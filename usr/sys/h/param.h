@@ -1,3 +1,6 @@
+#ifndef PARAM_H
+#define PARAM_H
+
 /*
  * tunable variables
  */
@@ -142,3 +145,5 @@ typedef	long		off_t;
 
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
+
+#endif

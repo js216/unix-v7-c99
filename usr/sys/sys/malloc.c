@@ -2,6 +2,9 @@
 #include "../h/systm.h"
 #include "../h/map.h"
 
+struct map coremap[CMAPSIZ];	/* space for core allocation */
+struct map swapmap[SMAPSIZ];	/* space for swap allocation */
+
 /*
  * Allocate 'size' units from the given
  * map. Return the base of the allocated
@@ -45,7 +48,7 @@ void mfree(struct map *mp, int size, int a)
    unsigned int t;
 
    if ((bp = mp)==coremap && runin) {
-      runin = 0;
+//      runin = 0;
 //      wakeup((caddr_t)&runin);	/* Wake scheduler when freeing core */
    }
    for (; bp->m_addr<=a && bp->m_size!=0; bp++);
