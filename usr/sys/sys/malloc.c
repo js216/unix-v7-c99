@@ -1,5 +1,3 @@
-#include "../h/param.h"
-#include "../h/systm.h"
 #include "../h/map.h"
 
 struct map coremap[CMAPSIZ];	/* space for core allocation */
@@ -47,10 +45,11 @@ void mfree(struct map *mp, int size, int a)
    struct map *bp;
    unsigned int t;
 
-   if ((bp = mp)==coremap && runin) {
+   bp = mp;
+//   if ((bp = mp)==coremap && runin) {
 //      runin = 0;
 //      wakeup((caddr_t)&runin);	/* Wake scheduler when freeing core */
-   }
+//   }
    for (; bp->m_addr<=a && bp->m_size!=0; bp++);
    if (bp>mp && (bp-1)->m_addr+(bp-1)->m_size == a) {
       (bp-1)->m_size += size;

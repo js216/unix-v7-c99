@@ -1,6 +1,7 @@
 #include "../h/map.h"
 #include "../h/param.h"
-#include "../h/systm.h"
+
+void printf(char *fmt, ...);
 
 static struct map testmap[] = {
      /* {size, addr} */

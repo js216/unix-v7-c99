@@ -1,9 +1,8 @@
 #include "../h/param.h"
-#include "../h/systm.h"
-#include "../h/seg.h"
 #include "../h/buf.h"
-#include "../h/conf.h"
 #include <stdarg.h>
+
+int putchar(int c);
 
 /*
  * In case console is off,
