@@ -1,0 +1,7 @@
+#define	isdigit(c)	((c)>='0'&&(c)<='9')
+#define	islower(c)	((c)>='a'&&(c)<='z')
+#define	isupper(c)	((c)>='A'&&(c)<='Z')
+#define	isalpha(c)	(islower(c)||isupper(c))
+#define	isalnum(c)	(isalpha(c)||isdigit(c))
+#define	isspace(c)	((c)==' '||(c)=='\t'||(c)=='\n'||(c)=='\r'||(c)=='\f')
+#define	toupper(c)	(islower(c)?(c)-'a'+'A':(c))

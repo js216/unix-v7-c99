@@ -1,0 +1,28 @@
+Unix, the greatest operating system ever created, served tens of thousands of
+users with a kernel that fit in under 100 kB of core. This repository aims to
+bring the Seventh Edition kernel up to date with C99 to run on hardware
+available nowadays, following these principles:
+
+- No Gratuitous Changes: Leave code as it was in 1979 unless it cannot work.
+- Documentation Over Implementation: Write explanations, not code.
+- Small Is Beautiful: Less code means fewer bugs.
+
+
+Getting Started
+-------------------------
+
+Build the system and run it under Qemu:
+
+    make ARCH=arm CONF=qemu_arm
+    make qemu
+
+
+References
+-------------------------
+
+- Ritchie, Dennis M., and Ken Thompson. "The UNIX time-sharing system."
+  Communications of the ACM 17.7 (1974): 365-375.
+- Lions, John. "A commentary on the sixth edition Unix operating system."
+  Department of Computer Science, The University of New South Wales (1977).
+- Bach, Maurice J. The design of the UNIX operating system. Prentice-Hall, Inc.,
+  1986.

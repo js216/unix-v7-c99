@@ -1,2 +1,17 @@
 *.swp
 *.o
+*.a
+*.out
+conf/test_malloc
+sys/unix
+unix
+root.img
+root/bin/
+root/usr/
+root/etc/init
+root/etc/getty
+tools/mkfs
+lib/*.o
+lib/*.elf
+
+v7
