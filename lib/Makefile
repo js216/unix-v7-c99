@@ -5,13 +5,22 @@ EDCFLAGS = $(SHCFLAGS) -Wno-builtin-declaration-mismatch
 LDFLAGS = -nostdlib -T u.ld
 LDLIBS = -lgcc
 LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
-      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o getenv.o
+      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o getenv.o \
+      atoi.o atol.o index.o rindex.o \
+      strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o
+# lib/abs.o is intentionally excluded -- cmd/chmod.c carries its
+# own `abs(void)` parser helper that would collide with the v7
+# libc abs(int).  No port currently calls libc abs(); the file
+# is on disk only to satisfy the original-diffs ratchet.
+
 # v7 sh has its own internal `getenv()` (a void(void) that walks
 # environ[] and registers each entry as a sh variable -- not libc
 # getenv).  Keep that file out of the sh link to avoid a duplicate
 # symbol clash.
 SHLIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
-      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o
+      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o \
+      atoi.o atol.o index.o rindex.o \
+      strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o
 ETC = init getty
 BIN = login cat echo ls pwd sync rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount id
 USRLIB = makekey diffh

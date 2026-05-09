@@ -467,29 +467,10 @@ _exit(int n)
 	exit(n);
 }
 
-static inline int
-strlen(char *s)
-{
-	char *p;
-
-	p = s;
-	while(*p)
-		p++;
-	return((int)(p - s));
-}
-
-static inline int
-strcmp(char *a, char *b)
-{
-
-	while(*a == *b) {
-		if(*a == 0)
-			return(0);
-		a++;
-		b++;
-	}
-	return(*a - *b);
-}
+/* strlen / strcmp now live in lib/strlen.c and lib/strcmp.c
+ * (real ports of v7's libc/gen/strlen.c and strcmp.c). */
+extern int strlen(char *s);
+extern int strcmp(char *a, char *b);
 
 static inline void
 qsort(void *vbase, int n, int size, int (*compar)())
@@ -531,19 +512,11 @@ minor(int dev)
 }
 #endif
 
-static inline int
-atoi(char *s)
-{
-	int n, c;
-
-	n = 0;
-	while((c = *s++))
-		if(c >= '0' && c <= '9')
-			n = n*10 + c - '0';
-		else
-			break;
-	return(n);
-}
+/* atoi/atol now live in lib/atoi.c, lib/atol.c (real ports of
+ * v7's libc/gen/atoi.c, atol.c).  abs is on disk as lib/abs.c
+ * but not linked because cmd/chmod.c carries its own abs(). */
+extern int atoi(char *s);
+extern long atol(char *s);
 
 static inline double
 atof(char *s)
@@ -790,82 +763,15 @@ fputs(char *s, FILE *f)
 	(void)write(f->fd, s, strlen(s));
 }
 
-static inline char *
-strcpy(char *a, char *b)
-{
-	char *p;
-
-	p = a;
-	while((*p++ = *b++))
-		;
-	return(a);
-}
-
-static inline char *
-strcat(char *a, char *b)
-{
-	char *p;
-
-	p = a;
-	while(*p)
-		p++;
-	while((*p++ = *b++))
-		;
-	return(a);
-}
-
-static inline char *
-strncpy(char *a, char *b, int n)
-{
-	char *p;
-
-	p = a;
-	while(n-- > 0)
-		if((*p++ = *b++) == 0)
-			while(n-- > 0)
-				*p++ = 0;
-	return(a);
-}
-
-static inline int
-strncmp(char *a, char *b, int n)
-{
-
-	while(n-- > 0) {
-		if(*a != *b)
-			return(*a - *b);
-		if(*a == 0)
-			return(0);
-		a++;
-		b++;
-	}
-	return(0);
-}
-
-static inline char *
-rindex(char *s, int c)
-{
-	char *p;
-
-	p = 0;
-	do
-		if(*s == c)
-			p = s;
-	while(*s++);
-	return(p);
-}
-
-static inline char *
-index(char *s, int c)
-{
-
-	while(*s) {
-		if(*s == c)
-			return(s);
-		s++;
-	}
-	return(c == 0 ? s : 0);
-}
+/* String routines now live in lib/str*.c, lib/index.c, lib/rindex.c
+ * (real ports of v7's libc/gen/{strcat,strcpy,strncat,strncpy,
+ * strncmp,index,rindex}.c). */
+extern char *strcpy(char *a, char *b);
+extern char *strcat(char *a, char *b);
+extern char *strncpy(char *a, char *b, int n);
+extern int strncmp(char *a, char *b, int n);
+extern char *rindex(char *s, int c);
+extern char *index(char *s, int c);
 
 static inline int
 time(long *t)
