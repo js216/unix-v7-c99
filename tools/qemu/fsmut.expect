@@ -1,0 +1,56 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# fsmut.expect --- mkdir/link/chmod/mv/rm round-trip under /tmp
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "mkdir /tmp/d\r"
+expect "# "
+send "echo hi > /tmp/d/f\r"
+expect "# "
+send "cat /tmp/d/f\r"
+expect "# "
+send "ln /tmp/d/f /tmp/d/g\r"
+expect "# "
+send "ls /tmp/d\r"
+expect "# "
+send "chmod 600 /tmp/d/f\r"
+expect "# "
+send "ls -l /tmp/d/f\r"
+expect "# "
+send "mv /tmp/d/g /tmp/d/h\r"
+expect "# "
+send "rm /tmp/d/f /tmp/d/h\r"
+expect "# "
+send "rmdir /tmp/d\r"
+expect "# "
+send "echo FSOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof
