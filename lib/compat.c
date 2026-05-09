@@ -473,13 +473,9 @@ printf(char *fmt, ...)
 	return(0);
 }
 
-struct passwd *
-getpwnam(char *name)
-{
-
-	(void)name;
-	return(0);
-}
+/* getpwnam now lives in lib/getpwnam.c (a real port of v7's
+ * libc/stdio/getpwnam.c).  Likewise getpwuid in getpwuid.c and
+ * setpwent/endpwent/getpwent in getpwent.c. */
 
 struct group *
 getgrnam(char *name)

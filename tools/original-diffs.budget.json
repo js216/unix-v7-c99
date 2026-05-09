@@ -136,8 +136,8 @@
     "inserts": 2
   },
   "cmd/login.c": {
-    "deletes": 134,
-    "inserts": 113
+    "deletes": 70,
+    "inserts": 78
   },
   "cmd/look.c": {
     "deletes": 14,
@@ -159,17 +159,13 @@
     "deletes": 5,
     "inserts": 6
   },
-  "cmd/mkfs.c": {
-    "deletes": 607,
-    "inserts": 14
-  },
   "cmd/mknod.c": {
     "deletes": 0,
     "inserts": 6
   },
   "cmd/mount.c": {
-    "deletes": 59,
-    "inserts": 21
+    "deletes": 18,
+    "inserts": 30
   },
   "cmd/mv.c": {
     "deletes": 19,
@@ -404,8 +400,8 @@
     "inserts": 5
   },
   "cmd/umount.c": {
-    "deletes": 45,
-    "inserts": 12
+    "deletes": 13,
+    "inserts": 23
   },
   "cmd/uniq.c": {
     "deletes": 13,
@@ -692,8 +688,8 @@
     "inserts": 7
   },
   "include/errno.h": {
-    "deletes": 39,
-    "inserts": 8
+    "deletes": 2,
+    "inserts": 48
   },
   "include/execargs.h": {
     "deletes": 1,
@@ -705,7 +701,7 @@
   },
   "include/pwd.h": {
     "deletes": 0,
-    "inserts": 3
+    "inserts": 9
   },
   "include/setjmp.h": {
     "deletes": 1,
@@ -779,13 +775,41 @@
     "deletes": 11,
     "inserts": 11
   },
+  "lib/execvp.c": {
+    "deletes": 39,
+    "inserts": 39
+  },
+  "lib/getenv.c": {
+    "deletes": 33,
+    "inserts": 29
+  },
+  "lib/getpwent.c": {
+    "deletes": 16,
+    "inserts": 23
+  },
+  "lib/getpwnam.c": {
+    "deletes": 5,
+    "inserts": 7
+  },
+  "lib/getpwuid.c": {
+    "deletes": 5,
+    "inserts": 7
+  },
   "lib/l3.c": {
     "deletes": 2,
+    "inserts": 9
+  },
+  "lib/strncat.c": {
+    "deletes": 12,
     "inserts": 9
   },
   "lib/syscall.s": {
     "deletes": 25,
     "inserts": 22
+  },
+  "lib/ttyslot.c": {
+    "deletes": 40,
+    "inserts": 39
   },
   "sys/acct.c": {
     "deletes": 0,
@@ -817,7 +841,7 @@
   },
   "sys/main.c": {
     "deletes": 1,
-    "inserts": 16
+    "inserts": 8
   },
   "sys/malloc.c": {
     "deletes": 9,

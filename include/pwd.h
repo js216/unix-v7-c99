@@ -11,4 +11,10 @@ struct	passwd { /* see getpwent(3) */
 	char	*pw_dir;
 	char	*pw_shell;
 };
+
+extern struct passwd *getpwent(void);
+extern struct passwd *getpwnam(char *);
+extern struct passwd *getpwuid(int);
+extern void setpwent(void);
+extern void endpwent(void);
 #endif

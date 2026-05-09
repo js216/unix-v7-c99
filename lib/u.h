@@ -1038,17 +1038,28 @@ nice(int incr)
 	return(0);
 }
 
+/* execvp/execlp now ride on the v7-faithful PATH-walk port at
+ * lib/execvp.c.  strncat/ttyslot are likewise real ports of v7
+ * libc sources rather than ad-hoc inlines. */
+extern int execvp(char *name, char **argv);
+extern int execlp(char *name, char *arg0, ...);
 static inline int
-execvp(char *name, char **argv)
+mount(char *special, char *dir, int ro)
 {
-	char path[64];
-
-	if(index(name, '/'))
-		return(syscall3(S_EXEC, (int)name, (int)argv, 0));
-	strcpy(path, "/bin/");
-	strcat(path, name);
-	return(syscall3(S_EXEC, (int)path, (int)argv, 0));
+	(void)ro;
+	return(syscall3(S_MOUNT, (int)special, (int)dir, 0));
 }
+static inline int
+umount(char *special)
+{
+
+	return(syscall3(S_UMOUNT, (int)special, 0, 0));
+}
+extern char *strncat(char *s1, char *s2, int n);
+extern int ttyslot(void);
+extern char *crypt(char *key, char *salt);
+extern char *getenv(char *name);
+extern char **environ;
 
 static inline char *
 ttyname(int fd)
@@ -1057,29 +1068,15 @@ ttyname(int fd)
 	return(fd >= 0 && fd <= 2 ? "/dev/console" : 0);
 }
 
-static inline struct passwd *
-getpwuid(int uid)
-{
-	static struct passwd pw = {
-		"root", "", 0, 0, 0, "", "", "/", "/bin/sh"
-	};
-
-	(void)uid;
-	return(&pw);
-}
-
-static inline struct passwd *
-getpwnam(char *name)
-{
-
-	(void)name;
-	return(getpwuid(0));
-}
-
-static inline void
-endpwent(void)
-{
-}
+/* getpwuid/getpwnam/setpwent/endpwent/getpwent are now real -- they
+ * walk /etc/passwd via the v7-style getpwent() machinery in
+ * lib/getpwent.c rather than returning a hard-coded "root"
+ * placeholder. */
+extern struct passwd *getpwuid(int uid);
+extern struct passwd *getpwnam(char *name);
+extern struct passwd *getpwent(void);
+extern void setpwent(void);
+extern void endpwent(void);
 
 static inline struct group *
 getgrnam(char *name)
