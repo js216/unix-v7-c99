@@ -1,8 +1,16 @@
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
 
+CONF ?= qemu_arm
+
+ifeq ($(CONF),evb_arm)
+LDSCRIPT = ../arch/evb.ld
+else
+LDSCRIPT = ../arch/a7.ld
+endif
+
 CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin -mcpu=cortex-a7 -marm -ffreestanding
-LDFLAGS = -nostdlib -T ../arch/a7.ld
+LDFLAGS = -nostdlib -T $(LDSCRIPT)
 
 OBJS = malloc.o prf.o ../arch/machdep.o ../arch/armboot.o
 DEVS = ../dev/pl011.o
