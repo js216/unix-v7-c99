@@ -14,7 +14,7 @@ ROOT = root/etc/init root/etc/getty root/etc/mkfs root/bin/login root/bin/sh \
 	root/bin/wall root/bin/write root/bin/df root/bin/clri \
 	root/bin/dcheck root/bin/icheck root/bin/ncheck \
 	root/bin/cb root/bin/sp root/bin/find root/bin/sort root/bin/ed \
-	root/bin/mount root/bin/umount \
+	root/bin/mount root/bin/umount root/bin/id \
 	root/usr/lib/makekey root/usr/lib/diffh \
 	root/etc/passwd root/etc/ttys root/usr/dict/words \
 	build/auxfs.img
@@ -32,7 +32,7 @@ root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makef
 	tools/mkfs root.img \
 	/etc/init=root/etc/init /etc/getty=root/etc/getty /etc/mkfs=root/etc/mkfs \
 	/etc/auxfs=build/auxfs.img \
-	/bin/mount=root/bin/mount /bin/umount=root/bin/umount \
+	/bin/mount=root/bin/mount /bin/umount=root/bin/umount /bin/id=root/bin/id \
 	/bin/login=root/bin/login /bin/sh=root/bin/sh \
 	/bin/cat=root/bin/cat /bin/echo=root/bin/echo \
 	/bin/ls=root/bin/ls /bin/pwd=root/bin/pwd /bin/sync=root/bin/sync \

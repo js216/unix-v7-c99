@@ -136,8 +136,8 @@
     "inserts": 2
   },
   "cmd/login.c": {
-    "deletes": 139,
-    "inserts": 25
+    "deletes": 134,
+    "inserts": 113
   },
   "cmd/look.c": {
     "deletes": 14,

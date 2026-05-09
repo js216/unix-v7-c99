@@ -9,6 +9,7 @@
 #define	IFMT			0170000
 #define	IFDIR			0040000
 #define	IFCHR			0020000
+#define	IFBLK			0060000
 #define	IFREG			0100000
 #define	VRING_DESC_F_NEXT	1
 #define	VRING_DESC_F_WRITE	2
@@ -154,6 +155,9 @@ static long handlers[NSIG+1];
 static long hsave[NFORK][NSIG+1];
 static unsigned int pending;
 static unsigned int psave[NFORK];
+static int kumask;
+static int kuid;
+static int kuidsave[NFORK];
 
 #define	QDOFF	0
 #define	QAOFF	(sizeof(struct vqdesc) * VQSIZE)
@@ -696,7 +700,7 @@ kcreat(char *path, int mode)
 						return(-1);
 					if((files[fd].mode & IFMT) != IFREG)
 						return(-1);
-					files[fd].mode = IFREG | (mode & 07777);
+					files[fd].mode = IFREG | ((mode & 07777) & ~kumask);
 					files[fd].size = 0;
 					bzero((char *)files[fd].addr, sizeof(files[fd].addr));
 					closed[fd] = 0;
@@ -709,7 +713,7 @@ kcreat(char *path, int mode)
 		if((fd >= 3 || closed[fd]) && files[fd].ino == 0) {
 			bzero((char *)&files[fd], sizeof(files[fd]));
 			files[fd].ino = nextino++;
-			files[fd].mode = IFREG | (mode & 07777);
+			files[fd].mode = IFREG | ((mode & 07777) & ~kumask);
 			files[fd].size = 0;
 			if(putino(files[fd].ino, &files[fd]) < 0)
 				return(-1);
@@ -763,7 +767,6 @@ kmknod(char *path, int mode, int dev)
 	ino_t pino;
 	int i;
 
-	(void)dev;
 	if(namei(path) != 0)
 		return(-1);
 	pino = parenti(path, name);
@@ -771,7 +774,13 @@ kmknod(char *path, int mode, int dev)
 		return(-1);
 	bzero((char *)&fp, sizeof(fp));
 	fp.ino = nextino++;
-	fp.mode = mode;
+	fp.mode = (mode & IFMT) | ((mode & 07777) & ~kumask);
+	/* For block/character special files, V7 stores the device number
+	 * in i_addr[0]. We piggyback on the first block-pointer slot
+	 * (which is unused for non-data inodes) so kstat/kfstat can hand
+	 * it back as st_rdev for ls -l. */
+	if((mode & IFMT) == IFCHR || (mode & IFMT) == IFBLK)
+		fp.addr[0] = (daddr_t)dev;
 	if(putino(fp.ino, &fp) < 0)
 		return(-1);
 	bzero((char *)&de, sizeof(de));
@@ -1065,7 +1074,8 @@ ustat(ino_t ino, struct file *fp, struct ustat *st)
 	st->st_nlink = 1;
 	st->st_uid = 0;
 	st->st_gid = 0;
-	st->st_rdev = 0;
+	st->st_rdev = ((fp->mode & IFMT) == IFCHR ||
+	    (fp->mode & IFMT) == IFBLK) ? (int)fp->addr[0] : 0;
 	st->st_size = fp->size;
 	st->st_atime = 0;
 	st->st_mtime = 0;
@@ -1357,6 +1367,7 @@ trap(int *r)
 				for(s = 0; s <= NSIG; s++)
 					handlers[s] = hsave[childmode][s];
 				pending = psave[childmode];
+				kuid = kuidsave[childmode];
 				curpid = ppid;
 				r[0] = pid;
 				kdone(pid, ppid, code);
@@ -1399,6 +1410,7 @@ trap(int *r)
 					hsave[childmode][s] = handlers[s];
 				psave[childmode] = pending;
 				pending = 0;
+				kuidsave[childmode] = kuid;
 				childpid[childmode] = nextpid++;
 				pidsave[childmode] = curpid;
 				curpid = childpid[childmode];
@@ -1497,6 +1509,16 @@ trap(int *r)
 		ret = 0;	/* tmpfs-backed -- nothing to do here */
 	else if(n == S_UMOUNT)
 		ret = 0;
+	else if(n == S_UMASK) {
+		ret = kumask;
+		kumask = r[0] & 07777;
+	}
+	else if(n == S_GETUID)
+		ret = kuid;
+	else if(n == S_SETUID) {
+		kuid = r[0];
+		ret = 0;
+	}
 	else if(n == S_KILL)
 		ret = kkill(r[0], r[1]);
 	else if(n == S_SIGNAL) {

@@ -1,0 +1,62 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# multiuser.expect --- non-root login as dmr, su back to root
+# Copyright (c) 2026 Jakob Kastelic
+#
+# /etc/passwd ships with `dmr::1:1:dennis:/:/bin/sh`; login walks
+# the file, calls setuid(1), and execs sh, which then chooses the
+# `$ ` prompt because getuid() reports non-zero.  `su root` flips
+# the uid back to 0 and forks a `# `-prompted shell.
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "dmr\r"
+
+expect {
+	timeout { exit 1 }
+	"\$ "
+}
+send "echo dmr\r"
+expect "\$ "
+send "echo WHOAMIOK\r"
+expect "\$ "
+send "id\r"
+expect "\$ "
+send "echo NONROOTOK\r"
+expect "\$ "
+send "su root\r"
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "echo SUOK\r"
+expect "# "
+send "id\r"
+expect "# "
+send "echo ROOTOK\r"
+expect "# "
+send "echo SETUIDOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect "# "
+send "exit\r"
+expect eof

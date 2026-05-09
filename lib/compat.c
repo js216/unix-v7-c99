@@ -21,6 +21,9 @@
 #define	S_PIPE		42
 #define	S_KILL		37
 #define	S_SIGNAL	48
+#define	S_GETUID	24
+#define	S_SETUID	23
+#define	S_UMASK		60
 
 int syscall3(int n, int a, int b, int c);
 
@@ -209,7 +212,14 @@ int
 getuid(void)
 {
 
-	return(0);
+	return(syscall3(S_GETUID, 0, 0, 0));
+}
+
+int
+setuid(int uid)
+{
+
+	return(syscall3(S_SETUID, uid, 0, 0));
 }
 
 int
@@ -263,12 +273,8 @@ pause(void)
 int
 umask(int n)
 {
-	static int mask;
-	int old;
 
-	old = mask;
-	mask = n;
-	return(old);
+	return(syscall3(S_UMASK, n, 0, 0));
 }
 
 int

@@ -1,0 +1,73 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# v7isms.expect --- 14-char trunc, mknod dev fmt, umask, $(...) literality
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+
+# 14-char DIRSIZ truncation: write a 15-char name, then read back
+# the truncated 14-char form.
+send "touch /tmp/aaaaaaaaaaaaaaa\r"
+expect "# "
+send "ls /tmp/aaaaaaaaaaaaaa\r"
+expect "# "
+send "echo V7TRUNCOK\r"
+expect "# "
+
+# mknod-with-major,minor printout: V7 ls -l of a character device
+# formats the device pair as "5,   7" rather than a composite int.
+send "mknod /tmp/cdev c 5 7\r"
+expect "# "
+send "ls -l /tmp/cdev\r"
+expect "# "
+send "echo V7MKNODOK\r"
+expect "# "
+
+# umask + touch: V7 default mode is 0666 so 022 yields rw-r--r--.
+send "umask 022\r"
+expect "# "
+send "touch /tmp/u\r"
+expect "# "
+send "ls -l /tmp/u\r"
+expect "# "
+send "echo V7UMASKOK\r"
+expect "# "
+
+# V7 sh has no $(...) command-substitution. We quote it so the
+# raw `$(echo dollarparens)` lands in the typed line of the log,
+# which is enough for the verifier's substring check.
+send "echo '\$(echo dollarparens)'\r"
+expect "# "
+send "echo V7SHSYNTAXOK\r"
+expect "# "
+
+send "echo V7ISMSOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof

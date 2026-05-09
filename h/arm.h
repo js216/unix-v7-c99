@@ -35,6 +35,9 @@
 #define	S_UMOUNT	22
 #define	S_KILL		37
 #define	S_SIGNAL	48
+#define	S_GETUID	24
+#define	S_SETUID	23
+#define	S_UMASK		60
 #define	S_SIGRETURN	139
 #define S_GETDENTS	141
 #define	S_SPAWN		200

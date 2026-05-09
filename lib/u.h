@@ -55,6 +55,9 @@ static inline char *sprintf(char *buf, char *fmt, ...);
 #define	S_UMOUNT	22
 #define	S_KILL		37
 #define	S_SIGNAL	48
+#define	S_GETUID	24
+#define	S_SETUID	23
+#define	S_UMASK		60
 #define	S_SIGRETURN	139
 #define	S_GETDENTS	141
 #define	S_SPAWN		200
@@ -606,7 +609,7 @@ static inline int
 getuid(void)
 {
 
-	return(0);
+	return(syscall3(S_GETUID, 0, 0, 0));
 }
 
 static inline int
@@ -683,8 +686,7 @@ static inline int
 setuid(int uid)
 {
 
-	(void)uid;
-	return(0);
+	return(syscall3(S_SETUID, uid, 0, 0));
 }
 
 static inline int
@@ -696,7 +698,7 @@ setgid(int gid)
 }
 
 static inline int
-umask(int n)
+_umask_unused(int n)
 {
 	static int mask;
 	int old;
@@ -704,6 +706,13 @@ umask(int n)
 	old = mask;
 	mask = n;
 	return(old);
+}
+
+static inline int
+umask(int n)
+{
+
+	return(syscall3(S_UMASK, n, 0, 0));
 }
 
 static inline int
