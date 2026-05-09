@@ -40,6 +40,11 @@ int	szicode = sizeof(icode);
 void
 startup(void)
 {
+	/* Qemu virt cortex-a7 default RAM is 128 MiB at 0x40000000. The
+	 * V7 banner shape is preserved so userspace tooling that scrapes
+	 * "mem = " from the console keeps working; on Armv7 we report
+	 * bytes directly rather than PDP-11 click-converted sizes. */
+	printf("mem = %D\n", (long)(128L * 1024 * 1024));
 #if 0
 	register i;
 
