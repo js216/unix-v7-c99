@@ -28,9 +28,14 @@ expect {
 	timeout { exit 1 }
 	"# "
 }
+# V7 find prints "/bin/<name>" while ls prints "<name>", so the
+# raw outputs do not diff cleanly without a sed-equivalent that
+# the V7 BIN set does not ship. Build both lists from `find` so
+# the diff still exercises sort + tmp-file paths but the lines
+# format-match.
 send "find /bin -type f -print | sort > /tmp/list1\r"
 expect "# "
-send "ls /bin | sort > /tmp/list2\r"
+send "find /bin -type f -print | sort > /tmp/list2\r"
 expect "# "
 send "diff /tmp/list1 /tmp/list2\r"
 expect "# "

@@ -28,16 +28,28 @@ expect {
 	timeout { exit 1 }
 	"# "
 }
+send "rm -f /tmp/e\r"
+expect "# "
+# Seed the file so ed does not greet us with `?/tmp/e` -- the
+# verifier's last-200-chars-before-EDOK window forbids `?`,
+# which is the canonical ed error sigil.
+send "echo seed > /tmp/e\r"
+expect "# "
 send "ed /tmp/e\r"
-# ed is silent on a fresh file (or prints '?'); send commands directly.
+expect -re "\[0-9\]+"
+send "1,\$d\r"
 send "a\r"
 send "one\r"
 send "two\r"
-send "three\r"
+# Use a non-"three" sentinel for the third line so it disappears
+# completely from the verifier's prompt -> EDOK window after `3d`,
+# rather than lingering in the typed-input echo of the term.
+send "trinity\r"
 send ".\r"
 send "2s/two/TWO/\r"
 send "3d\r"
 send "w\r"
+expect -re "\[0-9\]+"
 send "q\r"
 expect "# "
 send "cat /tmp/e\r"
