@@ -10,6 +10,7 @@ root/bin/
 root/usr/
 root/etc/init
 root/etc/getty
+root/etc/mkfs
 tools/mkfs
 lib/*.o
 lib/*.elf
