@@ -6,7 +6,7 @@ LDFLAGS = -nostdlib -T u.ld
 LDLIBS = -lgcc
 LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
       getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o getenv.o \
-      atoi.o atol.o index.o rindex.o \
+      atoi.o atol.o index.o rindex.o isatty.o perror.o \
       strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o
 # lib/abs.o is intentionally excluded -- cmd/chmod.c carries its
 # own `abs(void)` parser helper that would collide with the v7
@@ -19,7 +19,7 @@ LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
 # symbol clash.
 SHLIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
       getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o \
-      atoi.o atol.o index.o rindex.o \
+      atoi.o atol.o index.o rindex.o isatty.o perror.o \
       strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o
 ETC = init getty
 BIN = login cat echo ls pwd sync rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount id
