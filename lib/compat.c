@@ -111,10 +111,10 @@ fork(void)
 int
 wait(int *status)
 {
+	int w;
 
-	if(status)
-		*status = 0;
-	return(syscall3(S_WAIT, 0, 0, 0));
+	w = 0;
+	return(syscall3(S_WAIT, status ? (int)status : (int)&w, 0, 0));
 }
 
 int

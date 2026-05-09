@@ -117,6 +117,7 @@ static int spawned;
 static int childmode;
 static int childdone[NFD];
 static int childppid[NFD];
+static int childexitval[NFD];
 static int ndone;
 static int childpid[NFORK];
 static int pidsave[NFORK];
@@ -1003,31 +1004,43 @@ kpipe(int *fdp)
 }
 
 static void
-kdone(int pid, int ppid)
+kdone(int pid, int ppid, int code)
 {
 
 	if(ndone < NFD) {
-		childdone[ndone++] = pid;
-		childppid[ndone-1] = ppid;
+		childdone[ndone] = pid;
+		childppid[ndone] = ppid;
+		childexitval[ndone] = code;
+		ndone++;
 	}
 }
 
+/*
+ * V7 wait(2) returns the child's PID and stores a packed status word
+ * in *statp: the high byte is the exit code, the low 7 bits the
+ * terminating signal (always 0 here -- only normal exit is implemented).
+ * sh's await() pulls $? out of (status >> 8) & 0xff.
+ */
 static int
-kwait(int ppid)
+kwait(int ppid, int *statp)
 {
-	int i, pid;
+	int i, pid, code;
 
 	for(i=0; i<ndone; i++)
 		if(childppid[i] == ppid)
 			break;
 	if(i == ndone)
 		return(-1);
-	pid = childdone[i];
+	pid  = childdone[i];
+	code = childexitval[i];
 	for(i++; i<ndone; i++) {
-		childdone[i-1] = childdone[i];
-		childppid[i-1] = childppid[i];
+		childdone[i-1]    = childdone[i];
+		childppid[i-1]    = childppid[i];
+		childexitval[i-1] = childexitval[i];
 	}
 	ndone--;
+	if(statp != 0)
+		*statp = (code & 0xff) << 8;
 	return(pid);
 }
 
@@ -1322,8 +1335,9 @@ trap(int *r)
 	ret = -1;
 		if(n == S_EXIT) {
 			if(childmode) {
-				int pid, ppid, s;
+				int pid, ppid, s, code;
 
+				code = r[0];
 				childmode--;
 				pid = curpid;
 				ppid = pidsave[childmode];
@@ -1345,7 +1359,7 @@ trap(int *r)
 				pending = psave[childmode];
 				curpid = ppid;
 				r[0] = pid;
-				kdone(pid, ppid);
+				kdone(pid, ppid, code);
 				deliver_signal(r);
 				return;
 			}
@@ -1394,7 +1408,7 @@ trap(int *r)
 		}
 		}
 		else if(n == S_WAIT) {
-			ret = kwait(curpid);
+			ret = kwait(curpid, (int *)r[0]);
 		}
 	else if(n == S_READ)
 		ret = kread(r[0], (char *)r[1], (unsigned int)r[2]);

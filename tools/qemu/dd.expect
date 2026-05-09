@@ -1,0 +1,44 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# dd.expect --- raw I/O round-trip with mismatched block sizes
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 90
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "dd if=/etc/passwd of=/tmp/a bs=1\r"
+expect "# "
+send "dd if=/etc/passwd of=/tmp/b bs=512 count=1\r"
+expect "# "
+send "cmp /tmp/a /etc/passwd\r"
+expect "# "
+send "echo CMPA=\$?\r"
+expect "# "
+send "echo DDOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof

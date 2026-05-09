@@ -1,0 +1,52 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# proc.expect --- fork / wait / exit-status / time
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "sleep 1 &\r"
+expect "# "
+send "echo PID=\$!\r"
+expect "# "
+send "wait\r"
+expect "# "
+send "echo WAITOK\r"
+expect "# "
+send "(exit 7)\r"
+expect "# "
+send "echo RC=\$?\r"
+expect "# "
+send "time sleep 1\r"
+expect "# "
+send "echo TIMEOK\r"
+expect "# "
+send "echo PROCOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof
