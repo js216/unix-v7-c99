@@ -1,3 +1,8 @@
+#!/bin/sh
+# Print "diff <v7-path> <port-path>" before each hunk so the
+# ratchet verifier can attribute insertions/deletions per pair.
+diff() { echo "diff $1 $2"; command diff "$1" "$2"; }
+
 diff v7/usr/src/cmd/echo.c cmd/echo.c
 diff v7/usr/src/cmd/cat.c cmd/cat.c
 diff v7/usr/src/cmd/sync.c cmd/sync.c
@@ -152,3 +157,84 @@ diff v7/usr/sys/dev/tm.c dev/tm.c
 diff v7/usr/sys/dev/tty.c dev/tty.c
 diff v7/usr/sys/dev/vp.c dev/vp.c
 diff v7/usr/sys/dev/vs.c dev/vs.c
+
+# cmd/ (added by the iter-2 ratchet seeding)
+diff v7/usr/src/cmd/getty.c cmd/getty.c
+diff v7/usr/src/cmd/init.c cmd/init.c
+diff v7/usr/src/cmd/login.c cmd/login.c
+diff v7/usr/src/cmd/ls.c cmd/ls.c
+diff v7/usr/src/cmd/sh/args.c cmd/sh/args.c
+diff v7/usr/src/cmd/sh/blok.c cmd/sh/blok.c
+diff v7/usr/src/cmd/sh/brkincr.h cmd/sh/brkincr.h
+diff v7/usr/src/cmd/sh/builtin.c cmd/sh/builtin.c
+diff v7/usr/src/cmd/sh/cmd.c cmd/sh/cmd.c
+diff v7/usr/src/cmd/sh/ctype.c cmd/sh/ctype.c
+diff v7/usr/src/cmd/sh/ctype.h cmd/sh/ctype.h
+diff v7/usr/src/cmd/sh/defs.h cmd/sh/defs.h
+diff v7/usr/src/cmd/sh/dup.h cmd/sh/dup.h
+diff v7/usr/src/cmd/sh/error.c cmd/sh/error.c
+diff v7/usr/src/cmd/sh/expand.c cmd/sh/expand.c
+diff v7/usr/src/cmd/sh/fault.c cmd/sh/fault.c
+diff v7/usr/src/cmd/sh/io.c cmd/sh/io.c
+diff v7/usr/src/cmd/sh/mac.h cmd/sh/mac.h
+diff v7/usr/src/cmd/sh/macro.c cmd/sh/macro.c
+diff v7/usr/src/cmd/sh/main.c cmd/sh/main.c
+diff v7/usr/src/cmd/sh/mode.h cmd/sh/mode.h
+diff v7/usr/src/cmd/sh/msg.c cmd/sh/msg.c
+diff v7/usr/src/cmd/sh/name.c cmd/sh/name.c
+diff v7/usr/src/cmd/sh/name.h cmd/sh/name.h
+diff v7/usr/src/cmd/sh/print.c cmd/sh/print.c
+diff v7/usr/src/cmd/sh/service.c cmd/sh/service.c
+diff v7/usr/src/cmd/sh/setbrk.c cmd/sh/setbrk.c
+diff v7/usr/src/cmd/sh/stak.c cmd/sh/stak.c
+diff v7/usr/src/cmd/sh/stak.h cmd/sh/stak.h
+diff v7/usr/src/cmd/sh/string.c cmd/sh/string.c
+diff v7/usr/src/cmd/sh/sym.h cmd/sh/sym.h
+diff v7/usr/src/cmd/sh/timeout.h cmd/sh/timeout.h
+diff v7/usr/src/cmd/sh/word.c cmd/sh/word.c
+diff v7/usr/src/cmd/sh/xec.c cmd/sh/xec.c
+
+# conf/ (added by the iter-2 ratchet seeding)
+diff v7/usr/sys/conf/c.c conf/c.c
+diff v7/usr/src/libc/stdio/putchar.c conf/putchar.c
+
+# h/ (added by the iter-2 ratchet seeding)
+diff v7/usr/sys/h/buf.h h/buf.h
+diff v7/usr/sys/h/dir.h h/dir.h
+diff v7/usr/sys/h/inode.h h/inode.h
+diff v7/usr/sys/h/map.h h/map.h
+diff v7/usr/sys/h/param.h h/param.h
+diff v7/usr/sys/h/proc.h h/proc.h
+diff v7/usr/sys/h/user.h h/user.h
+
+# include/ (added by the iter-2 ratchet seeding)
+diff v7/usr/include/ctype.h include/ctype.h
+diff v7/usr/include/errno.h include/errno.h
+diff v7/usr/include/execargs.h include/execargs.h
+diff v7/usr/include/grp.h include/grp.h
+diff v7/usr/include/pwd.h include/pwd.h
+diff v7/usr/include/setjmp.h include/setjmp.h
+diff v7/usr/include/signal.h include/signal.h
+diff v7/usr/include/stdio.h include/stdio.h
+diff v7/usr/include/sys/dir.h include/sys/dir.h
+diff v7/usr/include/sys/stat.h include/sys/stat.h
+diff v7/usr/include/sys/timeb.h include/sys/timeb.h
+diff v7/usr/include/sys/times.h include/sys/times.h
+diff v7/usr/include/sys/types.h include/sys/types.h
+diff v7/usr/include/time.h include/time.h
+diff v7/usr/include/utmp.h include/utmp.h
+
+# lib/ (added by the iter-2 ratchet seeding)
+diff v7/usr/src/libc/csu/crt0.s lib/crt0.s
+diff v7/usr/src/libc/v6/syscall.s lib/syscall.s
+
+# sys/ (added by the iter-2 ratchet seeding)
+diff v7/usr/sys/sys/main.c sys/main.c
+diff v7/usr/sys/sys/malloc.c sys/malloc.c
+diff v7/usr/sys/sys/prf.c sys/prf.c
+diff v7/usr/sys/sys/prim.c sys/prim.c
+diff v7/usr/sys/sys/slp.c sys/slp.c
+
+# tools/ (added by the iter-2 ratchet seeding)
+diff v7/usr/src/cmd/mkfs.c tools/mkfs.c
+exit 0
