@@ -1,0 +1,52 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# fscheck.expect --- icheck / dcheck / ncheck on the rootfs
+# Copyright (c) 2026 Jakob Kastelic
+#
+# armboot.c does not back /dev/rrl0; the V7 fs check programs accept
+# any V7 image as their first arg, so feed them root.img directly via
+# the canonical /dev/hd0 alias the boot loader reads from.
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 90
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "sync\r"
+expect "# "
+send "icheck /dev/hd0\r"
+expect "# "
+send "echo ICHECKOK\r"
+expect "# "
+send "dcheck /dev/hd0\r"
+expect "# "
+send "echo DCHECKOK\r"
+expect "# "
+send "ncheck /dev/hd0\r"
+expect "# "
+send "echo NCHECKOK\r"
+expect "# "
+send "echo FSCHECKOK\r"
+expect "# "
+send "exit\r"
+expect eof

@@ -1,0 +1,96 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# breadth.expect --- exercise every remaining V7 utility once
+# Copyright (c) 2026 Jakob Kastelic
+#
+# Each utility is invoked with the smallest input that lets it run to
+# successful exit; the verifier only checks that "<name>:OK" appears
+# after the matching prompt, in the order from UTILS.  Programs that
+# expect a blocking read are fed an empty file (we use /etc/utmp,
+# which the V7 mkfs links to /dev/null on this image).
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 120
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+
+# Helper: dictionary file for `look`.
+send "echo root > /tmp/dict\r"
+expect "# "
+# Helper: empty stdin file for the few utilities that read from fd 0.
+send "echo > /tmp/empty\r"
+expect "# "
+# Helper: minimal pipeline input.
+send "echo a > /tmp/in\r"
+expect "# "
+
+set utils {
+	{who      "who </tmp/empty"}
+	{mesg     "mesg n"}
+	{write    "write root </tmp/empty"}
+	{wall     "wall </tmp/empty"}
+	{calendar "calendar </tmp/empty"}
+	{crypt    "crypt abc </tmp/empty >/tmp/c"}
+	{makekey  "makekey </tmp/empty >/tmp/k"}
+	{random   "random 2"}
+	{stty     "stty"}
+	{tabs     "tabs 4"}
+	{tty      "tty"}
+	{df       "df /"}
+	{du       "du /"}
+	{mknod    "mknod /tmp/n c 1 1"}
+	{file     "file /etc/passwd"}
+	{join     "join /etc/passwd /etc/passwd"}
+	{col      "col </tmp/in"}
+	{fgrep    "fgrep r /etc/passwd"}
+	{cb       "cb </tmp/in"}
+	{sp       "sp </tmp/in"}
+	{time     "time echo z"}
+	{comm     "comm /tmp/in /tmp/in"}
+	{tsort    "tsort </tmp/empty"}
+	{checkeq  "checkeq </tmp/empty"}
+	{pr       "pr /etc/passwd"}
+	{split    "split -1 /etc/passwd /tmp/sp"}
+	{sum      "sum /etc/passwd"}
+	{look     "look root /tmp/dict"}
+	{chown    "chown root /tmp/in"}
+	{chgrp    "chgrp 0 /tmp/in"}
+	{nice     "nice -1 echo n"}
+}
+
+foreach pair $utils {
+	set name [lindex $pair 0]
+	set cmd  [lindex $pair 1]
+	send "$cmd\r"
+	expect "# "
+	send "echo $name:OK\r"
+	expect "# "
+}
+
+send "echo BREADTHOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof

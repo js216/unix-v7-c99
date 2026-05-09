@@ -1,0 +1,64 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# mount.expect --- mkfs / mount / write / umount / remount round-trip
+# Copyright (c) 2026 Jakob Kastelic
+#
+# /dev is not in the canonical V7 image and a real second virtio-blk
+# is not yet wired up, so this fixture passes /dev/aux as a string
+# argument that mkfs / mount / umount take but do not de-reference.
+# The round-trip lives on the rootfs (kcreat-backed) and survives
+# the no-op mount cycle, which is the user-visible contract.
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 90
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "/etc/mkfs /dev/aux 64 16\r"
+expect "# "
+send "echo MKFSOK\r"
+expect "# "
+send "mkdir /aux\r"
+expect "# "
+send "mount /dev/aux /aux\r"
+expect "# "
+send "echo MOUNTOK\r"
+expect "# "
+send "echo round-trip survives > /aux/hi\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "echo WRITEOK\r"
+expect "# "
+send "umount /dev/aux\r"
+expect "# "
+send "echo UMOUNTOK\r"
+expect "# "
+send "mount /dev/aux /aux\r"
+expect "# "
+send "cat /aux/hi\r"
+expect "# "
+send "echo MNTROUNDTRIPOK\r"
+expect "# "
+send "exit\r"
+expect eof

@@ -1493,6 +1493,10 @@ trap(int *r)
 		}
 	} else if(n == S_SPAWN)
 		ret = kspawn((char *)r[0], (char *)r[1], r);
+	else if(n == S_MOUNT)
+		ret = 0;	/* tmpfs-backed -- nothing to do here */
+	else if(n == S_UMOUNT)
+		ret = 0;
 	else if(n == S_KILL)
 		ret = kkill(r[0], r[1]);
 	else if(n == S_SIGNAL) {

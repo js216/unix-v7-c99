@@ -1,0 +1,44 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# findsort.expect --- find | sort vs. ls | sort, diff for equality
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "find /bin -type f -print | sort > /tmp/list1\r"
+expect "# "
+send "ls /bin | sort > /tmp/list2\r"
+expect "# "
+send "diff /tmp/list1 /tmp/list2\r"
+expect "# "
+send "echo DIFFRC=\$?\r"
+expect "# "
+send "echo FINDSORTOK\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof

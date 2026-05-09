@@ -31,6 +31,8 @@
 #define S_DUP		41
 #define	S_PIPE		42
 #define S_EXIT		1
+#define	S_MOUNT		21
+#define	S_UMOUNT	22
 #define	S_KILL		37
 #define	S_SIGNAL	48
 #define	S_SIGRETURN	139
