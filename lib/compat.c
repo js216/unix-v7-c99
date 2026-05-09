@@ -313,12 +313,7 @@ exit(int n)
 /* strcmp / atoi / atol now live in lib/strcmp.c, lib/atoi.c,
  * lib/atol.c (real ports of v7's libc/gen/{strcmp,atoi,atol}.c). */
 
-int
-isatty(int fd)
-{
-
-	return(fd >= 0 && fd <= 2);
-}
+/* isatty now lives in lib/isatty.c (port of v7's libc/gen/isatty.c). */
 
 char *
 ttyname(int fd)

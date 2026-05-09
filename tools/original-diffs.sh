@@ -261,6 +261,8 @@ diff v7/usr/src/libc/gen/strcpy.c lib/strcpy.c
 diff v7/usr/src/libc/gen/strlen.c lib/strlen.c
 diff v7/usr/src/libc/gen/strncmp.c lib/strncmp.c
 diff v7/usr/src/libc/gen/strncpy.c lib/strncpy.c
+diff v7/usr/src/libc/gen/isatty.c lib/isatty.c
+diff v7/usr/src/libc/gen/perror.c lib/perror.c
 
 # include/ (real port of v7's errno.h, with a small port-side
 # helper-prototype block at the bottom; see file comment).

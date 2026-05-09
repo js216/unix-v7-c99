@@ -543,12 +543,8 @@ atof(char *s)
 	return(neg ? -a : a);
 }
 
-static inline int
-isatty(int fd)
-{
-
-	return(fd >= 0 && fd <= 2);
-}
+/* isatty now lives in lib/isatty.c (port of v7's libc/gen/isatty.c). */
+extern int isatty(int fd);
 
 static inline int
 gtty(int fd, void *buf)
@@ -1114,12 +1110,8 @@ fprintf(FILE *f, char *fmt, ...)
 	va_end(ap);
 }
 
-static inline void
-perror(char *s)
-{
-
-	fprintf(stderr, "%s\n", s);
-}
+/* perror lives in lib/perror.c (port of v7's libc/gen/perror.c). */
+extern void perror(char *s);
 
 static inline char *
 sputn(char *p, long n, int b)

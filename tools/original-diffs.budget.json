@@ -811,9 +811,17 @@
     "deletes": 5,
     "inserts": 8
   },
+  "lib/isatty.c": {
+    "deletes": 3,
+    "inserts": 9
+  },
   "lib/l3.c": {
     "deletes": 2,
     "inserts": 9
+  },
+  "lib/perror.c": {
+    "deletes": 11,
+    "inserts": 24
   },
   "lib/rindex.c": {
     "deletes": 8,
