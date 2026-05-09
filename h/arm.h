@@ -31,10 +31,23 @@
 #define S_DUP		41
 #define	S_PIPE		42
 #define S_EXIT		1
+#define	S_KILL		37
+#define	S_SIGNAL	48
+#define	S_SIGRETURN	139
 #define S_GETDENTS	141
 #define	S_SPAWN		200
 
 #define	UARGV		0x0000f000U
 #define	UARGLEN		512
+
+/*
+ * Fixed user-VA "vDSO" page used to host the signal-return trampoline.
+ * The kernel writes a 2-instruction `mov r7, #139; svc #0` stub here on
+ * every successful exec so the per-process handler's `bx lr` lands on
+ * code that can ask the kernel to pop the saved trap frame.  The
+ * address must sit in the user 1MB section but outside both the loaded
+ * binary (>= UENTRY) and the argv buffer (UARGV..UARGV+UARGLEN).
+ */
+#define	UENTRY_SIGTRAMP	0x0000fe00U
 
 #endif

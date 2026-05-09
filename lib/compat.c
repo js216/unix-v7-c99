@@ -19,6 +19,8 @@
 #define	S_SYNC		36
 #define	S_DUP		41
 #define	S_PIPE		42
+#define	S_KILL		37
+#define	S_SIGNAL	48
 
 int syscall3(int n, int a, int b, int c);
 
@@ -233,8 +235,14 @@ int
 signal(int sig, int fun)
 {
 
-	(void)sig;
-	return(fun);
+	return(syscall3(S_SIGNAL, sig, fun, 0));
+}
+
+int
+kill(int pid, int sig)
+{
+
+	return(syscall3(S_KILL, pid, sig, 0));
 }
 
 int

@@ -51,6 +51,9 @@ static inline char *sprintf(char *buf, char *fmt, ...);
 #define	S_SYNC		36
 #define	S_DUP		41
 #define	S_PIPE		42
+#define	S_KILL		37
+#define	S_SIGNAL	48
+#define	S_SIGRETURN	139
 #define	S_GETDENTS	141
 #define	S_SPAWN		200
 
@@ -738,8 +741,7 @@ static inline int
 signal(int sig, int fun)
 {
 
-	(void)sig;
-	return(fun);
+	return(syscall3(S_SIGNAL, sig, fun, 0));
 }
 
 static inline void
@@ -1014,9 +1016,7 @@ static inline int
 kill(int pid, int sig)
 {
 
-	(void)pid;
-	(void)sig;
-	return(-1);
+	return(syscall3(S_KILL, pid, sig, 0));
 }
 
 static inline int

@@ -125,6 +125,35 @@ static int nextpid = 2;
 static int sframe[17];
 static int cframe[NFORK][17];
 
+/*
+ * Signal facility.
+ *
+ * V7 user-space stores SIG_DFL as 0 and SIG_IGN as 1; anything else is a
+ * function pointer in the running image's text segment.  We keep one
+ * table per process depth: `handlers[1..NSIG]` holds the disposition for
+ * the currently-running process, and `hsave[d]` saves what was in place
+ * for the ancestor at depth d when it forked.  `pending` records signals
+ * that have been kkill()'d but not yet delivered, with the same depth
+ * stacking via `psave[]`.
+ *
+ * Delivery is synchronous on the next user-mode resume: kkill() targets
+ * either curpid (deliver before the syscall returns) or an ancestor
+ * (queue, deliver when the S_EXIT pop restores them).  The handler is
+ * called with `r0=sig`; its bx-lr lands on the sigreturn trampoline at
+ * UENTRY_SIGRETURN, which issues an S_SIGRETURN syscall to pop the
+ * saved PC + r0 we stashed on the user stack and resume the
+ * interrupted code in place.
+ */
+#define	SIG_DFL		0L
+#define	SIG_IGN		1L
+
+/* h/param.h already defines NSIG (= 17 in this V7 port). */
+
+static long handlers[NSIG+1];
+static long hsave[NFORK][NSIG+1];
+static unsigned int pending;
+static unsigned int psave[NFORK];
+
 #define	QDOFF	0
 #define	QAOFF	(sizeof(struct vqdesc) * VQSIZE)
 #define	QUOFF	((QAOFF + sizeof(struct vqavail) + 3) & ~3)
@@ -1073,6 +1102,19 @@ kexec(char *path)
 	bzero((char *)USERBASE, USERSIZE);
 	if(readi(&fp, 0, (char *)UENTRY, fp.size) != (int)fp.size)
 		return(-1);
+	/* Drop a sigreturn trampoline at UENTRY_SIGTRAMP and reset every
+	 * non-IGN handler to SIG_DFL: V7 exec semantics. */
+	{
+		volatile unsigned int *t;
+		int i;
+		t = (volatile unsigned int *)UENTRY_SIGTRAMP;
+		t[0] = 0xe3a0708bU;	/* mov r7, #139 (S_SIGRETURN)  */
+		t[1] = 0xef000000U;	/* svc #0                       */
+		for(i=1; i<=NSIG; i++)
+			if(handlers[i] != SIG_IGN)
+				handlers[i] = SIG_DFL;
+		pending = 0;
+	}
 	return(0);
 }
 
@@ -1159,6 +1201,118 @@ kspawn(char *path, char *args, int *r)
 	return(0);
 }
 
+/*
+ * Set the handler for `sig` to `fun` and return the previous value.
+ * Caller is responsible for valid signal numbers.
+ */
+static long
+ksignal(int sig, long fun)
+{
+	long old;
+
+	if(sig <= 0 || sig > NSIG)
+		return(-1);
+	old = handlers[sig];
+	handlers[sig] = fun;
+	return(old);
+}
+
+/*
+ * Queue signal `sig` for delivery to `pid`.  Self-kill marks the
+ * current frame's pending bits; killing an ancestor reaches into the
+ * matching psave[] slot so the signal lands when the S_EXIT pop
+ * restores that frame.  Targeting a sibling pid (i.e. one already
+ * exited under our sequential fork model) is a no-op success: V7
+ * code expects `kill` to succeed against any reachable pid.
+ */
+static int
+kkill(int pid, int sig)
+{
+	int d;
+
+	if(sig < 0 || sig > NSIG)
+		return(-1);
+	if(sig == 0)
+		return(0);
+	if(pid == curpid) {
+		pending |= 1U << sig;
+		return(0);
+	}
+	for(d = 0; d < childmode; d++) {
+		if(pidsave[d] == pid) {
+			psave[d] |= 1U << sig;
+			return(0);
+		}
+	}
+	for(d = 0; d < childmode; d++) {
+		if(childpid[d] == pid)
+			return(0);
+	}
+	return(-1);
+}
+
+/*
+ * Sigreturn: pop the saved-PC + saved-r0 pair the kernel pushed onto
+ * the user stack when the signal was delivered, and restore them in
+ * the trap frame so the trap-return path resumes the interrupted
+ * code with its original r0 value.
+ */
+static void
+ksigreturn(int *r)
+{
+	unsigned int sp;
+	unsigned int saved_pc, saved_r0;
+
+	sp = (unsigned int)r[13];
+	saved_pc = *(volatile unsigned int *)sp;
+	saved_r0 = *(volatile unsigned int *)(sp + 4);
+	r[13] = (int)(sp + 8);
+	r[15] = (int)saved_pc;
+	r[0]  = (int)saved_r0;
+}
+
+/*
+ * If a deliverable signal is pending for the current process, redirect
+ * the trap frame so user-mode resumes in the handler with `r0=sig` and
+ * `lr=UENTRY_SIGTRAMP`.  The original PC and r0 are pushed onto the
+ * user stack so ksigreturn() can put them back when the handler
+ * finishes.  Only one signal is delivered per trap return; remaining
+ * pending bits ride along into the next exit-to-user.
+ */
+static void
+deliver_signal(int *r)
+{
+	int sig;
+	long h;
+	unsigned int sp;
+
+	if(pending == 0)
+		return;
+	for(sig = 1; sig <= NSIG; sig++) {
+		if((pending & (1U << sig)) == 0)
+			continue;
+		pending &= ~(1U << sig);
+		h = handlers[sig];
+		if(h == SIG_IGN)
+			continue;
+		if(h == SIG_DFL) {
+			/* No fancy default actions yet -- the V7 default
+			 * for most catchable signals is process death;
+			 * absent a real exit/wait flow here, drop the
+			 * signal so we do not panic the test harness. */
+			continue;
+		}
+		sp = (unsigned int)r[13] - 8U;
+		*(volatile unsigned int *)sp       = (unsigned int)r[15];
+		*(volatile unsigned int *)(sp + 4) = (unsigned int)r[0];
+		r[13] = (int)sp;
+		r[14] = (int)UENTRY_SIGTRAMP;
+		r[15] = (int)h;
+		r[0]  = sig;
+		return;
+	}
+}
+
 void
 trap(int *r)
 {
@@ -1168,7 +1322,7 @@ trap(int *r)
 	ret = -1;
 		if(n == S_EXIT) {
 			if(childmode) {
-				int pid, ppid;
+				int pid, ppid, s;
 
 				childmode--;
 				pid = curpid;
@@ -1182,9 +1336,17 @@ trap(int *r)
 				bcopy((char *)cfsave[childmode], (char *)closed,
 				    sizeof(cfsave[childmode]));
 				cwdino = cfwsave[childmode];
+				/* Restore the parent's handler set + any
+				 * signals queued against it during the
+				 * child's run, then let deliver_signal()
+				 * fold those into the resume frame. */
+				for(s = 0; s <= NSIG; s++)
+					handlers[s] = hsave[childmode][s];
+				pending = psave[childmode];
 				curpid = ppid;
 				r[0] = pid;
 				kdone(pid, ppid);
+				deliver_signal(r);
 				return;
 			}
 			if(spawned) {
@@ -1205,6 +1367,7 @@ trap(int *r)
 			if(childmode >= NFORK || spawned) {
 				ret = -1;
 			} else {
+				int s;
 				bcopy((char *)USERBASE, (char *)fusave[childmode],
 				    USERSIZE);
 				bcopy((char *)r, (char *)cframe[childmode],
@@ -1214,6 +1377,14 @@ trap(int *r)
 				bcopy((char *)closed, (char *)cfsave[childmode],
 				    sizeof(cfsave[childmode]));
 				cfwsave[childmode] = cwdino;
+				/* V7 fork inherits handlers but the parent
+				 * keeps the originals: save them away under
+				 * the child's depth and let the parent's
+				 * pending-signal mask resume with it. */
+				for(s = 0; s <= NSIG; s++)
+					hsave[childmode][s] = handlers[s];
+				psave[childmode] = pending;
+				pending = 0;
 				childpid[childmode] = nextpid++;
 				pidsave[childmode] = curpid;
 				curpid = childpid[childmode];
@@ -1308,8 +1479,23 @@ trap(int *r)
 		}
 	} else if(n == S_SPAWN)
 		ret = kspawn((char *)r[0], (char *)r[1], r);
+	else if(n == S_KILL)
+		ret = kkill(r[0], r[1]);
+	else if(n == S_SIGNAL) {
+		long old;
+		old = ksignal(r[0], (long)(unsigned int)r[1]);
+		r[0] = (int)(unsigned int)old;
+		deliver_signal(r);
+		return;
+	}
+	else if(n == S_SIGRETURN) {
+		ksigreturn(r);
+		deliver_signal(r);
+		return;
+	}
 out:
 	r[0] = ret;
+	deliver_signal(r);
 }
 
 void
