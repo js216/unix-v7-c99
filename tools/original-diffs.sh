@@ -250,6 +250,17 @@ diff v7/usr/src/libc/gen/strncat.c lib/strncat.c
 diff v7/usr/src/libc/gen/ttyslot.c lib/ttyslot.c
 diff v7/usr/src/libc/gen/execvp.c lib/execvp.c
 diff v7/usr/src/libc/gen/getenv.c lib/getenv.c
+diff v7/usr/src/libc/gen/atoi.c lib/atoi.c
+diff v7/usr/src/libc/gen/atol.c lib/atol.c
+diff v7/usr/src/libc/gen/abs.c lib/abs.c
+diff v7/usr/src/libc/gen/index.c lib/index.c
+diff v7/usr/src/libc/gen/rindex.c lib/rindex.c
+diff v7/usr/src/libc/gen/strcat.c lib/strcat.c
+diff v7/usr/src/libc/gen/strcmp.c lib/strcmp.c
+diff v7/usr/src/libc/gen/strcpy.c lib/strcpy.c
+diff v7/usr/src/libc/gen/strlen.c lib/strlen.c
+diff v7/usr/src/libc/gen/strncmp.c lib/strncmp.c
+diff v7/usr/src/libc/gen/strncpy.c lib/strncpy.c
 
 # include/ (real port of v7's errno.h, with a small port-side
 # helper-prototype block at the bottom; see file comment).

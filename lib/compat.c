@@ -26,17 +26,10 @@
 #define	S_UMASK		60
 
 int syscall3(int n, int a, int b, int c);
+int strlen(char *s);
+int strcmp(char *a, char *b);
 
-int
-strlen(char *s)
-{
-	char *p;
-
-	p = s;
-	while(*p)
-		p++;
-	return((int)(p - s));
-}
+/* strlen now lives in lib/strlen.c (real port of v7's libc/gen/strlen.c). */
 
 static void
 write1(char *s, int n)
@@ -317,57 +310,8 @@ exit(int n)
 		;
 }
 
-int
-strcmp(char *a, char *b)
-{
-
-	while(*a == *b) {
-		if(*a == 0)
-			return(0);
-		a++;
-		b++;
-	}
-	return(*a - *b);
-}
-
-int
-atoi(char *s)
-{
-	int n, c;
-
-	n = 0;
-	while((c = *s++))
-		if(c >= '0' && c <= '9')
-			n = n*10 + c - '0';
-		else
-			break;
-	return(n);
-}
-
-long
-atol(char *p)
-{
-	long n;
-	int f;
-
-	n = 0;
-	f = 0;
-	for(;;p++) {
-		switch(*p) {
-		case ' ':
-		case '\t':
-			continue;
-		case '-':
-			f++;
-		case '+':
-			p++;
-		}
-		break;
-	}
-	while(*p >= '0' && *p <= '9')
-		n = n*10 + *p++ - '0';
-	return(f? -n: n);
-}
+/* strcmp / atoi / atol now live in lib/strcmp.c, lib/atoi.c,
+ * lib/atol.c (real ports of v7's libc/gen/{strcmp,atoi,atol}.c). */
 
 int
 isatty(int fd)
