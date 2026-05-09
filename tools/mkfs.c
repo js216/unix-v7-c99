@@ -15,10 +15,18 @@
 #define	IFDIR	0040000
 #define	IFREG	0100000
 #define	ROOTINO	2
+#ifndef FSSIZE
 #define	FSSIZE	4096
+#endif
+#ifndef ISIZE
 #define	ISIZE	16
+#endif
+#ifndef MAXINO
 #define	MAXINO	128
+#endif
+#ifndef MAXBLK
 #define	MAXBLK	4096
+#endif
 
 struct node {
 	char path[128];

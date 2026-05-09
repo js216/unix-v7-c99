@@ -237,4 +237,9 @@ diff v7/usr/sys/sys/slp.c sys/slp.c
 
 # tools/ (added by the iter-2 ratchet seeding)
 diff v7/usr/src/cmd/mkfs.c tools/mkfs.c
+
+# cmd/ (added by the mount/umount/mkfs userland)
+diff v7/usr/src/cmd/mkfs.c   cmd/mkfs.c
+diff v7/usr/src/cmd/mount.c  cmd/mount.c
+diff v7/usr/src/cmd/umount.c cmd/umount.c
 exit 0

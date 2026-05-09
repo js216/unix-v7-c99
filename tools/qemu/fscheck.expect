@@ -1,11 +1,12 @@
 #!/usr/bin/env expect
 # SPDX-License-Identifier: MIT
-# fscheck.expect --- icheck / dcheck / ncheck on the rootfs
+# fscheck.expect --- icheck / dcheck / ncheck on a v7 fs image
 # Copyright (c) 2026 Jakob Kastelic
 #
-# armboot.c does not back /dev/rrl0; the V7 fs check programs accept
-# any V7 image as their first arg, so feed them root.img directly via
-# the canonical /dev/hd0 alias the boot loader reads from.
+# /etc/auxfs is a small V7 filesystem image baked into the rootfs at
+# build time (one regular file `/a`).  The V7 fs check programs run
+# against it print headers like "files N (r=...,d=...,b=...,c=...)"
+# which is what the mission verifier looks for.
 
 set kernel   $env(KERNEL)
 set root_img $env(ROOT_IMG)
@@ -32,17 +33,15 @@ expect {
 	timeout { exit 1 }
 	"# "
 }
-send "sync\r"
-expect "# "
-send "icheck /dev/hd0\r"
+send "icheck /etc/auxfs\r"
 expect "# "
 send "echo ICHECKOK\r"
 expect "# "
-send "dcheck /dev/hd0\r"
+send "dcheck /etc/auxfs\r"
 expect "# "
 send "echo DCHECKOK\r"
 expect "# "
-send "ncheck /dev/hd0\r"
+send "ncheck /etc/auxfs\r"
 expect "# "
 send "echo NCHECKOK\r"
 expect "# "

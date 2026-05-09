@@ -16,7 +16,8 @@ ROOT = root/etc/init root/etc/getty root/etc/mkfs root/bin/login root/bin/sh \
 	root/bin/cb root/bin/sp root/bin/find root/bin/sort root/bin/ed \
 	root/bin/mount root/bin/umount \
 	root/usr/lib/makekey root/usr/lib/diffh \
-	root/etc/passwd root/etc/ttys root/usr/dict/words
+	root/etc/passwd root/etc/ttys root/usr/dict/words \
+	build/auxfs.img
 
 all:	unix
 
@@ -26,10 +27,11 @@ unix:	root.img sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h
 qemu:	unix
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel unix -drive if=none,file=root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0
 
-root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys
+root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
 	cd lib; make
 	tools/mkfs root.img \
 	/etc/init=root/etc/init /etc/getty=root/etc/getty /etc/mkfs=root/etc/mkfs \
+	/etc/auxfs=build/auxfs.img \
 	/bin/mount=root/bin/mount /bin/umount=root/bin/umount \
 	/bin/login=root/bin/login /bin/sh=root/bin/sh \
 	/bin/cat=root/bin/cat /bin/echo=root/bin/echo \
@@ -67,6 +69,19 @@ root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makef
 
 tools/mkfs: tools/mkfs.c
 	cc -std=c99 -Wall -Wextra -Wpedantic -Werror -o tools/mkfs tools/mkfs.c
+
+# A pocket-sized mkfs builds the /etc/auxfs filesystem-in-a-file used
+# by the icheck/dcheck/ncheck mission step; FSSIZE/ISIZE are dialed
+# down so the embedded image fits inside the host-built root.img
+# without exhausting its 4096-block budget.
+tools/minimkfs: tools/mkfs.c
+	cc -std=c99 -Wall -Wextra -Wpedantic -Werror \
+	    -DFSSIZE=64 -DISIZE=2 -DMAXINO=16 -DMAXBLK=64 \
+	    -o tools/minimkfs tools/mkfs.c
+
+build/auxfs.img: tools/minimkfs root/etc/passwd
+	mkdir -p build
+	tools/minimkfs build/auxfs.img /a=root/etc/passwd
 
 root/usr/dict/words: v7/usr/dict/words
 	mkdir -p root/usr/dict

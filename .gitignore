@@ -17,3 +17,4 @@ lib/*.elf
 
 v7
 build/
+tools/minimkfs

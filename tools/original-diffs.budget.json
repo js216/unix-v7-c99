@@ -159,9 +159,17 @@
     "deletes": 5,
     "inserts": 6
   },
+  "cmd/mkfs.c": {
+    "deletes": 607,
+    "inserts": 14
+  },
   "cmd/mknod.c": {
     "deletes": 0,
     "inserts": 6
+  },
+  "cmd/mount.c": {
+    "deletes": 59,
+    "inserts": 21
   },
   "cmd/mv.c": {
     "deletes": 19,
@@ -394,6 +402,10 @@
   "cmd/tty.c": {
     "deletes": 2,
     "inserts": 5
+  },
+  "cmd/umount.c": {
+    "deletes": 45,
+    "inserts": 12
   },
   "cmd/uniq.c": {
     "deletes": 13,
@@ -876,7 +888,7 @@
     "inserts": 0
   },
   "tools/mkfs.c": {
-    "deletes": 560,
-    "inserts": 257
+    "deletes": 556,
+    "inserts": 261
   }
 }

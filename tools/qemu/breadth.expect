@@ -53,7 +53,7 @@ set utils {
 	{calendar "calendar </tmp/empty"}
 	{crypt    "crypt abc </tmp/empty >/tmp/c"}
 	{makekey  "makekey </tmp/empty >/tmp/k"}
-	{random   "random 2"}
+	{random   "random 2 </tmp/empty"}
 	{stty     "stty"}
 	{tabs     "tabs 4"}
 	{tty      "tty"}
