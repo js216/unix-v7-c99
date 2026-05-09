@@ -33,6 +33,14 @@ main(void)
 {
 
 	startup();
+#ifdef EVB
+	/* The EVB build does not yet have an SD/eMMC block driver, so
+	 * the armboot() filesystem walker would panic in virtioinit().
+	 * Halt here once the banner is on the wire -- subsequent EVB
+	 * mission steps will wire up the real block path. */
+	for(;;)
+		;
+#endif
 #if 0
 	/*
 	 * set up system process

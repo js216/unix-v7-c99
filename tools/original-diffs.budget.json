@@ -817,7 +817,7 @@
   },
   "sys/main.c": {
     "deletes": 1,
-    "inserts": 8
+    "inserts": 16
   },
   "sys/malloc.c": {
     "deletes": 9,

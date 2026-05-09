@@ -5,15 +5,18 @@ CONF ?= qemu_arm
 
 ifeq ($(CONF),evb_arm)
 LDSCRIPT = ../arch/evb.ld
+DEVS    = ../dev/stm32_usart.o
+CFLAGS_EXTRA = -DEVB
 else
 LDSCRIPT = ../arch/a7.ld
+DEVS    = ../dev/pl011.o
+CFLAGS_EXTRA =
 endif
 
-CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin -mcpu=cortex-a7 -marm -ffreestanding
+CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin -mcpu=cortex-a7 -marm -ffreestanding $(CFLAGS_EXTRA)
 LDFLAGS = -nostdlib -T $(LDSCRIPT)
 
 OBJS = malloc.o prf.o ../arch/machdep.o ../arch/armboot.o
-DEVS = ../dev/pl011.o
 
 unix: ../unix
 
