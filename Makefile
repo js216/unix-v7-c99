@@ -1,4 +1,4 @@
-ROOT = root/etc/init root/etc/getty root/etc/mkfs root/bin/login root/bin/sh \
+ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/cat root/bin/echo root/bin/ls root/bin/pwd root/bin/sync \
 	root/bin/rev root/bin/yes root/bin/wc root/bin/basename root/bin/sum \
 	root/bin/tty root/bin/cmp root/bin/comm root/bin/cal root/bin/od \
@@ -30,7 +30,7 @@ qemu:	unix
 root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
 	cd lib; make
 	tools/mkfs root.img \
-	/etc/init=root/etc/init /etc/getty=root/etc/getty /etc/mkfs=root/etc/mkfs \
+	/etc/init=root/etc/init /etc/getty=root/etc/getty \
 	/etc/auxfs=build/auxfs.img \
 	/bin/mount=root/bin/mount /bin/umount=root/bin/umount /bin/id=root/bin/id \
 	/bin/login=root/bin/login /bin/sh=root/bin/sh \

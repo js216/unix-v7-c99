@@ -1,11 +1,18 @@
 CC = arm-none-eabi-gcc
-CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wno-error=parentheses -Wno-error=dangling-else -Wno-error=misleading-indentation -Wno-error=implicit-fallthrough -Wno-error=int-to-pointer-cast -Wno-error=char-subscripts -Wno-error=sizeof-pointer-div -Wno-error=missing-braces -Wno-error=missing-field-initializers -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -I../include -I..
+CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wno-error=parentheses -Wno-error=dangling-else -Wno-error=misleading-indentation -Wno-error=implicit-fallthrough -Wno-error=int-to-pointer-cast -Wno-error=char-subscripts -Wno-error=sizeof-pointer-div -Wno-error=missing-braces -Wno-error=missing-field-initializers -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -I../include -I..
 SHCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -fms-extensions -Wno-parentheses -Wno-dangling-else -Wno-implicit-int -Wno-implicit-function-declaration -Wno-return-type -Wno-return-mismatch -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -Wno-main -Wno-array-bounds -Wno-missing-braces -Wno-type-limits -Wno-implicit-fallthrough -Wno-pedantic -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -I../include -I..
 EDCFLAGS = $(SHCFLAGS) -Wno-builtin-declaration-mismatch
 LDFLAGS = -nostdlib -T u.ld
 LDLIBS = -lgcc
-LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o
-ETC = init getty mkfs
+LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
+      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o getenv.o
+# v7 sh has its own internal `getenv()` (a void(void) that walks
+# environ[] and registers each entry as a sh variable -- not libc
+# getenv).  Keep that file out of the sh link to avoid a duplicate
+# symbol clash.
+SHLIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
+      getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o
+ETC = init getty
 BIN = login cat echo ls pwd sync rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount id
 USRLIB = makekey diffh
 SHSRC = args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec
@@ -34,7 +41,7 @@ all:	$(LIB)
 	set -e; for i in $(SHSRC); do \
 		$(CC) $(SHCFLAGS) -I../cmd/sh -c ../cmd/sh/$$i.c; \
 	done
-	$(CC) $(SHCFLAGS) $(LDFLAGS) -o sh.elf $(LIB) $(SHOBJ)
+	$(CC) $(SHCFLAGS) $(LDFLAGS) -o sh.elf $(SHLIB) $(SHOBJ)
 	arm-none-eabi-objcopy -O binary sh.elf ../root/bin/sh
 
 crt0.o: crt0.s

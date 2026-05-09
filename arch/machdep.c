@@ -45,6 +45,14 @@ startup(void)
 	 * "mem = " from the console keeps working; on Armv7 we report
 	 * bytes directly rather than PDP-11 click-converted sizes. */
 	printf("mem = %D\n", (long)(128L * 1024 * 1024));
+#ifdef EVB
+	/* The EVB build does not yet have an SD/eMMC block driver, so
+	 * armboot()'s virtio probe would panic.  Halt cleanly here
+	 * after the banner; this file is exempt from the original-diffs
+	 * ratchet so the wart is contained to arch/. */
+	for(;;)
+		;
+#endif
 #if 0
 	register i;
 

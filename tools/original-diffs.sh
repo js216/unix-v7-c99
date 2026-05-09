@@ -238,8 +238,20 @@ diff v7/usr/sys/sys/slp.c sys/slp.c
 # tools/ (added by the iter-2 ratchet seeding)
 diff v7/usr/src/cmd/mkfs.c tools/mkfs.c
 
-# cmd/ (added by the mount/umount/mkfs userland)
-diff v7/usr/src/cmd/mkfs.c   cmd/mkfs.c
-diff v7/usr/src/cmd/mount.c  cmd/mount.c
+# cmd/ (added by the mount/umount userland)
+diff v7/usr/src/cmd/mount.c cmd/mount.c
 diff v7/usr/src/cmd/umount.c cmd/umount.c
+
+# lib/ (real ports of v7's libc/stdio + libc/gen helpers)
+diff v7/usr/src/libc/stdio/getpwent.c lib/getpwent.c
+diff v7/usr/src/libc/stdio/getpwnam.c lib/getpwnam.c
+diff v7/usr/src/libc/stdio/getpwuid.c lib/getpwuid.c
+diff v7/usr/src/libc/gen/strncat.c lib/strncat.c
+diff v7/usr/src/libc/gen/ttyslot.c lib/ttyslot.c
+diff v7/usr/src/libc/gen/execvp.c lib/execvp.c
+diff v7/usr/src/libc/gen/getenv.c lib/getenv.c
+
+# include/ (real port of v7's errno.h, with a small port-side
+# helper-prototype block at the bottom; see file comment).
+diff v7/usr/include/errno.h include/errno.h
 exit 0
