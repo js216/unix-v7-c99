@@ -1,0 +1,44 @@
+#!/usr/bin/env expect
+# SPDX-License-Identifier: MIT
+# smoke.expect --- userland smoke set: pwd / cat / wc / ls / echo $$
+# Copyright (c) 2026 Jakob Kastelic
+
+set kernel   $env(KERNEL)
+set root_img $env(ROOT_IMG)
+set log_path $env(LOG)
+
+log_user 0
+log_file -a $log_path
+
+set timeout 60
+
+spawn -noecho qemu-system-arm \
+	-machine virt -cpu cortex-a7 -nographic -no-reboot \
+	-kernel $kernel \
+	-drive if=none,file=$root_img,format=raw,id=hd0 \
+	-device virtio-blk-device,drive=hd0
+
+expect {
+	timeout { exit 1 }
+	"login:"
+}
+send "root\r"
+
+expect {
+	timeout { exit 1 }
+	"# "
+}
+send "pwd\r"
+expect "# "
+send "cat /etc/passwd\r"
+expect "# "
+send "wc /etc/passwd\r"
+expect "# "
+send "ls /bin\r"
+expect "# "
+send "echo \$\$\r"
+expect "# "
+send "sync\r"
+expect "# "
+send "exit\r"
+expect eof
