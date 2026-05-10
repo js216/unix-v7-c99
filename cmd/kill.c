@@ -8,7 +8,7 @@
 int kill(int pid, int sig);
 int atoi(char *s);
 void exit(int n);
-char *sys_errlist[] = { "error" };
+extern char *sys_errlist[];
 int errno;
 
 int

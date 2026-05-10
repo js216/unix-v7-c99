@@ -263,6 +263,11 @@ diff v7/usr/src/libc/gen/strncmp.c lib/strncmp.c
 diff v7/usr/src/libc/gen/strncpy.c lib/strncpy.c
 diff v7/usr/src/libc/gen/isatty.c lib/isatty.c
 diff v7/usr/src/libc/gen/perror.c lib/perror.c
+diff v7/usr/src/libc/gen/swab.c lib/swab.c
+diff v7/usr/src/libc/gen/rand.c lib/rand.c
+diff v7/usr/src/libc/gen/mktemp.c lib/mktemp.c
+diff v7/usr/src/libc/gen/errlst.c lib/errlst.c
+diff v7/usr/src/libc/gen/ttyname.c lib/ttyname.c
 
 # include/ (real port of v7's errno.h, with a small port-side
 # helper-prototype block at the bottom; see file comment).

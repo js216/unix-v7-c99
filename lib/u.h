@@ -634,22 +634,8 @@ realloc(char *p, unsigned n)
 	return(q);
 }
 
-static inline char *
-mktemp(char *s)
-{
-	static int n;
-	char *p;
-	int m;
-
-	for(p=s; *p; p++)
-		;
-	m = n++;
-	while(p > s && p[-1] == 'X') {
-		*--p = m%10 + '0';
-		m /= 10;
-	}
-	return(s);
-}
+/* mktemp now lives in lib/mktemp.c (port of v7's libc/gen/mktemp.c). */
+extern char *mktemp(char *s);
 
 static inline int
 setuid(int uid)
@@ -700,22 +686,9 @@ alarm(int n)
 	return(0);
 }
 
-static unsigned long randx = 1;
-
-static inline void
-srand(int n)
-{
-
-	randx = n;
-}
-
-static inline int
-rand(void)
-{
-
-	randx = randx*1103515245 + 12345;
-	return((randx >> 16) & 077777);
-}
+/* rand / srand now live in lib/rand.c (port of v7's libc/gen/rand.c). */
+extern void srand(unsigned int x);
+extern int rand(void);
 
 static inline int
 signal(int sig, int fun)
@@ -963,12 +936,9 @@ extern char *crypt(char *key, char *salt);
 extern char *getenv(char *name);
 extern char **environ;
 
-static inline char *
-ttyname(int fd)
-{
-
-	return(fd >= 0 && fd <= 2 ? "/dev/console" : 0);
-}
+/* ttyname now lives in lib/ttyname.c (port of v7's libc/gen/ttyname.c).
+ * Returns NULL until /dev is populated -- the rootfs has no /dev yet. */
+extern char *ttyname(int fd);
 
 /* getpwuid/getpwnam/setpwent/endpwent/getpwent are now real -- they
  * walk /etc/passwd via the v7-style getpwent() machinery in
