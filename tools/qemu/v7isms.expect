@@ -70,4 +70,10 @@ expect "# "
 send "sync\r"
 expect "# "
 send "exit\r"
+# Ctrl-A x: in -nographic mode, qemu interprets the stdio escape
+# sequence Ctrl-A then x as a monitor "quit" command, terminating
+# qemu immediately. Without this the wrapper would block in expect
+# eof until the wall-clock timeout in qemu-shell.sh fires.
+sleep 0.5
+send "\x01x"
 expect eof
