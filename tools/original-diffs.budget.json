@@ -380,8 +380,8 @@
     "inserts": 33
   },
   "cmd/time.c": {
-    "deletes": 4,
-    "inserts": 10
+    "deletes": 3,
+    "inserts": 9
   },
   "cmd/touch.c": {
     "deletes": 6,
@@ -787,6 +787,10 @@
     "deletes": 11,
     "inserts": 11
   },
+  "lib/errlst.c": {
+    "deletes": 2,
+    "inserts": 7
+  },
   "lib/execvp.c": {
     "deletes": 39,
     "inserts": 39
@@ -819,9 +823,17 @@
     "deletes": 2,
     "inserts": 9
   },
+  "lib/mktemp.c": {
+    "deletes": 10,
+    "inserts": 14
+  },
   "lib/perror.c": {
     "deletes": 11,
     "inserts": 24
+  },
+  "lib/rand.c": {
+    "deletes": 5,
+    "inserts": 10
   },
   "lib/rindex.c": {
     "deletes": 8,
@@ -855,9 +867,17 @@
     "deletes": 9,
     "inserts": 10
   },
+  "lib/swab.c": {
+    "deletes": 6,
+    "inserts": 8
+  },
   "lib/syscall.s": {
     "deletes": 25,
     "inserts": 22
+  },
+  "lib/ttyname.c": {
+    "deletes": 18,
+    "inserts": 31
   },
   "lib/ttyslot.c": {
     "deletes": 40,

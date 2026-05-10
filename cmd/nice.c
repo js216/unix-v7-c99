@@ -7,7 +7,7 @@ int nice(int incr);
 int execvp(char *name, char **argv);
 void exit(int n);
 int errno;
-char *sys_errlist[] = { "error" };
+extern char *sys_errlist[];
 
 int
 main(argc, argv)

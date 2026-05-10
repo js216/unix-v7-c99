@@ -315,12 +315,7 @@ exit(int n)
 
 /* isatty now lives in lib/isatty.c (port of v7's libc/gen/isatty.c). */
 
-char *
-ttyname(int fd)
-{
-
-	return(fd == 0 ? "/dev/console" : 0);
-}
+/* ttyname now lives in lib/ttyname.c (port of v7's libc/gen/ttyname.c). */
 
 void
 putchar(int c)

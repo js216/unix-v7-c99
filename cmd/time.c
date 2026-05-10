@@ -6,7 +6,7 @@
 #include <sys/times.h>
 
 int errno;
-char *sys_errlist[] = { "error" };
+extern char *sys_errlist[];
 
 void printt(char *s, long a);
 void exit(int n);
