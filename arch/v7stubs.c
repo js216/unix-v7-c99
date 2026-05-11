@@ -27,8 +27,31 @@ struct user u;
 /* head of available-buffer list */
 struct buf bfreelist;
 
-/* block-device switch table (single empty slot terminates the table) */
-struct bdevsw bdevsw[1] = { { 0, 0, 0, 0 } };
+/* nulldev: V7 placeholder for unimplemented open/close on a bdevsw row */
+int
+nulldev(void)
+{
+	return 0;
+}
+
+/* block-device switch table: bdevsw[0] is the active block device for
+ * this build (mp135 DDR-backed memcpy on EVB, virtio-blk on qemu).
+ * The single empty trailing row terminates the table. */
+#ifdef EVB
+extern int mp135_strategy(struct buf *);
+extern struct buf mp135_tab;
+struct bdevsw bdevsw[2] = {
+	{ nulldev, nulldev, mp135_strategy, &mp135_tab },
+	{ 0, 0, 0, 0 }
+};
+#else
+extern int virtio_strategy(struct buf *);
+extern struct buf virtio_tab;
+struct bdevsw bdevsw[2] = {
+	{ nulldev, nulldev, virtio_strategy, &virtio_tab },
+	{ 0, 0, 0, 0 }
+};
+#endif
 
 /* UNIBUS map release: meaningless on Armv7, no-op */
 void
