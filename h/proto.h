@@ -59,6 +59,7 @@ int nulldev(void);
 void binit_stub(void);
 extern dev_t rootdev;
 
+
 /* dev/mp135_blk.c */
 int mp135_strategy(struct buf *bp);
 

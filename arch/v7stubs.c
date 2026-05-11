@@ -17,8 +17,10 @@
 #include "../h/buf.h"
 #include "../h/conf.h"
 #include "../h/dir.h"
+#include "../h/inode.h"
 #include "../h/user.h"
 #include "../h/proc.h"
+#include "../h/filsys.h"
 #include "../h/proto.h"
 
 /* per-process user struct (referenced by physio() in dev/bio.c) */
@@ -151,4 +153,90 @@ void
 splx(int s)
 {
 	(void)s;
+}
+
+/* In-core inode table referenced by sys/iget.c and sys/nami.c. */
+struct inode inode[NINODE];
+
+/* Stubs for sys/iget.c + sys/nami.c.  No caller wires through them
+ * in this sub-step (armboot.c's shim namei/loadino/iget remain the
+ * active path); these definitions exist solely so the iget.o /
+ * nami.o translation units link.  They will be replaced by their
+ * real V7 implementations as the cascade widens in later iterations.
+ */
+void
+bcopy(caddr_t from, caddr_t to, unsigned int count)
+{
+	while (count--)
+		*to++ = *from++;
+}
+
+void
+free(dev_t dev, daddr_t bn)
+{
+	(void)dev;
+	(void)bn;
+}
+
+struct filsys *
+getfs(dev_t dev)
+{
+	(void)dev;
+	return (struct filsys *)0;
+}
+
+struct inode *
+ialloc(dev_t dev)
+{
+	(void)dev;
+	return (struct inode *)0;
+}
+
+void
+ifree(dev_t dev, ino_t ino)
+{
+	(void)dev;
+	(void)ino;
+}
+
+void
+prele(struct inode *ip)
+{
+	(void)ip;
+}
+
+void
+plock(struct inode *ip)
+{
+	(void)ip;
+}
+
+int
+access(struct inode *ip, int mode)
+{
+	(void)ip;
+	(void)mode;
+	return 0;
+}
+
+daddr_t
+bmap(struct inode *ip, daddr_t bn, int rwflg)
+{
+	(void)ip;
+	(void)bn;
+	(void)rwflg;
+	return (daddr_t)0;
+}
+
+int
+fubyte(caddr_t addr)
+{
+	return *(unsigned char *)addr;
+}
+
+int
+writei(struct inode *ip)
+{
+	(void)ip;
+	return 0;
 }

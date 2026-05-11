@@ -6,6 +6,17 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 
+/* Stub prototypes - implementations live in v7stubs.c or other sys TUs. */
+extern void bcopy(caddr_t from, caddr_t to, unsigned int count);
+extern void brelse(struct buf *bp);
+extern struct buf *bread(dev_t dev, daddr_t blkno);
+extern int access(struct inode *ip, int mode);
+extern daddr_t bmap(struct inode *ip, daddr_t bn, int rwflg);
+extern int fubyte(caddr_t addr);
+extern void plock(struct inode *ip);
+extern void iput(struct inode *ip);
+extern struct inode *iget(dev_t dev, ino_t ino);
+
 /*
  * Convert a pathname into a pointer to
  * an inode. Note that the inode is locked.
@@ -18,11 +29,10 @@
  *	2 if name is to be deleted
  */
 struct inode *
-namei(func, flag)
-int (*func)();
+namei(int (*func)(void), int flag)
 {
 	register struct inode *dp;
-	register c;
+	register int c;
 	register char *cp;
 	struct buf *bp;
 	int i;
@@ -203,7 +213,8 @@ out:
  * Return the next character from the
  * kernel string pointed at by dirp.
  */
-schar()
+int
+schar(void)
 {
 
 	return(*u.u_dirp++ & 0377);
@@ -213,9 +224,10 @@ schar()
  * Return the next character from the
  * user string pointed at by dirp.
  */
-uchar()
+int
+uchar(void)
 {
-	register c;
+	register int c;
 
 	c = fubyte(u.u_dirp++);
 	if(c == -1)
