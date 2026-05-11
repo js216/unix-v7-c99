@@ -90,9 +90,11 @@ struct ustat {
 };
 
 static unsigned int l1[4096] __attribute__((aligned(16384)));
+#ifndef EVB
 static volatile unsigned char vq[512] __attribute__((aligned(4096)));
 static struct virtio_blk_req vreq __attribute__((aligned(16)));
 static volatile unsigned char vstatus __attribute__((aligned(4)));
+#endif
 static unsigned char blkbuf[BSIZE] __attribute__((aligned(512)));
 static unsigned char usave[USERSIZE];
 static unsigned char fusave[NFORK][USERSIZE];
@@ -109,11 +111,15 @@ static int cfsave[NFORK][NFD];
 static ino_t cwdino = ROOTINO;
 static ino_t cwdsave;
 static ino_t cfwsave[NFORK];
+#ifndef EVB
 static unsigned int lastused;
+#endif
 static unsigned int tmpused;
 static ino_t nextino;
 static daddr_t nextblk;
+#ifndef EVB
 static unsigned int vbase;
+#endif
 static int spawned;
 static int childmode;
 static int childdone[NFD];
@@ -166,6 +172,7 @@ static int kuidsave[NFORK];
 #define	qavail	(*(volatile struct vqavail *)(void *)&vq[QAOFF])
 #define	qused	(*(volatile struct vqused *)(void *)&vq[QUOFF])
 
+#ifndef EVB
 static unsigned int
 mmio(unsigned int off)
 {
@@ -179,6 +186,7 @@ mmios(unsigned int off, unsigned int val)
 
 	*(volatile unsigned int *)(vbase + off) = val;
 }
+#endif
 
 static void
 mmuinit(void)
@@ -187,10 +195,22 @@ mmuinit(void)
 
 	for(i=0; i<4096; i++)
 		l1[i] = 0;
+#ifdef EVB
+	/* STM32MP135 DDR window: kernel image and DDR-staged rootfs both
+	 * live well above the qemu default KERNBASE.  Map a generous span
+	 * from 0xC0000000 covering DDR (0xC0000000..0xE0000000) plus the
+	 * APB peripheral block that hosts USART4 (0x40000000..0x50000000)
+	 * so putchar() keeps working after MMU is enabled. */
+	for(pa=0x40000000U; pa<0x50000000U; pa+=0x00100000U)
+		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
+	for(pa=0xC0000000U; pa<0xE0000000U; pa+=0x00100000U)
+		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
+#else
 	for(pa=KERNBASE; pa<0x48000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
 	for(pa=0x08000000U; pa<0x0c000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
+#endif
 	l1[0] = USERPHYS | 0x00000c02U;
 	mmu_on((unsigned int)l1);
 }
@@ -242,6 +262,7 @@ strcmp(char *a, char *b)
 static void
 virtioinit(void)
 {
+#ifndef EVB
 	unsigned int n;
 
 	for(vbase=VIRTIO_FIRST; vbase<VIRTIO_LAST; vbase+=VIRTIO_STEP)
@@ -267,11 +288,27 @@ virtioinit(void)
 	mmios(0x40, ((unsigned int)vq) >> 12);
 	mmios(0x70, 15);
 	lastused = 0;
+#endif
 }
 
 static void
 bio(daddr_t blkno, void *buf, unsigned int type)
 {
+#ifdef EVB
+	/* No virtio-MMIO on the STM32MP135 EVB.  The bootloader's `two`
+	 * command stages root.img into DDR at 0xC4400000, so we satisfy
+	 * block I/O directly out of that window with a bcopy().  Writes
+	 * are honored but only mutate the DDR-resident image (no
+	 * persistence back to the SD card). */
+	volatile unsigned char *ddr;
+
+	ddr = (volatile unsigned char *)(0xC4400000U +
+	    (unsigned int)blkno * (unsigned int)BSIZE);
+	if(type == VIRTIO_BLK_T_OUT)
+		bcopy((char *)buf, (char *)ddr, (unsigned int)BSIZE);
+	else
+		bcopy((char *)ddr, (char *)buf, (unsigned int)BSIZE);
+#else
 	unsigned int spin;
 	unsigned short aidx;
 
@@ -311,6 +348,7 @@ bio(daddr_t blkno, void *buf, unsigned int type)
 	if(vstatus != 0) {
 		panic("blk");
 	}
+#endif
 }
 
 static void
@@ -1558,6 +1596,26 @@ armboot(void)
 	files[2].ino = 1;
 	files[2].mode = IFCHR;
 	bread(SUPERB, blkbuf);
+#ifdef EVB
+	/* Sentinel: prove the DDR-backed bio() path returned a real V7
+	 * superblock before we touch anything that might panic.  The
+	 * on-disk superblock layout (matched by tools/mkfs) packs
+	 * s_isize as a u16 at offset 0 and s_fsize as a u32 at offset 2,
+	 * with no padding between them.  The host C struct gets 2 bytes
+	 * of alignment padding, so reading s_fsize through the struct
+	 * yields garbage; decode the raw bytes directly here. */
+	{
+		unsigned int isize, fsize;
+		isize = (unsigned int)blkbuf[0]
+		      | ((unsigned int)blkbuf[1] << 8);
+		fsize = (unsigned int)blkbuf[2]
+		      | ((unsigned int)blkbuf[3] << 8)
+		      | ((unsigned int)blkbuf[4] << 16)
+		      | ((unsigned int)blkbuf[5] << 24);
+		printf("evb: rootfs isize=%d fsize=%d\n",
+		    (int)isize, (int)fsize);
+	}
+#endif
 	if(((struct filsys *)blkbuf)->s_isize == 0)
 		panic("fs");
 	scanfs();
