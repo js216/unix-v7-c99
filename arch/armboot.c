@@ -12,50 +12,10 @@
 #define	IFCHR			0020000
 #define	IFBLK			0060000
 #define	IFREG			0100000
-#define	VRING_DESC_F_NEXT	1
-#define	VRING_DESC_F_WRITE	2
-#define	VIRTIO_FIRST		0x0a000000U
-#define	VIRTIO_LAST		0x0a004000U
-#define	VIRTIO_STEP		0x00000200U
-#define	VIRTIO_MAGIC		0x74726976U
-#define	VIRTIO_BLK_T_IN		0
-#define	VIRTIO_BLK_T_OUT	1
-#define	VQSIZE			8
 #define	NFD			16
 #define	NPIPES			4
 #define	NFORK			8
 #define	PIPESIZ			65536
-
-struct vqdesc {
-	unsigned int	addrlo;
-	unsigned int	addrhi;
-	unsigned int	len;
-	unsigned short	flags;
-	unsigned short	next;
-};
-
-struct vqavail {
-	unsigned short	flags;
-	unsigned short	idx;
-	unsigned short	ring[VQSIZE];
-};
-
-struct vqused_elem {
-	unsigned int	id;
-	unsigned int	len;
-};
-
-struct vqused {
-	unsigned short	flags;
-	unsigned short	idx;
-	struct vqused_elem ring[VQSIZE];
-};
-
-struct virtio_blk_req {
-	unsigned int	type;
-	unsigned int	reserved;
-	unsigned long long sector;
-};
 
 struct file {
 	ino_t	ino;
@@ -91,11 +51,6 @@ struct ustat {
 };
 
 static unsigned int l1[4096] __attribute__((aligned(16384)));
-#ifndef EVB
-static volatile unsigned char vq[512] __attribute__((aligned(4096)));
-static struct virtio_blk_req vreq __attribute__((aligned(16)));
-static volatile unsigned char vstatus __attribute__((aligned(4)));
-#endif
 static unsigned char blkbuf[BSIZE] __attribute__((aligned(512)));
 static unsigned char usave[USERSIZE];
 static unsigned char fusave[NFORK][USERSIZE];
@@ -112,15 +67,9 @@ static int cfsave[NFORK][NFD];
 static ino_t cwdino = ROOTINO;
 static ino_t cwdsave;
 static ino_t cfwsave[NFORK];
-#ifndef EVB
-static unsigned int lastused;
-#endif
 static unsigned int tmpused;
 static ino_t nextino;
 static daddr_t nextblk;
-#ifndef EVB
-static unsigned int vbase;
-#endif
 static int spawned;
 static int childmode;
 static int childdone[NFD];
@@ -165,29 +114,6 @@ static unsigned int psave[NFORK];
 static int kumask;
 static int kuid;
 static int kuidsave[NFORK];
-
-#define	QDOFF	0
-#define	QAOFF	(sizeof(struct vqdesc) * VQSIZE)
-#define	QUOFF	((QAOFF + sizeof(struct vqavail) + 3) & ~3)
-#define	qdesc	((volatile struct vqdesc *)(void *)&vq[QDOFF])
-#define	qavail	(*(volatile struct vqavail *)(void *)&vq[QAOFF])
-#define	qused	(*(volatile struct vqused *)(void *)&vq[QUOFF])
-
-#ifndef EVB
-static unsigned int
-mmio(unsigned int off)
-{
-
-	return(*(volatile unsigned int *)(vbase + off));
-}
-
-static void
-mmios(unsigned int off, unsigned int val)
-{
-
-	*(volatile unsigned int *)(vbase + off) = val;
-}
-#endif
 
 static void
 mmuinit(void)
@@ -264,98 +190,6 @@ strcmp(char *a, char *b)
 		b++;
 	}
 	return(*a - *b);
-}
-
-static void
-virtioinit(void)
-{
-#ifndef EVB
-	unsigned int n;
-
-	for(vbase=VIRTIO_FIRST; vbase<VIRTIO_LAST; vbase+=VIRTIO_STEP)
-		if(mmio(0) == VIRTIO_MAGIC && mmio(8) == 2)
-			break;
-	if(vbase == VIRTIO_LAST)
-		panic("virtio");
-	mmios(0x70, 0);
-	mmios(0x70, 1);
-	mmios(0x70, 3);
-	(void)mmio(0x10);
-	mmios(0x20, 0);
-	mmios(0x70, 11);
-	if((mmio(0x70) & 8) == 0)
-		panic("virtio features");
-	mmios(0x28, 4096);
-	mmios(0x30, 0);
-	n = mmio(0x34);
-	if(n < VQSIZE)
-		panic("virtio queue");
-	mmios(0x38, VQSIZE);
-	mmios(0x3c, 4);
-	mmios(0x40, ((unsigned int)vq) >> 12);
-	mmios(0x70, 15);
-	lastused = 0;
-#endif
-}
-
-static void __attribute__((unused))
-bio(daddr_t blkno, void *buf, unsigned int type)
-{
-#ifdef EVB
-	/* No virtio-MMIO on the STM32MP135 EVB.  The bootloader's `two`
-	 * command stages root.img into DDR at 0xC4400000, so we satisfy
-	 * block I/O directly out of that window with a bcopy().  Writes
-	 * are honored but only mutate the DDR-resident image (no
-	 * persistence back to the SD card). */
-	volatile unsigned char *ddr;
-
-	ddr = (volatile unsigned char *)(0xC4400000U +
-	    (unsigned int)blkno * (unsigned int)BSIZE);
-	if(type == VIRTIO_BLK_T_OUT)
-		bcopy((char *)buf, (char *)ddr, (unsigned int)BSIZE);
-	else
-		bcopy((char *)ddr, (char *)buf, (unsigned int)BSIZE);
-#else
-	unsigned int spin;
-	unsigned short aidx;
-
-	vreq.type = type;
-	vreq.reserved = 0;
-	vreq.sector = (unsigned long long)blkno;
-	vstatus = 0xff;
-	qdesc[0].addrlo = (unsigned int)&vreq;
-	qdesc[0].addrhi = 0;
-	qdesc[0].len = sizeof(vreq);
-	qdesc[0].flags = VRING_DESC_F_NEXT;
-	qdesc[0].next = 1;
-	qdesc[1].addrlo = (unsigned int)buf;
-	qdesc[1].addrhi = 0;
-	qdesc[1].len = BSIZE;
-	qdesc[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-	if(type == VIRTIO_BLK_T_OUT)
-		qdesc[1].flags = VRING_DESC_F_NEXT;
-	qdesc[1].next = 2;
-	qdesc[2].addrlo = (unsigned int)&vstatus;
-	qdesc[2].addrhi = 0;
-	qdesc[2].len = 1;
-	qdesc[2].flags = VRING_DESC_F_WRITE;
-	qdesc[2].next = 0;
-	aidx = qavail.idx;
-	qavail.ring[aidx % VQSIZE] = 0;
-	dmbsy();
-	qavail.idx = aidx + 1;
-	dmbsy();
-	mmios(0x50, 0);
-	spin = 0;
-	while(lastused == qused.idx) {
-		if(++spin == 100000000)
-			spin = 0;
-	}
-	lastused++;
-	if(vstatus != 0) {
-		panic("blk");
-	}
-#endif
 }
 
 static void
@@ -1601,7 +1435,7 @@ armboot(void)
 {
 
 	mmuinit();
-	virtioinit();
+	virtio_init();
 	files[0].ino = 1;
 	files[0].mode = IFCHR;
 	files[1].ino = 1;
