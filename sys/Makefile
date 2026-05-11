@@ -16,7 +16,7 @@ endif
 CFLAGS  = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin -fcommon -mcpu=cortex-a7 -marm -ffreestanding $(CFLAGS_EXTRA)
 LDFLAGS = -nostdlib -T $(LDSCRIPT)
 
-OBJS = malloc.o prf.o ../arch/machdep.o ../arch/armboot.o ../arch/v7stubs.o ../dev/bio.o
+OBJS = malloc.o prf.o ../arch/machdep.o ../arch/armboot.o ../arch/v7stubs.o ../dev/bio.o ../dev/mp135_blk.o ../dev/virtio_blk.o
 
 unix: ../unix
 
@@ -29,13 +29,15 @@ unix: ../unix
 malloc.o: malloc.c ../h/map.h ../h/param.h
 prf.o:    prf.c ../h/param.h ../h/buf.h
 ../dev/bio.o: ../dev/bio.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h ../h/systm.h ../h/user.h ../h/proc.h ../h/seg.h ../h/dir.h
+../dev/mp135_blk.o: ../dev/mp135_blk.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h
+../dev/virtio_blk.o: ../dev/virtio_blk.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h
 ../arch/v7stubs.o: ../arch/v7stubs.c ../h/proto.h ../h/buf.h ../h/conf.h ../h/param.h
 
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(DEVS) ../arch/a7.o main.o unix ../unix ../dev/bio.o ../arch/v7stubs.o
+	rm -f $(OBJS) $(DEVS) ../arch/a7.o main.o unix ../unix ../dev/bio.o ../dev/mp135_blk.o ../dev/virtio_blk.o ../arch/v7stubs.o
 
 qemu: unix
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel ../unix -drive if=none,file=../root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0

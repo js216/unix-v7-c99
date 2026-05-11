@@ -55,5 +55,13 @@ void sleep(caddr_t chan, int pri);
 int spl0(void);
 int spl6(void);
 void splx(int s);
+int nulldev(void);
+
+/* dev/mp135_blk.c */
+int mp135_strategy(struct buf *bp);
+
+/* dev/virtio_blk.c */
+int virtio_strategy(struct buf *bp);
+void virtio_init(void);
 
 #endif
