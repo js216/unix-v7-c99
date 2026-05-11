@@ -205,13 +205,19 @@ mmuinit(void)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
 	for(pa=0xC0000000U; pa<0xE0000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
+	/* USERPHYS as defined in h/arm.h points at 0x41000000, which on the
+	 * STM32MP135 is APB peripheral space, not RAM.  Writing the user
+	 * image there silently drops bytes (or faults).  Carve a 1 MiB DDR
+	 * slot well above the kernel image (0xC2000000) and the DDR-staged
+	 * rootfs (0xC4400000 + ~16 MiB) for the user-physical region. */
+	l1[0] = 0xC8000000U | 0x00000c02U;
 #else
 	for(pa=KERNBASE; pa<0x48000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
 	for(pa=0x08000000U; pa<0x0c000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
-#endif
 	l1[0] = USERPHYS | 0x00000c02U;
+#endif
 	mmu_on((unsigned int)l1);
 }
 
@@ -1633,7 +1639,18 @@ armboot(void)
 		printf("evb: init inum=%d\n", (int)initino);
 	}
 #endif
+#ifdef EVB
+	{
+		int rc = kexec("/etc/init");
+		if (rc < 0) {
+			printf("evb: kexec fail rc=%d\n", rc);
+			panic("init");
+		}
+		printf("evb: kexec ok\n");
+	}
+#else
 	if(kexec("/etc/init") < 0)
 		panic("init");
+#endif
 	run_user(UENTRY, USTACK);
 }
