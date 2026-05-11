@@ -444,22 +444,16 @@ scanfs(void)
 }
 
 /*
- * Path-to-inum lookup: thin wrapper around V7 sys/nami.c::namei() via
- * the v7_namei_inum() helper in arch/v7stubs.c.  The helper holds the
- * shim's includes for h/inode.h, h/user.h, etc. and bridges between
- * V7's `struct inode *namei(int (*)(void), int)` (which uses u.u_dirp
- * and returns a locked inode) and this file's historic
- * `ino_t shim_namei(char *path)` signature.  All existing call sites
- * in this file (kchdir, kopen, kcreat, klink, etc.) keep using inums.
+ * Path-to-inum lookup goes straight to V7 sys/nami.c::namei() via the
+ * v7_namei_inum() bridge in arch/v7stubs.c.  That bridge holds the
+ * includes for h/inode.h/h/user.h and turns V7's
+ * `struct inode *namei(int (*)(void), int)` (u.u_dirp in, locked inode
+ * out) into the `ino_t v7_namei_inum(char *path)` signature the shim's
+ * remaining file-system call sites (kchdir, kopen, kcreat, klink, ...)
+ * still consume.  The previous `static ino_t shim_namei(...)` wrapper
+ * in this file is retired: all call sites call v7_namei_inum() directly.
  */
 extern ino_t v7_namei_inum(char *path);
-
-static ino_t
-shim_namei(char *path)
-{
-
-	return v7_namei_inum(path);
-}
 
 static ino_t
 parenti(char *path, char *name)
@@ -490,7 +484,7 @@ parenti(char *path, char *name)
 		return(ROOTINO);
 	}
 	p[-1] = 0;
-	return(shim_namei(buf));
+	return(v7_namei_inum(buf));
 }
 
 static int
@@ -499,7 +493,7 @@ kchdir(char *path)
 	struct file fp;
 	ino_t ino;
 
-	ino = shim_namei(path);
+	ino = v7_namei_inum(path);
 	if(ino == 0 || loadino(ino, &fp) < 0 || (fp.mode & IFMT) != IFDIR)
 		return(-1);
 	cwdino = ino;
@@ -525,7 +519,7 @@ kopen(char *path)
 			}
 		return(-1);
 	}
-	ino = shim_namei(path);
+	ino = v7_namei_inum(path);
 	if(ino == 0)
 		return(-1);
 	for(fd=0; fd<NFD; fd++)
@@ -600,10 +594,10 @@ klink(char *from, char *to)
 	ino_t ino, pino;
 	int i;
 
-	ino = shim_namei(from);
+	ino = v7_namei_inum(from);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
-	if(shim_namei(to) != 0)
+	if(v7_namei_inum(to) != 0)
 		return(-1);
 	pino = parenti(to, name);
 	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
@@ -627,7 +621,7 @@ kmknod(char *path, int mode, int dev)
 	ino_t pino;
 	int i;
 
-	if(shim_namei(path) != 0)
+	if(v7_namei_inum(path) != 0)
 		return(-1);
 	pino = parenti(path, name);
 	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
@@ -685,7 +679,7 @@ kchmod(char *path, int mode)
 	struct file fp;
 	ino_t ino;
 
-	ino = shim_namei(path);
+	ino = v7_namei_inum(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	fp.mode = (fp.mode & IFMT) | (mode & 07777);
@@ -949,7 +943,7 @@ kstat(char *path, struct ustat *st)
 	struct file fp;
 	ino_t ino;
 
-	ino = shim_namei(path);
+	ino = v7_namei_inum(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	return(ustat(ino, &fp, st));
@@ -977,7 +971,7 @@ kexec(char *path)
 	struct file fp;
 	ino_t ino;
 
-	ino = shim_namei(path);
+	ino = v7_namei_inum(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	if(fp.size >= USERSIZE - UENTRY)
@@ -1345,9 +1339,9 @@ trap(int *r)
 	else if(n == S_STAT)
 		ret = kstat((char *)r[0], (struct ustat *)r[1]);
 	else if(n == S_ACCESS)
-		ret = shim_namei((char *)r[0]) == 0 ? -1 : 0;
+		ret = v7_namei_inum((char *)r[0]) == 0 ? -1 : 0;
 	else if(n == S_UTIME)
-		ret = shim_namei((char *)r[0]) == 0 ? -1 : 0;
+		ret = v7_namei_inum((char *)r[0]) == 0 ? -1 : 0;
 	else if(n == S_LSEEK)
 		ret = kseek(r[0], r[1], r[2]);
 	else if(n == S_FSTAT)
@@ -1451,7 +1445,7 @@ armboot(void)
 	 * so a failure inside the a.out loader shows up as the *next*
 	 * missing line, not as silence after this sentinel. */
 	{
-		ino_t initino = shim_namei("/etc/init");
+		ino_t initino = v7_namei_inum("/etc/init");
 		printf("evb: init inum=%d\n", (int)initino);
 	}
 #endif
