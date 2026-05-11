@@ -358,14 +358,14 @@ bio(daddr_t blkno, void *buf, unsigned int type)
 }
 
 static void
-bread(daddr_t blkno, void *buf)
+shim_bread(daddr_t blkno, void *buf)
 {
 
 	bio(blkno, buf, VIRTIO_BLK_T_IN);
 }
 
 static void
-bwrite(daddr_t blkno, void *buf)
+shim_bwrite(daddr_t blkno, void *buf)
 {
 
 	bio(blkno, buf, VIRTIO_BLK_T_OUT);
@@ -397,7 +397,7 @@ iget(ino_t ino, struct dinode *dp)
 
 	if(ino < ROOTINO)
 		return(-1);
-	bread(itod(ino), blkbuf);
+	shim_bread(itod(ino), blkbuf);
 	off = itoo(ino) * sizeof(struct dinode);
 	bcopy((char *)&blkbuf[off], (char *)dp, sizeof(*dp));
 	if(dp->di_mode == 0)
@@ -457,7 +457,7 @@ putino(ino_t ino, struct file *fp)
 
 	if(ino < ROOTINO)
 		return(-1);
-	bread(itod(ino), blkbuf);
+	shim_bread(itod(ino), blkbuf);
 	off = itoo(ino) * sizeof(struct dinode);
 	p = (char *)&blkbuf[off];
 	bzero(p, sizeof(struct dinode));
@@ -466,7 +466,7 @@ putino(ino_t ino, struct file *fp)
 	put32(p+8, (daddr_t)fp->size);
 	for(i=0; i<NADDR; i++)
 		put24(p+12+i*3, fp->addr[i]);
-	bwrite(itod(ino), blkbuf);
+	shim_bwrite(itod(ino), blkbuf);
 	return(0);
 }
 
@@ -491,17 +491,17 @@ readi(struct file *fp, unsigned int off, char *buf, unsigned int n)
 			if(lbn < NINDIR) {
 				if(fp->addr[NADDR-3] == 0)
 					break;
-				bread(fp->addr[NADDR-3], blkbuf);
+				shim_bread(fp->addr[NADDR-3], blkbuf);
 				bn = addr4((char *)&blkbuf[lbn*4]);
 			} else {
 				lbn -= NINDIR;
 				if(fp->addr[NADDR-2] == 0)
 					break;
-				bread(fp->addr[NADDR-2], blkbuf);
+				shim_bread(fp->addr[NADDR-2], blkbuf);
 				ib = addr4((char *)&blkbuf[(lbn/NINDIR)*4]);
 				if(ib == 0)
 					break;
-				bread(ib, blkbuf);
+				shim_bread(ib, blkbuf);
 				bn = addr4((char *)&blkbuf[(lbn%NINDIR)*4]);
 			}
 		}
@@ -511,7 +511,7 @@ readi(struct file *fp, unsigned int off, char *buf, unsigned int n)
 		m = BSIZE - boff;
 		if(m > n)
 			m = n;
-		bread(bn, blkbuf);
+		shim_bread(bn, blkbuf);
 		bcopy((char *)&blkbuf[boff], buf, m);
 		buf += m;
 		off += m;
@@ -538,13 +538,13 @@ writei(struct file *fp, unsigned int off, char *buf, unsigned int n)
 			fp->addr[lbn] = bn;
 			bzero((char *)blkbuf, BSIZE);
 		} else
-			bread(bn, blkbuf);
+			shim_bread(bn, blkbuf);
 		boff = off & BMASK;
 		m = BSIZE - boff;
 		if(m > n)
 			m = n;
 		bcopy(buf, (char *)&blkbuf[boff], m);
-		bwrite(bn, blkbuf);
+		shim_bwrite(bn, blkbuf);
 		buf += m;
 		off += m;
 		tot += m;
@@ -566,7 +566,7 @@ scanind(daddr_t bn, int lev)
 		return;
 	if(bn >= nextblk)
 		nextblk = bn + 1;
-	bread(bn, ibuf);
+	shim_bread(bn, ibuf);
 	for(i=0; i<NINDIR; i++) {
 		ib = addr4((char *)&ibuf[i*4]);
 		if(ib == 0)
@@ -1601,7 +1601,7 @@ armboot(void)
 	files[1].mode = IFCHR;
 	files[2].ino = 1;
 	files[2].mode = IFCHR;
-	bread(SUPERB, blkbuf);
+	shim_bread(SUPERB, blkbuf);
 #ifdef EVB
 	/* Sentinel: prove the DDR-backed bio() path returned a real V7
 	 * superblock before we touch anything that might panic.  The

@@ -6,6 +6,7 @@
 #include "../h/conf.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
+#include "../h/proto.h"
 
 #define	DISKMON	1
 
@@ -53,9 +54,7 @@ struct	buf	swbuf2;
  * Read in (if necessary) the block and return a buffer pointer.
  */
 struct buf *
-bread(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+bread(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 
@@ -81,9 +80,7 @@ daddr_t blkno;
  * read-ahead block (which is not allocated to the caller)
  */
 struct buf *
-breada(dev, blkno, rablkno)
-dev_t dev;
-daddr_t blkno, rablkno;
+breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
 {
 	register struct buf *bp, *rabp;
 
@@ -122,10 +119,10 @@ daddr_t blkno, rablkno;
  * Write the buffer, waiting for completion.
  * Then release the buffer.
  */
-bwrite(bp)
-register struct buf *bp;
+void
+bwrite(struct buf *bp)
 {
-	register flag;
+	register int flag;
 
 	flag = bp->b_flags;
 	bp->b_flags &= ~(B_READ | B_DONE | B_ERROR | B_DELWRI | B_AGE);
@@ -151,8 +148,8 @@ register struct buf *bp;
  * This can't be done for magtape, since writes must be done
  * in the same order as requested.
  */
-bdwrite(bp)
-register struct buf *bp;
+void
+bdwrite(struct buf *bp)
 {
 	register struct buf *dp;
 
@@ -168,8 +165,8 @@ register struct buf *bp;
 /*
  * Release the buffer, start I/O on it, but don't wait for completion.
  */
-bawrite(bp)
-register struct buf *bp;
+void
+bawrite(struct buf *bp)
 {
 
 	bp->b_flags |= B_ASYNC;
@@ -179,11 +176,11 @@ register struct buf *bp;
 /*
  * release the buffer, with no I/O implied.
  */
-brelse(bp)
-register struct buf *bp;
+void
+brelse(struct buf *bp)
 {
 	register struct buf **backp;
-	register s;
+	register int s;
 
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
@@ -215,9 +212,8 @@ register struct buf *bp;
  * See if the block is associated with some buffer
  * (mainly to avoid getting hung up on a wait in breada)
  */
-incore(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+int
+incore(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -235,14 +231,12 @@ daddr_t blkno;
  * for the oldest non-busy buffer and reassign it.
  */
 struct buf *
-getblk(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+getblk(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 	register struct buf *dp;
 #ifdef	DISKMON
-	register i;
+	register int i;
 #endif
 
 	if(major(dev) >= nblkdev)
@@ -306,7 +300,7 @@ daddr_t blkno;
  * not assigned to any particular device
  */
 struct buf *
-geteblk()
+geteblk(void)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -340,8 +334,8 @@ loop:
  * Wait for I/O completion on the buffer; return errors
  * to the user.
  */
-iowait(bp)
-register struct buf *bp;
+void
+iowait(struct buf *bp)
 {
 
 	spl6();
@@ -355,10 +349,10 @@ register struct buf *bp;
  * Unlink a buffer from the available list and mark it busy.
  * (internal interface)
  */
-notavail(bp)
-register struct buf *bp;
+void
+notavail(struct buf *bp)
 {
-	register s;
+	register int s;
 
 	s = spl6();
 	bp->av_back->av_forw = bp->av_forw;
@@ -371,8 +365,8 @@ register struct buf *bp;
  * Mark I/O complete on a buffer, release it if I/O is asynchronous,
  * and wake up anyone waiting for it.
  */
-iodone(bp)
-register struct buf *bp;
+void
+iodone(struct buf *bp)
 {
 
 	if(bp->b_flags&B_MAP)
@@ -389,11 +383,11 @@ register struct buf *bp;
 /*
  * Zero the core associated with a buffer.
  */
-clrbuf(bp)
-struct buf *bp;
+void
+clrbuf(struct buf *bp)
 {
-	register *p;
-	register c;
+	register int *p;
+	register int c;
 
 	p = bp->b_un.b_words;
 	c = BSIZE/sizeof(int);
@@ -406,11 +400,11 @@ struct buf *bp;
 /*
  * swap I/O
  */
-swap(blkno, coreaddr, count, rdflg)
-register count;
+void
+swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 {
 	register struct buf *bp;
-	register tcount;
+	register int tcount;
 
 	bp = &swbuf1;
 	if(bp->b_flags & B_BUSY)
@@ -453,8 +447,8 @@ register count;
  * are flushed out.
  * (from umount and update)
  */
-bflush(dev)
-dev_t dev;
+void
+bflush(dev_t dev)
 {
 	register struct buf *bp;
 
@@ -481,9 +475,8 @@ loop:
  * Essentially all the work is computing physical addresses and
  * validating them.
  */
-physio(strat, bp, dev, rw)
-register struct buf *bp;
-int (*strat)();
+void
+physio(int (*strat)(), struct buf *bp, dev_t dev, int rw)
 {
 	register unsigned base;
 	register int nb;
@@ -512,7 +505,7 @@ int (*strat)();
 	 * (remember wraparound was already checked).
 	 */
 	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
-	    && nb < 1024-u.u_ssize)
+	    && nb < (int)(1024-u.u_ssize))
 		goto bad;
 	spl6();
 	while (bp->b_flags&B_BUSY) {
@@ -554,8 +547,8 @@ int (*strat)();
  * code.  Actually the latter is always true because devices
  * don't yet return specific errors.
  */
-geterror(bp)
-register struct buf *bp;
+void
+geterror(struct buf *bp)
 {
 
 	if (bp->b_flags&B_ERROR)
