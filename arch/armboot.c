@@ -899,6 +899,8 @@ kread(int fd, char *buf, unsigned int n)
 		if(n == 0)
 			return(0);
 		c = getchar();
+		if(c == 0x03)
+			return(0);
 		if(c == '\r')
 			c = '\n';
 		putchar(c);
