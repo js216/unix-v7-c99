@@ -48,19 +48,19 @@ extern	int	szicode;	/* its size */
 dev_t getmdev();
 daddr_t	bmap();
 struct inode *ialloc();
-struct inode *iget();
+struct inode *iget(dev_t dev, ino_t ino);
 struct inode *owner();
 struct inode *maknode();
-struct inode *namei();
+struct inode *namei(int (*func)(void), int flag);
 struct buf *alloc();
-struct buf *getblk();
+struct buf *getblk(dev_t dev, daddr_t blkno);
 struct buf *geteblk();
-struct buf *bread();
-struct buf *breada();
+struct buf *bread(dev_t dev, daddr_t blkno);
+struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
 struct filsys *getfs();
 struct file *getf();
 struct file *falloc();
-int	uchar();
+int	uchar(void);
 /*
  * Instrumentation
  */
