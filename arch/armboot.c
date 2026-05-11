@@ -2,6 +2,7 @@
 #include "../h/dir.h"
 #include "../h/ino.h"
 #include "../h/filsys.h"
+#include "../h/buf.h"
 #include "../h/arm.h"
 #include "../h/proto.h"
 
@@ -297,7 +298,7 @@ virtioinit(void)
 #endif
 }
 
-static void
+static void __attribute__((unused))
 bio(daddr_t blkno, void *buf, unsigned int type)
 {
 #ifdef EVB
@@ -360,15 +361,21 @@ bio(daddr_t blkno, void *buf, unsigned int type)
 static void
 shim_bread(daddr_t blkno, void *buf)
 {
+	struct buf *bp;
 
-	bio(blkno, buf, VIRTIO_BLK_T_IN);
+	bp = bread((dev_t)rootdev, blkno);
+	bcopy((char *)bp->b_un.b_addr, (char *)buf, (unsigned int)BSIZE);
+	brelse(bp);
 }
 
 static void
 shim_bwrite(daddr_t blkno, void *buf)
 {
+	struct buf *bp;
 
-	bio(blkno, buf, VIRTIO_BLK_T_OUT);
+	bp = getblk((dev_t)rootdev, blkno);
+	bcopy((char *)buf, (char *)bp->b_un.b_addr, (unsigned int)BSIZE);
+	bwrite(bp);
 }
 
 static daddr_t
