@@ -64,6 +64,7 @@ root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makef
 	/usr/lib/makekey=root/usr/lib/makekey /usr/lib/diffh=root/usr/lib/diffh \
 	/etc/passwd=root/etc/passwd /etc/ttys=root/etc/ttys \
 	/etc/utmp=/dev/null \
+	/dev/null=/dev/null \
 	/usr/dict/words=root/usr/dict/words \
 	/tmp/.keep=/dev/null
 
