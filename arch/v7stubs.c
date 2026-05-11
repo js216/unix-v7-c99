@@ -21,6 +21,8 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/filsys.h"
+#include "../h/ino.h"
+#include "../h/systm.h"
 #include "../h/proto.h"
 
 /* per-process user struct (referenced by physio() in dev/bio.c) */
@@ -45,9 +47,16 @@ int nblkdev = 1;
 /* Buffer-cache storage: NBUF entries each owning BSIZE+BSLOP bytes
  * of payload.  Real V7 declares `buf[]` in conf/c.c and `buffers[][]`
  * in sys/main.c's binit; we collapse both here as link-time storage.
- * `binit_stub()` below links them onto bfreelist. */
+ * `binit_stub()` below links them onto bfreelist.
+ *
+ * The payload is aligned to 4 bytes because sys/iget.c casts the buffer
+ * via bp->b_un.b_dino (struct dinode *) and reads off_t fields with
+ * 4-byte alignment requirement.  BSIZE+BSLOP = 514 is not a multiple
+ * of 4, so without the explicit aligned attribute (and a rounded row
+ * stride) buffers[N] for N>=1 would land on an odd boundary and an
+ * unaligned LDRD/STM in iexpand could fault under SCTLR.A=1. */
 struct buf buf[NBUF];
-static char buffers[NBUF][BSIZE+BSLOP];
+static char buffers[NBUF][((BSIZE+BSLOP)+3)&~3] __attribute__((aligned(4)));
 
 /* nulldev: V7 placeholder for unimplemented open/close on a bdevsw row */
 int
@@ -178,11 +187,20 @@ free(dev_t dev, daddr_t bn)
 	(void)bn;
 }
 
+/* Single in-core superblock placeholder.  V7's iupdat dereferences
+ * getfs(ip->i_dev)->s_ronly before writing back; our shim_namei only
+ * does lookups, but iput() unconditionally hits iupdat() when an
+ * inode's i_flag has IUPD|IACC|ICHG set.  We return a real (zeroed)
+ * filsys so the dereference is safe; s_ronly==0 is harmless because
+ * we never reach the bdwrite path in read-only namei traffic.  Once
+ * sys/alloc.c and the mount table come online this stub goes away. */
+static struct filsys fakesb;
+
 struct filsys *
 getfs(dev_t dev)
 {
 	(void)dev;
-	return (struct filsys *)0;
+	return &fakesb;
 }
 
 struct inode *
@@ -199,16 +217,26 @@ ifree(dev_t dev, ino_t ino)
 	(void)ino;
 }
 
+/* Release inode lock.  V7's iget leaves the inode ILOCKED on return;
+ * the caller must explicitly drop the lock (via prele) once it's done.
+ * Without clearing ILOCK here, the next iget() call on the same inode
+ * blocks forever in our no-op sleep stub.  Real V7 prele() in slp.c
+ * additionally wakes IWANT-ers; that's a no-op here since sleep is a
+ * no-op too. */
 void
 prele(struct inode *ip)
 {
-	(void)ip;
+	if(ip != NULL)
+		ip->i_flag &= ~(ILOCK|IWANT);
 }
 
+/* Acquire inode lock.  In real V7 this would block if ILOCK is held by
+ * another process; our shim is single-threaded so we just set the bit. */
 void
 plock(struct inode *ip)
 {
-	(void)ip;
+	if(ip != NULL)
+		ip->i_flag |= ILOCK;
 }
 
 int
@@ -219,13 +247,81 @@ access(struct inode *ip, int mode)
 	return 0;
 }
 
+/* Read-only block-map translation.  V7's sys/subr.c::bmap() is too
+ * intertwined with sys/alloc.c (which we have not yet linked) to drop
+ * in unchanged; we implement just the read paths shim_namei needs.
+ *
+ * Address-packing wrinkle: sys/iget.c::iexpand() copies on-disk
+ * 3-byte block addresses into a 4-byte daddr_t with PDP-11 byte
+ * order: mem[0]=disk[0], mem[1]=0, mem[2]=disk[1], mem[3]=disk[2].
+ * Read back on ARM little-endian, ip->i_addr[i] is therefore
+ *   raw = disk[0] | (disk[1]<<16) | (disk[2]<<24)
+ * whereas the natural disk block number is
+ *   blk = disk[0] | (disk[1]<<8)  | (disk[2]<<16)
+ * so we unpack here.  Indirect-block addresses on disk are full
+ * 32-bit daddr_t (no PDP packing), so the bp->b_un.b_daddr[] path
+ * uses values verbatim.
+ */
+static daddr_t
+unpack_iaddr(daddr_t raw)
+{
+	unsigned int v = (unsigned int)raw;
+	return (daddr_t)((v & 0xffu)
+	    | (((v >> 16) & 0xffu) << 8)
+	    | (((v >> 24) & 0xffu) << 16));
+}
+
 daddr_t
 bmap(struct inode *ip, daddr_t bn, int rwflg)
 {
-	(void)ip;
-	(void)bn;
+	struct buf *bp;
+	daddr_t nb;
+	int sh, j, i;
+
 	(void)rwflg;
-	return (daddr_t)0;
+	if(bn < 0)
+		return (daddr_t)0;
+
+	/* Direct blocks 0..NADDR-4 */
+	if(bn < NADDR-3) {
+		nb = unpack_iaddr(ip->i_addr[(int)bn]);
+		return nb;
+	}
+
+	/* Indirect blocks: single (NADDR-3), double (NADDR-2),
+	 * triple (NADDR-1).  Compute number of indirection levels. */
+	sh = 0;
+	nb = 1;
+	bn -= NADDR-3;
+	for(j = 3; j > 0; j--) {
+		sh += NSHIFT;
+		nb <<= NSHIFT;
+		if(bn < nb)
+			break;
+		bn -= nb;
+	}
+	if(j == 0)
+		return (daddr_t)0;
+
+	nb = unpack_iaddr(ip->i_addr[NADDR-j]);
+	if(nb == 0)
+		return (daddr_t)0;
+
+	/* Walk indirect blocks; addresses inside them are full daddr_t. */
+	for(; j <= 3; j++) {
+		bp = bread(ip->i_dev, nb);
+		if(bp->b_flags & B_ERROR) {
+			brelse(bp);
+			return (daddr_t)0;
+		}
+		sh -= NSHIFT;
+		i = ((int)(bn >> sh)) & NMASK;
+		nb = bp->b_un.b_daddr[i];
+		brelse(bp);
+		if(nb == 0)
+			return (daddr_t)0;
+	}
+	return nb;
 }
 
 int
@@ -239,4 +335,60 @@ writei(struct inode *ip)
 {
 	(void)ip;
 	return 0;
+}
+
+/* uchar() lives in sys/nami.c; declare it here so v7_namei_inum can
+ * pass it as namei()'s char-fetch function pointer. */
+extern int uchar(void);
+
+/* Forward-decl V7's namei and iget/iput, since proto.h doesn't yet
+ * publish those entry points (its iget declaration would collide with
+ * arch/armboot.c's static shim of the same name). */
+extern struct inode *namei(int (*func)(void), int flag);
+extern struct inode *iget(dev_t dev, ino_t ino);
+extern void iput(struct inode *ip);
+
+/*
+ * Bridge between arch/armboot.c's `ino_t shim_namei(char *path)` shim
+ * and V7's `struct inode *namei(func, flag)` real path-walker.
+ *
+ * On first call rootdir/u.u_cdir are NULL: bootstrap by iget()-ing the
+ * root inode off rootdev, clearing ILOCK (V7's iget leaves the inode
+ * locked; without clearing it the next iget on the same inode would
+ * spin forever in our no-op sleep stub), and stashing the pointer.
+ * V7 namei picks up the absolute `/'-prefixed path itself: it sees the
+ * leading '/' and starts from rootdir (or u.u_rdir if set, which we
+ * leave NULL).  Relative paths start from u.u_cdir, which we point at
+ * rootdir for now.
+ *
+ * Returns the inum of the resolved path, or 0 if not found.  The shim
+ * callers (kchdir, kopen, kcreat, kexec, klink, ...) read the inum
+ * back through loadino() which still bread()s the dinode block by
+ * itself.  Once those are V7-fied too the inode pointer plumbing will
+ * carry through directly without this lookup-by-inum round trip.
+ */
+ino_t
+v7_namei_inum(char *path)
+{
+	struct inode *ip;
+	ino_t inum;
+
+	if(rootdir == NULL) {
+		rootdir = iget(rootdev, (ino_t)ROOTINO);
+		if(rootdir == NULL)
+			return (ino_t)0;
+		rootdir->i_flag &= ~ILOCK;
+		u.u_cdir = rootdir;
+	}
+
+	u.u_dirp = (caddr_t)path;
+	u.u_error = 0;
+	u.u_segflg = 1;		/* 1 = system-space path (kernel pointer) */
+
+	ip = namei(uchar, 0);
+	if(ip == NULL)
+		return (ino_t)0;
+	inum = ip->i_number;
+	iput(ip);
+	return inum;
 }
