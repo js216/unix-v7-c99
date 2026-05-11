@@ -56,6 +56,8 @@ int spl0(void);
 int spl6(void);
 void splx(int s);
 int nulldev(void);
+void binit_stub(void);
+extern dev_t rootdev;
 
 /* dev/mp135_blk.c */
 int mp135_strategy(struct buf *bp);

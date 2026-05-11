@@ -9,8 +9,9 @@
 #include "../h/seg.h"
 #include "../h/map.h"
 #include "../h/reg.h"
-#include "../h/buf.h"
 #endif
+#include "../h/param.h"
+#include "../h/buf.h"
 #include "../h/proto.h"
 
 /*
@@ -45,6 +46,43 @@ startup(void)
 	 * "mem = " from the console keeps working; on Armv7 we report
 	 * bytes directly rather than PDP-11 click-converted sizes. */
 	printf("mem = %D\n", (long)(128L * 1024 * 1024));
+
+	/*
+	 * First real V7-style caller of bread().  Walks
+	 *   bread -> getblk -> bdevsw[major(rootdev)].d_strategy
+	 *         -> iowait -> iodone
+	 * end-to-end and prints the V7 superblock geometry as a
+	 * sentinel.  Proves the buffer cache linked in the prior
+	 * iteration and the strategy routine wired in iter 2 actually
+	 * return real bytes from the DDR-staged (EVB) / virtio (qemu)
+	 * rootfs.  arch/armboot.c::bio() and its shim_bread callers are
+	 * unaffected and remain the active block-I/O path elsewhere.
+	 */
+	{
+		struct buf *bp;
+		unsigned char *raw;
+		unsigned int isize, fsize;
+
+		binit_stub();
+		bp = bread((dev_t)rootdev, (daddr_t)SUPERB);
+		/*
+		 * The on-disk V7 superblock packs s_isize as a u16 at
+		 * offset 0 and s_fsize as a u32 at offset 2 (tools/mkfs
+		 * writes this layout, and arch/armboot.c's sentinel
+		 * decodes it identically).  The host C struct in
+		 * h/filsys.h aligns s_fsize on a 4-byte boundary, so
+		 * reading sb->s_fsize through the struct yields garbage
+		 * (offset 4, not 2).  Decode the raw bytes directly here
+		 * to verify the bread() data path end-to-end.
+		 */
+		raw = (unsigned char *)bp->b_un.b_addr;
+		isize = (unsigned int)raw[0] | ((unsigned int)raw[1] << 8);
+		fsize = (unsigned int)raw[2] | ((unsigned int)raw[3] << 8)
+		      | ((unsigned int)raw[4] << 16)
+		      | ((unsigned int)raw[5] << 24);
+		printf("v7: sb isize=%d fsize=%d\n", (int)isize, (int)fsize);
+		brelse(bp);
+	}
 #if 0
 	register i;
 

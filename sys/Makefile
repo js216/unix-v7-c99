@@ -31,7 +31,8 @@ prf.o:    prf.c ../h/param.h ../h/buf.h
 ../dev/bio.o: ../dev/bio.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h ../h/systm.h ../h/user.h ../h/proc.h ../h/seg.h ../h/dir.h
 ../dev/mp135_blk.o: ../dev/mp135_blk.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h
 ../dev/virtio_blk.o: ../dev/virtio_blk.c ../h/buf.h ../h/conf.h ../h/proto.h ../h/param.h
-../arch/v7stubs.o: ../arch/v7stubs.c ../h/proto.h ../h/buf.h ../h/conf.h ../h/param.h
+../arch/v7stubs.o: ../arch/v7stubs.c ../h/proto.h ../h/buf.h ../h/conf.h ../h/param.h ../h/dir.h ../h/user.h ../h/proc.h
+../arch/machdep.o: ../arch/machdep.c ../h/proto.h ../h/buf.h ../h/param.h
 
 .c.o:
 	$(CC) $(CFLAGS) -c $< -o $@
