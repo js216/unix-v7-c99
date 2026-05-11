@@ -443,47 +443,22 @@ scanfs(void)
 		}
 }
 
-static ino_t
-namei(char *path)
-{
-	struct file fp;
-	struct direct de;
-	char name[DIRSIZ];
-	char *p;
-	ino_t ino;
-	int i;
+/*
+ * Path-to-inum lookup: thin wrapper around V7 sys/nami.c::namei() via
+ * the v7_namei_inum() helper in arch/v7stubs.c.  The helper holds the
+ * shim's includes for h/inode.h, h/user.h, etc. and bridges between
+ * V7's `struct inode *namei(int (*)(void), int)` (which uses u.u_dirp
+ * and returns a locked inode) and this file's historic
+ * `ino_t shim_namei(char *path)` signature.  All existing call sites
+ * in this file (kchdir, kopen, kcreat, klink, etc.) keep using inums.
+ */
+extern ino_t v7_namei_inum(char *path);
 
-	if(*path == '/') {
-		ino = ROOTINO;
-		while(*path == '/')
-			path++;
-	} else
-		ino = cwdino;
-	while(*path) {
-		if(loadino(ino, &fp) < 0 || (fp.mode & IFMT) != IFDIR)
-			return(0);
-		for(i=0; i<DIRSIZ; i++)
-			name[i] = 0;
-		p = name;
-		while(*path && *path != '/') {
-			if(p < &name[DIRSIZ])
-				*p++ = *path;
-			path++;
-		}
-		while(*path == '/')
-			path++;
-		ino = 0;
-		for(i=0; i<(int)fp.size; i += sizeof(de)) {
-			(void)readi(&fp, (unsigned int)i, (char *)&de, sizeof(de));
-			if(de.d_ino && strncmp(de.d_name, name, DIRSIZ) == 0) {
-				ino = de.d_ino;
-				break;
-			}
-		}
-		if(ino == 0)
-			return(0);
-	}
-	return(ino);
+static ino_t
+shim_namei(char *path)
+{
+
+	return v7_namei_inum(path);
 }
 
 static ino_t
@@ -515,7 +490,7 @@ parenti(char *path, char *name)
 		return(ROOTINO);
 	}
 	p[-1] = 0;
-	return(namei(buf));
+	return(shim_namei(buf));
 }
 
 static int
@@ -524,7 +499,7 @@ kchdir(char *path)
 	struct file fp;
 	ino_t ino;
 
-	ino = namei(path);
+	ino = shim_namei(path);
 	if(ino == 0 || loadino(ino, &fp) < 0 || (fp.mode & IFMT) != IFDIR)
 		return(-1);
 	cwdino = ino;
@@ -550,7 +525,7 @@ kopen(char *path)
 			}
 		return(-1);
 	}
-	ino = namei(path);
+	ino = shim_namei(path);
 	if(ino == 0)
 		return(-1);
 	for(fd=0; fd<NFD; fd++)
@@ -625,10 +600,10 @@ klink(char *from, char *to)
 	ino_t ino, pino;
 	int i;
 
-	ino = namei(from);
+	ino = shim_namei(from);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
-	if(namei(to) != 0)
+	if(shim_namei(to) != 0)
 		return(-1);
 	pino = parenti(to, name);
 	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
@@ -652,7 +627,7 @@ kmknod(char *path, int mode, int dev)
 	ino_t pino;
 	int i;
 
-	if(namei(path) != 0)
+	if(shim_namei(path) != 0)
 		return(-1);
 	pino = parenti(path, name);
 	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
@@ -710,7 +685,7 @@ kchmod(char *path, int mode)
 	struct file fp;
 	ino_t ino;
 
-	ino = namei(path);
+	ino = shim_namei(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	fp.mode = (fp.mode & IFMT) | (mode & 07777);
@@ -974,7 +949,7 @@ kstat(char *path, struct ustat *st)
 	struct file fp;
 	ino_t ino;
 
-	ino = namei(path);
+	ino = shim_namei(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	return(ustat(ino, &fp, st));
@@ -1002,7 +977,7 @@ kexec(char *path)
 	struct file fp;
 	ino_t ino;
 
-	ino = namei(path);
+	ino = shim_namei(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
 	if(fp.size >= USERSIZE - UENTRY)
@@ -1370,9 +1345,9 @@ trap(int *r)
 	else if(n == S_STAT)
 		ret = kstat((char *)r[0], (struct ustat *)r[1]);
 	else if(n == S_ACCESS)
-		ret = namei((char *)r[0]) == 0 ? -1 : 0;
+		ret = shim_namei((char *)r[0]) == 0 ? -1 : 0;
 	else if(n == S_UTIME)
-		ret = namei((char *)r[0]) == 0 ? -1 : 0;
+		ret = shim_namei((char *)r[0]) == 0 ? -1 : 0;
 	else if(n == S_LSEEK)
 		ret = kseek(r[0], r[1], r[2]);
 	else if(n == S_FSTAT)
@@ -1476,7 +1451,7 @@ armboot(void)
 	 * so a failure inside the a.out loader shows up as the *next*
 	 * missing line, not as silence after this sentinel. */
 	{
-		ino_t initino = namei("/etc/init");
+		ino_t initino = shim_namei("/etc/init");
 		printf("evb: init inum=%d\n", (int)initino);
 	}
 #endif
