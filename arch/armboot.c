@@ -1619,6 +1619,20 @@ armboot(void)
 	if(((struct filsys *)blkbuf)->s_isize == 0)
 		panic("fs");
 	scanfs();
+#ifdef EVB
+	/* Sentinel: prove namei() can walk the V7 directory tree off the
+	 * DDR-backed bio() path and resolve /etc/init to a real inum.  A
+	 * zero return would mean the directory walk failed (broken
+	 * directory-block reads or wrong rootfs); a positive integer
+	 * means /'s data blocks read OK, the `etc` entry was found, the
+	 * descent worked, and `init` was found.  Printed before kexec()
+	 * so a failure inside the a.out loader shows up as the *next*
+	 * missing line, not as silence after this sentinel. */
+	{
+		ino_t initino = namei("/etc/init");
+		printf("evb: init inum=%d\n", (int)initino);
+	}
+#endif
 	if(kexec("/etc/init") < 0)
 		panic("init");
 	run_user(UENTRY, USTACK);
