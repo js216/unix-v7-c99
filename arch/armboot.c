@@ -115,7 +115,7 @@ static int kumask;
 static int kuid;
 static int kuidsave[NFORK];
 
-static void
+void
 mmuinit(void)
 {
 	unsigned int i, pa;
@@ -1403,8 +1403,6 @@ void
 armboot(void)
 {
 
-	mmuinit();
-	virtio_init();
 	files[0].ino = 1;
 	files[0].mode = IFCHR;
 	files[1].ino = 1;

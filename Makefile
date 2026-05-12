@@ -28,7 +28,7 @@ unix:	root.img sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h
 qemu:	unix
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel unix -drive if=none,file=root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0
 
-root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
+root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img tools/test_suite.sh
 	cd lib; make
 	tools/mkfs root.img \
 	/etc/init=root/etc/init /etc/getty=root/etc/getty \

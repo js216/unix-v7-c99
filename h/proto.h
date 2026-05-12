@@ -24,6 +24,7 @@ void panictrap(void);
 void run_user(unsigned int pc, unsigned int sp);
 void mmu_on(unsigned int ttb);
 void dmbsy(void);
+void mmuinit(void);
 
 /* machdep.c */
 void startup(void);
