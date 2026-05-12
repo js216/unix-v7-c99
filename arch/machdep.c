@@ -47,6 +47,9 @@ startup(void)
 	 * bytes directly rather than PDP-11 click-converted sizes. */
 	printf("mem = %D\n", (long)(128L * 1024 * 1024));
 
+	mmuinit();
+	virtio_init();
+
 	/*
 	 * First real V7-style caller of bread().  Walks
 	 *   bread -> getblk -> bdevsw[major(rootdev)].d_strategy
