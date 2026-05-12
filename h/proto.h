@@ -56,7 +56,7 @@ int spl0(void);
 int spl6(void);
 void splx(int s);
 int nulldev(void);
-void binit_stub(void);
+void binit(void);
 extern dev_t rootdev;
 
 

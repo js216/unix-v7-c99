@@ -63,7 +63,7 @@ startup(void)
 		unsigned char *raw;
 		unsigned int isize, fsize;
 
-		binit_stub();
+		binit();
 		bp = bread((dev_t)rootdev, (daddr_t)SUPERB);
 		/*
 		 * The on-disk V7 superblock packs s_isize as a u16 at

@@ -113,6 +113,7 @@ iinit()
 	fp->s_ronly = 0;
 	time = fp->s_time;
 }
+#endif
 
 /*
  * This is the set of buffers proper, whose heads
@@ -128,7 +129,7 @@ char	buffers[NBUF][BSIZE+BSLOP];
  * Initialize the buffer I/O system by freeing
  * all buffers and setting all device buffer lists to empty.
  */
-binit()
+void binit(void)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -157,4 +158,3 @@ binit()
 		nblkdev++;
 	}
 }
-#endif
