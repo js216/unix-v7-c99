@@ -26,6 +26,7 @@ struct file {
 	char	*mem;
 	int	pipe;
 	int	wpipe;
+	int	eof;	/* /dev/console: 1=next read returns EOF then clears */
 };
 
 struct pipe {
@@ -71,6 +72,15 @@ static unsigned int tmpused;
 static ino_t nextino;
 static daddr_t nextblk;
 static int spawned;
+/* V7 init.c::single() opens /dev/console and exec()s the operator's shell;
+ * on a real PDP-11 the operator typed ^D to exit single-user mode.  This
+ * kernel has no operator -- the qemu-shell.py harness only starts feeding
+ * stdin after `login:` appears.  So the very first reader of /dev/console
+ * (init's single-user sh) is handed EOF immediately, which makes sh return
+ * and lets init advance through runcom() into multiple()'s getty-spawn
+ * loop.  All later /dev/console openers (the gettys themselves) see the
+ * normal UART.  Tracked here so the EOF-token is consumed exactly once. */
+static int console_seen;
 static int childmode;
 static int childdone[NFD];
 static int childppid[NFD];
@@ -519,6 +529,28 @@ kopen(char *path)
 			}
 		return(-1);
 	}
+	/* /dev/console is the console operator's typewriter in V7.  V7's
+	 * init.c::single() open()s it as the controlling tty for the
+	 * single-user shell, and dfork() opens it again as 0/1/2 before
+	 * exec'ing getty.  Mark such fds IFCHR so kread()/kwrite() route
+	 * through the UART fast-path.  The very first opener (init's
+	 * single-user sh) also gets a one-shot EOF token so its initial
+	 * read returns 0 and the shell exits, letting init advance into
+	 * the multi-user getty loop. */
+	if(strcmp(path, "/dev/console") == 0) {
+		for(fd=0; fd<NFD; fd++)
+			if((fd >= 3 || closed[fd]) && files[fd].ino == 0) {
+				bzero((char *)&files[fd], sizeof(files[fd]));
+				files[fd].ino = 1;
+				files[fd].mode = IFCHR;
+				files[fd].size = 0;
+				files[fd].eof = console_seen ? 0 : 1;
+				console_seen = 1;
+				closed[fd] = 0;
+				return(fd);
+			}
+		return(-1);
+	}
 	ino = v7_namei_inum(path);
 	if(ino == 0)
 		return(-1);
@@ -679,6 +711,10 @@ kchmod(char *path, int mode)
 	struct file fp;
 	ino_t ino;
 
+	/* /dev/console is kernel-resident (no inode); init.c::dfork()
+	 * chmod()s it to 0622 before fork-execing getty -- silently accept. */
+	if(strcmp(path, "/dev/console") == 0)
+		return(0);
 	ino = v7_namei_inum(path);
 	if(ino == 0 || loadino(ino, &fp) < 0)
 		return(-1);
@@ -708,6 +744,13 @@ kread(int fd, char *buf, unsigned int n)
 			goto file;
 		if(n == 0)
 			return(0);
+		/* One-shot EOF for init's single-user sh (see console_seen
+		 * above); after the first read the fd reverts to normal UART
+		 * semantics so dfork()'s gettys read keystrokes normally. */
+		if(fd >= 0 && fd < NFD && files[fd].eof) {
+			files[fd].eof = 0;
+			return(0);
+		}
 		c = getchar();
 		if(c == '\r')
 			c = '\n';
@@ -1338,8 +1381,16 @@ trap(int *r)
 		ret = kchdir((char *)r[0]);
 	else if(n == S_STAT)
 		ret = kstat((char *)r[0], (struct ustat *)r[1]);
-	else if(n == S_ACCESS)
-		ret = v7_namei_inum((char *)r[0]) == 0 ? -1 : 0;
+	else if(n == S_ACCESS) {
+		/* /dev/console is the kernel-resident UART pseudo-inode (see
+		 * kopen), not a real on-disk entry; init.c::rline() probes
+		 * it with access(tty, 06) before forking getty, so accept
+		 * it here even though v7_namei_inum cannot find it. */
+		if(strcmp((char *)r[0], "/dev/console") == 0)
+			ret = 0;
+		else
+			ret = v7_namei_inum((char *)r[0]) == 0 ? -1 : 0;
+	}
 	else if(n == S_UTIME)
 		ret = v7_namei_inum((char *)r[0]) == 0 ? -1 : 0;
 	else if(n == S_LSEEK)
