@@ -105,3 +105,4 @@ char	_ctype2[] = {
 /*	x	y	z	{	|	}	~	del	*/
 	_LPC,	_LPC,	_LPC,	_CBR,	0,	_CKT,	0,	0
 };
+

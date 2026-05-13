@@ -10,7 +10,6 @@ struct	stat	stbuf1, stbuf2;
 char	iobuf[BSIZE];
 
 int copy(char *from, char *to);
-
 int
 main(int argc, char *argv[])
 {
@@ -51,11 +50,11 @@ copy(char *from, char *to)
 		p1 = from;
 		p2 = to;
 		bp = iobuf;
-		while((*bp++ = *p2++))
+		while(*bp++ = *p2++)
 			;
 		bp[-1] = '/';
 		p2 = bp;
-		while((*bp = *p1++))
+		while(*bp = *p1++)
 			if (*bp++ == '/')
 				bp = p2;
 		to = iobuf;
@@ -72,7 +71,7 @@ copy(char *from, char *to)
 		close(fold);
 		return(1);
 	}
-	while((n = read(fold,  iobuf,  BSIZE))) {
+	while(n = read(fold,  iobuf,  BSIZE)) {
 		if (n < 0) {
 			fprintf(stderr, "cp: read error\n");
 			close(fold);

@@ -682,9 +682,9 @@ char *i, *j;
 		code = fp->code;
 		ignore = fp->ignore;
 loop: 
-		while(ignore[(unsigned char)*pa])
+		while(ignore[*pa])
 			pa++;
-		while(ignore[(unsigned char)*pb])
+		while(ignore[*pb])
 			pb++;
 		if(pa>=la || *pa=='\n')
 			if(pb<lb && *pb!='\n')
@@ -692,7 +692,7 @@ loop:
 			else continue;
 		if(pb>=lb || *pb=='\n')
 			return(-fp->rflg);
-		if((sa = code[(unsigned char)*pb++]-code[(unsigned char)*pa++]) == 0)
+		if((sa = code[*pb++]-code[*pa++]) == 0)
 			goto loop;
 		return(sa*fp->rflg);
 	}
@@ -791,7 +791,7 @@ int k;
 	d = 0;
 	for(; *s!=0; s++) {
 		switch(*s) {
-	case '\0':
+		case '\0':
 			return(0);
 
 		case 'b':
@@ -952,3 +952,4 @@ loop:
 		j = --hp;
 	}
 }
+

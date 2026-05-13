@@ -1,16 +1,15 @@
-/* Ported from v7/usr/src/libc/stdio/getpwnam.c.
- * K&R prototype -> C99, register dropped. Algorithm unchanged. */
 #include "u.h"
 #include <pwd.h>
 
 struct passwd *
-getpwnam(char *name)
+getpwnam(name)
+char *name;
 {
-	struct passwd *p;
+	register struct passwd *p;
+	struct passwd *getpwent();
 
 	setpwent();
-	while((p = getpwent()) && strcmp(name, p->pw_name))
-		;
+	while( (p = getpwent()) && strcmp(name,p->pw_name) );
 	endpwent();
 	return(p);
 }

@@ -30,7 +30,6 @@ void exit(int n);
 #undef minor
 #define major(x)	(((x)>>8)&0377)
 #define minor(x)	((x)&0377)
-
 int
 main(argc, argv)
 int argc;
@@ -115,7 +114,6 @@ spcl:
 
 	case 0411:
 		printf("separate ");
-		/* FALLTHROUGH */
 
 	case 0407:
 exec:

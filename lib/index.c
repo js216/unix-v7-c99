@@ -1,20 +1,17 @@
 /*
  * Return the ptr in sp at which the character c appears;
- * NULL if not found.
- *
- * Ported from v7/usr/src/libc/gen/index.c.  K&R prototype -> C99,
- * register dropped, char promoted to int in the second arg per
- * C99 default argument promotion.
+ * NULL if not found
  */
 
 #define	NULL	0
 
 char *
-index(char *sp, int c)
+index(sp, c)
+register char *sp, c;
 {
 	do {
-		if(*sp == c)
+		if (*sp == c)
 			return(sp);
-	} while(*sp++);
+	} while (*sp++);
 	return(NULL);
 }

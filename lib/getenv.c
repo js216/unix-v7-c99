@@ -1,36 +1,45 @@
-/* Minimal getenv + environ.
- *
- * The v7 libc getenv walks `environ[]`, looking for `name=`.  This
- * port keeps the algorithm but admits that the kernel does not yet
- * thread an envp through fork/exec, so the default `environ`
- * starts empty and getenv returns NULL until something installs
- * a proper environment. */
-
+/*
+ *	getenv(name)
+ *	returns ptr to value associated with name, if any, else NULL
+ */
 #include "u.h"
-
-#define	NULL	0
+#define NULL	0
 
 static char *empty[] = { 0 };
 char **environ = empty;
+int errno;
+
+static char *nvmatch();
 
 char *
-getenv(char *name)
+getenv(name)
+register char *name;
 {
-	char **p;
-	char *q;
-	int n;
+	register char **p = environ;
+	register char *v;
 
-	n = strlen(name);
-	for(p = environ; *p != NULL; p++) {
-		q = *p;
-		if(strncmp(q, name, n) == 0 && q[n] == '=')
-			return(q + n + 1);
-	}
+	while (*p != NULL)
+		if ((v = nvmatch(name, *p++)) != NULL)
+			return(v);
 	return(NULL);
 }
 
-/* errno: each cmd .c file in V7 declares `int errno;` (tentative),
- * and the linker coalesces them under -fcommon.  Provide a libc-side
- * tentative definition for binaries that don't already carry one
- * (e.g. /etc/init, /etc/getty whose mains never read errno). */
-int errno;
+/*
+ *	s1 is either name, or name=value
+ *	s2 is name=value
+ *	if names match, return value of s2, else NULL
+ *	used for environment searching: see getenv
+ */
+
+static char *
+nvmatch(s1, s2)
+register char *s1, *s2;
+{
+
+	while (*s1 == *s2++)
+		if (*s1++ == '=')
+			return(s2);
+	if (*s1 == '\0' && *(s2-1) == '=')
+		return(s2);
+	return(NULL);
+}

@@ -28,7 +28,6 @@ void error(char *s1, char *s2, char *s3, char *s4, char *s5);
 int cmp(char *s1, char *s2);
 int atoi(char *s);
 void exit(int n);
-
 int
 main(argc, argv)
 int argc;

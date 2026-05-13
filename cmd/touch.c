@@ -13,7 +13,6 @@ for(i = 1 ; i < argc ; ++i)
 		touch(force, argv[i]);
 	else
 		force = 0;
-exit(0);
 }
 
 

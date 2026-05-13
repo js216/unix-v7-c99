@@ -1,21 +1,20 @@
 /*
- * Return the ptr in sp at which the character c last appears;
- * NULL if not found.
- *
- * Ported from v7/usr/src/libc/gen/rindex.c.
- */
+ * Return the ptr in sp at which the character c last
+ * appears; NULL if not found
+*/
 
 #define NULL 0
 
 char *
-rindex(char *sp, int c)
+rindex(sp, c)
+register char *sp, c;
 {
-	char *r;
+	register char *r;
 
 	r = NULL;
 	do {
-		if(*sp == c)
+		if (*sp == c)
 			r = sp;
-	} while(*sp++);
+	} while (*sp++);
 	return(r);
 }

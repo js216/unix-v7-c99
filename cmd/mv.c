@@ -26,7 +26,7 @@ int	chkdot(char *s);
 struct	stat s1, s2;
 
 int
-main(int argc, char *argv[])
+main(int argc, register char *argv[])
 {
 	register int i, r;
 
@@ -238,7 +238,7 @@ register char *name;
 	static	char buf[MAXN];
 
 	p = q = buf;
-	while ((c = *p++ = *name++))
+	while (c = *p++ = *name++)
 		if (c == DELIM)
 			q = p-1;
 	if (q == buf && *q == DELIM)
@@ -274,7 +274,7 @@ check(char *spth, ino_t dinode)
 			fprintf(stderr, "mv: cannot access %s\n", nspth);
 			return(1);
 		}
-		if ((ino_t)sbuf.st_ino == dinode) {
+		if (sbuf.st_ino == dinode) {
 			fprintf(stderr, "mv: cannot move a directory into itself\n");
 			return(1);
 		}
@@ -289,7 +289,7 @@ check(char *spth, ino_t dinode)
 }
 
 int
-chkdot(char *s)
+chkdot(register char *s)
 {
 	do {
 		if (strcmp(dname(s), DOTDOT) == 0)

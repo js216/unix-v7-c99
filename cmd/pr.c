@@ -51,7 +51,6 @@ int	pgetc(int i);
 void	put(int ac);
 void	putcp(int c);
 void	onintr(void);
-
 int
 main(int argc, char **argv)
 {

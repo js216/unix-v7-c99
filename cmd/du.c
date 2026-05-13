@@ -4,7 +4,6 @@
 #include <sys/dir.h>
 #define EQ(x,y)	(strcmp(x,y)==0)
 #define ML	1000
-#define BSHIFT	9
 
 struct stat Statb;
 char	path[256], name[256];
@@ -41,7 +40,7 @@ main(int argc, char **argv)
 	do {
 		strcpy(path, Noarg? ".": argv[i]);
 		strcpy(name, path);
-		if((np = rindex(name, '/'))) {
+		if(np = rindex(name, '/')) {
 			*np++ = '\0';
 			if(chdir(*name? name: "/") == -1) {
 				fprintf(stderr, "cannot chdir()\n");
