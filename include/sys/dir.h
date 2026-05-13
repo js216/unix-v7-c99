@@ -1,7 +1,5 @@
 #ifndef SYS_DIR_H
 #define SYS_DIR_H
-#include <sys/types.h>
-
 #ifndef	DIRSIZ
 #define	DIRSIZ	14
 #endif
