@@ -12,6 +12,9 @@ putchar(char c)
 {
 	if(c == '\n')
 		putchar('\r');
+	/* mask off bit 7: historic v7 getty/tty sets parity via partab[],
+	 * but PL011 is configured 8N1 (no parity), so high bit corrupts output */
+	c &= 0177;
 	while(UART0_FR & TXFF)
 		;
 	UART0_DR = c;
