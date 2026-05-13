@@ -437,7 +437,15 @@ scanfs(void)
 	ino_t ino, maxino;
 	int i;
 
-	maxino = ((struct filsys *)blkbuf)->s_isize * INOPB;
+	/*
+	 * Inode blocks occupy block 2 .. (s_isize-1).  The original v7
+	 * formula `s_isize * INOPB` over-counts maxino by up to two
+	 * blocks worth of inodes, which on a packed image would have
+	 * iget() walk into the first data block(s) and misinterpret
+	 * directory bytes as a phantom dinode.  Bound the scan at the
+	 * last real inode block.
+	 */
+	maxino = (((struct filsys *)blkbuf)->s_isize - 2) * INOPB;
 	nextino = ROOTINO;
 	nextblk = 2 + ((struct filsys *)blkbuf)->s_isize;
 	for(ino=ROOTINO; ino<maxino; ino++)
