@@ -1,27 +1,29 @@
 : /bin/test_suite --- Unified V7 functional test suite
 :
-echo "--- START: USERLAND SMOKE ---"
+echo "USERLAND SMOKE"
 pwd
-ls /bin
+ls /bin/cal
 cat /etc/passwd
 wc /etc/passwd
-echo "PID: OK"
 
-echo "--- START: PIPES AND REDIRECTION ---"
+echo "MAKING DIRECTORIES AND FILES"
+cd /
+mkdir home
+cd home
+touch file
+ls -l file
+
+echo "PIPES AND REDIRECTION"
 echo hello | wc -c
 cat /etc/passwd | grep root
-echo "PIPESOK"
 
-echo "--- START: TEXT PROCESSING ---"
+echo "TEXT PROCESSING"
 grep root /etc/passwd
 sort /etc/passwd
 wc /usr/dict/words
-echo "TEXTPROCOK"
 
-echo "--- START: PROCESS CONTROL ---"
+echo "PROCESS CONTROL"
 sleep 1 &
 wait
-echo "WAITOK"
-echo "PROCOK"
 
-echo "--- UNIT TESTS COMPLETE ---"
+echo "UNIT TESTS COMPLETE"
