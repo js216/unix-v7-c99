@@ -12,7 +12,6 @@
 char	*panicstr;
 
 void printn(long n, int b);
-
 /*
  * Scaled down version of C Library printf.
  * Only %s %u %d (==%u) %o %x %D are recognized.

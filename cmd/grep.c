@@ -62,7 +62,6 @@ int advance(register char *lp, register char *ep);
 void succeed(char *f);
 int ecmp(char *a, char *b, int count);
 void errexit(char *s, char *f);
-
 int
 main(int argc, char *argv[])
 {
@@ -255,7 +254,6 @@ compile(char *astr)
 				*ep++ = c;
 				continue;
 			}
-			/* fall through */
 
 		defchar:
 		default:
@@ -365,18 +363,18 @@ advance(register char *lp, register char *ep)
 		}
 		return(0);
 	case CBRA:
-		braslist[(unsigned char)*ep++] = lp;
+		braslist[*ep++] = lp;
 		continue;
 
 	case CKET:
-		braelist[(unsigned char)*ep++] = lp;
+		braelist[*ep++] = lp;
 		continue;
 
 	case CBACK:
-		bbeg = braslist[(unsigned char)*ep];
-		if (braelist[(unsigned char)*ep]==0)
+		bbeg = braslist[*ep];
+		if (braelist[*ep]==0)
 			return(0);
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		ct = braelist[*ep++] - bbeg;
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
 			continue;
@@ -384,10 +382,10 @@ advance(register char *lp, register char *ep)
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[(unsigned char)*ep];
-		if (braelist[(unsigned char)*ep]==0)
+		bbeg = braslist[*ep];
+		if (braelist[*ep]==0)
 			return(0);
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		ct = braelist[*ep++] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -447,6 +445,7 @@ advance(register char *lp, register char *ep)
 void
 succeed(char *f)
 {
+	long ftell();
 	nsucc = 1;
 	if (sflag)
 		return;

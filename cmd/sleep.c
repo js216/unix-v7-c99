@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 int
 main(int argc, char **argv)
 {
@@ -12,7 +11,7 @@ main(int argc, char **argv)
 		exit(0);
 	}
 	s = argv[1];
-	while((c = *s++)) {
+	while(c = *s++) {
 		if(c<'0' || c>'9') {
 			printf("bad character\n");
 			exit(0);
@@ -20,5 +19,4 @@ main(int argc, char **argv)
 		n = n*10 + c - '0';
 	}
 	sleep(n);
-	exit(0);
 }

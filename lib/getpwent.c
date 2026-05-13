@@ -1,11 +1,5 @@
-/* Ported from v7/usr/src/libc/stdio/getpwent.c.
- * K&R prototypes -> C99, register dropped, void return on
- * setpwent/endpwent. Algorithm and i/o sequence unchanged. */
-#include "u.h"
 #include <stdio.h>
 #include <pwd.h>
-
-extern int atoi(char *);
 
 static char PASSWD[]	= "/etc/passwd";
 static char EMPTY[] = "";
@@ -14,43 +8,44 @@ static char line[BUFSIZ+1];
 static struct passwd passwd;
 
 void
-setpwent(void)
+setpwent()
 {
-	if(pwf == NULL)
-		pwf = fopen(PASSWD, "r");
+	if( pwf == NULL )
+		pwf = fopen( PASSWD, "r" );
 	else
-		rewind(pwf);
+		rewind( pwf );
 }
 
 void
-endpwent(void)
+endpwent()
 {
-	if(pwf != NULL) {
-		fclose(pwf);
+	if( pwf != NULL ){
+		fclose( pwf );
 		pwf = NULL;
 	}
 }
 
 static char *
-pwskip(char *p)
+pwskip(p)
+register char *p;
 {
-	while(*p && *p != ':')
+	while( *p && *p != ':' )
 		++p;
-	if(*p) *p++ = 0;
+	if( *p ) *p++ = 0;
 	return(p);
 }
 
 struct passwd *
-getpwent(void)
+getpwent()
 {
-	char *p;
+	register char *p;
 
-	if(pwf == NULL) {
-		if((pwf = fopen(PASSWD, "r")) == NULL)
+	if (pwf == NULL) {
+		if( (pwf = fopen( PASSWD, "r" )) == NULL )
 			return(0);
 	}
 	p = fgets(line, BUFSIZ, pwf);
-	if(p == NULL)
+	if (p==NULL)
 		return(0);
 	passwd.pw_name = p;
 	p = pwskip(p);

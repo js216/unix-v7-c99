@@ -47,7 +47,7 @@ isnumber(char *s)
 {
 	register int c;
 
-	while((c = *s++))
+	while(c = *s++)
 		if(!isdigit(c))
 			return(0);
 	return(1);

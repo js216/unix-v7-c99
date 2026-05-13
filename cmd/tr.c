@@ -49,7 +49,7 @@ main(int argc, char **argv)
 	for(i=0; i<256; i++)
 		code[i] = vect[i] = 0;
 	if(cflag) {
-		while((c = next(&string1)))
+		while(c = next(&string1))
 			vect[c&0377] = 1;
 		j = 0;
 		for(i=1; i<256; i++)
@@ -70,7 +70,7 @@ main(int argc, char **argv)
 		squeez[d&0377] = 1;
 		code[c&0377] = dflag?1:d;
 	}
-	while((d = next(&string2)))
+	while(d = next(&string2))
 		squeez[d&0377] = 1;
 	squeez[0] = 1;
 	for(i=0;i<256;i++) {
@@ -80,7 +80,7 @@ main(int argc, char **argv)
 
 	while((c=getc(stdin)) != EOF ) {
 		if(c == 0) continue;
-		if((c = code[c&0377]&0377))
+		if(c = code[c&0377]&0377)
 			if(!sflag || c!=save || !squeez[c&0377])
 				putchar(save = c);
 	}

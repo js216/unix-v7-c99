@@ -10,7 +10,6 @@ FILE	*os;
 
 int atoi(char *s);
 void exit(int n);
-
 int
 main(argc, argv)
 int argc;

@@ -1,8 +1,4 @@
-/* Ported from v7/usr/src/libc/gen/errlst.c.
- * The error-message table perror() consults; no executable code,
- * just data.  Strings byte-for-byte identical with v7. */
-
-char *sys_errlist[] = {
+char	*sys_errlist[] = {
 	"Error 0",
 	"Not owner",
 	"No such file or directory",
@@ -39,5 +35,4 @@ char *sys_errlist[] = {
 	"Argument too large",
 	"Result too large",
 };
-
-int sys_nerr = sizeof sys_errlist / sizeof sys_errlist[0];
+int	sys_nerr = { sizeof sys_errlist/sizeof sys_errlist[0] };
