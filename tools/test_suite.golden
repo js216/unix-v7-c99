@@ -1,0 +1,63 @@
+mem = <MEM>
+
+v7: sb isize=16 fsize=4096
+
+init: multi-user
+
+
+
+
+
+login: 
+
+login: root
+
+# /bin/sh /bin/test_suite
+
+# # # USERLAND SMOKE
+
+# /
+
+# /bin/cal
+
+# root::0:0:root:/:/bin/sh
+
+dmr::1:1:dennis:/:/bin/sh
+
+#       2      2      51 /etc/passwd
+
+# # MAKING DIRECTORIES AND FILES
+
+# # mkdir: cannot link home/.
+
+# home: bad directory
+
+# # file not found
+
+# # PIPES AND REDIRECTION
+
+#       6
+
+# root::0:0:root:/:/bin/sh
+
+# # TEXT PROCESSING
+
+# root::0:0:root:/:/bin/sh
+
+# dmr::1:1:dennis:/:/bin/sh
+
+root::0:0:root:/:/bin/sh
+
+#     202    202    1035 /usr/dict/words
+
+# # PROCESS CONTROL
+
+# 22
+
+# # # UNIT TESTS COMPLETE
+
+# # sync
+
+# exit
+
+# QEMU: Terminated
