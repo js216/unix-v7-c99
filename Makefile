@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
+# Copyright (c) 2026 Jakob Kastelic
+
 ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/cat root/bin/echo root/bin/ls root/bin/pwd root/bin/sync \
 	root/bin/rev root/bin/yes root/bin/wc root/bin/basename root/bin/sum \
@@ -15,7 +19,6 @@ ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/dcheck root/bin/icheck root/bin/ncheck \
 	root/bin/cb root/bin/sp root/bin/find root/bin/sort root/bin/ed \
 	root/bin/mount root/bin/umount root/bin/id \
-	root/bin/test_suite \
 	root/usr/lib/makekey root/usr/lib/diffh \
 	root/etc/passwd root/etc/ttys root/usr/dict/words \
 	build/auxfs.img
@@ -28,13 +31,12 @@ unix:	root.img sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h
 qemu:	unix
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel unix -drive if=none,file=root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0
 
-root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img tools/test_suite.sh
+root.img: Makefile tools/mkfs cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
 	cd lib; make
 	tools/mkfs root.img \
 	/etc/init=root/etc/init /etc/getty=root/etc/getty \
 	/etc/auxfs=build/auxfs.img \
 	/bin/mount=root/bin/mount /bin/umount=root/bin/umount /bin/id=root/bin/id \
-	/bin/test_suite=tools/test_suite.sh \
 	/bin/login=root/bin/login /bin/sh=root/bin/sh \
 	/bin/cat=root/bin/cat /bin/echo=root/bin/echo \
 	/bin/ls=root/bin/ls /bin/pwd=root/bin/pwd /bin/sync=root/bin/sync \
