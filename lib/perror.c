@@ -2,8 +2,7 @@
  * Print the error indicated
  * in the cerror cell.
  */
-
-#include "u.h"
+#include <stdio.h>
 
 int	errno;
 int	sys_nerr;

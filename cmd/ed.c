@@ -6,7 +6,7 @@
 #include <sgtty.h>
 #include <setjmp.h>
 #define	puts	u_puts
-#include "../lib/u.h"
+#include <stdio.h>
 #undef	puts
 #define	NULL	0
 #define	FNSIZE	64

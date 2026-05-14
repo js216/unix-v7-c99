@@ -2,7 +2,7 @@
  *	execlp(name, arg,...,0)	(like execl, but does path search)
  *	execvp(name, argv)	(like execv, but does path search)
  */
-#include "u.h"
+#include <stdio.h>
 #include <errno.h>
 #define	NULL	0
 

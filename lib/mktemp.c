@@ -1,5 +1,4 @@
-#include "u.h"
-
+#include <stdio.h>
 char *
 mktemp(as)
 char *as;

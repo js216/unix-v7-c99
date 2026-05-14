@@ -2,7 +2,7 @@
  * Returns 1 iff file is a tty
  */
 
-#include "u.h"
+#include <stdio.h>
 #include <sgtty.h>
 
 int

@@ -1,14 +1,28 @@
 CC = arm-none-eabi-gcc
+AR = arm-none-eabi-ar
 CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wno-error=parentheses -Wno-error=dangling-else -Wno-error=misleading-indentation -Wno-error=implicit-fallthrough -Wno-error=int-to-pointer-cast -Wno-error=char-subscripts -Wno-error=sizeof-pointer-div -Wno-error=missing-braces -Wno-error=missing-field-initializers -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -I../include -I..
 SHCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -fms-extensions -Wno-parentheses -Wno-dangling-else -Wno-implicit-int -Wno-implicit-function-declaration -Wno-return-type -Wno-return-mismatch -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-sign-compare -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter -Wno-main -Wno-array-bounds -Wno-missing-braces -Wno-type-limits -Wno-implicit-fallthrough -Wno-pedantic -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -I../include -I..
 EDCFLAGS = $(SHCFLAGS) -Wno-builtin-declaration-mismatch
 LDFLAGS = -nostdlib -T u.ld
-LDLIBS = -lgcc
-LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
+LDLIBS = -L. -lc -lgcc
+
+# crt0 is link-line head, not in libc.a (the entry symbol must come first
+# and is not pulled out of an archive on demand).
+CRT = crt0.o crt0c.o
+
+# Objects packed into libc.a.  The linker pulls these in only on demand,
+# so atof can finally live here without bloating every binary.
+LIBOBJ = syscall.o sys.o compat.o v7crypt.o l3.o \
       getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o getenv.o \
-      atoi.o atol.o index.o rindex.o isatty.o perror.o \
+      atoi.o atol.o atof.o index.o rindex.o isatty.o perror.o \
       strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o \
-      swab.o rand.o mktemp.o errlst.o ttyname.o
+      swab.o rand.o mktemp.o errlst.o ttyname.o \
+      qsort.o calloc.o tell.o timezone.o getlogin.o \
+      data.o fopen.o freopen.o findiop.o endopen.o filbuf.o flsbuf.o \
+      fgetc.o fputc.o fgets.o fputs.o gets.o puts.o rdwr.o \
+      fseek.o ftell.o rew.o setbuf.o ungetc.o clrerr.o \
+      getchar.o putchar.o strout.o doprnt.o printf.o fprintf.o sprintf.o \
+      doscan.o scanf.o malloc.o getpass.o ctime.o
 # lib/abs.o is intentionally excluded -- cmd/chmod.c carries its
 # own `abs(void)` parser helper that would collide with the v7
 # libc abs(int).  No port currently calls libc abs(); the file
@@ -16,44 +30,58 @@ LIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
 
 # v7 sh has its own internal `getenv()` (a void(void) that walks
 # environ[] and registers each entry as a sh variable -- not libc
-# getenv).  Keep that file out of the sh link to avoid a duplicate
+# getenv).  Build sh's libc.a without getenv to avoid a duplicate
 # symbol clash.
-SHLIB = crt0.o crt0c.o syscall.o compat.o v7crypt.o l3.o \
+SHLIBOBJ = syscall.o sys.o compat.o v7crypt.o l3.o \
       getpwent.o getpwnam.o getpwuid.o strncat.o ttyslot.o execvp.o \
-      atoi.o atol.o index.o rindex.o isatty.o perror.o \
+      atoi.o atol.o atof.o index.o rindex.o isatty.o perror.o \
       strcat.o strcmp.o strcpy.o strlen.o strncmp.o strncpy.o \
-      swab.o rand.o mktemp.o errlst.o ttyname.o
+      swab.o rand.o mktemp.o errlst.o ttyname.o \
+      qsort.o calloc.o tell.o timezone.o getlogin.o \
+      data.o fopen.o freopen.o findiop.o endopen.o filbuf.o flsbuf.o \
+      fgetc.o fputc.o fgets.o fputs.o gets.o puts.o rdwr.o \
+      fseek.o ftell.o rew.o setbuf.o ungetc.o clrerr.o \
+      getchar.o putchar.o strout.o doprnt.o printf.o fprintf.o sprintf.o \
+      doscan.o scanf.o malloc.o getpass.o ctime.o
 ETC = init getty
 BIN = login cat echo ls pwd sync rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount
 USRLIB = makekey diffh
 SHSRC = args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec
 SHOBJ = args.o blok.o builtin.o cmd.o ctype.o error.o expand.o fault.o io.o macro.o main.o msg.o name.o print.o service.o setbrk.o stak.o string.o word.o xec.o
 
-all:	$(LIB)
+all:	$(CRT) libc.a libsh.a
 	mkdir -p ../root/etc ../root/bin ../root/usr/lib
 	set -e; for i in $(ETC); do \
 		$(CC) $(CFLAGS) -c ../cmd/$$i.c; \
-		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(LIB) $$i.o $(LDLIBS); \
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(CRT) $$i.o $(LDLIBS); \
 		arm-none-eabi-objcopy -O binary $$i.elf ../root/etc/$$i; \
 	done
 	set -e; for i in $(BIN); do \
 		$(CC) $(CFLAGS) -c ../cmd/$$i.c; \
-		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(LIB) $$i.o $(LDLIBS); \
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(CRT) $$i.o $(LDLIBS); \
 		arm-none-eabi-objcopy -O binary $$i.elf ../root/bin/$$i; \
 	done
 	set -e; for i in $(USRLIB); do \
 		$(CC) $(CFLAGS) -c ../cmd/$$i.c; \
-		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(LIB) $$i.o $(LDLIBS); \
+		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(CRT) $$i.o $(LDLIBS); \
 		arm-none-eabi-objcopy -O binary $$i.elf ../root/usr/lib/$$i; \
 	done
 	$(CC) $(EDCFLAGS) -c ../cmd/ed.c
-	$(CC) $(EDCFLAGS) $(LDFLAGS) -o ed.elf $(LIB) ed.o $(LDLIBS)
+	$(CC) $(EDCFLAGS) $(LDFLAGS) -o ed.elf $(CRT) ed.o $(LDLIBS)
 	arm-none-eabi-objcopy -O binary ed.elf ../root/bin/ed
 	set -e; for i in $(SHSRC); do \
 		$(CC) $(SHCFLAGS) -I../cmd/sh -c ../cmd/sh/$$i.c; \
 	done
-	$(CC) $(SHCFLAGS) $(LDFLAGS) -o sh.elf $(SHLIB) $(SHOBJ)
+	$(CC) $(SHCFLAGS) $(LDFLAGS) -o sh.elf $(CRT) $(SHOBJ) -L. -lsh -lgcc
 	arm-none-eabi-objcopy -O binary sh.elf ../root/bin/sh
+
+libc.a: $(LIBOBJ)
+	rm -f libc.a
+	$(AR) rcs libc.a $(LIBOBJ)
+
+libsh.a: $(SHLIBOBJ)
+	rm -f libsh.a
+	$(AR) rcs libsh.a $(SHLIBOBJ)
 
 crt0.o: crt0.s
 	$(CC) $(CFLAGS) -c crt0.s
@@ -71,7 +99,7 @@ v7crypt.o: crypt.c
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -f *.o *.elf ../root/etc/init ../root/etc/getty
+	rm -f *.o *.elf *.a ../root/etc/init ../root/etc/getty
 	rm -f ../root/bin/login ../root/bin/sh ../root/bin/cat
 	rm -f ../root/bin/echo ../root/bin/ls ../root/bin/pwd ../root/bin/sync
 	rm -f ../root/bin/rev
