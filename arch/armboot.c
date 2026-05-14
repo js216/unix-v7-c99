@@ -3,7 +3,7 @@
 #include "../h/ino.h"
 #include "../h/filsys.h"
 #include "../h/buf.h"
-#include "../h/arm.h"
+#include "arm.h"
 #include "../h/proto.h"
 
 #define	NADDR			13
@@ -142,7 +142,7 @@ mmuinit(void)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
 	for(pa=0xC0000000U; pa<0xE0000000U; pa+=0x00100000U)
 		l1[pa>>20] = (pa & 0xfff00000U) | 0x00000402U;
-	/* USERPHYS as defined in h/arm.h points at 0x41000000, which on the
+	/* USERPHYS as defined in arch/arm.h points at 0x41000000, which on the
 	 * STM32MP135 is APB peripheral space, not RAM.  Writing the user
 	 * image there silently drops bytes (or faults).  Carve a 1 MiB DDR
 	 * slot well above the kernel image (0xC2000000) and the DDR-staged
