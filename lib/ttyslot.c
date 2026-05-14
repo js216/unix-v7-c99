@@ -4,7 +4,7 @@
  * Definition is the line number in the /etc/ttys file.
  */
 
-#include "u.h"
+#include <stdio.h>
 
 char	*ttyname();
 static char *getttys();

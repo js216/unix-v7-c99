@@ -25,4 +25,7 @@ struct	stat
 #define	S_IREAD	0000400
 #define	S_IWRITE	0000200
 #define	S_IEXEC	0000100
+#define	S_ISUID	0004000
+#define	S_ISGID	0002000
+#define	S_ISVTX	0001000
 #endif

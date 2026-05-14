@@ -1,4 +1,4 @@
-#include "u.h"
+#include <stdio.h>
 #include <pwd.h>
 
 struct passwd *

@@ -5,3 +5,4 @@
 #define	isalnum(c)	(isalpha(c)||isdigit(c))
 #define	isspace(c)	((c)==' '||(c)=='\t'||(c)=='\n'||(c)=='\r'||(c)=='\f')
 #define	toupper(c)	(islower(c)?(c)-'a'+'A':(c))
+#define	tolower(c)	(isupper(c)?(c)-'A'+'a':(c))
