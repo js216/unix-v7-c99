@@ -2,6 +2,8 @@
 # Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 # Copyright (c) 2026 Jakob Kastelic
 
+CONF ?= qemu_arm
+
 ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/cat root/bin/echo root/bin/ls root/bin/pwd root/bin/sync \
 	root/bin/rev root/bin/yes root/bin/wc root/bin/basename root/bin/sum \
@@ -18,7 +20,7 @@ ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/wall root/bin/write root/bin/df root/bin/clri \
 	root/bin/dcheck root/bin/icheck root/bin/ncheck \
 	root/bin/cb root/bin/sp root/bin/find root/bin/sort root/bin/ed \
-	root/bin/mount root/bin/umount root/bin/id \
+	root/bin/mount root/bin/umount \
 	root/usr/lib/makekey root/usr/lib/diffh \
 	root/etc/passwd root/etc/ttys root/usr/dict/words \
 	build/auxfs.img
@@ -31,10 +33,10 @@ unix:	root.img sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h
 qemu:	unix
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel unix -drive if=none,file=root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0
 
-root.img: Makefile tools/mkfs root.proto cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
+root.img: Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* lib/*.c lib/*.s lib/*.h lib/Makefile lib/u.ld root/etc/passwd root/etc/ttys build/auxfs.img
 	cd lib; make
 	mkdir -p build
-	tools/mkfs root.img root.proto
+	tools/mkfs root.img conf/$(CONF)/root.proto
 	# v7 mkfs only writes the blocks it touches.  Pad root.img to its
 	# declared filesystem size (FSIZE * BSIZE = 4096 * 512) so qemu's
 	# virtio block backend can serve any sector the kernel asks for.
@@ -61,9 +63,9 @@ tools/mkfs: tools/mkfs.c
 # A pocket-sized fs image holding just /a=root/etc/passwd, mounted as
 # /etc/auxfs by the icheck/dcheck/ncheck mission step.  The static
 # auxfs.proto declares a tiny (64 block, 32 inode) volume.
-build/auxfs.img: tools/mkfs auxfs.proto root/etc/passwd
+build/auxfs.img: tools/mkfs conf/$(CONF)/auxfs.proto root/etc/passwd
 	mkdir -p build
-	tools/mkfs build/auxfs.img auxfs.proto
+	tools/mkfs build/auxfs.img conf/$(CONF)/auxfs.proto
 	truncate -s 32768 build/auxfs.img
 
 root/usr/dict/words: v7/usr/dict/words

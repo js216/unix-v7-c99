@@ -31,7 +31,6 @@ d--755 0 0
 		find	---755 0 0 root/bin/find
 		grep	---755 0 0 root/bin/grep
 		icheck	---755 0 0 root/bin/icheck
-		id	---755 0 0 root/bin/id
 		join	---755 0 0 root/bin/join
 		kill	---755 0 0 root/bin/kill
 		ln	---755 0 0 root/bin/ln
