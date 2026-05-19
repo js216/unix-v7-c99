@@ -216,6 +216,38 @@ char **argv;
 					dirtry[0] = *++argv;
 				continue;
 
+			case 'k': {
+				/* POSIX -k N (single-field form) -> v7 +N-1.
+				 * -k 2 sorts by the second whitespace-separated
+				 * field.  More complex forms (-k F1,F2) aren't
+				 * supported; falls back to single field. */
+				static char kbuf[16];
+				char *kp;
+				int n = 0;
+				if (--argc <= 0) break;
+				kp = *++argv;
+				while (*kp >= '0' && *kp <= '9') {
+					n = n*10 + (*kp++ - '0');
+				}
+				if (n > 0) {
+					int v = n - 1, ki = 0;
+					char tmp[12]; int ti = 0;
+					if (v == 0) kbuf[ki++] = '0';
+					else {
+						while (v > 0) { tmp[ti++] = '0' + (v%10); v /= 10; }
+						while (ti > 0) kbuf[ki++] = tmp[--ti];
+					}
+					kbuf[ki] = '\0';
+					if (++nfields >= NF) {
+						diag("too many keys","");
+						exit(1);
+					}
+					copyproto();
+					field(kbuf, 0);
+				}
+				continue;
+			}
+
 			default:
 				field(++*argv,nfields>0);
 				break;

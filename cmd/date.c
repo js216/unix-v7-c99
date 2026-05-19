@@ -49,6 +49,48 @@ char *argv[];
 		argv++;
 		uflag++;
 	}
+	/* POSIX "+FORMAT": print the current time using strftime-like
+	 * codes.  Supports %Y %y %m %d %H %M %S %s %j %a %b %e %p plus
+	 * literal % via %%.  v7 date had no such mode. */
+	if (argc > 1 && argv[1][0] == '+') {
+		struct tm *tp;
+		char *f = argv[1] + 1;
+		time(&timbuf);
+		tp = uflag ? gmtime(&timbuf) : localtime(&timbuf);
+		while (*f) {
+			if (*f != '%') { putchar(*f++); continue; }
+			f++;
+			switch (*f) {
+			case 'Y': printf("%04d", tp->tm_year + 1900); break;
+			case 'y': printf("%02d", tp->tm_year % 100); break;
+			case 'm': printf("%02d", tp->tm_mon + 1); break;
+			case 'd': printf("%02d", tp->tm_mday); break;
+			case 'e': printf("%2d",  tp->tm_mday); break;
+			case 'H': printf("%02d", tp->tm_hour); break;
+			case 'M': printf("%02d", tp->tm_min); break;
+			case 'S': printf("%02d", tp->tm_sec); break;
+			case 's': printf("%ld",  (long)timbuf); break;
+			case 'j': printf("%03d", tp->tm_yday + 1); break;
+			case 'p': fputs(tp->tm_hour < 12 ? "AM" : "PM", stdout); break;
+			case 'a': {
+				static char *days[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+				fputs(days[tp->tm_wday & 7], stdout); break;
+			}
+			case 'b': {
+				static char *mons[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
+				fputs(mons[tp->tm_mon % 12], stdout); break;
+			}
+			case '%': putchar('%'); break;
+			case 'n': putchar('\n'); break;
+			case 't': putchar('\t'); break;
+			case '\0': putchar('%'); f--; break;
+			default:  putchar('%'); putchar(*f); break;
+			}
+			if (*f) f++;
+		}
+		putchar('\n');
+		exit(0);
+	}
 	if(argc > 1) {
 		ap = argv[1];
 		if (gtime()) {

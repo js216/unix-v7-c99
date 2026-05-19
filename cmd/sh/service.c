@@ -65,6 +65,33 @@ VOID	initio(iop)
 	FI
 }
 
+VOID	nullio(iop)
+	IOPTR		iop;
+{
+	REG STRING	ion;
+	REG INT		iof, fd;
+
+	IF iop
+	THEN	iof=iop->iofile;
+		ion=mactrim(iop->ioname);
+		IF *ion ANDF (flags&noexec)==0
+		THEN	IF iof&IODOC
+			THEN	fd=tmpfil(); close(fd); unlink(tmpout);
+			ELIF iof&IOMOV
+			THEN	;
+			ELIF (iof&IOPUT)==0
+			THEN	close(chkopen(ion));
+			ELIF flags&rshflg
+			THEN	failed(ion,restricted);
+			ELIF iof&IOAPP ANDF (fd=open(ion,1))>=0
+			THEN	lseek(fd, 0L, 2); close(fd);
+			ELSE	fd=create(ion); close(fd);
+			FI
+		FI
+		nullio(iop->ionxt);
+	FI
+}
+
 STRING	getpath(s)
 	STRING		s;
 {
@@ -147,7 +174,8 @@ LOCAL STRING	execs(ap,t)
 
 		/* set up new args */
 		setargs(t);
-		longjmp(subshell,1);
+		execexp(0,input);
+		done();
 
 	    case ENOMEM:
 		failed(p,toobig);

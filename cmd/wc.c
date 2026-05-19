@@ -1,16 +1,16 @@
-/* wc line and word count */
+/* wc line, word, char, and longest-line count */
 
 #include <stdio.h>
 
-void wcp(register char *wd, long charct, long wordct, long linect);
+void wcp(register char *wd, long charct, long wordct, long linect, long longest);
 
 int
 main(int argc, char *argv[])
 {
 	int i, token;
 	register FILE *fp;
-	long linect, wordct, charct;
-	long tlinect=0, twordct=0, tcharct=0;
+	long linect, wordct, charct, longest, curline;
+	long tlinect=0, twordct=0, tcharct=0, tlongest=0;
 	char *wd;
 	register int c;
 
@@ -31,12 +31,20 @@ main(int argc, char *argv[])
 		linect = 0;
 		wordct = 0;
 		charct = 0;
+		longest = 0;
+		curline = 0;
 		token = 0;
 		for(;;) {
 			c = getc(fp);
 			if (c == EOF)
 				break;
 			charct++;
+			if(c == '\n') {
+				if (curline > longest) longest = curline;
+				curline = 0;
+			} else {
+				curline++;
+			}
 			if(' '<c&&c<0177) {
 				if(!token) {
 					wordct++;
@@ -50,8 +58,9 @@ main(int argc, char *argv[])
 				continue;
 			token = 0;
 		}
+		if (curline > longest) longest = curline;
 		/* print lines, words, chars */
-		wcp(wd, charct, wordct, linect);
+		wcp(wd, charct, wordct, linect, longest);
 		if(argc>1) {
 			printf(" %s\n", argv[i]);
 		} else
@@ -60,16 +69,17 @@ main(int argc, char *argv[])
 		tlinect += linect;
 		twordct += wordct;
 		tcharct += charct;
+		if (longest > tlongest) tlongest = longest;
 	} while(++i<argc);
 	if(argc > 2) {
-		wcp(wd, tcharct, twordct, tlinect);
+		wcp(wd, tcharct, twordct, tlinect, tlongest);
 		printf(" total\n");
 	}
 	exit(0);
 }
 
 void
-wcp(register char *wd, long charct, long wordct, long linect)
+wcp(register char *wd, long charct, long wordct, long linect, long longest)
 {
 	while (*wd) switch (*wd++) {
 	case 'l':
@@ -82,6 +92,10 @@ wcp(register char *wd, long charct, long wordct, long linect)
 
 	case 'c':
 		printf("%7ld", charct);
+		break;
+
+	case 'L':
+		printf("%7ld", longest);
 		break;
 	}
 }

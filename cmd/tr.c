@@ -46,6 +46,12 @@ main(int argc, char **argv)
 	}
 	if(argc>0) string1.p = argv[0];
 	if(argc>1) string2.p = argv[1];
+	/* POSIX `tr -s STRING1` (no STRING2) squeezes runs of characters
+	 * listed in STRING1.  v7 tr's loop expects STRING2 to populate the
+	 * squeez[] table, so when only one string is given but -s is set,
+	 * mirror STRING1 into STRING2 so the squeeze tags land correctly. */
+	if(sflag && argc==1 && !dflag && !cflag)
+		string2.p = argv[0];
 	for(i=0; i<256; i++)
 		code[i] = vect[i] = 0;
 	if(cflag) {

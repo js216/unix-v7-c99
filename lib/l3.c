@@ -1,8 +1,6 @@
 /*
  * Convert longs to and from 3-byte disk addresses
  */
-int ltol3(), l3tol();
-int
 ltol3(cp, lp, n)
 char	*cp;
 long	*lp;
@@ -21,15 +19,14 @@ int	n;
 		*a++ = *b++;
 #else
 		*a++ = *b++;
+		*a++ = *b++;
+		*a++ = *b++;
 		b++;
-		*a++ = *b++;
-		*a++ = *b++;
 #endif
 	}
 	return(0);
 }
 
-int
 l3tol(lp, cp, n)
 long	*lp;
 char	*cp;
@@ -48,9 +45,9 @@ int	n;
 		*a++ = *b++;
 #else
 		*a++ = *b++;
+		*a++ = *b++;
+		*a++ = *b++;
 		*a++ = 0;
-		*a++ = *b++;
-		*a++ = *b++;
 #endif
 	}
 	return(0);

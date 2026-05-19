@@ -6,8 +6,7 @@
 daddr_t	blkno	= 1;
 char	*dargv[] = {
 	0,
-	"/dev/rp0",
-	"/dev/rp3",
+	"/dev/root",
 	0
 };
 

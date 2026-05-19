@@ -87,6 +87,7 @@ execute(argt, execflg, pf1, pf2)
 					exitsh(a1?stoi(a1):oldexit);
 	
 				case SYSNULL:
+					nullio(io);
 					io=0;
 					break;
 	

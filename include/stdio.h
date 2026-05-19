@@ -130,6 +130,7 @@ int execvp(char *name, char **argv);
 int execlp(char *name, char *arg0, ...);
 void exit(int n);
 void _exit(int n);
+void abort(void);
 int dup();		/* dup(fd) or dup(fd|0100, newfd) for dup2 protocol */
 int pipe(int *fd);
 int getuid(void);
@@ -186,6 +187,8 @@ int printf(char *fmt, ...);
 int fprintf(FILE *f, char *fmt, ...);
 char *sprintf(char *buf, char *fmt, ...);
 int fscanf(FILE *f, char *fmt, ...);
+int sscanf(char *str, char *fmt, ...);
+int system(char *s);
 void perror(char *s);
 
 /* extras */

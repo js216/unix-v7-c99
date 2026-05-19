@@ -6,6 +6,7 @@
 #define	NINDIR	(BSIZE/sizeof(daddr_t))
 #define	NDIRECT	(BSIZE/sizeof(struct direct))
 #define	LADDR	10
+#define	MAXFILEBLK	(LADDR+NINDIR+(NINDIR*NINDIR))
 #define	MAXFN	500
 #define	itoo(x)	(int)((x+15)&07)
 #ifndef STANDALONE
@@ -193,7 +194,7 @@ struct inode *par;
 	struct inode in;
 	int dbc, ibc;
 	char db[BSIZE];
-	daddr_t ib[NINDIR];
+	daddr_t ib[MAXFILEBLK];
 	int i, f, c;
 
 	/*
@@ -225,7 +226,7 @@ struct inode *par;
 	in.i_number = ino;
 	for(i=0; i<BSIZE; i++)
 		db[i] = 0;
-	for(i=0; i<NINDIR; i++)
+	for(i=0; i<MAXFILEBLK; i++)
 		ib[i] = (daddr_t)0;
 	in.i_nlink = 1;
 	in.i_size = 0;
@@ -459,6 +460,11 @@ daddr_t *ib;
 	int i;
 	daddr_t bno;
 
+	if(*aibc >= MAXFILEBLK) {
+		printf("indirect block full\n");
+		error = 1;
+		return;
+	}
 	bno = alloc();
 	wtfs(bno, db);
 	for(i=0; i<BSIZE; i++)
@@ -466,11 +472,6 @@ daddr_t *ib;
 	*adbc = 0;
 	ib[*aibc] = bno;
 	(*aibc)++;
-	if(*aibc >= NINDIR) {
-		printf("indirect block full\n");
-		error = 1;
-		*aibc = 0;
-	}
 }
 
 getch()
@@ -547,8 +548,8 @@ int *aibc;
 daddr_t *ib;
 {
 	struct dinode *dp;
-	daddr_t d;
-	int i;
+	daddr_t d, single[NINDIR], dbl[NINDIR];
+	int i, j, k, n;
 
 	filsys.s_tinode--;
 	d = itod(ip->i_number);
@@ -575,18 +576,41 @@ daddr_t *ib;
 
 	case IFDIR:
 	case IFREG:
-		for(i=0; i<*aibc; i++) {
-			if(i >= LADDR)
-				break;
-			ip->i_un.i_addr[i] = ib[i];
+		for(i=0; i<NINDIR; i++) {
+			single[i] = (daddr_t)0;
+			dbl[i] = (daddr_t)0;
 		}
-		if(*aibc >= LADDR) {
+		for(i=0; i<*aibc && i<LADDR; i++)
+			ip->i_un.i_addr[i] = ib[i];
+		if(*aibc > LADDR) {
+			n = *aibc - LADDR;
+			if(n > NINDIR)
+				n = NINDIR;
+			for(i=0; i<n; i++)
+				single[i] = ib[LADDR+i];
 			ip->i_un.i_addr[LADDR] = alloc();
-			for(i=0; i<NINDIR-LADDR; i++) {
-				ib[i] = ib[i+LADDR];
-				ib[i+LADDR] = (daddr_t)0;
+			wtfs(ip->i_un.i_addr[LADDR], (char *)single);
+		}
+		if(*aibc > LADDR+NINDIR) {
+			n = *aibc - LADDR - NINDIR;
+			if(n > NINDIR*NINDIR) {
+				printf("indirect block full\n");
+				error = 1;
+				n = NINDIR*NINDIR;
 			}
-			wtfs(ip->i_un.i_addr[LADDR], (char *)ib);
+			ip->i_un.i_addr[LADDR+1] = alloc();
+			k = LADDR + NINDIR;
+			for(i=0; i<NINDIR && n>0; i++) {
+				for(j=0; j<NINDIR; j++)
+					single[j] = (daddr_t)0;
+				for(j=0; j<NINDIR && n>0; j++) {
+					single[j] = ib[k++];
+					n--;
+				}
+				dbl[i] = alloc();
+				wtfs(dbl[i], (char *)single);
+			}
+			wtfs(ip->i_un.i_addr[LADDR+1], (char *)dbl);
 		}
 
 	case IFBLK:

@@ -127,6 +127,13 @@ void	range(int a, int b, char *separator);
 void	fetch(long *f, int a, int b, FILE *lb, char *s);
 int	readhash(FILE *f);
 void	mesg(char *s, char *t);
+static int	diff_isspace(int c);
+
+static int
+diff_isspace(int c)
+{
+	return(c==' ' || c=='\t' || c=='\n' || c=='\v' || c=='\r' || c=='\f');
+}
 
 void
 done(void)
@@ -474,7 +481,7 @@ check(char **argv)
 	register int i, j;
 	int jackpot;
 	long ctold, ctnew;
-	char c,d;
+	int c,d;
 	input[0] = fopen(argv[1],"r");
 	input[1] = fopen(argv[2],"r");
 	j = 1;
@@ -495,15 +502,15 @@ check(char **argv)
 			d = getc(input[1]);
 			ctold++;
 			ctnew++;
-			if(bflag && isspace(c) && isspace(d)) {
+			if(bflag && diff_isspace(c) && diff_isspace(d)) {
 				do {
 					if(c=='\n') break;
 					ctold++;
-				} while(isspace(c=getc(input[0])));
+				} while(diff_isspace(c=getc(input[0])));
 				do {
 					if(d=='\n') break;
 					ctnew++;
-				} while(isspace(d=getc(input[1])));
+				} while(diff_isspace(d=getc(input[1])));
 			}
 			if(c!=d) {
 				jackpot++;
@@ -637,25 +644,21 @@ readhash(FILE *f)
 		sum += (long)t << (shift%=HALFLONG);
 	}
 	else for(shift=0;;) {
-		switch(t=getc(f)) {
-		case -1:
+		t = getc(f);
+		if(t == -1)
 			return(0);
-		case '\t':
-		case ' ':
+		if(t == '\n')
+			break;
+		if(diff_isspace(t)) {
 			space++;
 			continue;
-		default:
-			if(space) {
-				shift += 7;
-				space = 0;
-			}
-			sum += (long)t << (shift%=HALFLONG);
-			shift += 7;
-			continue;
-		case '\n':
-			break;
 		}
-		break;
+		if(space) {
+			shift += 7;
+			space = 0;
+		}
+		sum += (long)t << (shift%=HALFLONG);
+		shift += 7;
 	}
 	sum = low(sum) + high(sum);
 	return((short)low(sum) + (short)high(sum));

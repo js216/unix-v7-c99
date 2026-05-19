@@ -3,7 +3,13 @@
 
 #define KERNBASE	0x40000000U
 #define USERBASE	0x00000000U
-#define USERPHYS	0x41000000U
+/* USERPHYS is the physical address backing the user-mode 1 MB window
+ * mapped at USERBASE.  Must sit above the kernel image's __bss_end:
+ * the kernel is loaded at KERNBASE=0x40000000, has ~5 MB of code+data
+ * plus ~20+ MB of per-proc save-pool BSS, so anchor USERPHYS at
+ * 0x44000000 to leave room.  At 128 MB total RAM (qemu-virt default)
+ * physical extends through 0x48000000, comfortable margin. */
+#define USERPHYS	0x44000000U
 #define USERSIZE	0x00100000U
 #define UENTRY		0x00010000U
 #define USTACK		0x000f0000U
@@ -43,7 +49,10 @@
 #define	S_SPAWN		200
 
 #define	UARGV		0x0000f000U
-#define	UARGLEN		512
+/* Was 512.  Glob expansion of 100 entries against ~8-byte filenames
+ * blew this and sh truncated.  Max usable is UENTRY_SIGTRAMP - UARGV
+ * = 0xfe00 - 0xf000 = 3584 bytes.  3072 leaves 512 bytes of headroom. */
+#define	UARGLEN		3072
 
 /*
  * Fixed user-VA "vDSO" page used to host the signal-return trampoline.

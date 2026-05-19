@@ -34,22 +34,17 @@ struct	inode
 	short	i_uid;		/* owner */
 	short	i_gid;		/* group of owner */
 	off_t	i_size;		/* size of file */
-	union i_un {
+	union {
 		struct {
 			daddr_t i_addr[NADDR];	/* if normal file/directory */
 			daddr_t	i_lastr;	/* last logical block read (for read-ahead) */
-		} i_f;
+		};
 		struct	{
 			daddr_t	i_rdev;			/* i_addr[0] */
 			struct	group	i_group;	/*  multiplexor group file */
-		} i_d;
+		};
 	} i_un;
 };
-
-#define	i_addr	i_un.i_f.i_addr
-#define	i_lastr	i_un.i_f.i_lastr
-#define	i_rdev	i_un.i_d.i_rdev
-#define	i_group	i_un.i_d.i_group
 
 
 extern struct inode inode[];	/* The inode table itself */

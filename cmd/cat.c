@@ -12,6 +12,10 @@ int
 main(int argc, char *argv[])
 {
 	int fflg = 0;
+	int nflg = 0, bflg = 0, sflg = 0;
+	int lineno = 1;
+	int blank_run = 0;
+	int at_line_start = 1;
 	register FILE *fi;
 	register int c;
 	int dev, ino = -1;
@@ -24,6 +28,15 @@ main(int argc, char *argv[])
 			break;
 		case 'u':
 			setbuf(stdout, (char *)NULL);
+			continue;
+		case 'n':
+			nflg = 1;
+			continue;
+		case 'b':	/* -b: number non-blank lines */
+			bflg = 1;
+			continue;
+		case 's':	/* -s: squeeze blank lines */
+			sflg = 1;
 			continue;
 		}
 		break;
@@ -54,8 +67,22 @@ main(int argc, char *argv[])
 			fclose(fi);
 			continue;
 		}
-		while ((c = getc(fi)) != EOF)
+		while ((c = getc(fi)) != EOF) {
+			if (sflg) {
+				if (c == '\n' && at_line_start) {
+					if (++blank_run > 1) continue;
+				} else if (c != '\n') {
+					blank_run = 0;
+				}
+			}
+			if (at_line_start && (nflg || bflg)) {
+				if (!(bflg && c == '\n')) {
+					printf("%6d\t", lineno++);
+				}
+			}
 			putchar(c);
+			at_line_start = (c == '\n');
+		}
 		if (fi!=stdin)
 			fclose(fi);
 	}

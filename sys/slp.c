@@ -109,12 +109,9 @@ register caddr_t chan;
 	splx(s);
 }
 
-/*
- * when you are sure that it
- * is impossible to get the
- * 'proc on q' diagnostic, the
- * diagnostic loop can be removed.
- */
+/* PORT: our scheduler doesn't unlink from v7's runq during swtch, so
+ * wakeup()->setrun() races re-add procs already linked.  Silently
+ * dedupe instead of printing; functionally a no-op. */
 setrq(p)
 struct proc *p;
 {
@@ -123,10 +120,7 @@ struct proc *p;
 
 	s = spl6();
 	for(q=runq; q!=NULL; q=q->p_link)
-		if(q == p) {
-			printf("proc on q\n");
-			goto out;
-		}
+		if(q == p) goto out;
 	p->p_link = runq;
 	runq = p;
 out:
@@ -136,7 +130,16 @@ out:
 /*
  * Set the process running;
  * arrange for it to be swapped in if necessary.
+ *
+ * PORT DIVERGENCE: armboot_setrun(p->p_pid) added so the port's
+ * scheduler (which keeps its own armproc_state[] table) sees the
+ * wakeup.  Without it, v7's wakeup()->setrun() flips p_stat = SRUN
+ * but mt_pick_runnable() never picks the slot because its
+ * armproc_state stays PSTATE_SLEEP.  No semantic change to v7's
+ * state machine; just a cross-side notify.
  */
+extern void armboot_setrun(int pid);
+
 setrun(p)
 register struct proc *p;
 {
@@ -154,6 +157,7 @@ register struct proc *p;
 	}
 	p->p_stat = SRUN;
 	setrq(p);
+	armboot_setrun((int)p->p_pid);
 	if(p->p_pri < curpri)
 		runrun++;
 	if(runout != 0 && (p->p_flag&SLOAD) == 0) {
@@ -335,87 +339,25 @@ qswtch()
 
 /*
  * This routine is called to reschedule the CPU.
- * if the calling process is not in RUN state,
- * arrangements for it to restart must have
- * been made elsewhere, usually by calling via sleep.
- * There is a race here. A process may become
- * ready after it has been examined.
- * In this case, idle() will be called and
- * will return in at most 1HZ time.
- * i.e. its not worth putting an spl() in.
+ *
+ * PORT DIVERGENCE (documented in logs/unix-on-qemu.md): the original
+ * v7 body walked `runq` (a linked list of SRUN procs), picked the
+ * lowest p_pri, called save(u.u_rsav) on the current process, and
+ * resume()'d into the picked one -- with idle() / proc 0 swapper
+ * dance for the no-runnable case.  That model assumes per-proc u-
+ * areas swapped in/out of core by an external swapper, which this
+ * port does not have.  Instead we keep every proc's u-area + kernel
+ * stack permanently in RAM (the save-slot pool in arch/armboot.c),
+ * and the equivalent save+pick+resume sequence lives in
+ * armboot_swtch().  Routing through it here means v7's
+ * sleep()/wakeup()/setrun()/exit()/wait()/pause() in this TU and
+ * sys/sys1.c / sys/sys4.c / sys/pipe.c work unchanged.
  */
+extern void armboot_swtch(void);
+
 swtch()
 {
-	register n;
-	register struct proc *p, *q, *pp, *pq;
-
-	/*
-	 * If not the idle process, resume the idle process.
-	 */
-	if (u.u_procp != &proc[0]) {
-		if (save(u.u_rsav)) {
-			sureg();
-			return;
-		}
-		if (u.u_fpsaved==0) {
-			savfp(&u.u_fps);
-			u.u_fpsaved = 1;
-		}
-		resume(proc[0].p_addr, u.u_qsav);
-	}
-	/*
-	 * The first save returns nonzero when proc 0 is resumed
-	 * by another process (above); then the second is not done
-	 * and the process-search loop is entered.
-	 *
-	 * The first save returns 0 when swtch is called in proc 0
-	 * from sched().  The second save returns 0 immediately, so
-	 * in this case too the process-search loop is entered.
-	 * Thus when proc 0 is awakened by being made runnable, it will
-	 * find itself and resume itself at rsav, and return to sched().
-	 */
-	if (save(u.u_qsav)==0 && save(u.u_rsav))
-		return;
-loop:
-	spl6();
-	runrun = 0;
-	pp = NULL;
-	q = NULL;
-	n = 128;
-	/*
-	 * Search for highest-priority runnable process
-	 */
-	for(p=runq; p!=NULL; p=p->p_link) {
-		if((p->p_stat==SRUN) && (p->p_flag&SLOAD)) {
-			if(p->p_pri < n) {
-				pp = p;
-				pq = q;
-				n = p->p_pri;
-			}
-		}
-		q = p;
-	}
-	/*
-	 * If no process is runnable, idle.
-	 */
-	p = pp;
-	if(p == NULL) {
-		idle();
-		goto loop;
-	}
-	q = pq;
-	if(q == NULL)
-		runq = p->p_link;
-	else
-		q->p_link = p->p_link;
-	curpri = n;
-	spl0();
-	/*
-	 * The rsav (ssav) contents are interpreted in the new address space
-	 */
-	n = p->p_flag&SSWAP;
-	p->p_flag &= ~SSWAP;
-	resume(p->p_addr, n? u.u_ssav: u.u_rsav);
+	armboot_swtch();
 }
 
 /*

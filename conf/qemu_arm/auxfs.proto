@@ -1,4 +1,5 @@
 nullboot
 64 32
 d--755 0 0
+	a	---644 0 0 root/etc/passwd
 $
