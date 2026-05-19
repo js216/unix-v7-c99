@@ -5,7 +5,9 @@
  * tunable variables
  */
 
-#define	NBUF	29		/* size of buffer cache */
+#define	NBUF	64		/* size of buffer cache (raised from v7's 29
+				 * to help long-running pipelines; 64*512=32KB
+				 * BSS, trivial on 128 MiB qemu). */
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
@@ -133,7 +135,7 @@ typedef	long		daddr_t;
 typedef char *		caddr_t;
 typedef	unsigned short	ino_t;
 typedef	long		time_t;
-typedef	int		label_t[6];	/* regs 2-7 */
+typedef	int		label_t[10];	/* regs 2-7 */
 typedef	int		dev_t;
 typedef	long		off_t;
 

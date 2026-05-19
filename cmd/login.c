@@ -37,8 +37,8 @@ main(int argc, char **argv)
 	char *ttyn;
 
 	alarm(60);
-	signal(SIGQUIT, (int)SIG_IGN);
-	signal(SIGINT, (int)SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
 	nice(-100);
 	nice(20);
 	nice(0);
@@ -120,8 +120,8 @@ main(int argc, char **argv)
 		if (statb.st_size)
 			printf("You have mail.\n");
 	}
-	signal(SIGQUIT, (int)SIG_DFL);
-	signal(SIGINT, (int)SIG_DFL);
+	signal(SIGQUIT, SIG_DFL);
+	signal(SIGINT, SIG_DFL);
 	execlp(pwd->pw_shell, minusnam, 0);
 	printf("No shell\n");
 	exit(0);
@@ -132,7 +132,7 @@ void
 catch(int sig)
 {
 	(void)sig;
-	signal(SIGINT, (int)SIG_IGN);
+	signal(SIGINT, SIG_IGN);
 	stopmotd++;
 }
 
@@ -148,5 +148,5 @@ showmotd(void)
 			putchar(c);
 		fclose(mf);
 	}
-	signal(SIGINT, (int)SIG_IGN);
+	signal(SIGINT, SIG_IGN);
 }

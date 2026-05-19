@@ -284,9 +284,14 @@ VOID	printflg(n)
 VOID	getenv()
 {
 	REG STRING	*e=environ;
+	REG STRING	s;
 
 	WHILE *e
-	DO setname(*e++, N_ENVNAM) OD
+	DO	s = *e++;
+		IF any('=', s)
+		THEN	setname(s, N_ENVNAM);
+		FI
+	OD
 }
 
 LOCAL INT	namec;

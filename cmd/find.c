@@ -41,8 +41,8 @@ char	Home[128];
 long	Blocks;
 char *rindex();
 char *sbrk();
-int	pclose(FILE *f);
 int	pr();
+int	gethome(void);
 int	descend(char *name, char *fname, struct anode *exlist);
 int	cpio(void);
 int	getunum(char *f, char *s);
@@ -60,13 +60,9 @@ int argc;
 	struct anode *exlist;
 	int paths;
 	register char *cp, *sp = 0;
-	FILE *pwd, *popen();
 
 	time(&Now);
-	pwd = popen("pwd", "r");
-	fgets(Home, 128, pwd);
-	pclose(pwd);
-	Home[strlen(Home) - 1] = '\0';
+	gethome();
 	Argc = argc; Argv = argv;
 	if(argc<3) {
 usage:		pr("Usage: find path-list predicate-list\n");
@@ -481,6 +477,37 @@ newer()
 
 /* support functions */
 int
+gethome()
+{
+	int fd[2], status;
+	register int n;
+
+	if(pipe(fd) < 0) {
+		pr("find: cannot run pwd\n");
+		exit(1);
+	}
+	if(fork() == 0) {
+		close(fd[0]);
+		dup(fd[1] | 0100, 1);
+		close(fd[1]);
+		execl("/bin/pwd", "pwd", 0);
+		exit(1);
+	}
+	close(fd[1]);
+	n = read(fd[0], Home, sizeof Home - 1);
+	close(fd[0]);
+	wait(&status);
+	if(n <= 0 || status) {
+		pr("find: cannot run pwd\n");
+		exit(1);
+	}
+	Home[n] = '\0';
+	if(Home[n - 1] == '\n')
+		Home[n - 1] = '\0';
+	return(0);
+}
+
+int
 scomp(a, b, s) /* funny signed compare */
 register int a, b;
 register int s;
@@ -528,6 +555,8 @@ getunum(f, s) char *f, *s; { /* find user/group name and return number */
 
 	i = -1;
 	pin = fopen(f, "r");
+	if(pin == NULL)
+		return(i);
 	c = '\n'; /* prime with a CR */
 	do {
 		if(c=='\n') {

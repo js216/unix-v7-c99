@@ -1,10 +1,16 @@
 nullboot
-4096 1024
+16384 2048
 d--755 0 0
 	bin	d--755 0 0
+		1	---755 0 0 root/bin/1
 		[	---755 0 0 root/bin/test
+		ac	---755 0 0 root/bin/ac
+		at	---755 0 0 root/bin/at
+		arcv	---755 0 0 root/bin/arcv
+		awk	---755 0 0 root/bin/awk
 		basename	---755 0 0 root/bin/basename
 		cal	---755 0 0 root/bin/cal
+		dirname	---755 0 0 root/bin/dirname
 		calendar	---755 0 0 root/bin/calendar
 		cat	---755 0 0 root/bin/cat
 		cb	---755 0 0 root/bin/cb
@@ -12,32 +18,80 @@ d--755 0 0
 		chgrp	---755 0 0 root/bin/chgrp
 		chmod	---755 0 0 root/bin/chmod
 		chown	---755 0 0 root/bin/chown
+		cksum	---755 0 0 root/bin/cksum
 		clri	---755 0 0 root/bin/clri
 		cmp	---755 0 0 root/bin/cmp
 		col	---755 0 0 root/bin/col
+		column	---755 0 0 root/bin/column
 		comm	---755 0 0 root/bin/comm
 		cp	---755 0 0 root/bin/cp
 		crypt	---755 0 0 root/bin/crypt
 		date	---755 0 0 root/bin/date
+		dc	---755 0 0 root/bin/dc
 		dcheck	---755 0 0 root/bin/dcheck
 		dd	---755 0 0 root/bin/dd
 		df	---755 0 0 root/bin/df
 		diff	---755 0 0 root/bin/diff
+		diff3	---755 0 0 root/bin/diff3
+		deroff	---755 0 0 root/bin/deroff
+		dmesg	---755 0 0 root/bin/dmesg
 		du	---755 0 0 root/bin/du
+		dump	---755 0 0 root/bin/dump
+		dumpdir	---755 0 0 root/bin/dumpdir
 		echo	---755 0 0 root/bin/echo
 		ed	---755 0 0 root/bin/ed
+		egrep	---755 0 0 root/bin/egrep
+		expr	---755 0 0 root/bin/expr
 		fgrep	---755 0 0 root/bin/fgrep
 		file	---755 0 0 root/bin/file
+		factor	---755 0 0 root/bin/factor
+		cut	---755 0 0 root/bin/cut
+		env	---755 0 0 root/bin/env
+		expand	---755 0 0 root/bin/expand
 		find	---755 0 0 root/bin/find
+		false	---755 0 0 root/bin/false
+		fmt	---755 0 0 root/bin/fmt
+		fold	---755 0 0 root/bin/fold
+		getopt	---755 0 0 root/bin/getopt
 		grep	---755 0 0 root/bin/grep
+		groups	---755 0 0 root/bin/groups
+		head	---755 0 0 root/bin/head
+		hostname	---755 0 0 root/bin/hostname
+		chroot	---755 0 0 root/bin/chroot
+		nproc	---755 0 0 root/bin/nproc
+		id	---755 0 0 root/bin/id
+		nl	---755 0 0 root/bin/nl
+		paste	---755 0 0 root/bin/paste
+		printenv	---755 0 0 root/bin/printenv
+		printf	---755 0 0 root/bin/printf
+		seq	---755 0 0 root/bin/seq
+		whoami	---755 0 0 root/bin/whoami
+		xargs	---755 0 0 root/bin/xargs
+		graph	---755 0 0 root/bin/graph
 		icheck	---755 0 0 root/bin/icheck
+		iostat	---755 0 0 root/bin/iostat
+		dkstat	---755 0 0 root/bin/dkstat
+		mathtest ---755 0 0 root/bin/mathtest
+		sigtest	---755 0 0 root/bin/sigtest
+		mttest	---755 0 0 root/bin/mttest
+		pidtest	---755 0 0 root/bin/pidtest
+		sigwaittest	---755 0 0 root/bin/sigwaittest
+		segvtest	---755 0 0 root/bin/segvtest
+		orphantest	---755 0 0 root/bin/orphantest
+		exittest	---755 0 0 root/bin/exittest
+		errtest	---755 0 0 root/bin/errtest
 		join	---755 0 0 root/bin/join
 		kill	---755 0 0 root/bin/kill
+		link	---755 0 0 root/bin/link
+		unlink	---755 0 0 root/bin/unlink
 		ln	---755 0 0 root/bin/ln
+		learn	---755 0 0 root/bin/learn
+		logname	---755 0 0 root/bin/logname
 		login	---755 0 0 root/bin/login
 		look	---755 0 0 root/bin/look
 		ls	---755 0 0 root/bin/ls
 		mesg	---755 0 0 root/bin/mesg
+		mktemp	---755 0 0 root/bin/mktemp
 		mkdir	---755 0 0 root/bin/mkdir
 		mknod	---755 0 0 root/bin/mknod
 		mount	---755 0 0 root/bin/mount
@@ -45,60 +99,273 @@ d--755 0 0
 		ncheck	---755 0 0 root/bin/ncheck
 		newgrp	---755 0 0 root/bin/newgrp
 		nice	---755 0 0 root/bin/nice
+		nohup	---755 0 0 root/bin/nohup
 		od	---755 0 0 root/bin/od
+		osh	---755 0 0 root/bin/osh
+		passwd	---755 0 0 root/bin/passwd
+		plot	---755 0 0 root/bin/plot
+		pgrep	---755 0 0 root/bin/pgrep
+		pidof	---755 0 0 root/bin/pidof
+		pkill	---755 0 0 root/bin/pkill
 		pr	---755 0 0 root/bin/pr
+		primes	---755 0 0 root/bin/primes
+		prof	---755 0 0 root/bin/prof
+		ps	---755 0 0 root/bin/ps
+		pstat	---755 0 0 root/bin/pstat
+		ptx	---755 0 0 root/bin/ptx
 		pwd	---755 0 0 root/bin/pwd
+		quot	---755 0 0 root/bin/quot
 		random	---755 0 0 root/bin/random
+		restor	---755 0 0 root/bin/restor
 		rev	---755 0 0 root/bin/rev
 		rm	---755 0 0 root/bin/rm
 		rmdir	---755 0 0 root/bin/rmdir
+		sa	---755 0 0 root/bin/sa
+		sed	---755 0 0 root/bin/sed
 		sh	---755 0 0 root/bin/sh
 		sleep	---755 0 0 root/bin/sleep
+		shuf	---755 0 0 root/bin/shuf
 		sort	---755 0 0 root/bin/sort
+		spell	---755 0 0 root/bin/spell
 		sp	---755 0 0 root/bin/sp
+		spline	---755 0 0 root/bin/spline
 		split	---755 0 0 root/bin/split
 		stty	---755 0 0 root/bin/stty
 		su	---755 0 0 root/bin/su
 		sum	---755 0 0 root/bin/sum
 		sync	---755 0 0 root/bin/sync
 		tabs	---755 0 0 root/bin/tabs
+		tac	---755 0 0 root/bin/tac
 		tail	---755 0 0 root/bin/tail
+		unexpand	---755 0 0 root/bin/unexpand
+		tar	---755 0 0 root/bin/tar
+		tc	---755 0 0 root/bin/tc
 		tee	---755 0 0 root/bin/tee
+		tek	---755 0 0 root/bin/tek
 		test	---755 0 0 root/bin/test
 		time	---755 0 0 root/bin/time
+		timeout	---755 0 0 root/bin/timeout
+		tk	---755 0 0 root/bin/tk
 		touch	---755 0 0 root/bin/touch
+		tp	---755 0 0 root/bin/tp
 		tr	---755 0 0 root/bin/tr
+		true	---755 0 0 root/bin/true
+		truncate	---755 0 0 root/bin/truncate
 		tsort	---755 0 0 root/bin/tsort
 		tty	---755 0 0 root/bin/tty
 		umount	---755 0 0 root/bin/umount
+		uname	---755 0 0 root/bin/uname
 		uniq	---755 0 0 root/bin/uniq
+		units	---755 0 0 root/bin/units
+		vpr	---755 0 0 root/bin/vpr
 		wall	---755 0 0 root/bin/wall
+		watch	---755 0 0 root/bin/watch
 		wc	---755 0 0 root/bin/wc
 		who	---755 0 0 root/bin/who
+		which	---755 0 0 root/bin/which
 		write	---755 0 0 root/bin/write
 		yes	---755 0 0 root/bin/yes
 		$
 	dev	d--755 0 0
-		null	---644 0 0 /dev/null
+		console	c--644 0 0 0 0
+		null	c--666 0 0 1 2
+		tty	c--666 0 0 0 0
 		$
 	etc	d--755 0 0
+		accton	---755 0 0 root/etc/accton
+		atrun	---755 0 0 root/etc/atrun
 		auxfs	---644 0 0 build/auxfs.img
+		cron	---755 0 0 root/etc/cron
+		ddate	---644 0 0 /dev/null
 		getty	---755 0 0 root/etc/getty
 		init	---755 0 0 root/etc/init
 		passwd	---644 0 0 root/etc/passwd
+		group	---644 0 0 root/etc/group
+		rc	---755 0 0 conf/qemu_arm/rc
 		ttys	---644 0 0 root/etc/ttys
+		update	---755 0 0 root/etc/update
 		utmp	---644 0 0 /dev/null
 		$
 	tmp	d--777 0 0
 		.keep	---644 0 0 /dev/null
 		$
 	usr	d--755 0 0
+		adm	d--755 0 0
+			acct	---644 0 0 /dev/null
+			wtmp	---644 0 0 /dev/null
+			$
 		dict	d--755 0 0
+			hlista	---644 0 0 root/usr/dict/hlista
+			hlistb	---644 0 0 root/usr/dict/hlistb
+			hstop	---644 0 0 root/usr/dict/hstop
+			spellhist	---666 0 0 root/usr/dict/spellhist
 			words	---644 0 0 root/usr/dict/words
 			$
+		games	d--755 0 0
+			arithmetic	---755 0 0 root/usr/games/arithmetic
+			backgammon	---755 0 0 root/usr/games/backgammon
+			fish	---755 0 0 root/usr/games/fish
+			fortune	---755 0 0 root/usr/games/fortune
+			hangman	---755 0 0 root/usr/games/hangman
+			lib	d--755 0 0
+				fortunes	---644 0 0 root/usr/games/lib/fortunes
+				$
+			quiz	---755 0 0 root/usr/games/quiz
+			wump	---755 0 0 root/usr/games/wump
+			$
 		lib	d--755 0 0
+			crontab	---644 0 0 root/usr/lib/crontab
 			diffh	---755 0 0 root/usr/lib/diffh
+			learn	d--755 0 0
+				Linfo	---644 0 0 root/usr/lib/learn/Linfo
+				Xinfo	---644 0 0 root/usr/lib/learn/Xinfo
+				files	d--755 0 0
+					L0	---644 0 0 root/usr/lib/learn/files/L0
+					L0.1a	---644 0 0 root/usr/lib/learn/files/L0.1a
+					L0.1b	---644 0 0 root/usr/lib/learn/files/L0.1b
+					L0.1c	---644 0 0 root/usr/lib/learn/files/L0.1c
+					L0.1d	---644 0 0 root/usr/lib/learn/files/L0.1d
+					L1.1a	---644 0 0 root/usr/lib/learn/files/L1.1a
+					L1.2a	---644 0 0 root/usr/lib/learn/files/L1.2a
+					L1.2b	---644 0 0 root/usr/lib/learn/files/L1.2b
+					L10.1a	---644 0 0 root/usr/lib/learn/files/L10.1a
+					L10.2a	---644 0 0 root/usr/lib/learn/files/L10.2a
+					L10.2b	---644 0 0 root/usr/lib/learn/files/L10.2b
+					L10.3a	---644 0 0 root/usr/lib/learn/files/L10.3a
+					L10.3b	---644 0 0 root/usr/lib/learn/files/L10.3b
+					L10.3c	---644 0 0 root/usr/lib/learn/files/L10.3c
+					L10.3d	---644 0 0 root/usr/lib/learn/files/L10.3d
+					L11.1a	---644 0 0 root/usr/lib/learn/files/L11.1a
+					L11.2a	---644 0 0 root/usr/lib/learn/files/L11.2a
+					L11.2b	---644 0 0 root/usr/lib/learn/files/L11.2b
+					L11.3a	---644 0 0 root/usr/lib/learn/files/L11.3a
+					L11.3b	---644 0 0 root/usr/lib/learn/files/L11.3b
+					L11.3c	---644 0 0 root/usr/lib/learn/files/L11.3c
+					L12.1a	---644 0 0 root/usr/lib/learn/files/L12.1a
+					L12.2a	---644 0 0 root/usr/lib/learn/files/L12.2a
+					L12.2b	---644 0 0 root/usr/lib/learn/files/L12.2b
+					L12.2c	---644 0 0 root/usr/lib/learn/files/L12.2c
+					L12.3a	---644 0 0 root/usr/lib/learn/files/L12.3a
+					L12.3b	---644 0 0 root/usr/lib/learn/files/L12.3b
+					L12.3c	---644 0 0 root/usr/lib/learn/files/L12.3c
+					L13.1a	---644 0 0 root/usr/lib/learn/files/L13.1a
+					L13.1b	---644 0 0 root/usr/lib/learn/files/L13.1b
+					L13.1c	---644 0 0 root/usr/lib/learn/files/L13.1c
+					L13.1d	---644 0 0 root/usr/lib/learn/files/L13.1d
+					L13.1e	---644 0 0 root/usr/lib/learn/files/L13.1e
+					L13.1f	---644 0 0 root/usr/lib/learn/files/L13.1f
+					L13.1g	---644 0 0 root/usr/lib/learn/files/L13.1g
+					L2.1a	---644 0 0 root/usr/lib/learn/files/L2.1a
+					L2.2a	---644 0 0 root/usr/lib/learn/files/L2.2a
+					L2.2b	---644 0 0 root/usr/lib/learn/files/L2.2b
+					L3.1a	---644 0 0 root/usr/lib/learn/files/L3.1a
+					L3.2a	---644 0 0 root/usr/lib/learn/files/L3.2a
+					L3.2b	---644 0 0 root/usr/lib/learn/files/L3.2b
+					L3.3a	---644 0 0 root/usr/lib/learn/files/L3.3a
+					L3.3b	---644 0 0 root/usr/lib/learn/files/L3.3b
+					L4.1a	---644 0 0 root/usr/lib/learn/files/L4.1a
+					L4.2a	---644 0 0 root/usr/lib/learn/files/L4.2a
+					L4.2b	---644 0 0 root/usr/lib/learn/files/L4.2b
+					L4.3a	---644 0 0 root/usr/lib/learn/files/L4.3a
+					L4.3b	---644 0 0 root/usr/lib/learn/files/L4.3b
+					L4.3c	---644 0 0 root/usr/lib/learn/files/L4.3c
+					L5.1a	---644 0 0 root/usr/lib/learn/files/L5.1a
+					L5.1b	---644 0 0 root/usr/lib/learn/files/L5.1b
+					L5.1c	---644 0 0 root/usr/lib/learn/files/L5.1c
+					L5.1d	---644 0 0 root/usr/lib/learn/files/L5.1d
+					L5.1e	---644 0 0 root/usr/lib/learn/files/L5.1e
+					L6.1a	---644 0 0 root/usr/lib/learn/files/L6.1a
+					L6.1b	---644 0 0 root/usr/lib/learn/files/L6.1b
+					L6.1c	---644 0 0 root/usr/lib/learn/files/L6.1c
+					L6.1d	---644 0 0 root/usr/lib/learn/files/L6.1d
+					L6.1e	---644 0 0 root/usr/lib/learn/files/L6.1e
+					L6.2a	---644 0 0 root/usr/lib/learn/files/L6.2a
+					L6.2b	---644 0 0 root/usr/lib/learn/files/L6.2b
+					L7.1a	---644 0 0 root/usr/lib/learn/files/L7.1a
+					L7.2a	---644 0 0 root/usr/lib/learn/files/L7.2a
+					L7.2b	---644 0 0 root/usr/lib/learn/files/L7.2b
+					L7.3a	---644 0 0 root/usr/lib/learn/files/L7.3a
+					L7.3b	---644 0 0 root/usr/lib/learn/files/L7.3b
+					L7.3c	---644 0 0 root/usr/lib/learn/files/L7.3c
+					L8.1a	---644 0 0 root/usr/lib/learn/files/L8.1a
+					L8.2a	---644 0 0 root/usr/lib/learn/files/L8.2a
+					L8.2b	---644 0 0 root/usr/lib/learn/files/L8.2b
+					L8.2c	---644 0 0 root/usr/lib/learn/files/L8.2c
+					L9.1a	---644 0 0 root/usr/lib/learn/files/L9.1a
+					L9.2a	---644 0 0 root/usr/lib/learn/files/L9.2a
+					L9.2b	---644 0 0 root/usr/lib/learn/files/L9.2b
+					L9.2c	---644 0 0 root/usr/lib/learn/files/L9.2c
+					$
+				morefiles	d--755 0 0
+					L0	---644 0 0 root/usr/lib/learn/morefiles/L0
+					L0.1a	---644 0 0 root/usr/lib/learn/morefiles/L0.1a
+					L0.1b	---644 0 0 root/usr/lib/learn/morefiles/L0.1b
+					L0.1c	---644 0 0 root/usr/lib/learn/morefiles/L0.1c
+					L0.1d	---644 0 0 root/usr/lib/learn/morefiles/L0.1d
+					L0.1e	---644 0 0 root/usr/lib/learn/morefiles/L0.1e
+					L0.1f	---644 0 0 root/usr/lib/learn/morefiles/L0.1f
+					L0.1g	---644 0 0 root/usr/lib/learn/morefiles/L0.1g
+					L1.1a	---644 0 0 root/usr/lib/learn/morefiles/L1.1a
+					L1.1b	---644 0 0 root/usr/lib/learn/morefiles/L1.1b
+					L1.1c	---644 0 0 root/usr/lib/learn/morefiles/L1.1c
+					L1.1d	---644 0 0 root/usr/lib/learn/morefiles/L1.1d
+					L2.1a	---644 0 0 root/usr/lib/learn/morefiles/L2.1a
+					L2.1b	---644 0 0 root/usr/lib/learn/morefiles/L2.1b
+					L2.1c	---644 0 0 root/usr/lib/learn/morefiles/L2.1c
+					L2.1d	---644 0 0 root/usr/lib/learn/morefiles/L2.1d
+					L2.1e	---644 0 0 root/usr/lib/learn/morefiles/L2.1e
+					L2.1f	---644 0 0 root/usr/lib/learn/morefiles/L2.1f
+					L3.1a	---644 0 0 root/usr/lib/learn/morefiles/L3.1a
+					L3.1b	---644 0 0 root/usr/lib/learn/morefiles/L3.1b
+					L3.1c	---644 0 0 root/usr/lib/learn/morefiles/L3.1c
+					L3.1d	---644 0 0 root/usr/lib/learn/morefiles/L3.1d
+					L3.1e	---644 0 0 root/usr/lib/learn/morefiles/L3.1e
+					L3.1f	---644 0 0 root/usr/lib/learn/morefiles/L3.1f
+					L3.1g	---644 0 0 root/usr/lib/learn/morefiles/L3.1g
+					L4.1a	---644 0 0 root/usr/lib/learn/morefiles/L4.1a
+					L4.1b	---644 0 0 root/usr/lib/learn/morefiles/L4.1b
+					L4.1c	---644 0 0 root/usr/lib/learn/morefiles/L4.1c
+					L4.1d	---644 0 0 root/usr/lib/learn/morefiles/L4.1d
+					L4.1e	---644 0 0 root/usr/lib/learn/morefiles/L4.1e
+					L4.1f	---644 0 0 root/usr/lib/learn/morefiles/L4.1f
+					L4.1g	---644 0 0 root/usr/lib/learn/morefiles/L4.1g
+					L4.2a	---644 0 0 root/usr/lib/learn/morefiles/L4.2a
+					L5.1a	---644 0 0 root/usr/lib/learn/morefiles/L5.1a
+					L5.1b	---644 0 0 root/usr/lib/learn/morefiles/L5.1b
+					L5.1c	---644 0 0 root/usr/lib/learn/morefiles/L5.1c
+					L5.1d	---644 0 0 root/usr/lib/learn/morefiles/L5.1d
+					L5.1e	---644 0 0 root/usr/lib/learn/morefiles/L5.1e
+					L6.1a	---644 0 0 root/usr/lib/learn/morefiles/L6.1a
+					L6.1b	---644 0 0 root/usr/lib/learn/morefiles/L6.1b
+					L6.1c	---644 0 0 root/usr/lib/learn/morefiles/L6.1c
+					L6.1d	---644 0 0 root/usr/lib/learn/morefiles/L6.1d
+					L6.1e	---644 0 0 root/usr/lib/learn/morefiles/L6.1e
+					L6.2e	---644 0 0 root/usr/lib/learn/morefiles/L6.2e
+					L7.1a	---644 0 0 root/usr/lib/learn/morefiles/L7.1a
+					$
+				lcount	---755 0 0 root/usr/lib/learn/lcount
+				log	d--777 0 0
+					.keep	---666 0 0 /dev/null
+					$
+				play	d--777 0 0
+					.keep	---666 0 0 /dev/null
+					$
+				tee	---755 0 0 root/usr/lib/learn/tee
+				$
 			makekey	---755 0 0 root/usr/lib/makekey
+			spell	---755 0 0 root/usr/lib/spell
+			spellin	---755 0 0 root/usr/lib/spellin
+			spellout	---755 0 0 root/usr/lib/spellout
+			units	---644 0 0 root/usr/lib/units
+			$
+		spool	d--755 0 0
+			at	d--777 0 0
+				lasttimedone	---666 0 0 /dev/null
+				past	d--777 0 0
+					.keep	---644 0 0 /dev/null
+					$
+				$
 			$
 		$
+	unix	---644 0 0 root/unix
 $

@@ -30,6 +30,39 @@ main(int argc, char *argv[])
 	lseek(0,(long)0,1);
 	piped = errno==ESPIPE;
 	arg = argv[1];
+	/* POSIX-style: tail -c N FILE  or  tail -n N FILE.
+	 * Translate to v7-style "-Nc" / "-Nl" so the rest of the parser
+	 * keeps using its compact form.  Build a stack-local re-shape. */
+	static char rebuf[32];
+	int posix_shift = 0;
+	if (argc >= 3 && arg && arg[0] == '-' && (arg[1] == 'c' || arg[1] == 'n')
+	    && arg[2] == '\0') {
+		char *num = argv[2];
+		int v = 0, neg = 0;
+		if (*num == '+' || *num == '-') {
+			if (*num == '-') neg = 1; /* always neg here (from-end) */
+			num++;
+		}
+		while (digit(*num)) { v = v*10 + *num - '0'; num++; }
+		rebuf[0] = '-';
+		{
+			int rl = 1, t = v, dpos;
+			char digs[12]; int ndig = 0;
+			if (t == 0) digs[ndig++] = '0';
+			while (t > 0) { digs[ndig++] = '0' + (t % 10); t /= 10; }
+			for (dpos = ndig - 1; dpos >= 0; dpos--) rebuf[rl++] = digs[dpos];
+			rebuf[rl++] = (arg[1] == 'c') ? 'c' : 'l';
+			rebuf[rl] = '\0';
+		}
+		(void)neg;
+		arg = rebuf;
+		/* Shift argv so argv[2] becomes the optional filename. */
+		argv[1] = arg;
+		argv[2] = (argc > 3) ? argv[3] : (char *)0;
+		argc = (argc > 3) ? argc - 1 : 2;
+		posix_shift = 1;
+	}
+	(void)posix_shift;
 	if(argc<=1 || *arg!='-'&&*arg!='+') {
 		arg = "-10l";
 		argc++;

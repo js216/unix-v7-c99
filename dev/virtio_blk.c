@@ -14,6 +14,15 @@
 #include "../h/conf.h"
 #include "../h/proto.h"
 
+/* Per-drive busy bitmap + transfer counters, declared by sys/systm.h.
+ * The PDP-11 driver suite (dev/hp.c, dev/rl.c) bumps these from the
+ * start/end of every strategy(); iostat snoops them via /dev/kmem.
+ * Slot 0 is "drive 0" -- there is only ever one virtio-blk device on
+ * the qemu-virt machine. */
+extern int	dk_busy;
+extern long	dk_numb[3];
+extern long	dk_wds[3];
+
 #define	VRING_DESC_F_NEXT	1
 #define	VRING_DESC_F_WRITE	2
 #define	VIRTIO_FIRST		0x0a000000U
@@ -130,7 +139,19 @@ virtio_strategy(struct buf *bp)
 	unsigned int spin;
 	unsigned short aidx;
 	unsigned int type;
+	unsigned int saved_cpsr;
 
+	/* Mask IRQs around the virtio kick+poll handshake.  qemu virt's
+	 * virtio device handshake is timing-sensitive: taking a timer IRQ
+	 * mid-poll (after the kick MMIO write, before qused.idx advances)
+	 * leaves virtio_vstatus != 0 and we panic("blk").  Save the
+	 * caller's CPSR.I bit so we restore the original IRQ mask state
+	 * on exit rather than blanket-unmask. */
+	__asm__ volatile("mrs %0, cpsr" : "=r"(saved_cpsr));
+	__asm__ volatile("cpsid i" ::: "memory");
+	dk_busy |= 1;
+	dk_numb[0]++;
+	dk_wds[0] += bp->b_bcount / 2;	/* v7 wds counts 16-bit words */
 	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
 	virtio_vreq.type = type;
 	virtio_vreq.reserved = 0;
@@ -168,7 +189,11 @@ virtio_strategy(struct buf *bp)
 	if(virtio_vstatus != 0)
 		panic("blk");
 	bp->b_resid = 0;
+	dk_busy &= ~1;
 	iodone(bp);
+	/* Restore caller's IRQ mask (CPSR.I bit only). */
+	if((saved_cpsr & 0x80U) == 0)
+		__asm__ volatile("cpsie i" ::: "memory");
 	return 0;
 #endif
 }

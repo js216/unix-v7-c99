@@ -4,6 +4,7 @@ extern int ttyslot(void);
 
 static	char	UTMP[]	= "/etc/utmp";
 static	struct	utmp ubuf;
+static	char	name[9];
 
 char *
 getlogin()
@@ -19,9 +20,10 @@ getlogin()
 	if (read(uf, (char *)&ubuf, sizeof(ubuf)) != sizeof(ubuf))
 		return(0);
 	close(uf);
-	ubuf.ut_name[8] = ' ';
-	for (cp=ubuf.ut_name; *cp++!=' ';)
+	strncpy(name, ubuf.ut_name, 8);
+	name[8] = ' ';
+	for (cp=name; *cp++!=' ';)
 		;
 	*--cp = '\0';
-	return( ubuf.ut_name );
+	return(name);
 }

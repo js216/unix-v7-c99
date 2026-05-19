@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/dir.h>
 
 #define	CBRA	1
 #define	CCHR	2
@@ -40,6 +43,7 @@ int	nfile;
 int	hflag	= 1;
 int	sflag;
 int	yflag;
+int	rflag;
 int	circf;
 long	tln;
 int	nsucc;
@@ -58,6 +62,7 @@ char	bittab[] = {
 
 void compile(char *astr);
 void execute(char *file);
+void descend(char *path);
 int advance(register char *lp, register char *ep);
 void succeed(char *f);
 int ecmp(char *a, char *b, int count);
@@ -65,11 +70,21 @@ void errexit(char *s, char *f);
 int
 main(int argc, char *argv[])
 {
-	while (--argc > 0 && (++argv)[0][0]=='-')
-		switch (argv[0][1]) {
+	while (--argc > 0 && (++argv)[0][0]=='-') {
+		char *fp = argv[0] + 1;
+		if (*fp == '\0') { /* lone "-" -> stdin marker; bail out */
+			break;
+		}
+		while (*fp) switch (*fp++) {
 
 		case 'y':
+		case 'i':	/* -i (POSIX) is an alias for -y: case-insensitive */
 			yflag++;
+			continue;
+
+		case 'r':
+		case 'R':	/* recurse into directory arguments */
+			rflag++;
 			continue;
 
 		case 'h':
@@ -109,6 +124,7 @@ main(int argc, char *argv[])
 			errexit("grep: unknown flag\n", (char *)NULL);
 			continue;
 		}
+	}
 out:
 	if (argc<=0)
 		exit(2);
@@ -143,9 +159,51 @@ out:
 		execute((char *)NULL);
 	} else while (--argc >= 0) {
 		argv++;
-		execute(*argv);
+		if (rflag)
+			descend(*argv);
+		else
+			execute(*argv);
 	}
 	exit(nsucc == 0);
+}
+
+/* If `path` is a directory, walk its entries and recurse; otherwise
+ * run the compiled regex over the file via execute(). */
+void
+descend(char *path)
+{
+	struct stat st;
+	struct direct dent;
+	FILE *df;
+	char child[256];
+	int i, j;
+	if (stat(path, &st) < 0) {
+		fprintf(stderr, "grep: can't access %s\n", path);
+		return;
+	}
+	if ((st.st_mode & S_IFMT) != S_IFDIR) {
+		execute(path);
+		return;
+	}
+	if ((df = fopen(path, "r")) == NULL) {
+		fprintf(stderr, "grep: can't read dir %s\n", path);
+		return;
+	}
+	/* With -r, each file's name should print, so behave like nfile>1. */
+	if (nfile < 2) nfile = 2;
+	while (fread((char *)&dent, sizeof(dent), 1, df) == 1) {
+		if (dent.d_ino == 0) continue;
+		if (dent.d_name[0] == '.' &&
+		    (dent.d_name[1] == '\0' ||
+		     (dent.d_name[1] == '.' && dent.d_name[2] == '\0')))
+			continue;
+		for (i = 0; path[i] && i < 200; i++) child[i] = path[i];
+		if (i > 0 && child[i-1] != '/') child[i++] = '/';
+		for (j = 0; j < DIRSIZ && dent.d_name[j]; j++) child[i++] = dent.d_name[j];
+		child[i] = '\0';
+		descend(child);
+	}
+	fclose(df);
 }
 
 void
@@ -254,6 +312,7 @@ compile(char *astr)
 				*ep++ = c;
 				continue;
 			}
+			goto defchar;
 
 		defchar:
 		default:

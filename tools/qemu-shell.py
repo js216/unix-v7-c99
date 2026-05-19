@@ -32,7 +32,9 @@ def main():
          '-no-reboot', '-snapshot', '-kernel', kernel,
          '-drive', f'if=none,file={rootimg},format=raw,id=hd0',
          '-device', 'virtio-blk-device,drive=hd0'],
-        timeout=60, encoding=None)
+        timeout=300, encoding=None)
+    if os.environ.get('QEMU_LOG'):
+        qemu.logfile_read = open(os.environ['QEMU_LOG'], 'wb')
 
     qemu.expect(b'login:')
     qemu.send(b'root\r')
@@ -50,7 +52,13 @@ def main():
     captured += qemu.before + qemu.after
 
     qemu.terminate(force=True)
-    sys.stdout.buffer.write(captured.replace(b'\r', b''))
+    # Strip backspaces (0x08).  arch/v7stubs.c::pause_spin_barrier writes
+    # one \b per spin iteration to advance qemu's virtual-time machinery
+    # during sleep()/pause(); kernel time wouldn't advance otherwise.  The
+    # hack works (sleep semantics are correct) but emits ~150 KB of \b per
+    # sleep(1).  They're invisible on an interactive terminal but pollute
+    # captured output for these regression tests, so we drop them here.
+    sys.stdout.buffer.write(captured.replace(b'\r', b'').replace(b'\x08', b''))
 
 
 if __name__ == '__main__':

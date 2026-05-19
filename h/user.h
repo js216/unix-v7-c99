@@ -1,8 +1,3 @@
-#ifndef USER_H
-#define USER_H
-
-#include "../h/dir.h"
-
 /*
  * The user structure.
  * One allocated per process.
@@ -36,11 +31,11 @@ struct	user
 	short	u_rgid;			/* real group id */
 	struct proc *u_procp;		/* pointer to proc structure */
 	int	*u_ap;			/* pointer to arglist */
-	union ret {				/* syscall return values */
-		struct r	{
+	union {				/* syscall return values */
+		struct	{
 			int	r_val1;
 			int	r_val2;
-		} r;
+		};
 		off_t	r_off;
 		time_t	r_time;
 	} u_r;
@@ -138,5 +133,3 @@ extern struct user u;
 #define	EPIPE	32
 #define	EDOM	33
 #define	ERANGE	34
-
-#endif

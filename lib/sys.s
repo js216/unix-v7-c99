@@ -11,6 +11,12 @@
 	mov r7, #\num
 	svc #0
 	mov r7, ip
+	cmp r0, #0
+	bxge lr
+	rsb r1, r0, #0
+	ldr r2, =errno
+	str r1, [r2]
+	mvn r0, #0
 	bx lr
 .endm
 
@@ -35,13 +41,64 @@ SYS setuid,  23
 SYS getuid,  24
 SYS fstat,   28
 SYS access,  33
+SYS nice,    34
 SYS sync,    36
 SYS kill,    37
 SYS pipe,    42
+SYS times,   43
+SYS profil,  44
+SYS ioctl,   54
 SYS umask,   60
 SYS utime,   30
 SYS signal,  48
+SYS acct,    51
+SYS lock,    53
+SYS chroot,  61
 SYS getdents, 141
-SYS spawn,    200
 SYS sigreturn, 139
 
+@ getpid(2) returns pid in r0 *and* ppid in r1 (v7's two-return-value
+@ convention).  Standard SYS macro discards r1; provide a wrapper here
+@ that issues getpid via syscall 20 and recovers r1 into a global so a
+@ getppid() libc shim can pick it up.  Also a getpid alias for symmetry.
+.globl getpid
+getpid:
+	mov ip, r7
+	mov r7, #20
+	svc #0
+	mov r7, ip
+	ldr r2, =_last_ppid
+	str r1, [r2]
+	bx lr
+.globl getppid
+getppid:
+	mov ip, r7
+	mov r7, #20
+	svc #0
+	mov r7, ip
+	mov r0, r1
+	bx lr
+
+@ v7 getuid(2) returns real uid in r0, effective uid in r1.  Provide
+@ geteuid() / getegid() wrappers that fire getuid/getgid and pick r1.
+.globl geteuid
+geteuid:
+	mov ip, r7
+	mov r7, #24
+	svc #0
+	mov r7, ip
+	mov r0, r1
+	bx lr
+
+.globl getegid
+getegid:
+	mov ip, r7
+	mov r7, #47
+	svc #0
+	mov r7, ip
+	mov r0, r1
+	bx lr
+
+.data
+.globl _last_ppid
+_last_ppid: .word 0

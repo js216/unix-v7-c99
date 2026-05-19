@@ -8,7 +8,11 @@
 struct	file
 {
 	char	f_flag;
-	char	f_count;	/* reference count */
+	short	f_count;	/* reference count.  PORT: widened from
+				 * char (8-bit, max 255) because every fork
+				 * bumps every open file's count by 1; with
+				 * sh's 5+ open FDs, ~250 sequential forks
+				 * overflowed it and corrupted refcounts. */
 	struct inode *f_inode;	/* pointer to inode structure */
 	union {
 		off_t	f_offset;	/* read/write character pointer */

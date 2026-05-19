@@ -22,8 +22,20 @@ char **argv;
 	errlev = 0;
 	if (argc <= 1) {
 	usage:
-		printf("usage: kill [ -signo ] pid ...\n");
+		printf("usage: kill [ -signo ] pid ...\n       kill -l\n");
 		exit(2);
+	}
+	/* -l : list signal names (v7 had 16 signals; SIGTERM=15). */
+	if (argv[1][0] == '-' && argv[1][1] == 'l' && argv[1][2] == '\0') {
+		static char *names[] = {
+			0, "HUP", "INT", "QUIT", "ILL", "TRAP", "IOT", "EMT",
+			"FPE", "KILL", "BUS", "SEGV", "SYS", "PIPE", "ALRM",
+			"TERM"
+		};
+		int s;
+		for (s = 1; s <= 15; s++)
+			printf("%2d) SIG%s\n", s, names[s]);
+		return 0;
 	}
 	if (*argv[1] == '-') {
 		signo = atoi(argv[1]+1);
