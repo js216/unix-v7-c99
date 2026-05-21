@@ -1,0 +1,10 @@
+PATH=/bin:/usr/bin
+echo "Restricted rights: Use, duplication, or disclosure
+is subject to restrictions stated in your contract with
+Western Electric Company, Inc." >/dev/console
+rm -f /etc/mtab
+cat /dev/null >/etc/utmp
+rm -f /tmp/*
+/etc/update
+date >/dev/console
+/etc/cron

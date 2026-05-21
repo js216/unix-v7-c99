@@ -82,7 +82,7 @@ qemu:	unix root.img
 
 cmd/awk/awk.g.c cmd/awk/awk.h cmd/awk/proctab.c: ;
 
-root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* cmd/learn/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/plot v7/bin/spell cmd/spell/spell.sh lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo tools/extract-old-ar.py $(LEARN_FILES) $(LEARN_MOREFILES) build/auxfs.img
+root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* cmd/learn/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/plot v7/bin/spell cmd/spell/spell.sh lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/rc root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo tools/extract-old-ar.py $(LEARN_FILES) $(LEARN_MOREFILES) build/auxfs.img
 	cd lib; make
 	mkdir -p build
 	tools/mkfs root.img conf/$(CONF)/root.proto
