@@ -6,8 +6,8 @@
 #include	<stdio.h>
 
 int	Errors = 0;
-char	*strcat();
-char	*strcpy();
+char	*strcat(char *a, char *b);
+char	*strcpy(char *a, char *b);
 void	mkdir(char *d);
 
 int

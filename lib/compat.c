@@ -3,21 +3,14 @@
  *   - dup() encodes v7's dup2 protocol (high bit set => second fd);
  *   - execve/execl marshal argv and envp for the flat exec bridge;
  *   - popen/pclose layer pipe+fork+exec on top of the syscalls;
- *   - sbrk/brk are a userland bump allocator until the kernel grows a
- *     real break syscall;
- *   - time/ftime/alarm/pause/sleep call the real kernel paths once the
- *     ARM timer is live (sysent[13,35,27,29] all route through
- *     arch/u_bridge.c -> sys/sys4.c).  Earlier these were no-op stubs
- *     because no clock IRQ existed; with arm_timer_init() running at
- *     HZ, the kernel `time` global advances per real second and v7's
- *     pause()-on-sleep semantics make pause(2) block until a signal.
- *   - ioctl/nice/getpid stay stubbed for now.
+ *   - sbrk/brk are a userland bump allocator -- the kernel's break(2)
+ *     (sysent[17] = sys_break_v7) only adjusts u.u_dsize bookkeeping
+ *     since on this port copyseg/clearseg are no-ops (all procs stay
+ *     resident), so there is no benefit to routing through it;
+ *   - time/ftime/alarm/pause/sleep route through the real kernel paths
+ *     (sysent[13,35,27,29] -> arch/u_bridge.c -> sys/sys4.c).
  */
 #include <stdarg.h>
-#include <signal.h>
-#include <sys/stat.h>
-
-extern int signal(int sig, int fun);
 
 #define	S_EXIT		1
 #define	S_FORK		2
@@ -29,7 +22,6 @@ extern int signal(int sig, int fun);
 #define	S_WAIT		7
 #define	S_TIME		13	/* gtime: returns kernel `time` global */
 #define	S_STIME		25	/* stime: write kernel `time` global */
-#define	S_GETPID	20
 #define	S_ALARM		27	/* alarm: schedule SIGALRM in n sec */
 #define	S_PAUSE		29	/* pause: sleep until any signal */
 #define	S_STTY		31
@@ -37,7 +29,6 @@ extern int signal(int sig, int fun);
 #define	S_FTIME		35	/* ftime: copyout struct timeb */
 
 int syscall3(int n, int a, int b, int c);
-int fstat(int fd, struct stat *st);
 extern char **environ;
 
 /* exit flushes buffered stdio (via _cleanup) before trapping; the
@@ -46,8 +37,7 @@ extern void _exit(int n);
 extern void _cleanup(void);
 
 void
-exit(n)
-int n;
+exit(int n)
 {
 
 	_cleanup();
@@ -63,8 +53,7 @@ open(char *path, int mode)
 }
 
 int
-dup(a, b)
-int a, b;
+dup(int a, int b)
 {
 
 	if(a & 0100)
@@ -183,61 +172,60 @@ pause(void)
 	return(syscall3(S_PAUSE, 0, 0, 0));
 }
 
-/* sleep(n): v7 convention is alarm(n) + pause().  armboot's
- * deliver_signal() special-cases SIGALRM under SIG_DFL as a no-op
- * (rather than terminate as v7's signal(2) man page nominally
- * specifies) so a libc sleep() without a handler still works.
- * v7's libc/gen/sleep.c installed a sleepx() handler that longjmp'd
- * out, achieving the same effect by a different route. */
-unsigned
-sleep(n)
-unsigned n;
+/* sleep(n): mirror v7 libc/gen/sleep.c.  Installs a SIGALRM handler
+ * that longjmps out of pause() so the alarm fires don't terminate the
+ * process under SIG_DFL semantics.  Restores prior disposition and
+ * any prior alarm() value before returning. */
+#include <setjmp.h>
+static jmp_buf sleep_jmp;
+static void sleepx(int signo)
 {
+	(void)signo;
+	longjmp(sleep_jmp, 1);
+}
+extern int signal(int sig, void (*fun)(int));
+unsigned
+sleep(unsigned n)
+{
+	unsigned altime;
+	void (*alsig)(int) = (void (*)(int))0;	/* SIG_DFL */
 
 	if(n == 0)
 		return(0);
+	altime = (unsigned)alarm(1000);	/* time to maneuver */
+	if(setjmp(sleep_jmp)) {
+		(void)signal(14 /* SIGALRM */, alsig);
+		(void)alarm((int)altime);
+		return(0);
+	}
+	if(altime) {
+		if(altime > n)
+			altime -= n;
+		else {
+			n = altime;
+			altime = 1;
+		}
+	}
+	alsig = (void (*)(int))(long)signal(14 /* SIGALRM */, sleepx);
 	(void)alarm((int)n);
-	(void)pause();
-	(void)alarm(0);
-	return(0);
+	for(;;)
+		(void)pause();
+	/*NOTREACHED*/
 }
 
-#include <grp.h>
-struct group *
-getgrnam(name)
-char *name;
-{
-	static char *mem[] = { "root", 0 };
-	static struct group gr = { "other", "", 0, mem };
-
-	(void)name;
-	return(&gr);
-}
 
 /* nice(2): now a real syscall (slot 34, sys/sys4.c::nice).  Defined in
  * lib/sys.s -- the libc stub used to ignore its argument. */
 
-int
-setgid(int gid)
-{
-
-	(void)gid;
-	return(0);
-}
-
+/* setgid/getgid: now real syscalls (slots 46/47, sys/sys4.c).
+ * Defined in lib/sys.s; the compat.c stubs that always returned 0
+ * have been retired. */
 
 void
-abort()
+abort(void)
 {
 
 	_exit(1);
-}
-
-int
-getgid(void)
-{
-
-	return(0);
 }
 
 /* times(2): now a real syscall (slot 43, sys/sys4.c::times).  The

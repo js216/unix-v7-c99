@@ -8,11 +8,10 @@
 #include <errno.h>
 
 int errno;
-double frexp();
+double frexp(double, int *);
 
 double
-sqrt(arg)
-double arg;
+sqrt(double arg)
 {
 	double x, temp;
 	int exp;

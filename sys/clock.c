@@ -1,11 +1,12 @@
 #include "../h/param.h"
 #include "../h/systm.h"
-#include "../h/callo.h"
-#include "../h/seg.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-#include "../h/reg.h"
+#include "../h/proto.h"
+
+extern void addupc(caddr_t pc, void *prof, int inc);	/* arch/v7stubs.c stub */
+/* wakeup/spl1 come from h/proto.h.  psignal/setpri come from h/systm.h. */
 
 #define	SCHMAG	8/10
 
@@ -25,64 +26,26 @@
  *	jab the scheduler
  */
 
-clock(dev, sp, r1, nps, r0, pc, ps)
-dev_t dev;
-caddr_t pc;
+void
+clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 {
-	register struct callo *p1, *p2;
 	register struct proc *pp;
 	int a;
 	extern caddr_t waitloc;
+	(void)dev; (void)sp; (void)r1; (void)nps; (void)r0;
 
-	/*
-	 * restart clock
-	 */
-
-	lks->r[0] = 0115;
-
-	/*
-	 * display register
-	 */
-
-	display();
-	/*
-	 * callouts
-	 * if none, just continue
-	 * else update first non-zero time
-	 */
-
-	if(callout[0].c_func == NULL)
-		goto out;
-	p2 = &callout[0];
-	while(p2->c_time<=0 && p2->c_func!=NULL)
-		p2++;
-	p2->c_time--;
+	/* v7 rearmed the KW11-L by writing 0115 to lks->r[0] and snapshotted
+	 * the front-panel switch register via display(); on this port the
+	 * timer is rearmed by clock_irq_handler's cntv_tval_set and there is
+	 * no front panel, so both calls are gone. */
+	/* v7's per-tick callout[] dispatch is gone on this port -- nothing
+	 * registers via timeout() so the callout table is permanently empty. */
 
 	/*
 	 * if ps is high, just return
 	 */
 	if (BASEPRI(ps))
 		goto out;
-
-	/*
-	 * callout
-	 */
-
-	spl5();
-	if(callout[0].c_time <= 0) {
-		p1 = &callout[0];
-		while(p1->c_func != 0 && p1->c_time <= 0) {
-			(*p1->c_func)(p1->c_arg);
-			p1++;
-		}
-		p2 = &callout[0];
-		while(p2->c_func = p1->c_func) {
-			p2->c_time = p1->c_time;
-			p2->c_arg = p1->c_arg;
-			p1++;
-			p2++;
-		}
-	}
 
 	/*
 	 * lightning bolt time-out
@@ -137,49 +100,7 @@ out:
 	}
 }
 
-/*
- * timeout is called to arrange that
- * fun(arg) is called in tim/HZ seconds.
- * An entry is sorted into the callout
- * structure. The time in each structure
- * entry is the number of HZ's more
- * than the previous entry.
- * In this way, decrementing the
- * first entry has the effect of
- * updating all entries.
- *
- * The panic is there because there is nothing
- * intelligent to be done if an entry won't fit.
- */
-timeout(fun, arg, tim)
-int (*fun)();
-caddr_t arg;
-{
-	register struct callo *p1, *p2;
-	register int t;
-	int s;
-
-	t = tim;
-	p1 = &callout[0];
-	s = spl7();
-	while(p1->c_func != 0 && p1->c_time <= t) {
-		t -= p1->c_time;
-		p1++;
-	}
-	if (p1 >= &callout[NCALL-1])
-		panic("Timeout table overflow");
-	p1->c_time -= t;
-	p2 = p1;
-	while(p2->c_func != 0)
-		p2++;
-	while(p2 >= p1) {
-		(p2+1)->c_time = p2->c_time;
-		(p2+1)->c_func = p2->c_func;
-		(p2+1)->c_arg = p2->c_arg;
-		p2--;
-	}
-	p1->c_time = t;
-	p1->c_func = fun;
-	p1->c_arg = arg;
-	splx(s);
-}
+/* v7's timeout() registered fun(arg) for deferred call after tim/HZ
+ * seconds via the callout[] table.  No driver on this port registers
+ * timeouts (the v7 callers were in dh.c / kl.c / etc., none of which
+ * exist here), so the function and the table are removed. */

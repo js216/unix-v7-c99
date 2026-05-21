@@ -10,12 +10,49 @@
 #include	"defs.h"
 
 
-PROC VOID	gsort();
+PROC VOID	gsort(STRING from[], STRING to[]);
+LOCAL STRING	execs(STRING ap, REG STRING t[]);
+LOCAL INT	split(REG STRING s);
+INT	subst(INT in, INT ot);
+INT	chkopen(STRING idf);
+INT	tmpfil(void);
+INT	stoi(STRING icp);
+INT	failed(STRING s1, STRING s2);
+INT	create(STRING s);
+INT	rename(REG INT f1, REG INT f2);
+INT	cf(STRING s1, STRING s2);
+INT	any(REG CHAR c, STRING s);
+INT	namscan(VOID (*fn)(NAMPTR));
+INT	trim(STRING at);
+INT	sigchk(void);
+INT	clearup(void);
+INT	execexp(STRING t, INT in);
+INT	done(void);
+INT	setargs(STRING argi[]);
+INT	exitsh(INT xno);
+INT	exitset(void);
+INT	expand(STRING as, INT rflg);
+INT	makearg(REG ARGPTR args);
+STRING	*setenv(void);
+VOID	exname(REG NAMPTR n);
+VOID	prc(INT c);
+VOID	prs(STRING as);
+VOID	prn(INT n);
+VOID	prp(void);
+VOID	newline(void);
+VOID	blank(void);
+extern int close(int fd);
+extern int unlink(char *p);
+extern int dup();
+extern int open(char *p, int f);
+extern long lseek(int fd, long off, int whence);
+extern int execve(char *p, char **argv, char **env);
+extern int wait(int *st);
 
 #define ARGMK	01
 
 INT		errno;
-STRING		sysmsg[];
+extern STRING	sysmsg[];
 
 /* fault handling */
 #define ENOMEM	12
@@ -28,8 +65,7 @@ STRING		sysmsg[];
 
 /* service routines for `execute' */
 
-VOID	initio(iop)
-	IOPTR		iop;
+VOID	initio(IOPTR iop)
 {
 	REG STRING	ion;
 	REG INT		iof, fd;
@@ -63,10 +99,10 @@ VOID	initio(iop)
 		FI
 		initio(iop->ionxt);
 	FI
+	return(0);
 }
 
-VOID	nullio(iop)
-	IOPTR		iop;
+VOID	nullio(IOPTR iop)
 {
 	REG STRING	ion;
 	REG INT		iof, fd;
@@ -90,10 +126,10 @@ VOID	nullio(iop)
 		FI
 		nullio(iop->ionxt);
 	FI
+	return(0);
 }
 
-STRING	getpath(s)
-	STRING		s;
+STRING	getpath(STRING s)
 {
 	REG STRING	path;
 	IF any('/',s)
@@ -105,10 +141,10 @@ STRING	getpath(s)
 	THEN	return(defpath);
 	ELSE	return(cpystak(path));
 	FI
+	return(0);
 }
 
-INT	pathopen(path, name)
-	REG STRING	path, name;
+INT	pathopen(REG STRING path, REG STRING name)
 {
 	REG UFD		f;
 
@@ -117,9 +153,7 @@ INT	pathopen(path, name)
 	return(f);
 }
 
-STRING	catpath(path,name)
-	REG STRING	path;
-	STRING		name;
+STRING	catpath(REG STRING path, STRING name)
 {
 	/* leaves result on top of stack */
 	REG STRING	scanp = path,
@@ -136,8 +170,7 @@ STRING	catpath(path,name)
 LOCAL STRING	xecmsg;
 LOCAL STRING	*xecenv;
 
-VOID	execa(at)
-	STRING		at[];
+VOID	execa(STRING at[])
 {
 	REG STRING	path;
 	REG STRING	*t = at;
@@ -146,14 +179,13 @@ VOID	execa(at)
 	THEN	xecmsg=notfound; path=getpath(*t);
 		namscan(exname);
 		xecenv=setenv();
-		WHILE path=execs(path,t) DONE
+		WHILE (path=execs(path,t)) DONE
 		failed(*t,xecmsg);
 	FI
+	return(0);
 }
 
-LOCAL STRING	execs(ap,t)
-	STRING		ap;
-	REG STRING	t[];
+LOCAL STRING	execs(STRING ap, REG STRING t[])
 {
 	REG STRING	p, prefix;
 
@@ -176,21 +208,27 @@ LOCAL STRING	execs(ap,t)
 		setargs(t);
 		execexp(0,input);
 		done();
+		/* fallthrough */
 
 	    case ENOMEM:
 		failed(p,toobig);
+		/* fallthrough */
 
 	    case E2BIG:
 		failed(p,arglist);
+		/* fallthrough */
 
 	    case ETXTBSY:
 		failed(p,txtbsy);
+		/* fallthrough */
 
 	    default:
 		xecmsg=badexec;
+		/* fallthrough */
 	    case ENOENT:
 		return(prefix);
 	ENDSW
+	return(prefix);
 }
 
 /* for processes to be waited for */
@@ -198,17 +236,17 @@ LOCAL STRING	execs(ap,t)
 LOCAL INT	pwlist[MAXP];
 LOCAL INT	pwc;
 
-postclr()
+INT postclr(void)
 {
 	REG INT		*pw = pwlist;
 
 	WHILE pw <= &pwlist[pwc]
 	DO *pw++ = 0 OD
 	pwc=0;
+	return(0);
 }
 
-VOID	post(pcsid)
-	INT		pcsid;
+VOID	post(INT pcsid)
 {
 	REG INT		*pw = pwlist;
 
@@ -220,10 +258,10 @@ VOID	post(pcsid)
 		FI
 		*pw = pcsid;
 	FI
+	return(0);
 }
 
-VOID	await(i)
-	INT		i;
+VOID	await(INT i)
 {
 	INT		rc=0, wx=0;
 	INT		w;
@@ -250,7 +288,7 @@ VOID	await(i)
 
 		w_hi = (w>>8)&LOBYTE;
 
-		IF sig = w&0177
+		IF (sig = w&0177)
 		THEN	IF sig == 0177	/* ptrace! return */
 			THEN	prs("ptrace: ");
 				sig = w_hi;
@@ -273,43 +311,42 @@ VOID	await(i)
 	THEN	exitsh(rc);
 	FI
 	exitval=rc; exitset();
+	return(0);
 }
 
 BOOL		nosubst;
 
-trim(at)
-	STRING		at;
+INT trim(STRING at)
 {
 	REG STRING	p;
 	REG CHAR	c;
 	REG CHAR	q=0;
 
-	IF p=at
-	THEN	WHILE c = *p
+	IF (p=at)
+	THEN	WHILE (c = *p)
 		DO *p++=c&STRIP; q |= c OD
 	FI
 	nosubst=q&QUOTE;
+	return(0);
 }
 
-STRING	mactrim(s)
-	STRING		s;
+STRING	mactrim(STRING s)
 {
 	REG STRING	t=macro(s);
 	trim(t);
 	return(t);
 }
 
-STRING	*scan(argn)
-	INT		argn;
+STRING	*scan(INT argn)
 {
-	REG ARGPTR	argp = Rcheat(gchain)&~ARGMK;
+	REG ARGPTR	argp = (ARGPTR)(long)(Rcheat(gchain)&~ARGMK);
 	REG STRING	*comargn, *comargm;
 
-	comargn=getstak(BYTESPERWORD*argn+BYTESPERWORD); comargm = comargn += argn; *comargn = ENDARGS;
+	comargn=(STRING *)getstak(BYTESPERWORD*argn+BYTESPERWORD); comargm = comargn += argn; *comargn = ENDARGS;
 
 	WHILE argp
 	DO	*--comargn = argp->argval;
-		IF argp = argp->argnxt
+		IF (argp = argp->argnxt)
 		THEN trim(*comargn);
 		FI
 		IF argp==0 ORF Rcheat(argp)&ARGMK
@@ -317,18 +354,17 @@ STRING	*scan(argn)
 			comargm = comargn;
 		FI
 		/* Lcheat(argp) &= ~ARGMK; */
-		argp = Rcheat(argp)&~ARGMK;
+		argp = (ARGPTR)(long)(Rcheat(argp)&~ARGMK);
 	OD
 	return(comargn);
 }
 
-LOCAL VOID	gsort(from,to)
-	STRING		from[], to[];
+LOCAL VOID	gsort(STRING from[], STRING to[])
 {
 	INT		k, m, n;
 	REG INT		i, j;
 
-	IF (n=to-from)<=1 THEN return FI
+	IF (n=to-from)<=1 THEN return(0) FI
 
 	FOR j=1; j<=n; j*=2 DONE
 
@@ -344,18 +380,18 @@ LOCAL VOID	gsort(from,to)
 		OD
 	    OD
 	OD
+	return(0);
 }
 
 /* Argument list generation */
 
-INT	getarg(ac)
-	COMPTR		ac;
+INT	getarg(COMPTR ac)
 {
 	REG ARGPTR	argp;
 	REG INT		count=0;
 	REG COMPTR	c;
 
-	IF c=ac
+	IF (c=ac)
 	THEN	argp=c->comarg;
 		WHILE argp
 		DO	count += split(macro(argp->argval));
@@ -365,8 +401,7 @@ INT	getarg(ac)
 	return(count);
 }
 
-LOCAL INT	split(s)
-	REG STRING	s;
+LOCAL INT	split(REG STRING s)
 {
 	REG STRING	argp;
 	REG ARGPTR	arg;
@@ -384,8 +419,8 @@ LOCAL INT	split(s)
 		ELIF c==0
 		THEN	s--;
 		FI
-		arg=endstak(argp);
-		IF c=expand(arg->argval,0)
+		arg=(ARGPTR)endstak(argp);
+		IF (c=expand(arg->argval,0))
 		THEN	count += c;
 		ELSE	/* assign(&fngnod, argp->argval); */
 			makearg(arg); count++;

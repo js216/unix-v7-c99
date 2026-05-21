@@ -4,13 +4,10 @@
 
 #include	<stdio.h>
 
-long lseek();
+long lseek(int fd, long offset, int ptrname);
 
 int
-fseek(iop, offset, ptrname)
-	register FILE *iop;
-	long offset;
-	int ptrname;
+fseek(register FILE *iop, long offset, int ptrname)
 {
 	register int c;
 	long p;

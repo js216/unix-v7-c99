@@ -2,15 +2,17 @@
 #include "lrnref"
 #define	ND	64
 
-start(lesson)
-char *lesson;
+extern void wrapup(int);
+
+void
+start(char *lesson)
 {
 	struct direct dv[ND], *dm, *dp;
 	int f, c, n;
 	char where [100];
 
 	f = open(".", 0);
-	n = read(f, dv, ND*sizeof(*dp));
+	n = read(f, (char *)dv, ND*sizeof(*dp));
 	n /= sizeof(*dp);
 	if (n==ND)
 		fprintf(stderr, "lesson too long\n");
@@ -34,8 +36,8 @@ char *lesson;
 	wrapup(1);
 }
 
-fcopy(new,old)
-char *new, *old;
+void
+fcopy(char *new, char *old)
 {
 	char b[512];
 	int n, fn, fo;

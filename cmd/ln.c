@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "stdio.h"
-char	*rindex();
+char	*rindex(char *sp, int c);
 
 int
 main(int argc, char **argv)

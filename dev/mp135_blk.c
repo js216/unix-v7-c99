@@ -17,7 +17,6 @@
 
 #include "../h/param.h"
 #include "../h/buf.h"
-#include "../h/conf.h"
 #include "../h/proto.h"
 
 /* Per-device buffer-list head.  bdevsw[].d_tab points here; V7

@@ -11,7 +11,7 @@ struct tty;
 #include "../h/user.h"
 #include "../h/proc.h"
 
-extern long lseek();
+extern long lseek(int fd, long offset, int ptrname);
 
 struct nlist nl[] = {
 	{ "_proc", 0, 0 },

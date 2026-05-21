@@ -38,8 +38,8 @@ int	mflg;
 int	tabc;
 char	*tty;
 int	mode;
-char	*ttyname();
-char	*ctime();
+char	*ttyname(int f);
+char	*ctime(long *t);
 void	done(void);
 void	fixtty(void);
 void	print(char *fp, char **argp);
@@ -201,7 +201,7 @@ print(char *fp, char **argp)
 	colp[ncol] = bufp = buffer;
 	if (mflg==0)
 		nexbuf();
-	while (mflg&&nofile || (!mflg)&&tpgetc(ncol)>0) {
+	while ((mflg&&nofile) || ((!mflg)&&tpgetc(ncol)>0)) {
 		if (mflg==0) {
 			colp[ncol]--;
 			if (colp[ncol] < buffer)

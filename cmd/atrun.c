@@ -11,16 +11,14 @@
 # define PDIR	"past"
 # define LASTF "/usr/spool/at/lasttimedone"
 
-int	makenowtime(), updatetime(), run(), movefile();
+int	makenowtime(void), updatetime(int t), run(char *file), movefile(char *file, char *dir);
 
 int	nowtime;
 int	nowdate;
 int	nowyear;
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int tt, day, year, uniq;
 	struct direct dirent;
@@ -55,7 +53,7 @@ char **argv;
 }
 
 int
-makenowtime()
+makenowtime(void)
 {
 	long t;
 	register struct tm *tp;
@@ -69,8 +67,7 @@ makenowtime()
 }
 
 int
-updatetime(t)
-int t;
+updatetime(int t)
 {
 	FILE *tfile;
 
@@ -84,8 +81,7 @@ int t;
 }
 
 int
-run(file)
-char *file;
+run(char *file)
 {
 	struct stat stbuf;
 	register int pid, i;
@@ -102,7 +98,7 @@ char *file;
 		exit(1);
 	setgid(stbuf.st_gid);
 	setuid(stbuf.st_uid);
-	if (pid = fork()) {
+	if ((pid = fork())) {
 		if (pid == -1)
 			exit(1);
 	wait((int *)0);
@@ -120,8 +116,7 @@ char *file;
 }
 
 int
-movefile(file, dir)
-char *file, *dir;
+movefile(char *file, char *dir)
 {
 	int pid, status;
 

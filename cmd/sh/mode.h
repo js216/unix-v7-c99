@@ -27,15 +27,15 @@ STRUCT fileblk	FILEBLK;
 STRUCT filehdr	FILEHDR;
 STRUCT fileblk	*FILE;
 STRUCT trenod	*TREPTR;
-STRUCT forknod	*FORKPTR;
-STRUCT comnod	*COMPTR;
-STRUCT swnod	*SWPTR;
-STRUCT regnod	*REGPTR;
-STRUCT parnod	*PARPTR;
-STRUCT ifnod	*IFPTR;
-STRUCT whnod	*WHPTR;
-STRUCT fornod	*FORPTR;
-STRUCT lstnod	*LSTPTR;
+STRUCT trenod	*FORKPTR;
+STRUCT trenod	*COMPTR;
+STRUCT trenod	*SWPTR;
+STRUCT trenod	*REGPTR;
+STRUCT trenod	*PARPTR;
+STRUCT trenod	*IFPTR;
+STRUCT trenod	*WHPTR;
+STRUCT trenod	*FORPTR;
+STRUCT trenod	*LSTPTR;
 STRUCT argnod	*ARGPTR;
 STRUCT dolnod	*DOLPTR;
 STRUCT ionod	*IOPTR;
@@ -107,61 +107,36 @@ struct sysnod {
 };
 STRUCT sysnod	SYSTAB[];
 
-/* this node is a proforma for those that follow */
+/* this node is a proforma for those that follow.  C99 strict: the v7
+ * K&R idiom of `t->forktyp' on a TREPTR (where forknod, comnod, etc.
+ * were separate structs with parallel layouts) is replaced with a
+ * single named-union trenod plus #define field aliases below; the
+ * separate forknod/comnod/etc. types are gone (only their `sizeof'
+ * was ever read, now expressed against the union members). */
+struct trenod_tre  { INT tretyp;  IOPTR treio; };
+struct trenod_fork { INT forktyp; IOPTR forkio;  TREPTR forktre; };
+struct trenod_com  { INT comtyp;  IOPTR comio;   ARGPTR comarg; ARGPTR comset; };
+struct trenod_if   { INT iftyp;   TREPTR iftre;  TREPTR thtre;  TREPTR eltre; };
+struct trenod_wh   { INT whtyp;   TREPTR whtre;  TREPTR dotre; };
+struct trenod_for  { INT fortyp;  TREPTR fortre; STRING fornam; COMPTR forlst; };
+struct trenod_sw   { INT swtyp;   STRING swarg;  REGPTR swlst; };
+struct trenod_par  { INT partyp;  TREPTR partre; };
+struct trenod_lst  { INT lsttyp;  TREPTR lstlef; TREPTR lstrit; };
+struct trenod_reg  { ARGPTR regptr; TREPTR regcom; REGPTR regnxt; };
+
 struct trenod {
 	union {
-		struct {
-			INT	tretyp;
-			IOPTR	treio;
-		};
-		struct {
-			INT	forktyp;
-			IOPTR	forkio;
-			TREPTR	forktre;
-		};
-		struct {
-			INT	comtyp;
-			IOPTR	comio;
-			ARGPTR	comarg;
-			ARGPTR	comset;
-		};
-		struct {
-			INT	iftyp;
-			TREPTR	iftre;
-			TREPTR	thtre;
-			TREPTR	eltre;
-		};
-		struct {
-			INT	whtyp;
-			TREPTR	whtre;
-			TREPTR	dotre;
-		};
-		struct {
-			INT	fortyp;
-			TREPTR	fortre;
-			STRING	fornam;
-			COMPTR	forlst;
-		};
-		struct {
-			INT	swtyp;
-			STRING	swarg;
-			REGPTR	swlst;
-		};
-		struct {
-			INT	partyp;
-			TREPTR	partre;
-		};
-		struct {
-			INT	lsttyp;
-			TREPTR	lstlef;
-			TREPTR	lstrit;
-		};
-		struct {
-			ARGPTR	regptr;
-			TREPTR	regcom;
-			REGPTR	regnxt;
-		};
-	};
+		struct trenod_tre  _tre;
+		struct trenod_fork _fork;
+		struct trenod_com  _com;
+		struct trenod_if   _if;
+		struct trenod_wh   _wh;
+		struct trenod_for  _for;
+		struct trenod_sw   _sw;
+		struct trenod_par  _par;
+		struct trenod_lst  _lst;
+		struct trenod_reg  _reg;
+	} u;
 };
 
 /* dummy for access only */
@@ -176,62 +151,6 @@ struct dolnod {
 	CHAR	dolarg[1];
 };
 
-struct forknod {
-	INT	forktyp;
-	IOPTR	forkio;
-	TREPTR	forktre;
-};
-
-struct comnod {
-	INT	comtyp;
-	IOPTR	comio;
-	ARGPTR	comarg;
-	ARGPTR	comset;
-};
-
-struct ifnod {
-	INT	iftyp;
-	TREPTR	iftre;
-	TREPTR	thtre;
-	TREPTR	eltre;
-};
-
-struct whnod {
-	INT	whtyp;
-	TREPTR	whtre;
-	TREPTR	dotre;
-};
-
-struct fornod {
-	INT	fortyp;
-	TREPTR	fortre;
-	STRING	fornam;
-	COMPTR	forlst;
-};
-
-struct swnod {
-	INT	swtyp;
-	STRING	swarg;
-	REGPTR	swlst;
-};
-
-struct regnod {
-	ARGPTR	regptr;
-	TREPTR	regcom;
-	REGPTR	regnxt;
-};
-
-struct parnod {
-	INT	partyp;
-	TREPTR	partre;
-};
-
-struct lstnod {
-	INT	lsttyp;
-	TREPTR	lstlef;
-	TREPTR	lstrit;
-};
-
 struct ionod {
 	INT	iofile;
 	STRING	ioname;
@@ -239,13 +158,49 @@ struct ionod {
 	IOPTR	iolst;
 };
 
-#define	FORKTYPE	(sizeof(struct forknod))
-#define	COMTYPE		(sizeof(struct comnod))
-#define	IFTYPE		(sizeof(struct ifnod))
-#define	WHTYPE		(sizeof(struct whnod))
-#define	FORTYPE		(sizeof(struct fornod))
-#define	SWTYPE		(sizeof(struct swnod))
-#define	REGTYPE		(sizeof(struct regnod))
-#define	PARTYPE		(sizeof(struct parnod))
-#define	LSTTYPE		(sizeof(struct lstnod))
+#define	FORKTYPE	(sizeof(struct trenod_fork))
+#define	COMTYPE		(sizeof(struct trenod_com))
+#define	IFTYPE		(sizeof(struct trenod_if))
+#define	WHTYPE		(sizeof(struct trenod_wh))
+#define	FORTYPE		(sizeof(struct trenod_for))
+#define	SWTYPE		(sizeof(struct trenod_sw))
+#define	REGTYPE		(sizeof(struct trenod_reg))
+#define	PARTYPE		(sizeof(struct trenod_par))
+#define	LSTTYPE		(sizeof(struct trenod_lst))
 #define	IOTYPE		(sizeof(struct ionod))
+
+/* Field-access macros: subsequent code writes `t->forktyp' etc., which
+ * the preprocessor rewrites to `t->u._fork.forktyp' (literal field of
+ * the named-union member).  Macros come AFTER all struct definitions
+ * so the field declarations above stay un-rewritten. */
+#define tretyp  u._tre.tretyp
+#define treio   u._tre.treio
+#define forktyp u._fork.forktyp
+#define forkio  u._fork.forkio
+#define forktre u._fork.forktre
+#define comtyp  u._com.comtyp
+#define comio   u._com.comio
+#define comarg  u._com.comarg
+#define comset  u._com.comset
+#define iftyp   u._if.iftyp
+#define iftre   u._if.iftre
+#define thtre   u._if.thtre
+#define eltre   u._if.eltre
+#define whtyp   u._wh.whtyp
+#define whtre   u._wh.whtre
+#define dotre   u._wh.dotre
+#define fortyp  u._for.fortyp
+#define fortre  u._for.fortre
+#define fornam  u._for.fornam
+#define forlst  u._for.forlst
+#define swtyp   u._sw.swtyp
+#define swarg   u._sw.swarg
+#define swlst   u._sw.swlst
+#define partyp  u._par.partyp
+#define partre  u._par.partre
+#define lsttyp  u._lst.lsttyp
+#define lstlef  u._lst.lstlef
+#define lstrit  u._lst.lstrit
+#define regptr  u._reg.regptr
+#define regcom  u._reg.regcom
+#define regnxt  u._reg.regnxt

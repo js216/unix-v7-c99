@@ -48,18 +48,32 @@ FILE *files[15];
 FILE **filesp;
 FILE *infile;
 
-char *calloc();
+char *calloc(unsigned num, unsigned size);
+
+FILE *opn(register char *p);
+int skeqn(void);
+int eof(void);
+void getfname(void);
+void backsl(void);
+char *copys(register char *s);
+void fatal(char *s, char *p);
+void work(void);
+void regline(int macline);
+void putmac(register char *s);
+void putwords(int macline);
+void comline(void);
+void macro(void);
+void tbl(void);
+void eqn(void);
 
 
 
-main(ac, av)
-int ac;
-char **av;
+int
+main(int ac, char **av)
 {
 register int i;
 register char *p;
 static char onechar[2] = "X";
-FILE *opn();
 
 argc = ac - 1;
 argv = av + 1;
@@ -104,24 +118,29 @@ work();
 
 
 
-skeqn()
+int
+skeqn(void)
 {
-while((c = getc(infile)) != rdelim)
+while((c = getc(infile)) != rdelim) {
 	if(c == EOF)
 		c = eof();
-	else if(c == '"')
-		while( (c = getc(infile)) != '"')
+	else if(c == '"') {
+		while( (c = getc(infile)) != '"') {
 			if(c == EOF)
 				c = eof();
-			else if(c == '\\')
+			else if(c == '\\') {
 				if((c = getc(infile)) == EOF)
 					c = eof();
+			}
+		}
+	}
+}
 return(c = ' ');
 }
 
 
-FILE *opn(p)
-register char *p;
+FILE *
+opn(register char *p)
 {
 FILE *fd;
 
@@ -135,7 +154,8 @@ return(fd);
 
 
 
-eof()
+int
+eof(void)
 {
 if(infile != stdin)
 	fclose(infile);
@@ -155,13 +175,13 @@ return(C);
 
 
 
-getfname()
+void
+getfname(void)
 {
 register char *p;
 struct chain { struct chain *nextp; char *datap; } *chainblock;
 register struct chain *q;
 static struct chain *namechain	= NULL;
-char *copys();
 
 while(C == ' ') ;
 
@@ -189,15 +209,16 @@ namechain = q;
 
 
 
-fatal(s,p)
-char *s, *p;
+void
+fatal(char *s, char *p)
 {
 fprintf(stderr, "Deroff: ");
 fprintf(stderr, s, p);
 exit(1);
 }
 
-work()
+void
+work(void)
 {
 
 for( ;; )
@@ -212,8 +233,8 @@ for( ;; )
 
 
 
-regline(macline)
-int macline;
+void
+regline(int macline)
 {
 line[0] = c;
 lp = line;
@@ -239,7 +260,7 @@ for( ; ; )
 
 *lp = '\0';
 
-if(line[0] != '\0')
+if(line[0] != '\0') {
 	if(wordflag)
 		putwords(macline);
 	else if(macline)
@@ -247,12 +268,13 @@ if(line[0] != '\0')
 	else
 		puts(line);
 }
+}
 
 
 
 
-putmac(s)
-register char *s;
+void
+putmac(register char *s)
 {
 register char *t;
 
@@ -262,7 +284,7 @@ while(*s)
 		putchar(*s++);
 	for(t = s ; *t!=' ' && *t!='\t' && *t!='\0' ; ++t)
 		;
-	if(t>s+2 && chars[ s[0] ]==LETTER && chars[ s[1] ]==LETTER)
+	if(t>s+2 && chars[(unsigned char)s[0]]==LETTER && chars[(unsigned char)s[1]]==LETTER)
 		while(s < t)
 			putchar(*s++);
 	else
@@ -273,8 +295,8 @@ putchar('\n');
 
 
 
-putwords(macline)	/* break into words for -w option */
-int macline;
+void
+putwords(int macline)	/* break into words for -w option */
 {
 register char *p, *p1;
 int i, nlet;
@@ -283,14 +305,14 @@ int i, nlet;
 for(p1 = line ; ;)
 	{
 	/* skip initial specials ampersands and apostrophes */
-	while( chars[*p1] < DIGIT)
+	while( chars[(unsigned char)*p1] < DIGIT)
 		if(*p1++ == '\0') return;
 	nlet = 0;
-	for(p = p1 ; (i=chars[*p]) != SPECIAL ; ++p)
+	for(p = p1 ; (i=chars[(unsigned char)*p]) != SPECIAL ; ++p)
 		if(i == LETTER) ++nlet;
 
 	if( (!macline && nlet>1)   /* MDM definition of word */
-	   || (macline && nlet>2 && chars[ p1[0] ]==LETTER && chars[ p1[1] ]==LETTER) )
+	   || (macline && nlet>2 && chars[(unsigned char)p1[0]]==LETTER && chars[(unsigned char)p1[1]]==LETTER) )
 		{
 		/* delete trailing ampersands and apostrophes */
 		while(p[-1]=='\'' || p[-1]=='&')
@@ -305,7 +327,8 @@ for(p1 = line ; ;)
 
 
 
-comline()
+void
+comline(void)
 {
 register int c1, c2;
 
@@ -360,11 +383,12 @@ else
 
 
 
-macro()
+void
+macro(void)
 {
 /*
 do { SKIP; }
-	while(C!='.' || C!='.' || C=='.');	/* look for  .. */
+	while(C!='.' || C!='.' || C=='.');	look for  .. */
 SKIP;
 inmacro = YES;
 }
@@ -372,14 +396,16 @@ inmacro = YES;
 
 
 
-tbl()
+void
+tbl(void)
 {
 while(C != '.');
 SKIP;
 intable = YES;
 }
 
-eqn()
+void
+eqn(void)
 {
 register int c1, c2;
 
@@ -422,7 +448,8 @@ for( ;;)
 
 
 
-backsl()	/* skip over a complete backslash construction */
+void
+backsl(void)	/* skip over a complete backslash construction */
 {
 int bdelim;
 
@@ -446,7 +473,7 @@ sw:  switch(C)
 	case '*':
 		if(C != '(')
 			return;
-
+		/* fallthrough */
 	case '(':
 		if(C != '\n') C;
 		return;
@@ -480,15 +507,15 @@ sw:  switch(C)
 
 
 
-char *copys(s)
-register char *s;
+char *
+copys(register char *s)
 {
 register char *t, *t0;
 
 if( (t0 = t = calloc( strlen(s)+1, sizeof(*t) ) ) == NULL)
 	fatal("Cannot allocate memory", (char *) NULL);
 
-while( *t++ = *s++ )
+while( (*t++ = *s++) )
 	;
 return(t0);
 }

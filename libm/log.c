@@ -11,7 +11,7 @@
 #include <math.h>
 
 int	errno;
-double	frexp();
+double	frexp(double, int *);
 static double	log2	= 0.693147180559945309e0;
 static double	ln10	= 2.302585092994045684;
 static double	sqrto2	= 0.707106781186547524e0;
@@ -24,8 +24,7 @@ static double	q1	= 0.194809660700889731e2;
 static double	q2	= -.891110902798312337e1;
 
 double
-log(arg)
-double arg;
+log(double arg)
 {
 	double x,z, zsq, temp;
 	int exp;
@@ -54,8 +53,7 @@ double arg;
 }
 
 double
-log10(arg)
-double arg;
+log10(double arg)
 {
 
 	return(log(arg)/ln10);

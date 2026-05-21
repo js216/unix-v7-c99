@@ -1,9 +1,17 @@
 #include "stdio.h"
 #include "lrnref"
 
+extern void wrapup(int);
+extern void trim(char *);
+extern int already(char *, int);
+
+int abs(int x);
+int grand(void);
+
 int	nsave	= 0;
 
-selunit()
+void
+selunit(void)
 {
 	char fnam[20], s[50];
 	static char dobuff[50];
@@ -86,17 +94,20 @@ retry:
 	fclose(f);
 }
 
-abs(x)
+int
+abs(int x)
 {
 	return(x>=0? x: -x);
 }
 
-grand()
+int
+grand(void)
 {
 	static int garbage;
-	int a[2], b;
+	long a;
+	int b;
 
-	time(a);
-	b = a[1]+10*garbage++;
+	time(&a);
+	b = (int)a + 10*garbage++;
 	return(b&077777);
 }

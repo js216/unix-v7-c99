@@ -230,10 +230,7 @@ eputn(char *buf, double v, int prec, int upper)
 }
 
 void
-_doprnt(fmt, argp, file)
-char *fmt;
-va_list *argp;
-FILE *file;
+_doprnt(char *fmt, va_list *argp, FILE *file)
 {
 	char numbuf[64];
 	char *p, *s;

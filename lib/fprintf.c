@@ -1,6 +1,6 @@
 #include	<stdio.h>
 #include	<stdarg.h>
-extern void _doprnt();
+extern void _doprnt(char *fmt, va_list *adx, FILE *file);
 
 int
 fprintf(FILE *iop, char *fmt, ...)

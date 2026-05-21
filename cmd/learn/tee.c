@@ -1,19 +1,31 @@
-main()
+int creat(char *path, int mode);
+int read(int fd, char *buf, int n);
+int write(int fd, char *buf, int n);
+int close(int fd);
+
+void put(int c, int f);
+void fl(int f);
+
+int
+main(void)
 {
 	int f, c;
 
 	f = creat(".ocopy", 0666);
-	while (read(0, &c, 1) == 1) {
-		write (1, &c, 1);
+	while (read(0, (char *)&c, 1) == 1) {
+		write (1, (char *)&c, 1);
 		put(c, f);
 	}
 	fl(f);
 	close(f);
+	return 0;
 }
 
 static char ln[512];
 char *p = ln;
-put(c, f)
+
+void
+put(int c, int f)
 {
 	*p++ = c;
 	if (c == '\n') {
@@ -21,7 +33,9 @@ put(c, f)
 		p=ln;
 	}
 }
-fl(f)
+
+void
+fl(int f)
 {
 	register char *s;
 

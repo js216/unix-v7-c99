@@ -51,11 +51,9 @@ int	atoi(char *);
 int	nlist(char *, struct nlent *);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
-	extern char *ctime();
+	extern char *ctime(long *t);
 	register  int i;
 	int iter;
 	double f1, f2;
@@ -189,8 +187,7 @@ double	xf[] = {
 };
 
 int
-stats(dn)
-int dn;
+stats(int dn)
 {
 	register int i;
 	double f1, f2, f3;
@@ -231,8 +228,7 @@ int dn;
 }
 
 int
-stat1(o)
-int o;
+stat1(int o)
 {
 	register int i;
 	long t;
@@ -253,8 +249,7 @@ int o;
 }
 
 int
-stats2(t)
-double t;
+stats2(double t)
 {
 	register int i, j;
 
@@ -267,8 +262,7 @@ double t;
 }
 
 int
-stats3(t)
-double t;
+stats3(double t)
 {
 	register int i;
 	double sum;
@@ -314,7 +308,7 @@ double t;
 }
 
 int
-biostats()
+biostats(void)
 {
 	register int i;
 

@@ -2,9 +2,7 @@
 #include "spell.h"
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i, j;
 	long h;

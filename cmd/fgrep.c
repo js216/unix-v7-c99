@@ -38,9 +38,7 @@ void cfail(void);
 void exit(int n);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -119,8 +117,7 @@ out:
 }
 
 void
-execute(file)
-char *file;
+execute(char *file)
 {
 	register char *p;
 	register struct words *c;
@@ -215,7 +212,7 @@ char *file;
 			failed = 0;
 			continue;
 		}
-		if (*p++ == '\n')
+		if (*p++ == '\n') {
 			if (vflag) goto succeed;
 			else {
 				lnum++;
@@ -223,6 +220,7 @@ char *file;
 				c = w;
 				failed = 0;
 			}
+		}
 	}
 	close(f);
 	if (cflag) {
@@ -233,7 +231,7 @@ char *file;
 }
 
 int
-getargc()
+getargc(void)
 {
 	register int c;
 	if (wordf)
@@ -244,7 +242,7 @@ getargc()
 }
 
 void
-cgotofn() {
+cgotofn(void) {
 	register int c;
 	register struct words *s;
 
@@ -308,12 +306,12 @@ nword:	for(;;) {
 }
 
 void
-overflo() {
+overflo(void) {
 	fprintf(stderr, "wordlist too large\n");
 	exit(2);
 }
 void
-cfail() {
+cfail(void) {
 	struct words *queue[QSIZE];
 	struct words **front, **rear;
 	struct words *state;

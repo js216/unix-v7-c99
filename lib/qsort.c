@@ -1,14 +1,12 @@
 
-static int	(*qscmp)();
+static int	(*qscmp)(char *, char *);
 static int	qses;
-static void qs1(), qsexc(), qstexc();
+static void qs1(char *a, char *l);
+static void qsexc(char *i, char *j);
+static void qstexc(char *i, char *j, char *k);
 
 void
-qsort(a, n, es, fc)
-void *a;
-unsigned n;
-int es;
-int (*fc)();
+qsort(void *a, unsigned n, int es, int (*fc)())
 {
 	qscmp = fc;
 	qses = es;
@@ -16,8 +14,7 @@ int (*fc)();
 }
 
 static void
-qs1(a, l)
-char *a, *l;
+qs1(char *a, char *l)
 {
 	register char *i, *j;
 	register int es;
@@ -87,8 +84,7 @@ loop:
 }
 
 static void
-qsexc(i, j)
-char *i, *j;
+qsexc(char *i, char *j)
 {
 	register char *ri, *rj, c;
 	int n;
@@ -104,8 +100,7 @@ char *i, *j;
 }
 
 static void
-qstexc(i, j, k)
-char *i, *j, *k;
+qstexc(char *i, char *j, char *k)
 {
 	register char *ri, *rj, *rk;
 	int c;

@@ -33,78 +33,78 @@ struct	tab {
 
 /* table '0'-1-2-3 300,1200,150,110 */
 
-	'0', 1,
-	ANYP+RAW+NL1+CR1, ANYP+ECHO+CR1,
-	B300, B300,
-	"\n\r\033;\007login: ",
+	{ '0', 1,
+	  ANYP+RAW+NL1+CR1, ANYP+ECHO+CR1,
+	  B300, B300,
+	  "\n\r\033;\007login: " },
 
-	1, 2,
-	ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
-	B1200, B1200,
-	"\n\r\033;login: ",
+	{ 1, 2,
+	  ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
+	  B1200, B1200,
+	  "\n\r\033;login: " },
 
-	2, 3,
-	ANYP+RAW+NL1+CR1, EVENP+ECHO+FF1+CR2+TAB1+NL1,
-	B150, B150,
-	"\n\r\033:\006\006\017login: ",
+	{ 2, 3,
+	  ANYP+RAW+NL1+CR1, EVENP+ECHO+FF1+CR2+TAB1+NL1,
+	  B150, B150,
+	  "\n\r\033:\006\006\017login: " },
 
-	3, '0',
-	ANYP+RAW+NL1+CR1, ANYP+ECHO+CRMOD+XTABS+LCASE+CR1,
-	B110, B110,
-	"\n\rlogin: ",
+	{ 3, '0',
+	  ANYP+RAW+NL1+CR1, ANYP+ECHO+CRMOD+XTABS+LCASE+CR1,
+	  B110, B110,
+	  "\n\rlogin: " },
 
 /* table '-' -- Console TTY 110 */
-	'-', '-',
-	ANYP+RAW+NL1+CR1, ANYP+ECHO+CRMOD+XTABS+LCASE+CR1,
-	B110, B110,
-	"\n\rlogin: ",
+	{ '-', '-',
+	  ANYP+RAW+NL1+CR1, ANYP+ECHO+CRMOD+XTABS+LCASE+CR1,
+	  B110, B110,
+	  "\n\rlogin: " },
 
 /* table '1' -- 150 */
-	'1', '1',
-	ANYP+RAW+NL1+CR1, EVENP+ECHO+FF1+CR2+TAB1+NL1,
-	B150, B150,
-	"\n\r\033:\006\006\017login: ",
+	{ '1', '1',
+	  ANYP+RAW+NL1+CR1, EVENP+ECHO+FF1+CR2+TAB1+NL1,
+	  B150, B150,
+	  "\n\r\033:\006\006\017login: " },
 
 /* table '2' -- 9600 */
-	'2', '2',
-	ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
-	B9600, B9600,
-	"\n\r\033;login: ",
+	{ '2', '2',
+	  ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
+	  B9600, B9600,
+	  "\n\r\033;login: " },
 
 /* table '3'-'5' -- 1200,300 */
-	'3', '5',
-	ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
-	B1200, B1200,
-	"\n\r\033;login: ",
+	{ '3', '5',
+	  ANYP+RAW+NL1+CR1, ANYP+XTABS+ECHO+CRMOD+FF1,
+	  B1200, B1200,
+	  "\n\r\033;login: " },
 
 /* table '5'-'3' -- 300,1200 */
-	'5', '3',
-	ANYP+RAW+NL1+CR1, ANYP+ECHO+CR1,
-	B300, B300,
-	"\n\r\033;\007login: ",
+	{ '5', '3',
+	  ANYP+RAW+NL1+CR1, ANYP+ECHO+CR1,
+	  B300, B300,
+	  "\n\r\033;\007login: " },
 
 /* table '4' -- Console Decwriter */
-	'4', '4',
-	ANYP+RAW, ANYP+ECHO+CRMOD+XTABS,
-	B300, B300,
-	"\n\rlogin: ",
+	{ '4', '4',
+	  ANYP+RAW, ANYP+ECHO+CRMOD+XTABS,
+	  B300, B300,
+	  "\n\rlogin: " },
 
 /* table 'i' -- Interdata Console */
-	'i', 'i',
-	RAW+CRMOD, CRMOD+ECHO+LCASE,
-	0, 0,
-	"\n\rlogin: ",
+	{ 'i', 'i',
+	  RAW+CRMOD, CRMOD+ECHO+LCASE,
+	  0, 0,
+	  "\n\rlogin: " },
 
 /* table 'l' -- LSI Chess Terminal */
-	'l', 'l',
-	ANYP+RAW/*+HUPCL*/, ANYP+ECHO/*+HUPCL*/,
-	B300, B300,
-	"*",
+	{ 'l', 'l',
+	  ANYP+RAW/*+HUPCL*/, ANYP+ECHO/*+HUPCL*/,
+	  B300, B300,
+	  "*" },
 /* table '6' -- 2400 11/23 line */
-	'6', '6',
-	ANYP+RAW+NL1+CR1, ANYP+ECHO,
-	B2400, B2400,
-	"\n\rlogin: ",
+	{ '6', '6',
+	  ANYP+RAW+NL1+CR1, ANYP+ECHO,
+	  B2400, B2400,
+	  "\n\rlogin: " },
 
 };
 

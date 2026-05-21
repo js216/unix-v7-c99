@@ -17,13 +17,14 @@
 struct	user
 {
 	label_t	u_rsav;			/* save info when exchanging stacks */
-	int	u_fper;			/* FP error register */
-	int	u_fpsaved;		/* FP regs saved for this proc */
+	/* v7 had `int u_fper, u_fpsaved` here -- never read or written on
+	 * this port, dropped to shrink struct user (proc[] is per-process). */
 	struct {
 		int	u_fpsr;		/* FP status register */
 		double	u_fpregs[6];	/* FP registers */
 	} u_fps;
-	char	u_segflg;		/* IO flag: 0:user D; 1:system; 2:user I */
+	char	u_segflg;		/* IO flag: 0:user; 1:system (v7's 2
+					 * "user I" path is not used here) */
 	char	u_error;		/* return error code */
 	short	u_uid;			/* effective user id */
 	short	u_gid;			/* effective group id */
@@ -35,10 +36,13 @@ struct	user
 		struct	{
 			int	r_val1;
 			int	r_val2;
-		};
+		} u_pair;
 		off_t	r_off;
 		time_t	r_time;
 	} u_r;
+/* Caller-side shorthand for the named inner pair (kept v7-flavoured). */
+#define	r_val1	u_pair.r_val1
+#define	r_val2	u_pair.r_val2
 	caddr_t	u_base;			/* base address for IO */
 	unsigned int u_count;		/* bytes remaining for IO */
 	off_t	u_offset;		/* offset in file for IO */
@@ -74,20 +78,14 @@ struct	user
 	char	u_sep;			/* flag for I and D separation */
 	struct tty *u_ttyp;		/* controlling tty pointer */
 	dev_t	u_ttyd;			/* controlling tty dev */
-	struct {			/* header of executable file */
-		int	ux_mag;		/* magic number */
-		unsigned ux_tsize;	/* text size */
-		unsigned ux_dsize;	/* data size */
-		unsigned ux_bsize;	/* bss size */
-		unsigned ux_ssize;	/* symbol table size */
-		unsigned ux_entloc;	/* entry location */
-		unsigned ux_unused;
-		unsigned ux_relflg;
-	} u_exdata;
+	/* v7 had `struct {...} u_exdata` here (the a.out header, populated
+	 * by sys1.c::getxfile and consumed by setregs).  Both functions are
+	 * gone; arch/armboot.c::v7_exec_call parses the a.out itself. */
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;
-	short	u_fpflag;		/* unused now, will be later */
+	/* v7 had `short u_fpflag` here (per its comment, "unused now, will
+	 * be later") -- it never got a "later".  Dropped. */
 	short	u_cmask;		/* mask for file creation */
 	int	u_stack[1];
 					/* kernel stack per user

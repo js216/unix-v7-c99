@@ -3,7 +3,8 @@
 
 #define	MAX	100
 
-int	getnum(), random(), skrand(), score(), getline(), delete();
+int	getnum(char *s), random(int range), skrand(int range);
+int	score(void), getline(char *s), delete(void);
 
 char	types[10];
 int	right[MAX];
@@ -15,14 +16,12 @@ long	etvec;
 long	dtvec;
 
 int
-main(argc,argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	int range, k, dif, l;
 	char line[100];
 	int ans,pans,i,j,t;
-	extern int delete();
+	extern int delete(void);
 
 	signal(SIGINT, (int)delete);
 
@@ -34,7 +33,7 @@ char	*argv[];
 		case '-':
 		case 'x':
 		case '/':
-			while(types[dif] = argv[1][dif])
+			while((types[dif] = argv[1][dif]))
 				dif++;
 			break;
 
@@ -124,8 +123,7 @@ loop1:
 }
 
 int
-getline(s)
-char *s;
+getline(char *s)
 {
 	register char	*rs;
 
@@ -147,8 +145,7 @@ char *s;
 }
 
 int
-getnum(s)
-char *s;
+getnum(char *s)
 {
 	int	a;
 	char	c;
@@ -162,15 +159,13 @@ char *s;
 
 
 int
-random(range)
-int range;
+random(int range)
 {
 	return(rand()%range);
 }
 
 int
-skrand(range)
-int range;
+skrand(int range)
 {
 int temp;
 	temp = random(range) + random(range);
@@ -179,7 +174,7 @@ int temp;
 	}
 
 int
-score()
+score(void)
 {
 	time(&etvec);
 
@@ -198,7 +193,7 @@ score()
 }
 
 int
-delete()
+delete(void)
 {
 	if(rights + wrongs == 0.) {
 		printf("\n");

@@ -14,9 +14,9 @@ struct {
 	int	dev,
 		ino;
 } ml[ML];
-long	descend();
-char	*rindex();
-char	*strcpy();
+long	descend(char *np, char *fname);
+char	*rindex(char *sp, int c);
+char	*strcpy(char *a, char *b);
 
 int
 main(int argc, char **argv)
@@ -40,7 +40,7 @@ main(int argc, char **argv)
 	do {
 		strcpy(path, Noarg? ".": argv[i]);
 		strcpy(name, path);
-		if(np = rindex(name, '/')) {
+		if((np = rindex(name, '/'))) {
 			*np++ = '\0';
 			if(chdir(*name? name: "/") == -1) {
 				fprintf(stderr, "cannot chdir()\n");
@@ -57,8 +57,7 @@ main(int argc, char **argv)
 }
 
 long
-descend(np, fname)
-char *np, *fname;
+descend(char *np, char *fname)
 {
 	int dir = 0, /* open directory */
 		offset,

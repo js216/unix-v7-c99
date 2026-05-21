@@ -8,9 +8,9 @@
 #include <stdio.h>
 
 int	Errors = 0;
-char	*rindex();
-char	*strcat();
-char	*strcpy();
+char	*rindex(char *sp, int c);
+char	*strcat(char *a, char *b);
+char	*strcpy(char *a, char *b);
 void	rmdir(char *d);
 
 int

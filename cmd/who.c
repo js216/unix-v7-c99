@@ -8,16 +8,15 @@
 struct utmp utmp;
 struct passwd *pw;
 
-char *ttyname(), *rindex(), *ctime(), *strcpy(), *index();
+char *ttyname(int f), *rindex(char *sp, int c), *ctime(long *t);
+char *strcpy(char *a, char *b), *index(register char *sp, int c);
 int getuid(void);
 int time(long *t);
 void putline(void);
 void exit(int n);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *tp, *s;
 	register FILE *fi;
@@ -59,7 +58,7 @@ char **argv;
 }
 
 void
-putline()
+putline(void)
 {
 	register char *cbuf;
 

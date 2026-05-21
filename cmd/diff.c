@@ -73,7 +73,6 @@
 #define low(x)	(x&((1L<<HALFLONG)-1))
 #define high(x)	(x>>HALFLONG)
 FILE *input[2];
-FILE *fopen();
 
 struct cand {
 	int x;
@@ -103,7 +102,7 @@ char *empty = "";
 int bflag;
 
 char *tempfile;	/*used when comparing against std input*/
-char *mktemp();
+char *mktemp(char *as);
 char *dummy;	/*used in resetting storage search ptr*/
 void	done(void);
 char	*talloc(int n);
@@ -144,7 +143,7 @@ done(void)
 
 char *talloc(int n)
 {
-	extern char *malloc();
+	extern char *malloc(unsigned n);
 	register char *p;
 	p = malloc((unsigned)n);
 	if(p!=NULL)
@@ -156,7 +155,7 @@ char *talloc(int n)
 char *ralloc(char *p, int n)	/*compacting reallocation */
 {
 	register char *q;
-	char *realloc();
+	char *realloc(char *p, unsigned n);
 	free(p);
 	free(dummy);
 	dummy = malloc(1);
@@ -191,8 +190,8 @@ sort(struct line *a, int n)	/*shellsort CACM #201*/
 				if(aim < ai)
 					break;	/*wraparound*/
 				if(aim->value > ai[0].value ||
-				   aim->value == ai[0].value &&
-				   aim->serial > ai[0].serial)
+				   (aim->value == ai[0].value &&
+				    aim->serial > ai[0].serial))
 					break;
 				w.value = ai[0].value;
 				ai[0].value = aim->value;
@@ -229,10 +228,11 @@ filename(char **pa1, char **pa2)
 	a2 = *pa2;
 	if(stat(a1,&stbuf)!=-1 && ((stbuf.st_mode&S_IFMT)==S_IFDIR)) {
 		b1 = *pa1 = malloc(100);
-		while(*b1++ = *a1++) ;
+		while((*b1++ = *a1++))
+			;
 		b1[-1] = '/';
 		a1 = b1;
-		while(*a1++ = *a2++)
+		while((*a1++ = *a2++))
 			if(*a2 && *a2!='/' && a2[-1]=='/')
 				a1 = b1;
 	}
@@ -262,7 +262,7 @@ prepare(int i, char *arg)
 		done();
 	}
 	p = (struct line *)talloc(3*sizeof(line));
-	for(j=0; h=readhash(input[i]);) {
+	for(j=0; (h=readhash(input[i]));) {
 		p = (struct line *)ralloc((char *)p,(++j+3)*sizeof(line));
 		p[j].value = h;
 	}

@@ -52,7 +52,7 @@ main(int argc, char *argv[])
 		fflg++;
 	}
 	while (--argc > 0) {
-		if (fflg || (*++argv)[0]=='-' && (*argv)[1]=='\0')
+		if (fflg || ((*++argv)[0]=='-' && (*argv)[1]=='\0'))
 			fi = stdin;
 		else {
 			if ((fi = fopen(*argv, "r")) == NULL) {

@@ -6,15 +6,15 @@
 
 #include <stdio.h>
 
-char	*ttyname();
-static char *getttys();
-char	*rindex();
+char	*ttyname(int f);
+static char *getttys(int f);
+char	*rindex(char *sp, int c);
 static	char	ttys[]	= "/etc/ttys";
 
 #define	NULL	0
 
 int
-ttyslot()
+ttyslot(void)
 {
 	register char *tp, *p;
 	register int s, tf;
@@ -28,7 +28,7 @@ ttyslot()
 	if ((tf=open(ttys, 0)) < 0)
 		return(0);
 	s = 0;
-	while (tp = getttys(tf)) {
+	while ((tp = getttys(tf))) {
 		s++;
 		if (strcmp(p, tp)==0) {
 			close(tf);
@@ -40,8 +40,7 @@ ttyslot()
 }
 
 static char *
-getttys(f)
-int f;
+getttys(int f)
 {
 	static char line[32];
 	register char *lp;

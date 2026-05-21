@@ -37,7 +37,9 @@ extern	struct	_iobuf {
 #define	_IOSTRG	0100
 #define	_IORW	0200
 
+#ifndef NULL
 #define	NULL	0
+#endif
 #define	FILE	struct _iobuf
 #define	EOF	(-1)
 
@@ -52,55 +54,17 @@ extern	struct	_iobuf {
 #define	ferror(p)	(((p)->_flag&_IOERR)!=0)
 #define	fileno(p)	p->_file
 
-FILE	*fopen();
-FILE	*freopen();
-FILE	*fdopen();
-long	ftell();
-char	*fgets();
+FILE	*fopen(char *name, char *mode);
+FILE	*freopen(char *name, char *mode, FILE *f);
+FILE	*fdopen(int fd, char *mode);
+long	ftell(FILE *f);
+char	*fgets(char *s, int n, FILE *f);
 
 /* -- below this line: declarations the c99 port adds to mirror what
  * u.h used to inline.  Will shrink as libc grows real .c ports. */
 
 #define	O_RDONLY	0
 
-/* syscall numbers, exposed because a handful of port-specific call
- * sites use the v7 syscall ABI directly (lib/syscall.s glue). */
-#define	S_EXIT		1
-#define	S_FORK		2
-#define	S_READ		3
-#define	S_WRITE		4
-#define	S_OPEN		5
-#define	S_CLOSE		6
-#define	S_WAIT		7
-#define	S_CREAT		8
-#define	S_LINK		9
-#define	S_UNLINK	10
-#define	S_EXEC		11
-#define	S_CHDIR		12
-#define	S_MKNOD		14
-#define	S_CHMOD		15
-#define	S_CHOWN		16
-#define	S_STAT		18
-#define	S_LSEEK		19
-#define	S_FSTAT		28
-#define	S_UTIME		30
-#define	S_ACCESS	33
-#define	S_SYNC		36
-#define	S_DUP		41
-#define	S_PIPE		42
-#define	S_MOUNT		21
-#define	S_UMOUNT	22
-#define	S_KILL		37
-#define	S_SIGNAL	48
-#define	S_GETUID	24
-#define	S_SETUID	23
-#define	S_UMASK		60
-#define	S_SIGRETURN	139
-#define	S_GETDENTS	141
-#define	S_SPAWN		200
-
-#define	UARGV		0x0000f000
-#define	UARGLEN		512
 
 int syscall3(int n, int a, int b, int c);
 
@@ -128,10 +92,10 @@ int execv(char *path, char **argv);
 int execl(char *path, char *arg0, ...);
 int execvp(char *name, char **argv);
 int execlp(char *name, char *arg0, ...);
-void exit(int n);
-void _exit(int n);
-void abort(void);
-int dup();		/* dup(fd) or dup(fd|0100, newfd) for dup2 protocol */
+void exit(int n) __attribute__((__noreturn__));
+void _exit(int n) __attribute__((__noreturn__));
+void abort(void) __attribute__((__noreturn__));
+int dup();		/* dup(fd) or dup(fd|0100, newfd); kept unprototyped because callers pass 1 or 2 args */
 int pipe(int *fd);
 int getuid(void);
 int setuid(int uid);
@@ -141,7 +105,10 @@ int getpid(void);
 int umask(int n);
 int sync(void);
 int kill(int pid, int sig);
-int signal(int sig, int fun);
+/* signal()'s second argument is a function pointer or the special values
+ * SIG_DFL/SIG_IGN; left unprototyped to accept both function pointers and
+ * the integer sentinels without forcing casts at every call site. */
+int signal();
 int alarm(int n);
 int pause(void);
 int nice(int incr);
@@ -151,8 +118,6 @@ int ioctl(int fd, int cmd, char *arg);
 int mount(char *special, char *dir, int ro);
 int umount(char *special);
 int sigreturn(int *frame);
-int getdents(int fd, char *buf, int n);
-int spawn(char *path, char *args);
 
 /* time */
 struct tm;
@@ -177,8 +142,8 @@ int fputc(int c, FILE *f);
 int fread(char *buf, unsigned size, unsigned n, FILE *f);
 int fwrite(char *buf, unsigned size, unsigned n, FILE *f);
 char *gets(char *buf);
-int puts();		/* v7 had no prototype -- some callers pass FILE* */
-int fputs();
+int puts();		/* v7 had no prototype -- many callers pass FILE* as a stray 2nd arg */
+int fputs(char *s, FILE *f);
 int ungetc(int c, FILE *f);
 int fflush(FILE *f);
 int _filbuf(FILE *f);
@@ -216,6 +181,8 @@ long atol(char *s);
 double atof(char *s);
 void srand(unsigned int x);
 int rand(void);
+/* compar kept unprototyped: v7 callers pass (char *, char *), (void *,
+ * void *), and (struct lbuf **, struct lbuf **) variants. */
 void qsort(void *base, unsigned n, int size, int (*compar)());
 char *malloc(unsigned n);
 void free(char *p);

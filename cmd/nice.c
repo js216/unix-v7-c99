@@ -10,9 +10,7 @@ int errno;
 extern char *sys_errlist[];
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	int nicarg = 10;
 

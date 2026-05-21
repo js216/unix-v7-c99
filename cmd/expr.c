@@ -501,6 +501,7 @@ compile_re(char *instring, char *ep, char *endbuf)
 			continue;
 		case '\n':
 			re_error(36);
+			/* fallthrough */
 		case '*':
 			if (lastep == 0 || *lastep == CBRA || *lastep == CKET)
 				goto defchar;
@@ -604,6 +605,7 @@ compile_re(char *instring, char *ep, char *endbuf)
 				continue;
 			case '\n':
 				re_error(36);
+				/* fallthrough */
 			default:
 				if (c >= '1' && c <= '9') {
 					c -= '1';
@@ -613,7 +615,7 @@ compile_re(char *instring, char *ep, char *endbuf)
 					*ep++ = c;
 					continue;
 				}
-			}
+			} /* fallthrough */
 		defchar:
 		default:
 			lastep = ep;

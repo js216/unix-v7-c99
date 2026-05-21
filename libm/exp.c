@@ -19,9 +19,11 @@ static double	log2e	= 1.4426950408889634073599247;
 static double	sqrt2	= 1.4142135623730950488016887;
 static double	maxf	= 10000;
 
+extern double floor(double);
+extern double ldexp(double, int);
+
 double
-exp(arg)
-double arg;
+exp(double arg)
 {
 	double fract;
 	double temp1, temp2, xsq;

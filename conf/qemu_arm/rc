@@ -1,3 +1,0 @@
-: /etc/rc -- single-user startup; the v7 multi-user transition
-: doesn't apply since this port has one PL011 console.
-/bin/sync

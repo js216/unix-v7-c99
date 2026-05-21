@@ -16,9 +16,7 @@ extern int maxsym, errno;
 char lexbuf[512];
 
 int
-haschar(s, c)
-char *s;
-int c;
+haschar(char *s, int c)
 {
 	while (*s)
 		if (*s++ == c)
@@ -27,8 +25,7 @@ int c;
 }
 
 int
-kwstart(s, kw)
-char *s, *kw;
+kwstart(char *s, char *kw)
 {
 	while (*kw)
 		if (*s++ != *kw++)
@@ -37,23 +34,19 @@ char *s, *kw;
 }
 
 int
-awkcmdstart(s)
-char *s;
+awkcmdstart(char *s)
 {
 	return(*s == '{' || kwstart(s, "BEGIN") || kwstart(s, "END"));
 }
 
 int
-awkcmdnext(s)
-char *s;
+awkcmdnext(char *s)
 {
 	return(kwstart(s, "BEGIN") || kwstart(s, "END"));
 }
 
 int
-awkcmdnextact(argc, argv, i)
-int argc, i;
-char *argv[];
+awkcmdnextact(int argc, char *argv[], int i)
 {
 	if (i >= argc || !awkcmdnext(argv[i]))
 		return(0);
@@ -63,9 +56,7 @@ char *argv[];
 }
 
 int
-awkcmdsplit(argc, argv)
-int argc;
-char *argv[];
+awkcmdsplit(int argc, char *argv[])
 {
 	char *p;
 	int braces, sawbrace, i;
@@ -93,7 +84,7 @@ char *argv[];
 }
 
 int
-main(argc, argv) int argc; char *argv[]; {
+main(int argc, char *argv[]) {
 	if (argc == 1)
 		error(FATAL, "Usage: awk [-f source | 'cmds'] [files]");
 	if (strcmp(argv[0], "a.out"))
@@ -195,7 +186,7 @@ iloop:
 }
 
 int
-logit(n, s) int n; char *s[];
+logit(int n, char *s[])
 {	int i, tvec[2];
 	FILE *f, *g;
 	char buf[512];
@@ -222,13 +213,13 @@ logit(n, s) int n; char *s[];
 }
 
 int
-yywrap()
+yywrap(void)
 {
 	return(1);
 }
 
 int
-msgfiles()
+msgfiles(void)
 {	char buf[512], *p, *q, **s;
 	int n;
 	n=read(filefd, buf, 512);

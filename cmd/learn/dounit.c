@@ -1,7 +1,13 @@
 #include "stdio.h"
 #include "lrnref"
 
-dounit()
+extern void start(char *);
+extern void copy(int, FILE *);
+extern void wrapup(int);
+extern void setdid(char *, int);
+
+void
+dounit(void)
 {
 	char tbuff[100];
 
@@ -56,4 +62,3 @@ retry:
 	}
 	setdid(todo, sequence++);
 }
-

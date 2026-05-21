@@ -17,17 +17,16 @@ struct {
 	char	omsgbuf[MSGBUFS];
 } omesg;
 struct nlist nl[3] = {
-	{"_msgbuf"},
-	{"_msgbufp"}
+	{"_msgbuf",  0, 0},
+	{"_msgbufp", 0, 0},
+	{"",         0, 0}
 };
 
 int done(char *);
 int pdate(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int mem;
 	register char *mp, *omp, *mstart;
@@ -87,8 +86,7 @@ char **argv;
 }
 
 int
-done(s)
-char *s;
+done(char *s)
 {
 	register char *p, *q;
 
@@ -107,9 +105,9 @@ char *s;
 }
 
 int
-pdate()
+pdate(void)
 {
-	extern char *ctime();
+	extern char *ctime(long *t);
 	static int firstime;
 	time_t tbuf;
 

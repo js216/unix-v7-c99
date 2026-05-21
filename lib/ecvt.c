@@ -9,31 +9,25 @@ static char *cvt(double, int, int *, int *, int);
 
 #define	NDIG	80
 char*
-ecvt(arg, ndigits, decpt, sign)
-double arg;
-int ndigits, *decpt, *sign;
+ecvt(double arg, int ndigits, int *decpt, int *sign)
 {
 	return(cvt(arg, ndigits, decpt, sign, 1));
 }
 
 char*
-fcvt(arg, ndigits, decpt, sign)
-double arg;
-int ndigits, *decpt, *sign;
+fcvt(double arg, int ndigits, int *decpt, int *sign)
 {
 	return(cvt(arg, ndigits, decpt, sign, 0));
 }
 
 static char*
-cvt(arg, ndigits, decpt, sign, eflag)
-double arg;
-int ndigits, *decpt, *sign;
+cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 {
 	register int r2;
 	double fi, fj;
 	register char *p, *p1;
 	static char buf[NDIG];
-	double modf();
+	double modf(double value, double *iptr);
 
 	if (ndigits<0)
 		ndigits = 0;

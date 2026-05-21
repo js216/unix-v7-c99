@@ -1,6 +1,5 @@
 long
-atol(p)
-register char *p;
+atol(register char *p)
 {
 	long n;
 	register int f;
@@ -14,6 +13,7 @@ register char *p;
 			continue;
 		case '-':
 			f++;
+			/* fallthrough */
 		case '+':
 			p++;
 		}

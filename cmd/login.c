@@ -12,7 +12,7 @@
 #define SCPYN(a, b)	strncpy(a, b, sizeof(a))
 
 char	maildir[30] =	"/usr/spool/mail/";
-struct	passwd nouser = {"", "nope"};
+struct	passwd nouser = {"", "nope", 0, 0, 0, 0, 0, 0, 0};
 struct	sgttyb ttyb;
 struct	utmp utmp;
 char	minusnam[16] = "-";
@@ -20,12 +20,12 @@ char	homedir[64] = "HOME=";
 char	*envinit[] = {homedir, "PATH=:/bin:/usr/bin", 0};
 struct	passwd *pwd;
 
-struct	passwd *getpwnam();
-char	*strcat();
-char	*ttyname();
-char	*crypt();
-char	*getpass();
-char	*rindex(), *index();
+struct	passwd *getpwnam(char *name);
+char	*strcat(char *a, char *b);
+char	*ttyname(int f);
+char	*crypt(char *pw, char *salt);
+char	*getpass(char *prompt);
+char	*rindex(char *sp, int c), *index(register char *sp, int c);
 extern	char **environ;
 void	showmotd(void);
 

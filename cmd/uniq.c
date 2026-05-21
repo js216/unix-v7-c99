@@ -8,7 +8,7 @@ int	letters;
 int	linec;
 char	mode;
 int	uniq;
-char	*skip();
+char	*skip(register char *s);
 int	gline(char *buf);
 void	pline(char *buf);
 int	equal(char *b1, char *b2);
@@ -120,8 +120,7 @@ equal(char b1[], char b2[])
 }
 
 char *
-skip(s)
-register char *s;
+skip(register char *s)
 {
 	register int nf, nl;
 

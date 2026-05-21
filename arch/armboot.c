@@ -6,6 +6,7 @@
 #include "../h/proc.h"
 #include "arm.h"
 #include "../h/proto.h"
+#include "../h/v7_bridge.h"
 #define	NADDR			13
 #define	IFMT			0170000
 #define	IFDIR			0040000
@@ -60,32 +61,13 @@ static struct pipe pipes[NPIPES];
 static struct file files[NFD];
 static int closed[NFD];
 static ino_t cwdino = ROOTINO;
-/* u_bridge.c bridges. */
-extern void *v7_cdir_save(void);
-extern void v7_cdir_restore(void *p);
-extern void v7_ofile_set(int fd, ino_t ino, int flag);
-extern void v7_ofile_clear(int fd), v7_ofile_dup(int from, int to);
-extern void v7_ofile_save(void *buf), v7_ofile_restore(void *buf);
-extern void v7_ofile_fork_bump(void), v7_ofile_drop_all(void);
-/* proc[] mirror bridges: keep v7's table in sync with curpid + save-pool (see u_bridge.c). */
-extern int  v7_proc_fork(int parent_pid, int child_pid);
-extern void v7_proc_exit(int curpid, int code);
-extern void v7_proc_reap(int pid), v7_proc_set_current(int pid);
-extern int v7_wait_check(int parent_pid, int *status), v7_get_ppid(int pid);
+/* v7_* bridges come from h/v7_bridge.h.  Routed-syscall bridges return
+ * >=0 ok, -1 err, -2 (r/w) = fall back to k*. */
 extern int *trap_frame;	/* mirrored at trap() entry for v7-side reads */
-/* Routed-syscall bridges return >=0 ok, -1 err, -2 (r/w) = fall back to k*. */
 extern void acct(void);
-extern int v7_close_call(int fd), v7_dup_call(int from, int to);
-extern int v7_lseek_call(int fd, int off, int whence);
-extern int v7_read_call(int fd, char *buf, unsigned int n);
-extern int v7_write_call(int fd, char *buf, unsigned int n);
-extern long v7_get_offset(int fd);
-extern void v7_set_offset(int fd, long off);
-extern int v7_ofile_isset(int fd);
-extern void v7_inode_refresh(int fd, unsigned int size, unsigned int *addrs);
-extern void v7_inode_writeback(int fd, unsigned int *size_out, unsigned int *addrs_out);
-extern void v7_inode_refresh_ino(ino_t ino, unsigned int size, unsigned int *addrs);
-extern int v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs_out);
+extern int getchar_ready(void);
+extern void pause_spin_barrier(void);
+void do_exit(int code, int *r);
 #define V7_FREAD	01	/* h/file.h flags */
 #define V7_FWRITE	02
 static unsigned int tmpused;
@@ -124,11 +106,12 @@ static struct armproc {
 	struct file files[NFD];
 	int closed[NFD];
 	void *ofile[20];
+	char pofile[20];	/* u_pofile[] -- per-fd close-on-exec flags */
 	ino_t cwdino;
-	void *cdir;
+	void *cdir, *rdir;
 	long handlers[NSIG+1];
 	unsigned int pending;
-	int uid, pid, inuse;
+	int uid, gid, pid, inuse;
 	long utime, stime, cutime, cstime, usignal[NSIG+1];
 	int umask;
 	unsigned char kstack[KSTACK_SIZE] __attribute__((aligned(16)))
@@ -168,16 +151,24 @@ static void proc_free_slot(int slot)
 	a->wait_for = -1;
 }
 /* Forward decls (definitions live later in this TU). */
-static void bcopy(char *, char *, unsigned int);
+void bcopy(char *, char *, unsigned int);
 static void restore_v7_regular_files(void);
 static long handlers[NSIG+1];
 static unsigned int pending;
-static int kuid, kumask, mt_switched;
-extern void v7_u_times_save(long *, long *, long *, long *);
-extern void v7_u_times_restore(long, long, long, long);
-extern void v7_u_signal_save(long *), v7_u_signal_restore(const long *);
-extern void v7_u_qsav_save(int *dst), v7_u_qsav_restore(const int *src);
-extern int v7_proc_set_stat(int pid, int stat);
+static int kuid, kgid, kumask, mt_switched;
+/* Return non-zero if `mask` contains at least one bit whose handler is
+ * not SIG_IGN -- mirrors v7 issig() which skips SIG_IGN bits.  Used by
+ * interruptible blocking syscalls (pause/wait/pipe-rw/tty-read) so
+ * they only break out on a deliverable signal. */
+static int sig_deliverable(unsigned int mask)
+{
+	for(int s = 1; s <= NSIG; s++)
+		if((mask & (1U << s)) && handlers[s] != 1L /* SIG_IGN */)
+			return 1;
+	return 0;
+}
+/* v7_u_times_save/restore, v7_u_signal_save/restore, v7_u_qsav_save/
+ * restore, v7_proc_set_stat all come from h/v7_bridge.h. */
 static int pstate_to_pstat(int pstate)
 {
 	switch(pstate) {
@@ -197,10 +188,13 @@ static void mt_save_current(int slot, int *r, int state)
 	bcopy((char *)closed,   (char *)a->closed, sizeof(a->closed));
 	bcopy((char *)handlers, (char *)a->handlers, sizeof(handlers));
 	v7_ofile_save(a->ofile);
+	v7_pofile_save(a->pofile);
 	a->cwdino = cwdino;
 	a->cdir = v7_cdir_save();
+	a->rdir = v7_rdir_save();
 	a->pending = pending;
 	a->uid = kuid;
+	a->gid = kgid;
 	a->pid = curpid;
 	a->state = state;
 	a->umask = kumask;
@@ -223,13 +217,16 @@ static void mt_load_slot(int slot, int *r)
 	bcopy((char *)a->closed,   (char *)closed,   sizeof(a->closed));
 	bcopy((char *)a->handlers, (char *)handlers, sizeof(handlers));
 	v7_ofile_restore(a->ofile);
+	v7_pofile_restore(a->pofile);
 	restore_v7_regular_files();
 	cwdino = a->cwdino;
 	pending = a->pending;
 	kuid = a->uid;
+	kgid = a->gid;
 	curpid = a->pid;
 	kumask = a->umask;
 	v7_cdir_restore(a->cdir);
+	v7_rdir_restore(a->rdir);
 	v7_proc_set_current(curpid);
 	(void)v7_proc_set_stat(curpid, SRUN);
 	v7_u_times_restore(a->utime, a->stime, a->cutime, a->cstime);
@@ -310,8 +307,8 @@ static int mt_pipe_count(int pipe_id, int want_wpipe)
 }
 #define	mt_pipe_has_writer(p)	mt_pipe_count((p), 1)
 #define	mt_pipe_has_reader(p)	mt_pipe_count((p), 0)
-/* clock_irq_handler tail: mirror p_sig into parked pending, wake SLEEP, bump preempt counter. */
-extern struct proc proc[NPROC];
+/* clock_irq_handler tail: mirror p_sig into parked pending, wake SLEEP, bump preempt counter.
+ * proc[] comes from h/proc.h. */
 static int mt_clock_ticks;
 static volatile int mt_need_resched;
 #define	MT_PREEMPT_TICKS	10	/* HZ=100 -> preempt every 100ms */
@@ -333,12 +330,22 @@ static void psig_drain(int pid, unsigned int *dst)
 void mt_clock_tick(void)
 {
 	for(int i = 0; i < NPROCSAVE; i++) {
-		if(!armproc[i].inuse || armproc[i].state == PSTATE_FREE) continue;
-		psig_drain(armproc[i].pid, &armproc[i].pending);
-		/* SLEEP slot with deliverable signal -> RUN. */
-		if(armproc[i].state == PSTATE_SLEEP && armproc[i].pending != 0) {
-			armproc[i].state    = PSTATE_RUN;
-			armproc[i].wait_for = -1;
+		struct armproc *a = &armproc[i];
+		if(!a->inuse || a->state == PSTATE_FREE) continue;
+		psig_drain(a->pid, &a->pending);
+		/* SLEEP slot with deliverable signal -> RUN.  Use the slot's
+		 * own handlers[] (parked dispositions, not the live ones)
+		 * so SIG_IGN bits don't wake the slot just to re-park.  */
+		if(a->state == PSTATE_SLEEP && a->pending != 0) {
+			int wake = 0;
+			for(int s = 1; s <= NSIG; s++)
+				if((a->pending & (1U << s)) && a->handlers[s] != 1L) {
+					wake = 1; break;
+				}
+			if(wake) {
+				a->state    = PSTATE_RUN;
+				a->wait_for = -1;
+			}
 		}
 	}
 	if(++mt_clock_ticks >= MT_PREEMPT_TICKS) {
@@ -361,9 +368,8 @@ static int mt_preempt(int *r)
 	mt_load_slot(next, r);
 	return 1;
 }
-/* sys/slp.c::swtch repl: save()->rsav, snapshot, resume() peer; wake -> save() returns 1. */
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
+/* sys/slp.c::swtch repl: save()->rsav, snapshot, resume() peer; wake -> save() returns 1.
+ * save/resume come from h/proto.h. */
 static int *trap_r;	/* forward decl; def near sysent_dispatch */
 void armboot_swtch(void)
 {
@@ -430,7 +436,7 @@ void mmuinit(void)
 	mmu_on((unsigned int)l1);
 }
 static void bzero(char *p, unsigned int n) { while(n--) *p++ = 0; }
-static void bcopy(char *f, char *t, unsigned int n) { while(n--) *t++ = *f++; }
+/* bcopy lives in arch/v7stubs.c; declared with the prototype above. */
 static int strncmp(char *a, char *b, int n)
 {
 	while(n-- > 0) {
@@ -733,7 +739,7 @@ static void scanfs(void)
 		}
 }
 /* v7 sys/nami.c::namei via the v7stubs.c bridge. */
-extern ino_t v7_namei_inum(char *path);
+/* v7_namei_inum declared in h/v7_bridge.h. */
 static ino_t parenti(char *path, char *name)
 {
 	char buf[128], *p = buf, *s = path;
@@ -768,6 +774,7 @@ static int pseudo_fd_open(ino_t ino, int mode, unsigned int size)
 	files[fd].mode = mode;
 	files[fd].size = size;
 	closed[fd] = 0;
+	v7_pofile_excl_clear(fd);	/* fresh fd: no inherited EXCLOSE */
 	return fd;
 }
 static int kopen(char *path)
@@ -839,7 +846,13 @@ static int kcreat(char *path, int mode)
 			if(loadino(de.d_ino, &files[fd]) < 0) return -1;
 			/* creat() on non-regular = open(O_WRONLY); itrunc
 			 * is a no-op on specials.  For /dev/console mirror
-			 * kopen's synthetic setup so kwrite routes UART. */
+			 * kopen's synthetic setup so kwrite routes UART.
+			 * For a directory: POSIX EISDIR; back out the alloc'd
+			 * fd so it can be reused. */
+			if((files[fd].mode & IFMT) == IFDIR) {
+				bzero((char *)&files[fd], sizeof(files[fd]));
+				return -2;	/* EISDIR marker for caller */
+			}
 			if((files[fd].mode & IFMT) != IFREG) {
 				if(strcmp(path, "/dev/console") == 0) {
 					/* kcreat allocated fd, reset it to
@@ -859,10 +872,12 @@ static int kcreat(char *path, int mode)
 			if(putino(files[fd].ino, &files[fd]) < 0) return -1;
 			v7_inode_refresh_ino(files[fd].ino, files[fd].size,
 			    (unsigned int *)files[fd].addr);
+			v7_inode_mark_dirty_ino(files[fd].ino);
 			closed[fd] = 0;
 			v7_ofile_set(fd, de.d_ino, V7_FREAD|V7_FWRITE);
 			v7_inode_refresh(fd, files[fd].size,
 			    (unsigned int *)files[fd].addr);
+			v7_inode_mark_dirty(fd);
 			return fd;
 		}
 	}
@@ -881,6 +896,8 @@ static int kcreat(char *path, int mode)
 		return -1;
 	(void)putino(pino, &fp);
 	v7_inode_refresh_ino(pino, fp.size, (unsigned int *)fp.addr);
+	v7_inode_mark_dirty_ino(pino);	/* parent dir grew */
+	v7_inode_mark_dirty_ino(files[fd].ino);	/* new file mtime */
 	closed[fd] = 0;
 	v7_ofile_set(fd, files[fd].ino, V7_FREAD|V7_FWRITE);
 	return fd;
@@ -926,26 +943,34 @@ static int kread(int fd, char *buf, unsigned int n)
 		return (int)n;
 	}
 	if(fd == 0 || (fd >= 0 && fd < NFD && files[fd].mode == IFCHR)) {
-		extern int getchar_ready(void);
 		if(fd == 0 && files[fd].ino != 0 && files[fd].mode != IFCHR)
 			goto file;
 		if(n == 0) return 0;
 		/* One-shot EOF for init's single-user sh. */
 		if(fd >= 0 && fd < NFD && files[fd].eof) { files[fd].eof = 0; return 0; }
 		/* Yield to peers while waiting for tty input; rewind SVC
-		 * so we retry the read on resume. */
-		while(!getchar_ready())
+		 * so we retry the read on resume.  Drain p_sig each
+		 * iteration so a non-IGN'd signal (e.g. login's alarm(60)
+		 * timeout, or any kill) interrupts the read with EINTR
+		 * rather than spinning forever.  SIG_IGN bits are left in
+		 * pending so deliver_signal can consume them silently. */
+		while(!getchar_ready()) {
+			psig_drain(curpid, &pending);
+			if(sig_deliverable(pending)) {
+				u.u_error = 4;	/* EINTR */
+				return -1;
+			}
 			if(mt_need_resched) {
 				trap_r[15] -= 4;
 				if(mt_preempt(trap_r)) { mt_switched = 1; return -1; }
 				trap_r[15] += 4;
 			}
+		}
 		c = getchar();
 		if(c == '\r') c = '\n';
 		if(c == 0x04) { putchar('\n'); return 0; }	/* ^D = EOF */
 		/* ^C / ^\ -> signal caller's pgrp; swallow the char. */
 		if(c == 0x03 || c == 0x1c) {
-			extern void v7_signal_pgrp(int sig, int curpid);
 			v7_signal_pgrp(c == 0x03 ? 2 : 3, curpid);
 			return 0;
 		}
@@ -996,15 +1021,12 @@ static void sync_fd_from_v7(int fd)
 	for(int j = 0; j < NADDR; j++)
 		files[fd].addr[j] = (daddr_t)addrs[j];
 }
-static int kgetdents(int fd, char *buf, unsigned int n)
-{
-	if(fd < 0 || fd >= NFD || files[fd].ino == 0 ||
-	   (files[fd].mode & IFMT) != IFDIR) return -1;
-	return kread(fd, buf, n);
-}
 static int kclose(int fd)
 {
-	if(fd < 0 || fd >= NFD) return 0;
+	if(fd < 0 || fd >= NFD) return -1;	/* EBADF: out-of-range */
+	/* fd >= 3 with no inode: never opened or already closed.
+	 * fd 0/1/2: closed[] tracks "was explicitly closed". */
+	if(files[fd].ino == 0 && (fd >= 3 || closed[fd])) return -1;	/* EBADF */
 	int p = files[fd].pipe;
 	if(p != 0 && files[fd].wpipe) pipes[p-1].writer = 0;
 	/* Closing a pipe end: wake the opposite end so it can re-check. */
@@ -1033,6 +1055,10 @@ static int kclose(int fd)
 static int kdup(int from, int to)
 {
 	if(from < 0 || from >= NFD) return -1;
+	/* dup of an unopened fd is EBADF, except for the early-boot console
+	 * placeholder case where fds 0/1/2 may not yet have an inode but
+	 * still represent the tty. */
+	if(files[from].ino == 0 && from > 2) return -1;
 	if(to < 0) {
 		int i;
 		for(i = 0; i < NFD; i++)
@@ -1056,6 +1082,7 @@ static int kseek(int fd, int off, int whence)
 {
 	unsigned int n;
 	if(fd < 0 || fd >= NFD || files[fd].ino == 0) return -1;
+	if(files[fd].pipe != 0) return -2;	/* ESPIPE marker for caller */
 	switch(whence) {
 	case 0:	n = (unsigned int)off;			break;
 	case 1:	n = files[fd].off  + (unsigned int)off;	break;
@@ -1087,13 +1114,14 @@ static int kpipe(int *fdp)
 	files[f0].pipe = files[f1].pipe = p+1;
 	files[f1].wpipe = 1;
 	closed[f0] = closed[f1] = 0;
+	v7_pofile_excl_clear(f0);	/* fresh fd: no inherited EXCLOSE */
+	v7_pofile_excl_clear(f1);
 	fdp[0] = f0;
 	fdp[1] = f1;
 	return 0;
 }
 /* u_times bridge accessors (lean u shadow can't reach the h/user.h fields). */
-extern void v7_u_times_snapshot(long *utp, long *stp);
-extern void v7_u_times_add_child(long ut, long st);
+/* v7_u_times_snapshot/add_child declared in h/v7_bridge.h. */
 static void kdone(int pid, int ppid, int code)
 {
 	struct childent *c;
@@ -1175,11 +1203,13 @@ static int kexec(char *path)
 	unsigned char hdr[4];
 	unsigned int insn;
 	ino_t ino = v7_namei_inum(path);
-	if(ino == 0 || loadino(ino, &fp) < 0) return -1;
-	if(fp.size >= USERSIZE - UENTRY) return -1;
+	if(ino == 0 || loadino(ino, &fp) < 0) return -2;	/* ENOENT */
+	if((fp.mode & IFMT) != IFREG) return -13;	/* EACCES on non-regular */
+	if((fp.mode & 0111) == 0) return -13;		/* EACCES: no exec bit */
+	if(fp.size >= USERSIZE - UENTRY) return -2;	/* binary too big -> ENOENT-ish */
 	if(fp.size < sizeof(hdr)) return -KENOEXEC;
 	if(readi(&fp, 0, (char *)hdr, sizeof(hdr)) != (int)sizeof(hdr))
-		return -1;
+		return -5;	/* EIO -- short read from header */
 	insn = (unsigned int)hdr[0]
 	    | ((unsigned int)hdr[1] << 8)
 	    | ((unsigned int)hdr[2] << 16)
@@ -1187,7 +1217,7 @@ static int kexec(char *path)
 	if((insn & 0xff000000U) != 0xeb000000U) return -KENOEXEC;
 	bzero((char *)USERBASE, USERSIZE);
 	if(readi(&fp, 0, (char *)UENTRY, fp.size) != (int)fp.size)
-		return -1;
+		return -5;	/* EIO -- short read from on-disk binary */
 	/* Plant the sigreturn trampoline and reset non-IGN handlers. */
 	volatile unsigned int *t = (volatile unsigned int *)UENTRY_SIGTRAMP;
 	t[0] = 0xe3a0708bU;	/* mov r7, #139 (S_SIGRETURN)  */
@@ -1265,6 +1295,19 @@ static int kexec2(char *path, char **argv, char **envp)
 /* Non-static wrapper around kexec2 for u_bridge.c::v7_exec_call. */
 int v7_load_image(char *path, char **argv, char **envp)
 { return kexec2(path, argv, envp); }
+/* Called by v7_exec_call's EXCLOSE sweep right after the v7 close, to
+ * finish freeing the armboot-side fd slot.  Without this the slot stays
+ * pinned (files[fd].ino != 0) and alloc_fd_slot keeps skipping it until
+ * the per-proc fd table fills up. */
+void armboot_post_exec_close(int fd)
+{
+	if(fd < 0 || fd >= NFD) return;
+	if(files[fd].ino == 0) return;	/* nothing to free */
+	if(fd_is_v7_reg(fd))
+		(void)putino(files[fd].ino, &files[fd]);
+	bzero((char *)&files[fd], sizeof(files[fd]));
+	if(fd < 3) closed[fd] = 1;	/* mark reusable */
+}
 /* signal() handler install.  SIGKIL is uncatchable. */
 static long ksignal(int sig, long fun)
 {
@@ -1275,7 +1318,7 @@ static long ksignal(int sig, long fun)
 	return old;
 }
 /* Queue sig for pid (self -> pending; parked -> armproc[].pending; dead -> no-op). */
-extern int v7_proc_alive(int pid);
+/* v7_proc_alive declared in h/v7_bridge.h. */
 static int kkill(int pid, int sig)
 {
 	if(sig < 0 || sig > NSIG) return -1;
@@ -1288,13 +1331,19 @@ static int kkill(int pid, int sig)
 		}
 	return v7_proc_alive(pid) ? 0 : -1;
 }
-/* Pop saved-PC + saved-r0 (pushed by deliver_signal) back into trap frame. */
+/* Pop saved-PC + saved-r0 + saved-lr (pushed by deliver_signal) back
+ * into trap frame.  Restoring lr is critical: deliver_signal stomps
+ * r[14] with the sigtramp address so the handler returns there; if we
+ * don't restore the caller's lr here, the post-svc continuation's
+ * `bx lr` / `bxge lr` would jump BACK to sigtramp, causing a recursive
+ * sigreturn that pops garbage from a too-shallow stack -> SIGILL. */
 void armboot_ksigreturn(int *r)
 {
 	unsigned int sp = (unsigned int)r[13];
 	r[15] = (int)*(volatile unsigned int *)sp;
 	r[0]  = (int)*(volatile unsigned int *)(sp + 4);
-	r[13] = (int)(sp + 8);
+	r[14] = (int)*(volatile unsigned int *)(sp + 8);
+	r[13] = (int)(sp + 12);
 }
 /* Redirect trap frame to pending sig's handler; push PC+r0 for ksigreturn. */
 static void deliver_signal(int *r)
@@ -1311,17 +1360,22 @@ static void deliver_signal(int *r)
 		if(h == SIG_IGN) continue;
 		if(h == SIG_DFL) {
 			/* Default = terminate; 0x100|sig flags signal-killed
-			 * in the wait status.  SIGALRM is dropped (the port's
-			 * sleep relies on alarm to simply wake pause). */
-			if(sig == 14 /* SIGALRM */) continue;
-			extern void do_exit(int code, int *r);
+			 * in the wait status.  This matches v7's signal(2)
+			 * man page: SIGALRM under SIG_DFL terminates -- our
+			 * libc sleep() installs a sleepx() handler so it
+			 * survives, and cmd/login uses alarm(60) deliberately
+			 * to time out after 60 s of no login. */
 			do_exit(0x100 | sig, r);
 			return;
 		}
 		handlers[sig] = SIG_DFL;	/* v7 one-shot */
-		sp = (unsigned int)r[13] - 8U;
+		/* Push PC + r0 + lr (so sigreturn can restore all three).
+		 * Stomping lr without saving caused the sigreturn-recursion
+		 * SIGILL on syscall paths that end with `bx lr`. */
+		sp = (unsigned int)r[13] - 12U;
 		*(volatile unsigned int *)sp       = (unsigned int)r[15];
 		*(volatile unsigned int *)(sp + 4) = (unsigned int)r[0];
+		*(volatile unsigned int *)(sp + 8) = (unsigned int)r[14];
 		r[13] = (int)sp;
 		r[14] = (int)UENTRY_SIGTRAMP;
 		r[15] = (int)h;
@@ -1334,18 +1388,22 @@ static void sys_write_v7(void)
 {
 	char *p;
 	int n = u.u_arg[2], fd = u.u_arg[0];
-	/* Out-of-range fd falls through to the console putchar path. */
-	if(fd < 0 || fd >= NFD) goto console;
+	/* Out-of-range fd is EBADF, not a free pass to write to console. */
+	if(fd < 0 || fd >= NFD) { u.u_error = 9; return; }	/* EBADF */
 	if(files[fd].kmem == 2) { u.u_rval1 = n; return; }	/* /dev/null */
 	if(files[fd].pipe != 0) {
 		struct pipe *pp = &pipes[files[fd].pipe-1];
 		if(files[fd].wpipe && !mt_pipe_has_reader(files[fd].pipe)) {
-			u.u_error = 1;	/* EPIPE */
+			u.u_error = 32;	/* EPIPE */
 			kkill(curpid, SIGPIPE);
 			u.u_rval1 = -1;
 			return;
 		}
 		if(files[fd].wpipe && pp->wpos >= PIPESIZ) {
+			/* Drain p_sig so a deliverable signal queued before
+			 * the block surfaces as EINTR rather than re-block. */
+			psig_drain(curpid, &pending);
+			if(sig_deliverable(pending)) { u.u_error = 4; return; }	/* EINTR */
 			if(mt_pipe_has_reader(files[fd].pipe) &&
 			   mt_block_on_pipe(trap_r, S_WRITE,
 			       -(200 + files[fd].pipe)) == 0) {
@@ -1379,11 +1437,18 @@ static void sys_write_v7(void)
 		if(w >= 0 && v7_ofile_isset(fd)) {
 			v7_inode_refresh(fd, files[fd].size,
 			    (unsigned int *)files[fd].addr);
+			if(w > 0) v7_inode_mark_dirty(fd);
 			v7_set_offset(fd, (long)files[fd].off);
 		}
 		return;
 	}
-console:
+	/* In-range fd but no matching property: only goes to console when
+	 * it's a console fd (fd 0/1/2 with no ino set yet, or any IFCHR
+	 * inode -- sh's `Ldup(dup(2), 11)` clones stderr onto a high fd
+	 * for prompt output).  Other unopened fds are EBADF. */
+	if(fd > 2 && (files[fd].ino == 0 || (files[fd].mode & IFMT) != IFCHR)) {
+		u.u_error = 9; return;	/* EBADF */
+	}
 	p = (char *)u.u_arg[1];
 	for(int i = 0; i < n; i++) putchar(p[i]);
 	u.u_rval1 = n;
@@ -1392,37 +1457,45 @@ console:
 static void sys_open_v7(void)
 {
 	int r = kopen((char *)u.u_arg[0]);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r < 0) u.u_error = 2; else u.u_rval1 = r;	/* ENOENT */
 }
 /* Like sys_open_v7; kcreat handles dirent append + fd pick. */
 static void sys_creat_v7(void)
 {
 	int r = kcreat((char *)u.u_arg[0], u.u_arg[1]);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r == -2) u.u_error = 21;		/* EISDIR */
+	else if(r < 0) u.u_error = 2;		/* ENOENT */
+	else u.u_rval1 = r;
 }
 /* sys_{fstat,close,dup,lseek,read,write}_v7: IFREG -> v7, pseudo -> k*; sync files[fd] post. */
-extern int v7_fstat_call(int fd, void *ubuf);
+/* v7_fstat_call declared in h/v7_bridge.h. */
 static void sys_fstat_v7(void)
 {
+	/* New v7_fstat_call convention: -1 = not v7-routable, 0 = success,
+	 * >0 = v7 errno.  Fall back to kfstat only on -1. */
 	int r = v7_fstat_call(u.u_arg[0], (void *)u.u_arg[1]);
-	if(r < 0) {	/* fall back to armboot's table for pseudo-fds */
-		r = kfstat(u.u_arg[0], (struct ustat *)u.u_arg[1]);
-		if(r < 0) u.u_error = 1; else u.u_rval1 = r;
-	} else u.u_rval1 = 0;
+	if(r == 0) { u.u_rval1 = 0; return; }
+	if(r > 0) { u.u_error = r; return; }	/* v7-side error */
+	/* r == -1: not v7-routable -- try armboot's table. */
+	r = kfstat(u.u_arg[0], (struct ustat *)u.u_arg[1]);
+	if(r < 0) u.u_error = 9;	/* EBADF */
+	else u.u_rval1 = r;
 }
 static void sys_close_v7(void)
 {
 	int fd = u.u_arg[0], r;
 	if(fd_is_v7_reg(fd) && v7_ofile_isset(fd)) {
 		sync_fd_from_v7(fd);
-		if((r = v7_close_call(fd)) < 0) { u.u_error = 1; return; }
+		r = v7_close_call(fd);
+		if(r > 0) { u.u_error = r; return; }	/* v7-side error */
+		if(r < 0) { u.u_error = 9; return; }	/* not v7-routable: EBADF */
 		(void)kclose(fd);
 		u.u_rval1 = 0;
 		return;
 	}
 	/* Pseudo-fd or non-routable: armboot path. */
 	r = kclose(fd);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r < 0) u.u_error = 9; else u.u_rval1 = r;	/* EBADF */
 }
 static void sys_dup_v7(void)
 {
@@ -1433,8 +1506,13 @@ static void sys_dup_v7(void)
 		/* Allocate the slot from armboot's table (avoid v7 ufalloc
 		 * conflict with armboot's pseudo-fd slots), then pass it to
 		 * v7 as an explicit dup2 target. */
-		if(to < 0 && (to = alloc_fd_slot()) < 0) { u.u_error = 1; return; }
-		if((r = v7_dup_call(from, to)) < 0) { u.u_error = 1; return; }
+		if(to < 0 && (to = alloc_fd_slot()) < 0) { u.u_error = 24; return; }	/* EMFILE */
+		/* v7 dup() sets u.u_error (EBADF) on a bad fd; fetch via bridge. */
+		if((r = v7_dup_call(from, to)) < 0) {
+			int e = v7_u_error_get();
+			u.u_error = e ? e : 9;	/* EBADF fallback */
+			return;
+		}
 		/* Mirror files[from] -> files[r] manually -- NOT via kdup,
 		 * which would double-bump f_count via v7_ofile_dup. */
 		to = r;
@@ -1449,7 +1527,7 @@ static void sys_dup_v7(void)
 	}
 	/* Pseudo-fd source: armboot path. */
 	r = kdup(from, to);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r < 0) u.u_error = 9; else u.u_rval1 = r;	/* EBADF */
 }
 static void sys_lseek_v7(void)
 {
@@ -1460,7 +1538,11 @@ static void sys_lseek_v7(void)
 		if(whence == 2)
 			v7_inode_refresh(fd, files[fd].size,
 			    (unsigned int *)files[fd].addr);
-		if((r = v7_lseek_call(fd, off, whence)) < 0) { u.u_error = 1; return; }
+		if((r = v7_lseek_call(fd, off, whence)) < 0) {
+			int e = v7_u_error_get();
+			u.u_error = e ? e : 9;	/* EBADF fallback */
+			return;
+		}
 		/* Mirror v7's f_offset back to armboot's files[fd].off. */
 		files[fd].off = (unsigned int)r;
 		u.u_rval1 = r;
@@ -1468,7 +1550,9 @@ static void sys_lseek_v7(void)
 	}
 	/* Pseudo-fd or non-routable: armboot path. */
 	r = kseek(fd, off, whence);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r == -2) u.u_error = 29;		/* ESPIPE on pipe fd */
+	else if(r < 0) u.u_error = 9;		/* EBADF */
+	else u.u_rval1 = r;
 }
 static void sys_read_v7(void)
 {
@@ -1480,8 +1564,11 @@ static void sys_read_v7(void)
 	if(fd >= 0 && fd < NFD && files[fd].pipe != 0) {
 		struct pipe *pp = &pipes[files[fd].pipe-1];
 		if(pp->rpos >= pp->wpos && mt_pipe_has_writer(files[fd].pipe)) {
-			extern void pause_spin_barrier(void);
 			int rc;
+			/* Drain p_sig so a deliverable signal queued before
+			 * the block surfaces as EINTR rather than re-block. */
+			psig_drain(curpid, &pending);
+			if(sig_deliverable(pending)) { u.u_error = 4; return; }	/* EINTR */
 			while((rc = mt_block_on_pipe(trap_r, S_READ,
 			                    -(100 + files[fd].pipe))) < 0) {
 				/* No runnable peer right now -- spin so the clock
@@ -1511,17 +1598,25 @@ static void sys_read_v7(void)
 			u.u_rval1 = r;
 			return;
 		}
-		if(r == -1) { u.u_error = 1; return; }
-		/* r == -2: not routable; fall through to kread. */
+		/* r == -1: v7 read() set u.u_error; fetch via bridge.
+		 * r == -2: not routable; fall through to kread. */
+		if(r == -1) {
+			int e = v7_u_error_get();
+			u.u_error = e ? e : 9;	/* EBADF fallback */
+			return;
+		}
 	}
-	/* Pseudo-fd / non-routable: armboot path. */
+	/* Pseudo-fd / non-routable: armboot path.  kread may have set
+	 * u.u_error itself (e.g. EINTR on tty-wait); preserve. */
 	r = kread(fd, buf, n);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r < 0) {
+		if(!u.u_error) u.u_error = 9;	/* EBADF fallback */
+	} else u.u_rval1 = r;
 }
 static void sys_pipe(void)
 {
 	int r = kpipe((int *)u.u_arg[0]);
-	if(r < 0) u.u_error = 1; else u.u_rval1 = r;
+	if(r < 0) u.u_error = 24; else u.u_rval1 = r;	/* EMFILE: pipe table full */
 }
 /* Drop pid from childdone[] after v7_wait_check reaped via proc[]. */
 static void kdone_drop(int pid)
@@ -1534,19 +1629,24 @@ static void kdone_drop(int pid)
 }
 static void sys_wait(void)
 {
-	extern void pause_spin_barrier(void);
 	int r, next, my_slot, has_child = 0, ppid;
+	/* Drain any signal posted to proc[curpid].p_sig (e.g. via kill) so
+	 * a wait() that was parked SLEEP and then woken by a signal (rather
+	 * than by do_exit) returns EINTR on retry instead of re-parking. */
+	psig_drain(curpid, &pending);
 	r = v7_wait_check(curpid, (int *)u.u_arg[0]);
 	if(r > 0) { u.u_rval1 = r; kdone_drop(r); return; }
 	r = kwait(curpid, (int *)u.u_arg[0]);
 	if(r >= 0) { u.u_rval1 = r; v7_proc_reap(r); return; }
+	/* No zombie: deliverable signal pending breaks the wait. */
+	if(sig_deliverable(pending)) { u.u_error = 4; return; }	/* EINTR */
 	/* No zombie: park as SLEEP/-1; do_exit wakes us.  ECHILD if no
 	 * child (parked, sleeping, or already in childdone[]). */
 	for(int i = 0; i < NPROCSAVE && !has_child; i++)
 		has_child = armproc[i].inuse && armproc[i].ppid == curpid;
 	for(int i = 0; i < ndone && !has_child; i++)
 		has_child = childdone[i].ppid == curpid;
-	if(!has_child) { u.u_error = 1; return; }	/* ECHILD */
+	if(!has_child) { u.u_error = 10; return; }	/* ECHILD */
 	next = mt_pick_runnable();
 	if(next < 0) {
 		/* All children sleeping -- spin (IRQs on) until a clock IRQ
@@ -1560,7 +1660,7 @@ static void sys_wait(void)
 	ppid = v7_get_ppid(curpid);
 	if(ppid < 0) ppid = 1;
 	my_slot = mt_alloc_slot(curpid, ppid, PSTATE_SLEEP);
-	if(my_slot < 0) { u.u_error = 1; return; }
+	if(my_slot < 0) { u.u_error = 11; return; }	/* EAGAIN: no proc slot */
 	mt_save_current(my_slot, trap_r, PSTATE_SLEEP);
 	armproc[my_slot].wait_for = -1;
 	armproc[my_slot].frame[7]  = S_WAIT;
@@ -1568,8 +1668,8 @@ static void sys_wait(void)
 	mt_load_slot(next, trap_r);
 	mt_switched = 1;
 }
-extern int v7_mount_call(char *special, char *dir, int ro);
-extern int v7_umount_call(char *special);
+/* v7_mount_call declared in h/v7_bridge.h. */
+/* v7_umount_call declared in h/v7_bridge.h. */
 static void sys_mount_v7(void)
 {
 	int err = v7_mount_call((char *)u.u_arg[0],
@@ -1581,22 +1681,21 @@ static void sys_umount_v7(void)
 	int err = v7_umount_call((char *)u.u_arg[0]);
 	if(err) u.u_error = err; else u.u_rval1 = 0;
 }
-extern int v7_umask_call(int *args, int kumask);
+/* v7_umask_call declared in h/v7_bridge.h. */
 static void sys_umask_v7(void)
 {
-	u.u_rval1 = v7_umask_call(u.u_arg, kumask) & 07777;
-	/* Keep kumask in sync so kcreat/kopen/kmknod see the new mask. */
-	kumask = u.u_arg[0] & 07777;
+	u.u_rval1 = v7_umask_call(u.u_arg, kumask) & 0777;
+	/* Keep kumask in sync so kcreat/kopen/kmknod see the new mask.
+	 * Match v7 sys4.c::umask which masks to 0777 (9 bits), not 07777. */
+	kumask = u.u_arg[0] & 0777;
 }
-extern int v7_getuid_call(int kuid), v7_getgid_call(int kgid);
-extern int v7_getpid_call(int curpid, int ppid), v7_getppid_call(int curpid);
+/* v7_getuid_call/getgid_call/getpid_call/getppid_call declared in h/v7_bridge.h. */
 /* Mirror v7's u_cdir->i_number into cwdino (parenti's resolver agrees). */
-extern ino_t v7_chdir_call(char *path);
-extern int v7_chroot_call(char *path);
+/* v7_chdir_call/v7_chroot_call declared in h/v7_bridge.h. */
 static void sys_getuid_v7(void)
 { u.u_rval1 = v7_getuid_call(kuid); u.u_rval2 = kuid; }
 static void sys_getgid_v7(void)
-{ u.u_rval1 = v7_getgid_call(0); u.u_rval2 = 0; }
+{ u.u_rval1 = v7_getgid_call(kgid); u.u_rval2 = kgid; }
 static void sys_getpid_v7(void)
 {
 	u.u_rval1 = v7_getpid_call(curpid, 1);
@@ -1605,38 +1704,57 @@ static void sys_getpid_v7(void)
 static void sys_chdir_v7(void)
 {
 	ino_t ino = v7_chdir_call((char *)u.u_arg[0]);
-	if(ino == 0) { u.u_error = 1; return; }
+	if(ino == 0) {
+		/* v7 chdir sets v7-side u.u_error (ENOENT/ENOTDIR/EACCES);
+		 * fetch via bridge.  Pre-boot u_cdir==NULL falls through to
+		 * ENOENT since v7 didn't run far enough to set u.u_error. */
+		int e = v7_u_error_get();
+		u.u_error = e ? e : 2;	/* ENOENT */
+		return;
+	}
 	cwdino = ino;
 	u.u_rval1 = 0;
 }
 /* chroot affects only v7-routed syscalls (armboot's parenti is unaware). */
 static void sys_chroot_v7(void)
 {
-	if(v7_chroot_call((char *)u.u_arg[0]) < 0) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_chroot_call((char *)u.u_arg[0]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 /* /dev/console has no on-disk dinode; chmod/chown/utime are no-op success. */
 static int is_dev_console(char *p) { return strcmp(p, "/dev/console") == 0; }
-extern int v7_chmod_call(char *path, int mode);
-extern int v7_chown_call(char *path, int uid, int gid);
-extern int v7_utime_call(char *path, void *tptr), v7_sysacct_call(char *path);
+/* v7_chmod_call/chown_call/utime_call/sysacct_call declared in h/v7_bridge.h.
+ *
+ * IMPORTANT: armboot.c has its own lean `struct user u` (static) shadowing
+ * v7stubs.c's global v7 u.  Errors set inside v7 syscall bodies live in
+ * the v7-side u and DO NOT auto-propagate to armboot's u.  The v7_*_call
+ * wrappers return v7's u.u_error -- capture it and copy into armboot's
+ * u.u_error here, otherwise stat/chmod/... silently succeed on failure. */
 static void sys_chmod_v7(void)
 {
+	int e;
 	if(is_dev_console((char *)u.u_arg[0])) { u.u_rval1 = 0; return; }
-	if(v7_chmod_call((char *)u.u_arg[0], u.u_arg[1])) u.u_error = 1; else u.u_rval1 = 0;
+	e = v7_chmod_call((char *)u.u_arg[0], u.u_arg[1]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_chown_v7(void)
 {
+	int e;
 	if(is_dev_console((char *)u.u_arg[0])) { u.u_rval1 = 0; return; }
-	if(v7_chown_call((char *)u.u_arg[0], u.u_arg[1], u.u_arg[2])) u.u_error = 1; else u.u_rval1 = 0;
+	e = v7_chown_call((char *)u.u_arg[0], u.u_arg[1], u.u_arg[2]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_utime_v7(void)
 {
+	int e;
 	if(is_dev_console((char *)u.u_arg[0])) { u.u_rval1 = 0; return; }
-	if(v7_utime_call((char *)u.u_arg[0], (void *)u.u_arg[1])) u.u_error = 1; else u.u_rval1 = 0;
+	e = v7_utime_call((char *)u.u_arg[0], (void *)u.u_arg[1]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_sysacct_v7(void)
 {
-	if(v7_sysacct_call((char *)u.u_arg[0])) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_sysacct_call((char *)u.u_arg[0]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static int is_tty_fd(int fd)
 {
@@ -1648,13 +1766,13 @@ static int is_tty_fd(int fd)
 }
 static void sys_stty(void)
 {
-	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) { u.u_error = 1; return; }
+	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) { u.u_error = 25; return; }	/* ENOTTY */
 	bcopy((char *)u.u_arg[1], (char *)&console_sgtty, sizeof(console_sgtty));
 	u.u_rval1 = 0;
 }
 static void sys_gtty(void)
 {
-	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) { u.u_error = 1; return; }
+	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) { u.u_error = 25; return; }	/* ENOTTY */
 	bcopy((char *)&console_sgtty, (char *)u.u_arg[1], sizeof(console_sgtty));
 	u.u_rval1 = 0;
 }
@@ -1663,15 +1781,19 @@ static void sys_ioctl_v7(void)
 {
 	int fd = u.u_arg[0], cmd = u.u_arg[1];
 	char *arg = (char *)u.u_arg[2];
-	if(fd < 0 || fd >= NFD || files[fd].ino == 0) { u.u_error = 1; return; }
+	if(fd < 0 || fd >= NFD || files[fd].ino == 0) { u.u_error = 9; return; }	/* EBADF */
 	switch(cmd) {
-	case ('f' << 8) | 1:	/* FIOCLEX */
-		closed[fd] |= 1; u.u_rval1 = 0; return;
+	case ('f' << 8) | 1:	/* FIOCLEX -- arm both kernel-side trackings.
+				 * armboot's closed[] gates fd reuse; v7's
+				 * u_pofile[] is what v7_exec_call sweeps. */
+		closed[fd] |= 1; v7_pofile_excl_set(fd);
+		u.u_rval1 = 0; return;
 	case ('f' << 8) | 2:	/* FIONCLEX */
-		closed[fd] &= ~1; u.u_rval1 = 0; return;
+		closed[fd] &= ~1; v7_pofile_excl_clear(fd);
+		u.u_rval1 = 0; return;
 	case ('t' << 8) | 8:	/* TIOCGETP */
 	case ('t' << 8) | 9:	/* TIOCSETP */
-		if(!is_tty_fd(fd) || arg == 0) { u.u_error = 1; return; }
+		if(!is_tty_fd(fd) || arg == 0) { u.u_error = 25; return; }	/* ENOTTY */
 		if(cmd == (('t' << 8) | 8))
 			bcopy((char *)&console_sgtty, arg, sizeof(console_sgtty));
 		else
@@ -1679,33 +1801,38 @@ static void sys_ioctl_v7(void)
 		u.u_rval1 = 0;
 		return;
 	}
-	u.u_error = 1;	/* ENOTTY */
+	u.u_error = 25;	/* ENOTTY */
 }
-extern int v7_stat_call(char *path, void *ubuf);
+/* v7_stat_call declared in h/v7_bridge.h. */
 static void sys_stat_v7(void)
 {
-	if(v7_stat_call((char *)u.u_arg[0], (void *)u.u_arg[1])) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_stat_call((char *)u.u_arg[0], (void *)u.u_arg[1]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
-extern int v7_access_call(char *path, int mode), v7_unlink_call(char *path);
-extern int v7_link_call(char *from, char *to);
-extern int v7_exec_call(char *path, char **argv, char **envp);	/* loads flat binary, runs close-on-exec, resets non-IGN handlers, stomps trap frame */
+/* v7_access_call/unlink_call/link_call/exec_call declared in h/v7_bridge.h.
+ * v7_exec_call loads a flat binary, runs close-on-exec, resets non-IGN
+ * handlers, and stomps the trap frame. */
 /* /dev/{console,mem,kmem} are pseudo-fds; short-circuit v7's namei(). */
 static void sys_access_v7(void)
 {
+	int e;
 	char *path = (char *)u.u_arg[0];
 	if(strcmp(path, "/dev/console") == 0
 	    || strcmp(path, "/dev/mem") == 0
 	    || strcmp(path, "/dev/kmem") == 0
 	    || strcmp(path, "/dev/root") == 0) { u.u_rval1 = 0; return; }
-	if(v7_access_call(path, u.u_arg[1])) u.u_error = 1; else u.u_rval1 = 0;
+	e = v7_access_call(path, u.u_arg[1]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_unlink_v7(void)
 {
-	if(v7_unlink_call((char *)u.u_arg[0])) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_unlink_call((char *)u.u_arg[0]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_link_v7(void)
 {
-	if(v7_link_call((char *)u.u_arg[0], (char *)u.u_arg[1])) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_link_call((char *)u.u_arg[0], (char *)u.u_arg[1]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_exec_v7(void)
 {
@@ -1713,22 +1840,33 @@ static void sys_exec_v7(void)
 	    (char **)u.u_arg[2]);
 	if(err) u.u_error = err; else u.u_rval1 = 0;
 }
-extern int v7_mknod_call(char *path, int mode, int dev), v7_sync_call(void);
-extern int v7_setuid_call(int kuid, int *args), v7_setgid_call(int kgid, int *args);
+/* v7_mknod_call/sync_call/setuid_call/setgid_call declared in h/v7_bridge.h. */
 static void sys_mknod_v7(void)
 {
-	if(v7_mknod_call((char *)u.u_arg[0], u.u_arg[1], u.u_arg[2])) u.u_error = 1; else u.u_rval1 = 0;
+	int e = v7_mknod_call((char *)u.u_arg[0], u.u_arg[1], u.u_arg[2]);
+	if(e) u.u_error = e; else u.u_rval1 = 0;
 }
 static void sys_setuid_v7(void)
-{ kuid = v7_setuid_call(kuid, u.u_arg); u.u_rval1 = 0; }
+{
+	/* v7 setuid() sets u.u_error = EPERM for unprivileged uid mismatch. */
+	int new = v7_setuid_call(kuid, u.u_arg);
+	if(!u.u_error) { kuid = new; u.u_rval1 = 0; }
+}
 static void sys_setgid_v7(void)
-{ (void)v7_setgid_call(0, u.u_arg); u.u_rval1 = 0; }
+{
+	int new = v7_setgid_call(kgid, u.u_arg);
+	if(!u.u_error) { kgid = new; u.u_rval1 = 0; }
+}
 static void sys_sync_v7(void)
 { (void)v7_sync_call(); u.u_rval1 = 0; }
-extern int v7_nice_call(int *args, int curpid), v7_alarm_call(int *args, int curpid);
-extern long v7_gtime_call(void), v7_stime_call(int *args);
+/* v7_nice_call/alarm_call/gtime_call/stime_call declared in h/v7_bridge.h. */
 static void sys_nice_v7(void)
-{ (void)v7_nice_call(u.u_arg, curpid); u.u_rval1 = 0; }
+{
+	(void)v7_nice_call(u.u_arg, curpid);
+	/* v7 nice() can only fail via suser() which sets EPERM -- v7_nice_call
+	 * returns u.u_error, propagate. */
+	u.u_rval1 = 0;
+}
 /* time(2) splits time_t low/high 16 across u_rval1/u_rval2. */
 static void sys_gtime_v7(void)
 {
@@ -1740,12 +1878,16 @@ static void sys_stime_v7(void)
 { (void)v7_stime_call(u.u_arg); u.u_rval1 = 0; }
 static void sys_alarm_v7(void)
 { u.u_rval1 = v7_alarm_call(u.u_arg, curpid); }
-extern int v7_pause_call(volatile unsigned int *pending_ptr);
+/* v7_pause_call declared in h/v7_bridge.h. */
 /* pause(2): park SLEEP/-2; pre-bake r[0]=-EINTR for mt_switched resume. */
 static void sys_pause_v7(void)
 {
 	int next, my_slot, ppid;
-	if(pending != 0) { u.u_error = 1; return; }
+	/* Drain any signal sitting in proc[curpid].p_sig (e.g. SIGCLK posted
+	 * between alarm(n) and pause()) so the deliverable-signal check
+	 * below sees it without waiting for the next clock tick. */
+	psig_drain(curpid, &pending);
+	if(sig_deliverable(pending)) { u.u_error = 4; return; }	/* EINTR */
 	if((next = mt_pick_runnable()) >= 0) {
 		ppid = v7_get_ppid(curpid);
 		if(ppid < 0) ppid = 1;
@@ -1760,24 +1902,28 @@ static void sys_pause_v7(void)
 	}
 	/* No runnable peer -- fall through to the busy-spin fallback. */
 	(void)v7_pause_call(&pending);
-	u.u_error = 1;
+	u.u_error = 4;	/* EINTR */
 }
-extern int v7_ftime_call(int *args), v7_times_call(int *args), v7_profil_call(int *args);
-extern int v7_lock_call(int *args, int curpid);
+/* v7_ftime_call/times_call/profil_call/lock_call declared in h/v7_bridge.h.
+ * Each returns v7-side u.u_error -- capture and copy into armboot's u
+ * (separate shadow struct; see sys_chmod_v7 comment). */
 static void sys_ftime_v7(void)
-{ if(v7_ftime_call(u.u_arg)) u.u_error = 1; else u.u_rval1 = 0; }
+{ int e = v7_ftime_call(u.u_arg);  if(e) u.u_error = e; else u.u_rval1 = 0; }
 static void sys_times_v7(void)
-{ if(v7_times_call(u.u_arg)) u.u_error = 1; else u.u_rval1 = 0; }
+{ int e = v7_times_call(u.u_arg);  if(e) u.u_error = e; else u.u_rval1 = 0; }
 static void sys_lock_v7(void)
-{ if(v7_lock_call(u.u_arg, curpid) < 0) u.u_error = 1; else u.u_rval1 = 0; }
+{ int e = v7_lock_call(u.u_arg, curpid); if(e) u.u_error = e; else u.u_rval1 = 0; }
 static void sys_profil_v7(void)
-{ (void)v7_profil_call(u.u_arg); u.u_rval1 = 0; }
-/* v7 kill -> psignal->setrun (armboot_setrun); we also poke armproc[].pending. */
-extern int v7_kill_call(int *args, int kuid, int curpid);
+{ int e = v7_profil_call(u.u_arg); if(e) u.u_error = e; else u.u_rval1 = 0; }
+/* v7 kill -> psignal->setrun (armboot_setrun); we also poke armproc[].pending.
+ * v7_kill_call declared in h/v7_bridge.h. */
 static void sys_kill_v7(void)
 {
 	int tgt = u.u_arg[0], sig = u.u_arg[1];
-	int r = v7_kill_call(u.u_arg, kuid, curpid);
+	int r;
+	/* v7 psignal silently drops sig >= NSIG; POSIX EINVAL. */
+	if(sig < 0 || sig >= NSIG) { u.u_error = 22; return; }	/* EINVAL */
+	r = v7_kill_call(u.u_arg, kuid, curpid);
 	if(r < 0) { u.u_error = -r; return; }	/* ESRCH/EPERM */
 	if(sig > 0 && sig < NSIG) {
 		if(tgt == curpid)
@@ -1795,13 +1941,34 @@ static void sys_kill_v7(void)
 	}
 	u.u_rval1 = 0;
 }
-static void sys_nosys(void) { u.u_error = 1; }
-/* sysent[N] = (narg, handler); {0,sys_nosys}=unused; pairs of slots/line. */
+/* v7 trap.c::nosys -- "invalid syscall number" returns EINVAL. */
+static void sys_nosys(void) { u.u_error = 22; }
+/* v7 trap.c::nullsys -- "syscall slot reserved but does nothing"
+ * silently succeeds.  Used by slots 0 (indir), 38 (switch), 39
+ * (setpgrp not in yet) -- matching v7/usr/sys/sys/sysent.c. */
+static void sys_nullsys(void) { }
+/* break(2): v7 sys1.c::sbreak() adjusts u.u_dsize via expand().  On this
+ * port copyseg/clearseg are no-ops (everything stays resident), so sbreak
+ * just records the new data-segment size into the v7 u struct. */
+extern void sbreak(void);
+static void sys_break_v7(void) { sbreak(); }
+/* ptrace(2): v7 sys/sig.c::ptrace() coordinates parent/child via ipc
+ * struct + setrun/sleep on (caddr_t)&ipc.  The ARM port's setrun/sleep
+ * stubs are eager (arch/v7stubs.c), so ptrace will return ESRCH unless
+ * the child is also using the v7 sleep loop -- sufficient for adb(1)
+ * compile-and-link, exercised behaviour is out of scope. */
+extern void ptrace(void);
+static void sys_ptrace_v7(void) { ptrace(); }
+/* sysent[N] = (narg, handler); pairs of slots per line.  Slots that v7
+ * mapped to `nullsys` (silent success) use sys_nullsys here; slots that
+ * v7 mapped to `nosys` (EINVAL) use sys_nosys.  Slots 1 (exit), 2
+ * (fork), 48 (signal) and 139 (sigreturn) are handled inline in trap()
+ * so their entries are never actually dispatched. */
 static struct sysent {
 	int	sy_narg;
 	void	(*sy_call)(void);
 } sysent[64] = {
-	/* 0 indir, 1 exit */		{0, sys_nosys},     {1, sys_nosys},
+	/* 0 indir, 1 exit */		{0, sys_nullsys},   {1, sys_nosys},
 	/* 2 fork, 3 read */		{0, sys_nosys},     {3, sys_read_v7},
 	/* 4 write, 5 open */		{3, sys_write_v7},  {2, sys_open_v7},
 	/* 6 close, 7 wait */		{1, sys_close_v7},  {1, sys_wait},
@@ -1809,18 +1976,18 @@ static struct sysent {
 	/* 10 unlink, 11 exec */	{1, sys_unlink_v7}, {3, sys_exec_v7},
 	/* 12 chdir, 13 time */		{1, sys_chdir_v7},  {0, sys_gtime_v7},
 	/* 14 mknod, 15 chmod */	{3, sys_mknod_v7},  {2, sys_chmod_v7},
-	/* 16 chown, 17 break */	{3, sys_chown_v7},  {0, sys_nosys},
+	/* 16 chown, 17 break */	{3, sys_chown_v7},  {1, sys_break_v7},
 	/* 18 stat, 19 lseek */		{2, sys_stat_v7},   {3, sys_lseek_v7},
 	/* 20 getpid, 21 mount */	{0, sys_getpid_v7}, {3, sys_mount_v7},
 	/* 22 umount, 23 setuid */	{1, sys_umount_v7}, {1, sys_setuid_v7},
 	/* 24 getuid, 25 stime */	{0, sys_getuid_v7}, {1, sys_stime_v7},
-	/* 26 ptrace, 27 alarm */	{0, sys_nosys},     {1, sys_alarm_v7},
+	/* 26 ptrace, 27 alarm */	{4, sys_ptrace_v7}, {1, sys_alarm_v7},
 	/* 28 fstat, 29 pause */	{2, sys_fstat_v7},  {0, sys_pause_v7},
 	/* 30 utime, 31 stty */		{2, sys_utime_v7},  {2, sys_stty},
 	/* 32 gtty, 33 access */	{2, sys_gtty},      {2, sys_access_v7},
 	/* 34 nice, 35 ftime */		{1, sys_nice_v7},   {1, sys_ftime_v7},
 	/* 36 sync, 37 kill */		{0, sys_sync_v7},   {2, sys_kill_v7},
-	/* 38, 39 */			{0, sys_nosys},     {0, sys_nosys},
+	/* 38 switch, 39 setpgrp */	{0, sys_nullsys},   {0, sys_nullsys},
 	/* 40 tell, 41 dup */		{0, sys_nosys},     {2, sys_dup_v7},
 	/* 42 pipe, 43 times */		{1, sys_pipe},      {1, sys_times_v7},
 	/* 44 prof, 45 */		{4, sys_profil_v7}, {0, sys_nosys},
@@ -1830,16 +1997,16 @@ static struct sysent {
 	/* 52, 53 lock */		{0, sys_nosys},     {1, sys_lock_v7},
 	/* 54 ioctl, 55 */		{3, sys_ioctl_v7},  {0, sys_nosys},
 	/* 56, 57 */			{0, sys_nosys},     {0, sys_nosys},
-	/* 58, 59 exece */		{0, sys_nosys},     {0, sys_nosys},
+	/* 58, 59 exece */		{0, sys_nosys},     {3, sys_exec_v7},
 	/* 60 umask, 61 chroot */	{1, sys_umask_v7},  {1, sys_chroot_v7},
 	/* 62, 63 */			{0, sys_nosys},     {0, sys_nosys},
 };
-extern int v7_save_qsav(void);
+/* v7_save_qsav declared in h/v7_bridge.h. */
 static void sysent_dispatch(int n)
 {
 	u.u_error = 0;
 	u.u_rval1 = u.u_rval2 = 0;
-	if(n < 0 || n >= 64) { u.u_error = 1; return; }
+	if(n < 0 || n >= 64) { u.u_error = 22; return; }	/* EINVAL */
 	for(int i = 0; i < sysent[n].sy_narg && i < 6; i++)
 		u.u_arg[i] = trap_r[i];
 	/* Seed u_qsav; sleep() in the handler longjmps back here on a
@@ -1853,7 +2020,6 @@ volatile int in_trap;
 /* From S_EXIT / deliver_signal SIG_DFL: reparent->init, flush fds, record code, wake, switch peer. */
 void do_exit(int code, int *r)
 {
-	extern void v7_reparent_children(int dying_pid, int new_ppid);
 	int my_pid = curpid, next, ppid = v7_get_ppid(my_pid);
 	/* Orphans go to init (pid 1), not 0 -- matches v7's exit() and
 	 * keeps childdone[] entries reachable from a real wait()er. */
@@ -1886,7 +2052,9 @@ void trap(int *r)
 	int n = r[7], ret = -1;
 	in_trap = 1;
 	trap_frame = trap_r = r;	/* mirror into v7-visible global */
-	if(n == S_EXIT) { do_exit(r[0], r); return; }
+	/* v7 _exit only honors the low 8 bits; mask to keep our internal
+	 * 0x100 signal-killed flag bit out of user-supplied codes. */
+	if(n == S_EXIT) { do_exit(r[0] & 0xff, r); return; }
 	if(n == S_FORK) {
 		int new_pid = nextpid, parent_pid = curpid;
 		int slot = mt_alloc_slot(new_pid, parent_pid, PSTATE_RUN);
@@ -1895,30 +2063,51 @@ void trap(int *r)
 			v7_ofile_fork_bump();
 			mt_save_current(slot, r, PSTATE_RUN);
 			/* Parent stays live -- restore u_times that
-			 * mt_save_current zeroed; child inherits the copy. */
+			 * mt_save_current zeroed; the child slot keeps the
+			 * snapshot only as a placeholder before we zero it. */
 			v7_u_times_restore(a->utime, a->stime, a->cutime, a->cstime);
+			/* Per POSIX/v7 newproc: child starts with all CPU
+			 * times = 0 so the eventual wait()-time fold doesn't
+			 * double-count the parent's pre-fork u_utime. */
+			a->utime = a->stime = a->cutime = a->cstime = 0;
 			a->pid = new_pid;
 			a->ppid = parent_pid;
 			a->pending = 0;
 			a->frame[0] = 0;	/* child fork ret */
+			if(v7_proc_fork(parent_pid, new_pid) < 0) {
+				/* proc[] full (rare: NPROC=150 vs NPROCSAVE=32):
+				 * back out the armproc slot so we don't leave the
+				 * child with no proc[] entry to anchor curpid.
+				 * Drop the cdir/rdir refs mt_save_current iget'd
+				 * so they don't leak. */
+				v7_inode_drop(a->cdir);
+				v7_inode_drop(a->rdir);
+				proc_free_slot(slot);
+				v7_proc_set_current(parent_pid);
+				ret = -11;	/* EAGAIN */
+				goto fork_fail;
+			}
 			nextpid++;
-			(void)v7_proc_fork(parent_pid, new_pid);
 			v7_proc_set_current(parent_pid);
 			r[0] = new_pid;
 			in_trap = 0; return;
 		}
-		/* slot pool full -- fall through to ret=-1 below. */
+		/* slot pool full -- v7 fork(2) returns EAGAIN here. */
+		ret = -11;	/* EAGAIN */
+fork_fail:	;
 	}
-	else if(n == S_GETDENTS)
-		ret = kgetdents(r[0], (char *)r[1], (unsigned int)r[2]);
 	else if(n == S_SIGNAL) {
-		extern int v7_signal_call(int signo, int func, int curpid);
+		long old;
 		(void)v7_signal_call(r[0], r[1], curpid);
-		r[0] = (int)ksignal(r[0], (long)(unsigned int)r[1]);
+		old = ksignal(r[0], (long)(unsigned int)r[1]);
+		/* ksignal returns -1 for invalid signo (out of range or
+		 * SIGKIL).  v7 signal(2) returns EINVAL for that case; map
+		 * to -EINVAL so userspace's SYS macro picks the right
+		 * errno.  Non-negative returns are previous handler. */
+		r[0] = (old == -1) ? -22 : (int)old;
 		deliver_signal(r); in_trap = 0; return;
 	}
 	else if(n == S_SIGRETURN) {
-		extern int v7_sigreturn_call(int *r);
 		(void)v7_sigreturn_call(r);
 		deliver_signal(r); in_trap = 0; return;
 	}
@@ -1943,7 +2132,6 @@ void user_trap_handler(int signo, int *r)
 {
 	int mode = r[16] & 0x1f;
 	if(mode != 0x10 && mode != 0x1f) {
-		extern void printf(char *, ...);
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x\n",
 		    signo, r[15], r[16]);
 		panic("kernel trap");
@@ -1986,8 +2174,8 @@ void armboot(void)
 		console_ino = cino;
 		for(int i = 0; i < 3; i++) files[i].ino = cino;
 	}
-	{ extern int v7_mount_init(void); extern void v7_proc_init(void);
-	  (void)v7_mount_init(); v7_proc_init(); }
+	(void)v7_mount_init();
+	v7_proc_init();
 	{ char *s; s = "swapper"; for(int i = 0; i < 8; i++) pcomm[0][i] = s[i];
 	  s = "init"; for(int i = 0; i < 5; i++) pcomm[1][i] = s[i]; }
 #ifdef EVB

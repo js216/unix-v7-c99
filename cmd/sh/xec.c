@@ -10,18 +10,80 @@
 #include	"defs.h"
 #include	"sym.h"
 
+void	execexp(STRING s, UFD f);
+INT	sigchk(void);
+INT	getarg(COMPTR ac);
+STRING	*scan(INT argn);
+INT	syslook(STRING w, struct sysnod syswds[]);
+INT	setlist(REG ARGPTR arg, INT xp);
+VOID	prc(INT c);
+VOID	prs(STRING as);
+VOID	prn(INT n);
+INT	blank(void);
+INT	newline(void);
+INT	prt(L_INT t);
+INT	pathopen(REG STRING path, REG STRING name);
+STRING	getpath(STRING s);
+INT	failed(STRING s1, STRING s2);
+INT	exitsh(INT xno);
+INT	stoi(STRING icp);
+VOID	nullio(IOPTR iop);
+INT	clrsig(INT i);
+INT	getsig(INT n);
+INT	ignsig(INT n);
+INT	error(STRING s);
+INT	chktrap(void);
+INT	oldsigs(void);
+VOID	execa(STRING at[]);
+INT	done(void);
+INT	postclr(void);
+INT	settmp(void);
+INT	chkpipe(INT *pv);
+INT	rename(REG INT f1, REG INT f2);
+INT	chkopen(STRING idf);
+VOID	initio(IOPTR iop);
+INT	assnum(STRING *p, INT n);
+INT	assign(NAMPTR n, STRING v);
+INT	readvar(STRING *names);
+INT	options(INT argc, STRING *argv);
+INT	setargs(STRING argi[]);
+INT	replace(REG STRING *a, STRING v);
+DOLPTR	freeargs(DOLPTR blk);
+INT	gmatch(REG STRING s, REG STRING p);
+INT	cf(STRING s1, STRING s2);
+INT	exitset(void);
+INT	namscan(VOID (*fn)(NAMPTR));
+VOID	printnam(NAMPTR n);
+VOID	printflg(REG NAMPTR n);
+INT	push(FILE af);
+INT	pop(void);
+INT	initf(UFD fd);
+INT	estabf(REG STRING s);
+INT	trim(STRING at);
+INT	tdystak(REG STKPTR x);
+VOID	post(INT pcsid);
+INT	builtin(void);
+VOID	await(INT i);
+extern int chdir(char *p);
+extern int signal();
+extern int times(long *t);
+extern int umask(int m);
+extern int fork(void);
+extern int alarm(unsigned sec);
+extern int pause(void);
+extern int close(int fd);
+extern int dup();
+
 LOCAL INT	parent;
 
-SYSTAB		commands;
+extern SYSTAB	commands;
 
 
 
 /* ========	command execution	========*/
 
 
-execute(argt, execflg, pf1, pf2)
-	TREPTR		argt;
-	INT		*pf1, *pf2;
+INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 {
 	/* `stakbot' is preserved by this routine */
 	REG TREPTR	t;
@@ -46,11 +108,11 @@ execute(argt, execflg, pf1, pf2)
 			ARGPTR		schain=gchain;
 			IOPTR		io=t->treio;
 			gchain=0;
-			argn = getarg(t);
+			argn = getarg((COMPTR)t);
 			com=scan(argn);
 			a1=com[1]; gchain=schain;
 
-			IF (internal=syslook(com[0],commands)) ORF argn==0
+			IF ((internal=syslook(com[0],commands)) ORF argn==0)
 			THEN	setlist(t->comset, 0);
 			FI
 
@@ -85,7 +147,8 @@ execute(argt, execflg, pf1, pf2)
 	
 				case SYSEXIT:
 					exitsh(a1?stoi(a1):oldexit);
-	
+					/* fallthrough */
+
 				case SYSNULL:
 					nullio(io);
 					io=0;
@@ -134,11 +197,13 @@ execute(argt, execflg, pf1, pf2)
 					com++;
 					initio(io); ioset=0; io=0;
 					IF a1==0 THEN break FI
-	
+					/* fallthrough */
+
 				case SYSLOGIN:
 					flags |= forked;
 					oldsigs(); execa(com); done();
-	
+					/* fallthrough */
+
 				case SYSCD:
 					IF flags&rshflg
 					THEN	failed(com[0],restricted);
@@ -184,6 +249,7 @@ execute(argt, execflg, pf1, pf2)
 	
 				case SYSRDONLY:
 					exitval=N_RDONLY;
+					/* fallthrough */
 				case SYSXPORT:
 					IF exitval==0 THEN exitval=N_EXPORT; FI
 	
@@ -197,7 +263,7 @@ execute(argt, execflg, pf1, pf2)
 	
 				case SYSEVAL:
 					IF a1
-					THEN	execexp(a1,&com[2]);
+					THEN	execexp(a1,(UFD)(long)&com[2]);
 					FI
 					break;
 
@@ -220,8 +286,8 @@ execute(argt, execflg, pf1, pf2)
                                         break;
 	
 				default:
-					internal=builtin(argn,com);
-	
+					internal=builtin();
+					(void)argn;
 				ENDSW
 
 				IF internal
@@ -233,7 +299,8 @@ execute(argt, execflg, pf1, pf2)
 			THEN	break;
 			FI
 			END
-	
+			/* fallthrough */
+
 		case TFORK:
 			IF execflg ANDF (treeflgs&(FAMP|FPOU))==0
 			THEN	parent=0;
@@ -290,18 +357,20 @@ execute(argt, execflg, pf1, pf2)
 				/* io redirection */
 				initio(t->treio);
 				IF type!=TCOM
-				THEN	execute(t->forktre,1);
+				THEN	execute(t->forktre,1,(INT *)0,(INT *)0);
 				ELIF com[0]!=ENDARGS
 				THEN	setlist(t->comset,N_EXPORT);
 					execa(com);
 				FI
 				done();
 			FI
+			break;
 
 		case TPAR:
 			rename(dup(2),output);
-			execute(t->partre,execflg);
+			execute(t->partre,execflg,(INT *)0,(INT *)0);
 			done();
+			/* fallthrough */
 
 		case TFIL:
 			BEGIN
@@ -314,19 +383,19 @@ execute(argt, execflg, pf1, pf2)
 			break;
 
 		case TLST:
-			execute(t->lstlef,0);
-			execute(t->lstrit,execflg);
+			execute(t->lstlef,0,(INT *)0,(INT *)0);
+			execute(t->lstrit,execflg,(INT *)0,(INT *)0);
 			break;
 
 		case TAND:
-			IF execute(t->lstlef,0)==0
-			THEN	execute(t->lstrit,execflg);
+			IF execute(t->lstlef,0,(INT *)0,(INT *)0)==0
+			THEN	execute(t->lstrit,execflg,(INT *)0,(INT *)0);
 			FI
 			break;
 
 		case TORF:
-			IF execute(t->lstlef,0)!=0
-			THEN	execute(t->lstrit,execflg);
+			IF execute(t->lstlef,0,(INT *)0,(INT *)0)!=0
+			THEN	execute(t->lstrit,execflg,(INT *)0,(INT *)0);
 			FI
 			break;
 
@@ -347,8 +416,8 @@ execute(argt, execflg, pf1, pf2)
 			   loopcnt++;
 			   WHILE *args!=ENDARGS ANDF execbrk==0
 			   DO	assign(n,*args++);
-				execute(t->fortre,0);
-				IF execbrk<0 THEN execbrk=0 FI
+				execute(t->fortre,0,(INT *)0,(INT *)0);
+				IF (signed char)execbrk<0 THEN execbrk=0 FI
 			   OD
 			   IF breakcnt THEN breakcnt-- FI
 			   execbrk=breakcnt; loopcnt--;
@@ -362,9 +431,9 @@ execute(argt, execflg, pf1, pf2)
 			   INT		i=0;
 
 			   loopcnt++;
-			   WHILE execbrk==0 ANDF (execute(t->whtre,0)==0)==(type==TWH)
-			   DO i=execute(t->dotre,0);
-			      IF execbrk<0 THEN execbrk=0 FI
+			   WHILE execbrk==0 ANDF (execute(t->whtre,0,(INT *)0,(INT *)0)==0)==(type==TWH)
+			   DO i=execute(t->dotre,0,(INT *)0,(INT *)0);
+			      IF (signed char)execbrk<0 THEN execbrk=0 FI
 			   OD
 			   IF breakcnt THEN breakcnt-- FI
 			   execbrk=breakcnt; loopcnt--; exitval=i;
@@ -372,27 +441,27 @@ execute(argt, execflg, pf1, pf2)
 			break;
 
 		case TIF:
-			IF execute(t->iftre,0)==0
-			THEN	execute(t->thtre,execflg);
-			ELSE	execute(t->eltre,execflg);
+			IF execute(t->iftre,0,(INT *)0,(INT *)0)==0
+			THEN	execute(t->thtre,execflg,(INT *)0,(INT *)0);
+			ELSE	execute(t->eltre,execflg,(INT *)0,(INT *)0);
 			FI
 			break;
 
 		case TSW:
 			BEGIN
 			   REG STRING	r = mactrim(t->swarg);
-			   t=t->swlst;
+			   t=(TREPTR)t->swlst;
 			   WHILE t
 			   DO	ARGPTR		rex=t->regptr;
 				WHILE rex
 				DO	REG STRING	s;
 					IF gmatch(r,s=macro(rex->argval)) ORF (trim(s), eq(r,s))
-					THEN	execute(t->regcom,0);
+					THEN	execute(t->regcom,0,(INT *)0,(INT *)0);
 						t=0; break;
 					ELSE	rex=rex->argnxt;
 					FI
 				OD
-				IF t THEN t=t->regnxt FI
+				IF t THEN t=(TREPTR)t->regnxt FI
 			   OD
 			END
 			break;
@@ -406,17 +475,16 @@ execute(argt, execflg, pf1, pf2)
 }
 
 
-execexp(s,f)
-	STRING		s;
-	UFD		f;
+void
+execexp(STRING s, UFD f)
 {
 	FILEBLK		fb;
 	push(&fb);
 	IF s
-	THEN	estabf(s); fb.feval=f;
+	THEN	estabf(s); fb.feval=(STRING *)(long)f;
 	ELIF f>=0
 	THEN	initf(f);
 	FI
-	execute(cmd(NL, NLFLG|MTFLG),0);
+	execute(cmd(NL, NLFLG|MTFLG),0,(INT *)0,(INT *)0);
 	pop();
 }

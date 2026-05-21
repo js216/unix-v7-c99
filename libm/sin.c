@@ -19,8 +19,7 @@ static double q3	=  .1326534908786136358911494e3;
 static double sinus(double, int);
 
 double
-cos(arg)
-double arg;
+cos(double arg)
 {
 	if(arg<0)
 		arg = -arg;
@@ -28,18 +27,15 @@ double arg;
 }
 
 double
-sin(arg)
-double arg;
+sin(double arg)
 {
 	return(sinus(arg, 0));
 }
 
 static double
-sinus(arg, quad)
-double arg;
-int quad;
+sinus(double arg, int quad)
 {
-	double modf();
+	double modf(double, double *);
 	double e, f;
 	double ysq;
 	double x,y;

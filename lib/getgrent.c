@@ -12,7 +12,8 @@ static char line[BUFSIZ+1];
 static struct group group;
 static char *gr_mem[MAXGRP];
 
-setgrent()
+void
+setgrent(void)
 {
 	if( !grf )
 		grf = fopen( GROUP, "r" );
@@ -20,7 +21,8 @@ setgrent()
 		rewind( grf );
 }
 
-endgrent()
+void
+endgrent(void)
 {
 	if( grf ){
 		fclose( grf );
@@ -29,9 +31,7 @@ endgrent()
 }
 
 static char *
-grskip(p,c)
-register char *p;
-register c;
+grskip(register char *p, register int c)
 {
 	while( *p && *p != c ) ++p;
 	if( *p ) *p++ = 0;
@@ -39,7 +39,7 @@ register c;
 }
 
 struct group *
-getgrent()
+getgrent(void)
 {
 	register char *p, **q;
 

@@ -1,8 +1,13 @@
 #include "stdio.h"
 #include "lrnref"
 
-selsub(argc,argv)
-char *argv[];
+extern void list(char *);
+extern void wrapup(int);
+extern void start(char *);
+void chknam(char *name);
+
+void
+selsub(int argc, char *argv[])
 {
 	char ans1[100], *cp;
 	static char ans2[30];
@@ -84,8 +89,8 @@ char *argv[];
 	start(level);
 }
 
-chknam(name)
-char *name;
+void
+chknam(char *name)
 {
 	if (access(name, 05) < 0) {
 		printf("Sorry, there is no subject or lesson named %s.\nBye.\n", name);

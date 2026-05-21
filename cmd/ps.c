@@ -23,11 +23,11 @@ struct tty;
 #include "../h/user.h"
 
 struct nlist nl[] = {
-	{ "_proc" },
-	{ "_swapdev" },
-	{ "_swplo" },
-	{ "_pcomm" },
-	{ "" },
+	{ "_proc",    0, 0 },
+	{ "_swapdev", 0, 0 },
+	{ "_swplo",   0, 0 },
+	{ "_pcomm",   0, 0 },
+	{ "",         0, 0 },
 };
 
 static int cur_slot;	/* index of mproc within proc[]; passed to prcom indirectly */
@@ -42,9 +42,9 @@ int	vflg;
 int	kflg;
 int	xflg;
 char	*tptr;
-long	lseek();
-char	*gettty();
-char	*getptr();
+long	lseek(int fd, long offset, int ptrname);
+char	*gettty(void);
+char	*getptr(char **adr);
 /* strncmp() is declared in <stdio.h> with the standard prototype in
  * this port; the v7 K&R-era `char *strncmp()` line is dropped. */
 int	getdev(void);
@@ -66,9 +66,7 @@ struct devl {
 char	*coref;
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int i;
 	char *ap;
@@ -173,7 +171,7 @@ bbreak:
 }
 
 int
-getdev()
+getdev(void)
 {
 #include <sys/stat.h>
 	register FILE *df;
@@ -206,8 +204,7 @@ getdev()
 }
 
 long
-round(a, b)
-	long		a, b;
+round(long a, long b)
 {
 	long		w = ((a+b-1)/b)*b;
 
@@ -221,8 +218,7 @@ struct map {
 struct map datmap;
 int	file;
 int
-prcom(puid)
-int puid;
+prcom(int puid)
 {
 	char abuf[512];
 	long addr;
@@ -374,7 +370,7 @@ int puid;
 }
 
 char *
-gettty()
+gettty(void)
 {
 	register int i;
 	register char *p;
@@ -393,8 +389,7 @@ gettty()
 }
 
 char *
-getptr(adr)
-char **adr;
+getptr(char **adr)
 {
 	char *ptr;
 	register char *p, *pa;
@@ -409,8 +404,7 @@ char **adr;
 }
 
 int
-getbyte(adr)
-char *adr;
+getbyte(char *adr)
 {
 	register struct map *amap = &datmap;
 	char b;
@@ -432,9 +426,7 @@ char *adr;
 
 
 int
-within(adr,lbd,ubd)
-char *adr;
-long lbd, ubd;
+within(char *adr, long lbd, long ubd)
 {
-	return((unsigned)adr>=lbd && (unsigned)adr<ubd);
+	return((unsigned long)adr>=(unsigned long)lbd && (unsigned long)adr<(unsigned long)ubd);
 }

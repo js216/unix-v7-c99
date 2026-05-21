@@ -15,9 +15,9 @@ int	donefld;	/* 1 = implies rec broken into fields */
 int	donerec;	/* 1 = record is valid (no flds have changed) */
 int	mustfld;	/* 1 = NF seen, so always break*/
 
-#define	FINIT	{0, NULL, 0.0, FLD|STR}
+#define	FINIT	{0, NULL, 0.0, FLD|STR, 0}
 cell fldtab[MAXFLD] = {	/*room for fields */
-	{ "$record", record, 0.0, STR|FLD},
+	{ "$record", record, 0.0, STR|FLD, 0},
 	FINIT, FINIT, FINIT, FINIT, FINIT, FINIT, FINIT,
 	FINIT, FINIT, FINIT, FINIT, FINIT, FINIT, FINIT,
 	FINIT, FINIT, FINIT, FINIT, FINIT, FINIT, FINIT,
@@ -30,7 +30,7 @@ int	maxfld	= 0;	/* last used field */
 
 
 int
-getrec()
+getrec(void)
 {
 	register char *rr;
 	extern int svargc;
@@ -87,8 +87,7 @@ getrec()
 }
 
 int
-setclvar(s)	/* set var=value from s */
-char *s;
+setclvar(char *s)	/* set var=value from s */
 {
 	char *p;
 	cell *q;
@@ -103,7 +102,7 @@ char *s;
 }
 
 int
-fldbld()
+fldbld(void)
 {
 	register char *r, *fr, sep;
 	int i, j;
@@ -165,7 +164,7 @@ fldbld()
 }
 
 int
-recbld()
+recbld(void)
 {
 	int i;
 	register char *r, *p;
@@ -175,7 +174,7 @@ recbld()
 	r = record;
 	for (i = 1; i <= *NF; i++) {
 		p = getsval(&fldtab[i]);
-		while (*r++ = *p++)
+		while ((*r++ = *p++))
 			;
 		*(r-1) = **OFS;
 	}
@@ -189,8 +188,7 @@ recbld()
 	return(0);
 }
 
-cell *fieldadr(n)
-int n;
+cell *fieldadr(int n)
 {
 	if (n >= MAXFLD)
 		error(FATAL, "trying to access field %d", n);
@@ -200,16 +198,14 @@ int n;
 int	errorflag	= 0;
 
 int
-yyerror(s) char *s; {
+yyerror(char *s) {
 	fprintf(stderr, "awk: %s near line %d\n", s, lineno);
 	errorflag = 2;
 	return(0);
 }
 
 int
-error(f, s, a1, a2, a3, a4, a5, a6, a7)
-int f, a1, a2, a3, a4, a5, a6, a7;
-char *s;
+error(int f, char *s, int a1, int a2, int a3, int a4, int a5, int a6, int a7)
 {
 	fprintf(stderr, "awk: ");
 	fprintf(stderr, s, a1, a2, a3, a4, a5, a6, a7);
@@ -222,7 +218,7 @@ char *s;
 }
 
 int
-PUTS(s) char *s; {
+PUTS(char *s) {
 	(void)s;
 	dprintf("%s\n", s, NULL, NULL);
 	return(0);
@@ -231,8 +227,7 @@ PUTS(s) char *s; {
 #define	MAXEXPON	38	/* maximum exponenet for fp number */
 
 int
-isnumber(s)
-register char *s;
+isnumber(register char *s)
 {
 	register int d1, d2;
 	int point;
@@ -265,7 +260,7 @@ register char *s;
 			s++;
 		} while (isdigit(*s));
 	}
-	if (!(d1 || point && d2))
+	if (!(d1 || (point && d2)))
 		return(0);
 	if (*s == 'e' || *s == 'E') {
 		s++;

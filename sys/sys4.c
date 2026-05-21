@@ -2,10 +2,16 @@
 #include "../h/systm.h"
 #include "../h/dir.h"
 #include "../h/user.h"
-#include "../h/reg.h"
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/timeb.h"
+#include "../h/proto.h"
+
+/* suser/update/namei/uchar/iget/access/owner/iput/writei/prele/plock/iupdat
+ * /xrele/psignal/copyin/copyout come from h/systm.h.
+ * sleep/spl0/spl7 come from h/proto.h. */
+
+void chdirec(struct inode **ipp);
 
 /*
  * Everything in this file is a routine implementing a system call.
@@ -14,7 +20,8 @@
 /*
  * return the current time (old-style entry)
  */
-gtime()
+void
+gtime(void)
 {
 	u.u_r.r_time = time;
 }
@@ -23,7 +30,8 @@ gtime()
  * New time entry-- return TOD with milliseconds, timezone,
  * DST flag
  */
-ftime()
+void
+ftime(void)
 {
 	register struct a {
 		struct	timeb	*tp;
@@ -50,7 +58,8 @@ ftime()
 /*
  * Set the time
  */
-stime()
+void
+stime(void)
 {
 	register struct a {
 		time_t	time;
@@ -61,9 +70,10 @@ stime()
 		time = uap->time;
 }
 
-setuid()
+void
+setuid(void)
 {
-	register uid;
+	register int uid;
 	register struct a {
 		int	uid;
 	} *uap;
@@ -77,16 +87,18 @@ setuid()
 	}
 }
 
-getuid()
+void
+getuid(void)
 {
 
 	u.u_r.r_val1 = u.u_ruid;
 	u.u_r.r_val2 = u.u_uid;
 }
 
-setgid()
+void
+setgid(void)
 {
-	register gid;
+	register int gid;
 	register struct a {
 		int	gid;
 	} *uap;
@@ -99,28 +111,32 @@ setgid()
 	}
 }
 
-getgid()
+void
+getgid(void)
 {
 
 	u.u_r.r_val1 = u.u_rgid;
 	u.u_r.r_val2 = u.u_gid;
 }
 
-getpid()
+void
+getpid(void)
 {
 	u.u_r.r_val1 = u.u_procp->p_pid;
 	u.u_r.r_val2 = u.u_procp->p_ppid;
 }
 
-sync()
+void
+sync(void)
 {
 
 	update();
 }
 
-nice()
+void
+nice(void)
 {
-	register n;
+	register int n;
 	register struct a {
 		int	niceness;
 	} *uap;
@@ -142,12 +158,10 @@ nice()
  * Hard to avoid races here, especially
  * in unlinking directories.
  */
-unlink()
+void
+unlink(void)
 {
 	register struct inode *ip, *pp;
-	struct a {
-		char	*fname;
-	};
 
 	pp = namei(uchar, 2);
 	if(pp == NULL)
@@ -191,24 +205,24 @@ out:
 out1:
 	iput(pp);
 }
-chdir()
+
+void
+chdir(void)
 {
 	chdirec(&u.u_cdir);
 }
 
-chroot()
+void
+chroot(void)
 {
 	if (suser())
 		chdirec(&u.u_rdir);
 }
 
-chdirec(ipp)
-register struct inode **ipp;
+void
+chdirec(register struct inode **ipp)
 {
 	register struct inode *ip;
-	struct a {
-		char	*fname;
-	};
 
 	ip = namei(uchar, 0);
 	if(ip == NULL)
@@ -231,7 +245,8 @@ bad:
 	iput(ip);
 }
 
-chmod()
+void
+chmod(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -252,7 +267,8 @@ chmod()
 	iput(ip);
 }
 
-chown()
+void
+chown(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -270,9 +286,10 @@ chown()
 	iput(ip);
 }
 
-ssig()
+void
+ssig(void)
 {
-	register a;
+	register int a;
 	struct a {
 		int	signo;
 		int	fun;
@@ -289,10 +306,11 @@ ssig()
 	u.u_procp->p_sig &= ~(1<<(a-1));
 }
 
-kill()
+void
+kill(void)
 {
 	register struct proc *p, *q;
-	register a;
+	register int a;
 	register struct a {
 		int	pid;
 		int	signo;
@@ -324,7 +342,8 @@ kill()
 		u.u_error = ESRCH;
 }
 
-times()
+void
+times(void)
 {
 	register struct a {
 		time_t	(*times)[4];
@@ -335,7 +354,8 @@ times()
 		u.u_error = EFAULT;
 }
 
-profil()
+void
+profil(void)
 {
 	register struct a {
 		short	*bufbase;
@@ -354,10 +374,11 @@ profil()
 /*
  * alarm clock signal
  */
-alarm()
+void
+alarm(void)
 {
 	register struct proc *p;
-	register c;
+	register int c;
 	register struct a {
 		int	deltat;
 	} *uap;
@@ -369,26 +390,20 @@ alarm()
 	u.u_r.r_val1 = c;
 }
 
-/*
- * indefinite wait.
- * no one should wakeup(&u)
- */
-pause()
-{
-
-	for(;;)
-		sleep((caddr_t)&u, PSLEP);
-}
+/* v7's pause(2) implementation is gone -- arch/armboot.c has its own
+ * sys_pause_v7 that uses the mt_block_on_pipe + clock-tick wake path
+ * instead of the v7 sleep()/wakeup() handoff. */
 
 /*
  * mode mask for creation of files
  */
-umask()
+void
+umask(void)
 {
 	register struct a {
 		int	mask;
 	} *uap;
-	register t;
+	register int t;
 
 	uap = (struct a *)u.u_ap;
 	t = u.u_cmask;
@@ -400,7 +415,8 @@ umask()
  * Set IUPD and IACC times on file.
  * Can't set ICHG.
  */
-utime()
+void
+utime(void)
 {
 	register struct a {
 		char	*fname;

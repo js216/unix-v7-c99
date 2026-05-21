@@ -11,12 +11,11 @@
 #include <sys/stat.h>
 
 static	char	dev[]	= "/dev/";
-char	*strcpy();
-char	*strcat();
+char	*strcpy(char *a, char *b);
+char	*strcat(char *a, char *b);
 
 char *
-ttyname(f)
-int f;
+ttyname(int f)
 {
 	struct stat fsb;
 	struct stat tsb;

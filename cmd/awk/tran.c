@@ -19,7 +19,7 @@ cell	*nfloc;		/* NF */
 int error(), recbld(), checkval(), hash(), isnumber();
 
 int
-syminit()
+syminit(void)
 {
 	setsymtab("0", tostring("0"), 0.0, NUM|STR|CON|FLD, symtab);
 	recloc = setsymtab("$record", record, 0.0, STR|FLD, symtab);
@@ -37,7 +37,7 @@ syminit()
 	return(0);
 }
 
-cell **makesymtab()
+cell **makesymtab(void)
 {
 	int i;
 	cell **cp;
@@ -51,8 +51,7 @@ cell **makesymtab()
 }
 
 int
-freesymtab(ap)	/* free symbol table */
-cell *ap;
+freesymtab(cell *ap)	/* free symbol table */
 {
 	cell *cp, **tp;
 	int i;
@@ -71,15 +70,11 @@ cell *ap;
 	return(0);
 }
 
-cell *setsymtab(n, s, f, t, tab)
-char *n, *s;
-awkfloat f;
-unsigned t;
-cell **tab;
+cell *setsymtab(char *n, char *s, awkfloat f, unsigned t, cell **tab)
 {
 	register int h;
 	register cell *p;
-	cell *lookup();
+	cell *lookup(register char *s, cell **tab);
 
 	if (n != NULL && (p = lookup(n, tab)) != NULL) {
 		xfree(s);
@@ -103,8 +98,7 @@ cell **tab;
 }
 
 int
-hash(s)	/* form hash value for string s */
-register char *s;
+hash(register char *s)	/* form hash value for string s */
 {
 	register int hashval;
 
@@ -113,9 +107,7 @@ register char *s;
 	return(hashval % MAXSYM);
 }
 
-cell *lookup(s, tab)	/* look for s in tab */
-register char *s;
-cell **tab;
+cell *lookup(register char *s, cell **tab)	/* look for s in tab */
 {
 	register cell *p;
 
@@ -125,9 +117,7 @@ cell **tab;
 	return(NULL);	/* not found */
 }
 
-awkfloat setfval(vp, f)
-register cell *vp;
-awkfloat f;
+awkfloat setfval(register cell *vp, awkfloat f)
 {
 	dprintf("setfval: %o %g\n", vp, f, NULL);
 	checkval(vp);
@@ -140,9 +130,7 @@ awkfloat f;
 	return(vp->fval = f);
 }
 
-char *setsval(vp, s)
-register cell *vp;
-char *s;
+char *setsval(register cell *vp, char *s)
 {
 	dprintf("setsval: %o %s\n", vp, s, NULL);
 	checkval(vp);
@@ -158,8 +146,7 @@ char *s;
 	return(vp->sval = tostring(s));
 }
 
-awkfloat getfval(vp)
-register cell *vp;
+awkfloat getfval(register cell *vp)
 {
 	awkfloat atof();
 
@@ -184,8 +171,7 @@ register cell *vp;
 	return(vp->fval);
 }
 
-char *getsval(vp)
-register cell *vp;
+char *getsval(register cell *vp)
 {
 	char s[100];
 
@@ -209,8 +195,7 @@ register cell *vp;
 }
 
 int
-checkval(vp)
-register cell *vp;
+checkval(register cell *vp)
 {
 	if (vp->tval & ARR)
 		error(FATAL, "illegal reference to array %s", vp->nval);
@@ -220,8 +205,7 @@ register cell *vp;
 	return(0);
 }
 
-char *tostring(s)
-register char *s;
+char *tostring(register char *s)
 {
 	register char *p;
 
@@ -233,8 +217,7 @@ register char *s;
 }
 #ifndef yfree
 int
-yfree(a) char *a;
-{
+yfree(char *a) {
 	printf("%o\n", a);
 	free(a);
 	return(0);
@@ -242,7 +225,7 @@ yfree(a) char *a;
 #endif
 #ifdef malloc
 #undef malloc
-char *ymalloc(u) unsigned u;
+char *ymalloc(unsigned u)
 {	char *p;
 	p = malloc(u);
 	printf("%o %o\n", u, p);

@@ -5,7 +5,8 @@
 static int oldout;
 static char tee[50];
 
-maktee()
+int
+maktee(void)
 {
 	int fpip[2], in, out;
 
@@ -34,7 +35,8 @@ maktee()
 	return(1);
 }
 
-untee()
+void
+untee(void)
 {
 	int x;
 

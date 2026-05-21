@@ -22,19 +22,17 @@ struct iostat_info {
 };
 
 struct nlist nl[] = {
-	{"_dk_busy"},
-	{"_dk_numb"},
-	{"_dk_wds"},
-	{"_io_info"},
-	{"_dk_time"},
-	{"_lbolt"},
-	{"\0\0\0\0\0\0\0\0"}
+	{"_dk_busy",            0, 0},
+	{"_dk_numb",            0, 0},
+	{"_dk_wds",             0, 0},
+	{"_io_info",            0, 0},
+	{"_dk_time",            0, 0},
+	{"_lbolt",              0, 0},
+	{"\0\0\0\0\0\0\0\0",    0, 0}
 };
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int mem;
 	int dk_busy;

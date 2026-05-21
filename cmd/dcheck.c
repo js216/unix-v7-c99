@@ -36,9 +36,7 @@ char	*malloc();
 int	l3tol(long *lp, char *cp, int n);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	long n;
@@ -70,8 +68,7 @@ char *argv[];
 }
 
 int
-check(file)
-char *file;
+check(char *file)
 {
 	register int i;
 	register int j;
@@ -127,8 +124,7 @@ char *file;
 }
 
 int
-pass1(ip)
-register struct dinode *ip;
+pass1(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -176,8 +172,7 @@ register struct dinode *ip;
 }
 
 int
-pass2(ip)
-register struct dinode *ip;
+pass2(register struct dinode *ip)
 {
 	register int i;
 
@@ -198,10 +193,7 @@ register struct dinode *ip;
 }
 
 int
-bread(bno, buf, cnt)
-daddr_t bno;
-char *buf;
-int cnt;
+bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
@@ -216,8 +208,7 @@ int cnt;
 
 
 daddr_t
-bmap(i)
-int i;
+bmap(int i)
 {
 	daddr_t ibuf[NINDIR];
 

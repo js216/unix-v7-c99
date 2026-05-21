@@ -14,7 +14,7 @@
 */
 
 
-double static sq2p1	 =2.414213562373095048802e0;
+static double sq2p1	 =2.414213562373095048802e0;
 static double sq2m1	 = .414213562373095048802e0;
 static double pio2	 =1.570796326794896619231e0;
 static double pio4	 = .785398163397448309615e0;
@@ -39,8 +39,7 @@ static double xatan(double);
 */
 
 double
-atan(arg)
-double arg;
+atan(double arg)
 {
 	if(arg>0)
 		return(satan(arg));
@@ -55,8 +54,7 @@ double arg;
 */
 
 double
-atan2(arg1,arg2)
-double arg1,arg2;
+atan2(double arg1, double arg2)
 {
 	if((arg1+arg2)==arg1)
 		if(arg1 >= 0.) return(pio2);
@@ -78,8 +76,7 @@ double arg1,arg2;
 */
 
 static double
-satan(arg)
-double arg;
+satan(double arg)
 {
 	if(arg < sq2m1)
 		return(xatan(arg));
@@ -95,8 +92,7 @@ double arg;
 */
 
 static double
-xatan(arg)
-double arg;
+xatan(double arg)
 {
 	double argsq;
 	double value;

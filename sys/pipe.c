@@ -4,7 +4,10 @@
 #include "../h/user.h"
 #include "../h/inode.h"
 #include "../h/file.h"
-#include "../h/reg.h"
+#include "../h/proto.h"
+
+/* readi/writei/plock/prele/psignal/min come from h/systm.h.
+ * sleep/wakeup come from h/proto.h. */
 
 /*
  * Max allowable buffering per pipe.
@@ -16,50 +19,18 @@
  */
 #define	PIPSIZ	4096
 
-/*
- * The sys-pipe entry.
- * Allocate an inode on the root device.
- * Allocate 2 file structures.
- * Put it all together with flags.
- */
-pipe()
-{
-	register struct inode *ip;
-	register struct file *rf, *wf;
-	int r;
-
-	ip = ialloc(pipedev);
-	if(ip == NULL)
-		return;
-	rf = falloc();
-	if(rf == NULL) {
-		iput(ip);
-		return;
-	}
-	r = u.u_r.r_val1;
-	wf = falloc();
-	if(wf == NULL) {
-		rf->f_count = 0;
-		u.u_ofile[r] = NULL;
-		iput(ip);
-		return;
-	}
-	u.u_r.r_val2 = u.u_r.r_val1;
-	u.u_r.r_val1 = r;
-	wf->f_flag = FWRITE|FPIPE;
-	wf->f_inode = ip;
-	rf->f_flag = FREAD|FPIPE;
-	rf->f_inode = ip;
-	ip->i_count = 2;
-	ip->i_mode = IFREG;
-	ip->i_flag = IACC|IUPD|ICHG;
-}
+/* v7's pipe(2) implementation (allocate inode + two file structs + wire
+ * FREAD/FWRITE) is gone -- arch/armboot.c::sys_pipe maintains its own
+ * pipes[NPIPES] table that doesn't touch the v7 inode[]/file[] arrays.
+ * readp() and writep() are still kept because v7's read(2)/write(2)
+ * fast path on FPIPE-flagged file structs lands here, even though new
+ * pipe creation no longer creates such structs in this port. */
 
 /*
  * Read call directed to a pipe.
  */
-readp(fp)
-register struct file *fp;
+void
+readp(register struct file *fp)
 {
 	register struct inode *ip;
 
@@ -113,10 +84,10 @@ loop:
 /*
  * Write call directed to a pipe.
  */
-writep(fp)
-register struct file *fp;
+void
+writep(register struct file *fp)
 {
-	register c;
+	register int c;
 	register struct inode *ip;
 
 	ip = fp->f_inode;
@@ -181,36 +152,6 @@ loop:
 	goto loop;
 }
 
-/*
- * Lock a pipe.
- * If its already locked,
- * set the WANT bit and sleep.
- */
-plock(ip)
-register struct inode *ip;
-{
-
-	while(ip->i_flag&ILOCK) {
-		ip->i_flag |= IWANT;
-		sleep((caddr_t)ip, PINOD);
-	}
-	ip->i_flag |= ILOCK;
-}
-
-/*
- * Unlock a pipe.
- * If WANT bit is on,
- * wakeup.
- * This routine is also used
- * to unlock inodes in general.
- */
-prele(ip)
-register struct inode *ip;
-{
-
-	ip->i_flag &= ~ILOCK;
-	if(ip->i_flag&IWANT) {
-		ip->i_flag &= ~IWANT;
-		wakeup((caddr_t)ip);
-	}
-}
+/* v7's plock/prele are in arch/v7stubs.c -- cooperative-scheduling
+ * variants that just flip ILOCK without ever sleeping, since the ARM
+ * port runs without the v7 sleep()/wakeup() handoff path. */

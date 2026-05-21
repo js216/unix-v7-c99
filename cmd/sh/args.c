@@ -9,9 +9,15 @@
 
 #include	"defs.h"
 
-PROC DOLPTR	copyargs();
-LOCAL STRING	comstring();
+PROC DOLPTR	copyargs(STRING from[], INT n);
+LOCAL STRING	comstring(STRING av[]);
 LOCAL DOLPTR	dolh;
+
+INT	failed(STRING s1, STRING s2);
+DOLPTR	freeargs(DOLPTR blk);
+INT	assnum(STRING *p, INT n);
+INT	pop(void);
+extern void free(void *p);
 
 CHAR	flagadr[10];
 
@@ -25,9 +31,7 @@ INT	flagval[]  = {
 /* ========	option handling	======== */
 
 
-INT	options(argc,argv)
-	STRING		*argv;
-	INT		argc;
+INT	options(INT argc, STRING *argv)
 {
 	REG STRING	cp;
 	REG STRING	*argp=argv;
@@ -66,8 +70,7 @@ INT	options(argc,argv)
 	return(argc);
 }
 
-LOCAL STRING	comstring(av)
-	STRING		av[];
+LOCAL STRING	comstring(STRING av[])
 {
 	REG STRING	cp;
 	REG STRING	s, q;
@@ -91,8 +94,7 @@ LOCAL STRING	comstring(av)
 	return(q);
 }
 
-VOID	setargs(argi)
-	STRING		argi[];
+VOID	setargs(STRING argi[])
 {
 	/* count args */
 	REG STRING	*argp=argi;
@@ -104,19 +106,19 @@ VOID	setargs(argi)
 	freeargs(dolh);
 	dolh=copyargs(argi,argn);	/* sets dolv */
 	assnum(&dolladr,dolc=argn-1);
+	return(0);
 }
 
-freeargs(blk)
-	DOLPTR		blk;
+DOLPTR freeargs(DOLPTR blk)
 {
 	REG STRING	*argp;
 	REG DOLPTR	argr=0;
 	REG DOLPTR	argblk;
 
-	IF argblk=blk
+	IF (argblk=blk)
 	THEN	argr = argblk->dolnxt;
 		IF (--argblk->doluse)==0
-		THEN	FOR argp=argblk->dolarg; Rcheat(*argp)!=ENDARGS; argp++
+		THEN	FOR argp=(STRING *)argblk->dolarg; Rcheat(*argp)!=ENDARGS; argp++
 			DO free(*argp) OD
 			free(argblk);
 		FI
@@ -124,15 +126,14 @@ freeargs(blk)
 	return(argr);
 }
 
-LOCAL DOLPTR	copyargs(from, n)
-	STRING		from[];
+LOCAL DOLPTR	copyargs(STRING from[], INT n)
 {
-	REG DOLPTR	np=alloc(sizeof(STRING*)*n+3*BYTESPERWORD);
+	REG DOLPTR	np=(DOLPTR)alloc(sizeof(STRING*)*n+3*BYTESPERWORD);
 	REG STRING *	fp=from;
 	REG STRING *	pp;
 
 	np->doluse=1;	/* use count */
-	pp=np->dolarg;
+	pp=(STRING *)np->dolarg;
 	dolv=pp;
 
 	WHILE n--
@@ -141,16 +142,17 @@ LOCAL DOLPTR	copyargs(from, n)
 	return(np);
 }
 
-clearup()
+INT clearup(void)
 {
 	/* force `for' $* lists to go away */
-	WHILE argfor=freeargs(argfor) DONE
+	WHILE (argfor=freeargs(argfor)) DONE
 
 	/* clean up io files */
 	WHILE pop() DONE
+	return(0);
 }
 
-DOLPTR	useargs()
+DOLPTR	useargs(void)
 {
 	IF dolh
 	THEN	dolh->doluse++;

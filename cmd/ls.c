@@ -39,10 +39,10 @@ struct	lbuf	**lastp = flist;
 struct	lbuf	**firstp = flist;
 char	*dotp	= ".";
 
-char	*makename();
-struct	lbuf *gstat();
-char	*ctime();
-long	nblock();
+char	*makename(char *dir, char *file);
+struct	lbuf *gstat(char *file, int argfl);
+char	*ctime(long *t);
+long	nblock(long size);
 void	pentry(struct lbuf *ap);
 int	getname(int uid, char buf[]);
 void	pmode(int aflag);
@@ -62,7 +62,7 @@ main(int argc, char *argv[])
 	struct lbuf **epp;
 	struct lbuf lb;
 	char *t;
-	int compar();
+	int compar(struct lbuf **pp1, struct lbuf **pp2);
 
 	setbuf(stdout, stdbuf);
 	time(&lb.lmtime);
@@ -165,7 +165,7 @@ main(int argc, char *argv[])
 	slastp = lastp;
 	for (epp=firstp; epp<slastp; epp++) {
 		ep = *epp;
-		if (ep->ltype=='d' && dflg==0 || fflg) {
+		if ((ep->ltype=='d' && dflg==0) || fflg) {
 			if (argc>1 || Rflg)
 				printf("\n%s:\n", ep->ln.namep);
 			lastp = slastp;
@@ -275,9 +275,7 @@ pentry(struct lbuf *ap)
 }
 
 int
-getname(uid, buf)
-int uid;
-char buf[];
+getname(int uid, char buf[])
 {
 	int j, c, n, i;
 
@@ -310,8 +308,7 @@ char buf[];
 }
 
 long
-nblock(size)
-long size;
+nblock(long size)
 {
 	return((size+511)>>9);
 }
@@ -350,8 +347,7 @@ select(register int *pairp)
 }
 
 char *
-makename(dir, file)
-char *dir, *file;
+makename(char *dir, char *file)
 {
 	static char dfile[100];
 	register char *dp, *fp;
@@ -385,8 +381,8 @@ readdir(char *dir)
 		if (fread((char *)&dentry, sizeof(dentry), 1, dirf) != 1)
 			break;
 		if (dentry.d_ino==0
-		 || aflg==0 && dentry.d_name[0]=='.' &&  (dentry.d_name[1]=='\0'
-			|| dentry.d_name[1]=='.' && dentry.d_name[2]=='\0'))
+		 || (aflg==0 && dentry.d_name[0]=='.' && (dentry.d_name[1]=='\0'
+			|| (dentry.d_name[1]=='.' && dentry.d_name[2]=='\0'))))
 			continue;
 		ep = gstat(makename(dir, dentry.d_name), 0);
 		if (ep==NULL)
@@ -400,9 +396,7 @@ readdir(char *dir)
 }
 
 struct lbuf *
-gstat(file, argfl)
-char *file;
-int argfl;
+gstat(char *file, int argfl)
 {
 	struct stat statb;
 	register struct lbuf *rep;

@@ -8,11 +8,10 @@
 #include	<errno.h>
 
 FILE *
-fdopen(fd, mode)
-	register char *mode;
+fdopen(int fd, register char *mode)
 {
 	register FILE *iop;
-	FILE *_findiop();
+	FILE *_findiop(void);
 
 	if ((iop = _findiop()) == NULL)
 		return(NULL);
@@ -27,7 +26,7 @@ fdopen(fd, mode)
 
 	case 'a':
 		lseek(fd, 0L, 2);
-		/* No break */
+		/* fallthrough */
 	case 'w':
 		iop->_flag |= _IOWRT;
 		break;

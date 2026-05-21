@@ -6,8 +6,11 @@
 #include "../h/file.h"
 #include "../h/conf.h"
 #include "../h/inode.h"
-#include "../h/reg.h"
 #include "../h/acct.h"
+#include "../h/proto.h"
+
+/* wakeup() is declared in h/proto.h.
+ * plock/iput/getfs/namei/uchar/suser/ufalloc/xrele come from h/systm.h. */
 
 /*
  * Convert a user supplied
@@ -17,8 +20,7 @@
  * of the descriptor.
  */
 struct file *
-getf(f)
-register int f;
+getf(register int f)
 {
 	register struct file *fp;
 
@@ -42,14 +44,13 @@ register int f;
  * removal to the referencing file structure.
  * Call device handler on last close.
  */
-closef(fp)
-register struct file *fp;
+void
+closef(register struct file *fp)
 {
 	register struct inode *ip;
 	int flag, mode;
 	dev_t dev;
-	register int (*cfunc)();
-	struct chan *cp;
+	register int (*cfunc)(dev_t, int);
 
 	if(fp == NULL)
 		return;
@@ -59,7 +60,6 @@ register struct file *fp;
 	}
 	ip = fp->f_inode;
 	flag = fp->f_flag;
-	cp = fp->f_un.f_chan;
 	dev = (dev_t)ip->i_un.i_rdev;
 	mode = ip->i_mode;
 
@@ -87,46 +87,16 @@ register struct file *fp;
 		return;
 	}
 
-	if ((flag & FMP) == 0)
-		for(fp=file; fp < &file[NFILE]; fp++)
-			if (fp->f_count && fp->f_inode==ip)
-				return;
-	(*cfunc)(dev, flag, cp);
+	for(fp=file; fp < &file[NFILE]; fp++)
+		if (fp->f_count && fp->f_inode==ip)
+			return;
+	(*cfunc)(dev, flag);
 }
 
-/*
- * openi called to allow handler
- * of special files to initialize and
- * validate before actual IO.
- */
-openi(ip, rw)
-register struct inode *ip;
-{
-	dev_t dev;
-	register unsigned int maj;
-
-	dev = (dev_t)ip->i_un.i_rdev;
-	maj = major(dev);
-	switch(ip->i_mode&IFMT) {
-
-	case IFCHR:
-	case IFMPC:
-		if(maj >= nchrdev)
-			goto bad;
-		(*cdevsw[maj].d_open)(dev, rw);
-		break;
-
-	case IFBLK:
-	case IFMPB:
-		if(maj >= nblkdev)
-			goto bad;
-		(*bdevsw[maj].d_open)(dev, rw);
-	}
-	return;
-
-bad:
-	u.u_error = ENXIO;
-}
+/* v7 openi() (per-driver d_open dispatch for IFCHR/IFBLK) is gone --
+ * open(2) on this port routes through arch/armboot.c::kopen(), which
+ * handles the pseudo-fds and IFREG itself.  The cdevsw[]/bdevsw[]
+ * d_open hook was never reached. */
 
 /*
  * Check mode permission on inode pointer.
@@ -141,10 +111,10 @@ bad:
  * The super user is granted all
  * permissions.
  */
-access(ip, mode)
-register struct inode *ip;
+int
+access(register struct inode *ip, int mode)
 {
-	register m;
+	register int m;
 
 	m = mode;
 	if(m == IWRITE) {
@@ -182,7 +152,7 @@ register struct inode *ip;
  * return inode pointer.
  */
 struct inode *
-owner()
+owner(void)
 {
 	register struct inode *ip;
 
@@ -201,7 +171,8 @@ owner()
  * Test if the current user is the
  * super user.
  */
-suser()
+int
+suser(void)
 {
 
 	if(u.u_uid == 0) {
@@ -215,9 +186,10 @@ suser()
 /*
  * Allocate a user file descriptor.
  */
-ufalloc()
+int
+ufalloc(void)
 {
-	register i;
+	register int i;
 
 	for(i=0; i<NOFILE; i++)
 		if(u.u_ofile[i] == NULL) {
@@ -229,32 +201,6 @@ ufalloc()
 	return(-1);
 }
 
-/*
- * Allocate a user file descriptor
- * and a file structure.
- * Initialize the descriptor
- * to point at the file structure.
- *
- * no file -- if there are no available
- * 	file structures.
- */
-struct file *
-falloc()
-{
-	register struct file *fp;
-	register i;
-
-	i = ufalloc();
-	if(i < 0)
-		return(NULL);
-	for(fp = &file[0]; fp < &file[NFILE]; fp++)
-		if(fp->f_count == 0) {
-			u.u_ofile[i] = fp;
-			fp->f_count++;
-			fp->f_un.f_offset = 0;
-			return(fp);
-		}
-	printf("no file\n");
-	u.u_error = ENFILE;
-	return(NULL);
-}
+/* v7 falloc() (allocate fd + file slot, return file*) is gone -- its
+ * only callers were sys2.c::open1 and pipe.c::pipe, both removed.
+ * arch/armboot.c uses its own files[NFD] table instead of file[NFILE]. */

@@ -4,10 +4,7 @@
 #define	NTAB	601
 char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
-double	getflt();
-int	fperr();
-struct	table	*hash();
-int	init(), convr(), units(), pu(), lookup(), equal(), get();
+
 struct unit
 {
 	double	factor;
@@ -20,30 +17,38 @@ struct table
 	char	dim[NDIM];
 	char	*name;
 } table[NTAB];
+
+double	getflt(void);
+int	fperr(int sig);
+struct	table	*hash(char *name);
+int	init(void), convr(struct unit *up), units(struct unit *up);
+int	pu(int u, int i, int f);
+int	lookup(char *name, struct unit *up, int den, int c);
+int	equal(char *s1, char *s2), get(void);
 char	names[NTAB*10];
 struct prefix
 {
 	double	factor;
 	char	*pname;
-} prefix[] = 
+} prefix[] =
 {
-	1e-18,	"atto",
-	1e-15,	"femto",
-	1e-12,	"pico",
-	1e-9,	"nano",
-	1e-6,	"micro",
-	1e-3,	"milli",
-	1e-2,	"centi",
-	1e-1,	"deci",
-	1e1,	"deka",
-	1e2,	"hecta",
-	1e2,	"hecto",
-	1e3,	"kilo",
-	1e6,	"mega",
-	1e6,	"meg",
-	1e9,	"giga",
-	1e12,	"tera",
-	0.0,	0
+	{1e-18,	"atto"},
+	{1e-15,	"femto"},
+	{1e-12,	"pico"},
+	{1e-9,	"nano"},
+	{1e-6,	"micro"},
+	{1e-3,	"milli"},
+	{1e-2,	"centi"},
+	{1e-1,	"deci"},
+	{1e1,	"deka"},
+	{1e2,	"hecta"},
+	{1e2,	"hecto"},
+	{1e3,	"kilo"},
+	{1e6,	"mega"},
+	{1e6,	"meg"},
+	{1e9,	"giga"},
+	{1e12,	"tera"},
+	{0.0,	0}
 };
 FILE	*inp;
 int	fperrc;
@@ -51,9 +56,7 @@ int	peekc;
 int	dumpflg;
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	register char *file;
@@ -110,8 +113,7 @@ fp:
 }
 
 int
-units(up)
-struct unit *up;
+units(struct unit *up)
 {
 	register struct unit *p;
 	register int f, i;
@@ -132,8 +134,7 @@ struct unit *up;
 }
 
 int
-pu(u, i, f)
-int u, i, f;
+pu(int u, int i, int f)
 {
 
 	if(u > 0) {
@@ -144,7 +145,7 @@ int u, i, f;
 			printf("*%c*", i+'a');
 		if(u > 1)
 			putchar(u+'0');
-			return(2);
+		return(2);
 	}
 	if(u < 0)
 		return(1);
@@ -152,8 +153,7 @@ int u, i, f;
 }
 
 int
-convr(up)
-struct unit *up;
+convr(struct unit *up)
 {
 	register struct unit *p;
 	register int c;
@@ -204,10 +204,7 @@ loop:
 }
 
 int
-lookup(name, up, den, c)
-char *name;
-struct unit *up;
-int den, c;
+lookup(char *name, struct unit *up, int den, int c)
 {
 	register struct unit *p;
 	register struct table *q;
@@ -237,7 +234,7 @@ loop:
 		}
 		return(0);
 	}
-	for(i=0; cp1 = prefix[i].pname; i++) {
+	for(i=0; (cp1 = prefix[i].pname); i++) {
 		cp2 = name;
 		while(*cp1 == *cp2++)
 			if(*cp1++ == 0) {
@@ -260,8 +257,7 @@ loop:
 }
 
 int
-equal(s1, s2)
-char *s1, *s2;
+equal(char *s1, char *s2)
 {
 	register char *c1, *c2;
 
@@ -274,7 +270,7 @@ char *s1, *s2;
 }
 
 int
-init()
+init(void)
 {
 	register char *cp;
 	register struct table *tp, *lp;
@@ -306,7 +302,7 @@ l0:
 			if(tp->name == 0)
 				continue;
 			printf("%s", tp->name);
-			units(tp);
+			units((struct unit *)tp);
 		}
 		fclose(inp);
 		inp = stdin;
@@ -342,7 +338,7 @@ l0:
 	lp = hash(np);
 	if(lp->name)
 		goto redef;
-	convr(lp);
+	convr((struct unit *)lp);
 	lp->name = np;
 	f = 0;
 	i++;
@@ -368,7 +364,7 @@ redef:
 }
 
 double
-getflt()
+getflt(void)
 {
 	register int c, i, dp;
 	double d, e;
@@ -425,11 +421,11 @@ l1:
 }
 
 int
-get()
+get(void)
 {
 	register int c;
 
-	if(c=peekc) {
+	if((c=peekc)) {
 		peekc = 0;
 		return(c);
 	}
@@ -445,8 +441,7 @@ get()
 }
 
 struct table *
-hash(name)
-char *name;
+hash(char *name)
 {
 	register struct table *tp;
 	register char *np;
@@ -470,9 +465,9 @@ l0:
 }
 
 int
-fperr()
+fperr(int sig)
 {
-
+	(void)sig;
 	signal(8, (int)fperr);
 	fperrc++;
 	return(0);

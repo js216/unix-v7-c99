@@ -1,12 +1,11 @@
 #include	<stdio.h>
 
 int
-puts(s)
-register char *s;
+puts(register char *s)
 {
 	register int c;
 
-	while (c = *s++)
+	while ((c = *s++))
 		putchar(c);
 	return(putchar('\n'));
 }

@@ -6,11 +6,10 @@
 #define	NULL	0
 
 char *
-index(sp, c)
-register char *sp, c;
+index(register char *sp, int c)
 {
 	do {
-		if (*sp == c)
+		if (*sp == (char)c)
 			return(sp);
 	} while (*sp++);
 	return(NULL);

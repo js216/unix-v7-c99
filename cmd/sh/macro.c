@@ -10,13 +10,32 @@
 #include	"defs.h"
 #include	"sym.h"
 
+LOCAL INT	getch(CHAR endch);
+LOCAL INT	skipto(CHAR endch);
+LOCAL INT	comsubst(void);
+LOCAL INT	flush(INT ot);
+INT	error(STRING s);
+INT	readc(void);
+INT	failed(STRING s1, STRING s2);
+INT	assign(NAMPTR n, STRING v);
+INT	push(FILE af);
+INT	pop(void);
+INT	estabf(REG STRING s);
+INT	trim(STRING at);
+INT	chkpipe(INT *pv);
+INT	initf(UFD fd);
+INT	execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2);
+INT	tdystak(REG STKPTR x);
+INT	await(INT i);
+extern int close(int fd);
+extern int write(int fd, char *buf, int n);
+
 LOCAL CHAR	quote;	/* used locally */
 LOCAL CHAR	quoted;	/* used locally */
 
 
 
-LOCAL STRING	copyto(endch)
-	REG CHAR	endch;
+LOCAL STRING	copyto(INT endch)
 {
 	REG CHAR	c;
 
@@ -24,10 +43,10 @@ LOCAL STRING	copyto(endch)
 	DO pushstak(c|quote) OD
 	zerostak();
 	IF c!=endch THEN error(badsub) FI
+	return(0);
 }
 
-LOCAL	skipto(endch)
-	REG CHAR	endch;
+LOCAL INT skipto(CHAR endch)
 {
 	/* skip chars up to } */
 	REG CHAR	c;
@@ -44,10 +63,10 @@ LOCAL	skipto(endch)
 		ENDSW
 	OD
 	IF c!=endch THEN error(badsub) FI
+	return(0);
 }
 
-LOCAL	getch(endch)
-	CHAR		endch;
+LOCAL INT getch(CHAR endch)
 {
 	REG CHAR	d;
 
@@ -59,16 +78,16 @@ retry:
 	IF d==DOLLAR
 	THEN	REG INT	c;
 		IF (c=readc(), dolchar(c))
-		THEN	NAMPTR		n=NIL;
+		THEN	NAMPTR		n=(NAMPTR)NIL;
 			INT		dolg=0;
 			BOOL		bra;
 			REG STRING	argp, v;
 			CHAR		idb[2];
 			STRING		id=idb;
 
-			IF bra=(c==BRACE) THEN c=readc() FI
+			IF (bra=(c==BRACE)) THEN c=readc() FI
 			IF letter(c)
-			THEN	argp=relstak();
+			THEN	argp=(STRING)(long)relstak();
 				WHILE alphanum(c) DO pushstak(c); c=readc() OD
 				zerostak();
 				n=lookup(absstak(argp)); setstak(argp);
@@ -80,7 +99,7 @@ retry:
 				THEN	dolg=1; c='1';
 				FI
 				c -= '0';
-				v=((c==0) ? cmdadr : (c<=dolc) ? dolv[c] : (dolg=0));
+				v=((c==0) ? cmdadr : (c<=dolc) ? dolv[c] : (STRING)(long)(dolg=0));
 			ELIF c=='$'
 			THEN	v=pidadr;
 			ELIF c=='!'
@@ -101,7 +120,7 @@ retry:
 			argp=0;
 			IF bra
 			THEN	IF c!='}'
-				THEN	argp=relstak();
+				THEN	argp=(STRING)(long)relstak();
 					IF (v==0)NEQ(setchar(c))
 					THEN	copyto('}');
 					ELSE	skipto('}');
@@ -112,7 +131,7 @@ retry:
 			FI
 			IF v
 			THEN	IF c!='+'
-				THEN	LOOP WHILE c = *v++
+				THEN	LOOP WHILE (c = *v++)
 					     DO pushstak(c|quote); OD
 					     IF dolg==0 ORF (++dolg>dolc)
 					     THEN break;
@@ -145,8 +164,7 @@ retry:
 	return(d);
 }
 
-STRING	macro(as)
-	STRING		as;
+STRING	macro(STRING as)
 {
 	/* Strip "" and do $ substitution
 	 * Leaves result on top of stack
@@ -155,7 +173,7 @@ STRING	macro(as)
 	REG CHAR	savq = quote;
 	FILEHDR		fb;
 
-	push(&fb); estabf(as);
+	push((FILE)&fb); estabf(as);
 	usestak();
 	quote=0; quoted=0;
 	copyto(0);
@@ -165,7 +183,7 @@ STRING	macro(as)
 	return(fixstak());
 }
 
-LOCAL	comsubst()
+LOCAL INT comsubst(void)
 {
 	/* command substn */
 	FILEBLK		cb;
@@ -194,7 +212,7 @@ LOCAL	comsubst()
 	   close(pv[OTPIPE]);
 	END
 	tdystak(savptr); staktop=movstr(savptr,stakbot);
-	WHILE d=readc() DO pushstak(d|quote) OD
+	WHILE (d=readc()) DO pushstak(d|quote) OD
 	await(0);
 	WHILE stakbot!=staktop
 	DO	IF (*--staktop&STRIP)!=NL
@@ -202,12 +220,12 @@ LOCAL	comsubst()
 		FI
 	OD
 	pop();
+	return(0);
 }
 
 #define CPYSIZ	512
 
-subst(in,ot)
-	INT		in, ot;
+INT subst(INT in, INT ot)
 {
 	REG CHAR	c;
 	FILEBLK		fb;
@@ -215,7 +233,7 @@ subst(in,ot)
 
 	push(&fb); initf(in);
 	/* DQUOTE used to stop it from quoting */
-	WHILE c=(getch(DQUOTE)&STRIP)
+	WHILE (c=(getch(DQUOTE)&STRIP))
 	DO pushstak(c);
 	   IF --count == 0
 	   THEN	flush(ot); count=CPYSIZ;
@@ -223,11 +241,13 @@ subst(in,ot)
 	OD
 	flush(ot);
 	pop();
+	return(0);
 }
 
-LOCAL	flush(ot)
+LOCAL INT flush(INT ot)
 {
 	write(ot,stakbot,staktop-stakbot);
 	IF flags&execpr THEN write(output,stakbot,staktop-stakbot) FI
 	staktop=stakbot;
+	return(0);
 }

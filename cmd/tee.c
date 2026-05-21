@@ -16,7 +16,7 @@ char in[512];
 char out[512];
 
 int errno;
-long	lseek();
+long	lseek(int fd, long offset, int ptrname);
 int	creat(char *path, int mode);
 int	stat(char *path, struct stat *buf);
 int	signal(int sig, int fun);

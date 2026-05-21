@@ -1,10 +1,8 @@
 /*
  * Convert longs to and from 3-byte disk addresses
  */
-ltol3(cp, lp, n)
-char	*cp;
-long	*lp;
-int	n;
+int
+ltol3(char *cp, long *lp, int n)
 {
 	register int i;
 	register char *a, *b;
@@ -27,10 +25,8 @@ int	n;
 	return(0);
 }
 
-l3tol(lp, cp, n)
-long	*lp;
-char	*cp;
-int	n;
+int
+l3tol(long *lp, char *cp, int n)
 {
 	register int i;
 	register char *a, *b;

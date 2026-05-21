@@ -3,10 +3,12 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-#include "../h/inode.h"
-#include "../h/reg.h"
-#include "../h/text.h"
-#include "../h/seg.h"
+#include "../h/proto.h"
+
+/* setrun comes from h/systm.h.  wakeup/sleep come from h/proto.h. */
+
+int fsig(struct proc *p);
+void psignal(struct proc *p, int sig);
 
 /*
  * Priority for tracing
@@ -29,32 +31,17 @@ struct
 	int	ip_data;
 } ipc;
 
-/*
- * Send the specified signal to
- * all processes with 'pgrp' as
- * process group.
- * Called by tty.c for quits and
- * interrupts.
- */
-signal(pgrp, sig)
-register pgrp;
-{
-	register struct proc *p;
-
-	if(pgrp == 0)
-		return;
-	for(p = &proc[0]; p < &proc[NPROC]; p++)
-		if(p->p_pgrp == pgrp)
-			psignal(p, sig);
-}
+/* v7's signal(pgrp, sig) (broadcast sig to every proc in pgrp) is gone
+ * -- its only caller was sys/tty.c (the v7 line-discipline interrupt
+ * path), which this port doesn't compile.  arch/u_bridge.c has its own
+ * v7_signal_pgrp that walks armproc[] instead of proc[]. */
 
 /*
  * Send the specified signal to
  * the specified process.
  */
-psignal(p, sig)
-register struct proc *p;
-register sig;
+void
+psignal(register struct proc *p, register int sig)
 {
 
 	if((unsigned)sig >= NSIG)
@@ -78,9 +65,10 @@ register sig;
  * a flag that asks the process to
  * do something to itself.
  */
-issig()
+int
+issig(void)
 {
-	register n;
+	register int n;
 	register struct proc *p;
 
 	p = u.u_procp;
@@ -93,86 +81,24 @@ issig()
 	return(0);
 }
 
-/*
- * Enter the tracing STOP state.
- * In this state, the parent is
- * informed and the process is able to
- * receive commands from the parent.
- */
-stop()
-{
-	register struct proc *pp, *cp;
+/* v7's stop() (enter SSTOP, signal parent, wait for procxmt cmd) and
+ * its co-routine procxmt() (parent ptrace command dispatcher) were
+ * driven by psig(); removed alongside it on this port. */
 
-loop:
-	cp = u.u_procp;
-	if(cp->p_ppid != 1)
-	for (pp = &proc[0]; pp < &proc[NPROC]; pp++)
-		if (pp->p_pid == cp->p_ppid) {
-			wakeup((caddr_t)pp);
-			cp->p_stat = SSTOP;
-			swtch();
-			if ((cp->p_flag&STRC)==0 || procxmt())
-				return;
-			goto loop;
-		}
-	exit(fsig(u.u_procp));
-}
-
-/*
- * Perform the action specified by
- * the current signal.
- * The usual sequence is:
- *	if(issig())
- *		psig();
- */
-psig()
-{
-	register n, p;
-	register struct proc *rp;
-
-	rp = u.u_procp;
-	if (u.u_fpsaved==0) {
-		savfp(&u.u_fps);
-		u.u_fpsaved = 1;
-	}
-	if (rp->p_flag&STRC)
-		stop();
-	n = fsig(rp);
-	if (n==0)
-		return;
-	rp->p_sig &= ~(1<<(n-1));
-	if((p=u.u_signal[n]) != 0) {
-		u.u_error = 0;
-		if(n != SIGINS && n != SIGTRC)
-			u.u_signal[n] = 0;
-		sendsig((caddr_t)p, n);
-		return;
-	}
-	switch(n) {
-
-	case SIGQUIT:
-	case SIGINS:
-	case SIGTRC:
-	case SIGIOT:
-	case SIGEMT:
-	case SIGFPT:
-	case SIGBUS:
-	case SIGSEG:
-	case SIGSYS:
-		if(core())
-			n += 0200;
-	}
-	exit(n);
-}
+/* The v7 issig()/psig() pair handled signal delivery during trap return.
+ * On this port deliver_signal() in arch/armboot.c does it inline so
+ * psig() is never called from C; the resume(u_qsav) path in slp.c's
+ * sleep() loop still uses its own local `psig:` label for the
+ * longjmp-back-on-signal idiom. */
 
 /*
  * find the signal in bit-position
  * representation in p_sig.
  */
-fsig(p)
-struct proc *p;
+int
+fsig(struct proc *p)
 {
-	register n, i;
+	register int n, i;
 
 	n = p->p_sig;
 	for(i=1; i<NSIG; i++) {
@@ -183,95 +109,27 @@ struct proc *p;
 	return(0);
 }
 
-/*
- * Create a core image on the file "core"
- * If you are looking for protection glitches,
- * there are probably a wealth of them here
- * when this occurs to a suid command.
- *
- * It writes USIZE block of the
- * user.h area followed by the entire
- * data+stack segments.
- */
-core()
-{
-	register struct inode *ip;
-	register unsigned s;
-	extern schar();
-
-	u.u_error = 0;
-	u.u_dirp = "core";
-	ip = namei(schar, 1);
-	if(ip == NULL) {
-		if(u.u_error)
-			return(0);
-		ip = maknode(0666);
-		if (ip==NULL)
-			return(0);
-	}
-	if(!access(ip, IWRITE) &&
-	   (ip->i_mode&IFMT) == IFREG &&
-	   u.u_uid == u.u_ruid) {
-		itrunc(ip);
-		u.u_offset = 0;
-		u.u_base = (caddr_t)&u;
-		u.u_count = ctob(USIZE);
-		u.u_segflg = 1;
-		writei(ip);
-		s = u.u_procp->p_size - USIZE;
-		estabur((unsigned)0, s, (unsigned)0, 0, RO);
-		u.u_base = 0;
-		u.u_count = ctob(s);
-		u.u_segflg = 0;
-		writei(ip);
-	}
-	iput(ip);
-	return(u.u_error==0);
-}
-
-/*
- * grow the stack to include the SP
- * true return if successful.
- */
-
-grow(sp)
-unsigned sp;
-{
-	register si, i;
-	register struct proc *p;
-	register a;
-
-	if(sp >= -ctob(u.u_ssize))
-		return(0);
-	si = (-sp)/64 - u.u_ssize + SINCR;
-	if(si <= 0)
-		return(0);
-	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))
-		return(0);
-	p = u.u_procp;
-	expand(p->p_size+si);
-	a = p->p_addr + p->p_size;
-	for(i=u.u_ssize; i; i--) {
-		a--;
-		copyseg(a-si, a);
-	}
-	for(i=si; i; i--)
-		clearseg(--a);
-	u.u_ssize += si;
-	return(1);
-}
+/* v7's core() wrote a process's u-area + data + stack to ./core on a
+ * fatal signal.  Called from psig(); removed alongside it. */
 
 /*
  * sys-trace system call.
+ *
+ * v7's PDP-11 libc/sys/ptrace.s shuffled C args -- it copied req, pid,
+ * addr into trailing-word indirect slots and put data in r0 -- so the
+ * kernel's struct a came out (data, pid, addr, req).  On this ARM port
+ * the SYS macro passes args straight in r0..r3, so u.u_arg[0..3] is
+ * (req, pid, addr, data) -- the natural C order.  Match that here.
  */
-ptrace()
+void
+ptrace(void)
 {
 	register struct proc *p;
 	register struct a {
-		int	data;
+		int	req;
 		int	pid;
 		int	*addr;
-		int	req;
+		int	data;
 	} *uap;
 
 	uap = (struct a *)u.u_ap;
@@ -279,7 +137,7 @@ ptrace()
 		u.u_procp->p_flag |= STRC;
 		return;
 	}
-	for (p=proc; p < &proc[NPROC]; p++) 
+	for (p=proc; p < &proc[NPROC]; p++)
 		if (p->p_stat==SSTOP
 		 && p->p_pid==uap->pid
 		 && p->p_ppid==u.u_procp->p_pid)
@@ -305,113 +163,4 @@ ptrace()
 	wakeup((caddr_t)&ipc);
 }
 
-/*
- * Code that the child process
- * executes to implement the command
- * of the parent process in tracing.
- */
-procxmt()
-{
-	register int i;
-	register *p;
-	register struct text *xp;
-
-	if (ipc.ip_lock != u.u_procp->p_pid)
-		return(0);
-	i = ipc.ip_req;
-	ipc.ip_req = 0;
-	wakeup((caddr_t)&ipc);
-	switch (i) {
-
-	/* read user I */
-	case 1:
-		if (fuibyte((caddr_t)ipc.ip_addr) == -1)
-			goto error;
-		ipc.ip_data = fuiword((caddr_t)ipc.ip_addr);
-		break;
-
-	/* read user D */
-	case 2:
-		if (fubyte((caddr_t)ipc.ip_addr) == -1)
-			goto error;
-		ipc.ip_data = fuword((caddr_t)ipc.ip_addr);
-		break;
-
-	/* read u */
-	case 3:
-		i = (int)ipc.ip_addr;
-		if (i<0 || i >= ctob(USIZE))
-			goto error;
-		ipc.ip_data = ((physadr)&u)->r[i>>1];
-		break;
-
-	/* write user I */
-	/* Must set up to allow writing */
-	case 4:
-		/*
-		 * If text, must assure exclusive use
-		 */
-		if (xp = u.u_procp->p_textp) {
-			if (xp->x_count!=1 || xp->x_iptr->i_mode&ISVTX)
-				goto error;
-			xp->x_iptr->i_flag &= ~ITEXT;
-		}
-		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RW);
-		i = suiword((caddr_t)ipc.ip_addr, 0);
-		suiword((caddr_t)ipc.ip_addr, ipc.ip_data);
-		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
-		if (i<0)
-			goto error;
-		if (xp)
-			xp->x_flag |= XWRIT;
-		break;
-
-	/* write user D */
-	case 5:
-		if (suword((caddr_t)ipc.ip_addr, 0) < 0)
-			goto error;
-		suword((caddr_t)ipc.ip_addr, ipc.ip_data);
-		break;
-
-	/* write u */
-	case 6:
-		i = (int)ipc.ip_addr;
-		p = (int *)&((physadr)&u)->r[i>>1];
-		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
-			goto ok;
-		for (i=0; i<8; i++)
-			if (p == &u.u_ar0[regloc[i]])
-				goto ok;
-		if (p == &u.u_ar0[RPS]) {
-			ipc.ip_data |= 0170000;	/* assure user space */
-			ipc.ip_data &= ~0340;	/* priority 0 */
-			goto ok;
-		}
-		goto error;
-
-	ok:
-		*p = ipc.ip_data;
-		break;
-
-	/* set signal and continue */
-	/*  one version causes a trace-trap */
-	case 9:
-		u.u_ar0[RPS] |= TBIT;
-	case 7:
-		if ((int)ipc.ip_addr != 1)
-			u.u_ar0[PC] = (int)ipc.ip_addr;
-		u.u_procp->p_sig = 0;
-		if (ipc.ip_data)
-			psignal(u.u_procp, ipc.ip_data);
-		return(1);
-
-	/* force exit */
-	case 8:
-		exit(fsig(u.u_procp));
-
-	default:
-	error:
-		ipc.ip_req = -1;
-	}
-	return(0);
-}
+/* procxmt() removed -- see comment above. */

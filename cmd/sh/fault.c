@@ -9,6 +9,22 @@
 
 #include	"defs.h"
 
+extern int signal(int sig, int fun);
+extern void execexp(STRING t, INT in);
+extern void error(STRING s);
+extern void done(void);
+extern INT setbrk(INT n);
+extern void exitset(void);
+extern void free(void *p);
+
+VOID	stdsigs(void);
+INT	ignsig(INT n);
+VOID	getsig(INT n);
+VOID	oldsigs(void);
+VOID	clrsig(INT i);
+VOID	chktrap(void);
+VOID	fault(INT sig);
+
 
 STRING		trapcom[MAXTRAP];
 BOOL		trapflg[MAXTRAP];
@@ -16,12 +32,12 @@ BOOL		trapflg[MAXTRAP];
 /* ========	fault handling routines	   ======== */
 
 
-VOID	fault(sig)
-	REG INT		sig;
+VOID
+fault(INT sig)
 {
 	REG INT		flag;
 
-	signal(sig,fault);
+	signal(sig, (int)fault);
 	IF sig==MEMF
 	THEN	IF setbrk(brkincr) == -1
 		THEN	error(nospace);
@@ -34,17 +50,21 @@ VOID	fault(sig)
 		trapnote |= flag;
 		trapflg[sig] |= flag;
 	FI
+	return(0);
 }
 
-stdsigs()
+VOID
+stdsigs(void)
 {
 	ignsig(QUIT);
 	getsig(INTR);
 	getsig(MEMF);
 	getsig(ALARM);
+	return(0);
 }
 
-ignsig(n)
+INT
+ignsig(INT n)
 {
 	REG INT		s, i;
 
@@ -54,16 +74,19 @@ ignsig(n)
 	return(s);
 }
 
-getsig(n)
+VOID
+getsig(INT n)
 {
 	REG INT		i;
 
 	IF trapflg[i=n]&SIGMOD ORF ignsig(i)==0
-	THEN	signal(i,fault);
+	THEN	signal(i, (int)fault);
 	FI
+	return(0);
 }
 
-oldsigs()
+VOID
+oldsigs(void)
 {
 	REG INT		i;
 	REG STRING	t;
@@ -77,19 +100,22 @@ oldsigs()
 	    trapflg[i]=0;
 	OD
 	trapnote=0;
+	return(0);
 }
 
-clrsig(i)
-	INT		i;
+VOID
+clrsig(INT i)
 {
 	free(trapcom[i]); trapcom[i]=0;
 	IF trapflg[i]&SIGMOD
-	THEN	signal(i,fault);
+	THEN	signal(i, (int)fault);
 		trapflg[i] &= ~SIGMOD;
 	FI
+	return(0);
 }
 
-chktrap()
+VOID
+chktrap(void)
 {
 	/* check for traps */
 	REG INT		i=MAXTRAP;
@@ -99,11 +125,12 @@ chktrap()
 	WHILE --i
 	DO IF trapflg[i]&TRAPSET
 	   THEN trapflg[i] &= ~TRAPSET;
-		IF t=trapcom[i]
+		IF (t=trapcom[i])
 		THEN	INT	savxit=exitval;
 			execexp(t,0);
 			exitval=savxit; exitset();
 		FI
 	   FI
 	OD
+	return(0);
 }

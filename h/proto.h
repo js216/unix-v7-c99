@@ -13,6 +13,7 @@ void mfree(struct map *mp, int size, int a);
 /* prf.c */
 void printf(char *fmt, ...);
 void panic(char *s);
+void prdev(char *str, dev_t dev);
 
 /* pl011.c */
 void putchar(char c);
@@ -30,12 +31,19 @@ void mmuinit(void);
 void startup(void);
 void armboot(void);
 
+/* arch/armboot.c -- v7-side hooks into the multi-thread save-pool. */
+void armboot_setrun(int pid);
+void armboot_swtch(void);
+
+/* arch/swtch.s -- setjmp-style save/resume over label_t (10 ints). */
+int save(int *lp);
+void resume(int addr, int *lp);
+
 /* dev/bio.c */
 struct buf *bread(dev_t dev, daddr_t blkno);
 struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
 void bwrite(struct buf *bp);
 void bdwrite(struct buf *bp);
-void bawrite(struct buf *bp);
 void brelse(struct buf *bp);
 int incore(dev_t dev, daddr_t blkno);
 struct buf *getblk(dev_t dev, daddr_t blkno);
@@ -46,18 +54,19 @@ void iodone(struct buf *bp);
 void clrbuf(struct buf *bp);
 void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
 void bflush(dev_t dev);
-void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 void geterror(struct buf *bp);
 
 /* arch/v7stubs.c */
-void mapfree(struct buf *bp);
 void wakeup(caddr_t chan);
 void sleep(caddr_t chan, int pri);
 int spl0(void);
+int spl1(void);
 int spl6(void);
+int spl7(void);
 void splx(int s);
-int nulldev(void);
 void binit(void);
+void copyseg(int from, int to);
+void clearseg(int a);
 extern dev_t rootdev;
 
 /* dev/mp135_blk.c */

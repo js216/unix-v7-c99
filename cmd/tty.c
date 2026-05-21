@@ -2,7 +2,7 @@
  * Type tty name
  */
 
-char	*ttyname();
+char	*ttyname(int f);
 int strcmp(char *a, char *b);
 int printf(char *fmt, ...);
 void exit(int n);

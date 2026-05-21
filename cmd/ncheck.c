@@ -34,9 +34,9 @@ int	nhent;
 int	nxfile;
 
 int	nerror;
-daddr_t	bmap();
-long	atol();
-struct htab *lookup();
+daddr_t	bmap(int i);
+long	atol(register char *p);
+struct htab *lookup(ino_t i, int ef);
 int	check(char *file);
 int	pass1(struct dinode *ip);
 int	pass2(struct dinode *ip);
@@ -47,9 +47,7 @@ int	bread(daddr_t bno, char *buf, int cnt);
 int	l3tol(long *lp, char *cp, int n);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	long n;
@@ -89,8 +87,7 @@ char *argv[];
 }
 
 int
-check(file)
-char *file;
+check(char *file)
 {
 	register int i, j;
 	ino_t mino;
@@ -147,24 +144,24 @@ char *file;
 }
 
 int
-pass1(ip)
-register struct dinode *ip;
+pass1(register struct dinode *ip)
 {
 	if((ip->di_mode & IFMT) != IFDIR) {
 		if (sflg==0 || nxfile>=NB)
 			return(0);
 		if ((ip->di_mode&IFMT)==IFBLK || (ip->di_mode&IFMT)==IFCHR
-		  || ip->di_mode&(ISUID|ISGID))
+		  || ip->di_mode&(ISUID|ISGID)) {
 			ilist[nxfile++] = ino;
 			return(0);
+		}
+		return(0);
 	}
 	lookup(ino, 1);
 	return(0);
 }
 
 int
-pass2(ip)
-register struct dinode *ip;
+pass2(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -208,8 +205,7 @@ register struct dinode *ip;
 }
 
 int
-pass3(ip)
-register struct dinode *ip;
+pass3(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -259,8 +255,7 @@ register struct dinode *ip;
 }
 
 int
-dotname(dp)
-register struct direct *dp;
+dotname(register struct direct *dp)
 {
 
 	if (dp->d_name[0]=='.')
@@ -270,9 +265,7 @@ register struct direct *dp;
 }
 
 int
-pname(i, lev)
-int i;
-int lev;
+pname(int i, int lev)
 {
 	register struct htab *hp;
 
@@ -292,9 +285,7 @@ int lev;
 }
 
 struct htab *
-lookup(i, ef)
-ino_t i;
-int ef;
+lookup(ino_t i, int ef)
 {
 	register struct htab *hp;
 
@@ -315,10 +306,7 @@ int ef;
 }
 
 int
-bread(bno, buf, cnt)
-daddr_t bno;
-char *buf;
-int cnt;
+bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
@@ -332,8 +320,7 @@ int cnt;
 }
 
 daddr_t
-bmap(i)
-int i;
+bmap(int i)
 {
 	daddr_t ibuf[NINDIR];
 

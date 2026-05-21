@@ -1,11 +1,10 @@
 #include	<stdio.h>
 
-char	*malloc();
+char	*malloc(unsigned n);
 
 
 int
-_filbuf(iop)
-	register FILE *iop;
+_filbuf(register FILE *iop)
 {
 	static char smallbuf[_NFILE];
 
@@ -18,7 +17,7 @@ _filbuf(iop)
 tryagain:
 	if (iop->_base == NULL) {
 		if (iop->_flag & _IONBF) {
-			iop->_base = &smallbuf[fileno(iop)];
+			iop->_base = &smallbuf[(unsigned char)fileno(iop)];
 			goto tryagain;
 		}
 		if ((iop->_base = malloc(BUFSIZ)) == NULL) {

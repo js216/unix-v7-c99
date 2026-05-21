@@ -146,7 +146,7 @@ int n;
 	else	s = getsval(x.optr);
 	tempfree(x);
 	i = match(a[1], s);
-	if (n==MATCH && i==1 || n==NOTMATCH && i==0)
+	if ((n==MATCH && i==1) || (n==NOTMATCH && i==0))
 		return(true);
 	else
 		return(false);
@@ -164,6 +164,7 @@ int n;
 	switch (n) {
 	default:
 		error(FATAL, "unknown boolean operator %d", n);
+		/* fallthrough */
 	case BOR:
 		if (i) return(true);
 		y = execute(a[1]);
@@ -204,6 +205,7 @@ int n;
 	switch (n) {
 	default:
 		error(FATAL, "unknown relational operator %d", n);
+		/* fallthrough */
 	case LT:	if (i<0) return(true);
 			else return(false);
 	case LE:	if (i<=0) return(true);
@@ -421,7 +423,7 @@ int n;
 obj arith(a,n) node **a;
 int n;
 {
-	awkfloat i,j;
+	awkfloat i,j=0;
 	obj x,y,z;
 
 	x = execute(a[0]);
@@ -436,6 +438,7 @@ int n;
 	switch (n) {
 	default:
 		error(FATAL, "illegal arithmetic operator %d", n);
+		/* fallthrough */
 	case ADD:
 		setfval(z.optr, i+j);
 		break;
@@ -645,8 +648,8 @@ int nnn;
 		n++;
 		for (p=s, t=temp; (*t = *p) != '\0'; p++, t++)
 			if (*p == sep
-			  || sep == ' ' && (*p == '\t' || *p == '\n')
-			  || sep == '\t' && *p == '\n')
+			  || (sep == ' ' && (*p == '\t' || *p == '\n'))
+			  || (sep == '\t' && *p == '\n'))
 				break;
 		*t = '\0';
 		dprintf("n=%d, s=|%s|, temp=|%s|\n", n, s, temp);
@@ -788,7 +791,7 @@ obj fncn(a,n) node **a;
 int n;
 {
 	obj x;
-	awkfloat u;
+	awkfloat u=0;
 	int t;
 	(void)n;
 

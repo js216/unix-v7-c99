@@ -1,6 +1,6 @@
 #include	<stdio.h>
 #include	<stdarg.h>
-int	_doscan();
+int	_doscan(FILE *iop, register char *fmt, va_list *argp);
 
 int
 scanf(char *fmt, ...)

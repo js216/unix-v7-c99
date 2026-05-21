@@ -10,18 +10,16 @@
 char	passwd[] = "/etc/passwd";
 char	temp[]	 = "/etc/ptmp";
 struct	passwd *pwd;
-char	*strcpy();
-char	*crypt();
-char	*getpass();
-char	*getlogin();
+char	*strcpy(char *a, char *b);
+char	*crypt(char *pw, char *salt);
+char	*getpass(char *prompt);
+char	*getlogin(void);
 char	*pw;
 char	pwbuf[10];
 char	buf[512];
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	char *p;
 	int i;
@@ -72,7 +70,7 @@ tryagn:
 	ok = 0;
 	flags = 0;
 	p = pwbuf;
-	while(c = *p++){
+	while((c = *p++)){
 		if(c>='a' && c<='z') flags |= 2;
 		else if(c>='A' && c<='Z') flags |= 4;
 		else if(c>='0' && c<='9') flags |= 1;

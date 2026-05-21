@@ -7,7 +7,7 @@ static	struct	utmp ubuf;
 static	char	name[9];
 
 char *
-getlogin()
+getlogin(void)
 {
 	register int me, uf;
 	register char *cp;

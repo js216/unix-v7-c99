@@ -2,32 +2,44 @@
 #include "signal.h"
 #include "lrnref"
 
+extern char * ctime();
+extern void intrpt(int);
+extern int *action(char *);
+extern void list(char *);
+extern int mysys(char *);
+extern void maktee(void);
+extern void untee(void);
+extern int makpipe(void);
+extern void fcopy(char *new, char *old);
+
+int pgets(char *s, int prompt, FILE *f);
+void trim(char *s);
+void scopy(FILE *fi, FILE *fo);
+int cmp(char *r);
+char *wordb(char *s, char *t);
+
 char last[100];
 char logf[100];
 char subdir[100];
-extern char * ctime();
 
-copy(prompt, fin)
-FILE *fin;
+void
+copy(int prompt, FILE *fin)
 {
 	FILE *fout, *f;
 	char s[100], t[100], s1[100], *r, *tod;
 	char nm[30];
-	int *p, tv[2];
-	extern int intrpt(), *action();
-	extern char *wordb();
+	int *p; long tv;
 	int nmatch = 0;
 
 	if (subdir[0]==0)
 		sprintf(subdir, "../../%s", sname);
 	for (;;) {
-		if (pgets(s, prompt, fin) == 0)
+		if (pgets(s, prompt, fin) == 0) {
 			if (fin == stdin) {
-				/* fprintf(stderr, "Don't type control-D\n"); */
-				/* this didn't work out very well */
 				continue;
 			} else
 				break;
+		}
 		trim(s);
 		/* change the sequence %s to lesson directory */
 		/* if needed */
@@ -169,8 +181,8 @@ FILE *fin;
 			f = fopen( (r? r : logf), "a");
 			if (f == NULL)
 				break;
-			time(tv);
-			tod = ctime(tv);
+			time(&tv);
+			tod = ctime(&tv);
 			tod[24] = 0;
 			fprintf(f, "%s L%-6s %s %2d %s\n", tod,
 				todo, status? "fail" : "pass", speed, pwline);
@@ -181,8 +193,8 @@ FILE *fin;
 	return;
 }
 
-pgets(s, prompt, f)
-FILE *f;
+int
+pgets(char *s, int prompt, FILE *f)
 {
 	if (prompt) {
 		if (comfile < 0)
@@ -195,8 +207,8 @@ FILE *f;
 		return(0);
 }
 
-trim(s)
-char *s;
+void
+trim(char *s)
 {
 	while (*s)
 		s++;
@@ -204,8 +216,8 @@ char *s;
 		*s=0;
 }
 
-scopy(fi, fo)	/* copy fi to fo until a line with # */
-FILE *fi, *fo;
+void
+scopy(FILE *fi, FILE *fo)	/* copy fi to fo until a line with # */
 {
 	int c;
 
@@ -222,8 +234,8 @@ FILE *fi, *fo;
 	fflush(fo);
 }
 
-cmp(r)	/* compare two files for status */
-char *r;
+int
+cmp(char *r)	/* compare two files for status */
 {
 	char *s;
 	FILE *f1, *f2;
@@ -255,12 +267,11 @@ char *r;
 }
 
 char *
-wordb(s, t)	/* in s, t is prefix; return tail */
-char *s, *t;
+wordb(char *s, char *t)	/* in s, t is prefix; return tail */
 {
 	int c;
 
-	while (c = *s++) {
+	while ((c = *s++)) {
 		if (c == ' ' || c == '\t')
 			break;
 		*t++ = c;

@@ -1,7 +1,8 @@
 #include "stdio.h"
 #include "lrnref"
 
-whatnow()
+void
+whatnow(void)
 {
 	if (todo == 0) {
 		more=0;

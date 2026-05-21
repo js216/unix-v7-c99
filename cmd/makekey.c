@@ -5,9 +5,9 @@
  * (a significant part of a second).
  */
 
-char	*crypt();
-int	read();
-int	write();
+char	*crypt(char *pw, char *salt);
+int	read(int fd, char *buf, int n);
+int	write(int fd, char *buf, int n);
 
 int
 main(void)
