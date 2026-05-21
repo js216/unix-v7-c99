@@ -185,6 +185,7 @@ d--755 0 0
 		init	---755 0 0 root/etc/init
 		passwd	---644 0 0 root/etc/passwd
 		group	---644 0 0 root/etc/group
+		rc	---755 0 0 root/etc/rc
 		ttys	---644 0 0 root/etc/ttys
 		update	---755 0 0 root/etc/update
 		utmp	---644 0 0 /dev/null
