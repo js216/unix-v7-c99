@@ -8,8 +8,8 @@
 #include <signal.h>
 #include <utmp.h>
 
-char	*strcat();
-char	*strcpy();
+char	*strcat(char *a, char *b);
+char	*strcpy(char *a, char *b);
 struct	utmp ubuf;
 int	signum[] = {SIGHUP, SIGINT, SIGQUIT, 0};
 char	me[10]	= "???";
@@ -17,11 +17,11 @@ char	*him;
 char	*mytty;
 char	histty[32];
 char	*histtya;
-char	*ttyname();
-char	*rindex(), *index();
+char	*ttyname(int f);
+char	*rindex(char *sp, int c), *index(register char *sp, int c);
 int	logcnt;
-int	eof();
-int	timout();
+int	eof(void);
+int	timout(void);
 void	ex(char *bp);
 void	sigs(int sig);
 FILE	*tf;

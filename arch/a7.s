@@ -4,11 +4,9 @@
 .globl mmu_on
 .globl dmbsy
 .globl irq_enable
-.globl irq_disable
 .globl cntfrq_get
 .globl cntv_tval_set
 .globl cntv_ctl_set
-.globl cntv_ctl_get
 _start:
 
 	ldr sp, =stack_top
@@ -249,15 +247,10 @@ dmbsy:
 	bx lr
 
 /*
- * CPSR-I (IRQ mask) control.  irq_enable() clears I (allows IRQs);
- * irq_disable() sets I (masks).  Both run from SVC mode.
+ * CPSR-I clear -- unmask IRQs.  Runs from SVC mode.
  */
 irq_enable:
 	cpsie i
-	bx lr
-
-irq_disable:
-	cpsid i
 	bx lr
 
 /*
@@ -282,10 +275,6 @@ cntv_tval_set:
 cntv_ctl_set:
 	mcr p15, 0, r0, c14, c3, 1
 	isb
-	bx lr
-
-cntv_ctl_get:
-	mrc p15, 0, r0, c14, c3, 1
 	bx lr
 
 .section .stack

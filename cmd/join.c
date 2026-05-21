@@ -29,14 +29,12 @@ int cmp(char *s1, char *s2);
 int atoi(char *s);
 void exit(int n);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	int i;
 	int n1, n2;
 	long top2, bot2;
-	long ftell();
+	long ftell(FILE *iop);
 
 	while (argc > 1 && argv[1][0] == '-') {
 		if (argv[1][1] == '\0')
@@ -110,12 +108,12 @@ char *argv[];
 	get1();
 	bot2 = ftell(f[F2]);
 	get2();
-	while(n1>0 && n2>0 || aflg!=0 && n1+n2>0) {
-		if(n1>0 && n2>0 && comp()>0 || n1==0) {
+	while((n1>0 && n2>0) || (aflg!=0 && n1+n2>0)) {
+		if((n1>0 && n2>0 && comp()>0) || n1==0) {
 			if(aflg&2) output(0, n2);
 			bot2 = ftell(f[F2]);
 			get2();
-		} else if(n1>0 && n2>0 && comp()<0 || n2==0) {
+		} else if((n1>0 && n2>0 && comp()<0) || n2==0) {
 			if(aflg&1) output(n1, 0);
 			get1();
 		} else /*(n1>0 && n2>0 && comp()==0)*/ {
@@ -131,7 +129,7 @@ char *argv[];
 				if(n1>0 && n2>0 && comp()==0) {
 					output(n1, n2);
 					get2();
-				} else if(n1>0 && n2>0 && comp()<0 || n2==0) {
+				} else if((n1>0 && n2>0 && comp()<0) || n2==0) {
 					fseek(f[F2], bot2, 0);
 					get2();
 					get1();
@@ -196,8 +194,8 @@ int on1, on2;
 	} else {
 		for (i = 0; i < no; i++) {
 			temp = ppi[olistf[i]][olist[i]];
-			if(olistf[i]==F1 && on1<=olist[i] ||
-			   olistf[i]==F2 && on2<=olist[i] ||
+			if((olistf[i]==F1 && on1<=olist[i]) ||
+			   (olistf[i]==F2 && on2<=olist[i]) ||
 			   *temp==0)
 				temp = null;
 			printf("%s", temp);
@@ -210,8 +208,7 @@ int on1, on2;
 }
 
 void
-error(s1, s2, s3, s4, s5)
-char *s1, *s2, *s3, *s4, *s5;
+error(char *s1, char *s2, char *s3, char *s4, char *s5)
 {
 	fprintf(stderr, "join: ");
 	fprintf(stderr, s1, s2, s3, s4, s5);
@@ -220,8 +217,7 @@ char *s1, *s2, *s3, *s4, *s5;
 }
 
 int
-cmp(s1, s2)
-char *s1, *s2;
+cmp(char *s1, char *s2)
 {
 	return(strcmp(s1, s2));
 }

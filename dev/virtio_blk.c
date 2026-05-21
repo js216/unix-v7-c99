@@ -11,7 +11,6 @@
 
 #include "../h/param.h"
 #include "../h/buf.h"
-#include "../h/conf.h"
 #include "../h/proto.h"
 
 /* Per-drive busy bitmap + transfer counters, declared by sys/systm.h.
@@ -185,6 +184,12 @@ virtio_strategy(struct buf *bp)
 		if(++spin == 100000000)
 			spin = 0;
 	}
+	/* Memory barrier: ARM is weakly ordered.  Without this, reading
+	 * qused.idx can be reordered with the (preceding) device write to
+	 * virtio_vstatus, so vstatus may still read as the 0xff sentinel
+	 * even though qused.idx has advanced -- causing a spurious panic
+	 * under high I/O throughput (caught by `cat A B C D > /tmp/big`). */
+	dmbsy();
 	virtio_lastused++;
 	if(virtio_vstatus != 0)
 		panic("blk");

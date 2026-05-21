@@ -2,30 +2,27 @@
 #include "awk.h"
 #include "stdio.h"
 int error();
-node *ALLOC(n)
-int n;
+node *ALLOC(int n)
 {	node *x;
 	x = (node *)malloc(sizeof(node)+n*sizeof(node *));
 	if (x == NULL)
 		error(FATAL, "out of space in ALLOC");
 	return(x);
 }
-node *exptostat(a) node *a;
+node *exptostat(node *a)
 {
 	a->ntype = NSTAT;
 	return(a);
 }
 node	*nullstat;
-node *node0(a)
-int a;
+node *node0(int a)
 {	node *x;
 	x=ALLOC(0);
 	x->nnext = NULL;
 	x->nobj=a;
 	return(x);
 }
-node *node1(a,b) node *b;
-int a;
+node *node1(int a, node *b)
 {	node *x;
 	x=ALLOC(1);
 	x->nnext = NULL;
@@ -33,8 +30,7 @@ int a;
 	x->narg[0]=b;
 	return(x);
 }
-node *node2(a,b,c) node *b, *c;
-int a;
+node *node2(int a, node *b, node *c)
 {	node *x;
 	x = ALLOC(2);
 	x->nnext = NULL;
@@ -43,8 +39,7 @@ int a;
 	x->narg[1] = c;
 	return(x);
 }
-node *node3(a,b,c,d) node *b, *c, *d;
-int a;
+node *node3(int a, node *b, node *c, node *d)
 {	node *x;
 	x = ALLOC(3);
 	x->nnext = NULL;
@@ -54,8 +49,7 @@ int a;
 	x->narg[2] = d;
 	return(x);
 }
-node *node4(a,b,c,d,e) node *b, *c, *d, *e;
-int a;
+node *node4(int a, node *b, node *c, node *d, node *e)
 {	node *x;
 	x = ALLOC(4);
 	x->nnext = NULL;
@@ -66,77 +60,68 @@ int a;
 	x->narg[3] = e;
 	return(x);
 }
-node *stat3(a,b,c,d) node *b, *c, *d;
-int a;
+node *stat3(int a, node *b, node *c, node *d)
 {	node *x;
 	x = node3(a,b,c,d);
 	x->ntype = NSTAT;
 	return(x);
 }
-node *op2(a,b,c) node *b, *c;
-int a;
+node *op2(int a, node *b, node *c)
 {	node *x;
 	x = node2(a,b,c);
 	x->ntype = NEXPR;
 	return(x);
 }
-node *op1(a,b) node *b;
-int a;
+node *op1(int a, node *b)
 {	node *x;
 	x = node1(a,b);
 	x->ntype = NEXPR;
 	return(x);
 }
-node *stat1(a,b) node *b;
-int a;
+node *stat1(int a, node *b)
 {	node *x;
 	x = node1(a,b);
 	x->ntype = NSTAT;
 	return(x);
 }
-node *op3(a,b,c,d) node *b, *c, *d;
-int a;
+node *op3(int a, node *b, node *c, node *d)
 {	node *x;
 	x = node3(a,b,c,d);
 	x->ntype = NEXPR;
 	return(x);
 }
-node *stat2(a,b,c) node *b, *c;
-int a;
+node *stat2(int a, node *b, node *c)
 {	node *x;
 	x = node2(a,b,c);
 	x->ntype = NSTAT;
 	return(x);
 }
-node *stat4(a,b,c,d,e) node *b, *c, *d, *e;
-int a;
+node *stat4(int a, node *b, node *c, node *d, node *e)
 {	node *x;
 	x = node4(a,b,c,d,e);
 	x->ntype = NSTAT;
 	return(x);
 }
-node *valtonode(a, b) cell *a;
-int b;
+node *valtonode(cell *a, int b)
 {	node *x;
-	x = node0(a);
+	x = node0((int)a);
 	x->ntype = NVALUE;
 	x->subtype = b;
 	return(x);
 }
-node *genjump(a)
-int a;
+node *genjump(int a)
 {	node *x;
 	x = node0(a);
 	x->ntype = NSTAT;
 	return(x);
 }
-node *pa2stat(a,b,c) node *a, *b, *c;
+node *pa2stat(node *a, node *b, node *c)
 {	node *x;
 	x = node3(paircnt++, a, b, c);
 	x->ntype = NPA2;
 	return(x);
 }
-node *linkum(a,b) node *a, *b;
+node *linkum(node *a, node *b)
 {	node *c;
 	if(a == NULL) return(b);
 	else if(b == NULL) return(a);
@@ -144,7 +129,7 @@ node *linkum(a,b) node *a, *b;
 	c->nnext = b;
 	return(a);
 }
-node *genprint()
+node *genprint(void)
 {	node *x;
 	x = stat2(PRINT,valtonode(lookup("$record", symtab), CFLD), nullstat);
 	return(x);

@@ -31,50 +31,50 @@ struct suftab {
 	char *d2;
 	char *a2;
 } suftab[] = {
-	{"ssen",ily,4,"-y+iness","+ness" },
-	{"ssel",ily,4,"-y+i+less","+less" },
+	{"ssen",ily,4,"-y+iness","+ness",	0, 0, "", ""},
+	{"ssel",ily,4,"-y+i+less","+less",	0, 0, "", ""},
 	{"se",s,1,"","+s",		es,2,"-y+ies","+es" },
-	{"s'",s,2,"","+'s"},
-	{"s",s,1,"","+s"},
-	{"ecn",ncy,1,"","-t+ce"},
-	{"ycn",ncy,1,"","-cy+t"},
-	{"ytilb",nop,0,"",""},
-	{"ytilib",bility,5,"-le+ility",""},
-	{"elbaif",i_to_y,4,"-y+iable",""},
-	{"elba",CCe,4,"-e+able","+able"},
-	{"yti",CCe,3,"-e+ity","+ity"},
-	{"ylb",y_to_e,1,"-e+y",""},
-	{"yl",ily,2,"-y+ily","+ly"},
-	{"laci",strip,2,"","+al"},
-	{"latnem",strip,2,"","+al"},
-	{"lanoi",strip,2,"","+al"},
-	{"tnem",strip,4,"","+ment"},
-	{"gni",CCe,3,"-e+ing","+ing"},
-	{"reta",nop,0,"",""},
+	{"s'",s,2,"","+'s",		0, 0, "", ""},
+	{"s",s,1,"","+s",		0, 0, "", ""},
+	{"ecn",ncy,1,"","-t+ce",		0, 0, "", ""},
+	{"ycn",ncy,1,"","-cy+t",		0, 0, "", ""},
+	{"ytilb",nop,0,"","",		0, 0, "", ""},
+	{"ytilib",bility,5,"-le+ility","",		0, 0, "", ""},
+	{"elbaif",i_to_y,4,"-y+iable","",		0, 0, "", ""},
+	{"elba",CCe,4,"-e+able","+able",		0, 0, "", ""},
+	{"yti",CCe,3,"-e+ity","+ity",		0, 0, "", ""},
+	{"ylb",y_to_e,1,"-e+y","",		0, 0, "", ""},
+	{"yl",ily,2,"-y+ily","+ly",		0, 0, "", ""},
+	{"laci",strip,2,"","+al",		0, 0, "", ""},
+	{"latnem",strip,2,"","+al",		0, 0, "", ""},
+	{"lanoi",strip,2,"","+al",		0, 0, "", ""},
+	{"tnem",strip,4,"","+ment",		0, 0, "", ""},
+	{"gni",CCe,3,"-e+ing","+ing",		0, 0, "", ""},
+	{"reta",nop,0,"","",		0, 0, "", ""},
 	{"re",strip,1,"","+r",		i_to_y,2,"-y+ier","+er"},
 	{"de",strip,1,"","+d",		i_to_y,2,"-y+ied","+ed"},
-	{"citsi",strip,2,"","+ic"},
-	{"cihparg",i_to_y,1,"-y+ic",""},
+	{"citsi",strip,2,"","+ic",		0, 0, "", ""},
+	{"cihparg",i_to_y,1,"-y+ic","",		0, 0, "", ""},
 	{"tse",strip,2,"","+st",	i_to_y,3,"-y+iest","+est"},
-	{"cirtem",i_to_y,1,"-y+ic",""},
-	{"yrtem",metry,0,"-ry+er",""},
-	{"cigol",i_to_y,1,"-y+ic",""},
-	{"tsigol",i_to_y,2,"-y+ist",""},
-	{"tsi",VCe,3,"-e+ist","+ist"},
-	{"msi",VCe,3,"-e+ism","+ist"},
-	{"noitacif",i_to_y,6,"-y+ication",""},
-	{"noitazi",ize,5,"-e+ation",""},
-	{"rota",tion,2,"-e+or",""},
-	{"noit",tion,3,"-e+ion","+ion"},
-	{"naino",an,3,"","+ian"},
-	{"na",an,1,"","+n"},
-	{"evit",tion,3,"-e+ive","+ive"},
-	{"ezi",CCe,3,"-e+ize","+ize"},
-	{"pihs",strip,4,"","+ship"},
-	{"dooh",ily,4,"-y+ihood","+hood"},
-	{"luf",ily,3,"-y+iful","+ful"},
-	{"ekil",strip,4,"","+like"},
-	0
+	{"cirtem",i_to_y,1,"-y+ic","",		0, 0, "", ""},
+	{"yrtem",metry,0,"-ry+er","",		0, 0, "", ""},
+	{"cigol",i_to_y,1,"-y+ic","",		0, 0, "", ""},
+	{"tsigol",i_to_y,2,"-y+ist","",		0, 0, "", ""},
+	{"tsi",VCe,3,"-e+ist","+ist",		0, 0, "", ""},
+	{"msi",VCe,3,"-e+ism","+ist",		0, 0, "", ""},
+	{"noitacif",i_to_y,6,"-y+ication","",		0, 0, "", ""},
+	{"noitazi",ize,5,"-e+ation","",		0, 0, "", ""},
+	{"rota",tion,2,"-e+or","",		0, 0, "", ""},
+	{"noit",tion,3,"-e+ion","+ion",		0, 0, "", ""},
+	{"naino",an,3,"","+ian",		0, 0, "", ""},
+	{"na",an,1,"","+n",		0, 0, "", ""},
+	{"evit",tion,3,"-e+ive","+ive",		0, 0, "", ""},
+	{"ezi",CCe,3,"-e+ize","+ize",		0, 0, "", ""},
+	{"pihs",strip,4,"","+ship",		0, 0, "", ""},
+	{"dooh",ily,4,"-y+ihood","+hood",		0, 0, "", ""},
+	{"luf",ily,3,"-y+iful","+ful",		0, 0, "", ""},
+	{"ekil",strip,4,"","+like",		0, 0, "", ""},
+	{0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 
 char *preftab[] = {
@@ -126,9 +126,7 @@ int suffix(), strip(), putsuf(), putw(), monosyl(), vowel(),
     ise(), ztos(), dict();
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *ep, *cp;
 	register char *dp;
@@ -175,7 +173,7 @@ lcase:
 		if(putsuf(ep,".",0)||suffix(ep,0))
 			continue;
 		if(isupper(word[0])) {
-			for(cp=original,dp=word; *dp = *cp++; dp++)
+			for(cp=original,dp=word; (*dp = *cp++); dp++)
 				if (fold) *dp = Tolower(*dp);
 			word[0] = Tolower(word[0]);
 			goto lcase;
@@ -185,15 +183,13 @@ lcase:
 }
 
 int
-suffix(ep,lev)
-char *ep;
-int lev;
+suffix(char *ep, int lev)
 {
 	register struct suftab *t;
 	register char *cp, *sp;
 	lev += DLEV;
 	deriv[lev] = deriv[lev-1] = 0;
-	for(t= &suftab[0];sp=t->suf;t++) {
+	for(t= &suftab[0];(sp=t->suf);t++) {
 		cp = ep;
 		while(*sp)
 			if(*--cp!=*sp++)
@@ -214,24 +210,20 @@ next:		;
 }
 
 int
-nop()
+nop(void)
 {
 	return(0);
 }
 
 int
-strip(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+strip(char *ep, char *d, char *a, int lev)
 {
 	(void)d;
 	return(putsuf(ep,a,lev)||suffix(ep,lev));
 }
 
 int
-s(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+s(char *ep, char *d, char *a, int lev)
 {
 	if(lev>DLEV+1)
 		return(0);
@@ -241,9 +233,7 @@ int lev;
 }
 
 int
-an(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+an(char *ep, char *d, char *a, int lev)
 {
 	(void)d;
 	if(!isupper(*word))	/*must be proper name*/
@@ -252,9 +242,7 @@ int lev;
 }
 
 int
-ize(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+ize(char *ep, char *d, char *a, int lev)
 {
 	(void)a;
 	*ep++ = 'e';
@@ -262,9 +250,7 @@ int lev;
 }
 
 int
-y_to_e(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+y_to_e(char *ep, char *d, char *a, int lev)
 {
 	(void)a;
 	*ep++ = 'e';
@@ -272,9 +258,7 @@ int lev;
 }
 
 int
-ily(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+ily(char *ep, char *d, char *a, int lev)
 {
 	if(ep[-1]=='i')
 		return(i_to_y(ep,d,a,lev));
@@ -283,9 +267,7 @@ int lev;
 }
 
 int
-ncy(ep,d,a,lev)
-char *ep, *d, *a;
-int lev;
+ncy(char *ep, char *d, char *a, int lev)
 {
 	if(skipv(skipv(ep-1))<word)
 		return(0);
@@ -294,18 +276,14 @@ int lev;
 }
 
 int
-bility(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+bility(char *ep, char *d, char *a, int lev)
 {
 	*ep++ = 'l';
 	return(y_to_e(ep,d,a,lev));
 }
 
 int
-i_to_y(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+i_to_y(char *ep, char *d, char *a, int lev)
 {
 	if(ep[-1]=='i') {
 		ep[-1] = 'y';
@@ -315,9 +293,7 @@ int lev;
 }
 
 int
-es(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+es(char *ep, char *d, char *a, int lev)
 {
 	if(lev>DLEV)
 		return(0);
@@ -335,9 +311,7 @@ int lev;
 }
 
 int
-metry(ep,d,a,lev)
-char *ep, *d,*a;
-int lev;
+metry(char *ep, char *d, char *a, int lev)
 {
 	ep[-2] = 'e';
 	ep[-1] = 'r';
@@ -345,9 +319,7 @@ int lev;
 }
 
 int
-tion(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+tion(char *ep, char *d, char *a, int lev)
 {
 	switch(ep[-2]) {
 	case 'c':
@@ -361,9 +333,7 @@ int lev;
 
 /*	possible consonant-consonant-e ending*/
 int
-CCe(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+CCe(char *ep, char *d, char *a, int lev)
 {
 	switch(ep[-1]) {
 	case 'l':
@@ -381,14 +351,17 @@ int lev;
 	case 's':
 		if(ep[-2]=='s')
 			break;
+		/* fallthrough */
 	case 'c':
 	case 'g':
 		if(*ep=='a')
 			return(0);
+		/* fallthrough */
 	case 'v':
 	case 'z':
 		if(vowel(ep[-2]))
 			break;
+		/* fallthrough */
 	case 'u':
 		if(y_to_e(ep,d,a,lev))
 			return(1);
@@ -400,9 +373,7 @@ int lev;
 
 /*	possible consonant-vowel-consonant-e ending*/
 int
-VCe(ep,d,a,lev)
-char *ep,*d,*a;
-int lev;
+VCe(char *ep, char *d, char *a, int lev)
 {
 	char c;
 	c = ep[-1];
@@ -419,9 +390,8 @@ int lev;
 	return(strip(ep,d,a,lev));
 }
 
-char *lookuppref(wp,ep)
-char **wp;
-char *ep;
+char *
+lookuppref(char **wp, char *ep)
 {
 	register char **sp;
 	register char *bp,*cp;
@@ -441,9 +411,7 @@ next:	;
 }
 
 int
-putsuf(ep,a,lev)
-char *ep,*a;
-int lev;
+putsuf(char *ep, char *a, int lev)
 {
 	register char *cp;
 	char *bp;
@@ -456,9 +424,9 @@ int lev;
 	bp = word;
 	pp = space;
 	deriv[lev+1] = pp;
-	while(cp=lookuppref(&bp,ep)) {
+	while((cp=lookuppref(&bp,ep))) {
 		*pp++ = '+';
-		while(*pp = *cp++)
+		while((*pp = *cp++))
 			pp++;
 		if(putw(bp,ep,lev+1)) {
 			val = 1;
@@ -470,9 +438,7 @@ int lev;
 }
 
 int
-putw(bp,ep,lev)
-char *bp,*ep;
-int lev;
+putw(char *bp, char *ep, int lev)
 {
 	register int i, j;
 	char duple[3];
@@ -504,8 +470,7 @@ int lev;
 
 
 int
-monosyl(bp,ep)
-char *bp, *ep;
+monosyl(char *bp, char *ep)
 {
 	if(ep<bp+2)
 		return(0);
@@ -519,8 +484,7 @@ char *bp, *ep;
 }
 
 char *
-skipv(s)
-char *s;
+skipv(char *s)
 {
 	if(s>=word&&vowel(*s))
 		s--;
@@ -530,8 +494,7 @@ char *s;
 }
 
 int
-vowel(c)
-int c;
+vowel(int c)
 {
 	switch(Tolower(c)) {
 	case 'a':
@@ -547,7 +510,7 @@ int c;
 
 /* crummy way to Britishise */
 int
-ise()
+ise(void)
 {
 	register struct suftab *p;
 	for(p = suftab;p->suf;p++) {
@@ -558,8 +521,7 @@ ise()
 	return(0);
 }
 int
-ztos(s)
-char *s;
+ztos(char *s)
 {
 	for(;*s;s++)
 		if(*s=='z')
@@ -568,8 +530,7 @@ char *s;
 }
 
 int
-dict(bp,ep)
-char *bp, *ep;
+dict(char *bp, char *ep)
 {
 	register char *wp;
 	long h;

@@ -10,19 +10,7 @@
  */
 
 #define	NADDR	13
-#define	NINDEX	15
 
-struct group {
-	short	g_state;
-	char	g_index;
-	char	g_rot;
-	struct	group	*g_group;
-	struct	inode	*g_inode;
-	struct	file	*g_file;
-	short	g_rotmask;
-	short	g_datq;
-	struct	chan *g_chans[NINDEX];
-};
 struct	inode
 {
 	char	i_flag;
@@ -38,17 +26,24 @@ struct	inode
 		struct {
 			daddr_t i_addr[NADDR];	/* if normal file/directory */
 			daddr_t	i_lastr;	/* last logical block read (for read-ahead) */
-		};
+		} u_reg;
 		struct	{
 			daddr_t	i_rdev;			/* i_addr[0] */
-			struct	group	i_group;	/*  multiplexor group file */
-		};
+		} u_dev;
 	} i_un;
+/* Caller-side shorthand for the named inner structs (kept v7-flavoured).
+ * v7's multiplexor `struct group i_group` is gone -- the mpx subsystem
+ * isn't wired on this port and shrinking the inode union by ~80 bytes
+ * saves ~16 KB across NINODE=200 in-core inodes. */
+#define	i_addr	u_reg.i_addr
+#define	i_lastr	u_reg.i_lastr
+#define	i_rdev	u_dev.i_rdev
 };
 
 
 extern struct inode inode[];	/* The inode table itself */
-struct inode *mpxip;		/* mpx virtual inode */
+/* v7 had `struct inode *mpxip` here for the mpx multiplexor server's
+ * virtual inode; never assigned on this port, so removed. */
 
 /* flags */
 #define	ILOCK	01		/* inode is locked */

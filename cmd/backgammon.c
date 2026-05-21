@@ -12,10 +12,19 @@ int j;
 int l;
 int m;
 int count;
-int	getstr(), play(), nextmove(), prtmov(), update(), piececount(),
-	roll(), movegen(), moverecord(), strategy(), eval(),
-	instructions(), getprob(), prtbrd(), numline(), colorline(),
-	bg_srand(), bg_rand(), _look(), _store();
+int	getstr(char *s), play(int *player, int *playee, int pos[]);
+int	nextmove(int *player, int *playee), prtmov(int k);
+int	update(int *player, int *playee, int k);
+int	piececount(int *player, int startrow, int endrow);
+int	roll(void), movegen(int *mover, int *movee);
+int	moverecord(int *mover), strategy(int *player, int *playee);
+int	eval(int *player, int *playee, int k, int *prob);
+int	instructions(void);
+int	getprob(int *player, int *playee, int start, int finish);
+int	prtbrd(void);
+int	numline(int *upcol, int *downcol, int start, int fin);
+int	colorline(int *upcol, int c1, int *downcol, int c2, int start, int fin);
+int	bg_srand(void), bg_rand(void), _look(int *p), _store(int *p, int numb);
 int red[]     = {0,2,0,0,0,0,0,0,0,0,0,0,5,
 		 0,0,0,0,3,0,5,0,0,0,0,0,
 		 0,0,0,0,0,0};
@@ -30,7 +39,7 @@ int probmoves[MAXGMOV] ;
 struct {int pos[4],mov[4];} moves[MAXIMOVES] ;
 
 int
-main()
+main(void)
 {
 	int t,k,n,go[5];
 	char s[100];
@@ -102,8 +111,7 @@ retry:
 }
 
 int
-getstr(s)
-char *s;
+getstr(char *s)
 {
 	while((*s=getchar())!='\n')s++;
 	*s=0;
@@ -111,8 +119,7 @@ char *s;
 }
 
 int
-play(player,playee,pos)
-int *player,*playee,pos[];
+play(int *player, int *playee, int pos[])
 {
 	int k,n,die,ipos;
 	for(k=0;k<player[0];k++){  /*blots on player[0] must be moved first*/
@@ -155,8 +162,7 @@ badmove:
 	return(-1);
 }
 int
-nextmove(player,playee)
-int *player,*playee;
+nextmove(int *player, int *playee)
 {
 	int k;
 	imoves=0;
@@ -177,8 +183,7 @@ int *player,*playee;
 	return(0);
 }
 int
-prtmov(k)
-int k;
+prtmov(int k)
 {
 	int n;
 	if(k==NIL)printf( "no move possible\n");
@@ -190,8 +195,7 @@ int k;
 	return(0);
 }
 int
-update(player,playee,k)
-int *player,*playee,k;
+update(int *player, int *playee, int k)
 {
 	int n,t;
 	for(n=0;n<4;n++){
@@ -207,8 +211,7 @@ int *player,*playee,k;
 	return(0);
 }
 int
-piececount(player,startrow,endrow)
-int *player,startrow,endrow;
+piececount(int *player, int startrow, int endrow)
 {
 	int sum;
 	sum=0;
@@ -216,24 +219,8 @@ int *player,startrow,endrow;
 	sum+=player[startrow++];
 	return(sum);
 }
-/*
-prtmovs()
-{
-	int i1,i2;
-	printf( "possible moves are\n");
-	for(i1=0;i1<imoves;i1++){
-		printf( "\n%d",i1);
-		for(i2=0;i2<4;i2++){
-			if(moves[i1].pos[i2]==NIL)break;
-			printf( "%d, %d",moves[i1].pos[i2],moves[i1].mov[i2]);
-		}
-	}
-	printf( "\n");
-}
-*/
-
 int
-roll()
+roll(void)
 {
 	extern int die1,die2;
 	die1=(bg_rand()>>8)%6+1;
@@ -242,8 +229,7 @@ roll()
 }
 
 int
-movegen(mover,movee)
-int *mover,*movee;
+movegen(int *mover, int *movee)
 {
 	extern int i,j,l,m,count;
 	extern int die1,die2;
@@ -251,9 +237,10 @@ int *mover,*movee;
 	for(i=0;i<=24;i++){
 		count=0;
 		if(mover[i]==0)continue;
-		if((k=25-i-die1)>0&&movee[k]>=2)
+		if((k=25-i-die1)>0&&movee[k]>=2) {
 		    if(mover[0]>0)break;
 		    else continue;
+		}
 		if(k<=0){
 		    if(piececount(mover,0,18)!=0)break;
 		    if((i+die1)!=25&&
@@ -264,9 +251,10 @@ int *mover,*movee;
 		count=1;
 		for(j=0;j<=24;j++){
 			if(mover[j]==0)continue;
-			if((k=25-j-die2)>0&&movee[k]>=2)
+			if((k=25-j-die2)>0&&movee[k]>=2) {
 			    if(mover[0]>0)break;
 			    else continue;
+			}
 			if(k<=0){
 			    if(piececount(mover,0,18)!=0)break;
 			    if((j+die2)!=25&&
@@ -282,9 +270,10 @@ int *mover,*movee;
 			}
 			for(l=0;l<=24;l++){
 			    if(mover[l]==0)continue;
-			    if((k=25-l-die1)>0&&movee[k]>=2)
+			    if((k=25-l-die1)>0&&movee[k]>=2) {
 				if(mover[0]>0)break;
 				else continue;
+			    }
 			    if(k<=0){
 				if(piececount(mover,0,18)!=0)break;
 				if((l+die2)!=25&&
@@ -295,9 +284,10 @@ int *mover,*movee;
 			    count=3;
 			    for(m=0;m<=24;m++){
 				if(mover[m]==0)continue;
-				if((k=25-m-die1)>=0&&movee[k]>=2)
+				if((k=25-m-die1)>=0&&movee[k]>=2) {
 				    if(mover[0]>0)break;
 				    else continue;
+				}
 				if(k<=0){
 				    if(piececount(mover,0,18)!=0)break;
 				    if((m+die2)!=25&&
@@ -331,8 +321,7 @@ int *mover,*movee;
 	return(0);
 }
 int
-moverecord(mover)
-int *mover;
+moverecord(int *mover)
 {
 	extern int i,j,l,m,imoves,count;
 	int t;
@@ -343,12 +332,15 @@ int *mover;
 case 4:
 	    moves[imoves].pos[3]=m;
 	    moves[imoves].mov[3]=die1;
+	    /* fallthrough */
 case 3:
 	    moves[imoves].pos[2]=l;
 	    moves[imoves].mov[2]=die1;
+	    /* fallthrough */
 case 2:
 	    moves[imoves].pos[1]=j;
 	    moves[imoves].mov[1]=die2;
+	    /* fallthrough */
 case 1:
 	    moves[imoves].pos[0]=i;
 	    moves[imoves].mov[0]=die1;
@@ -375,8 +367,7 @@ case 1:
 
 
 int
-strategy(player,playee)
-int *player,*playee;
+strategy(int *player, int *playee)
 {
 	extern char level;
 	int k,n,nn,bestval,moveval,prob;
@@ -413,8 +404,7 @@ int *player,*playee;
 }
 
 int
-eval(player,playee,k,prob)
-int *player,*playee,k,*prob;
+eval(int *player, int *playee, int k, int *prob)
 {
 	extern char level;
 	int newtry[31],newother[31],*r,*q,*p,n,sum,first;
@@ -476,7 +466,7 @@ int *player,*playee,k,*prob;
 	return(sum);
 }
 int
-instructions()
+instructions(void)
 {
 	printf( "To play backgammon, type the numbers of the points\n");
 	printf( "from which pieces are to be moved. Thus, if the\n");
@@ -507,8 +497,7 @@ instructions()
 }
 
 int
-getprob(player,playee,start,finish)
-int *player,*playee,start,finish;
+getprob(int *player, int *playee, int start, int finish)
 {			/*returns the probability (times 102) that any
 			  pieces belonging to 'player' and lying between
 			  his points 'start' and 'finish' will be hit
@@ -527,7 +516,7 @@ int *player,*playee,start,finish;
 	return(sum);
 }
 int
-prtbrd()
+prtbrd(void)
 {
 	int k;
 	printf( "White's Home\n");
@@ -567,8 +556,7 @@ prtbrd()
 	return(0);
 }
 int
-numline(upcol,downcol,start,fin)
-int *upcol,*downcol,start,fin;
+numline(int *upcol, int *downcol, int start, int fin)
 {
 	int k,n;
 	for(k=start;k<=fin;k++){
@@ -578,9 +566,7 @@ int *upcol,*downcol,start,fin;
 	return(0);
 }
 int
-colorline(upcol,c1,downcol,c2,start,fin)
-int *upcol,*downcol,start,fin;
-char c1,c2;
+colorline(int *upcol, int c1, int *downcol, int c2, int start, int fin)
 {
 	int k;
 	char c;
@@ -596,26 +582,26 @@ char c1,c2;
 int rrno = 0;
 
 int
-bg_srand(){
-	rrno = _look( 0x40000 );
-	_store( 0x40000, rrno+1 );
+bg_srand(void){
+	rrno = _look( (int *)0x40000 );
+	_store( (int *)0x40000, rrno+1 );
 	return(0);
 	}
 
 int
-bg_rand(){
+bg_rand(void){
 	rrno *= 0106273;
 	rrno += 020202;
 	return( rrno & 077777 );
 	}
 
 int
-_look(p) int *p; {
+_look(int *p) {
 	return( *p );
 	}
 
 int
-_store( p, numb ) int *p; int numb; {
+_store(int *p, int numb) {
 	*p = numb;
 	return(0);
 	}

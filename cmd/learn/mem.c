@@ -2,6 +2,8 @@
 # include "lrnref"
 # define SAME 0
 
+extern void wrapup(int);
+
 struct keys {
 	char *k_wd;
 	int k_val;
@@ -39,8 +41,8 @@ struct keys {
 	{NULL,		0}
 };
 
-int *action(s)
-char *s;
+int *
+action(char *s)
 {
 	struct keys *kp;
 	for (kp=keybuff; kp->k_wd; kp++)
@@ -59,8 +61,8 @@ int nwh = 0;
 char whbuff[NWCH];
 char *whcp = whbuff;
 
-setdid(lesson, sequence)
-char *lesson;
+void
+setdid(char *lesson, int sequence)
 {
 	struct whichdid *pw;
 	for(pw=which; pw < which+nwh; pw++)
@@ -76,17 +78,18 @@ char *lesson;
 	}
 	pw->w_seq = sequence;
 	pw->w_less = whcp;
-	while (*whcp++ = *lesson++);
+	while ((*whcp++ = *lesson++));
 	if (whcp >= whbuff + NWCH) {
 		fprintf(stderr, "lesson name too long\n");
 		wrapup(1);
 	}
 }
 
-already(lesson, sequence)
-char *lesson;
+int
+already(char *lesson, int sequence)
 {
 	struct whichdid *pw;
+	(void)sequence;
 	for (pw=which; pw < which+nwh; pw++)
 		if (strcmp(pw->w_less, lesson) == SAME)
 			return(1);

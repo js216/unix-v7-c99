@@ -47,8 +47,7 @@ int	tabs	= 0;
 int	lastchar;
 int	c;
 int
-main(argc,argv) int argc;
-char argv[];
+main(int argc, char *argv[])
 {
 	(void)argc;
 	(void)argv;
@@ -165,11 +164,12 @@ char argv[];
 			puts();
 			printf("\n");
 			sflg = 1;
-			if(iflev > 0)
+			if(iflev > 0) {
 				if(ifflg == 1){iflev--;
 					ifflg = 0;
 				}
 				else iflev = 0;
+			}
 			continue;
 		case '\\':
 			string[j++] = c;
@@ -273,20 +273,20 @@ cont:
 	return(0);
 }
 int
-ptabs(){
+ptabs(void){
 	int i;
 	for(i=0; i < tabs; i++)printf("\t");
 	return(0);
 }
 int
-getch(){
+getch(void){
 	if(peek < 0 && lastchar != ' ' && lastchar != '\t')pchar = lastchar;
 	lastchar = (peek<0) ? getc(stdin):peek;
 	peek = -1;
 	return(lastchar);
 }
 int
-puts(){
+puts(void){
 	if(j > 0){
 		if(sflg != 0){
 			ptabs();
@@ -309,8 +309,7 @@ puts(){
 	return(0);
 }
 int
-lookup(tab)
-char *tab[];
+lookup(char *tab[])
 {
 	char r;
 	int l,kk,k,i;
@@ -325,7 +324,7 @@ char *tab[];
 	return(0);
 }
 int
-gets(){
+gets(void){
 	char ch;
 beg:
 	if((ch = string[j++] = getch()) == '\\'){
@@ -344,7 +343,7 @@ beg:
 	else return(ch);
 }
 int
-gotelse(){
+gotelse(void){
 	tabs = stabs[clevel][iflev];
 	pflg[level] = spflg[clevel][iflev];
 	ind[level] = sind[clevel][iflev];
@@ -352,7 +351,7 @@ gotelse(){
 	return(0);
 }
 int
-getnl(){
+getnl(void){
 	while((peek = getch()) == '\t' || peek == ' '){
 		string[j++] = peek;
 		peek = -1;
@@ -374,7 +373,7 @@ getnl(){
 	return(0);
 }
 int
-comment(){
+comment(void){
 rep:
 	while((c = string[j++] = getch()) != '*')
 		if(c == '\n'){

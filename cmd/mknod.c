@@ -3,9 +3,7 @@
 int number(char *s);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int m, a, b;
 
@@ -33,13 +31,12 @@ usage:
 }
 
 int
-number(s)
-char *s;
+number(char *s)
 {
 	int n, c;
 
 	n = 0;
-	while(c = *s++) {
+	while((c = *s++)) {
 		if(c<'0' || c>'9')
 			return(-1);
 		n = n*10 + c-'0';

@@ -32,12 +32,11 @@ long	day	= 86400L;
 int	pcount;
 char	**pptr;
 
-int	loop(), print(), upall(), update(), among(), newday(), pdate();
+int	loop(void), print(void), upall(int f), update(struct tbuf *tp, int f);
+int	among(int i), newday(void), pdate(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int c, fl;
 	register int i;
@@ -94,7 +93,7 @@ char **argv;
 }
 
 int
-loop()
+loop(void)
 {
 	register int i;
 	register struct tbuf *tp;
@@ -141,7 +140,7 @@ loop()
 }
 
 int
-print()
+print(void)
 {
 	int i;
 	long ttime, t;
@@ -166,8 +165,7 @@ print()
 }
 
 int
-upall(f)
-int f;
+upall(int f)
 {
 	register struct tbuf *tp;
 
@@ -177,9 +175,7 @@ int f;
 }
 
 int
-update(tp, f)
-struct tbuf *tp;
-int f;
+update(struct tbuf *tp, int f)
 {
 	int j;
 	struct ubuf *up;
@@ -215,8 +211,7 @@ int f;
 }
 
 int
-among(i)
-int i;
+among(int i)
 {
 	register int j, k;
 	register char *p;
@@ -237,11 +232,11 @@ int i;
 }
 
 int
-newday()
+newday(void)
 {
 	long ttime;
 	struct timeb tb;
-	struct tm *localtime();
+	struct tm *localtime(long *tim);
 
 	time(&ttime);
 	if (midnight == 0) {
@@ -256,10 +251,10 @@ newday()
 }
 
 int
-pdate()
+pdate(void)
 {
 	long x;
-	char *ctime();
+	char *ctime(long *);
 
 	if (byday==0)
 		return(0);

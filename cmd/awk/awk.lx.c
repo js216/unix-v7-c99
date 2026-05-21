@@ -6,6 +6,8 @@
 extern int mustfld;
 extern FILE *yyin;
 extern YYSTYPE yylval;
+int yyerror(char *s);
+cell *fieldadr(int n);
 
 FILE *yyin = NULL;
 int lineno = 1;
@@ -27,21 +29,19 @@ static int state = 0;
 #define SC 2
 
 static int
-isword1(c)
-int c;
+isword1(int c)
 {
 	return(isalpha(c));
 }
 
 static int
-isword(c)
-int c;
+isword(int c)
 {
 	return(isalnum(c));
 }
 
 static int
-inputc()
+inputc(void)
 {
 	int c;
 	extern char *lexprog;
@@ -59,8 +59,7 @@ inputc()
 }
 
 static int
-unputc(c)
-int c;
+unputc(int c)
 {
 	pushed = c;
 	return(0);
@@ -79,7 +78,7 @@ word(char *s, char *t)
 }
 
 static int
-readstr()
+readstr(void)
 {
 	int c, n;
 
@@ -118,8 +117,7 @@ readstr()
 }
 
 static int
-readclass(neg)
-int neg;
+readclass(int neg)
 {
 	int c, n;
 
@@ -158,7 +156,7 @@ int neg;
 }
 
 int
-yylex()
+yylex(void)
 {
 	int c, d, n;
 	char buf[CBUFLEN];
@@ -398,7 +396,7 @@ again:
 }
 
 int
-startreg()
+startreg(void)
 {
 	state = REG;
 	return(0);

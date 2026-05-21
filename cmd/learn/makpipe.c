@@ -1,6 +1,7 @@
 #include "stdio.h"
 
-makpipe()
+int
+makpipe(void)
 {
 	int f[2];
 

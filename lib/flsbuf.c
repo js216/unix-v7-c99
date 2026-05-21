@@ -1,11 +1,9 @@
 #include	<stdio.h>
 
-char	*malloc();
+char	*malloc(unsigned n);
 
 int
-_flsbuf(c, iop)
-	int c;
-	register FILE *iop;
+_flsbuf(int c, register FILE *iop)
 {
 	register char *base;
 	register int n, rn;
@@ -56,8 +54,7 @@ tryagain:
 }
 
 int
-fflush(iop)
-	register FILE *iop;
+fflush(register FILE *iop)
 {
 	register char *base;
 	register int n;
@@ -79,7 +76,7 @@ fflush(iop)
  */
 
 void
-_cleanup()
+_cleanup(void)
 {
 	register FILE *iop;
 	extern FILE *_lastbuf;
@@ -89,8 +86,7 @@ _cleanup()
 }
 
 int
-fclose(iop)
-	register FILE *iop;
+fclose(register FILE *iop)
 {
 	register int r;
 

@@ -32,8 +32,8 @@
 #define NBRA	9
 
 FILE	*fin;
-union reptr	*abuf[ABUFSIZE];
-union reptr **aptr;
+struct reptr	*abuf[ABUFSIZE];
+struct reptr **aptr;
 char	*lastre;
 char	ibuf[512];
 char	*cbp;
@@ -47,7 +47,7 @@ char	*reend;
 char	*lbend;
 char	*hend;
 char	*lcomend;
-union reptr	*ptrend;
+struct reptr	*ptrend;
 int	eflag;
 int	dolflag;
 int	sflag;
@@ -102,22 +102,24 @@ char	*cp;
 char	*reend;
 char	*lbend;
 
-union	reptr {
-	struct {
-		char	*ad1;
-		char	*ad2;
-		union {
-			char	*re1;
-			union reptr	*lb1;
-		};
-		char	*rhs;
-		FILE	*fcode;
-		char	command;
-		char	gfl;
-		char	pfl;
-		char	inar;
-		char	negfl;
-	};
+/* Strict C99: v7 sed had struct reptr { struct reptr1; struct reptr2; }
+ * where reptr1/reptr2 differed only by re1(char*)/lb1(reptr*) in one
+ * slot.  Collapsed to a single struct with a named inner union for that
+ * slot -- callers reach the slot via ipc->u.re1 / ipc->u.lb1. */
+struct reptr {
+	char	*ad1;
+	char	*ad2;
+	union {
+		char	*re1;
+		struct reptr	*lb1;
+	} u;
+	char	*rhs;
+	FILE	*fcode;
+	char	command;
+	char	gfl;
+	char	pfl;
+	char	inar;
+	char	negfl;
 } ptrspace[PTRSIZE], *rep;
 
 
@@ -125,8 +127,8 @@ char	respace[RESIZE];
 
 struct label {
 	char	asc[9];
-	union reptr	*chain;
-	union reptr	*address;
+	struct reptr	*chain;
+	struct reptr	*address;
 } ltab[LABSIZE];
 
 struct label	*lab;
@@ -140,9 +142,9 @@ char	**eargv;
 
 extern	char	bittab[];
 
-union reptr	**cmpend[DEPTH];
+struct reptr	**cmpend[DEPTH];
 int	depth;
-union reptr	*pending;
+struct reptr	*pending;
 char	*badp;
 char	bad;
 char	*compile();

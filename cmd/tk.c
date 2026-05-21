@@ -34,25 +34,23 @@ int	alpha;
 int	ry;
 FILE	*ttyin;
 
-int	init(), sendpt(), kwait(), execom();
+int	init(void), sendpt(int a), kwait(void), execom(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i, j;
-	extern int ex();
+	extern int ex(void);
 
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch(argv[0][1]) {
 			case 'p':
-				if (i = atoi(&argv[0][2]))
+				if ((i = atoi(&argv[0][2])))
 					pl = i;
-					yyll = MAXY + 1 - pl;
+				yyll = MAXY + 1 - pl;
 				break;
 			default:
-				if (i = atoi(&argv[0][1])) {
+				if ((i = atoi(&argv[0][1]))) {
 					maxcol = i;
 					xx = xoff = 0;
 					coff = 4096/i;
@@ -76,6 +74,7 @@ char **argv;
 
 		case FF:
 			yy = 0;
+			/* fallthrough */
 		case '\n':
 			xx = xoff;
 			yy -= LINE;
@@ -155,7 +154,7 @@ char **argv;
 }
 
 int
-init()
+init(void)
 {
 	ohx = oxb = olx = ohy = oly = -1;
 	if (ncol >= maxcol) {
@@ -175,7 +174,7 @@ init()
 }
 
 int
-ex()
+ex(void)
 {
 	yy = MAXY;
 	xx = 0;
@@ -186,7 +185,7 @@ ex()
 }
 
 int
-kwait()
+kwait(void)
 {
 	register int c;
 
@@ -207,7 +206,7 @@ kwait()
 }
 
 int
-execom()
+execom(void)
 {
 	int (*si)(), (*sq)();
 
@@ -228,8 +227,7 @@ execom()
 }
 
 int
-sendpt(a)
-int a;
+sendpt(int a)
 {
 	register int zz;
 	int hy,xb,ly,hx,lx;
@@ -239,7 +237,7 @@ int a;
 	if ((zz = yy) < 0)
 		zz = 0;
 	hy = ((zz>>7) & 037);
-	xb = ((xx & 03) + ((zz<<2) & 014) & 017);
+	xb = (((xx & 03) + ((zz<<2) & 014)) & 017);
 	ly = ((zz>>2) & 037);
 	hx = ((xx>>7) & 037);
 	lx = ((xx>>2) & 037);

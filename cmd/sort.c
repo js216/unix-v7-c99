@@ -22,10 +22,10 @@ unsigned	nlines;
 unsigned	ntext;
 int	*lspace;
 char	*tspace;
-int	cmp(), cmpa();
-int	(*compare)() = cmpa;
-char	*eol();
-int	term();
+int	cmp(char *i, char *j), cmpa(register char *pa, register char *pb);
+int	(*compare)(char *, char *) = cmpa;
+char	*eol(register char *p);
+int	term(void);
 int 	mflg;
 int	cflg;
 int	uflg;
@@ -158,15 +158,15 @@ struct field proto = {
 	zero+128,
 	0,
 	1,
-	0,0,
-	0,-1,
-	0,0
+	{0,0},
+	{0,-1},
+	{0,0}
 };
 int	nfields;
 int 	error = 1;
-char	*setfil();
-char	*sbrk();
-char	*brk();
+char	*setfil(int i);
+char	*sbrk(int);
+char	*brk(char *);
 struct	merg;
 int	copyproto(void);
 int	field(char *s, int k);
@@ -185,9 +185,7 @@ int	number(char **ppa);
 int	qsort(char **a, char **l);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int a;
 	extern char end[1];
@@ -294,7 +292,7 @@ char **argv;
 	brk(ep -= 512);	/* for recursion */
 	a = ep - (char*)lspace;
 	nlines = (a-L);
-	nlines /= (5*(sizeof(char *)/sizeof(char)));
+	nlines /= (5*(sizeof(char *)));
 	ntext = nlines*8;
 	tspace = (char *)(lspace + nlines);
 	a = -1;
@@ -321,7 +319,7 @@ char **argv;
 		sort();
 		fclose(stdin);
 	}
-	for(a = mflg|cflg?0:eargc; a+N<nfiles || unsafeout&&a<eargc; a=i) {
+	for(a = (mflg|cflg)?0:eargc; a+N<nfiles || (unsafeout&&a<eargc); a=i) {
 		i = a+N;
 		if(i>=nfiles)
 			i = nfiles;
@@ -338,7 +336,7 @@ char **argv;
 }
 
 int
-sort()
+sort(void)
 {
 	register char *cp;
 	register char **lp;
@@ -403,8 +401,7 @@ struct merg
 } *ibuf[256];
 
 int
-merge(a,b)
-int a, b;
+merge(int a, int b)
 {
 	struct	merg	*p;
 	register char	*cp, *dp;
@@ -446,7 +443,7 @@ int a, b;
 		}
 	} while(l);
 
-	muflg = mflg & uflg | cflg;
+	muflg = (mflg & uflg) | cflg;
 	i = j;
 	while(i > 0) {
 		cp = ibuf[i-1]->l;
@@ -500,8 +497,7 @@ int a, b;
 }
 
 int
-rline(mp)
-struct merg *mp;
+rline(struct merg *mp)
 {
 	register char *cp;
 	register char *ce;
@@ -523,8 +519,7 @@ struct merg *mp;
 }
 
 int
-disorder(s,t)
-char *s, *t;
+disorder(char *s, char *t)
 {
 	register char *u;
 	for(u=t; *u!='\n';u++) ;
@@ -535,7 +530,7 @@ char *s, *t;
 }
 
 int
-newfile()
+newfile(void)
 {
 	register char *f;
 
@@ -549,15 +544,15 @@ newfile()
 }
 
 char *
-setfil(i)
-int i;
+setfil(int i)
 {
 
-	if(i < eargc)
+	if(i < eargc) {
 		if(eargv[i][0] == '-' && eargv[i][1] == '\0')
 			return(0);
 		else
 			return(eargv[i]);
+	}
 	i -= eargc;
 	filep[0] = i/26 + 'a';
 	filep[1] = i%26 + 'a';
@@ -565,7 +560,7 @@ int i;
 }
 
 int
-oldfile()
+oldfile(void)
 {
 
 	if(outfil) {
@@ -579,7 +574,7 @@ oldfile()
 }
 
 int
-safeoutfil()
+safeoutfil(void)
 {
 	register int i;
 	struct stat obuf,ibuf;
@@ -599,8 +594,7 @@ safeoutfil()
 }
 
 int
-cant(f)
-char *f;
+cant(char *f)
 {
 
 	diag("can't open ",f);
@@ -609,8 +603,7 @@ char *f;
 }
 
 int
-diag(s,t)
-char *s, *t;
+diag(char *s, char *t)
 {
 	fputs("sort: ",stderr);
 	fputs(s,stderr);
@@ -620,7 +613,7 @@ char *s, *t;
 }
 
 int
-term()
+term(void)
 {
 	register int i;
 
@@ -637,11 +630,10 @@ term()
 }
 
 int
-cmp(i, j)
-char *i, *j;
+cmp(char *i, char *j)
 {
 	register char *pa, *pb;
-	char *skip();
+	char *skip(char *pp, struct field *fp, int j);
 	char *code, *ignore;
 	int a, b;
 	int k;
@@ -685,7 +677,7 @@ char *i, *j;
 			a = 0;
 			if(sa==sb)
 				while(ipa > pa && ipb > pb)
-					if(b = *--ipb - *--ipa)
+					if((b = *--ipb - *--ipa))
 						a = b;
 			while(ipa > pa)
 				if(*--ipa != '0')
@@ -701,7 +693,7 @@ char *i, *j;
 			if(sa==sb)
 				while(pa<la && isdigit(*pa)
 				   && pb<lb && isdigit(*pb))
-					if(a = *pb++ - *pa++)
+					if((a = *pb++ - *pa++))
 						return(a*sa);
 			while(pa<la && isdigit(*pa))
 				if(*pa++ != '0')
@@ -714,17 +706,18 @@ char *i, *j;
 		code = fp->code;
 		ignore = fp->ignore;
 loop: 
-		while(ignore[*pa])
+		while(ignore[(unsigned char)*pa])
 			pa++;
-		while(ignore[*pb])
+		while(ignore[(unsigned char)*pb])
 			pb++;
-		if(pa>=la || *pa=='\n')
+		if(pa>=la || *pa=='\n') {
 			if(pb<lb && *pb!='\n')
 				return(fp->rflg);
 			else continue;
+		}
 		if(pb>=lb || *pb=='\n')
 			return(-fp->rflg);
-		if((sa = code[*pb++]-code[*pa++]) == 0)
+		if((sa = code[(unsigned char)*pb++]-code[(unsigned char)*pa++]) == 0)
 			goto loop;
 		return(sa*fp->rflg);
 	}
@@ -734,8 +727,7 @@ loop:
 }
 
 int
-cmpa(pa, pb)
-register char *pa, *pb;
+cmpa(register char *pa, register char *pb)
 {
 	while(*pa == *pb) {
 		if(*pa++ == '\n')
@@ -751,10 +743,7 @@ register char *pa, *pb;
 }
 
 char *
-skip(pp, fp, j)
-struct field *fp;
-char *pp;
-int j;
+skip(char *pp, struct field *fp, int j)
 {
 	register int i;
 	register char *p;
@@ -792,15 +781,14 @@ ret:
 }
 
 char *
-eol(p)
-register char *p;
+eol(register char *p)
 {
 	while(*p != '\n') p++;
 	return(p);
 }
 
 int
-copyproto()
+copyproto(void)
 {
 	register int i;
 	register int *p, *q;
@@ -813,9 +801,7 @@ copyproto()
 }
 
 int
-field(s,k)
-char *s;
-int k;
+field(char *s, int k)
 {
 	register struct field *p;
 	register int d;
@@ -868,7 +854,7 @@ int k;
 			if(p->m[k] == -1)	/* -m.n with m missing */
 				p->m[k] = 0;
 			d = &fields[0].n[0]-&fields[0].m[0];
-
+			/* fallthrough */
 		default:
 			p->m[k+d] = number(&s);
 		}
@@ -878,8 +864,7 @@ int k;
 }
 
 int
-number(ppa)
-char **ppa;
+number(char **ppa)
 {
 	int n;
 	register char *pa;
@@ -893,8 +878,7 @@ char **ppa;
 }
 
 int
-blank(c)
-int c;
+blank(int c)
 {
 	if(c==' ' || c=='\t')
 		return(1);
@@ -905,8 +889,7 @@ int c;
 #define qstexc(p,q,r) t= *p;*p= *r;*r= *q;*q=t
 
 int
-qsort(a,l)
-char **a, **l;
+qsort(char **a, char **l)
 {
 	register char **i, **j;
 	char **k;

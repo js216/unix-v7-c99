@@ -5,9 +5,7 @@
 #include <ctype.h>
 #define LOGHUGE 39
 static double
-ldexp(value, n)
-double value;
-int n;
+ldexp(double value, int n)
 {
 	while (n > 0) { value *= 2.0; n--; }
 	while (n < 0) { value *= 0.5; n++; }
@@ -15,8 +13,7 @@ int n;
 }
 
 double
-atof(p)
-register char *p;
+atof(register char *p)
 {
 	register int c;
 	double fl, flexp, exp5;

@@ -5,8 +5,10 @@
 #define	MEDIUM	2
 #define	HARD	3
 
-mysys(s)
-char *s;
+int lrn_getargs(char *s, char **v);
+
+int
+mysys(char *s)
 {
 	/* like "system" but rips off "mv", etc.*/
 	/* also tries to guess if can get away with exec cmd */
@@ -19,18 +21,18 @@ char *s;
 	type = EASY;	/* we hope */
 	for (t = s; *t && type != HARD; t++) {
 		switch (*t) {
-		case '*': 
-		case '[': 
-		case '?': 
-		case '>': 
-		case '<': 
+		case '*':
+		case '[':
+		case '?':
+		case '>':
+		case '<':
 		case '$':
 		case '\'':
 		case '"':
 			type = MEDIUM;
 			break;
-		case '|': 
-		case ';': 
+		case '|':
+		case ';':
 		case '&':
 			type = HARD;
 			break;
@@ -66,6 +68,7 @@ char *s;
 		}
 		return(system(s));
 	}
+	return 0;
 }
 
 /*
@@ -75,14 +78,14 @@ char *s;
  *	user gets the behavior he expects.
  */
 
-system(s)
-char *s;
+int
+system(char *s)
 {
 	int status, pid, w;
-	register int (*istat)(), (*qstat)();
+	register void (*istat)(int), (*qstat)(int);
 
-	istat = signal(SIGINT, SIG_IGN);
-	qstat = signal(SIGQUIT, SIG_IGN);
+	istat = (void (*)(int))(long)signal(SIGINT, SIG_IGN);
+	qstat = (void (*)(int))(long)signal(SIGQUIT, SIG_IGN);
 	if ((pid = fork()) == 0) {
 		signal(SIGINT, SIG_DFL);
 		signal(SIGQUIT, SIG_DFL);
@@ -98,8 +101,8 @@ char *s;
 	return(status);
 }
 
-lrn_getargs(s, v)
-char *s, **v;
+int
+lrn_getargs(char *s, char **v)
 {
 	int i;
 

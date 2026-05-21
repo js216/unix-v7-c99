@@ -3,7 +3,6 @@
  * used by more than one
  * routine.
  */
-char	canonb[CANBSIZ];	/* buffer for erase and kill (#@) */
 struct inode *rootdir;		/* pointer to inode of root directory */
 struct proc *runq;		/* head of linked list of running processes */
 int	cputype;		/* type of cpu =40, 45, or 70 */
@@ -20,11 +19,9 @@ time_t	time;			/* time in sec from 1970 */
  */
 int	nblkdev;
 
-/*
- * Number of character switch entries.
- * Set by cinit/tty.c
- */
-int	nchrdev;
+/* v7's `int nchrdev` (character-switch row count, set by cinit()) is
+ * gone -- this port doesn't dispatch through cdevsw[], so no caller
+ * ever reads it. */
 
 int	mpid;			/* generic for unique process id's */
 char	runin;			/* scheduling flag */
@@ -32,35 +29,61 @@ char	runout;			/* scheduling flag */
 char	runrun;			/* scheduling flag */
 char	curpri;			/* more scheduling */
 int	maxmem;			/* actual max memory per process */
-physadr	lks;			/* pointer to clock device */
+/* `physadr lks` (PDP-11 KW11-L clock-device CSR pointer) is gone --
+ * the ARM port rearms the timer via cntv_tval_set, not by writing
+ * lks->r[0] = 0115. */
 daddr_t	swplo;			/* block number of swap space */
-int	nswap;			/* size of swap space */
 int	updlock;		/* lock for sync */
 daddr_t	rablock;		/* block to be read ahead */
 extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
 char	msgbuf[MSGBUFS];	/* saved "printf" characters */
 dev_t	rootdev;		/* device of the root */
 dev_t	swapdev;		/* swapping device */
-dev_t	pipedev;		/* pipe device */
-extern	int	icode[];	/* user init code */
-extern	int	szicode;	/* its size */
-
-dev_t getmdev();
-daddr_t	bmap();
-struct inode *ialloc();
+/* `dev_t pipedev` (the device pipe(2) ialloc'd against) is gone --
+ * sys/pipe.c::pipe() was removed; arch/armboot.c::kpipe uses its own
+ * pipes[] table that doesn't allocate inodes. */
+dev_t	getmdev(void);
+daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
+void	setrun(struct proc *p);
+int	setpri(struct proc *pp);
+int	issig(void);
+unsigned min(unsigned a, unsigned b);
+int	fubyte(caddr_t addr);
+int	subyte(caddr_t addr, char c);
+struct inode *ialloc(dev_t dev);
 struct inode *iget(dev_t dev, ino_t ino);
-struct inode *owner();
-struct inode *maknode();
+struct inode *owner(void);
+struct inode *maknode(int mode);
 struct inode *namei(int (*func)(void), int flag);
-struct buf *alloc();
+struct buf *alloc(dev_t dev);
 struct buf *getblk(dev_t dev, daddr_t blkno);
-struct buf *geteblk();
+struct buf *geteblk(void);
 struct buf *bread(dev_t dev, daddr_t blkno);
 struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-struct filsys *getfs();
-struct file *getf();
-struct file *falloc();
+struct filsys *getfs(dev_t dev);
+struct file *getf(int fdes);
+/* falloc() (allocate file slot) is gone -- see sys/fio.c. */
 int	uchar(void);
+void	free(dev_t dev, daddr_t bno);
+void	ifree(dev_t dev, ino_t ino);
+void	update(void);
+int	passc(int c);
+int	cpass(void);
+void	closef(struct file *fp);
+int	access(struct inode *ip, int mode);
+void	iput(struct inode *ip);
+void	plock(struct inode *ip);
+void	prele(struct inode *ip);
+void	readi(struct inode *ip);
+void	writei(struct inode *ip);
+int	iupdat(struct inode *ip, time_t *ta, time_t *tm);
+int	suser(void);
+int	ufalloc(void);
+void	xrele(struct inode *ip);
+void	psignal(struct proc *p, int sig);
+void	bcopy(char *f, char *t, unsigned int n);
+int	copyin(caddr_t f, caddr_t t, unsigned int n);
+int	copyout(caddr_t f, caddr_t t, unsigned int n);
 /*
  * Instrumentation
  */
@@ -71,11 +94,3 @@ long	dk_wds[3];
 long	tk_nin;
 long	tk_nout;
 
-/*
- * Structure of the system-entry table
- */
-extern struct sysent {
-	char	sy_narg;		/* total number of arguments */
-	char	sy_nrarg;		/* number of args in registers */
-	int	(*sy_call)();		/* handler */
-} sysent[];

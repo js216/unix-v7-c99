@@ -13,20 +13,17 @@
 /* ========	general purpose string handling ======== */
 
 
-STRING	movstr(a,b)
-	REG STRING	a, b;
+STRING	movstr(REG STRING a, REG STRING b)
 {
-	WHILE *b++ = *a++ DONE
+	WHILE (*b++ = *a++) DONE
 	return(--b);
 }
 
-INT	any(c,s)
-	REG CHAR	c;
-	STRING		s;
+INT	any(REG CHAR c, STRING s)
 {
 	REG CHAR d;
 
-	WHILE d = *s++
+	WHILE (d = *s++)
 	DO	IF d==c
 		THEN	return(TRUE);
 		FI
@@ -34,8 +31,7 @@ INT	any(c,s)
 	return(FALSE);
 }
 
-INT	cf(s1, s2)
-	REG STRING s1, s2;
+INT	cf(REG STRING s1, REG STRING s2)
 {
 	WHILE *s1++ == *s2
 	DO	IF *s2++==0
@@ -45,11 +41,10 @@ INT	cf(s1, s2)
 	return(*--s1 - *s2);
 }
 
-INT	length(as)
-	STRING as;
+INT	length(STRING as)
 {
 	REG STRING s;
 
-	IF s=as THEN WHILE *s++ DONE FI
+	IF (s=as) THEN WHILE *s++ DONE FI
 	return(s-as);
 }

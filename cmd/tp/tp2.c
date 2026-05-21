@@ -12,7 +12,7 @@ struct direct	direct;
 struct stat	statb;
 
 int
-clrdir()
+clrdir(void)
 {
 	register int j, *p;
 
@@ -24,8 +24,7 @@ clrdir()
 }
 
 int
-clrent(ptr)
-struct	dent *ptr;
+clrent(struct dent *ptr)
 {
 	register int *p, j;
 
@@ -44,7 +43,7 @@ struct	dent *ptr;
 
 
 int
-rddir()
+rddir(void)
 {
 	register struct tent *tp;
 	register struct dent *p1;
@@ -98,7 +97,7 @@ rddir()
 		++tptr;		/* bump to next tent */
 		(dptr++)->d_mode &= ~OK;
 	} while (--count);
-	if(sum != 0)
+	if(sum != 0) {
 		if(flags & (fls|fli)) {
 			printf("Directory checksum\n");
 			if ((flags & fli) == 0)		done();
@@ -108,13 +107,14 @@ rddir()
 			printf("Warning: swabbing required\n");
 			return(0);
 		}
+	}
 	bitmap();
 	return(0);
 }
 
 
 int
-wrdir()
+wrdir(void)
 {
 	register struct tent *tp;
 	register struct dent *dp;
@@ -173,7 +173,7 @@ wrdir()
 }
 
 int
-tread()
+tread(void)
 {
 	register int j, *ptr;
 
@@ -189,7 +189,7 @@ tread()
 }
 
 int
-twrite()
+twrite(void)
 {
 	if (write(fio, (char *)tapeb,BSIZE) != BSIZE) {
 		printf("Tape write error\n");
@@ -200,8 +200,7 @@ twrite()
 }
 
 int
-rseek(blk)
-int blk;
+rseek(int blk)
 {
 	rseeka = blk;
 	if (lseek(fio,(long)blk*BSIZE,0) < 0)	seekerr();
@@ -209,8 +208,7 @@ int blk;
 }
 
 int
-wseek(blk)
-int blk;
+wseek(int blk)
 {
 	register int amt, b;
 
@@ -226,7 +224,7 @@ int blk;
 }
 
 int
-seekerr()
+seekerr(void)
 {
 	printf("Tape seek error\n");
 	done();
@@ -234,8 +232,7 @@ seekerr()
 }
 
 int
-verify(key)
-int key;
+verify(int key)
 {
 	register int c;
 
@@ -258,7 +255,7 @@ repeat:	printf("%c %s ", key, name);
 }
 
 int
-getfiles()
+getfiles(void)
 {
 
 	if ((narg -= 2) == 0) {
@@ -273,7 +270,7 @@ getfiles()
 
 
 int
-expand()
+expand(void)
 {
 	register  char *p0, *save0;
 	int n, fid;
@@ -371,8 +368,7 @@ copydir:
 }
 
 int
-swabdir(tp)
-register struct tent *tp;
+swabdir(register struct tent *tp)
 {
 	swab((char *)tp, (char *)tp, sizeof(*tp));
 	swab(tp->pathnam, tp->pathnam, NAMELEN);

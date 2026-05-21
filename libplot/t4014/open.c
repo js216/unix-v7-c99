@@ -1,5 +1,0 @@
-openvt ()
-{
-}
-openpl(){
-}

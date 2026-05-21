@@ -5,6 +5,10 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/buf.h"
+#include "../h/proto.h"
+
+/* bread/brelse come from h/proto.h.
+ * iget/iput/plock/access/bcopy/bmap/fubyte come from h/systm.h. */
 
 /*
  * Convert a pathname into a pointer to
@@ -18,8 +22,7 @@
  *	2 if name is to be deleted
  */
 struct inode *
-namei(func, flag)
-int (*func)();
+namei(int (*func)(void), int flag)
 {
 	register struct inode *dp;
 	register int c;
@@ -63,8 +66,6 @@ cloop:
 
 	cp = &u.u_dbuf[0];
 	while (c != '/' && c != '\0' && u.u_error == 0 ) {
-		if (mpxip!=NULL && c=='!')
-			break;
 		if(cp < &u.u_dbuf[DIRSIZ])
 			*cp++ = c;
 		c = (*func)();
@@ -73,12 +74,8 @@ cloop:
 		*cp++ = '\0';
 	while(c == '/')
 		c = (*func)();
-	if (c == '!' && mpxip != NULL) {
-		iput(dp);
-		plock(mpxip);
-		mpxip->i_count++;
-		return(mpxip);
-	}
+	/* v7's `path!subpath` mpx multiplexor lookup is gone -- mpxip was
+	 * never assigned on this port, so the branch was unreachable. */
 
 seloop:
 	/*
@@ -199,21 +196,16 @@ out:
 	return(NULL);
 }
 
-/*
- * Return the next character from the
- * kernel string pointed at by dirp.
- */
-schar()
-{
-
-	return(*u.u_dirp++ & 0377);
-}
+/* schar() (kernel-side name-fetcher passed to namei) was only used by
+ * sys/sig.c::core() which is gone on this port; uchar() remains for the
+ * user-space namei path. */
 
 /*
  * Return the next character from the
  * user string pointed at by dirp.
  */
-uchar()
+int
+uchar(void)
 {
 	register int c;
 

@@ -2,12 +2,14 @@
 #include "lrnref"
 #include "signal.h"
 
+extern void intrpt(int);
+void stop(int);
+
 int istop;
 
-list(r)
-char *r;
+void
+list(char *r)
 {
-	int stop(), intrpt();
 	FILE *ft;
 	char s[100];
 
@@ -24,7 +26,9 @@ char *r;
 	signal(SIGINT, intrpt);
 }
 
-stop()
+void
+stop(int sig)
 {
+	(void)sig;
 	istop=0;
 }

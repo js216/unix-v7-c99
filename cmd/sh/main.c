@@ -22,14 +22,43 @@ FILEBLK		stdfile;
 FILE		standin = &stdfile;
 #include	<execargs.h>
 
-PROC VOID	exfile();
+PROC VOID	exfile(BOOL prof);
+INT	stdsigs(void);
+INT	addblok(POS reqd);
+INT	options(INT argc, STRING *argv);
+INT	assnum(STRING *p, INT n);
+INT	settmp(void);
+INT	dfault(NAMPTR n, STRING v);
+INT	estabf(REG STRING s);
+INT	chkopen(STRING idf);
+INT	pathopen(STRING path, STRING name);
+INT	done(void);
+INT	Ldup(REG INT fa, REG INT fb);
+INT	initf(UFD fd);
+INT	tdystak(REG STKPTR x);
+INT	stakchk(void);
+INT	exitset(void);
+INT	ignsig(INT n);
+INT	execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2);
+INT	itos(INT n);
+INT	getenv(void);
+extern INT setbrk(INT n);
+INT	readc(void);
+VOID	prs(STRING as);
+extern int getpid(void);
+extern int getuid(void);
+extern int gtty();
+extern int alarm(unsigned sec);
+extern int stat(char *p, struct stat *s);
+extern int close(int fd);
+extern int dup();
+extern int ioctl(int fd, int cmd, ...);
 
 
 
 
-main(c, v)
-	INT		c;
-	STRING		v[];
+int
+main(INT c, STRING v[])
 {
 	REG INT		rflag=ttyflg;
 
@@ -82,17 +111,17 @@ main(c, v)
 		ELSE	input=((flags&stdflg) ? 0 : chkopen(cmdadr));
 			comdiv--;
 		FI
-	ELSE	*execargs=dolv;	/* for `ps' cmd */
+	ELSE	*execargs=(char *)dolv;	/* for `ps' cmd */
 	FI
 
 	exfile(0);
 	done();
+	return(0);
 }
 
-LOCAL VOID	exfile(prof)
-BOOL		prof;
+LOCAL VOID	exfile(BOOL prof)
 {
-	REG L_INT	mailtime = 0;
+	volatile L_INT	mailtime = 0;
 	REG INT		userid;
 	struct stat	statb;
 
@@ -119,7 +148,7 @@ BOOL		prof;
 	FI
 
 	IF setjmp(errshell) ANDF prof
-	THEN	close(input); return;
+	THEN	close(input); return(0);
 	FI
 
 	/* error return here */
@@ -143,32 +172,34 @@ BOOL		prof;
 
 		trapnote=0; peekc=readc();
 		IF eof
-		THEN	return;
+		THEN	return(0);
 		FI
 		alarm(0); flags &= ~waiting;
-		execute(cmd(NL,MTFLG),0);
+		execute(cmd(NL,MTFLG),0,(INT *)0,(INT *)0);
 		eof |= (flags&oneflg);
 	POOL
 }
 
-chkpr(eor)
-char eor;
+VOID
+chkpr(INT eor)
 {
 	IF (flags&prompt) ANDF standin->fstak==0 ANDF eor==NL
 	THEN	prs(ps2nod.namval);
 	FI
+	return(0);
 }
 
-settmp()
+INT settmp(void)
 {
 	itos(getpid()); serial=0;
 	tmpnam=movstr(numbuf,&tmpout[TMPNAM]);
+	return(0);
 }
 
-Ldup(fa, fb)
-	REG INT		fa, fb;
+INT Ldup(REG INT fa, REG INT fb)
 {
 	dup(fa|DUPFLG, fb);
 	close(fa);
 	ioctl(fb, FIOCLEX, 0);
+	return(0);
 }

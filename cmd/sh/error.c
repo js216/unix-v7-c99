@@ -9,15 +9,27 @@
 
 #include	"defs.h"
 
+extern void exit(int n) __attribute__((__noreturn__));
+extern int unlink(char *p);
+void	exitsh(INT xno);
+void	rmtemp(IOPTR base);
+INT	assnum(STRING *p, INT n);
+void	prp(void);
+void	newline(void);
+void	done(void);
+void	clearup(void);
+void	execexp(STRING s, UFD f);
+
 
 /* ========	error handling	======== */
 
-exitset()
+INT exitset(void)
 {
 	assnum(&exitadr,exitval);
+	return(0);
 }
 
-sigchk()
+INT sigchk(void)
 {
 	/* Find out if it is time to go away.
 	 * `trapnote' is set to SIGSET when fault is seen and
@@ -26,26 +38,27 @@ sigchk()
 	IF trapnote&SIGSET
 	THEN	exitsh(SIGFAIL);
 	FI
+	return(0);
 }
 
-failed(s1,s2)
-	STRING	s1, s2;
+INT failed(STRING s1, STRING s2)
 {
-	prp(); prs(s1); 
+	prp(); prs(s1);
 	IF s2
 	THEN	prs(colon); prs(s2);
 	FI
 	newline(); exitsh(ERROR);
+	return(0);
 }
 
-error(s)
-	STRING	s;
+INT error(STRING s)
 {
 	failed(s,NIL);
+	return(0);
 }
 
-exitsh(xno)
-	INT	xno;
+void
+exitsh(INT xno)
 {
 	/* Arrive here from `FATAL' errors
 	 *  a) exit command,
@@ -62,10 +75,10 @@ exitsh(xno)
 	FI
 }
 
-done()
+void done(void)
 {
 	REG STRING	t;
-	IF t=trapcom[0]
+	IF (t=trapcom[0])
 	THEN	trapcom[0]=0; /*should free but not long */
 		execexp(t,0);
 	FI
@@ -73,8 +86,8 @@ done()
 	exit(exitval);
 }
 
-rmtemp(base)
-	IOPTR		base;
+void
+rmtemp(IOPTR base)
 {
 	WHILE iotemp>base
 	DO  unlink(iotemp->ioname);

@@ -12,7 +12,7 @@ int	getit(void);
 int	putit(int ntab);
 int	clean(void);
 int
-getit()
+getit(void)
 {	register int i;
 	register int c;
 	slen=alen=elen=0;
@@ -21,6 +21,7 @@ getit()
 		switch(c)
 		{
 		case '\n':	if(i==0) continue;
+				/* fallthrough */
 		case EOF:
 			alen=i;
 			return(i);
@@ -36,22 +37,20 @@ getit()
 	}
 }
 int
-putit(ntab)
-int ntab;
+putit(int ntab)
 {	register int i;
 	for(i=0;i<ntab;i++) putchar('\t');
 	for(i=0;i<alen;i++) putchar(buf[i]);
 	return(0);
 }
 int
-clean()
+clean(void)
 {
 	putchar('\n');
 	return(0);
 }
 int
-main(argc,argv) char *argv[];
-int argc;
+main(int argc, char *argv[])
 {	int len,ntab;
 	int i;
 	len=80;

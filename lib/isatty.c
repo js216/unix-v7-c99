@@ -6,8 +6,7 @@
 #include <sgtty.h>
 
 int
-isatty(f)
-int f;
+isatty(int f)
 {
 	struct sgttyb ttyb;
 

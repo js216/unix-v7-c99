@@ -10,11 +10,25 @@
 #include	"defs.h"
 #include	"sym.h"
 
+INT	word(void);
+INT	nextc(INT quote);
+INT	readc(void);
+INT	syslook(STRING w, struct sysnod syswds[]);
+INT	estabf(STRING s);
+VOID	prc(INT c);
+VOID	newline(void);
+VOID	sigchk(void);
+VOID	chkpr(CHAR c);
+VOID	copy(struct ionod *ioparg);
+extern int read(int fd, char *buf, int n);
+extern int close(int fd);
+LOCAL	INT readb(void);
+
 
 /* ========	character handling for command lines	========*/
 
 
-word()
+INT word(void)
 {
 	REG CHAR	c, d;
 	REG CHAR	*argp=locstak()+BYTESPERWORD;
@@ -40,7 +54,7 @@ word()
 				FI
 			FI
 		PER (c=nextc(0), !eofmeta(c)) DONE
-		arg=endstak(argp);
+		arg=(ARGPTR)endstak(argp);
 		IF !letter(arg->argval[0]) THEN wdset=0 FI
 
 		peekc=c|MARK;
@@ -68,8 +82,8 @@ word()
 	return(wdval);
 }
 
-nextc(quote)
-	CHAR		quote;
+int
+nextc(int quote)
 {
 	REG CHAR	c, d;
 	IF (d=readc())==ESCAPE
@@ -83,7 +97,7 @@ nextc(quote)
 	return(d);
 }
 
-readc()
+INT readc(void)
 {
 	REG CHAR	c;
 	REG INT		len;
@@ -114,7 +128,7 @@ retry:
 	return(c);
 }
 
-LOCAL	readb()
+LOCAL	INT readb(void)
 {
 	REG FILE	f=standin;
 	REG INT		len;

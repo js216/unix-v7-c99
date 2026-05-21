@@ -11,9 +11,7 @@ FILE	*os;
 int atoi(char *s);
 void exit(int n);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i, c, f;
 	int iflg = 0;

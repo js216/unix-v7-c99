@@ -11,8 +11,9 @@
 #define	INT	0
 #define	FLOAT	1
 
-char	*_getccl();
-int	_innum(), _instr();
+static char	*_getccl(register char *s);
+static int	_innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr);
+static int	_instr(register char *ptr, int type, int len, register struct _iobuf *iop, int *eofptr);
 
 char	_sctab[128] = {
 	0,0,0,0,0,0,0,0,
@@ -26,10 +27,7 @@ char	_sctab[128] = {
 };
 
 int
-_doscan(iop, fmt, argp)
-FILE *iop;
-register char *fmt;
-va_list *argp;
+_doscan(FILE *iop, register char *fmt, va_list *argp)
 {
 	int *slot;
 	register int ch;
@@ -99,13 +97,10 @@ va_list *argp;
 	}
 }
 
-int
-_innum(ptr, type, len, size, iop, eofptr)
-int **ptr, *eofptr;
-int type, len, size;
-struct _iobuf *iop;
+static int
+_innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 {
-	extern double atof();
+	extern double atof(char *s);
 	register char *np;
 	char numbuf[64];
 	register int c, base;
@@ -139,7 +134,7 @@ struct _iobuf *iop;
 	}
 	for ( ; --len>=0; *np++ = c, c = getc(iop)) {
 		if (isdigit(c)
-		 || base==16 && ('a'<=c && c<='f' || 'A'<=c && c<='F')) {
+		 || (base==16 && (('a'<=c && c<='f') || ('A'<=c && c<='F')))) {
 			ndigit++;
 			if (base==8)
 				lcval <<=3;
@@ -209,12 +204,8 @@ struct _iobuf *iop;
 	return(1);
 }
 
-int
-_instr(ptr, type, len, iop, eofptr)
-register char *ptr;
-int type, len;
-register struct _iobuf *iop;
-int *eofptr;
+static int
+_instr(register char *ptr, int type, int len, register struct _iobuf *iop, int *eofptr)
 {
 	register int ch;
 	register char *optr;
@@ -256,9 +247,8 @@ int *eofptr;
 	return(0);
 }
 
-char *
-_getccl(s)
-register char *s;
+static char *
+_getccl(register char *s)
 {
 	register int c, t;
 

@@ -70,9 +70,34 @@
 #line 32 "cmd/awk/awk.g.y"
 
 #include "awk.def"
-#ifndef	DEBUG	
+#ifndef	DEBUG
 #	define	PUTS(x)
 #endif
+/* The bison grammar packs node* values through YYSTYPE (=int) without a
+ * %union, so the action code below freely converts between int and
+ * struct-pointer types.  Scope the warning suppression to this single
+ * generated file rather than to all of awk -- the hand-written awk
+ * sources are clean. */
+#pragma GCC diagnostic ignored "-Wint-conversion"
+/* Forward decls for helpers from parse.c/lib.c/b.c. */
+extern void free(void *p);
+extern int yylex(void);
+extern int yyerror(char *s);
+extern node *stat2(int a, node *b, node *c);
+extern node *stat3(int a, node *b, node *c, node *d);
+extern node *stat4(int a, node *b, node *c, node *d, node *e);
+extern node *op1(int a, node *b);
+extern node *op2(int a, node *b, node *c);
+extern node *op3(int a, node *b, node *c, node *d);
+extern node *valtonode(cell *a, int b);
+extern node *exptostat(node *a);
+extern node *genjump(int a);
+extern node *genprint(void);
+extern node *pa2stat(node *a, node *b, node *c);
+extern node *linkum(node *a, node *b);
+extern int makedfa(node *a);
+extern int startreg(void);
+extern int cclenter(char *p);
 
 #line 78 "y.tab.c"
 

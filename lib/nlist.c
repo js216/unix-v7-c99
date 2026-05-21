@@ -64,9 +64,7 @@ struct elfsym {
 };
 
 int
-nlist(name, list)
-char *name;
-struct nlist *list;
+nlist(char *name, struct nlist *list)
 {
 	struct nlist *p;
 	struct elfhdr eh;

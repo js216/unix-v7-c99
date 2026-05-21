@@ -7,11 +7,10 @@
 static char *empty[] = { 0 };
 char **environ = empty;
 int errno;
-static char *nvmatch();
+static char *nvmatch(register char *s1, register char *s2);
 
 char *
-getenv(name)
-register char *name;
+getenv(register char *name)
 {
 	register char **p = environ;
 	register char *v;
@@ -30,8 +29,7 @@ register char *name;
  */
 
 static char *
-nvmatch(s1, s2)
-register char *s1, *s2;
+nvmatch(register char *s1, register char *s2)
 {
 
 	while (*s1 == *s2++)

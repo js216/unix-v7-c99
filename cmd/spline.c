@@ -138,8 +138,8 @@ where
 */
 
 float
-rhs(i)
-int i;{
+rhs(int i)
+{
 	int i_;
 	double zz;
 	i_ = i==n-1?0:i;
@@ -148,7 +148,7 @@ int i;{
 }
 
 int
-spline(){
+spline(void){
 	float d,s,u,v,hi,hi1;
 	float h;
 	float D2yi,D2yi1,D2yn1,x0,x1,yy,a;
@@ -204,7 +204,7 @@ spline(){
 		m = 1.001*m*hi1/(x.ub-x.lb);
 		if(m<=0) m = 1;
 		h = hi1/m;
-		for(j=m;j>0||i==0&&j==0;j--){	/* interpolate */
+		for(j=m;j>0||(i==0&&j==0);j--){	/* interpolate */
 			x0 = (m-j)*h/hi1;
 			x1 = j*h/hi1;
 			yy = D2yi*(x0-x0*x0*x0)+D2yi1*(x1-x1*x1*x1);
@@ -215,21 +215,22 @@ spline(){
 		}
 	return(1);
 	}
-int	getfloat(), numb(), getlim();
+int	getfloat(float *p), numb(float *np, int *argcp, char ***argvp);
+int	getlim(struct proj *p);
 int
-readin() {
+readin(void) {
 	for(n=0;n<NP;n++){
 		if(auta) x.val[n] = n*dx+x.lb;
 		else if(!getfloat(&x.val[n])) break;
 		if(!getfloat(&y.val[n])) break; } return(0); }
 
 int
-getfloat(p)
-	float *p;{
+getfloat(float *p)
+{
 	char buf[30];
 	register int c;
 	int i;
-	extern double atof();
+	extern double atof(char *s);
 	for(;;){
 		c = getchar();
 		if (c==EOF) {
@@ -264,8 +265,7 @@ getfloat(p)
 	return(1); }
 
 int
-getlim(p)
-	struct proj *p; {
+getlim(struct proj *p) {
 	int i;
 	for(i=0;i<n;i++) {
 		if(!p->lbf && p->lb>(p->val[i])) p->lb = p->val[i];
@@ -274,10 +274,9 @@ getlim(p)
 
 
 int
-main(argc,argv)
-	int argc;
-	char *argv[];{
-	extern char *malloc();
+main(int argc, char *argv[])
+{
+	extern char *malloc(unsigned n);
 	int i;
 	x.lbf = x.ubf = y.lbf = y.ubf = 0;
 	x.lb = INF;
@@ -326,15 +325,13 @@ again:		switch(argv[0][0]) {
 		printf("%f\n",y.val[i]); }
 }
 int
-numb(np,argcp,argvp)
-	int *argcp;
-	float *np;
-	char ***argvp;{
-	double atof();
+numb(float *np, int *argcp, char ***argvp)
+{
+	double atof(char *s);
 	char c;
 	if(*argcp<=1) return(0);
 	c = (*argvp)[1][0];
-	if(!('0'<=c&&c<='9' || c=='-' || c== '.' )) return(0);
+	if(!(('0'<=c&&c<='9') || c=='-' || c== '.' )) return(0);
 	*np = atof((*argvp)[1]);
 	(*argcp)--;
 	(*argvp)++; 

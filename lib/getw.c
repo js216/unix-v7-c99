@@ -1,9 +1,9 @@
 #include	<stdio.h>
 
-getw(iop)
-register struct _iobuf *iop;
+int
+getw(register struct _iobuf *iop)
 {
-	register i;
+	register int i;
 
 	i = getc(iop);
 	if (iop->_flag&_IOEOF)

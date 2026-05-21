@@ -12,9 +12,7 @@ extern char *sys_errlist[];
 int errno;
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int signo, pid, res;
 	int errlev;

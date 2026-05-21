@@ -24,8 +24,7 @@ BLKPTR		bloktop=BLK(end);	/*top of arena (last blok)*/
 
 
 
-ADDRESS	alloc(nbytes)
-	POS		nbytes;
+ADDRESS	alloc(POS nbytes)
 {
 	REG POS		rbytes = round(nbytes+BYTESPERWORD,BYTESPERWORD);
 
@@ -34,7 +33,7 @@ ADDRESS	alloc(nbytes)
 		REG BLKPTR	q;
 		REP	IF !busy(p)
 			THEN	WHILE !busy(q = p->word) DO p->word = q->word OD
-				IF ADR(q)-ADR(p) >= rbytes
+				IF (POS)(ADR(q)-ADR(p)) >= rbytes
 				THEN	blokp = BLK(ADR(p)+rbytes);
 					IF q > blokp
 					THEN	blokp->word = p->word;
@@ -49,15 +48,14 @@ ADDRESS	alloc(nbytes)
 	POOL
 }
 
-VOID	addblok(reqd)
-	POS		reqd;
+VOID	addblok(POS reqd)
 {
 	IF stakbas!=staktop
 	THEN	REG STKPTR	rndstak;
 		REG BLKPTR	blokstak;
 
 		pushstak(0);
-		rndstak=round(staktop,BYTESPERWORD);
+		rndstak=(STKPTR)round(staktop,BYTESPERWORD);
 		blokstak=BLK(stakbas)-1;
 		blokstak->word=stakbsy; stakbsy=blokstak;
 		bloktop->word=BLK(Rcheat(rndstak)|BUSY);
@@ -72,16 +70,17 @@ VOID	addblok(reqd)
 	   staktop=movstr(stakbot,stakadr);
 	   stakbas=stakbot=stakadr;
 	END
+	return(0);
 }
 
-VOID	free(ap)
-	BLKPTR		ap;
+VOID	free(BLKPTR ap)
 {
 	REG BLKPTR	p;
 
 	IF (p=ap) ANDF p<bloktop
 	THEN	Lcheat((--p)->word) &= ~BUSY;
 	FI
+	return(0);
 }
 
 #ifdef DEBUG

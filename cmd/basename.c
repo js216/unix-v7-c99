@@ -32,6 +32,6 @@ main(int argc, char *argv[])
 			*p1 = '\0';
 	}
 output:
-	puts(p2, stdout);
+	puts(p2);
 	exit(0);
 }

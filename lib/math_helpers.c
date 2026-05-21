@@ -7,9 +7,7 @@
  */
 
 double
-frexp(value, eptr)
-double value;
-int *eptr;
+frexp(double value, int *eptr)
 {
 	union { double d; unsigned int u[2]; } u;
 	int exp;
@@ -34,9 +32,7 @@ int *eptr;
 }
 
 double
-ldexp(value, n)
-double value;
-int n;
+ldexp(double value, int n)
 {
 	union { double d; unsigned int u[2]; } u;
 	int exp;
@@ -63,9 +59,7 @@ int n;
 }
 
 double
-modf(value, iptr)
-double value;
-double *iptr;
+modf(double value, double *iptr)
 {
 	double ipart;
 	long ll;

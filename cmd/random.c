@@ -1,7 +1,7 @@
 #include <stdio.h>
 #define MAXINT 32768.
 float fract = 2;
-double	atof();
+double	atof(char *s);
 char rflag,eflag,c;
 char ibuf[BUFSIZ],obuf[BUFSIZ],line[BUFSIZ];
 int

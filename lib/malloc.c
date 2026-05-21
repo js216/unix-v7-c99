@@ -8,8 +8,7 @@
 static char *brkp = (char *)0x00060000;
 
 char *
-malloc(n)
-unsigned n;
+malloc(unsigned n)
 {
 	unsigned *p;
 
@@ -21,17 +20,14 @@ unsigned n;
 }
 
 void
-free(p)
-char *p;
+free(char *p)
 {
 
 	(void)p;
 }
 
 char *
-realloc(p, n)
-char *p;
-unsigned n;
+realloc(char *p, unsigned n)
 {
 	char *q;
 	unsigned i, old;

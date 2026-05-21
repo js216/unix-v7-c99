@@ -53,17 +53,17 @@ int	today; /* day of year today */
 FILE	*file;
 FILE	*ifile;
 char	**environ;
-char	*prefix();
+char	*prefix(char *begin, char *full);
 
-FILE	*openjob();
-int	makeutime(), makeuday(), filename(), onintr(), getpwd();
+FILE	*openjob(char *name);
+int	makeutime(char *pp), makeuday(int argc, char **argv);
+int	filename(char *dir, int y, int d, int t);
+int	onintr(int sig), getpwd(char *buf, int nbuf);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
-	extern int onintr();
+	extern int onintr(int sig);
 	register int c;
 	char pwbuf[100];
 	int larg;
@@ -120,8 +120,7 @@ char **argv;
 }
 
 FILE *
-openjob(name)
-char *name;
+openjob(char *name)
 {
 	int fd;
 
@@ -137,9 +136,7 @@ char *name;
 }
 
 int
-getpwd(buf, nbuf)
-char *buf;
-int nbuf;
+getpwd(char *buf, int nbuf)
 {
 	int fd[2], status;
 	register int n;
@@ -170,8 +167,7 @@ int nbuf;
 }
 
 int
-makeutime(pp)
-char *pp;
+makeutime(char *pp)
 {
 	register int val;
 	register char *p;
@@ -199,7 +195,7 @@ char *pp;
 			}
 			fprintf(stderr, "at: bad time format:\n");
 			exit(1);
-
+			/* fallthrough */
 		case 'A':
 		case 'a':
 			if (val >= HALFDAY+HOUR)
@@ -255,9 +251,7 @@ char *pp;
 
 
 int
-makeuday(argc,argv)
-int argc;
-char **argv;
+makeuday(int argc, char **argv)
 {
 	/* the presumption is that argv[2], argv[3] are either
 	   month day OR weekday [week].  Returns either 2 or 3 as last
@@ -328,11 +322,10 @@ char **argv;
 }
 
 char *
-prefix(begin, full)
-char *begin, *full;
+prefix(char *begin, char *full)
 {
 	int c;
-	while (c = *begin++) {
+	while ((c = *begin++)) {
 		if (isupper(c))
 			c = tolower(c);
 		if (*full != c)
@@ -344,9 +337,7 @@ char *begin, *full;
 }
 
 int
-filename(dir, y, d, t)
-char *dir;
-int y, d, t;
+filename(char *dir, int y, int d, int t)
 {
 	register int i;
 
@@ -359,8 +350,9 @@ int y, d, t;
 }
 
 int
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 	unlink(fname);
 	exit(1);
 	return(0);

@@ -24,23 +24,13 @@ struct clist
  * code is in each driver. (kl.c dc.c dh.c)
  */
 
-struct tc {
-	char	t_intrc;	/* interrupt */
-	char	t_quitc;	/* quit */
-	char	t_startc;	/* start output */
-	char	t_stopc;	/* stop output */
-	char	t_eofc;		/* end-of-file */
-	char	t_brkc;		/* input delimiter (like nl) */
-};
-
 struct tty
 {
 	struct	clist t_rawq;	/* input chars right off device */
 	struct	clist t_canq;	/* input chars after erase and kill */
 	struct	clist t_outq;	/* output list to device */
-	int	(* t_oproc)();	/* routine to start output */
-	int	(* t_iproc)();	/* routine to start input */
-	struct chan *t_chan;	/* destination channel */
+	int	(* t_oproc)(void);	/* routine to start output */
+	int	(* t_iproc)(void);	/* routine to start input */
 	caddr_t	t_linep;	/* aux line discipline pointer */
 	caddr_t	t_addr;		/* device address */
 	dev_t	t_dev;		/* device number */
@@ -55,13 +45,7 @@ struct tty
 	char	t_char;		/* character temporary */
 	char	t_ispeed;	/* input speed */
 	char	t_ospeed;	/* output speed */
-	union {
-		struct tc;
-		struct clist t_ctlq;
-	} t_un;
 };
-
-#define	tun	tp->t_un
 
 /*
  * structure of arg for ioctl

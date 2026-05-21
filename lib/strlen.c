@@ -4,8 +4,7 @@
  */
 
 int
-strlen(s)
-register char *s;
+strlen(register char *s)
 {
 	register int n;
 

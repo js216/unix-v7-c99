@@ -29,7 +29,7 @@ struct stat stbuff;
 char junk[1];
 int fd;
 
-if( stat(name,&stbuff) < 0)
+if( stat(name,&stbuff) < 0) {
 	if(force)
 		goto create;
 	else
@@ -37,6 +37,7 @@ if( stat(name,&stbuff) < 0)
 		fprintf(stderr, "touch: file %s does not exist.\n", name);
 		return;
 		}
+	}
 
 if(stbuff.st_size == 0)
 	goto create;

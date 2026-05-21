@@ -31,11 +31,16 @@
 
 #define isabreak(c) (btable[c])
 
-extern char *calloc(), *mktemp();
-extern char *getline();
+extern char *calloc(unsigned num, unsigned size);
+extern char *mktemp(char *as);
+extern char *getline(void);
 int status;
-int diag(), msg(), storeh(), hash(), cmpline(), getsort(), cmpword(),
-    putline(), putout(), onintr();
+int diag(char *s, char *arg), msg(char *s, char *arg);
+int storeh(int num, char *strtp), hash(char *strtp, char *endp);
+int cmpline(char *pend), getsort(void);
+int cmpword(char *cpp, char *pend, char *hpp);
+int putline(char *strt, char *end), putout(char *strt, char *end);
+int onintr(int sig);
 
 
 char *hasht[MAXT];
@@ -69,15 +74,13 @@ char *bfile;	/*contains user supplied break chars */
 FILE *bptr;
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int c;
 	register char *bufp;
 	int pid;
 	char *pend;
-	extern int onintr();
+	extern int onintr(int sig);
 
 	char *xfile;
 	FILE *xptr;
@@ -116,7 +119,7 @@ char **argv;
 				}
 				break;
 			}
-
+			/* fallthrough */
 		case 't':
 			if(wlen == 0)
 				llen = 100;
@@ -228,7 +231,7 @@ char **argv;
 
 	if (infile!=0 && (inptr = fopen(infile,"r")) == NULL)
 		diag("Cannot open data: ",infile);
-	while(pend=getline())
+	while((pend=getline()))
 		cmpline(pend);
 	fclose(sortptr);
 
@@ -236,7 +239,7 @@ char **argv;
 
 	case -1:	/* cannot fork */
 		diag("Cannot fork",empty);
-
+		/* fallthrough */
 	case 0:		/* child */
 		execl(SORT, SORT, sortopt, "+0", "-1", "+1",
 			sortfile, "-o", sortfile, 0);
@@ -247,20 +250,17 @@ char **argv;
 
 
 	getsort();
-	onintr();
+	onintr(0);
 }
 
 int
-msg(s,arg)
-char *s;
-char *arg;
+msg(char *s, char *arg)
 {
 	fprintf(stderr,"%s %s\n",s,arg);
 	return(0);
 }
 int
-diag(s,arg)
-char *s, *arg;
+diag(char *s, char *arg)
 {
 
 	msg(s,arg);
@@ -269,7 +269,7 @@ char *s, *arg;
 }
 
 
-char *getline()
+char *getline(void)
 {
 
 	register int c;
@@ -306,8 +306,7 @@ char *getline()
 }
 
 int
-cmpline(pend)
-char *pend;
+cmpline(char *pend)
 {
 
 	char *pstrt, *pchar, *cp;
@@ -320,16 +319,16 @@ char *pend;
 			pchar++;
 	while(pchar<pend){
 	/* eliminate white space */
-		if(isabreak(*pchar++))
+		if(isabreak((unsigned char)*pchar++))
 			continue;
 		pstrt = --pchar;
 
 		flag = 1;
 		while(flag){
-			if(isabreak(*pchar)) {
+			if(isabreak((unsigned char)*pchar)) {
 				hp = &hasht[hash(pstrt,pchar)];
 				pchar--;
-				while(cp = *hp++){
+				while((cp = *hp++)){
 					if(hp == &hasht[MAXT])
 						hp = hasht;
 	/* possible match */
@@ -355,8 +354,7 @@ char *pend;
 }
 
 int
-cmpword(cpp,pend,hpp)
-char *cpp, *pend, *hpp;
+cmpword(char *cpp, char *pend, char *hpp)
 {
 	char c;
 
@@ -370,8 +368,7 @@ char *cpp, *pend, *hpp;
 }
 
 int
-putline(strt, end)
-char *strt, *end;
+putline(char *strt, char *end)
 {
 	char *cp;
 
@@ -388,13 +385,13 @@ char *strt, *end;
 }
 
 int
-getsort()
+getsort(void)
 {
 	register int c;
 	register char *tilde, *linep, *ref;
 	char *p1a,*p1b,*p2a,*p2b,*p3a,*p3b,*p4a,*p4b;
 	int w;
-	char *rtrim(), *ltrim();
+	char *rtrim(char *a, char *c, int d), *ltrim(char *c, char *b, int d);
 
 	if((sortptr = fopen(sortfile,"r")) == NULL)
 		diag("Cannot open sorted data:",sortfile);
@@ -462,6 +459,7 @@ getsort()
 		case '"':
 	/* put double " for "  */
 			*linep++ = c;
+			/* fallthrough */
 		default:
 			*linep++ = c;
 		}
@@ -469,9 +467,7 @@ getsort()
 	return(0);
 }
 
-char *rtrim(a,c,d)
-char *a,*c;
-int d;
+char *rtrim(char *a, char *c, int d)
 {
 	char *b,*x;
 	b = c;
@@ -483,9 +479,7 @@ int d;
 	return(b);
 }
 
-char *ltrim(c,b,d)
-char *c,*b;
-int d;
+char *ltrim(char *c, char *b, int d)
 {
 	char *a,*x;
 	a = c;
@@ -498,8 +492,7 @@ int d;
 }
 
 int
-putout(strt,end)
-char *strt, *end;
+putout(char *strt, char *end)
 {
 	char *cp;
 
@@ -512,9 +505,9 @@ char *strt, *end;
 }
 
 int
-onintr()
+onintr(int sig)
 {
-
+	(void)sig;
 	if(*sortfile)
 		unlink(sortfile);
 	exit(1);
@@ -522,8 +515,7 @@ onintr()
 }
 
 int
-hash(strtp,endp)
-char *strtp, *endp;
+hash(char *strtp, char *endp)
 {
 	char *cp, c;
 	int i, j, k;
@@ -550,9 +542,7 @@ char *strtp, *endp;
 }
 
 int
-storeh(num,strtp)
-int num;
-char *strtp;
+storeh(int num, char *strtp)
 {
 	int i;
 

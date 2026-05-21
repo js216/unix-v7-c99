@@ -3,13 +3,18 @@
 #include "../h/mount.h"
 #include "../h/filsys.h"
 #include "../h/fblk.h"
-#include "../h/conf.h"
 #include "../h/buf.h"
 #include "../h/inode.h"
 #include "../h/ino.h"
 #include "../h/dir.h"
 #include "../h/user.h"
+#include "../h/proto.h"
 typedef	struct fblk *FBLKP;
+
+/* bread/getblk/brelse/bwrite/bflush/clrbuf/sleep/wakeup/panic/prdev come from h/proto.h.
+ * iget/iput/iupdat/bcopy come from h/systm.h. */
+
+int badblock(register struct filsys *fp, daddr_t bn, dev_t dev);
 
 /*
  * alloc will obtain the next available
@@ -23,8 +28,7 @@ typedef	struct fblk *FBLKP;
  * the free list is exhausted.
  */
 struct buf *
-alloc(dev)
-dev_t dev;
+alloc(dev_t dev)
 {
 	daddr_t bno;
 	register struct filsys *fp;
@@ -75,9 +79,8 @@ nospace:
  * back on the free list of the
  * specified device.
  */
-free(dev, bno)
-dev_t dev;
-daddr_t bno;
+void
+free(dev_t dev, daddr_t bno)
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -117,10 +120,8 @@ daddr_t bno;
  *
  * bad block on dev x/y -- not in range
  */
-badblock(fp, bn, dev)
-register struct filsys *fp;
-daddr_t bn;
-dev_t dev;
+int
+badblock(register struct filsys *fp, daddr_t bn, dev_t dev)
 {
 
 	if (bn < fp->s_isize || bn >= fp->s_fsize) {
@@ -142,8 +143,7 @@ dev_t dev;
  * up NICINOD more.
  */
 struct inode *
-ialloc(dev)
-dev_t dev;
+ialloc(dev_t dev)
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -220,9 +220,8 @@ loop:
  * to NICINOD I nodes in the super
  * block and throws away any more.
  */
-ifree(dev, ino)
-dev_t dev;
-ino_t ino;
+void
+ifree(dev_t dev, ino_t ino)
 {
 	register struct filsys *fp;
 
@@ -254,8 +253,7 @@ ino_t ino;
  *	this "cannot happen"
  */
 struct filsys *
-getfs(dev)
-dev_t dev;
+getfs(dev_t dev)
 {
 	register struct mount *mp;
 	register struct filsys *fp;
@@ -283,7 +281,8 @@ dev_t dev;
  * the mount table to initiate modified
  * super blocks.
  */
-update()
+void
+update(void)
 {
 	register struct inode *ip;
 	register struct mount *mp;

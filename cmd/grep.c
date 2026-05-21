@@ -422,18 +422,18 @@ advance(register char *lp, register char *ep)
 		}
 		return(0);
 	case CBRA:
-		braslist[*ep++] = lp;
+		braslist[(unsigned char)*ep++] = lp;
 		continue;
 
 	case CKET:
-		braelist[*ep++] = lp;
+		braelist[(unsigned char)*ep++] = lp;
 		continue;
 
 	case CBACK:
-		bbeg = braslist[*ep];
-		if (braelist[*ep]==0)
+		bbeg = braslist[(unsigned char)*ep];
+		if (braelist[(unsigned char)*ep]==0)
 			return(0);
-		ct = braelist[*ep++] - bbeg;
+		ct = braelist[(unsigned char)*ep++] - bbeg;
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
 			continue;
@@ -441,10 +441,10 @@ advance(register char *lp, register char *ep)
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[*ep];
-		if (braelist[*ep]==0)
+		bbeg = braslist[(unsigned char)*ep];
+		if (braelist[(unsigned char)*ep]==0)
 			return(0);
-		ct = braelist[*ep++] - bbeg;
+		ct = braelist[(unsigned char)*ep++] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -504,7 +504,7 @@ advance(register char *lp, register char *ep)
 void
 succeed(char *f)
 {
-	long ftell();
+	long ftell(FILE *iop);
 	nsucc = 1;
 	if (sflag)
 		return;

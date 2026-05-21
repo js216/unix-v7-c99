@@ -63,7 +63,7 @@ main(int argc, char *argv[])
 		posix_shift = 1;
 	}
 	(void)posix_shift;
-	if(argc<=1 || *arg!='-'&&*arg!='+') {
+	if(argc<=1 || (*arg!='-' && *arg!='+')) {
 		arg = "-10l";
 		argc++;
 		argv--;

@@ -18,7 +18,7 @@ char	*ifile;
 char	*ofile;
 char	*ibuf;
 char	*obuf;
-char	*sbrk();
+char	*sbrk(int);
 int	ibs	= 512;
 int	obs	= 512;
 int	bs;
@@ -151,9 +151,7 @@ char	atoibm[] =
 
 
 int
-main(argc, argv)
-int	argc;
-char	**argv;
+main(int argc, char **argv)
 {
 	void (*conv)();
 	register char *ip;
@@ -417,7 +415,7 @@ number(int big)
 	case 'x':
 		string = cs;
 		n *= number(BIG);
-
+		/* fallthrough */
 	case '\0':
 		if (n>=big || n<0) {
 			fprintf(stderr, "dd: argument %D out of range\n", n);

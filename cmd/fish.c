@@ -27,7 +27,7 @@ int proflag;
 /* utility and output programs */
 
 int
-shuffle(){
+shuffle(void){
 	/* shuffle the deck, and reset nextcd */
 	/* uses the random number generator `rand' in the C library */
 	/* assumes that `srand' has already been called */
@@ -59,7 +59,7 @@ choose( a, n ) char a[]; int n; {
 	}
 
 int
-draw() {
+draw(void) {
 	if( nextcd >= DECK ) return( NOMORE );
 	return( deck[nextcd++] );
 	}
@@ -119,7 +119,7 @@ char *cname[] = {
 	};
 
 int
-stats(){
+stats(void){
 	register int i, ct, b;
 
 	if( proflag ) printf( "Pro level\n" );
@@ -226,7 +226,7 @@ char *inst[] = {
 	};
 
 int
-instruct(){
+instruct(void){
 	register char **cpp;
 
 	printf( "\n" );
@@ -238,7 +238,7 @@ instruct(){
 	}
 
 int
-game(){
+game(void){
 
 	shuffle();
 
@@ -343,7 +343,7 @@ madebook( x ) int x; {
 	}
 
 int
-score(){
+score(void){
 	register int my, your, i;
 
 	my = your = 0;
@@ -376,7 +376,7 @@ score(){
 # define G(x) { if(go) goto err;  else go = x; }
 
 int
-guess(){
+guess(void){
 	/* get the guess from the tty and return it... */
 	register int g, go;
 
@@ -478,7 +478,7 @@ heguessed( d ) int d; {
 	}
 
 int
-myguess(){
+myguess(void){
 
 	register int i, lg, t;
 
@@ -491,7 +491,7 @@ myguess(){
 	ntry = 0;
 	for( i=1; i<=CTYPE; ++i ){
 		if( myhand[i] == 0 || myhand[i] == 4 ) continue;
-		try[ntry++] = i;
+		try[(unsigned char)ntry++] = i;
 		}
 
 	if( !proflag ) goto random;
@@ -499,7 +499,7 @@ myguess(){
 	/* get ones he has, if any */
 
 	for( i=0; i<ntry; ++i ){
-		if( hehas[try[i]] ) {
+		if( hehas[(unsigned char)try[i]] ) {
 			i = try[i];
 			goto gotguess;
 			}
@@ -508,13 +508,13 @@ myguess(){
 	/* is there one that has never been guessed; if so, guess it */
 	lg = 101;
 	for( i=0; i<ntry; ++i ){
-		if( haveguessed[try[i]] < lg ) lg = haveguessed[try[i]];
+		if( haveguessed[(unsigned char)try[i]] < lg ) lg = haveguessed[(unsigned char)try[i]];
 		}
 	/* remove all those not guessed longest ago */
 
 	t = 0;
 	for( i=0; i<ntry; ++i ){
-		if( haveguessed[try[i]] == lg ) try[t++] = try[i];
+		if( haveguessed[(unsigned char)try[i]] == lg ) try[t++] = try[i];
 		}
 	ntry = t;
 	if( t <= 0 ) error( "bad guessing loop" );

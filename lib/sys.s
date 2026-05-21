@@ -39,6 +39,8 @@ SYS mount,   21
 SYS umount,  22
 SYS setuid,  23
 SYS getuid,  24
+SYS setgid,  46
+SYS getgid,  47
 SYS fstat,   28
 SYS access,  33
 SYS nice,    34
@@ -54,7 +56,7 @@ SYS signal,  48
 SYS acct,    51
 SYS lock,    53
 SYS chroot,  61
-SYS getdents, 141
+SYS ptrace,  26
 SYS sigreturn, 139
 
 @ getpid(2) returns pid in r0 *and* ppid in r1 (v7's two-return-value

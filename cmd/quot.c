@@ -39,17 +39,16 @@ int	fi;
 unsigned	ino;
 unsigned	nfiles;
 
-struct	passwd	*getpwent();
-char	*malloc();
-char	*copy();
+char	*malloc(unsigned n);
+char	*copy(char *s);
 int	scanf(char *fmt, ...);
 
-int	check(), acct(), bread(), qcmp(), report();
+int	check(char *file), acct(register struct dinode *ip);
+int	bread(unsigned bno, char *buf, int cnt);
+int	qcmp(const void *vp1, const void *vp2), report(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int n;
 	register struct passwd *lp;
@@ -90,8 +89,7 @@ char **argv;
 }
 
 int
-check(file)
-char *file;
+check(char *file)
 {
 	register unsigned i, j;
 	register int c;
@@ -123,8 +121,7 @@ char *file;
 }
 
 int
-acct(ip)
-register struct dinode *ip;
+acct(register struct dinode *ip)
 {
 	register int n;
 	register char *np;
@@ -160,7 +157,7 @@ register struct dinode *ip;
 			fino = 0;
 			goto tryagain;
 		}
-		if (np = du[ip->di_uid].name)
+		if ((np = du[ip->di_uid].name))
 			printf("%.7s	", np);
 		else
 			printf("%d	", ip->di_uid);
@@ -177,10 +174,7 @@ register struct dinode *ip;
 }
 
 int
-bread(bno, buf, cnt)
-unsigned bno;
-char *buf;
-int cnt;
+bread(unsigned bno, char *buf, int cnt)
 {
 
 	lseek(fi, (long)bno*BSIZE, 0);
@@ -192,9 +186,9 @@ int cnt;
 }
 
 int
-qcmp(p1, p2)
-register struct du *p1, *p2;
+qcmp(const void *vp1, const void *vp2)
 {
+	register const struct du *p1 = vp1, *p2 = vp2;
 	if (p1->blocks > p2->blocks)
 		return(-1);
 	if (p1->blocks < p2->blocks)
@@ -203,7 +197,7 @@ register struct du *p1, *p2;
 }
 
 int
-report()
+report(void)
 {
 	register int i;
 
@@ -235,8 +229,7 @@ report()
 }
 
 char *
-copy(s)
-char *s;
+copy(char *s)
 {
 	register char *p;
 	register int n;
@@ -244,7 +237,7 @@ char *s;
 	for(n=0; s[n]; n++)
 		;
 	p = malloc((unsigned)n+1);
-	for(n=0; p[n] = s[n]; n++)
+	for(n=0; (p[n] = s[n]); n++)
 		;
 	return(p);
 }

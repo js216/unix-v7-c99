@@ -1,13 +1,8 @@
 #include "../h/param.h"
 #include "../h/buf.h"
+#include "../h/systm.h"
 #include "../h/proto.h"
-/* V7 PDP-11 octal bootstrap; kept verbatim for v7 source link compat. */
-int icode[] = {
-	0104413, 0000014, 0000010, 0000777,
-	0000014, 0000000, 0062457, 0061564,
-	0064457, 0064556, 0000164,
-};
-int szicode = sizeof(icode);
+#include "arm.h"
 void startup(void)
 {
 	struct buf *bp;
@@ -16,6 +11,12 @@ void startup(void)
 	/* Qemu virt's default RAM is 128 MiB at 0x40000000.  Print bytes
 	 * directly; the V7 banner shape lets userspace scrape "mem =". */
 	printf("mem = %D\n", (long)(128L * 1024 * 1024));
+	/* v7's startup() probed core via UISA/fuibyte to compute maxmem,
+	 * then capped it at MAXMEM.  On this port userspace is identity-
+	 * mapped into a USERSIZE (1 MiB = 16384 click) window, so estabur()'s
+	 * `nt+nd+ns+USIZE > maxmem` check passes as long as maxmem covers
+	 * that window.  Seed it directly. */
+	maxmem = (int)(USERSIZE >> 6) + USIZE;	/* clicks (64 bytes) */
 	mmuinit();
 	virtio_init();
 	binit();

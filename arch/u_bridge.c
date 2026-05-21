@@ -7,8 +7,10 @@
 #include "../h/proc.h"
 #include "../h/systm.h"
 #include "../h/inode.h"
+#include "../h/proto.h"
+#include "../h/v7_bridge.h"
 #include "arm.h"
-/* v7 syscall entry points (in sys/sys{2,3,4}.c, sig.c, prim.c). */
+/* v7 syscall entry points (in sys/sys{2,3,4}.c, sig.c). */
 extern void umask(void), getuid(void), getgid(void), getpid(void);
 extern void setuid(void), setgid(void), sync(void), nice(void);
 extern void gtime(void), stime(void), alarm(void), ftime(void), times(void);
@@ -16,7 +18,7 @@ extern void kill(void), ssig(void), chdir(void), chmod(void), chown(void);
 extern void sysacct(void), utime(void), profil(void), syslock(void);
 extern void stat(void), fstat(void), saccess(void), unlink(void), link(void);
 extern void mknod(void), smount(void), sumount(void);
-extern void close(void), dup(void), seek(void), read(void), write(void);
+extern void close(void), dup(void), seek(void), read(void);
 extern void iput(struct inode *ip);
 extern struct file file[];
 extern void pause_spin_barrier(void);
@@ -61,6 +63,7 @@ int v7_proc_fork(int parent_pid, int child_pid)
 	struct proc *pp = proc_by_pid(parent_pid);
 	short parent_pgrp = pp ? pp->p_pgrp : (short)child_pid;
 	short parent_nice = pp ? pp->p_nice : NZERO;
+	short parent_uid = pp ? pp->p_uid : 0;
 	int parent_slot = pp ? (int)(pp - proc) : -1;
 	int i;
 	/* Skip proc[0]/proc[1] (kill 0/pgrp guard reserves them). */
@@ -69,7 +72,7 @@ int v7_proc_fork(int parent_pid, int child_pid)
 	if(i >= NPROC) return -1;
 	pp = &proc[i];
 	pp->p_stat = SRUN; pp->p_flag = SLOAD; pp->p_pri = 40;
-	pp->p_nice = parent_nice; pp->p_uid = u.u_uid;
+	pp->p_nice = parent_nice; pp->p_uid = parent_uid;
 	pp->p_pgrp = parent_pgrp;
 	pp->p_pid = (short)child_pid; pp->p_ppid = (short)parent_pid;
 	pp->p_time = pp->p_cpu = pp->p_sig = pp->p_clktim = 0;
@@ -291,7 +294,7 @@ int v7_lock_call(int *args, int curpid)
 	v7_proc_set_current(curpid);
 	u.u_uid = u.u_procp->p_uid;
 	v7_call_prep(args); syslock();
-	return u.u_error ? -1 : 0;
+	return u.u_error;
 }
 /* Save/restore u_times around ctx switch (save zeros live for next proc). */
 void v7_u_times_save(long *out_utime, long *out_stime,
@@ -323,7 +326,8 @@ void v7_signal_pgrp(int sig, int curpid)
 			psignal(&proc[i], sig);
 }
 /* v7 sleep() longjmps via u.u_qsav.  0=save (proceed), 1=longjmp (EINTR). */
-extern int save(int *);
+/* save() declared in h/proto.h. */
+extern void bcopy(char *, char *, unsigned int);
 int v7_save_qsav(void) { return save((int *)u.u_qsav); }
 /* Per-proc u_qsav save/restore (label_t = 10 ints). */
 void v7_u_qsav_save(int *dst)
@@ -361,7 +365,28 @@ void *v7_cdir_save(void)
 void v7_cdir_restore(void *p)
 {
 	struct inode *old = u.u_cdir;
-	if(p) u.u_cdir = (struct inode *)p;
+	u.u_cdir = (struct inode *)p;
+	if(old) iput(old);
+}
+/* u.u_rdir tracks chroot(2)'s root for name lookups.  v7 stored it in
+ * the per-proc u area which was swapped in/out -- on this port struct
+ * user is global, so chroot from one process would leak into siblings
+ * if we didn't checkpoint it across context switches.  Mirror the cdir
+ * dance: iget a held ref into the armproc slot, iput the live one on
+ * restore.  NULL is the legitimate "no chroot" state and must round-
+ * trip as NULL, not as rootdir, so unchrooted procs see the full tree. */
+void *v7_rdir_save(void)
+{
+	struct inode *ip = u.u_rdir, *held;
+	if(ip == NULL) return NULL;
+	held = iget(ip->i_dev, ip->i_number);
+	if(held) held->i_flag &= ~ILOCK;
+	return (void *)held;
+}
+void v7_rdir_restore(void *p)
+{
+	struct inode *old = u.u_rdir;
+	u.u_rdir = (struct inode *)p;
 	if(old) iput(old);
 }
 /* Common path-syscall prologue: seed uid=0, set u_dirp/segflg/u_ap, clear err/rvals. */
@@ -383,7 +408,7 @@ extern void chroot(void);
 int v7_chroot_call(char *path)
 {
 	v7_path_prep(path, NULL); chroot();
-	return u.u_error ? -1 : 0;
+	return u.u_error;
 }
 int v7_chmod_call(char *path, int mode)
 {
@@ -506,6 +531,20 @@ void v7_ofile_save(void *buf)
 { bcopy((char *)u.u_ofile, (char *)buf, sizeof(u.u_ofile)); }
 void v7_ofile_restore(void *buf)
 { bcopy((char *)buf, (char *)u.u_ofile, sizeof(u.u_ofile)); }
+/* u.u_pofile[] holds per-fd EXCLOSE flags (sh sets one on its script
+ * buffer fd via ioctl FIOCLEX).  Shared u struct means another proc's
+ * exec would otherwise sweep stale EXCLOSE bits and shut its own fds. */
+void v7_pofile_save(void *buf)
+{ bcopy((char *)u.u_pofile, (char *)buf, sizeof(u.u_pofile)); }
+void v7_pofile_restore(void *buf)
+{ bcopy((char *)buf, (char *)u.u_pofile, sizeof(u.u_pofile)); }
+/* FIOCLEX/FIONCLEX bridge: armboot's struct user is a lean shadow and
+ * can't reach u_pofile -- route through here so v7_exec_call's EXCLOSE
+ * sweep sees the bit. */
+void v7_pofile_excl_set(int fd)
+{ if(fd >= 0 && fd < NOFILE) u.u_pofile[fd] |= EXCLOSE; }
+void v7_pofile_excl_clear(int fd)
+{ if(fd >= 0 && fd < NOFILE) u.u_pofile[fd] &= (char)~EXCLOSE; }
 void v7_ofile_fork_bump(void)
 {
 	for(int i = 0; i < NOFILE; i++)
@@ -526,19 +565,35 @@ static int v7_fd_prep(int fd, int *args)
 	u.u_r.r_val1 = u.u_r.r_val2 = 0;
 	return 0;
 }
+/* Read v7-side u.u_error.  armboot.c has its own lean `struct user u`
+ * shadow that doesn't see v7's u_error; for bridges whose return value
+ * encodes a v7 result (fd, offset) and can't simultaneously carry the
+ * errno, the caller fetches it via this helper. */
+int v7_u_error_get(void) { return (int)u.u_error; }
+/* Drop a held inode ref (e.g. one that mt_save_current iget'd into the
+ * slot's cdir/rdir field).  Used to back out a half-allocated armproc
+ * slot when v7_proc_fork fails after mt_save_current. */
+void v7_inode_drop(void *p)
+{
+	struct inode *ip = (struct inode *)p;
+	if(ip) iput(ip);
+}
+/* fd-bridge convention now matches path bridges: returns positive v7 errno
+ * on failure, 0 on success.  -1 reserved for "fd not v7-routable" so the
+ * caller can fall back to its armboot-side path. */
 int v7_fstat_call(int fd, void *ubuf)
 {
 	int args[2] = { fd, (int)(long)ubuf };
 	if(v7_fd_prep(fd, args) < 0) return -1;
 	fstat();
-	return u.u_error ? -1 : 0;
+	return (int)u.u_error;
 }
 int v7_close_call(int fd)
 {
 	int args[1] = { fd };
 	if(v7_fd_prep(fd, args) < 0) return -1;
 	close();
-	return u.u_error ? -1 : 0;
+	return (int)u.u_error;
 }
 /* v7 dup: "explicit target" = fdes|0100, target in fdes2 (caller mirrors files[]). */
 int v7_dup_call(int from, int to)
@@ -607,8 +662,10 @@ static int v7_rdwr_call(int fd, char *buf, unsigned int n, int want_flag,
 }
 int v7_read_call(int fd, char *buf, unsigned int n)
 { return v7_rdwr_call(fd, buf, n, FREAD, read); }
-int v7_write_call(int fd, char *buf, unsigned int n)
-{ return v7_rdwr_call(fd, buf, n, FWRITE, write); }
+/* No v7_write_call wrapper: sys_write_v7 in armboot.c implements the
+ * write(2) syscall directly (pipe/console fast paths plus IFREG via the
+ * v7 file/inode chain), so the v7_rdwr_call indirection isn't needed
+ * on the write side. */
 /* Sync files[fd] <-> v7 in-core inode (i_addr is 39B of 3-byte addrs; loop-copy). */
 extern void v7_inode_pack_addr(struct inode *ip, unsigned int *addrs);
 extern void v7_inode_unpack_addr(struct inode *ip, unsigned int *addrs);
@@ -625,6 +682,15 @@ void v7_inode_refresh(int fd, unsigned int size, unsigned int *addrs)
 	if(ip == NULL) return;
 	ip->i_size = (off_t)size;
 	v7_inode_pack_addr(ip, addrs);
+}
+/* Mark fd's inode dirty so iput->iupdat writes current time to mtime/
+ * ctime.  v7's writei sets IUPD|ICHG; armboot's writei bypasses that
+ * path so the dirty flags must be armed explicitly post-write. */
+void v7_inode_mark_dirty(int fd)
+{
+	struct inode *ip = fd_inode(fd);
+	if(ip == NULL) return;
+	ip->i_flag |= IUPD | ICHG;
 }
 void v7_inode_writeback(int fd, unsigned int *size_out, unsigned int *addrs_out)
 {
@@ -649,6 +715,14 @@ void v7_inode_refresh_ino(ino_t ino, unsigned int size, unsigned int *addrs)
 	ip->i_size = (off_t)size;
 	v7_inode_pack_addr(ip, addrs);
 }
+/* Same as v7_inode_mark_dirty but by ino, for kcreat which doesn't have
+ * an fd yet (the new inode is being installed into v7's table). */
+void v7_inode_mark_dirty_ino(ino_t ino)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_flag |= IUPD | ICHG;
+}
 int v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs_out)
 {
 	struct inode *ip = find_inode(ino);
@@ -660,16 +734,20 @@ int v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs
 /* Post-exec over armboot's loader: close-on-exec, sig reset, frame stomp. */
 extern int v7_load_image(char *path, char **argv, char **envp);
 extern void closef(struct file *fp);
+extern void armboot_post_exec_close(int fd);
 int v7_exec_call(char *path, char **argv, char **envp)
 {
 	int rc = v7_load_image(path, argv, envp);
 	if(rc != 0) return rc < 0 ? -rc : 1;
-	/* Close-on-exec sweep (EXCLOSE=01 in h/user.h). */
+	/* Close-on-exec sweep (EXCLOSE=01 in h/user.h).  Both sides: v7's
+	 * closef drops f_count + iputs the inode; armboot_post_exec_close
+	 * zeroes files[fd]+closed[fd] so the slot is reusable. */
 	for(int i = 0; i < NOFILE; i++)
 		if(u.u_pofile[i] & EXCLOSE) {
 			if(u.u_ofile[i]) closef(u.u_ofile[i]);
 			u.u_ofile[i] = NULL;
 			u.u_pofile[i] &= ~EXCLOSE;
+			armboot_post_exec_close(i);
 		}
 	/* Non-IGN signal handlers reset to SIG_DFL (slot 0 unused). */
 	for(int i = 1; i < NSIG; i++)
@@ -705,17 +783,14 @@ int v7_sigreturn_call(int *r)
 #define TIMER_IRQ	27	/* CNTV PPI */
 /* TIMER_HZ==HZ so sys/clock.c's `++lbolt >= HZ` bumps `time` per second. */
 #define TIMER_HZ	HZ
-extern unsigned int cntfrq_get(void), cntv_ctl_get(void);
+extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
-/* v7 clock(): ps=UMODE if trap-time CPSR=user; lks steered at scratch word. */
+/* v7 clock(): ps=UMODE if trap-time CPSR=user. */
 extern long dk_time[];
 extern int lbolt;
 extern void clock(int dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps);
-extern physadr lks;
 static unsigned int timer_reload;	/* CNTFRQ / HZ */
-static int lks_scratch_word;
-#define LKS_SCRATCH	((physadr)&lks_scratch_word)
 /* Re-entrancy guard: skip the v7 clock() body when trap() is mid-update. */
 volatile int in_clock_irq;
 extern volatile int in_trap;
@@ -743,7 +818,6 @@ void clock_irq_handler(int *tf)
 void arm_timer_init(void)
 {
 	unsigned int freq, prio_reg, prio_off, prio_val;
-	lks = LKS_SCRATCH;	/* satisfy clock()'s `lks->r[0]=0115` */
 	freq = cntfrq_get();
 	if(freq == 0) freq = 62500000U;	/* fallback (qemu virt typical) */
 	timer_reload = freq / TIMER_HZ;

@@ -103,10 +103,8 @@ root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd
 # assumes PDP-11 middle-endian long byte layout, which discards the
 # second byte on a straight little-endian Armv7 long.
 tools/mkfs: tools/mkfs.c
-	arm-linux-gnueabihf-gcc -std=c89 -static \
+	arm-linux-gnueabihf-gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
 	    -D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32 \
-	    -fms-extensions \
-	    -Wno-pedantic \
 	    -o tools/mkfs tools/mkfs.c
 
 # A pocket-sized fs image holding just /a=root/etc/passwd, mounted as
@@ -178,5 +176,5 @@ $(LEARN_MOREFILES): v7/usr/lib/learn/morefiles.a tools/extract-old-ar.py
 clean:
 	cd sys; make clean
 	cd lib; make clean
-	rm -f unix root.img tools/mkfs tools/minimkfs
+	rm -f unix root.img tools/mkfs
 	rm -rf build

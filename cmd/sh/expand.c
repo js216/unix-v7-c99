@@ -24,11 +24,16 @@
  *
  */
 
-PROC VOID	addg();
+PROC VOID	addg(STRING as1, STRING as2, STRING as3);
+INT	gmatch(REG STRING s, REG STRING p);
+INT	makearg(REG ARGPTR args);
+extern int stat(char *p, STATBUF *s);
+extern int open(char *p, int f);
+extern int read(int fd, char *buf, int n);
+extern int close(int fd);
 
 
-INT	expand(as,rflg)
-	STRING		as;
+INT	expand(STRING as, INT rflg)
 {
 	INT		count, dirf;
 	BOOL		dir=0;
@@ -77,7 +82,7 @@ INT	expand(as,rflg)
 		REP	IF *rs=='/' THEN rescan=rs; *rs=0; gchain=0 FI
 		PER	*rs++ DONE
 
-		WHILE read(dirf, &entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
+		WHILE read(dirf, (char *)&entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
 		DO	IF entry.d_ino==0 ORF
 			    (*entry.d_name=='.' ANDF *cs!='.')
 			THEN	continue;
@@ -105,29 +110,29 @@ INT	expand(as,rflg)
 	BEGIN
 	   REG CHAR	c;
 	   s=as;
-	   WHILE c = *s
+	   WHILE (c = *s)
 	   DO	*s++=(c&STRIP?c:'/') OD
 	END
 	return(count);
 }
 
-gmatch(s, p)
-	REG STRING	s, p;
+INT
+gmatch(REG STRING s, REG STRING p)
 {
 	REG INT		scc;
 	CHAR		c;
 
-	IF scc = *s++
+	IF (scc = *s++)
 	THEN	IF (scc &= STRIP)==0
 		THEN	scc=0200;
 		FI
 	FI
-	SWITCH c = *p++ IN
+	SWITCH (c = *p++) IN
 
 	    case '[':
 		{BOOL ok; INT lc;
 		ok=0; lc=077777;
-		WHILE c = *p++
+		WHILE (c = *p++)
 		DO	IF c==']'
 			THEN	return(ok?gmatch(s,p):0);
 			ELIF c==MINUS
@@ -140,6 +145,7 @@ gmatch(s, p)
 
 	    default:
 		IF (c&STRIP)!=scc THEN return(0) FI
+		/* fallthrough */
 
 	    case '?':
 		return(scc?gmatch(s,p):0);
@@ -154,10 +160,10 @@ gmatch(s, p)
 	    case 0:
 		return(scc==0);
 	ENDSW
+	return(0);
 }
 
-LOCAL VOID	addg(as1,as2,as3)
-	STRING		as1, as2, as3;
+LOCAL VOID	addg(STRING as1, STRING as2, STRING as3)
 {
 	REG STRING	s1, s2;
 	REG INT		c;
@@ -165,7 +171,7 @@ LOCAL VOID	addg(as1,as2,as3)
 	s2 = locstak()+BYTESPERWORD;
 
 	s1=as1;
-	WHILE c = *s1++
+	WHILE (c = *s1++)
 	DO	IF (c &= STRIP)==0
 		THEN	*s2++='/';
 			break;
@@ -173,18 +179,19 @@ LOCAL VOID	addg(as1,as2,as3)
 		*s2++=c;
 	OD
 	s1=as2;
-	WHILE *s2 = *s1++ DO s2++ OD
-	IF s1=as3
+	WHILE (*s2 = *s1++) DO s2++ OD
+	IF (s1=as3)
 	THEN	*s2++='/';
-		WHILE *s2++ = *++s1 DONE
+		WHILE (*s2++ = *++s1) DONE
 	FI
-	makearg(endstak(s2));
+	makearg((ARGPTR)endstak(s2));
+	return(0);
 }
 
-makearg(args)
-	REG ARGPTR	args;
+INT makearg(REG ARGPTR args)
 {
 	args->argnxt=gchain;
 	gchain=args;
+	return(0);
 }
 

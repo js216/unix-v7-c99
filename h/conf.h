@@ -7,41 +7,24 @@
  * device switches is in the
  * file conf.c.
  */
+struct buf;
 extern struct bdevsw
 {
-	int	(*d_open)();
-	int	(*d_close)();
-	int	(*d_strategy)();
+	int	(*d_open)(dev_t dev, int rw);
+	int	(*d_close)(dev_t dev, int flag);
+	int	(*d_strategy)(struct buf *bp);
 	struct buf *d_tab;
 } bdevsw[];
 
 /*
- * Character device switch.
+ * Character device switch.  v7's d_ioctl, d_stop, d_ttys are gone --
+ * cdevsw[] is empty on this port (no char-device drivers wire it).
  */
 extern struct cdevsw
 {
-	int	(*d_open)();
-	int	(*d_close)();
-	int	(*d_read)();
-	int	(*d_write)();
-	int	(*d_ioctl)();
-	int	(*d_stop)();
-	struct tty *d_ttys;
+	int	(*d_open)(dev_t dev, int rw);
+	int	(*d_close)(dev_t dev, int flag);
+	int	(*d_read)(dev_t dev);
+	int	(*d_write)(dev_t dev);
 } cdevsw[];
 
-/*
- * tty line control switch.
- */
-extern struct linesw
-{
-	int	(*l_open)();
-	int	(*l_close)();
-	int	(*l_read)();
-	char	*(*l_write)();
-	int	(*l_ioctl)();
-	int	(*l_rint)();
-	int	(*l_rend)();
-	int	(*l_meta)();
-	int	(*l_start)();
-	int	(*l_modem)();
-} linesw[];

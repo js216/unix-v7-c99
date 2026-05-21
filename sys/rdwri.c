@@ -5,6 +5,11 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
+#include "../h/proto.h"
+
+/* bread/breada/getblk/geteblk/brelse/bdwrite/clrbuf come from h/proto.h.
+ * cpass/passc/copyin/copyout/bmap/min come from h/systm.h. */
+extern void iomove(register caddr_t cp, register int n, int flag);
 
 /*
  * Read the file corresponding to
@@ -16,15 +21,15 @@
  *	u_count		number of bytes to read
  *	u_segflg	read to kernel/user/user I
  */
-readi(ip)
-register struct inode *ip;
+void
+readi(register struct inode *ip)
 {
 	struct buf *bp;
 	dev_t dev;
 	daddr_t lbn, bn;
 	off_t diff;
-	register on, n;
-	register type;
+	register int on, n;
+	register int type;
 
 	if(u.u_count == 0)
 		return;
@@ -36,7 +41,8 @@ register struct inode *ip;
 	dev = (dev_t)ip->i_un.i_rdev;
 	type = ip->i_mode&IFMT;
 	if (type==IFCHR || type==IFMPC) {
-		return((*cdevsw[major(dev)].d_read)(dev));
+		(*cdevsw[major(dev)].d_read)(dev);
+		return;
 	}
 
 	do {
@@ -80,14 +86,14 @@ register struct inode *ip;
  *	u_count		number of bytes to write
  *	u_segflg	write to kernel/user/user I
  */
-writei(ip)
-register struct inode *ip;
+void
+writei(register struct inode *ip)
 {
 	struct buf *bp;
 	dev_t dev;
 	daddr_t bn;
-	register n, on;
-	register type;
+	register int n, on;
+	register int type;
 
 	if(u.u_offset < 0) {
 		u.u_error = EINVAL;
@@ -113,7 +119,7 @@ register struct inode *ip;
 				return;
 			dev = ip->i_dev;
 		}
-		if(n == BSIZE) 
+		if(n == BSIZE)
 			bp = getblk(dev, bn);
 		else
 			bp = bread(dev, bn);
@@ -129,25 +135,13 @@ register struct inode *ip;
 	} while(u.u_error==0 && u.u_count!=0);
 }
 
-/*
- * Return the logical maximum
- * of the 2 arguments.
- */
-max(a, b)
-unsigned a, b;
-{
-
-	if(a > b)
-		return(a);
-	return(b);
-}
 
 /*
  * Return the logical minimum
  * of the 2 arguments.
  */
-min(a, b)
-unsigned a, b;
+unsigned
+min(unsigned a, unsigned b)
 {
 
 	if(a < b)
@@ -170,28 +164,24 @@ unsigned a, b;
  * If not, its done byte-by-byte with
  * cpass and passc.
  */
-iomove(cp, n, flag)
-register caddr_t cp;
-register n;
+void
+iomove(register caddr_t cp, register int n, int flag)
 {
-	register t;
+	register int t;
 
 	if (n==0)
 		return;
-	if(u.u_segflg != 1 &&
+	/* v7 had a u_segflg==2 (user I-space) branch here that called
+	 * copyiin/copyiout; this port never sets u_segflg to 2, so the
+	 * fast path is just user (==0) vs system (==1). */
+	if(u.u_segflg == 0 &&
 	  (n&(NBPW-1)) == 0 &&
 	  ((int)cp&(NBPW-1)) == 0 &&
 	  ((int)u.u_base&(NBPW-1)) == 0) {
 		if (flag==B_WRITE)
-			if (u.u_segflg==0)
-				t = copyin(u.u_base, (caddr_t)cp, n);
-			else
-				t = copyiin(u.u_base, (caddr_t)cp, n);
+			t = copyin(u.u_base, (caddr_t)cp, n);
 		else
-			if (u.u_segflg==0)
-				t = copyout((caddr_t)cp, u.u_base, n);
-			else
-				t = copyiout((caddr_t)cp, u.u_base, n);
+			t = copyout((caddr_t)cp, u.u_base, n);
 		if (t) {
 			u.u_error = EFAULT;
 			return;

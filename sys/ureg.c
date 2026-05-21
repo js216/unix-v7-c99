@@ -6,32 +6,20 @@
 #include "../h/text.h"
 #include "../h/seg.h"
 
-/*
- * Load the user hardware segmentation
- * registers from the software prototype.
- * The software registers must have
- * been setup prior by estabur.
- */
-sureg()
-{
-	register *udp, *uap, *rdp;
-	int *rap, *limudp;
-	int taddr, daddr;
-	struct text *tp;
+int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 
-	taddr = daddr = u.u_procp->p_addr;
-	if ((tp=u.u_procp->p_textp) != NULL)
-		taddr = tp->x_caddr;
-	limudp = &u.u_uisd[16];
-	if (cputype==40)
-		limudp = &u.u_uisd[8];
-	rap = (int *)UISA;
-	rdp = (int *)UISD;
-	uap = &u.u_uisa[0];
-	for (udp = &u.u_uisd[0]; udp < limudp;) {
-		*rap++ = *uap++ + (*udp&TX? taddr: (*udp&ABS? 0: daddr));
-		*rdp++ = *udp++;
-	}
+/*
+ * v7's sureg() pushed the per-proc u_uisa/u_uisd prototype into the
+ * PDP-11's UISA/UISD segment registers at 0177640 / 0177600.  On ARM
+ * those literal addresses fall inside l1[0]'s identity-mapped user
+ * page (USERPHYS+0xFF80..0xFFFE), so the original loop would silently
+ * scribble over the bottom of every process's address space.  ARM
+ * userspace runs out of a single 1 MiB identity-mapped window with
+ * no per-segment registers to reload, so this is a no-op.
+ */
+void
+sureg(void)
+{
 }
 
 /*
@@ -45,10 +33,10 @@ sureg()
  * The last argument determines whether the text
  * segment is read-write or read-only.
  */
-estabur(nt, nd, ns, sep, xrw)
-unsigned nt, nd, ns;
+int
+estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 {
-	register a, *ap, *dp;
+	register int a, *ap, *dp;
 
 	if(sep) {
 		if(cputype == 40)
@@ -58,7 +46,7 @@ unsigned nt, nd, ns;
 	} else
 		if(ctos(nt)+ctos(nd)+ctos(ns) > 8)
 			goto err;
-	if(nt+nd+ns+USIZE > maxmem)
+	if((int)(nt+nd+ns+USIZE) > maxmem)
 		goto err;
 	a = 0;
 	ap = &u.u_uisa[0];

@@ -1,4 +1,0 @@
-linemod(s)
-char *s;
-{
-}

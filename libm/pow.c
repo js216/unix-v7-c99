@@ -5,11 +5,10 @@
 
 #include	<errno.h>
 int errno;
-double log(), exp();
+double log(double), exp(double);
 
 double
-pow(arg1,arg2)
-double arg1, arg2;
+pow(double arg1, double arg2)
 {
 	double temp;
 	long l;

@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 FILE *
-_findiop()
+_findiop(void)
 {
 	extern FILE *_lastbuf;
 	register FILE *iop;

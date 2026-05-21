@@ -7,9 +7,7 @@ int	optap(), setcom(), useerr(), check(), done(), encode(),
 	update(), delete(), taboc(), extract(), usage();
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char c,*ptr;
 	extern int cmd(), cmr(),cmx(), cmt();
@@ -21,7 +19,7 @@ char **argv;
 	else {
 		ptr = argv[1];	/* get first argument */
 		parg = &argv[2];	/* pointer to second argument */
-		while (c = *ptr++) switch(c)  {
+		while ((c = *ptr++)) switch(c)  {
 			case '0':
 			case '1':
 			case '2':
@@ -73,7 +71,7 @@ char **argv;
 }
 
 int
-optap()
+optap(void)
 {
 	extern int cmr();
 
@@ -99,8 +97,7 @@ optap()
 }
 
 int
-setcom(newcom)
-int (*newcom)();
+setcom(int (*newcom)(void))
 {
 	extern int cmr();
 
@@ -110,7 +107,7 @@ int (*newcom)();
 }
 
 int
-useerr()
+useerr(void)
 {
 	printf("Bad usage\n");
 	done();
@@ -120,9 +117,9 @@ useerr()
 /* COMMANDS */
 
 int
-cmd()
+cmd(void)
 {
-	extern int delete();
+	extern int delete(void);
 
 	if (flags & (flm|flc))	useerr();
 	if (narg <= 2)			useerr();
@@ -134,7 +131,7 @@ cmd()
 }
 
 int
-cmr()
+cmr(void)
 {
 	if (flags & (flc|flm))		clrdir();
 	else				rddir();
@@ -145,9 +142,9 @@ cmr()
 }
 
 int
-cmt()
+cmt(void)
 {
-	extern int taboc();
+	extern int taboc(struct dent *);
 
 	if (flags & (flc|flw))	useerr();
 	rddir();
@@ -159,9 +156,9 @@ cmt()
 }
 
 int
-cmx()
+cmx(void)
 {
-	extern int extract();
+	extern int extract(struct dent *);
 
 	if (flags & (flc))		useerr();
 	rddir();

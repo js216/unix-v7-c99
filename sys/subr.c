@@ -1,10 +1,13 @@
 #include "../h/param.h"
 #include "../h/systm.h"
-#include "../h/conf.h"
 #include "../h/inode.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/buf.h"
+#include "../h/proto.h"
+
+/* bread/bdwrite/brelse come from h/proto.h.
+ * alloc/subyte/fubyte come from h/systm.h. */
 
 /*
  * Bmap defines the structure of file system storage
@@ -15,11 +18,9 @@
  * for use in read-ahead.
  */
 daddr_t
-bmap(ip, bn, rwflg)
-register struct inode *ip;
-daddr_t bn;
+bmap(register struct inode *ip, daddr_t bn, int rwflg)
 {
-	register i;
+	register int i;
 	struct buf *bp, *nbp;
 	int j, sh;
 	daddr_t nb, *bap;
@@ -114,7 +115,7 @@ daddr_t bn;
 	/*
 	 * calculate read-ahead.
 	 */
-	if(i < NINDIR-1)
+	if((unsigned)i < NINDIR-1)
 		rablock = bap[i+1];
 	return(nb);
 }
@@ -125,18 +126,17 @@ daddr_t bn;
  * on the last character of the user's read.
  * u_base is in the user address space unless u_segflg is set.
  */
-passc(c)
-register c;
+int
+passc(register int c)
 {
-	register id;
-
-	if((id = u.u_segflg) == 1)
+	/* v7 had a u_segflg==2 (user I-space) branch dispatching to
+	 * suibyte; this port never sets u_segflg to 2. */
+	if(u.u_segflg == 1)
 		*u.u_base = c;
-	else
-		if(id?suibyte(u.u_base, c):subyte(u.u_base, c) < 0) {
-			u.u_error = EFAULT;
-			return(-1);
-		}
+	else if(subyte(u.u_base, c) < 0) {
+		u.u_error = EFAULT;
+		return(-1);
+	}
 	u.u_count--;
 	u.u_offset++;
 	u.u_base++;
@@ -150,55 +150,25 @@ register c;
  * when u_count is exhausted.  u_base is in the user's
  * address space unless u_segflg is set.
  */
-cpass()
+int
+cpass(void)
 {
-	register c, id;
+	register int c;
 
 	if(u.u_count == 0)
 		return(-1);
-	if((id = u.u_segflg) == 1)
+	if(u.u_segflg == 1)
 		c = *u.u_base;
-	else
-		if((c = id==0?fubyte(u.u_base):fuibyte(u.u_base)) < 0) {
-			u.u_error = EFAULT;
-			return(-1);
-		}
+	else if((c = fubyte(u.u_base)) < 0) {
+		u.u_error = EFAULT;
+		return(-1);
+	}
 	u.u_count--;
 	u.u_offset++;
 	u.u_base++;
 	return(c&0377);
 }
 
-/*
- * Routine which sets a user error; placed in
- * illegal entries in the bdevsw and cdevsw tables.
- */
-nodev()
-{
-
-	u.u_error = ENODEV;
-}
-
-/*
- * Null routine; placed in insignificant entries
- * in the bdevsw and cdevsw tables.
- */
-nulldev()
-{
-}
-
-/*
- * copy count bytes from from to to.
- */
-bcopy(from, to, count)
-caddr_t from, to;
-register count;
-{
-	register char *f, *t;
-
-	f = from;
-	t = to;
-	do
-		*t++ = *f++;
-	while(--count);
-}
+/* v7 bcopy lives in arch/v7stubs.c -- byte-loop tuned for AAPCS softfloat
+ * rather than the PDP-11 mov2/movb instruction layout the original
+ * carried over from v7/usr/sys/sys/subr.c. */

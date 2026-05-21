@@ -5,9 +5,7 @@
  */
 
 char *
-strncat(s1, s2, n)
-register char *s1, *s2;
-register int n;
+strncat(register char *s1, register char *s2, register int n)
 {
 	register char *os1;
 
@@ -15,7 +13,7 @@ register int n;
 	while (*s1++)
 		;
 	--s1;
-	while (*s1++ = *s2++)
+	while ((*s1++ = *s2++))
 		if (--n < 0) {
 			*--s1 = '\0';
 			break;

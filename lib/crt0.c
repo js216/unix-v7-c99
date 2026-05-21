@@ -1,11 +1,10 @@
 /*
  * crt0.c -- userland entry point.  _start (in crt0.s) calls _startc,
- * which parses argv out of the spawn page at UARGV and dispatches to
- * main(), then exits via libc's exit() so stdio buffers are flushed.
+ * which parses argv out of the exec-staged page at UARGV and dispatches
+ * to main(), then exits via libc's exit() so stdio buffers are flushed.
  */
 
 #define	UARGV		0x0000f000
-#define	UARGLEN		3072
 
 extern int main(int argc, char **argv);
 extern void exit(int n);

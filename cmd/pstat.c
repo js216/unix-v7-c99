@@ -76,9 +76,7 @@ int ttyprt(int n, struct tty *atp);
 int oatoi(char *s);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 
 	while (--argc && **++argv == '-') {
@@ -145,7 +143,7 @@ char **argv;
 }
 
 int
-doinode()
+doinode(void)
 {
 	register struct inode *ip;
 	struct inode xinode[NINODE];
@@ -186,8 +184,7 @@ doinode()
 }
 
 int
-putf(v, n)
-int v, n;
+putf(int v, int n)
 {
 	if (v)
 		printf("%c", n);
@@ -197,7 +194,7 @@ int v, n;
 }
 
 int
-dotext()
+dotext(void)
 {
 	register struct text *xp;
 	struct text xtext[NTEXT];
@@ -235,7 +232,7 @@ dotext()
 }
 
 int
-doproc()
+doproc(void)
 {
 	struct proc xproc[NPROC];
 	register struct proc *pp;
@@ -276,7 +273,7 @@ doproc()
 }
 
 int
-dotty()
+dotty(void)
 {
 	struct tty dh11[48];
 	int ndh;
@@ -302,9 +299,7 @@ dotty()
 }
 
 int
-ttyprt(n, atp)
-int n;
-struct tty *atp;
+ttyprt(int n, struct tty *atp)
 {
 	register struct tty *tp;
 
@@ -331,7 +326,7 @@ struct tty *atp;
 }
 
 int
-dousr()
+dousr(void)
 {
 	union {
 		struct	user rxu;
@@ -400,8 +395,7 @@ dousr()
 }
 
 int
-oatoi(s)
-char *s;
+oatoi(char *s)
 {
 	register int v;
 
@@ -412,7 +406,7 @@ char *s;
 }
 
 int
-dofil()
+dofil(void)
 {
 	struct file xfile[NFILE];
 	register struct file *fp;

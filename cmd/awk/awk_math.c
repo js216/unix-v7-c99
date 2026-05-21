@@ -1,6 +1,5 @@
 double
-sqrt(x)
-double x;
+sqrt(double x)
 {
 	double y, last;
 	int i;
@@ -18,8 +17,7 @@ double x;
 }
 
 double
-exp(x)
-double x;
+exp(double x)
 {
 	double term, sum;
 	int i, neg;
@@ -43,8 +41,7 @@ double x;
 }
 
 double
-log(x)
-double x;
+log(double x)
 {
 	double y, e, d;
 	int i;

@@ -6,8 +6,7 @@ int	decode(), verify(), clrent(), bitmap(), maperr(), setmap(),
 	rseek(), tread(), usage();
 
 int
-gettape(how)
-int (*how)();
+gettape(int (*how)(struct dent *))
 {
 	register char *ptr0, *ptr1;
 	register struct dent *d;
@@ -38,8 +37,7 @@ cont:			continue;
 }
 
 int
-delete(dd)
-struct dent *dd;
+delete(struct dent *dd)
 {
 	if (verify('d') >= 0)
 		clrent(dd);
@@ -48,7 +46,7 @@ struct dent *dd;
 
 
 int
-update()
+update(void)
 {
 	register struct dent *d;
 	register int b, last;
@@ -80,7 +78,7 @@ toosmall:	++first;
 
 
 int
-update1()
+update1(void)
 {
 	register struct dent *d, *id;
 	register int index;
@@ -110,7 +108,7 @@ update1()
 			if (read(f,(char *)tapeb,BSIZE) != BSIZE)	    phserr();
 			twrite();
 		}
-		if (index = d->d_size % BSIZE) {
+		if ((index = d->d_size % BSIZE)) {
 			if (read(f,(char *)tapeb,index) != index)  phserr();
 			twrite();
 		}
@@ -120,7 +118,7 @@ update1()
 }
 
 int
-phserr()
+phserr(void)
 {	printf("%s -- Phase error \n", name); return(0);  }
 
 
@@ -143,8 +141,7 @@ bitmap()	/* place old files in the map */
 }
 
 int
-setmap(d)
-register struct dent *d;
+setmap(register struct dent *d)
 {
 	unsigned c, block;
 	char bit;
@@ -164,7 +161,7 @@ register struct dent *d;
 }
 
 int
-maperr()
+maperr(void)
 {
 	printf("Tape overflow\n");
 	done();
@@ -173,7 +170,7 @@ maperr()
 
 
 int
-usage()
+usage(void)
 {
 	register int reg,count;
 	int	nused, nentr, nfree;
@@ -209,8 +206,7 @@ usage()
 
 
 int
-taboc(dd)
-struct dent *dd;
+taboc(struct dent *dd)
 {
 	register int mode;
 	register int *m;
@@ -243,8 +239,7 @@ struct dent *dd;
 
 
 int
-extract(d)
-register struct dent *d;
+extract(register struct dent *d)
 {
 	register int count, id;
 
@@ -259,7 +254,7 @@ register struct dent *d;
 		tread();
 		if (write(id, (char *)tapeb, BSIZE) != BSIZE)	goto ng;
 	}
-	if (count = d->d_size % BSIZE) {
+	if ((count = d->d_size % BSIZE)) {
 		tread();
 		if (write(id, (char *)tapeb, count) != count) {
 ng:			printf("%s -- write error\n", name);

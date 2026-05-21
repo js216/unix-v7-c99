@@ -1,43 +1,44 @@
 /* v7 buffer-cache + proc-table storage + stubs for symbols sys/ references. */
 #include "../h/param.h"
+#include "../h/acct.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
 #include "../h/dir.h"
 #include "../h/inode.h"
 #include "../h/user.h"
-#include "../h/proc.h"
-#include "../h/file.h"
 #include "../h/filsys.h"
-#include "../h/ino.h"
 #include "../h/mount.h"
 #include "../h/systm.h"
 #include "../h/proto.h"
-/* per-process user struct (referenced by physio() in dev/bio.c) */
+#include "../h/v7_bridge.h"
+/* per-process user struct -- all v7 sys globals land here. */
 struct user u;
 /* head of available-buffer list */
 struct buf bfreelist;
 /* Major 0 = active block device (mp135 DDR on EVB, virtio-blk on qemu). */
 dev_t rootdev = 0;
 int nblkdev = 0;	/* binit() counts populated bdevsw[] rows from here */
-struct buf buf[NBUF];	/* conf/c.c equivalent until conf/c.c is linked in */
+struct buf buf[NBUF];	/* v7 conf/c.c provided this on PDP-11; lives here on ARM */
 /* Trailing empty row terminates the table. */
+/* nulldev placeholder for d_open/d_close, which v7's binit() sentinel
+ * walk + sys3.c::smount/sumount and fio.c::closef still touch.  Declared
+ * locally with the bdevsw entry signature so the initializer stays
+ * strict-C99-compatible. */
+static int nulldev_dev(dev_t dev, int flag) { (void)dev; (void)flag; return 0; }
+/* mp135_strategy/virtio_strategy prototypes come from h/proto.h. */
 #ifdef EVB
-extern int mp135_strategy(struct buf *);
 extern struct buf mp135_tab;
 struct bdevsw bdevsw[2] = {
-	{ nulldev, nulldev, mp135_strategy, &mp135_tab },
+	{ nulldev_dev, nulldev_dev, mp135_strategy, &mp135_tab },
 	{ 0, 0, 0, 0 }
 };
 #else
-extern int virtio_strategy(struct buf *);
 extern struct buf virtio_tab;
 struct bdevsw bdevsw[2] = {
-	{ nulldev, nulldev, virtio_strategy, &virtio_tab },
+	{ nulldev_dev, nulldev_dev, virtio_strategy, &virtio_tab },
 	{ 0, 0, 0, 0 }
 };
 #endif
-/* UNIBUS map release: no-op on ARM. */
-void mapfree(struct buf *bp) { (void)bp; }
 /* PDP-11 SPL primitives -- ARM has no PSL_IPL, so all no-ops. */
 int spl0(void) { return 0; }
 int spl6(void) { return 0; }
@@ -48,35 +49,28 @@ void prele(struct inode *ip)
 { if(ip) ip->i_flag &= ~(ILOCK|IWANT); }
 void plock(struct inode *ip)
 { if(ip) { ip->i_flag &= ~IWANT; ip->i_flag |= ILOCK; } }
+/* fuibyte/suibyte (user I-space) gone -- this port never sets
+ * u.u_segflg to 2, so subr.c::passc/cpass never select them. */
 int fubyte(caddr_t addr) { return *(unsigned char *)addr; }
-int fuibyte(caddr_t addr) { return *(unsigned char *)addr; }
 int subyte(caddr_t addr, char c) { *(unsigned char *)addr = c; return 0; }
-int suibyte(caddr_t addr, char c) { *(unsigned char *)addr = c; return 0; }
-/* bcopy/nulldev/nodev for v7 alloc.c without pulling in subr.c. */
+/* Byte-loop bcopy tuned for AAPCS softfloat -- replaces v7's
+ * PDP-11-shaped subr.c bcopy (deleted earlier). */
 void bcopy(char *f, char *t, unsigned int n) { while(n--) *t++ = *f++; }
-int nulldev(void) { return 0; }
-int nodev(void) { return -1; }
-/* USERBASE identity-mapped: copy{in,out,iin,iout} = memcpy (iin/iout unreachable). */
+/* USERBASE identity-mapped: copyin/copyout = memcpy.  v7's copyiin/
+ * copyiout (user I-space) are gone -- rdwri.c never selects them. */
 int copyin(caddr_t f, caddr_t t, unsigned int n)   { while(n--) *t++ = *f++; return 0; }
 int copyout(caddr_t f, caddr_t t, unsigned int n)  { while(n--) *t++ = *f++; return 0; }
-int copyiin(caddr_t f, caddr_t t, unsigned int n)  { while(n--) *t++ = *f++; return 0; }
-int copyiout(caddr_t f, caddr_t t, unsigned int n) { while(n--) *t++ = *f++; return 0; }
 int spl1(void) { return 0; }
-int spl5(void) { return 0; }
 int spl7(void) { return 0; }
-void display(void) {}
-/* Per-proc stubs for sig.c/sys1.c paths we don't exercise yet. */
-void savfp(void *fp) { (void)fp; }
-void sendsig(caddr_t p, int n) { (void)p; (void)n; }
+/* copyseg/clearseg called from sys/sys1.c::sbreak and sys/slp.c::expand
+ * -- no-op on this port because every proc is permanently resident in
+ * RAM and userspace is identity-mapped. */
 void copyseg(int from, int to) { (void)from; (void)to; }
 void clearseg(int a) { (void)a; }
-/* fu*word / su*word -- no live caller; nodev-style stubs. */
-int fuiword(caddr_t addr) { (void)addr; return -1; }
-int fuword(caddr_t addr) { (void)addr; return -1; }
-int suiword(caddr_t addr, int v) { (void)addr; (void)v; return -1; }
-int suword(caddr_t addr, int v) { (void)addr; (void)v; return -1; }
+/* v7's fuword/suword (int-aligned user->kernel xfer) are gone -- no
+ * remaining kernel C code calls them; the syscall path uses copyin/copyout. */
 char regloc[9];
-void addupc(void) {}
+void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
 caddr_t waitloc;
 /* Per-iteration barrier for v7_pause_call's busy spin.  Cross-TU call
  * defeats register caching of pp->p_sig; the UART write advances qemu's
@@ -86,21 +80,9 @@ void pause_spin_barrier(void)
 	putchar('\b');
 	__asm__ volatile("dmb ish" ::: "memory");
 }
-/* idle reached = scheduler bug (no runnable peers + v7 sleep()). */
-void idle(void) { panic("idle reached"); }
 struct inode *acctp;
-struct acct {
-	char ac_comm[10];
-	long ac_utime, ac_stime, ac_etime;
-	time_t ac_btime;
-	short ac_uid, ac_gid, ac_mem, ac_io;
-	dev_t ac_tty;
-	char ac_flag;
-} acctbuf;
-extern int uchar(void);
-extern struct inode *namei(int (*func)(void), int flag);
-extern struct inode *iget(dev_t dev, ino_t ino);
-extern void iput(struct inode *ip);
+struct acct acctbuf;
+/* uchar/namei/iget/iput come from h/systm.h. */
 /* Path -> inum bridge over v7's namei.  First call iget's rootdir +
  * u.u_cdir as separate refs (sys/main.c) so child chdir-iput doesn't
  * drop rootdir to 0 and break later absolute-path walks. */
@@ -138,6 +120,9 @@ int v7_mount_init(void)
 	    (unsigned int)BSIZE);
 	fp = mb->b_un.b_filsys;
 	fp->s_ilock = fp->s_flock = fp->s_ronly = 0;
+	/* Seed kernel `time` from the superblock's last-modified stamp,
+	 * matching v7 iinit().  stime(2) can override later. */
+	time = fp->s_time;
 	brelse(bp);
 	mount[0].m_dev = rootdev;
 	mount[0].m_bufp = mb;

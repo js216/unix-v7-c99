@@ -2,11 +2,9 @@
 #include <pwd.h>
 
 struct passwd *
-getpwnam(name)
-char *name;
+getpwnam(char *name)
 {
 	register struct passwd *p;
-	struct passwd *getpwent();
 
 	setpwent();
 	while( (p = getpwent()) && strcmp(name,p->pw_name) );

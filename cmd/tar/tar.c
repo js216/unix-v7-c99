@@ -59,9 +59,7 @@ char	magtape[]	= "/dev/mt1";
 char	*malloc();
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	char *cp;
 	int onintr(), onquit(), onhup(), onterm();
@@ -200,7 +198,7 @@ noupdate:
 }
 
 int
-usage()
+usage(void)
 {
 	fprintf(stderr, "tar: usage  tar -{txru}[cvfblm] [tapefile] [blocksize] file1 file2...\n");
 	done(1);
@@ -208,8 +206,7 @@ usage()
 }
 
 int
-dorep(argv)
-char	*argv[];
+dorep(char *argv[])
 {
 	register char *cp, *cp2;
 	char wdir[60];
@@ -265,7 +262,7 @@ char	*argv[];
 }
 
 int
-endtape()
+endtape(void)
 {
 	if (dblock.dbuf.name[0] == '\0') {
 		backtape();
@@ -276,7 +273,7 @@ endtape()
 }
 
 int
-getdir()
+getdir(void)
 {
 	register struct stat *sp;
 	int i;
@@ -304,7 +301,7 @@ getdir()
 }
 
 int
-passtape()
+passtape(void)
 {
 	long blocks;
 	char buf[TBLOCK];
@@ -321,9 +318,7 @@ passtape()
 }
 
 int
-putfile(longname, shortname)
-char *longname;
-char *shortname;
+putfile(char *longname, char *shortname)
 {
 	int infile;
 	long blocks;
@@ -350,7 +345,8 @@ char *shortname;
 	}
 
 	if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
-		for (i = 0, cp = buf; *cp++ = longname[i++];);
+		for (i = 0, cp = buf; (*cp++ = longname[i++]);)
+			;
 		*--cp = '/';
 		cp++;
 		i = 0;
@@ -458,8 +454,7 @@ char *shortname;
 
 
 int
-doxtract(argv)
-char	*argv[];
+doxtract(char *argv[])
 {
 	long blocks, bytes;
 	char buf[TBLOCK];
@@ -536,7 +531,7 @@ gotit:
 }
 
 int
-dotable()
+dotable(void)
 {
 	for (;;) {
 		getdir();
@@ -554,7 +549,7 @@ dotable()
 }
 
 int
-putempty()
+putempty(void)
 {
 	char buf[TBLOCK];
 	char *cp;
@@ -566,8 +561,7 @@ putempty()
 }
 
 int
-longt(st)
-register struct stat *st;
+longt(register struct stat *st)
 {
 	register char *cp;
 	char *ctime();
@@ -605,8 +599,7 @@ int	m9[] = { 2, STXT, 't', XOTH, 'x', '-' };
 int	*m[] = { m1, m2, m3, m4, m5, m6, m7, m8, m9};
 
 int
-pmode(st)
-register struct stat *st;
+pmode(register struct stat *st)
 {
 	register int **mp;
 
@@ -616,9 +609,7 @@ register struct stat *st;
 }
 
 int
-select(pairp, st)
-int *pairp;
-struct stat *st;
+select(int *pairp, struct stat *st)
 {
 	register int n, *ap;
 
@@ -631,8 +622,7 @@ struct stat *st;
 }
 
 int
-checkdir(name)
-register char *name;
+checkdir(register char *name)
 {
 	register char *cp;
 	int i;
@@ -656,40 +646,43 @@ register char *name;
 }
 
 int
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 	signal(SIGINT, (int)SIG_IGN);
 	term++;
 	return(0);
 }
 
 int
-onquit()
+onquit(int sig)
 {
+	(void)sig;
 	signal(SIGQUIT, (int)SIG_IGN);
 	term++;
 	return(0);
 }
 
 int
-onhup()
+onhup(int sig)
 {
+	(void)sig;
 	signal(SIGHUP, (int)SIG_IGN);
 	term++;
 	return(0);
 }
 
 int
-onterm()
+onterm(int sig)
 {
+	(void)sig;
 	signal(SIGTERM, (int)SIG_IGN);
 	term++;
 	return(0);
 }
 
 int
-tomodes(sp)
-register struct stat *sp;
+tomodes(register struct stat *sp)
 {
 	register char *cp;
 
@@ -704,7 +697,7 @@ register struct stat *sp;
 }
 
 int
-checksum()
+checksum(void)
 {
 	register int i;
 	register char *cp;
@@ -718,9 +711,7 @@ checksum()
 }
 
 int
-checkw(c, name)
-int c;
-char *name;
+checkw(int c, char *name)
 {
 	if (wflag) {
 		printf("%c ", c);
@@ -736,7 +727,7 @@ char *name;
 }
 
 int
-response()
+response(void)
 {
 	char c;
 
@@ -748,13 +739,12 @@ response()
 }
 
 int
-checkupdate(arg)
-char	*arg;
+checkupdate(char *arg)
 {
 	char name[100];
 	long	mtime;
 	daddr_t seekp;
-	daddr_t	lookup();
+	daddr_t	lookup(char *s);
 
 	rewind(tfile);
 	for (;;) {
@@ -770,8 +760,7 @@ char	*arg;
 }
 
 int
-done(n)
-int n;
+done(int n)
 {
 	unlink(tname);
 	exit(n);
@@ -779,8 +768,7 @@ int n;
 }
 
 int
-prefix(s1, s2)
-register char *s1, *s2;
+prefix(register char *s1, register char *s2)
 {
 	while (*s1)
 		if (*s1++ != *s2++)
@@ -791,8 +779,7 @@ register char *s1, *s2;
 }
 
 int
-getwdir(s)
-char *s;
+getwdir(char *s)
 {
 	int i;
 	int	pipdes[2];
@@ -821,8 +808,7 @@ char *s;
 #define	N	200
 int	njab;
 daddr_t
-lookup(s)
-char *s;
+lookup(char *s)
 {
 	register int i;
 	daddr_t a;
@@ -835,10 +821,7 @@ char *s;
 }
 
 daddr_t
-bsrch(s, n, l, h)
-daddr_t l, h;
-char *s;
-int n;
+bsrch(char *s, int n, daddr_t l, daddr_t h)
 {
 	register int i, j;
 	char b[N];
@@ -882,9 +865,7 @@ loop:
 }
 
 int
-cmp(b, s, n)
-char *b, *s;
-int n;
+cmp(char *b, char *s, int n)
 {
 	register int i;
 
@@ -900,8 +881,7 @@ int n;
 }
 
 int
-readtape(buffer)
-char *buffer;
+readtape(char *buffer)
 {
 	int i, j;
 
@@ -937,8 +917,7 @@ char *buffer;
 }
 
 int
-writetape(buffer)
-char *buffer;
+writetape(char *buffer)
 {
 	first = 1;
 	if (nblock == 0)
@@ -962,7 +941,7 @@ char *buffer;
 }
 
 int
-backtape()
+backtape(void)
 {
 	lseek(mt, (long) -TBLOCK, 1);
 	if (recno >= nblock) {
@@ -977,15 +956,14 @@ backtape()
 }
 
 int
-flushtape()
+flushtape(void)
 {
 	write(mt, (char *)tbuf, TBLOCK*nblock);
 	return(0);
 }
 
 int
-copy(to, from)
-register char *to, *from;
+copy(register char *to, register char *from)
 {
 	register int i;
 

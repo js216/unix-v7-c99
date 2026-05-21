@@ -3,12 +3,20 @@
 #include "lrnref"
 #include "signal.h"
 
-main(argc,argv)
-char *argv[];
+extern void selsub(int, char **);
+extern void selunit(void);
+extern void dounit(void);
+extern void whatnow(void);
+extern void wrapup(int);
+
+void hangup(int);
+void intrpt(int);
+
+int
+main(int argc, char *argv[])
 {
-	extern hangup(), intrpt();
-	extern char * getlogin();
-	char *malloc();
+	extern char *getlogin(void);
+	extern char *malloc(unsigned);
 
 	speed = 0;
 	more = 1;
@@ -23,16 +31,21 @@ char *argv[];
 		whatnow();
 	}
 	wrapup(0);
+	return 0;
 }
 
-hangup()
+void
+hangup(int sig)
 {
+	(void)sig;
 	wrapup(1);
 }
 
-intrpt()
+void
+intrpt(int sig)
 {
 	char response[20], *p;
+	(void)sig;
 
 	signal(SIGINT, hangup);
 	write(2, "\nInterrupt.\nWant to go on?  ", 28);

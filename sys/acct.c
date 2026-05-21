@@ -5,13 +5,15 @@
 #include "../h/user.h"
 #include "../h/inode.h"
 #include "../h/proc.h"
-#include "../h/seg.h"
+
+/* suser/plock/iput/prele/namei/uchar/writei come from h/systm.h. */
 
 /*
  * Perform process accounting functions.
  */
 
-sysacct()
+void
+sysacct(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -45,19 +47,22 @@ sysacct()
 	}
 }
 
+int compress(time_t t);
+
 /*
  * On exit, write a record on the accounting file.
  */
-acct()
+void
+acct(void)
 {
-	register i;
+	register int i;
 	register struct inode *ip;
 	off_t siz;
 
 	if ((ip=acctp)==NULL)
 		return;
 	plock(ip);
-	for (i=0; i<sizeof(acctbuf.ac_comm); i++)
+	for (i=0; i<(int)sizeof(acctbuf.ac_comm); i++)
 		acctbuf.ac_comm[i] = u.u_comm[i];
 	acctbuf.ac_utime = compress(u.u_utime);
 	acctbuf.ac_stime = compress(u.u_stime);
@@ -85,10 +90,10 @@ acct()
  * Produce a pseudo-floating point representation
  * with 3 bits base-8 exponent, 13 bits fraction.
  */
-compress(t)
-register time_t t;
+int
+compress(time_t t)
 {
-	register exp = 0, round = 0;
+	register int exp = 0, round = 0;
 
 	while (t >= 8192) {
 		exp++;
@@ -105,23 +110,11 @@ register time_t t;
 	return((exp<<13) + t);
 }
 
-/*
- * lock user into core as much
- * as possible. swapping may still
- * occur if core grows.
- */
-syslock()
+/* lock(2): v7 toggled SULOCK to pin the process resident.  This port
+ * keeps every proc permanently in RAM, so the only remaining behavior
+ * is to enforce the superuser check (matching v7's EPERM for non-root). */
+void
+syslock(void)
 {
-	register struct proc *p;
-	register struct a {
-		int	flag;
-	} *uap;
-
-	uap = (struct a *)u.u_ap;
-	if(suser()) {
-		p = u.u_procp;
-		p->p_flag &= ~SULOCK;
-		if(uap->flag)
-			p->p_flag |= SULOCK;
-	}
+	(void)suser();
 }

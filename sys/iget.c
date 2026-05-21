@@ -6,8 +6,18 @@
 #include "../h/inode.h"
 #include "../h/ino.h"
 #include "../h/filsys.h"
-#include "../h/conf.h"
 #include "../h/buf.h"
+#include "../h/proto.h"
+
+/* bread/brelse/bdwrite/sleep/panic come from h/proto.h.
+ * free/ifree/ialloc/getfs/prele/writei/bcopy come from h/systm.h. */
+
+void iexpand(register struct inode *ip, register struct dinode *dp);
+void itrunc(register struct inode *ip);
+void tloop(dev_t dev, daddr_t bn, int f1, int f2);
+void wdir(struct inode *ip);
+void iput(register struct inode *ip);
+int iupdat(register struct inode *ip, time_t *ta, time_t *tm);
 
 /*
  * Look up an inode by device,inumber.
@@ -27,9 +37,7 @@
  *	"cannot happen"
  */
 struct inode *
-iget(dev, ino)
-dev_t dev;
-ino_t ino;
+iget(dev_t dev, ino_t ino)
 {
 	register struct inode *ip;
 	register struct mount *mp;
@@ -89,9 +97,8 @@ loop:
 	return(ip);
 }
 
-iexpand(ip, dp)
-register struct inode *ip;
-register struct dinode *dp;
+void
+iexpand(register struct inode *ip, register struct dinode *dp)
 {
 	register char *p1;
 	char *p2;
@@ -119,8 +126,8 @@ register struct dinode *dp;
  * write the inode out and if necessary,
  * truncate and deallocate the file.
  */
-iput(ip)
-register struct inode *ip;
+void
+iput(register struct inode *ip)
 {
 
 	if(ip->i_count == 1) {
@@ -146,9 +153,8 @@ register struct inode *ip;
  * If any are on, update the inode
  * with the current time.
  */
-iupdat(ip, ta, tm)
-register struct inode *ip;
-time_t *ta, *tm;
+int
+iupdat(register struct inode *ip, time_t *ta, time_t *tm)
 {
 	register struct buf *bp;
 	struct dinode *dp;
@@ -190,6 +196,7 @@ time_t *ta, *tm;
 		ip->i_flag &= ~(IUPD|IACC|ICHG);
 		bdwrite(bp);
 	}
+	return(0);
 }
 
 /*
@@ -201,16 +208,16 @@ time_t *ta, *tm;
  * a contiguous free list much longer
  * than FIFO.
  */
-itrunc(ip)
-register struct inode *ip;
+void
+itrunc(register struct inode *ip)
 {
-	register i;
+	register int i;
 	dev_t dev;
 	daddr_t bn;
 
 	i = ip->i_mode & IFMT;
 	if (i!=IFREG && i!=IFDIR)
-		return(0);
+		return;
 	dev = ip->i_dev;
 	for(i=NADDR-1; i>=0; i--) {
 		bn = ip->i_un.i_addr[i];
@@ -239,22 +246,22 @@ register struct inode *ip;
 	ip->i_flag |= ICHG|IUPD;
 }
 
-tloop(dev, bn, f1, f2)
-dev_t dev;
-daddr_t bn;
+void
+tloop(dev_t dev, daddr_t bn, int f1, int f2)
 {
-	register i;
+	register int i;
 	register struct buf *bp;
 	register daddr_t *bap;
 	daddr_t nb;
 
 	bp = NULL;
+	bap = NULL;
 	for(i=NINDIR-1; i>=0; i--) {
 		if(bp == NULL) {
 			bp = bread(dev, bn);
 			if (bp->b_flags & B_ERROR) {
 				brelse(bp);
-				return(0);
+				return;
 			}
 			bap = bp->b_un.b_daddr;
 		}
@@ -277,7 +284,7 @@ daddr_t bn;
  * Make a new file.
  */
 struct inode *
-maknode(mode)
+maknode(int mode)
 {
 	register struct inode *ip;
 
@@ -302,8 +309,8 @@ maknode(mode)
  * parameters left as side effects
  * to a call to namei.
  */
-wdir(ip)
-struct inode *ip;
+void
+wdir(struct inode *ip)
 {
 
 	if (u.u_pdir->i_nlink <= 0) {

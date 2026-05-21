@@ -15,7 +15,7 @@ struct	filsys sblock;
 
 int	fi;
 int	errno;
-daddr_t	alloc();
+daddr_t	alloc(void);
 void	dfree(char *file);
 void	bread(daddr_t bno, char *buf, int cnt);
 
@@ -54,7 +54,7 @@ dfree(char *file)
 }
 
 daddr_t
-alloc()
+alloc(void)
 {
 	int i;
 	daddr_t b;

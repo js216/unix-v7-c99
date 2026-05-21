@@ -10,21 +10,38 @@
 #include	"defs.h"
 #include	"dup.h"
 
+extern int close(int fd);
+extern int open(char *p, int f);
+extern int creat(char *p, int m);
+extern int pipe(int *pv);
+extern int dup(int f1, int f2);
+extern int write(int fd, char *buf, int n);
+INT	length(STRING as);
+INT	itos(INT n);
+INT	chkpr(CHAR c);
+INT	readc(void);
+INT	nextc(INT quote);
+INT	failed(STRING s1, STRING s2);
+INT	error(STRING s);
+INT	tmpfil(void);
+INT	create(STRING s);
+INT	cf(STRING s1, STRING s2);
+STRING	mactrim(STRING s);
+
 
 /* ========	input output and file copying ======== */
 
-initf(fd)
-	UFD		fd;
+INT initf(UFD fd)
 {
 	REG FILE	f=standin;
 
 	f->fdes=fd; f->fsiz=((flags&(oneflg|ttyflg))==0 ? BUFSIZ : 1);
 	f->fnxt=f->fend=f->fbuf; f->feval=0; f->flin=1;
 	f->feof=FALSE;
+	return(0);
 }
 
-estabf(s)
-	REG STRING	s;
+INT estabf(REG STRING s)
 {
 	REG FILE	f;
 
@@ -34,17 +51,17 @@ estabf(s)
 	return(f->feof=(s==0));
 }
 
-push(af)
-	FILE		af;
+INT push(FILE af)
 {
 	REG FILE	f;
 
 	(f=af)->fstak=standin;
 	f->feof=0; f->feval=0;
 	standin=f;
+	return(0);
 }
 
-pop()
+INT pop(void)
 {
 	REG FILE	f;
 
@@ -56,16 +73,16 @@ pop()
 	FI
 }
 
-chkpipe(pv)
-	INT		*pv;
+INT chkpipe(INT *pv)
 {
 	IF pipe(pv)<0 ORF pv[INPIPE]<0 ORF pv[OTPIPE]<0
 	THEN	error(piperr);
 	FI
+	return(0);
 }
 
-chkopen(idf)
-	STRING		idf;
+INT
+chkopen(STRING idf)
 {
 	REG INT		rc;
 
@@ -73,20 +90,21 @@ chkopen(idf)
 	THEN	failed(idf,badopen);
 	ELSE	return(rc);
 	FI
+	return(0);
 }
 
-rename(f1,f2)
-	REG INT		f1, f2;
+INT rename(REG INT f1, REG INT f2)
 {
 	IF f1!=f2
 	THEN	dup(f1|DUPFLG, f2);
 		close(f1);
 		IF f2==0 THEN ioset|=1 FI
 	FI
+	return(0);
 }
 
-create(s)
-	STRING		s;
+INT
+create(STRING s)
 {
 	REG INT		rc;
 
@@ -94,9 +112,10 @@ create(s)
 	THEN	failed(s,badcreate);
 	ELSE	return(rc);
 	FI
+	return(0);
 }
 
-tmpfil()
+INT tmpfil(void)
 {
 	itos(serial++); movstr(numbuf,tmpnam);
 	return(create(tmpout));
@@ -105,15 +124,14 @@ tmpfil()
 /* set by trim */
 BOOL		nosubst;
 
-copy(ioparg)
-	IOPTR		ioparg;
+INT copy(IOPTR ioparg)
 {
 	CHAR		c, *ends;
 	REG CHAR	*cline, *clinep;
 	INT		fd;
 	REG IOPTR	iop;
 
-	IF iop=ioparg
+	IF (iop=ioparg)
 	THEN	copy(iop->iolst);
 		ends=mactrim(iop->ioname); IF nosubst THEN iop->iofile &= ~IODOC FI
 		fd=tmpfil();
@@ -130,4 +148,5 @@ copy(ioparg)
 		POOL
 		close(fd);
 	FI
+	return(0);
 }

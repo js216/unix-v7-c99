@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include "sed.h"
 
+void	fcomp(void);
+void	dechain(void);
+void	execute(char *file);
+int	rline(char *lbuf);
+int	cmp(char *a, char *b);
+
 struct label	*labtab = ltab;
 char	CGMES[]	= "command garbled: %s\n";
 char	TMMES[]	= "Too much text: %s\n";
@@ -18,8 +24,8 @@ char	bittab[]  = {
 		128
 	};
 
-main(argc, argv)
-char	*argv[];
+int
+main(int argc, char *argv[])
 {
 
 	eargc = argc;
@@ -106,7 +112,7 @@ char	*argv[];
 
 	dechain();
 
-/*	abort();	/*DEBUG*/
+/*	abort();	DEBUG */
 
 	if(eargc <= 0)
 		execute((char *)NULL);
@@ -136,12 +142,13 @@ char	*argv[];
 	fclose(stdout);
 	exit(0);
 }
-fcomp()
+void
+fcomp(void)
 {
 
 	register char	*p, *op, *tp;
-	char	*address();
-	union reptr	*pt, *pt1;
+	char	*address(char *expbuf);
+	struct reptr	*pt, *pt1;
 	int	i;
 	struct label	*lpt;
 
@@ -164,7 +171,7 @@ fcomp()
 		cp = linebuf;
 
 comploop:
-/*	fprintf(stdout, "cp: %s\n", cp);	/*DEBUG*/
+/*	fprintf(stdout, "cp: %s\n", cp);	DEBUG */
 		while(*cp == ' ' || *cp == '\t')	cp++;
 		if(*cp == '\0' || *cp == '#')		continue;
 		if(*cp == ';') {
@@ -231,7 +238,7 @@ swit:
 			case '{':
 				rep->command = BCOM;
 				rep->negfl = !(rep->negfl);
-				cmpend[depth++] = &rep->lb1;
+				cmpend[depth++] = &rep->u.lb1;
 				if(++rep >= ptrend) {
 					fprintf(stderr, "Too many commands: %s\n", linebuf);
 					exit(2);
@@ -282,7 +289,7 @@ swit:
 					}
 				*--tp = '\0';
 
-				if(lpt = search(lab)) {
+				if((lpt = search(lab))) {
 					if(lpt->address) {
 						fprintf(stderr, "Duplicate labels: %s\n", linebuf);
 						exit(2);
@@ -311,8 +318,8 @@ swit:
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
 				}
-				rep->re1 = p;
-				p = text(rep->re1);
+				rep->u.re1 = p;
+				p = text(rep->u.re1);
 				break;
 			case 'c':
 				rep->command = CCOM;
@@ -321,8 +328,8 @@ swit:
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
 				}
-				rep->re1 = p;
-				p = text(rep->re1);
+				rep->u.re1 = p;
+				p = text(rep->u.re1);
 				break;
 			case 'i':
 				rep->command = ICOM;
@@ -335,8 +342,8 @@ swit:
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
 				}
-				rep->re1 = p;
-				p = text(rep->re1);
+				rep->u.re1 = p;
+				p = text(rep->u.re1);
 				break;
 
 			case 'g':
@@ -366,10 +373,10 @@ jtcommon:
 				cp--;
 
 				if(*cp == '\0') {
-					if(pt = labtab->chain) {
-						while(pt1 = pt->lb1)
+					if((pt = labtab->chain)) {
+						while((pt1 = pt->u.lb1))
 							pt = pt1;
-						pt->lb1 = rep;
+						pt->u.lb1 = rep;
 					} else
 						labtab->chain = rep;
 					break;
@@ -383,14 +390,14 @@ jtcommon:
 				cp--;
 				*--tp = '\0';
 
-				if(lpt = search(lab)) {
+				if((lpt = search(lab))) {
 					if(lpt->address) {
-						rep->lb1 = lpt->address;
+						rep->u.lb1 = lpt->address;
 					} else {
 						pt = lpt->chain;
-						while(pt1 = pt->lb1)
+						while((pt1 = pt->u.lb1))
 							pt = pt1;
-						pt->lb1 = rep;
+						pt->u.lb1 = rep;
 					}
 				} else {
 					lab->chain = rep;
@@ -428,8 +435,8 @@ jtcommon:
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
 				}
-				rep->re1 = p;
-				p = text(rep->re1);
+				rep->u.re1 = p;
+				p = text(rep->u.re1);
 				break;
 
 			case 'd':
@@ -438,7 +445,7 @@ jtcommon:
 
 			case 'D':
 				rep->command = CDCOM;
-				rep->lb1 = ptrspace;
+				rep->u.lb1 = ptrspace;
 				break;
 
 			case 'q':
@@ -456,16 +463,16 @@ jtcommon:
 			case 's':
 				rep->command = SCOM;
 				seof = *cp++;
-				rep->re1 = p;
-				p = compile(rep->re1);
+				rep->u.re1 = p;
+				p = compile(rep->u.re1);
 				if(p == badp) {
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
 				}
-				if(p == rep->re1) {
-					rep->re1 = op;
+				if(p == rep->u.re1) {
+					rep->u.re1 = op;
 				} else {
-					op = rep->re1;
+					op = rep->u.re1;
 				}
 
 				if((rep->rhs = p) > reend) {
@@ -550,8 +557,8 @@ jtcommon:
 			case 'y':
 				rep->command = YCOM;
 				seof = *cp++;
-				rep->re1 = p;
-				p = ycomp(rep->re1);
+				rep->u.re1 = p;
+				p = ycomp(rep->u.re1);
 				if(p == badp) {
 					fprintf(stderr, CGMES, linebuf);
 					exit(2);
@@ -609,10 +616,10 @@ char	*rhsbuf;
 	}
 }
 
-char *compile(expbuf)
-char	*expbuf;
+char *
+compile(char *expbuf)
 {
-	register c;
+	register int c;
 	register char *ep, *sp;
 	char	neg;
 	char *lastep, *cstart;
@@ -770,11 +777,11 @@ char	*expbuf;
 		}
 	}
 }
-rline(lbuf)
-char	*lbuf;
+int
+rline(char *lbuf)
 {
 	register char	*p, *q;
-	register	t;
+	register int	t;
 	static char	*saveq;
 
 	p = lbuf - 1;
@@ -785,7 +792,7 @@ char	*lbuf;
 			if(eargc-- <= 0)
 				exit(2);
 			q = *++eargv;
-			while(*++p = *q++) {
+			while((*++p = *q++)) {
 				if(*p == '\\') {
 					if((*++p = *q++) == '\0') {
 						saveq = 0;
@@ -804,7 +811,7 @@ char	*lbuf;
 		}
 		if((q = saveq) == 0)	return(-1);
 
-		while(*++p = *q++) {
+		while((*++p = *q++)) {
 			if(*p == '\\') {
 				if((*++p = *q++) == '0') {
 					saveq = 0;
@@ -837,8 +844,8 @@ char	*lbuf;
 	return(-1);
 }
 
-char	*address(expbuf)
-char	*expbuf;
+char	*
+address(char *expbuf)
 {
 	register char	*rcp;
 	long	lno;
@@ -876,15 +883,15 @@ char	*expbuf;
 	}
 	return(0);
 }
-cmp(a, b)
-char	*a,*b;
+int
+cmp(char *a, char *b)
 {
 	register char	*ra, *rb;
 
 	ra = a - 1;
 	rb = b - 1;
 
-	while(*++ra == *++rb)
+	while ((*++ra == *++rb))
 		if(*ra == '\0')	return(0);
 	return(1);
 }
@@ -929,10 +936,11 @@ struct label	*ptr;
 }
 
 
-dechain()
+void
+dechain(void)
 {
 	struct label	*lptr;
-	union reptr	*rptr, *trptr;
+	struct reptr	*rptr, *trptr;
 
 	for(lptr = labtab; lptr < lab; lptr++) {
 
@@ -943,17 +951,17 @@ dechain()
 
 		if(lptr->chain) {
 			rptr = lptr->chain;
-			while(trptr = rptr->lb1) {
-				rptr->lb1 = lptr->address;
+			while((trptr = rptr->u.lb1)) {
+				rptr->u.lb1 = lptr->address;
 				rptr = trptr;
 			}
-			rptr->lb1 = lptr->address;
+			rptr->u.lb1 = lptr->address;
 		}
 	}
 }
 
-char *ycomp(expbuf)
-char	*expbuf;
+char *
+ycomp(char *expbuf)
 {
 	register char	c, *ep, *tsp;
 	char	*sp;
@@ -973,11 +981,11 @@ char	*expbuf;
 			sp++;
 			c = '\n';
 		}
-		if((ep[c] = *tsp++) == '\\' && *tsp == 'n') {
-			ep[c] = '\n';
+		if((ep[(unsigned char)c] = *tsp++) == '\\' && *tsp == 'n') {
+			ep[(unsigned char)c] = '\n';
 			tsp++;
 		}
-		if(ep[c] == seof || ep[c] == '\0')
+		if(ep[(unsigned char)c] == seof || ep[(unsigned char)c] == '\0')
 			return(badp);
 	}
 	if(*tsp != seof)
@@ -985,8 +993,8 @@ char	*expbuf;
 	cp = ++tsp;
 
 	for(c = 0; !(c & 0200); c++)
-		if(ep[c] == 0)
-			ep[c] = c;
+		if(ep[(unsigned char)c] == 0)
+			ep[(unsigned char)c] = c;
 
 	return(ep + 0200);
 }

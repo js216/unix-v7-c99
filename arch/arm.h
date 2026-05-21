@@ -14,39 +14,18 @@
 #define UENTRY		0x00010000U
 #define USTACK		0x000f0000U
 
+/* v7 syscall numbers.  The full set is dispatched via sysent[] in
+ * armboot.c by numeric index, so most have no symbolic alias.  Only
+ * the ones the trap/scheduler intercepts inline (exit/fork/signal/
+ * sigreturn) or that pipe-block uses for resume retry (read/write/
+ * wait) need a name here. */
+#define S_EXIT		1
 #define S_FORK		2
 #define S_READ		3
 #define S_WRITE		4
-#define S_OPEN		5
-#define S_CLOSE		6
 #define S_WAIT		7
-#define S_CREAT		8
-#define	S_LINK		9
-#define S_UNLINK	10
-#define S_EXEC		11
-#define	S_CHDIR		12
-#define	S_MKNOD		14
-#define	S_CHMOD		15
-#define	S_CHOWN		16
-#define	S_STAT		18
-#define S_LSEEK		19
-#define	S_FSTAT		28
-#define	S_UTIME		30
-#define	S_ACCESS	33
-#define S_SYNC		36
-#define S_DUP		41
-#define	S_PIPE		42
-#define S_EXIT		1
-#define	S_MOUNT		21
-#define	S_UMOUNT	22
-#define	S_KILL		37
 #define	S_SIGNAL	48
-#define	S_GETUID	24
-#define	S_SETUID	23
-#define	S_UMASK		60
 #define	S_SIGRETURN	139
-#define S_GETDENTS	141
-#define	S_SPAWN		200
 
 #define	UARGV		0x0000f000U
 /* Was 512.  Glob expansion of 100 entries against ~8-byte filenames

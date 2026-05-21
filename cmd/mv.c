@@ -16,9 +16,9 @@
 #define MODEBITS 07777
 #define ROOTINO 2
 
-char	*pname();
+char	*pname(register char *name);
 char	*sprintf(char *buf, char *fmt, ...);
-char	*dname();
+char	*dname(register char *name);
 int	move(char *source, char *target);
 int	mvdir(char *source, char *target);
 int	check(char *spth, ino_t dinode);
@@ -230,15 +230,14 @@ mvdir(char *source, char *target)
 }
 
 char *
-pname(name)
-register char *name;
+pname(register char *name)
 {
 	register int c;
 	register char *p, *q;
 	static	char buf[MAXN];
 
 	p = q = buf;
-	while (c = *p++ = *name++)
+	while ((c = *p++ = *name++))
 		if (c == DELIM)
 			q = p-1;
 	if (q == buf && *q == DELIM)
@@ -248,8 +247,7 @@ register char *name;
 }
 
 char *
-dname(name)
-register char *name;
+dname(register char *name)
 {
 	register char *p;
 

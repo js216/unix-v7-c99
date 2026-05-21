@@ -36,32 +36,35 @@ int	nadded;
 int	dadded;
 int	density = 160;
 
-char	*ctime();
-char	*prdate();
-long	atol();
+char	*ctime(long *t);
+char	*prdate(time_t d);
+long	atol(register char *p);
 int	fi;
 long	tsize;
 long	esize;
 long	asize;
-int	mark();
-int	add();
-int	dump();
-int	tapsrec();
-int	dmpspc();
-int	dsrch();
-int	nullf();
-int	pass(), otape(), bread(), spclrec(), bitmap(), bmapest(), CLR(),
-	getitime(), putitime(), est(), indir(), flusht(), taprec();
-int	l3tol();
+int	mark(struct dinode *ip);
+int	add(struct dinode *ip);
+int	dump(struct dinode *ip);
+int	tapsrec(daddr_t d);
+int	dmpspc(daddr_t *dp, int n);
+int	dsrch(daddr_t d);
+int	nullf(void);
+int	pass(int (*fn)(), short *map), otape(void);
+int	bread(daddr_t da, char *ba, int c), spclrec(void);
+int	bitmap(short *map, int typ), bmapest(short *map);
+int	CLR(register short *map), getitime(void), putitime(void);
+int	est(struct dinode *ip);
+int	indir(daddr_t d, int (*fn1)(), int (*fn2)(), int n);
+int	flusht(void), taprec(char *dp);
+int	l3tol(long *lp, char *cp, int n);
 
 #define	HOUR	(60L*60L)
 #define	DAY	(24L*HOUR)
 #define	YEAR	(365L*DAY)
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	char *arg;
 	register int i;
@@ -178,9 +181,7 @@ char *argv[];
 }
 
 int
-pass(fn, map)
-int (*fn)();
-short *map;
+pass(int (*fn)(), short *map)
 {
 	register int i, j;
 	int bits;
@@ -218,9 +219,7 @@ short *map;
 }
 
 int
-icat(ip, fn1, fn2)
-struct	dinode	*ip;
-int (*fn1)(), (*fn2)();
+icat(struct dinode *ip, int (*fn1)(), int (*fn2)())
 {
 	register int i;
 	daddr_t d[NADDR];
@@ -238,10 +237,7 @@ int (*fn1)(), (*fn2)();
 }
 
 int
-indir(d, fn1, fn2, n)
-daddr_t d;
-int (*fn1)(), (*fn2)();
-int n;
+indir(daddr_t d, int (*fn1)(), int (*fn2)(), int n)
 {
 	register int i;
 	daddr_t	idblk[NINDIR];
@@ -267,8 +263,7 @@ int n;
 }
 
 int
-mark(ip)
-struct dinode *ip;
+mark(struct dinode *ip)
 {
 	register int f;
 
@@ -289,8 +284,7 @@ struct dinode *ip;
 }
 
 int
-add(ip)
-struct dinode *ip;
+add(struct dinode *ip)
 {
 
 	if(BIT(ino, nodmap))
@@ -310,8 +304,7 @@ struct dinode *ip;
 }
 
 int
-dump(ip)
-struct dinode *ip;
+dump(struct dinode *ip)
 {
 	register int i;
 
@@ -333,9 +326,7 @@ struct dinode *ip;
 }
 
 int
-dmpspc(dp, n)
-daddr_t *dp;
-int n;
+dmpspc(daddr_t *dp, int n)
 {
 	register int i, t;
 
@@ -351,9 +342,7 @@ int n;
 }
 
 int
-bitmap(map, typ)
-short *map;
-int typ;
+bitmap(short *map, int typ)
 {
 	register int i, n;
 	char *cp;
@@ -376,7 +365,7 @@ int typ;
 }
 
 int
-spclrec()
+spclrec(void)
 {
 	register int i, *ip, s;
 
@@ -393,8 +382,7 @@ spclrec()
 }
 
 int
-dsrch(d)
-daddr_t d;
+dsrch(daddr_t d)
 {
 	register char *cp;
 	register int i;
@@ -426,16 +414,13 @@ daddr_t d;
 }
 
 int
-nullf()
+nullf(void)
 {
 	return(0);
 }
 
 int
-bread(da, ba, c)
-daddr_t da;
-char *ba;
-int c;
+bread(daddr_t da, char *ba, int c)
 {
 	register int n;
 
@@ -447,8 +432,7 @@ int c;
 }
 
 int
-CLR(map)
-register short *map;
+CLR(register short *map)
 {
 	register int n;
 
@@ -465,8 +449,7 @@ daddr_t	tdaddr[NTREC];
 int	trecno;
 
 int
-taprec(dp)
-char *dp;
+taprec(char *dp)
 {
 	register int i;
 
@@ -481,8 +464,7 @@ char *dp;
 }
 
 int
-tapsrec(d)
-daddr_t d;
+tapsrec(daddr_t d)
 {
 
 	if(d == 0)
@@ -496,7 +478,7 @@ daddr_t d;
 }
 
 int
-flusht()
+flusht(void)
 {
 	char place[100];
 	register int i, si;
@@ -532,7 +514,7 @@ loop:
 }
 
 int
-otape()
+otape(void)
 {
 	to = creat(tape, 0666);
 	if(to < 0) {
@@ -548,8 +530,7 @@ otape()
 }
 
 char *
-prdate(d)
-time_t d;
+prdate(time_t d)
 {
 	char *p;
 
@@ -561,7 +542,7 @@ time_t d;
 }
 
 int
-getitime()
+getitime(void)
 {
 	register int i, df;
 	struct idates idbuf;
@@ -603,7 +584,7 @@ l2:
 }
 
 int
-putitime()
+putitime(void)
 {
 	register int i, n, df;
 	struct idates idbuf;
@@ -655,8 +636,7 @@ l3:
 }
 
 int
-est(ip)
-struct dinode *ip;
+est(struct dinode *ip)
 {
 	long s;
 
@@ -672,8 +652,7 @@ struct dinode *ip;
 }
 
 int
-bmapest(map)
-short *map;
+bmapest(short *map)
 {
 	register int i, n;
 

@@ -4,11 +4,10 @@
  */
 
 #include	<stdio.h>
-long	lseek();
+long	lseek(int fd, long offset, int ptrname);
 
 
-long ftell(iop)
-FILE *iop;
+long ftell(FILE *iop)
 {
 	long tres;
 	register int adjust;

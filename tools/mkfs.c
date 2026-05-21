@@ -41,26 +41,44 @@ int	fsi;
 int	fso;
 char	*charp;
 char	buf[BSIZE];
-union {
-	struct fblk;
+/* The v7 K&R-era "anonymous struct as union member" idiom (`struct fblk;`
+ * inside a union) is not strict C99.  Named members + macro aliases keep
+ * the call-site spelling (`fbuf.df_nfree`, `filsys.s_fsize`) unchanged. */
+union fbuf_u {
+	struct fblk fb;
 	char pad1[BSIZE];
-} fbuf;
+} fbuf_storage;
+#define fbuf fbuf_storage.fb
 char	string[50];
-union {
-	struct filsys;
+union filsys_u {
+	struct filsys fs;
 	char pad2[BSIZE];
-} filsys;
+} filsys_storage;
+#define filsys filsys_storage.fs
 char	*fsys;
 char	*proto;
 int	f_n	= MAXFN;
 int	f_m	= 3;
 int	error;
 ino_t	ino;
-long	getnum();
-daddr_t	alloc();
+struct	inode;
+long	getnum(void);
+daddr_t	alloc(void);
+void	cfile(struct inode *par);
+void	getstr(void);
+int	gmode(int c, char *s, int m0, int m1, int m2, int m3);
+void	rdfs(daddr_t bno, char *bf);
+void	wtfs(daddr_t bno, char *bf);
+void	bfree(daddr_t bno);
+void	entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib);
+void	newblk(int *adbc, char *db, int *aibc, daddr_t *ib);
+int	getch(void);
+void	bflist(void);
+void	iput(struct inode *ip, int *aibc, daddr_t *ib);
+int	badblk(daddr_t bno);
 
-main(argc, argv)
-char *argv[];
+int
+main(int argc, char *argv[])
 {
 	int f, c;
 	long n;
@@ -110,7 +128,7 @@ char *argv[];
 #endif
 	if(fin == NULL) {
 		n = 0;
-		for(f=0; c=proto[f]; f++) {
+		for(f=0; (c=proto[f]); f++) {
 			if(c<'0' || c>'9') {
 				printf("%s: cannot open\n", proto);
 				exit(1);
@@ -121,7 +139,7 @@ char *argv[];
 		n = n/25;
 		if(n <= 0)
 			n = 1;
-		if(n > 65500/NIPB)
+		if((unsigned long)n > 65500/NIPB)
 			n = 65500/NIPB;
 		filsys.s_isize = n + 2;
 		printf("isize = %ld\n", n*NIPB);
@@ -166,7 +184,7 @@ f3:
 	filsys.s_n = f_n;
 	printf("m/n = %d %d\n", f_m, f_n);
 	if(filsys.s_isize >= filsys.s_fsize) {
-		printf("%ld/%ld: bad ratio\n", filsys.s_fsize, filsys.s_isize-2);
+		printf("%ld/%d: bad ratio\n", filsys.s_fsize, filsys.s_isize-2);
 		exit(1);
 	}
 	filsys.s_tfree = 0;
@@ -188,8 +206,8 @@ f3:
 	exit(error);
 }
 
-cfile(par)
-struct inode *par;
+void
+cfile(struct inode *par)
 {
 	struct inode in;
 	int dbc, ibc;
@@ -226,7 +244,7 @@ struct inode *par;
 	in.i_number = ino;
 	for(i=0; i<BSIZE; i++)
 		db[i] = 0;
-	for(i=0; i<MAXFILEBLK; i++)
+	for(i=0; (unsigned)i<MAXFILEBLK; i++)
 		ib[i] = (daddr_t)0;
 	in.i_nlink = 1;
 	in.i_size = 0;
@@ -300,8 +318,8 @@ struct inode *par;
 	iput(&in, &ibc, ib);
 }
 
-gmode(c, s, m0, m1, m2, m3)
-char c, *s;
+int
+gmode(int c, char *s, int m0, int m1, int m2, int m3)
 {
 	int i;
 	int m[4] = {m0, m1, m2, m3};
@@ -315,7 +333,7 @@ char c, *s;
 }
 
 long
-getnum()
+getnum(void)
 {
 	int i, c;
 	long n;
@@ -323,7 +341,7 @@ getnum()
 	getstr();
 	n = 0;
 	i = 0;
-	for(i=0; c=string[i]; i++) {
+	for(i=0; (c=string[i]) != 0; i++) {
 		if(c<'0' || c>'9') {
 			printf("%s: bad number\n", string);
 			error = 1;
@@ -334,7 +352,8 @@ getnum()
 	return(n);
 }
 
-getstr()
+void
+getstr(void)
 {
 	int i, c;
 
@@ -364,9 +383,8 @@ loop:
 	string[i] = '\0';
 }
 
-rdfs(bno, bf)
-daddr_t bno;
-char *bf;
+void
+rdfs(daddr_t bno, char *bf)
 {
 	int n;
 
@@ -378,9 +396,8 @@ char *bf;
 	}
 }
 
-wtfs(bno, bf)
-daddr_t bno;
-char *bf;
+void
+wtfs(daddr_t bno, char *bf)
 {
 	int n;
 
@@ -393,7 +410,7 @@ char *bf;
 }
 
 daddr_t
-alloc()
+alloc(void)
 {
 	int i;
 	daddr_t bno;
@@ -413,8 +430,8 @@ alloc()
 	return(bno);
 }
 
-bfree(bno)
-daddr_t bno;
+void
+bfree(daddr_t bno)
 {
 	int i;
 
@@ -429,12 +446,8 @@ daddr_t bno;
 	filsys.s_free[filsys.s_nfree++] = bno;
 }
 
-entry(inum, str, adbc, db, aibc, ib)
-ino_t inum;
-char *str;
-int *adbc, *aibc;
-char *db;
-daddr_t *ib;
+void
+entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib)
 {
 	struct direct *dp;
 	int i;
@@ -448,19 +461,17 @@ daddr_t *ib;
 	for(i=0; i<DIRSIZ; i++)
 		if((dp->d_name[i] = str[i]) == 0)
 			break;
-	if(*adbc >= NDIRECT)
+	if((unsigned)*adbc >= NDIRECT)
 		newblk(adbc, db, aibc, ib);
 }
 
-newblk(adbc, db, aibc, ib)
-int *adbc, *aibc;
-char *db;
-daddr_t *ib;
+void
+newblk(int *adbc, char *db, int *aibc, daddr_t *ib)
 {
 	int i;
 	daddr_t bno;
 
-	if(*aibc >= MAXFILEBLK) {
+	if((unsigned)*aibc >= MAXFILEBLK) {
 		printf("indirect block full\n");
 		error = 1;
 		return;
@@ -474,7 +485,8 @@ daddr_t *ib;
 	(*aibc)++;
 }
 
-getch()
+int
+getch(void)
 {
 
 #ifndef STANDALONE
@@ -486,7 +498,8 @@ getch()
 #endif
 }
 
-bflist()
+void
+bflist(void)
 {
 	struct inode in;
 	daddr_t ib[NINDIR];
@@ -517,7 +530,7 @@ bflist()
 	for(i=0; i<NADDR; i++)
 		in.i_un.i_addr[i] = (daddr_t)0;
 
-	for(i=0; i<NINDIR; i++)
+	for(i=0; (unsigned)i<NINDIR; i++)
 		ib[i] = (daddr_t)0;
 	ibc = 0;
 	bfree((daddr_t)0);
@@ -527,9 +540,9 @@ bflist()
 	for(; d > 0; d -= f_n)
 	for(i=0; i<f_n; i++) {
 		f = d - adr[i];
-		if(f < filsys.s_fsize && f >= filsys.s_isize)
+		if(f < filsys.s_fsize && f >= filsys.s_isize) {
 			if(badblk(f)) {
-				if(ibc >= NINDIR) {
+				if((unsigned)ibc >= NINDIR) {
 					printf("too many bad blocks\n");
 					error = 1;
 					ibc = 0;
@@ -538,14 +551,13 @@ bflist()
 				ibc++;
 			} else
 				bfree(f);
+		}
 	}
 	iput(&in, &ibc, ib);
 }
 
-iput(ip, aibc, ib)
-struct inode *ip;
-int *aibc;
-daddr_t *ib;
+void
+iput(struct inode *ip, int *aibc, daddr_t *ib)
 {
 	struct dinode *dp;
 	daddr_t d, single[NINDIR], dbl[NINDIR];
@@ -576,34 +588,34 @@ daddr_t *ib;
 
 	case IFDIR:
 	case IFREG:
-		for(i=0; i<NINDIR; i++) {
+		for(i=0; (unsigned)i<NINDIR; i++) {
 			single[i] = (daddr_t)0;
 			dbl[i] = (daddr_t)0;
 		}
 		for(i=0; i<*aibc && i<LADDR; i++)
 			ip->i_un.i_addr[i] = ib[i];
-		if(*aibc > LADDR) {
+		if((unsigned)*aibc > LADDR) {
 			n = *aibc - LADDR;
-			if(n > NINDIR)
-				n = NINDIR;
+			if((unsigned)n > NINDIR)
+				n = (int)NINDIR;
 			for(i=0; i<n; i++)
 				single[i] = ib[LADDR+i];
 			ip->i_un.i_addr[LADDR] = alloc();
 			wtfs(ip->i_un.i_addr[LADDR], (char *)single);
 		}
-		if(*aibc > LADDR+NINDIR) {
+		if((unsigned)*aibc > LADDR+NINDIR) {
 			n = *aibc - LADDR - NINDIR;
-			if(n > NINDIR*NINDIR) {
+			if((unsigned)n > NINDIR*NINDIR) {
 				printf("indirect block full\n");
 				error = 1;
-				n = NINDIR*NINDIR;
+				n = (int)(NINDIR*NINDIR);
 			}
 			ip->i_un.i_addr[LADDR+1] = alloc();
 			k = LADDR + NINDIR;
-			for(i=0; i<NINDIR && n>0; i++) {
-				for(j=0; j<NINDIR; j++)
+			for(i=0; (unsigned)i<NINDIR && n>0; i++) {
+				for(j=0; (unsigned)j<NINDIR; j++)
 					single[j] = (daddr_t)0;
-				for(j=0; j<NINDIR && n>0; j++) {
+				for(j=0; (unsigned)j<NINDIR && n>0; j++) {
 					single[j] = ib[k++];
 					n--;
 				}
@@ -612,6 +624,7 @@ daddr_t *ib;
 			}
 			wtfs(ip->i_un.i_addr[LADDR+1], (char *)dbl);
 		}
+		/* fall through */
 
 	case IFBLK:
 	case IFCHR:
@@ -625,9 +638,9 @@ daddr_t *ib;
 	wtfs(d, buf);
 }
 
-badblk(bno)
-daddr_t bno;
+int
+badblk(daddr_t bno)
 {
-
+	(void)bno;
 	return(0);
 }

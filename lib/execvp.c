@@ -7,7 +7,7 @@
 #define	NULL	0
 
 static	char shell[] =	"/bin/sh";
-static char *execat();
+static char *execat(register char *s1, register char *s2, char *si);
 extern	int errno;
 
 int
@@ -17,8 +17,7 @@ execlp(char *name, char *arg0, ...)
 }
 
 int
-execvp(name, argv)
-char *name, **argv;
+execvp(char *name, char **argv)
 {
 	char *pathstr;
 	register char *cp;
@@ -40,7 +39,7 @@ char *name, **argv;
 		case ENOEXEC:
 			newargs[0] = "sh";
 			newargs[1] = fname;
-			for (i=1; newargs[i+1]=argv[i]; i++) {
+			for (i=1; (newargs[i+1]=argv[i]); i++) {
 				if (i>=254) {
 					errno = E2BIG;
 					return(-1);
@@ -67,9 +66,7 @@ char *name, **argv;
 }
 
 static char *
-execat(s1, s2, si)
-register char *s1, *s2;
-char *si;
+execat(register char *s1, register char *s2, char *si)
 {
 	register char *s;
 

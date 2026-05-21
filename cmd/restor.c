@@ -81,23 +81,55 @@ struct	cache {
 } cache[NCACHE];
 int	curcache;
 
-int	doit(), readhdr(), checkvol(), pass1(), readbits(), gethead(),
-	checktype(), ishead(), readtape(), flsht(), getfile(), psearch(),
-	getdino(), putdino(), itrunc(), clri(), dread(), dwrite(),
-	rstrfile(), rstrskip(), xtrfile(), skip(), checksum(), putent(),
-	putdir(), null(), copy(), clearbuf(), writec(), readc(), mseek(),
-	getent(), direq(), flsh(), bfree(), tloop();
+struct spcl;
+struct dinode;
+int	doit(int command, int argc, char *argv[]);
+int	readhdr(struct spcl *b);
+int	checkvol(struct spcl *b, int t);
+int	pass1(void);
+int	readbits(short *m);
+int	gethead(struct spcl *buf);
+int	checktype(struct spcl *b, int t);
+int	ishead(struct spcl *buf);
+int	readtape(char *b);
+int	flsht(void);
+int	getfile(ino_t n, int (*f1)(), int (*f2)(), long size);
+int	psearch(char *n);
+int	getdino(ino_t inum, struct dinode *b);
+int	putdino(ino_t inum, struct dinode *b);
+int	itrunc(struct dinode *ip);
+int	clri(struct dinode *ip);
+int	dread(daddr_t bno, char *buf, int cnt);
+int	dwrite(daddr_t bno, char *b);
+int	rstrfile(char *b, long s);
+int	rstrskip(char *b, long s);
+int	xtrfile(char *b, long size);
+int	skip(void);
+int	checksum(int *b);
+int	putent(char *cp);
+int	putdir(char *b);
+int	null(void);
+int	copy(char *f, char *t, int s);
+int	clearbuf(char *cp);
+int	writec(int c);
+int	readc(void);
+int	mseek(daddr_t pt);
+int	getent(char *bf);
+int	direq(char *s1, char *s2);
+int	flsh(void);
+int	bfree(daddr_t bn);
+int	tloop(daddr_t bn, int f1, int f2);
 int	l3tol(), ltol3();
-daddr_t	balloc(), bmap();
+daddr_t	balloc(void);
+daddr_t	bmap(daddr_t iaddr[NADDR], daddr_t bn);
+ino_t	search(ino_t inum, char *cp);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register char *cp;
 	char command;
-	int done();
+	int done(void);
 
 #ifndef STANDALONE
 	mktemp(dirfile);
@@ -152,18 +184,15 @@ usage:
 }
 
 int
-doit(command, argc, argv)
-char	command;
-int	argc;
-char	*argv[];
+doit(int command, int argc, char *argv[])
 {
-	extern char *ctime();
+	extern char *ctime(long *t);
 	register int i, k;
 	ino_t	d;
 #ifndef STANDALONE
-	int	xtrfile(), skip();
+	int	xtrfile(char *b, long size), skip(void);
 #endif
-	int	rstrfile(), rstrskip();
+	int	rstrfile(char *b, long s), rstrskip(char *b, long s);
 	struct dinode *ip, *ip1;
 
 #ifndef STANDALONE
@@ -260,7 +289,7 @@ checkdone:
 				for (k = 0; xtrlist[k].x_flags; k++)
 					if ((xtrlist[k].x_flags&XTRACTD) == 0)
 						goto newvol;
-					return(0);
+				return(0);
 			}
 			if (checktype(&spcl, TS_INODE) == 0) {
 				gethead(&spcl);
@@ -416,11 +445,11 @@ ragain:
  */
 #ifndef STANDALONE
 int
-pass1()
+pass1(void)
 {
 	register int i;
 	struct dinode *ip;
-	int	putdir(), null();
+	int	putdir(char *b), null();
 
 	while (gethead(&spcl) == 0) {
 		printf("Can't find directory header!\n");
@@ -458,10 +487,7 @@ finish:
  * with the blocks
  */
 int
-getfile(n, f1, f2, size)
-ino_t	n;
-int	(*f2)(), (*f1)();
-long	size;
+getfile(ino_t n, int (*f1)(), int (*f2)(), long size)
 {
 	register int i;
 	struct spcl addrblock;
@@ -508,8 +534,7 @@ eloop:
  * etc..
  */
 int
-readtape(b)
-char *b;
+readtape(char *b)
 {
 	register int i;
 	struct spcl tmpbuf;
@@ -554,16 +579,14 @@ loop:
 }
 
 int
-flsht()
+flsht(void)
 {
 	bct = NTREC+1;
 	return(0);
 }
 
 int
-copy(f, t, s)
-register char *f, *t;
-int s;
+copy(register char *f, register char *t, int s)
 {
 	register int i;
 
@@ -575,8 +598,7 @@ int s;
 }
 
 int
-clearbuf(cp)
-register char *cp;
+clearbuf(register char *cp)
 {
 	register int i;
 
@@ -593,8 +615,7 @@ register char *cp;
  */
 #ifndef STANDALONE
 int
-putent(cp)
-char	*cp;
+putent(char *cp)
 {
 	register int i;
 
@@ -609,8 +630,7 @@ char	*cp;
 }
 
 int
-getent(bf)
-register char *bf;
+getent(register char *bf)
 {
 	register int i;
 
@@ -626,8 +646,7 @@ register char *bf;
  * read/write te directory file
  */
 int
-writec(c)
-char c;
+writec(int c)
 {
 	drblock[bpt++] = c;
 	seekpt++;
@@ -639,7 +658,7 @@ char c;
 }
 
 int
-readc()
+readc(void)
 {
 	if (bpt >= BSIZE) {
 		read(df, drblock, BSIZE);
@@ -649,8 +668,7 @@ readc()
 }
 
 int
-mseek(pt)
-daddr_t pt;
+mseek(daddr_t pt)
 {
 	bpt = BSIZE;
 	lseek(df, pt, 0);
@@ -658,7 +676,7 @@ daddr_t pt;
 }
 
 int
-flsh()
+flsh(void)
 {
 	write(df, drblock, bpt+1);
 	return(0);
@@ -669,9 +687,7 @@ flsh()
  * looking for entry cp
  */
 ino_t
-search(inum, cp)
-ino_t	inum;
-char	*cp;
+search(ino_t inum, char *cp)
 {
 	register int i;
 	struct direct dir;
@@ -696,8 +712,7 @@ found:
  * for the path pointed at by n
  */
 int
-psearch(n)
-char	*n;
+psearch(char *n)
 {
 	register char *cp, *cp1;
 	char c;
@@ -725,8 +740,7 @@ next:
 }
 
 int
-direq(s1, s2)
-register char *s1, *s2;
+direq(register char *s1, register char *s2)
 {
 	register int i;
 
@@ -745,9 +759,7 @@ register char *s1, *s2;
  * cache if needed.
  */
 int
-dwrite(bno, b)
-daddr_t	bno;
-char	*b;
+dwrite(daddr_t bno, char *b)
 {
 	register int i;
 
@@ -773,10 +785,7 @@ char	*b;
 }
 
 int
-dread(bno, buf, cnt)
-daddr_t bno;
-char *buf;
-int cnt;
+dread(daddr_t bno, char *buf, int cnt)
 {
 	register int i, j;
 
@@ -817,8 +826,7 @@ int cnt;
  * clri zeros the inode
  */
 int
-clri(ip)
-struct dinode *ip;
+clri(struct dinode *ip)
 {
 	int i, *p;
 	i = sizeof(struct dinode)/sizeof(int);
@@ -833,8 +841,7 @@ struct dinode *ip;
  * itrunc/tloop/bfree free all of the blocks pointed at by the inode
  */
 int
-itrunc(ip)
-register struct dinode *ip;
+itrunc(register struct dinode *ip)
 {
 	register int i;
 	daddr_t bn, iaddr[NADDR];
@@ -871,9 +878,7 @@ register struct dinode *ip;
 }
 
 int
-tloop(bn, f1, f2)
-daddr_t	bn;
-int	f1, f2;
+tloop(daddr_t bn, int f1, int f2)
 {
 	register int i;
 	daddr_t nb;
@@ -897,8 +902,7 @@ int	f1, f2;
 }
 
 int
-bfree(bn)
-daddr_t	bn;
+bfree(daddr_t bn)
 {
 	register int i;
 	union {
@@ -921,7 +925,7 @@ daddr_t	bn;
  * allocate a block off the free list.
  */
 daddr_t
-balloc()
+balloc(void)
 {
 	daddr_t	bno;
 	register int i;
@@ -955,9 +959,7 @@ balloc()
  * the block requested.
  */
 daddr_t
-bmap(iaddr, bn)
-daddr_t	iaddr[NADDR];
-daddr_t	bn;
+bmap(daddr_t iaddr[NADDR], daddr_t bn)
 {
 	register int i;
 	int j, sh;
@@ -1022,8 +1024,7 @@ daddr_t	bn;
  * or not it is a header block.
  */
 int
-gethead(buf)
-struct spcl *buf;
+gethead(struct spcl *buf)
 {
 	readtape((char *)buf);
 	if (buf->c_magic != MAGIC || checksum((int *) buf) == 0)
@@ -1035,8 +1036,7 @@ struct spcl *buf;
  * return whether or not the buffer contains a header block
  */
 int
-ishead(buf)
-struct spcl *buf;
+ishead(struct spcl *buf)
 {
 	if (buf->c_magic != MAGIC || checksum((int *) buf) == 0)
 		return(0);
@@ -1044,17 +1044,14 @@ struct spcl *buf;
 }
 
 int
-checktype(b, t)
-struct	spcl *b;
-int	t;
+checktype(struct spcl *b, int t)
 {
 	return(b->c_type == t);
 }
 
 
 int
-checksum(b)
-int *b;
+checksum(int *b)
 {
 	register int i, j;
 
@@ -1071,9 +1068,7 @@ int *b;
 }
 
 int
-checkvol(b, t)
-struct spcl *b;
-int t;
+checkvol(struct spcl *b, int t)
 {
 	if (b->c_volume == t)
 		return(1);
@@ -1081,8 +1076,7 @@ int t;
 }
 
 int
-readhdr(b)
-struct	spcl *b;
+readhdr(struct spcl *b)
 {
 	if (gethead(b) == 0)
 		return(0);
@@ -1097,18 +1091,16 @@ struct	spcl *b;
  */
 #ifndef STANDALONE
 int
-xtrfile(b, size)
-char	*b;
-long	size;
+xtrfile(char *b, long size)
 {
 	write(ofile, b, (int) size);
 	return(0);
 }
 
-int null() {return(0);}
+int null(void) {return(0);}
 
 int
-skip()
+skip(void)
 {
 	lseek(ofile, (long) BSIZE, 1);
 	return(0);
@@ -1117,9 +1109,7 @@ skip()
 
 
 int
-rstrfile(b, s)
-char *b;
-long s;
+rstrfile(char *b, long s)
 {
 	daddr_t d;
 
@@ -1131,9 +1121,7 @@ long s;
 }
 
 int
-rstrskip(b, s)
-char *b;
-long s;
+rstrskip(char *b, long s)
 {
 	(void)b; (void)s;
 	curbno += 1;
@@ -1142,8 +1130,7 @@ long s;
 
 #ifndef STANDALONE
 int
-putdir(b)
-char *b;
+putdir(char *b)
 {
 	register struct direct *dp;
 	register int i;
@@ -1161,9 +1148,7 @@ char *b;
  * read/write an inode from the disk
  */
 int
-getdino(inum, b)
-ino_t	inum;
-struct	dinode *b;
+getdino(ino_t inum, struct dinode *b)
 {
 	daddr_t	bno;
 	char buf[BSIZE];
@@ -1176,9 +1161,7 @@ struct	dinode *b;
 }
 
 int
-putdino(inum, b)
-ino_t	inum;
-struct	dinode *b;
+putdino(ino_t inum, struct dinode *b)
 {
 	daddr_t bno;
 	char buf[BSIZE];
@@ -1194,8 +1177,7 @@ struct	dinode *b;
  * read a bit mask from the tape into m.
  */
 int
-readbits(m)
-short	*m;
+readbits(short *m)
 {
 	register int i;
 
@@ -1211,7 +1193,7 @@ short	*m;
 }
 
 int
-done()
+done(void)
 {
 #ifndef STANDALONE
 	unlink(dirfile);

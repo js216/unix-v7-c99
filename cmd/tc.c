@@ -5,7 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-#define	oput(c) if (pgskip==0) putchar(c); else (void)0
+#define	oput(c) do { if (pgskip==0) putchar(c); } while (0)
 #define MAXY 3071
 #define US 037
 #define GS 035
@@ -65,20 +65,18 @@ int tcatoi(void);
 int getch(void);
 long tscale(int n);
 
-int main(argc,argv)
-int argc;
-char **argv;
+int main(int argc, char **argv)
 {
 	register int i, j;
 	register char *k;
-	extern int ex();
+	extern int ex(void);
 
 	while((--argc > 0) && ((++argv)[0][0]=='-')){
 		switch(argv[0][1]){
 			case 'p':
 				ap = &argv[0][2];
 				dfact = 72;
-				if(i = tcatoi())pl = i/3;
+				if((i = tcatoi()))pl = i/3;
 				continue;
 			case 't':
 				tflag++;
@@ -91,8 +89,8 @@ char **argv;
 			default:
 				dfact = 1;
 				ap = &argv[0][1];
-				if(i = tcatoi())mpy = i;
-				if(i = tcatoi())div = i;
+				if((i = tcatoi()))mpy = i;
+				if((i = tcatoi()))div = i;
 				continue;
 		}
 	}
@@ -234,8 +232,7 @@ char **argv;
 	}
 	ex();
 }
-int lig(x)
-char *x;
+int lig(char *x)
 {
 	register int i, j;
 	register char *k;
@@ -312,8 +309,7 @@ next:
 	else	return(0);
 	return(0);
 }
-int callunix(line)
-char line[];
+int callunix(char line[])
 {
 	int rc, status, unixpid;
 	if( (unixpid=fork())==0 ) {
@@ -340,7 +336,7 @@ int sendpt(void){
 
 	oput(GS);
 	hy = ((yy>>7) & 037);
-	xb = ((xx & 03) + ((yy<<2) & 014) & 017);
+	xb = (((xx & 03) + ((yy<<2) & 014)) & 017);
 	ly = ((yy>>2) & 037);
 	hx = ((xx>>7) & 037);
 	lx = ((xx>>2) & 037);
@@ -388,8 +384,7 @@ a1:
 	ch = 0;
 	return(acc);
 }
-long tscale(n)
-int n;
+long tscale(int n)
 {
 	register int i, j;
 

@@ -2,7 +2,6 @@
 #include "../h/systm.h"
 #include "../h/mount.h"
 #include "../h/ino.h"
-#include "../h/reg.h"
 #include "../h/buf.h"
 #include "../h/filsys.h"
 #include "../h/dir.h"
@@ -11,11 +10,21 @@
 #include "../h/file.h"
 #include "../h/conf.h"
 #include "../h/stat.h"
+#include "../h/proto.h"
+
+/* getf/namei/uchar/closef/update/iupdat/ufalloc/iput/plock/prele
+ * /copyout/bcopy come from h/systm.h.
+ * bread/brelse/geteblk come from h/proto.h. */
+extern void xumount(dev_t);
+
+void stat1(struct inode *ip, struct stat *ub, off_t pipeadj);
+dev_t getmdev(void);
 
 /*
  * the fstat system call.
  */
-fstat()
+void
+fstat(void)
 {
 	register struct file *fp;
 	register struct a {
@@ -33,7 +42,8 @@ fstat()
 /*
  * the stat system call.
  */
-stat()
+void
+stat(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -53,10 +63,8 @@ stat()
  * The basic routine for fstat and stat:
  * get the inode and pass appropriate parts back.
  */
-stat1(ip, ub, pipeadj)
-register struct inode *ip;
-struct stat *ub;
-off_t pipeadj;
+void
+stat1(register struct inode *ip, struct stat *ub, off_t pipeadj)
 {
 	register struct dinode *dp;
 	register struct buf *bp;
@@ -91,14 +99,15 @@ off_t pipeadj;
 /*
  * the dup system call.
  */
-dup()
+void
+dup(void)
 {
 	register struct file *fp;
 	register struct a {
 		int	fdes;
 		int	fdes2;
 	} *uap;
-	register i, m;
+	register int i, m;
 
 	uap = (struct a *)u.u_ap;
 	m = uap->fdes & ~077;
@@ -128,7 +137,8 @@ dup()
 /*
  * the mount system call.
  */
-smount()
+void
+smount(void)
 {
 	dev_t dev;
 	register struct inode *ip;
@@ -194,15 +204,13 @@ out1:
 /*
  * the umount system call.
  */
-sumount()
+void
+sumount(void)
 {
 	dev_t dev;
 	register struct inode *ip;
 	register struct mount *mp;
 	struct buf *bp;
-	register struct a {
-		char	*fspec;
-	};
 
 	dev = getmdev();
 	if(u.u_error)
@@ -237,7 +245,7 @@ found:
  * thing on which to mount, and return the device number if so.
  */
 dev_t
-getmdev()
+getmdev(void)
 {
 	dev_t dev;
 	register struct inode *ip;

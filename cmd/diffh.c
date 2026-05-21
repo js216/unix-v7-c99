@@ -56,11 +56,12 @@ again:
 	t = text[f][nt];
 	if(t==0) {
 		t = text[f][nt] = malloc(LEN+1);
-		if(t==NULL)
+		if(t==NULL) {
 			if(hardsynch())
 				goto again;
 			else
 				progerr("5");
+		}
 	}
 	t = fgets(t,LEN,file[f]);
 	if(t!=NULL)
@@ -83,7 +84,7 @@ clrl(int f, long n)
 void
 movstr(register char *s, register char *t)
 {
-	while(*t++= *s++)
+	while((*t++= *s++))
 		continue;
 }
 
@@ -91,7 +92,7 @@ int
 main(int argc, char **argv)
 {
 	char *s0,*s1;
-	FILE *dopen();
+	FILE *dopen(char *f1, char *f2);
 	if(*argv[1]=='-') {
 		argc--;
 		argv++;
@@ -234,20 +235,23 @@ dopen(char *f1, char *f2)
 	FILE *f;
 	char b[100],*bptr,*eptr;
 	struct stat statbuf;
-	if(cmp(f1,"-")==0)
+	if(cmp(f1,"-")==0) {
 		if(cmp(f2,"-")==0)
 			error("can't do - -","");
 		else
 			return(stdin);
+	}
 	if(stat(f1,&statbuf)==-1)
 		error("can't access ",f1);
 	if((statbuf.st_mode&S_IFMT)==S_IFDIR) {
-		for(bptr=b;*bptr= *f1++;bptr++) ;
+		for(bptr=b;(*bptr= *f1++);bptr++)
+			;
 		*bptr++ = '/';
 		for(eptr=f2;*eptr;eptr++)
 			if(*eptr=='/'&&eptr[1]!=0&&eptr[1]!='/')
 				f2 = eptr+1;
-		while(*bptr++= *f2++) ;
+		while((*bptr++= *f2++))
+			;
 		f1 = b;
 	}
 	f = fopen(f1,"r");

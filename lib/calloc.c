@@ -4,8 +4,7 @@
 #define CHARPERINT (sizeof(int)/sizeof(char))
 
 char *
-calloc(num, size)
-unsigned num, size;
+calloc(unsigned num, unsigned size)
 {
 	register char *mp;
 	register int *q;
@@ -22,12 +21,3 @@ unsigned num, size;
 	return(mp);
 }
 
-int
-cfree(p, num, size)
-char *p;
-unsigned num, size;
-{
-	(void)num; (void)size;
-	free(p);
-	return(0);
-}
