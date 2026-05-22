@@ -1,12 +1,13 @@
 /*
  * Virtio-blk strategy routine for qemu-virt.
  *
- * Factored out of arch/armboot.c's bio()/virtioinit() so that a
+ * Factored out of arch/arm.c's bio()/virtioinit() so that a
  * real V7 buffer-cache caller can dispatch through bdevsw[0] on
- * qemu the same way mp135_strategy() handles the EVB.  Parity
+ * qemu through the same static config table shape v7 used for block
+ * devices.  Parity
  * scaffolding only in this sub-step: nothing yet calls into
  * virtio_strategy() through the bdevsw, so the existing
- * armboot.c::bio() virtio path remains the active one on qemu.
+ * arm.c::bio() virtio path remains the active one on qemu.
  */
 
 #include "../h/param.h"

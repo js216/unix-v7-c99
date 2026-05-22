@@ -15,30 +15,7 @@
 struct user u;
 /* head of available-buffer list */
 struct buf bfreelist;
-/* Major 0 = active block device (mp135 DDR on EVB, virtio-blk on qemu). */
-dev_t rootdev = 0;
-int nblkdev = 0;	/* binit() counts populated bdevsw[] rows from here */
 struct buf buf[NBUF];	/* v7 conf/c.c provided this on PDP-11; lives here on ARM */
-/* Trailing empty row terminates the table. */
-/* nulldev placeholder for d_open/d_close, which v7's binit() sentinel
- * walk + sys3.c::smount/sumount and fio.c::closef still touch.  Declared
- * locally with the bdevsw entry signature so the initializer stays
- * strict-C99-compatible. */
-static int nulldev_dev(dev_t dev, int flag) { (void)dev; (void)flag; return 0; }
-/* mp135_strategy/virtio_strategy prototypes come from h/proto.h. */
-#ifdef EVB
-extern struct buf mp135_tab;
-struct bdevsw bdevsw[2] = {
-	{ nulldev_dev, nulldev_dev, mp135_strategy, &mp135_tab },
-	{ 0, 0, 0, 0 }
-};
-#else
-extern struct buf virtio_tab;
-struct bdevsw bdevsw[2] = {
-	{ nulldev_dev, nulldev_dev, virtio_strategy, &virtio_tab },
-	{ 0, 0, 0, 0 }
-};
-#endif
 /* PDP-11 SPL primitives -- ARM has no PSL_IPL, so all no-ops. */
 int spl0(void) { return 0; }
 int spl6(void) { return 0; }

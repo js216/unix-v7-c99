@@ -15,7 +15,7 @@
 #define USTACK		0x000f0000U
 
 /* v7 syscall numbers.  The full set is dispatched via sysent[] in
- * armboot.c by numeric index, so most have no symbolic alias.  Only
+ * arch/arm.c by numeric index, so most have no symbolic alias.  Only
  * the ones the trap/scheduler intercepts inline (exit/fork/signal/
  * sigreturn) or that pipe-block uses for resume retry (read/write/
  * wait) need a name here. */

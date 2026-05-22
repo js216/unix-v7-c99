@@ -169,6 +169,6 @@ cpass(void)
 	return(c&0377);
 }
 
-/* v7 bcopy lives in arch/v7stubs.c -- byte-loop tuned for AAPCS softfloat
+/* v7 bcopy lives in sys/v7stubs.c -- byte-loop tuned for AAPCS softfloat
  * rather than the PDP-11 mov2/movb instruction layout the original
  * carried over from v7/usr/sys/sys/subr.c. */

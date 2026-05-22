@@ -124,8 +124,6 @@ struct
 
 	{"ti700", CR2, ALLDELAY},
 
-	{"tek", FF1, ALLDELAY},
-
 	{0, 0, 0}
 	};
 

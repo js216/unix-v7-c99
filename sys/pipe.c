@@ -20,7 +20,7 @@
 #define	PIPSIZ	4096
 
 /* v7's pipe(2) implementation (allocate inode + two file structs + wire
- * FREAD/FWRITE) is gone -- arch/armboot.c::sys_pipe maintains its own
+ * FREAD/FWRITE) is gone -- arch/arm.c::sys_pipe maintains its own
  * pipes[NPIPES] table that doesn't touch the v7 inode[]/file[] arrays.
  * readp() and writep() are still kept because v7's read(2)/write(2)
  * fast path on FPIPE-flagged file structs lands here, even though new
@@ -152,6 +152,6 @@ loop:
 	goto loop;
 }
 
-/* v7's plock/prele are in arch/v7stubs.c -- cooperative-scheduling
+/* v7's plock/prele are in sys/v7stubs.c -- cooperative-scheduling
  * variants that just flip ILOCK without ever sleeping, since the ARM
  * port runs without the v7 sleep()/wakeup() handoff path. */

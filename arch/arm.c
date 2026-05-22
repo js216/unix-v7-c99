@@ -436,7 +436,7 @@ void mmuinit(void)
 	mmu_on((unsigned int)l1);
 }
 static void bzero(char *p, unsigned int n) { while(n--) *p++ = 0; }
-/* bcopy lives in arch/v7stubs.c; declared with the prototype above. */
+/* bcopy lives in sys/v7stubs.c; declared with the prototype above. */
 static int strncmp(char *a, char *b, int n)
 {
 	while(n-- > 0) {
@@ -1292,7 +1292,7 @@ static int kexec2(char *path, char **argv, char **envp)
 	}
 	return e;
 }
-/* Non-static wrapper around kexec2 for u_bridge.c::v7_exec_call. */
+/* Non-static wrapper around kexec2 for v7_bridge.c::v7_exec_call. */
 int v7_load_image(char *path, char **argv, char **envp)
 { return kexec2(path, argv, envp); }
 /* Called by v7_exec_call's EXCLOSE sweep right after the v7 close, to
@@ -1725,7 +1725,7 @@ static void sys_chroot_v7(void)
 static int is_dev_console(char *p) { return strcmp(p, "/dev/console") == 0; }
 /* v7_chmod_call/chown_call/utime_call/sysacct_call declared in h/v7_bridge.h.
  *
- * IMPORTANT: armboot.c has its own lean `struct user u` (static) shadowing
+ * IMPORTANT: arm.c has its own lean `struct user u` (static) shadowing
  * v7stubs.c's global v7 u.  Errors set inside v7 syscall bodies live in
  * the v7-side u and DO NOT auto-propagate to armboot's u.  The v7_*_call
  * wrappers return v7's u.u_error -- capture it and copy into armboot's
@@ -1954,7 +1954,7 @@ extern void sbreak(void);
 static void sys_break_v7(void) { sbreak(); }
 /* ptrace(2): v7 sys/sig.c::ptrace() coordinates parent/child via ipc
  * struct + setrun/sleep on (caddr_t)&ipc.  The ARM port's setrun/sleep
- * stubs are eager (arch/v7stubs.c), so ptrace will return ESRCH unless
+ * stubs are eager (sys/v7stubs.c), so ptrace will return ESRCH unless
  * the child is also using the v7 sleep loop -- sufficient for adb(1)
  * compile-and-link, exercised behaviour is out of scope. */
 extern void ptrace(void);
@@ -2127,7 +2127,7 @@ fork_fail:	;
 	deliver_signal(r);
 	in_trap = 0;
 }
-/* From a7.s::user_trap_common (user undef/abort): post signo, deliver. */
+/* From arm.s::user_trap_common (user undef/abort): post signo, deliver. */
 void user_trap_handler(int signo, int *r)
 {
 	int mode = r[16] & 0x1f;

@@ -1,5 +1,5 @@
-/* u_bridge.c: hands v7 syscalls to K&R impls in sys/sys{2,3,4}.c using
- * v7stubs.c's `struct user u`; armboot.c has its own static shadow. */
+/* v7_bridge.c: hands v7 syscalls to K&R impls in sys/sys{2,3,4}.c using
+ * v7stubs.c's `struct user u`; arm.c has its own static shadow. */
 #include "../h/param.h"
 #include "../h/dir.h"
 #include "../h/file.h"
@@ -9,7 +9,7 @@
 #include "../h/inode.h"
 #include "../h/proto.h"
 #include "../h/v7_bridge.h"
-#include "arm.h"
+#include "../arch/arm.h"
 /* v7 syscall entry points (in sys/sys{2,3,4}.c, sig.c). */
 extern void umask(void), getuid(void), getgid(void), getpid(void);
 extern void setuid(void), setgid(void), sync(void), nice(void);
@@ -565,7 +565,7 @@ static int v7_fd_prep(int fd, int *args)
 	u.u_r.r_val1 = u.u_r.r_val2 = 0;
 	return 0;
 }
-/* Read v7-side u.u_error.  armboot.c has its own lean `struct user u`
+/* Read v7-side u.u_error.  arm.c has its own lean `struct user u`
  * shadow that doesn't see v7's u_error; for bridges whose return value
  * encodes a v7 result (fd, offset) and can't simultaneously carry the
  * errno, the caller fetches it via this helper. */
@@ -662,7 +662,7 @@ static int v7_rdwr_call(int fd, char *buf, unsigned int n, int want_flag,
 }
 int v7_read_call(int fd, char *buf, unsigned int n)
 { return v7_rdwr_call(fd, buf, n, FREAD, read); }
-/* No v7_write_call wrapper: sys_write_v7 in armboot.c implements the
+/* No v7_write_call wrapper: sys_write_v7 in arm.c implements the
  * write(2) syscall directly (pipe/console fast paths plus IFREG via the
  * v7 file/inode chain), so the v7_rdwr_call indirection isn't needed
  * on the write side. */

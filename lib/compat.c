@@ -8,7 +8,7 @@
  *     since on this port copyseg/clearseg are no-ops (all procs stay
  *     resident), so there is no benefit to routing through it;
  *   - time/ftime/alarm/pause/sleep route through the real kernel paths
- *     (sysent[13,35,27,29] -> arch/u_bridge.c -> sys/sys4.c).
+ *     (sysent[13,35,27,29] -> sys/v7_bridge.c -> sys/sys4.c).
  */
 #include <stdarg.h>
 
@@ -142,7 +142,7 @@ gtty(int fd, char *buf)
 }
 
 /* ioctl(2): now a real syscall (slot 54).  Handles FIOCLEX, FIONCLEX,
- * TIOCGETP, TIOCSETP in arch/armboot.c::sys_ioctl_v7.  Defined in
+ * TIOCGETP, TIOCSETP in arch/arm.c::sys_ioctl_v7.  Defined in
  * lib/sys.s; the libc stub below has been retired. */
 
 int
@@ -233,7 +233,7 @@ abort(void)
  * 4-time_t buffer pointed at by t.  Defined in lib/sys.s. */
 
 /* time(t): return kernel `time` global (seconds since the 1970 epoch).
- * syscall3 invokes sys/sys4.c::gtime() through u_bridge.c.  On 32-bit
+ * syscall3 invokes sys/sys4.c::gtime() through v7_bridge.c.  On 32-bit
  * ARM time_t is 32 bits, so r0 already carries the full value. */
 int
 time(long *t)
@@ -247,7 +247,7 @@ time(long *t)
 }
 
 /* stime(t): set the kernel `time` global.  Suser-only in v7; our
- * S_STIME bridge in arch/u_bridge.c::v7_stime_call pre-seeds
+ * S_STIME bridge in sys/v7_bridge.c::v7_stime_call pre-seeds
  * u.u_uid=0 so the suser() check passes for the single-user shell. */
 int
 stime(long *t)
@@ -259,7 +259,7 @@ stime(long *t)
 
 /* ftime(t): copy out a struct timeb with the kernel's current time/
  * millitm/timezone/dstflag.  The kernel side (sys/sys4.c::ftime) is
- * wired through arch/u_bridge.c::v7_ftime_call. */
+ * wired through sys/v7_bridge.c::v7_ftime_call. */
 #include <sys/timeb.h>
 int
 ftime(struct timeb *t)

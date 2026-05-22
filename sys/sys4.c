@@ -390,7 +390,7 @@ alarm(void)
 	u.u_r.r_val1 = c;
 }
 
-/* v7's pause(2) implementation is gone -- arch/armboot.c has its own
+/* v7's pause(2) implementation is gone -- arch/arm.c has its own
  * sys_pause_v7 that uses the mt_block_on_pipe + clock-tick wake path
  * instead of the v7 sleep()/wakeup() handoff. */
 

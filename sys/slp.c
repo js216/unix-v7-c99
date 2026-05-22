@@ -226,7 +226,7 @@ qswtch(void)
  * dance for the no-runnable case.  That model assumes per-proc u-
  * areas swapped in/out of core by an external swapper, which this
  * port does not have.  Instead we keep every proc's u-area + kernel
- * stack permanently in RAM (the save-slot pool in arch/armboot.c),
+ * stack permanently in RAM (the save-slot pool in arch/arm.c),
  * and the equivalent save+pick+resume sequence lives in
  * armboot_swtch().  Routing through it here means v7's
  * sleep()/wakeup()/setrun()/exit()/wait()/pause() in this TU and
@@ -246,7 +246,7 @@ swtch(void)
  * It returns 1 in the new process, 0 in the old.
  */
 /* v7 newproc() (alloc proc[] slot, copy parent's image into child) is
- * gone -- fork(2) routes through arch/armboot.c::mt_alloc_slot, which
+ * gone -- fork(2) routes through arch/arm.c::mt_alloc_slot, which
  * maintains armproc[NSLOTS] in parallel with proc[NPROC]; the child's
  * register state is duplicated by the trap frame copy, not by save()/
  * resume() over the v7 u_ssav. */

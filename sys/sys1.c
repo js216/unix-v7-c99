@@ -10,7 +10,7 @@ extern int  estabur(unsigned, unsigned, unsigned, int, int);
 extern void expand(int);
 
 /* v7 sys/sys1.c held exec/exece/getxfile/setregs/rexit/exit/wait/fork.
- * On this port they're all reimplemented inline in arch/armboot.c::trap()
+ * On this port they're all reimplemented inline in arch/arm.c::trap()
  * and v7_exec_call(); the v7 versions are linker-dead.  Only sbreak()
  * (the break(2) syscall, sysent[17]) is kept -- it still drives the v7
  * data-segment grow/shrink via expand()/copyseg(). */

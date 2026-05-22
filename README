@@ -13,7 +13,7 @@ Getting Started
 
 Build the system and run it under Qemu:
 
-    make ARCH=arm CONF=qemu_arm
+    make CONF=arm_qemu
     make qemu
 
 

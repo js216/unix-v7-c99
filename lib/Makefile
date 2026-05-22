@@ -59,7 +59,7 @@ LIBMOBJ = m_asin.o m_atan.o m_exp.o m_fabs.o m_floor.o m_hypot.o \
       m_tan.o m_tanh.o
 
 ETC = init getty accton update atrun cron
-BIN = login cat echo ls pwd sync arcv rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep egrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount passwd diff3 at units spline restor tk dmesg sa ptx vpr dump dumpdir graph factor primes expr ac iostat tek printf chroot mktemp link unlink prof tc
+BIN = login cat echo ls pwd sync arcv rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep egrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount passwd diff3 at units spline restor tk dmesg sa ptx vpr dump dumpdir graph factor primes expr ac iostat printf chroot mktemp link unlink prof tc
 # ps/pstat share a private build loop only so their
 # objects are kept out of the BIN loop's automatic crt0/libc linking
 # pattern -- the source-level flags are the project's strict CFLAGS.
@@ -68,17 +68,14 @@ USRLIB = makekey diffh
 USRGAMES = fortune arithmetic hangman backgammon fish quiz wump
 SHSRC = args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec
 SHOBJ = args.o blok.o builtin.o cmd.o ctype.o error.o expand.o fault.o io.o macro.o main.o msg.o name.o print.o service.o setbrk.o stak.o string.o word.o xec.o
-LEARNSRC = learn copy dounit list makpipe maktee mem mysys selsub selunit start whatnow wrapup
-LEARNOBJ = learn.o copy.o dounit.o list.o makpipe.o maktee.o mem.o mysys.o selsub.o selunit.o start.o whatnow.o wrapup.o
 
 all:	$(CRT) libc.a libsh.a libm.a
-	mkdir -p ../root/etc ../root/bin ../root/usr/lib ../root/usr/games ../root/usr/lib/learn
+	mkdir -p ../root/etc ../root/bin ../root/usr/lib ../root/usr/games
 	cp ../v7/bin/1 ../root/bin/1
 	cp ../v7/bin/true ../root/bin/true
 	cp ../v7/bin/false ../root/bin/false
 	cp ../v7/bin/nohup ../root/bin/nohup
-	cp ../v7/bin/plot ../root/bin/plot
-	chmod 755 ../root/bin/1 ../root/bin/true ../root/bin/false ../root/bin/nohup ../root/bin/plot
+	chmod 755 ../root/bin/1 ../root/bin/true ../root/bin/false ../root/bin/nohup
 	set -e; for i in $(ETC); do \
 		$(CC) $(CFLAGS) -c ../cmd/$$i.c -o cmd-$$i.o; \
 		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(CRT) cmd-$$i.o $(LDLIBS); \
@@ -163,17 +160,6 @@ all:	$(CRT) libc.a libsh.a libm.a
 		$(CC) $(CFLAGS) $(LDFLAGS) -o $$i.elf $(CRT) $$i.o $(LDLIBS); \
 		arm-none-eabi-objcopy -O binary $$i.elf ../root/usr/lib/$$i; \
 	done
-	set -e; for i in $(LEARNSRC); do \
-		$(CC) $(CFLAGS) -I../cmd/learn -c ../cmd/learn/$$i.c; \
-	done
-	$(CC) $(CFLAGS) -I../cmd/learn -c ../cmd/learn/lcount.c
-	$(CC) $(CFLAGS) -I../cmd/learn -c ../cmd/learn/tee.c -o lrntee.o
-	$(CC) $(CFLAGS) $(LDFLAGS) -o learn.elf $(CRT) $(LEARNOBJ) $(LDLIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o lcount.elf $(CRT) lcount.o $(LDLIBS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o lrntee.elf $(CRT) lrntee.o $(LDLIBS)
-	arm-none-eabi-objcopy -O binary learn.elf ../root/bin/learn
-	arm-none-eabi-objcopy -O binary lcount.elf ../root/usr/lib/learn/lcount
-	arm-none-eabi-objcopy -O binary lrntee.elf ../root/usr/lib/learn/tee
 
 libc.a: $(LIBOBJ)
 	rm -f libc.a
@@ -261,6 +247,4 @@ clean:
 	rm -f ../root/bin/dc
 	rm -f ../root/bin/tar
 	rm -f ../root/bin/tp
-	rm -f ../root/bin/plot ../root/bin/tek
 	rm -f ../root/bin/nohup
-	rm -f ../root/bin/learn ../root/usr/lib/learn/lcount ../root/usr/lib/learn/tee
