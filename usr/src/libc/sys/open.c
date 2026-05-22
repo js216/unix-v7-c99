@@ -1,0 +1,8 @@
+#define S_OPEN 5
+int syscall3(int, int, int, int);
+int
+open(char *path, int mode)
+{
+	(void)mode;
+	return(syscall3(S_OPEN, (int)path, 0, 0));
+}
