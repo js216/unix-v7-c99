@@ -1,0 +1,190 @@
+nullboot
+16384 2048
+d--755 0 0
+	bin	d--755 0 0
+		1	---755 0 0 bin/1
+		[	---755 0 0 bin/test
+		ac	---755 0 0 bin/ac
+		at	---755 0 0 bin/at
+		arcv	---755 0 0 bin/arcv
+		awk	---755 0 0 bin/awk
+		basename	---755 0 0 bin/basename
+		cal	---755 0 0 bin/cal
+		calendar	---755 0 0 bin/calendar
+		cat	---755 0 0 bin/cat
+		cb	---755 0 0 bin/cb
+		checkeq	---755 0 0 bin/checkeq
+		chgrp	---755 0 0 bin/chgrp
+		chmod	---755 0 0 bin/chmod
+		chown	---755 0 0 bin/chown
+		clri	---755 0 0 bin/clri
+		cmp	---755 0 0 bin/cmp
+		col	---755 0 0 bin/col
+		comm	---755 0 0 bin/comm
+		cp	---755 0 0 bin/cp
+		crypt	---755 0 0 bin/crypt
+		date	---755 0 0 bin/date
+		dc	---755 0 0 bin/dc
+		dcheck	---755 0 0 bin/dcheck
+		dd	---755 0 0 bin/dd
+		df	---755 0 0 bin/df
+		diff	---755 0 0 bin/diff
+		diff3	---755 0 0 bin/diff3
+		deroff	---755 0 0 bin/deroff
+		dmesg	---755 0 0 bin/dmesg
+		du	---755 0 0 bin/du
+		dump	---755 0 0 bin/dump
+		dumpdir	---755 0 0 bin/dumpdir
+		echo	---755 0 0 bin/echo
+		ed	---755 0 0 bin/ed
+		egrep	---755 0 0 bin/egrep
+		expr	---755 0 0 bin/expr
+		fgrep	---755 0 0 bin/fgrep
+		file	---755 0 0 bin/file
+		factor	---755 0 0 bin/factor
+		find	---755 0 0 bin/find
+		false	---755 0 0 bin/false
+		grep	---755 0 0 bin/grep
+		chroot	---755 0 0 bin/chroot
+		printf	---755 0 0 bin/printf
+		graph	---755 0 0 bin/graph
+		icheck	---755 0 0 bin/icheck
+		iostat	---755 0 0 bin/iostat
+		join	---755 0 0 bin/join
+		kill	---755 0 0 bin/kill
+		link	---755 0 0 bin/link
+		unlink	---755 0 0 bin/unlink
+		ln	---755 0 0 bin/ln
+		login	---755 0 0 bin/login
+		look	---755 0 0 bin/look
+		ls	---755 0 0 bin/ls
+		mesg	---755 0 0 bin/mesg
+		mktemp	---755 0 0 bin/mktemp
+		mkdir	---755 0 0 bin/mkdir
+		mknod	---755 0 0 bin/mknod
+		mount	---755 0 0 bin/mount
+		mv	---755 0 0 bin/mv
+		ncheck	---755 0 0 bin/ncheck
+		newgrp	---755 0 0 bin/newgrp
+		nice	---755 0 0 bin/nice
+		nohup	---755 0 0 bin/nohup
+		od	---755 0 0 bin/od
+		osh	---755 0 0 bin/osh
+		passwd	---755 0 0 bin/passwd
+		pr	---755 0 0 bin/pr
+		primes	---755 0 0 bin/primes
+		prof	---755 0 0 bin/prof
+		ps	---755 0 0 bin/ps
+		pstat	---755 0 0 bin/pstat
+		ptx	---755 0 0 bin/ptx
+		pwd	---755 0 0 bin/pwd
+		quot	---755 0 0 bin/quot
+		random	---755 0 0 bin/random
+		restor	---755 0 0 bin/restor
+		rev	---755 0 0 bin/rev
+		rm	---755 0 0 bin/rm
+		rmdir	---755 0 0 bin/rmdir
+		sa	---755 0 0 bin/sa
+		sed	---755 0 0 bin/sed
+		sh	---755 0 0 bin/sh
+		sleep	---755 0 0 bin/sleep
+		sort	---755 0 0 bin/sort
+		spell	---755 0 0 bin/spell
+		sp	---755 0 0 bin/sp
+		spline	---755 0 0 bin/spline
+		split	---755 0 0 bin/split
+		stty	---755 0 0 bin/stty
+		su	---755 0 0 bin/su
+		sum	---755 0 0 bin/sum
+		sync	---755 0 0 bin/sync
+		tabs	---755 0 0 bin/tabs
+		tail	---755 0 0 bin/tail
+		tar	---755 0 0 bin/tar
+		tc	---755 0 0 bin/tc
+		tee	---755 0 0 bin/tee
+		test	---755 0 0 bin/test
+		time	---755 0 0 bin/time
+		tk	---755 0 0 bin/tk
+		touch	---755 0 0 bin/touch
+		tp	---755 0 0 bin/tp
+		tr	---755 0 0 bin/tr
+		true	---755 0 0 bin/true
+		tsort	---755 0 0 bin/tsort
+		tty	---755 0 0 bin/tty
+		umount	---755 0 0 bin/umount
+		uniq	---755 0 0 bin/uniq
+		units	---755 0 0 bin/units
+		vpr	---755 0 0 bin/vpr
+		wall	---755 0 0 bin/wall
+		wc	---755 0 0 bin/wc
+		who	---755 0 0 bin/who
+		write	---755 0 0 bin/write
+		yes	---755 0 0 bin/yes
+		$
+	dev	d--755 0 0
+		console	c--644 0 0 0 0
+		null	c--666 0 0 1 2
+		tty	c--666 0 0 0 0
+		$
+	etc	d--755 0 0
+		accton	---755 0 0 etc/accton
+		atrun	---755 0 0 etc/atrun
+		auxfs	---644 0 0 etc/auxfs
+		cron	---755 0 0 etc/cron
+		ddate	---644 0 0 /dev/null
+		getty	---755 0 0 etc/getty
+		init	---755 0 0 etc/init
+		passwd	---644 0 0 etc/passwd
+		group	---644 0 0 etc/group
+		rc	---755 0 0 etc/rc
+		ttys	---644 0 0 etc/ttys
+		update	---755 0 0 etc/update
+		utmp	---644 0 0 /dev/null
+		$
+	tmp	d--777 0 0
+		.keep	---644 0 0 /dev/null
+		$
+	usr	d--755 0 0
+		adm	d--755 0 0
+			acct	---644 0 0 /dev/null
+			wtmp	---644 0 0 /dev/null
+			$
+		dict	d--755 0 0
+			hlista	---644 0 0 usr/dict/hlista
+			hlistb	---644 0 0 usr/dict/hlistb
+			hstop	---644 0 0 usr/dict/hstop
+			spellhist	---666 0 0 usr/dict/spellhist
+			words	---644 0 0 usr/dict/words
+			$
+		games	d--755 0 0
+			arithmetic	---755 0 0 usr/games/arithmetic
+			backgammon	---755 0 0 usr/games/backgammon
+			fish	---755 0 0 usr/games/fish
+			fortune	---755 0 0 usr/games/fortune
+			hangman	---755 0 0 usr/games/hangman
+			lib	d--755 0 0
+				fortunes	---644 0 0 usr/games/lib/fortunes
+				$
+			quiz	---755 0 0 usr/games/quiz
+			wump	---755 0 0 usr/games/wump
+			$
+		lib	d--755 0 0
+			crontab	---644 0 0 usr/lib/crontab
+			diffh	---755 0 0 usr/lib/diffh
+			makekey	---755 0 0 usr/lib/makekey
+			spell	---755 0 0 usr/lib/spell
+			spellin	---755 0 0 usr/lib/spellin
+			spellout	---755 0 0 usr/lib/spellout
+			units	---644 0 0 usr/lib/units
+			$
+		spool	d--755 0 0
+			at	d--777 0 0
+				lasttimedone	---666 0 0 /dev/null
+				past	d--777 0 0
+					.keep	---644 0 0 /dev/null
+					$
+				$
+			$
+		$
+	unix	---644 0 0 unix
+$
