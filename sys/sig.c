@@ -33,7 +33,7 @@ struct
 
 /* v7's signal(pgrp, sig) (broadcast sig to every proc in pgrp) is gone
  * -- its only caller was sys/tty.c (the v7 line-discipline interrupt
- * path), which this port doesn't compile.  arch/u_bridge.c has its own
+ * path), which this port doesn't compile.  sys/v7_bridge.c has its own
  * v7_signal_pgrp that walks armproc[] instead of proc[]. */
 
 /*
@@ -86,7 +86,7 @@ issig(void)
  * driven by psig(); removed alongside it on this port. */
 
 /* The v7 issig()/psig() pair handled signal delivery during trap return.
- * On this port deliver_signal() in arch/armboot.c does it inline so
+ * On this port deliver_signal() in arch/arm.c does it inline so
  * psig() is never called from C; the resume(u_qsav) path in slp.c's
  * sleep() loop still uses its own local `psig:` label for the
  * longjmp-back-on-signal idiom. */

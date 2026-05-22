@@ -94,7 +94,7 @@ closef(register struct file *fp)
 }
 
 /* v7 openi() (per-driver d_open dispatch for IFCHR/IFBLK) is gone --
- * open(2) on this port routes through arch/armboot.c::kopen(), which
+ * open(2) on this port routes through arch/arm.c::kopen(), which
  * handles the pseudo-fds and IFREG itself.  The cdevsw[]/bdevsw[]
  * d_open hook was never reached. */
 
@@ -203,4 +203,4 @@ ufalloc(void)
 
 /* v7 falloc() (allocate fd + file slot, return file*) is gone -- its
  * only callers were sys2.c::open1 and pipe.c::pipe, both removed.
- * arch/armboot.c uses its own files[NFD] table instead of file[NFILE]. */
+ * arch/arm.c uses its own files[NFD] table instead of file[NFILE]. */

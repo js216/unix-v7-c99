@@ -38,7 +38,7 @@
 #define	PPIPE	26
 /* PWAIT (wait priority) and PSLEP (pause priority) are gone -- their
  * only sleep() callers were sys1.c::wait and sys4.c::pause, both
- * reimplemented in arch/armboot.c using the multithreading primitives. */
+ * reimplemented in arch/arm.c using the multithreading primitives. */
 #define	PUSER	50
 
 /*
@@ -55,7 +55,7 @@
  * defined here.  SIGINS/IOT/EMT/FPT/BUS/SEG/SYS/TRM are gone -- never
  * raised or named anywhere; userspace gets the long names from
  * <signal.h> instead.  The matching numeric slots (4, 6, 7, 8, 10, 11,
- * 12, 15) remain reserved in u_signal[NSIG]; a7.s raises 4 and 11 by
+ * 12, 15) remain reserved in u_signal[NSIG]; arm.s raises 4 and 11 by
  * literal integer (see undef_entry / pabort_entry).
  */
 #define	SIGHUP	1	/* hangup */

@@ -14,7 +14,7 @@ extern void wdir(struct inode *);
 void rdwr(int mode);
 
 /* v7's write(), open(), creat() and open1() are gone -- on this port
- * sys_{write,open,creat}_v7 in arch/armboot.c implement those syscalls
+ * sys_{write,open,creat}_v7 in arch/arm.c implement those syscalls
  * directly (pipe/console fast paths + kopen/kcreat for the file tree),
  * so the v7 entry points were linker-dead.  read() is still routed
  * here via v7_read_call. */

@@ -27,15 +27,15 @@ void mmu_on(unsigned int ttb);
 void dmbsy(void);
 void mmuinit(void);
 
-/* machdep.c */
+/* sys/machdep_arm.c */
 void startup(void);
 void armboot(void);
 
-/* arch/armboot.c -- v7-side hooks into the multi-thread save-pool. */
+/* arch/arm.c -- v7-side hooks into the multi-thread save-pool. */
 void armboot_setrun(int pid);
 void armboot_swtch(void);
 
-/* arch/swtch.s -- setjmp-style save/resume over label_t (10 ints). */
+/* arch/arm.s -- setjmp-style save/resume over label_t (10 ints). */
 int save(int *lp);
 void resume(int addr, int *lp);
 
@@ -56,7 +56,7 @@ void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
 void bflush(dev_t dev);
 void geterror(struct buf *bp);
 
-/* arch/v7stubs.c */
+/* sys/v7stubs.c */
 void wakeup(caddr_t chan);
 void sleep(caddr_t chan, int pri);
 int spl0(void);
@@ -69,8 +69,6 @@ void copyseg(int from, int to);
 void clearseg(int a);
 extern dev_t rootdev;
 
-/* dev/mp135_blk.c */
-int mp135_strategy(struct buf *bp);
 
 /* dev/virtio_blk.c */
 int virtio_strategy(struct buf *bp);

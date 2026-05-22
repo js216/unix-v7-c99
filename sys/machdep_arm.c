@@ -2,7 +2,7 @@
 #include "../h/buf.h"
 #include "../h/systm.h"
 #include "../h/proto.h"
-#include "arm.h"
+#include "../arch/arm.h"
 void startup(void)
 {
 	struct buf *bp;

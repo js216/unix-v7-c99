@@ -1,0 +1,193 @@
+nullboot
+16384 2048
+d--755 0 0
+	bin	d--755 0 0
+		1	---755 0 0 root/bin/1
+		[	---755 0 0 root/bin/test
+		ac	---755 0 0 root/bin/ac
+		at	---755 0 0 root/bin/at
+		arcv	---755 0 0 root/bin/arcv
+		awk	---755 0 0 root/bin/awk
+		basename	---755 0 0 root/bin/basename
+		cal	---755 0 0 root/bin/cal
+		calendar	---755 0 0 root/bin/calendar
+		cat	---755 0 0 root/bin/cat
+		cb	---755 0 0 root/bin/cb
+		checkeq	---755 0 0 root/bin/checkeq
+		chgrp	---755 0 0 root/bin/chgrp
+		chmod	---755 0 0 root/bin/chmod
+		chown	---755 0 0 root/bin/chown
+		clri	---755 0 0 root/bin/clri
+		cmp	---755 0 0 root/bin/cmp
+		col	---755 0 0 root/bin/col
+		comm	---755 0 0 root/bin/comm
+		cp	---755 0 0 root/bin/cp
+		crypt	---755 0 0 root/bin/crypt
+		date	---755 0 0 root/bin/date
+		dc	---755 0 0 root/bin/dc
+		dcheck	---755 0 0 root/bin/dcheck
+		dd	---755 0 0 root/bin/dd
+		df	---755 0 0 root/bin/df
+		diff	---755 0 0 root/bin/diff
+		diff3	---755 0 0 root/bin/diff3
+		deroff	---755 0 0 root/bin/deroff
+		dmesg	---755 0 0 root/bin/dmesg
+		du	---755 0 0 root/bin/du
+		dump	---755 0 0 root/bin/dump
+		dumpdir	---755 0 0 root/bin/dumpdir
+		echo	---755 0 0 root/bin/echo
+		ed	---755 0 0 root/bin/ed
+		egrep	---755 0 0 root/bin/egrep
+		expr	---755 0 0 root/bin/expr
+		fgrep	---755 0 0 root/bin/fgrep
+		file	---755 0 0 root/bin/file
+		factor	---755 0 0 root/bin/factor
+		find	---755 0 0 root/bin/find
+		false	---755 0 0 root/bin/false
+		grep	---755 0 0 root/bin/grep
+		chroot	---755 0 0 root/bin/chroot
+		printf	---755 0 0 root/bin/printf
+		graph	---755 0 0 root/bin/graph
+		icheck	---755 0 0 root/bin/icheck
+		iostat	---755 0 0 root/bin/iostat
+		mathtest ---755 0 0 root/bin/mathtest
+		sigtest	---755 0 0 root/bin/sigtest
+		mttest	---755 0 0 root/bin/mttest
+		join	---755 0 0 root/bin/join
+		kill	---755 0 0 root/bin/kill
+		link	---755 0 0 root/bin/link
+		unlink	---755 0 0 root/bin/unlink
+		ln	---755 0 0 root/bin/ln
+		login	---755 0 0 root/bin/login
+		look	---755 0 0 root/bin/look
+		ls	---755 0 0 root/bin/ls
+		mesg	---755 0 0 root/bin/mesg
+		mktemp	---755 0 0 root/bin/mktemp
+		mkdir	---755 0 0 root/bin/mkdir
+		mknod	---755 0 0 root/bin/mknod
+		mount	---755 0 0 root/bin/mount
+		mv	---755 0 0 root/bin/mv
+		ncheck	---755 0 0 root/bin/ncheck
+		newgrp	---755 0 0 root/bin/newgrp
+		nice	---755 0 0 root/bin/nice
+		nohup	---755 0 0 root/bin/nohup
+		od	---755 0 0 root/bin/od
+		osh	---755 0 0 root/bin/osh
+		passwd	---755 0 0 root/bin/passwd
+		pr	---755 0 0 root/bin/pr
+		primes	---755 0 0 root/bin/primes
+		prof	---755 0 0 root/bin/prof
+		ps	---755 0 0 root/bin/ps
+		pstat	---755 0 0 root/bin/pstat
+		ptx	---755 0 0 root/bin/ptx
+		pwd	---755 0 0 root/bin/pwd
+		quot	---755 0 0 root/bin/quot
+		random	---755 0 0 root/bin/random
+		restor	---755 0 0 root/bin/restor
+		rev	---755 0 0 root/bin/rev
+		rm	---755 0 0 root/bin/rm
+		rmdir	---755 0 0 root/bin/rmdir
+		sa	---755 0 0 root/bin/sa
+		sed	---755 0 0 root/bin/sed
+		sh	---755 0 0 root/bin/sh
+		sleep	---755 0 0 root/bin/sleep
+		sort	---755 0 0 root/bin/sort
+		spell	---755 0 0 root/bin/spell
+		sp	---755 0 0 root/bin/sp
+		spline	---755 0 0 root/bin/spline
+		split	---755 0 0 root/bin/split
+		stty	---755 0 0 root/bin/stty
+		su	---755 0 0 root/bin/su
+		sum	---755 0 0 root/bin/sum
+		sync	---755 0 0 root/bin/sync
+		tabs	---755 0 0 root/bin/tabs
+		tail	---755 0 0 root/bin/tail
+		tar	---755 0 0 root/bin/tar
+		tc	---755 0 0 root/bin/tc
+		tee	---755 0 0 root/bin/tee
+		test	---755 0 0 root/bin/test
+		time	---755 0 0 root/bin/time
+		tk	---755 0 0 root/bin/tk
+		touch	---755 0 0 root/bin/touch
+		tp	---755 0 0 root/bin/tp
+		tr	---755 0 0 root/bin/tr
+		true	---755 0 0 root/bin/true
+		tsort	---755 0 0 root/bin/tsort
+		tty	---755 0 0 root/bin/tty
+		umount	---755 0 0 root/bin/umount
+		uniq	---755 0 0 root/bin/uniq
+		units	---755 0 0 root/bin/units
+		vpr	---755 0 0 root/bin/vpr
+		wall	---755 0 0 root/bin/wall
+		wc	---755 0 0 root/bin/wc
+		who	---755 0 0 root/bin/who
+		write	---755 0 0 root/bin/write
+		yes	---755 0 0 root/bin/yes
+		$
+	dev	d--755 0 0
+		console	c--644 0 0 0 0
+		null	c--666 0 0 1 2
+		tty	c--666 0 0 0 0
+		$
+	etc	d--755 0 0
+		accton	---755 0 0 root/etc/accton
+		atrun	---755 0 0 root/etc/atrun
+		auxfs	---644 0 0 build/auxfs.img
+		cron	---755 0 0 root/etc/cron
+		ddate	---644 0 0 /dev/null
+		getty	---755 0 0 root/etc/getty
+		init	---755 0 0 root/etc/init
+		passwd	---644 0 0 root/etc/passwd
+		group	---644 0 0 root/etc/group
+		rc	---755 0 0 root/etc/rc
+		ttys	---644 0 0 root/etc/ttys
+		update	---755 0 0 root/etc/update
+		utmp	---644 0 0 /dev/null
+		$
+	tmp	d--777 0 0
+		.keep	---644 0 0 /dev/null
+		$
+	usr	d--755 0 0
+		adm	d--755 0 0
+			acct	---644 0 0 /dev/null
+			wtmp	---644 0 0 /dev/null
+			$
+		dict	d--755 0 0
+			hlista	---644 0 0 root/usr/dict/hlista
+			hlistb	---644 0 0 root/usr/dict/hlistb
+			hstop	---644 0 0 root/usr/dict/hstop
+			spellhist	---666 0 0 root/usr/dict/spellhist
+			words	---644 0 0 root/usr/dict/words
+			$
+		games	d--755 0 0
+			arithmetic	---755 0 0 root/usr/games/arithmetic
+			backgammon	---755 0 0 root/usr/games/backgammon
+			fish	---755 0 0 root/usr/games/fish
+			fortune	---755 0 0 root/usr/games/fortune
+			hangman	---755 0 0 root/usr/games/hangman
+			lib	d--755 0 0
+				fortunes	---644 0 0 root/usr/games/lib/fortunes
+				$
+			quiz	---755 0 0 root/usr/games/quiz
+			wump	---755 0 0 root/usr/games/wump
+			$
+		lib	d--755 0 0
+			crontab	---644 0 0 root/usr/lib/crontab
+			diffh	---755 0 0 root/usr/lib/diffh
+			makekey	---755 0 0 root/usr/lib/makekey
+			spell	---755 0 0 root/usr/lib/spell
+			spellin	---755 0 0 root/usr/lib/spellin
+			spellout	---755 0 0 root/usr/lib/spellout
+			units	---644 0 0 root/usr/lib/units
+			$
+		spool	d--755 0 0
+			at	d--777 0 0
+				lasttimedone	---666 0 0 /dev/null
+				past	d--777 0 0
+					.keep	---644 0 0 /dev/null
+					$
+				$
+			$
+		$
+	unix	---644 0 0 root/unix
+$

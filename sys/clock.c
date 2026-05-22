@@ -5,7 +5,7 @@
 #include "../h/proc.h"
 #include "../h/proto.h"
 
-extern void addupc(caddr_t pc, void *prof, int inc);	/* arch/v7stubs.c stub */
+extern void addupc(caddr_t pc, void *prof, int inc);	/* sys/v7stubs.c stub */
 /* wakeup/spl1 come from h/proto.h.  psignal/setpri come from h/systm.h. */
 
 #define	SCHMAG	8/10

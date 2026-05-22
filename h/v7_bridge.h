@@ -1,12 +1,12 @@
 /*
  * v7_bridge.h -- prototypes for the cross-TU bridge between the
- * v7-side helpers in arch/u_bridge.c (+ a few in arch/v7stubs.c)
- * and the armboot.c trap-dispatch path.
+ * v7-side helpers in sys/v7_bridge.c (+ a few in sys/v7stubs.c)
+ * and the arch/arm.c trap-dispatch path.
  *
  * Every function name starts with v7_*; the implementations live in
- * arch/u_bridge.c except v7_namei_inum / v7_mount_init /
+ * sys/v7_bridge.c except v7_namei_inum / v7_mount_init /
  * v7_inode_pack_addr / v7_inode_unpack_addr which are in
- * arch/v7stubs.c.  Both definers and the armboot.c caller include this
+ * sys/v7stubs.c.  Both definers and the arch/arm.c caller include this
  * header so the C compiler cross-checks signatures.
  */
 #ifndef V7_BRIDGE_H
@@ -121,14 +121,14 @@ int	v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs
 void	v7_inode_pack_addr(struct inode *ip, unsigned int *addrs);
 void	v7_inode_unpack_addr(struct inode *ip, unsigned int *addrs);
 
-/* namei + rootfs init from v7stubs.c. */
+/* namei + rootfs init from sys/v7stubs.c. */
 ino_t	v7_namei_inum(char *path);
 int	v7_mount_init(void);
 
-/* exec image loader (defined in armboot.c::kexec2). */
+/* exec image loader (defined in arch/arm.c::kexec2). */
 int	v7_load_image(char *path, char **argv, char **envp);
 /* post-EXCLOSE cleanup of armboot-side fd state.  v7_exec_call calls
- * this from u_bridge.c after the v7 closef so the slot is reusable. */
+ * this from sys/v7_bridge.c after the v7 closef so the slot is reusable. */
 void	armboot_post_exec_close(int fd);
 
 #endif

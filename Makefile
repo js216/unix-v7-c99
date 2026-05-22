@@ -2,27 +2,7 @@
 # Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 # Copyright (c) 2026 Jakob Kastelic
 
-CONF ?= qemu_arm
-
-LEARN_FILE_NAMES = L0 L0.1a L0.1b L0.1c L0.1d L1.1a L1.2a L1.2b \
-	L10.1a L10.2a L10.2b L10.3a L10.3b L10.3c L10.3d \
-	L11.1a L11.2a L11.2b L11.3a L11.3b L11.3c \
-	L12.1a L12.2a L12.2b L12.2c L12.3a L12.3b L12.3c \
-	L13.1a L13.1b L13.1c L13.1d L13.1e L13.1f L13.1g \
-	L2.1a L2.2a L2.2b L3.1a L3.2a L3.2b L3.3a L3.3b \
-	L4.1a L4.2a L4.2b L4.3a L4.3b L4.3c \
-	L5.1a L5.1b L5.1c L5.1d L5.1e \
-	L6.1a L6.1b L6.1c L6.1d L6.1e L6.2a L6.2b \
-	L7.1a L7.2a L7.2b L7.3a L7.3b L7.3c \
-	L8.1a L8.2a L8.2b L8.2c L9.1a L9.2a L9.2b L9.2c
-LEARN_FILES = $(addprefix root/usr/lib/learn/files/,$(LEARN_FILE_NAMES))
-LEARN_MOREFILE_NAMES = L0 L0.1a L0.1b L0.1c L0.1d L0.1e L0.1f L0.1g \
-	L1.1a L1.1b L1.1c L1.1d L2.1a L2.1b L2.1c L2.1d L2.1e L2.1f \
-	L3.1a L3.1b L3.1c L3.1d L3.1e L3.1f L3.1g \
-	L4.1a L4.1b L4.1c L4.1d L4.1e L4.1f L4.1g L4.2a \
-	L5.1a L5.1b L5.1c L5.1d L5.1e \
-	L6.1a L6.1b L6.1c L6.1d L6.1e L6.2e L7.1a
-LEARN_MOREFILES = $(addprefix root/usr/lib/learn/morefiles/,$(LEARN_MOREFILE_NAMES))
+CONF ?= arm_qemu
 
 ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/cat root/bin/echo root/bin/ls root/bin/pwd root/bin/sync \
@@ -50,9 +30,8 @@ ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/quot root/bin/dump root/bin/dumpdir \
 	root/bin/restor root/bin/tk root/bin/dc root/bin/tar root/bin/tp \
 	root/bin/prof root/bin/tc root/bin/graph root/bin/factor root/bin/primes \
-	root/bin/expr root/bin/iostat root/bin/plot root/bin/tek \
+	root/bin/expr root/bin/iostat \
 	root/bin/spell root/bin/deroff root/bin/printf root/bin/chroot root/bin/mktemp root/bin/link root/bin/unlink \
-	root/bin/learn root/usr/lib/learn/tee root/usr/lib/learn/lcount \
 	root/usr/games/fortune root/usr/games/arithmetic root/usr/games/hangman \
 	root/usr/games/backgammon root/usr/games/fish root/usr/games/quiz \
 	root/usr/games/wump \
@@ -62,13 +41,12 @@ ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/usr/lib/crontab \
 	root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop \
 	root/usr/dict/spellhist \
-	root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo $(LEARN_FILES) $(LEARN_MOREFILES) \
 	build/auxfs.img
 
 all:	unix root.img
 
-unix:	sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h
-	cd sys; make unix
+unix:	sys/*.c arch/*.c arch/*.s arch/*.ld dev/*.c h/*.h conf/$(CONF)/config.mk conf/$(CONF)/conf.c
+	$(MAKE) -C sys unix
 
 # Keep the in-rootfs /unix copy small: the live kernel still loads the
 # full ELF directly from qemu's -kernel arg, while dmesg only needs
@@ -78,11 +56,11 @@ root/unix:	unix
 	arm-none-eabi-objcopy -R .text -R .rodata -R .stack -R .ARM.attributes -R .comment unix root/unix
 
 qemu:	unix root.img
-	qemu-system-arm -machine virt -cpu cortex-a7 -nographic -kernel unix -drive if=none,file=root.img,format=raw,id=hd0 -device virtio-blk-device,drive=hd0
+	$(MAKE) -C sys qemu
 
 cmd/awk/awk.g.c cmd/awk/awk.h cmd/awk/proctab.c: ;
 
-root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* cmd/learn/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/plot v7/bin/spell lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/rc root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo tools/extract-old-ar.py $(LEARN_FILES) $(LEARN_MOREFILES) build/auxfs.img
+root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/rc root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab tools/extract-old-ar.py build/auxfs.img
 	cd lib; make
 	mkdir -p build
 	tools/mkfs root.img conf/$(CONF)/root.proto
@@ -157,21 +135,6 @@ root/usr/lib/crontab: v7/usr/lib/crontab
 	mkdir -p root/usr/lib
 	cp v7/usr/lib/crontab root/usr/lib/crontab
 
-root/usr/lib/learn/Linfo: v7/usr/lib/learn/Linfo
-	mkdir -p root/usr/lib/learn
-	cp v7/usr/lib/learn/Linfo root/usr/lib/learn/Linfo
-
-root/usr/lib/learn/Xinfo: v7/usr/lib/learn/Xinfo
-	mkdir -p root/usr/lib/learn
-	cp v7/usr/lib/learn/Xinfo root/usr/lib/learn/Xinfo
-
-$(LEARN_FILES): v7/usr/lib/learn/files.a tools/extract-old-ar.py
-	mkdir -p root/usr/lib/learn/files
-	python3 tools/extract-old-ar.py v7/usr/lib/learn/files.a root/usr/lib/learn/files
-
-$(LEARN_MOREFILES): v7/usr/lib/learn/morefiles.a tools/extract-old-ar.py
-	mkdir -p root/usr/lib/learn/morefiles
-	python3 tools/extract-old-ar.py v7/usr/lib/learn/morefiles.a root/usr/lib/learn/morefiles
 
 clean:
 	cd sys; make clean

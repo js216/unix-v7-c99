@@ -18,7 +18,7 @@ static char *argv[256];
 static char *envp[256];
 static char *emptyenv[] = { 0 };
 
-/* arch/armboot.c::kargs lays out argv as NUL-separated strings, an
+/* arch/arm.c::kargs lays out argv as NUL-separated strings, an
  * empty-string sentinel, then envp the same way.  We parse both. */
 static char *argv_end;
 

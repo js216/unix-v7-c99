@@ -6,7 +6,7 @@
 
 /*
  * Initialization code.  On this port the ARM-specific cold-start path
- * (arch/a7.s -> main() -> startup() -> armboot()) drives the actual
+ * (arch/arm.s -> main() -> startup() -> armboot()) drives the actual
  * boot.  The v7 PDP-11 main body (manually set up proc[0], call
  * cinit/binit/iinit, fork the init process, jump to sched()) is replaced
  * by armboot()'s scheduler + ELF loader, so main() is now just glue.

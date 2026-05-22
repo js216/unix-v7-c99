@@ -320,7 +320,7 @@ prcom(int puid)
 	 * This port has no swap and only one live user image at a time
 	 * (USERBASE..USERBASE+USERSIZE), with argv kept as a single
 	 * NUL-terminated, space-separated buffer at the fixed user VA
-	 * UARGV (see arch/armboot.c::kexec2 / kspawn).  arch/u_bridge.c::
+	 * UARGV (see arch/arm.c::kexec2 / kspawn).  sys/v7_bridge.c::
 	 * v7_proc_set_current() steers p_addr/p_size for the currently
 	 * running proc at UARGV/UARGLEN respectively, so the lseek+read
 	 * below lands directly on that buffer; every other proc gets

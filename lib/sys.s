@@ -1,7 +1,7 @@
 @ Per-syscall stubs.  Each entry is the ARM-EABI equivalent of v7's
 @ libc/sys/<name>.s -- it loads r7 with the v7 syscall number and
 @ traps via svc, leaving the args already in r0..r3.  Only syscalls
-@ the kernel actually services (see arch/armboot.c trap()) appear
+@ the kernel actually services (see arch/arm.c trap()) appear
 @ here; unimplemented or trivially-stubbed calls stay in compat.c.
 
 .macro SYS name, num

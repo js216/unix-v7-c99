@@ -80,7 +80,7 @@ struct	user
 	dev_t	u_ttyd;			/* controlling tty dev */
 	/* v7 had `struct {...} u_exdata` here (the a.out header, populated
 	 * by sys1.c::getxfile and consumed by setregs).  Both functions are
-	 * gone; arch/armboot.c::v7_exec_call parses the a.out itself. */
+	 * gone; arch/arm.c::v7_exec_call parses the a.out itself. */
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;

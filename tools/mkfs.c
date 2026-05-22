@@ -22,7 +22,7 @@
 #include "../include/sys/filsys.h"
 #include "../include/sys/fblk.h"
 #include "../include/sys/dir.h"
-/* Pack longs into pure LE 24-bit; matches arch/armboot.c::addr(). */
+/* Pack longs into pure LE 24-bit; matches arch/arm.c::addr(). */
 int ltol3(cp, lp, n) char *cp; long *lp; int n; {
 	int i; long v;
 	for(i=0; i<n; i++) {

@@ -52,7 +52,7 @@ def main():
     captured += qemu.before + qemu.after
 
     qemu.terminate(force=True)
-    # Strip backspaces (0x08).  arch/v7stubs.c::pause_spin_barrier writes
+    # Strip backspaces (0x08).  sys/v7stubs.c::pause_spin_barrier writes
     # one \b per spin iteration to advance qemu's virtual-time machinery
     # during sleep()/pause(); kernel time wouldn't advance otherwise.  The
     # hack works (sleep semantics are correct) but emits ~150 KB of \b per

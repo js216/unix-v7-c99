@@ -36,7 +36,7 @@
  * v7's h/acct.h declares comp_t (16-bit pseudo-float) fields for ac_utime,
  * ac_stime, ac_etime, ac_io.  The kernel writei()s `&acctbuf` for
  * `sizeof(acctbuf)` bytes; in this port `acctbuf` is the global declared
- * in arch/v7stubs.c -- which uses *long* for utime/stime/etime and *short*
+ * in sys/v7stubs.c -- which uses *long* for utime/stime/etime and *short*
  * for ac_io.  The on-disk record we read back here therefore mirrors that
  * 44-byte struct, not h/acct.h's 36-byte one.
  *
@@ -55,7 +55,7 @@ typedef	unsigned short comp_t;
 struct	acct {
 	char	ac_comm[10];
 	char	ac_pad[2];	/* alignment pad between ac_comm and ac_utime
-				 * in arch/v7stubs.c's struct -- the kernel
+				 * in sys/v7stubs.c's struct -- the kernel
 				 * writes this byte-for-byte even though
 				 * h/acct.h's matching field is comp_t. */
 	long	ac_utime;
