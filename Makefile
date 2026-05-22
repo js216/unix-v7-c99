@@ -26,9 +26,9 @@ LEARN_MOREFILES = $(addprefix root/usr/lib/learn/morefiles/,$(LEARN_MOREFILE_NAM
 
 ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/cat root/bin/echo root/bin/ls root/bin/pwd root/bin/sync \
-	root/bin/arcv root/bin/rev root/bin/yes root/bin/wc root/bin/basename root/bin/dirname root/bin/sum \
+	root/bin/arcv root/bin/rev root/bin/yes root/bin/wc root/bin/basename root/bin/sum \
 	root/bin/tty root/bin/cmp root/bin/comm root/bin/cal root/bin/od \
-	root/bin/head root/bin/tail root/bin/grep root/bin/test root/bin/look root/bin/cp \
+	root/bin/tail root/bin/grep root/bin/test root/bin/look root/bin/cp \
 	root/bin/rm root/bin/ln root/bin/mkdir root/bin/rmdir root/bin/mv \
 	root/bin/chmod root/bin/chown root/bin/chgrp root/bin/sleep \
 	root/bin/tee root/bin/touch root/bin/tr root/bin/uniq root/bin/du \
@@ -50,8 +50,8 @@ ROOT = root/etc/init root/etc/getty root/bin/login root/bin/sh \
 	root/bin/quot root/bin/dump root/bin/dumpdir \
 	root/bin/restor root/bin/tk root/bin/dc root/bin/tar root/bin/tp \
 	root/bin/prof root/bin/tc root/bin/graph root/bin/factor root/bin/primes \
-	root/bin/expr root/bin/iostat root/bin/dkstat root/bin/plot root/bin/tek \
-	root/bin/spell root/bin/deroff root/bin/printf root/bin/id root/bin/whoami root/bin/seq root/bin/xargs root/bin/paste root/bin/tac root/bin/nl root/bin/expand root/bin/unexpand root/bin/cut root/bin/env root/bin/fmt root/bin/uname root/bin/logname root/bin/which root/bin/hostname root/bin/nproc root/bin/chroot root/bin/mktemp root/bin/getopt root/bin/pgrep root/bin/pkill root/bin/timeout root/bin/watch root/bin/pidof root/bin/cksum root/bin/column root/bin/shuf root/bin/truncate root/bin/printenv root/bin/link root/bin/unlink root/bin/fold root/bin/groups \
+	root/bin/expr root/bin/iostat root/bin/plot root/bin/tek \
+	root/bin/spell root/bin/deroff root/bin/printf root/bin/chroot root/bin/mktemp root/bin/link root/bin/unlink \
 	root/bin/learn root/usr/lib/learn/tee root/usr/lib/learn/lcount \
 	root/usr/games/fortune root/usr/games/arithmetic root/usr/games/hangman \
 	root/usr/games/backgammon root/usr/games/fish root/usr/games/quiz \
@@ -82,7 +82,7 @@ qemu:	unix root.img
 
 cmd/awk/awk.g.c cmd/awk/awk.h cmd/awk/proctab.c: ;
 
-root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* cmd/learn/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/plot v7/bin/spell cmd/spell/spell.sh lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/rc root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo tools/extract-old-ar.py $(LEARN_FILES) $(LEARN_MOREFILES) build/auxfs.img
+root.img: unix root/unix Makefile tools/mkfs conf/$(CONF)/root.proto cmd/*.c cmd/sh/* cmd/sed/* cmd/awk/* cmd/dc/* cmd/tar/* cmd/tp/* cmd/learn/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/plot v7/bin/spell lib/*.c lib/*.s lib/Makefile lib/u.ld root/bin/spell root/etc/passwd root/etc/rc root/etc/ttys root/usr/dict/words root/usr/dict/hlista root/usr/dict/hlistb root/usr/dict/hstop root/usr/dict/spellhist root/usr/games/lib/fortunes root/usr/lib/units root/usr/lib/crontab root/usr/lib/learn/Linfo root/usr/lib/learn/Xinfo tools/extract-old-ar.py $(LEARN_FILES) $(LEARN_MOREFILES) build/auxfs.img
 	cd lib; make
 	mkdir -p build
 	tools/mkfs root.img conf/$(CONF)/root.proto
@@ -140,9 +140,9 @@ root/usr/dict/spellhist: v7/usr/dict/spellhist
 	rm -f root/usr/dict/spellhist
 	cp v7/usr/dict/spellhist root/usr/dict/spellhist
 
-root/bin/spell: v7/bin/spell cmd/spell/spell.sh
+root/bin/spell: v7/bin/spell
 	mkdir -p root/bin
-	cp cmd/spell/spell.sh root/bin/spell
+	cp v7/bin/spell root/bin/spell
 	chmod 755 root/bin/spell
 
 root/usr/games/lib/fortunes: v7/usr/games/lib/fortunes

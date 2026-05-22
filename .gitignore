@@ -2,6 +2,9 @@
 *.o
 *.a
 *.out
+
+v7
+
 conf/test_malloc
 sys/unix
 unix
@@ -14,7 +17,5 @@ root/etc/mkfs
 tools/mkfs
 lib/*.o
 lib/*.elf
-
-v7
 build/
 tools/minimkfs

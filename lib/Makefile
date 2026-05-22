@@ -59,11 +59,11 @@ LIBMOBJ = m_asin.o m_atan.o m_exp.o m_fabs.o m_floor.o m_hypot.o \
       m_tan.o m_tanh.o
 
 ETC = init getty accton update atrun cron
-BIN = login cat echo ls pwd sync arcv rev yes wc basename dirname sum tty cmp comm cal od head tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep egrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount passwd diff3 at units spline restor tk dmesg sa ptx vpr dump dumpdir graph factor primes expr ac iostat dkstat tek printf id whoami seq xargs paste tac nl expand unexpand cut env fmt uname logname which hostname nproc chroot mktemp getopt timeout watch cksum column shuf truncate printenv link unlink fold groups pidtest sigwaittest segvtest orphantest exittest errtest stattest sigfromchild unlinkopen sigstorm prof tc
-# ps/pstat/pgrep/pkill/pidof share a private build loop only so their
+BIN = login cat echo ls pwd sync arcv rev yes wc basename sum tty cmp comm cal od tail grep test look cp rm ln mkdir rmdir mv chmod chown chgrp sleep tee touch tr uniq du date kill nice mknod who mesg time split checkeq calendar tsort file join col fgrep egrep su newgrp random crypt pr dd stty tabs diff wall write df clri dcheck icheck ncheck cb sp find sort mount umount passwd diff3 at units spline restor tk dmesg sa ptx vpr dump dumpdir graph factor primes expr ac iostat tek printf chroot mktemp link unlink prof tc
+# ps/pstat share a private build loop only so their
 # objects are kept out of the BIN loop's automatic crt0/libc linking
 # pattern -- the source-level flags are the project's strict CFLAGS.
-PSBIN = ps pstat pgrep pkill pidof
+PSBIN = ps pstat
 USRLIB = makekey diffh
 USRGAMES = fortune arithmetic hangman backgammon fish quiz wump
 SHSRC = args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec
