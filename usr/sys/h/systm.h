@@ -42,6 +42,7 @@ dev_t	swapdev;		/* swapping device */
 /* `dev_t pipedev` (the device pipe(2) ialloc'd against) is gone --
  * sys/pipe.c::pipe() was removed; arch/arm.c::kpipe uses its own
  * pipes[] table that doesn't allocate inodes. */
+
 dev_t	getmdev(void);
 daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
 void	setrun(struct proc *p);

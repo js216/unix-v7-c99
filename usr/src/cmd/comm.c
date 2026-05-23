@@ -13,7 +13,6 @@ int rd(FILE *file, char *buf);
 void wr(char *str, int n);
 void copy(FILE *ibuf, char *lbuf, int n);
 int compare(char *a, char *b);
-
 int
 main(int argc, char *argv[])
 {

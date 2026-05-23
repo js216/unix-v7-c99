@@ -123,7 +123,6 @@ int	l3tol(), ltol3();
 daddr_t	balloc(void);
 daddr_t	bmap(daddr_t iaddr[NADDR], daddr_t bn);
 ino_t	search(ino_t inum, char *cp);
-
 int
 main(int argc, char *argv[])
 {

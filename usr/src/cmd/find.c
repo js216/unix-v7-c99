@@ -471,34 +471,65 @@ newer(void)
 int
 gethome(void)
 {
-	int fd[2], status;
-	register int n;
+	char name[128];
+	int file, off, i, j;
+	struct stat d, dd, root;
+	struct direct dir;
 
-	if(pipe(fd) < 0) {
-		pr("find: cannot run pwd\n");
-		exit(1);
+	off = -1;
+	stat("/", &root);
+	for (;;) {
+		stat(".", &d);
+		if(d.st_ino == root.st_ino && d.st_dev == root.st_dev) {
+			Home[0] = '/';
+			if(off < 0) {
+				Home[1] = '\0';
+			} else {
+				if(off + 2 > (int)sizeof Home) {
+					pr("find: pathname too long\n");
+					exit(1);
+				}
+				strcpy(Home + 1, name);
+			}
+			chdir(Home);
+			return(0);
+		}
+		if((file = open("..", 0)) < 0) {
+			pr("find: cannot open ..\n");
+			exit(1);
+		}
+		fstat(file, &dd);
+		chdir("..");
+		if(d.st_dev == dd.st_dev) {
+			do {
+				if(read(file, (char *)&dir, sizeof dir) < (int)sizeof dir) {
+					pr("find: cannot read ..\n");
+					exit(1);
+				}
+			} while(dir.d_ino != d.st_ino);
+		} else do {
+			if(read(file, (char *)&dir, sizeof dir) < (int)sizeof dir) {
+				pr("find: cannot read ..\n");
+				exit(1);
+			}
+			stat(dir.d_name, &dd);
+		} while(dd.st_ino != d.st_ino || dd.st_dev != d.st_dev);
+		close(file);
+		i = -1;
+		while(dir.d_name[++i] != 0);
+		if(off + i + 2 >= (int)sizeof name) {
+			pr("find: pathname too long\n");
+			exit(1);
+		}
+		for(j = off + 1; j >= 0; --j)
+			name[j + i + 1] = name[j];
+		off = i + off + 1;
+		name[i] = '/';
+		for(--i; i >= 0; --i)
+			name[i] = dir.d_name[i];
 	}
-	if(fork() == 0) {
-		close(fd[0]);
-		dup(fd[1] | 0100, 1);
-		close(fd[1]);
-		execl("/bin/pwd", "pwd", 0);
-		exit(1);
-	}
-	close(fd[1]);
-	n = read(fd[0], Home, sizeof Home - 1);
-	close(fd[0]);
-	wait(&status);
-	if(n <= 0 || status) {
-		pr("find: cannot run pwd\n");
-		exit(1);
-	}
-	Home[n] = '\0';
-	if(Home[n - 1] == '\n')
-		Home[n - 1] = '\0';
 	return(0);
 }
-
 int
 scomp(register int a, register int b, register int s) /* funny signed compare */
 {

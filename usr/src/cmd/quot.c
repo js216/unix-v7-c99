@@ -42,7 +42,6 @@ unsigned	nfiles;
 char	*malloc(unsigned n);
 char	*copy(char *s);
 int	scanf(char *fmt, ...);
-
 int	check(char *file), acct(register struct dinode *ip);
 int	bread(unsigned bno, char *buf, int cnt);
 int	qcmp(const void *vp1, const void *vp2), report(void);

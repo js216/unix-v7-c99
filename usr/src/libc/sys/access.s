@@ -1,3 +1,6 @@
+
+
+
 .globl access
 access:
 		mov ip, r7

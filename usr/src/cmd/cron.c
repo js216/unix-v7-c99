@@ -24,7 +24,6 @@ unsigned listsize;
 
 int	slp(void), ex(char *s), init(void), number(register int c);
 int	open(char *path, int mode), close(int fd);
-
 int
 main(void)
 {
@@ -149,6 +148,7 @@ slp(void)
 
 int
 ex(char *s)
+
 {
 	if(fork())
 		return(0);

@@ -25,7 +25,6 @@
 #include "../../sys/h/user.h"
 #include "../../sys/h/file.h"
 #include <sys/stat.h>
-
 #include <a.out.h>		/* nlist() prototype */
 /* exit/open/read/lseek prototypes are pulled in via stdio.h on this
  * port; no extra K&R-style declarations are needed here. */
@@ -74,7 +73,6 @@ int dofil(void);
 int putf(int v, int n);
 int ttyprt(int n, struct tty *atp);
 int oatoi(char *s);
-
 int
 main(int argc, char **argv)
 {

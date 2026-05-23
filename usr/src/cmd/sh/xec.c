@@ -73,7 +73,6 @@ extern int alarm(unsigned sec);
 extern int pause(void);
 extern int close(int fd);
 extern int dup();
-
 LOCAL INT	parent;
 
 extern SYSTAB	commands;
@@ -148,7 +147,6 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				case SYSEXIT:
 					exitsh(a1?stoi(a1):oldexit);
 					/* fallthrough */
-
 				case SYSNULL:
 					nullio(io);
 					io=0;
@@ -198,12 +196,10 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 					initio(io); ioset=0; io=0;
 					IF a1==0 THEN break FI
 					/* fallthrough */
-
 				case SYSLOGIN:
 					flags |= forked;
 					oldsigs(); execa(com); done();
 					/* fallthrough */
-
 				case SYSCD:
 					IF flags&rshflg
 					THEN	failed(com[0],restricted);
@@ -300,7 +296,6 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			FI
 			END
 			/* fallthrough */
-
 		case TFORK:
 			IF execflg ANDF (treeflgs&(FAMP|FPOU))==0
 			THEN	parent=0;

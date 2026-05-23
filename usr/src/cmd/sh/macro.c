@@ -29,7 +29,6 @@ INT	tdystak(REG STKPTR x);
 INT	await(INT i);
 extern int close(int fd);
 extern int write(int fd, char *buf, int n);
-
 LOCAL CHAR	quote;	/* used locally */
 LOCAL CHAR	quoted;	/* used locally */
 

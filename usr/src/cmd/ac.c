@@ -34,7 +34,6 @@ char	**pptr;
 
 int	loop(void), print(void), upall(int f), update(struct tbuf *tp, int f);
 int	among(int i), newday(void), pdate(void);
-
 int
 main(int argc, char **argv)
 {

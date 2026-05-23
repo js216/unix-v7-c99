@@ -5,7 +5,6 @@ int	optap(), setcom(), useerr(), check(), done(), encode(),
 	decode(), cmd(), cmr(), cmt(), cmx(),
 	clrdir(), clrent(), rddir(), gettape(), wrdir(), getfiles(),
 	update(), delete(), taboc(), extract(), usage();
-
 int
 main(int argc, char **argv)
 {

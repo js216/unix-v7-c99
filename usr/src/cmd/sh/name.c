@@ -10,6 +10,8 @@
 #include	"defs.h"
 
 PROC BOOL	chkid(STRING nam);
+
+
 LOCAL VOID	namwalk(REG NAMPTR np);
 VOID	countnam(NAMPTR n);
 VOID	pushnam(NAMPTR n);
@@ -31,8 +33,6 @@ VOID	prs(STRING as);
 extern int dup();
 extern long lseek(int fd, long off, int whence);
 extern void free(void *p);
-
-
 NAMNOD	ps2nod	= {	0,		0,		ps2name,	NIL, NIL, 0},
 	fngnod	= {	0,		0,		fngname,	NIL, NIL, 0},
 	pathnod = {	0,		0,		pathname,	NIL, NIL, 0},

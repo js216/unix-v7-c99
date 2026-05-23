@@ -6,8 +6,6 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 
-/* suser/plock/iput/prele/namei/uchar/writei come from h/systm.h. */
-
 /*
  * Perform process accounting functions.
  */
@@ -48,7 +46,6 @@ sysacct(void)
 }
 
 int compress(time_t t);
-
 /*
  * On exit, write a record on the accounting file.
  */
@@ -117,4 +114,5 @@ void
 syslock(void)
 {
 	(void)suser();
+
 }

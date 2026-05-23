@@ -3,60 +3,28 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* setrun comes from h/systm.h.  wakeup/sleep come from local declarations. */
-
+#include "../h/inode.h"
+#include "../h/text.h"
+#include "../h/seg.h"
+#include "../arch/arm.h"
+void sleep(caddr_t chan, int pri);
+void wakeup(caddr_t chan);
 int fsig(struct proc *p);
 void psignal(struct proc *p, int sig);
+int procxmt(void);
+int core(void);
+void swtch(void);
+void do_exit(int code, int *r);
+void itrunc(struct inode *ip);
+void expand(int newsize);
+void copyseg(int from, int to);
+void clearseg(int a);
+int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+extern int *trap_frame;
+#define	SINCR	20
+#define	ARM_SP	13
+#define	ARM_LR	14
+#define	ARM_PC	15
 
 /*
  * Priority for tracing
@@ -79,10 +47,24 @@ struct
 	int	ip_data;
 } ipc;
 
-/* v7's signal(pgrp, sig) (broadcast sig to every proc in pgrp) is gone
- * -- its only caller was sys/tty.c (the v7 line-discipline interrupt
- * path), which this port doesn't compile.  arch/arm.c has its own
- * v7_signal_pgrp that walks armproc[] instead of proc[]. */
+/*
+ * Send the specified signal to
+ * all processes with 'pgrp' as
+ * process group.
+ * Called by tty.c for quits and
+ * interrupts.
+ */
+void
+signal(register int pgrp, int sig)
+{
+	register struct proc *p;
+
+	if(pgrp == 0)
+		return;
+	for(p = &proc[0]; p < &proc[NPROC]; p++)
+		if(p->p_pgrp == pgrp)
+			psignal(p, sig);
+}
 
 /*
  * Send the specified signal to
@@ -129,15 +111,92 @@ issig(void)
 	return(0);
 }
 
-/* v7's stop() (enter SSTOP, signal parent, wait for procxmt cmd) and
- * its co-routine procxmt() (parent ptrace command dispatcher) were
- * driven by psig(); removed alongside it on this port. */
+/*
+ * Enter the tracing STOP state.
+ * In this state, the parent is
+ * informed and the process is able to
+ * receive commands from the parent.
+ */
+void
+stop(void)
+{
+	register struct proc *pp, *cp;
 
-/* The v7 issig()/psig() pair handled signal delivery during trap return.
- * On this port deliver_signal() in arch/arm.c does it inline so
- * psig() is never called from C; the resume(u_qsav) path in slp.c's
- * sleep() loop still uses its own local `psig:` label for the
- * longjmp-back-on-signal idiom. */
+loop:
+	cp = u.u_procp;
+	if(cp->p_ppid != 1)
+	for (pp = &proc[0]; pp < &proc[NPROC]; pp++)
+		if (pp->p_pid == cp->p_ppid) {
+			wakeup((caddr_t)pp);
+			cp->p_stat = SSTOP;
+			swtch();
+			if ((cp->p_flag&STRC)==0 || procxmt())
+				return;
+			goto loop;
+		}
+	do_exit(0x100 | fsig(u.u_procp), trap_frame);
+}
+static void
+sendsig(caddr_t handler, int sig)
+{
+	register int *r;
+	register unsigned int sp;
+	r = trap_frame != NULL ? trap_frame : u.u_ar0;
+	if(r == NULL)
+		return;
+	sp = (unsigned int)r[ARM_SP] - 12U;
+	*(volatile unsigned int *)sp = (unsigned int)r[ARM_PC];
+	*(volatile unsigned int *)(sp + 4) = (unsigned int)r[0];
+	*(volatile unsigned int *)(sp + 8) = (unsigned int)r[ARM_LR];
+	r[ARM_SP] = (int)sp;
+	r[ARM_LR] = (int)UENTRY_SIGTRAMP;
+	r[ARM_PC] = (int)handler;
+	r[0] = sig;
+}
+
+/*
+ * Perform the action specified by
+ * the current signal.
+ * The usual sequence is:
+ *	if(issig())
+ *		psig();
+ */
+void
+psig(void)
+{
+	register int n, p;
+	register struct proc *rp;
+
+	rp = u.u_procp;
+	if (rp->p_flag&STRC)
+		stop();
+	n = fsig(rp);
+	if (n==0)
+		return;
+	rp->p_sig &= ~(1<<(n-1));
+	if((p=u.u_signal[n]) != 0) {
+		u.u_error = 0;
+		if(n != SIGINS && n != SIGTRC)
+			u.u_signal[n] = 0;
+		sendsig((caddr_t)p, n);
+		return;
+	}
+	switch(n) {
+
+	case SIGQUIT:
+	case SIGINS:
+	case SIGTRC:
+	case SIGIOT:
+	case SIGEMT:
+	case SIGFPT:
+	case SIGBUS:
+	case SIGSEG:
+	case SIGSYS:
+		if(core())
+			n += 0200;
+	}
+	do_exit(0x100 | n, trap_frame);
+}
 
 /*
  * find the signal in bit-position
@@ -156,9 +215,89 @@ fsig(struct proc *p)
 	}
 	return(0);
 }
+static int
+schar(void)
+{
+	return((unsigned char)*u.u_dirp++);
+}
 
-/* v7's core() wrote a process's u-area + data + stack to ./core on a
- * fatal signal.  Called from psig(); removed alongside it. */
+/*
+ * Create a core image on the file "core"
+ * If you are looking for protection glitches,
+ * there are probably a wealth of them here
+ * when this occurs to a suid command.
+ *
+ * It writes USIZE block of the
+ * user.h area followed by the entire
+ * data+stack segments.
+ */
+int
+core(void)
+{
+	register struct inode *ip;
+	register unsigned s;
+
+	u.u_error = 0;
+	u.u_dirp = "core";
+	ip = namei(schar, 1);
+	if(ip == NULL) {
+		if(u.u_error)
+			return(0);
+		ip = maknode(0666);
+		if (ip==NULL)
+			return(0);
+	}
+	if(!access(ip, IWRITE) &&
+	   (ip->i_mode&IFMT) == IFREG &&
+	   u.u_uid == u.u_ruid) {
+		itrunc(ip);
+		u.u_offset = 0;
+		u.u_base = (caddr_t)&u;
+		u.u_count = ctob(USIZE);
+		u.u_segflg = 1;
+		writei(ip);
+		s = u.u_procp->p_size - USIZE;
+		estabur((unsigned)0, s, (unsigned)0, 0, RO);
+		u.u_base = 0;
+		u.u_count = ctob(s);
+		u.u_segflg = 0;
+		writei(ip);
+	}
+	iput(ip);
+	return(u.u_error==0);
+}
+
+/*
+ * grow the stack to include the SP
+ * true return if successful.
+
+ */
+int
+grow(unsigned sp)
+{
+	register int si, i;
+	register struct proc *p;
+	register int a;
+
+	if(sp >= -ctob(u.u_ssize))
+		return(0);
+	si = (-sp)/64 - u.u_ssize + SINCR;
+	if(si <= 0)
+		return(0);
+	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))
+		return(0);
+	p = u.u_procp;
+	expand(p->p_size+si);
+	a = p->p_addr + p->p_size;
+	for(i=u.u_ssize; i; i--) {
+		a--;
+		copyseg(a-si, a);
+	}
+	for(i=si; i; i--)
+		clearseg(--a);
+	u.u_ssize += si;
+	return(1);
+}
 
 /*
  * sys-trace system call.
@@ -210,5 +349,124 @@ ptrace(void)
 	ipc.ip_lock = 0;
 	wakeup((caddr_t)&ipc);
 }
+static int
+sig_fuword(caddr_t addr)
+{
+	return(*(int *)addr);
+}
+static int
+sig_suword(caddr_t addr, int data)
+{
+	*(int *)addr = data;
+	return(0);
+}
 
-/* procxmt() removed -- see comment above. */
+/*
+ * Code that the child process
+ * executes to implement the command
+ * of the parent process in tracing.
+ */
+int
+procxmt(void)
+{
+	register int i;
+	register int *p;
+	register struct text *xp;
+
+	if (ipc.ip_lock != u.u_procp->p_pid)
+		return(0);
+	i = ipc.ip_req;
+	ipc.ip_req = 0;
+	wakeup((caddr_t)&ipc);
+	switch (i) {
+
+	/* read user I */
+	case 1:
+		if (fubyte((caddr_t)ipc.ip_addr) == -1)
+			goto error;
+		ipc.ip_data = sig_fuword((caddr_t)ipc.ip_addr);
+		break;
+
+	/* read user D */
+	case 2:
+		if (fubyte((caddr_t)ipc.ip_addr) == -1)
+			goto error;
+		ipc.ip_data = sig_fuword((caddr_t)ipc.ip_addr);
+		break;
+
+	/* read u */
+	case 3:
+		i = (int)ipc.ip_addr;
+		if (i<0 || i >= ctob(USIZE))
+			goto error;
+		ipc.ip_data = *(int *)((char *)&u + i);
+		break;
+
+	/* write user I */
+	/* Must set up to allow writing */
+	case 4:
+		/*
+		 * If text, must assure exclusive use
+		 */
+		xp = u.u_procp->p_textp;
+		if (xp != NULL) {
+			if (xp->x_count!=1 || (xp->x_iptr->i_mode&ISVTX))
+				goto error;
+			xp->x_iptr->i_flag &= ~ITEXT;
+		}
+		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RW);
+		i = sig_suword((caddr_t)ipc.ip_addr, 0);
+		sig_suword((caddr_t)ipc.ip_addr, ipc.ip_data);
+		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
+		if (i<0)
+			goto error;
+		if (xp)
+			xp->x_flag |= XWRIT;
+		break;
+
+	/* write user D */
+	case 5:
+		if (sig_suword((caddr_t)ipc.ip_addr, 0) < 0)
+			goto error;
+		sig_suword((caddr_t)ipc.ip_addr, ipc.ip_data);
+		break;
+
+	/* write u */
+	case 6:
+		i = (int)ipc.ip_addr;
+		if (i<0 || i+(int)sizeof(int) > ctob(USIZE))
+			goto error;
+		p = (int *)((char *)&u + i);
+		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
+			goto ok;
+		goto error;
+
+	ok:
+		*p = ipc.ip_data;
+		break;
+
+	/* set signal and continue */
+	/*  one version causes a trace-trap */
+	case 9:
+	case 7:
+		if ((int)ipc.ip_addr != 1) {
+			p = trap_frame != NULL ? trap_frame : u.u_ar0;
+			if (p != NULL)
+				p[ARM_PC] = (int)ipc.ip_addr;
+		}
+		u.u_procp->p_sig = 0;
+		if (ipc.ip_data)
+			psignal(u.u_procp, ipc.ip_data);
+		return(1);
+
+	/* force exit */
+	case 8:
+		do_exit(0x100 | fsig(u.u_procp), trap_frame);
+		return(1);
+
+	default:
+	error:
+		ipc.ip_req = -1;
+	}
+	return(0);
+}

@@ -5,12 +5,10 @@
 #include <sys/types.h>
 #include <sys/times.h>
 
-int errno;
+extern int errno;
 extern char *sys_errlist[];
 
 void printt(char *s, long a);
-void exit(int n);
-
 int
 main(int argc, char **argv)
 {

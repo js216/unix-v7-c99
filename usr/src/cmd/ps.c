@@ -31,7 +31,6 @@ struct nlist nl[] = {
 };
 
 static int cur_slot;	/* index of mproc within proc[]; passed to prcom indirectly */
-
 struct	proc mproc;
 
 struct	user u;
@@ -313,6 +312,7 @@ prcom(int puid)
 		return(1);
 	}
 	/* In real v7, p_addr*64 / p_size*64 describe the swap-clicks layout
+
 	 * of a process's user struct + text/data/stack image, and the scan
 	 * below walks the top of the user stack (where exec() laid out
 	 * argv[]) byte by byte through a saved struct user{} address map.
@@ -335,6 +335,7 @@ prcom(int puid)
 	 * argv strings).  Original v7 read at addr+size-512 because v7 placed
 	 * argv at the top of the user stack; in this port the buffer base is
 	 * UARGV itself. */
+
 	lseek(file, addr, 0);
 	if (read(file, abuf, sizeof(abuf)) != sizeof(abuf))
 		return(1);

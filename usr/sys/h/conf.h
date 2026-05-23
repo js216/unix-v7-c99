@@ -17,8 +17,7 @@ extern struct bdevsw
 } bdevsw[];
 
 /*
- * Character device switch.  v7's d_ioctl, d_stop, d_ttys are gone --
- * cdevsw[] is empty on this port (no char-device drivers wire it).
+ * Character device switch.
  */
 extern struct cdevsw
 {
@@ -26,5 +25,24 @@ extern struct cdevsw
 	int	(*d_close)(dev_t dev, int flag);
 	int	(*d_read)(dev_t dev);
 	int	(*d_write)(dev_t dev);
+	int	(*d_ioctl)();
+	int	(*d_stop)();
+	struct tty *d_ttys;
 } cdevsw[];
 
+/*
+ * tty line control switch.
+ */
+extern struct linesw
+{
+	int	(*l_open)();
+	int	(*l_close)();
+	int	(*l_read)();
+	char	*(*l_write)();
+	int	(*l_ioctl)();
+	int	(*l_rint)();
+	int	(*l_rend)();
+	int	(*l_meta)();
+	int	(*l_start)();
+	int	(*l_modem)();
+} linesw[];

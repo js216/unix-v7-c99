@@ -4,55 +4,20 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
+#include "../h/proc.h"
+#include "../h/seg.h"
+void brelse(struct buf *bp);
+void iowait(struct buf *bp);
+void notavail(struct buf *bp);
+void geterror(struct buf *bp);
+int incore(dev_t dev, daddr_t blkno);
+void wakeup(caddr_t chan);
+void sleep(caddr_t chan, int pri);
+int spl0(void);
+int spl6(void);
+void splx(int s);
+void panic(char *s);
+void mapfree(struct buf *bp);
 
 #define	DISKMON	1
 
@@ -196,13 +161,21 @@ bwrite(struct buf *bp)
 void
 bdwrite(struct buf *bp)
 {
+
 	bp->b_flags |= B_DELWRI | B_DONE;
 	brelse(bp);
 }
 
-/* v7's bawrite() (asynchronous bwrite) is gone -- its only callers
- * were sys1.c::exec (now removed) and the B_TAPE branch of bdwrite
- * (also gone). */
+/*
+ * Release the buffer, start I/O on it, but don't wait for completion.
+ */
+void
+bawrite(register struct buf *bp)
+{
+
+	bp->b_flags |= B_ASYNC;
+	bwrite(bp);
+}
 
 /*
  * release the buffer, with no I/O implied.
@@ -400,8 +373,8 @@ void
 iodone(struct buf *bp)
 {
 
-	/* v7's B_MAP/mapfree path (UNIBUS map release after physio) is gone
-	 * -- no buf on this port carries B_MAP, so the branch was dead. */
+	if (bp->b_flags&B_MAP)
+		mapfree(bp);
 	bp->b_flags |= B_DONE;
 	if (bp->b_flags&B_ASYNC)
 		brelse(bp);
@@ -447,10 +420,7 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 		sleep((caddr_t)bp, PSWP+1);
 	}
 	while (count) {
-		/* v7 set B_PHYS (UNIBUS-mapped physio) and b_xmem (high
-		 * 6 bits of an 18-bit phys address); neither is ever read
-		 * on this port, so they are dropped. */
-		bp->b_flags = B_BUSY | rdflg;
+		bp->b_flags = B_BUSY | B_PHYS | rdflg;
 		bp->b_dev = swapdev;
 		tcount = count;
 		if (tcount >= 01700)	/* prevent byte-count wrap */
@@ -458,6 +428,7 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 		bp->b_bcount = ctob(tcount);
 		bp->b_blkno = swplo+blkno;
 		bp->b_un.b_addr = (caddr_t)(coreaddr<<6);
+		bp->b_xmem = (coreaddr>>10) & 077;
 		(*bdevsw[major(swapdev)].d_strategy)(bp);
 		spl6();
 		while((bp->b_flags&B_DONE)==0)
@@ -496,6 +467,82 @@ loop:
 		}
 	}
 	spl0();
+}
+
+/*
+ * Raw I/O. The arguments are
+ *	The strategy routine for the device
+ *	A buffer, which will always be a special buffer
+ *	  header owned exclusively by the device for this purpose
+ *	The device number
+ *	Read/write flag
+ * Essentially all the work is computing physical addresses and
+ * validating them.
+ */
+void
+physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
+{
+	register unsigned base;
+	register int nb;
+	int ts;
+
+	base = (unsigned)u.u_base;
+	/*
+	 * Check odd base, odd count, and address wraparound
+	 */
+	if (base&01 || u.u_count&01 || base>=base+u.u_count)
+		goto bad;
+	ts = (u.u_tsize+127) & ~0177;
+	if (u.u_sep)
+		ts = 0;
+	nb = (base>>6) & 01777;
+	/*
+	 * Check overlap with text. (ts and nb now
+	 * in 64-byte clicks)
+	 */
+	if (nb < ts)
+		goto bad;
+	/*
+	 * Check that transfer is either entirely in the
+	 * data or in the stack: that is, either
+	 * the end is in the data or the start is in the stack
+	 * (remember wraparound was already checked).
+	 */
+	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
+	    && (unsigned)nb < 1024-u.u_ssize)
+		goto bad;
+	spl6();
+	while (bp->b_flags&B_BUSY) {
+		bp->b_flags |= B_WANTED;
+		sleep((caddr_t)bp, PRIBIO+1);
+	}
+	bp->b_flags = B_BUSY | B_PHYS | rw;
+	bp->b_dev = dev;
+	/*
+	 * Compute physical address by simulating
+	 * the segmentation hardware.
+	 */
+	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
+	bp->b_un.b_addr = (caddr_t)((ts<<6) + (base&077));
+	bp->b_xmem = (ts>>10) & 077;
+	bp->b_blkno = u.u_offset >> BSHIFT;
+	bp->b_bcount = u.u_count;
+	bp->b_error = 0;
+	u.u_procp->p_flag |= SLOCK;
+	(*strat)(bp);
+	spl6();
+	while ((bp->b_flags&B_DONE) == 0)
+		sleep((caddr_t)bp, PRIBIO);
+	u.u_procp->p_flag &= ~SLOCK;
+	if (bp->b_flags&B_WANTED)
+		wakeup((caddr_t)bp);
+	spl0();
+	bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
+	u.u_count = bp->b_resid;
+	geterror(bp);
+	return;
+bad:
+	u.u_error = EFAULT;
 }
 
 /*

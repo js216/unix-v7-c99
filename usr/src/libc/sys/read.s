@@ -1,3 +1,6 @@
+
+
+
 .globl read
 read:
 		mov ip, r7

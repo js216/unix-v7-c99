@@ -1,7 +1,7 @@
-#define S_GTTY 32
-int syscall3(int, int, int, int);
+#include <sgtty.h>
+int ioctl(int, int, char *);
 int
-gtty(int fd, char *buf)
+gtty(int fd, struct sgttyb *ap)
 {
-	return(syscall3(S_GTTY, fd, (int)buf, 0));
+	return(ioctl(fd, TIOCGETP, (char *)ap));
 }

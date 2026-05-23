@@ -1,3 +1,10 @@
+
+
+
+
+
+
+
 .globl getuid
 getuid:
 	mov ip, r7

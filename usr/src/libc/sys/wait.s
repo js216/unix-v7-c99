@@ -1,3 +1,6 @@
+
+
+
 .globl wait
 wait:
 		mov ip, r7

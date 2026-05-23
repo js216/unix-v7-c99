@@ -221,6 +221,7 @@ piececount(int *player, int startrow, int endrow)
 }
 int
 roll(void)
+
 {
 	extern int die1,die2;
 	die1=(bg_rand()>>8)%6+1;

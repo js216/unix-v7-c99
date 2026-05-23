@@ -35,8 +35,6 @@ int getargc(void);
 void cgotofn(void);
 void overflo(void);
 void cfail(void);
-void exit(int n);
-
 int
 main(int argc, char **argv)
 {

@@ -16,16 +16,13 @@ int cp, lp;
 int ll, llh, mustwr;
 int pcp = 0;
 char *pgmname;
-char *strcpy(char *a, char *b);
+char *strcpy();
 void outc(int c);
 void store(int lno);
 void fetch(int lno);
 void emit(char *s, int lineno);
 void incr(void);
 void decr(void);
-char *malloc(unsigned n);
-void free(char *p);
-void exit(int n);
 
 int
 main (int argc, char **argv)
@@ -216,6 +213,7 @@ outc (register int c)
 
 void
 store (int lno)
+
 {
 	lno %= PL;
 	if (page[lno] != 0)

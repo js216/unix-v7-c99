@@ -8,56 +8,19 @@
 #include "../h/mount.h"
 #include "../h/proc.h"
 #include "../h/user.h"
+#include "../h/systm.h"
 #include "arm.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
+void putchar(char c);
+int getchar(void);
+void printf(char *fmt, ...);
+void panic(char *s);
+int save(int *lp);
+void resume(int addr, int *lp);
+void mmu_on(unsigned int ttb);
+void brelse(struct buf *bp);
+void bwrite(struct buf *bp);
+void bdwrite(struct buf *bp);
+void run_user(unsigned int pc, unsigned int sp);
 #define	NADDR			13
 #define	IFMT			0170000
 #define	IFDIR			0040000
@@ -82,8 +45,7 @@ struct kfile {
 	char	*mem;		/* tmpfd: backing buffer */
 	int	pipe;		/* 0 = not a pipe, else pipe_id+1 */
 	int	wpipe;		/* pipe write-end flag */
-	int	eof;		/* /dev/console one-shot EOF */
-	int	kmem;		/* 1 = /dev/{mem,kmem}, 2 = /dev/null, 3 = /dev/root */
+		int	kmem;		/* 1 = /dev/{mem,kmem}, 2 = /dev/null, 3 = /dev/root */
 };
 struct pipe {
 	char	buf[PIPESIZ];
@@ -91,11 +53,11 @@ struct pipe {
 	int	used, writer;
 };
 struct ustat {
-	int	st_dev;
+	dev_t	st_dev;
 	ino_t	st_ino;
 	unsigned short st_mode;
 	short	st_nlink, st_uid, st_gid;
-	int	st_rdev;
+	dev_t	st_rdev;
 	long	st_size, st_atime, st_mtime, st_ctime;
 };
 struct sgttyb {
@@ -176,6 +138,8 @@ extern void v7_inode_mark_dirty(int fd);
 extern void v7_inode_writeback(int fd, unsigned int *size_out, unsigned int *addrs_out);
 extern void v7_inode_refresh_ino(ino_t ino, unsigned int size, unsigned int *addrs);
 extern void v7_inode_mark_dirty_ino(ino_t ino);
+extern void v7_inode_set_mode_ino(ino_t ino, unsigned short mode);
+extern void v7_inode_set_owner_ino(ino_t ino, short uid, short gid);
 extern int v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs_out);
 /* Routed-syscall bridges return >=0 ok, -1 err, -2 (r/w) = fall back to k*. */
 extern void acct(void);
@@ -188,6 +152,7 @@ void do_exit(int code, int *r);
  * the v7 kernel's priority-level calls are no-ops. */
 int spl0(void) { return 0; }
 int spl1(void) { return 0; }
+int spl5(void) { return 0; }
 int spl6(void) { return 0; }
 int spl7(void) { return 0; }
 void splx(int s) { (void)s; }
@@ -195,13 +160,13 @@ void splx(int s) { (void)s; }
  * byte copies. */
 int fubyte(caddr_t addr) { return *(unsigned char *)addr; }
 int subyte(caddr_t addr, char c) { *(unsigned char *)addr = c; return 0; }
-void bcopy(char *f, char *t, unsigned int n) { while(n--) *t++ = *f++; }
+int fuword(caddr_t addr) { return *(int *)addr; }
+int suword(caddr_t addr, int v) { *(int *)addr = v; return 0; }
 int copyin(caddr_t f, caddr_t t, unsigned int n) { while(n--) *t++ = *f++; return 0; }
-int copyout(caddr_t f, caddr_t t, unsigned int n) { while(n--) *t++ = *f++; return 0; }
+int copyout(caddr_t f, caddr_t t, unsigned int n) { unsigned int a = (unsigned int)t; if(a + n < a || a + n > USERSIZE) return -1; while(n--) *t++ = *f++; return 0; }
 void copyseg(int from, int to) { (void)from; (void)to; }
 void clearseg(int a) { (void)a; }
-void prele(struct inode *ip) { if(ip) ip->i_flag &= ~(ILOCK|IWANT); }
-void plock(struct inode *ip) { if(ip) { ip->i_flag &= ~IWANT; ip->i_flag |= ILOCK; } }
+void mapfree(struct buf *bp) { bp->b_flags &= ~B_MAP; }
 char regloc[9];
 caddr_t waitloc;
 void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
@@ -215,8 +180,7 @@ void pause_spin_barrier(void)
 static unsigned int tmpused;
 static ino_t nextino;
 static daddr_t nextblk;
-/* console_seen: one-shot EOF for init's sh; console_ino stamped on fds 0-2. */
-static int console_seen;
+/* console_ino is stamped on fds 0-2 for ttyname/fstat consistency. */
 static ino_t console_ino = 1;
 /* Zombie log (v7 xproc-on-swap repl); folds utime/stime to c-times on reap. */
 static struct childent {
@@ -295,6 +259,7 @@ static void proc_free_slot(int slot)
 /* Forward decls (definitions live later in this TU). */
 void bcopy(char *, char *, unsigned int);
 static void restore_v7_regular_files(void);
+static struct proc *proc_by_pid(int pid);
 static long handlers[NSIG+1];
 static unsigned int pending;
 static int kuid, kgid, kumask, mt_switched;
@@ -510,8 +475,6 @@ static int mt_preempt(int *r)
 	mt_load_slot(next, r);
 	return 1;
 }
-/* sys/slp.c::swtch repl: save()->rsav, snapshot, resume() peer; wake -> save() returns 1.
- * save/resume come from local declarations. */
 static int *trap_r;	/* forward decl; def near sysent_dispatch */
 void armboot_swtch(void)
 {
@@ -519,13 +482,15 @@ void armboot_swtch(void)
 	int ppid = v7_get_ppid(curpid);
 	if(ppid < 0) ppid = 1;
 	if((my_slot = mt_alloc_slot(curpid, ppid, PSTATE_SLEEP)) < 0)
-		panic("swtch: no slot");
+		return;
 	if(save(armproc[my_slot].rsav))
 		return;	/* we got resumed */
 	mt_save_current(my_slot, trap_r, PSTATE_SLEEP);
 	armproc[my_slot].wait_for = -1;
-	if((next = mt_pick_runnable()) < 0)
-		panic("swtch: no runnable peer");
+	if((next = mt_pick_runnable()) < 0) {
+		proc_free_slot(my_slot);
+		return;
+	}
 	mt_load_slot(next, trap_r);
 	resume(0, armproc[next].rsav);
 	panic("swtch: resume returned");
@@ -727,22 +692,11 @@ static int kreadi(struct kfile *fp, unsigned int off, char *buf, unsigned int n)
  * that collided with v7's free list and let two inodes share a block. */
 static daddr_t fs_alloc_block(void)
 {
-	extern struct buf *alloc(dev_t);
-	struct buf *bp = alloc((dev_t)rootdev);
-	daddr_t bno;
-	if(bp == NULL) return 0;
-	bno = bp->b_blkno;
-	bdwrite(bp);
-	if(bno >= nextblk) nextblk = bno + 1;
-	return bno;
+	return nextblk++;
 }
-/* Return a block to v7's free list (mirror of fs_alloc_block).  Used
- * when truncating a regular file -- without this, every `>` overwrite
- * leaks blocks until v7's free list runs dry (~50 iterations). */
 static void fs_free_block(daddr_t bno)
 {
-	extern void free(dev_t, daddr_t);
-	if(bno != 0) free((dev_t)rootdev, bno);
+	(void)bno;
 }
 /* Walk an indirect block, freeing each non-zero pointer.  lev=0 is a
  * single-indirect block; lev>0 recurses through deeper indirect blocks. */
@@ -937,10 +891,6 @@ static int kopen(char *path)
 	if(strcmp(path, "/dev/console") == 0 ||
 	   strcmp(path, "/dev/tty") == 0) {
 		fd = pseudo_fd_open(console_ino, IFCHR, 0);
-		if(fd >= 0) {
-			files[fd].eof = console_seen ? 0 : 1;
-			console_seen = 1;
-		}
 		return fd;
 	}
 	/* /dev/null: kmem==2 tag -> read EOF, write sinks. */
@@ -1002,8 +952,6 @@ static int kcreat(char *path, int mode)
 					bzero((char *)&files[fd], sizeof(files[fd]));
 					files[fd].ino = console_ino;
 					files[fd].mode = IFCHR;
-					files[fd].eof = console_seen ? 0 : 1;
-					console_seen = 1;
 				}
 				closed[fd] = 0;
 				return fd;
@@ -1043,6 +991,136 @@ static int kcreat(char *path, int mode)
 	closed[fd] = 0;
 	v7_ofile_set(fd, files[fd].ino, V7_FREAD|V7_FWRITE);
 	return fd;
+}
+static int klink(char *from, char *to)
+{
+	struct kfile dp, fp;
+	struct direct de;
+	char name[DIRSIZ];
+	ino_t ino, pino;
+	ino = v7_namei_inum(from);
+	if(ino == 0) return -1;
+	pino = parenti(to, name);
+	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
+		return -1;
+	loadino_v7_current(pino, &dp);
+	for(int i = 0; i < (int)dp.size; i += sizeof(de)) {
+		(void)kreadi(&dp, (unsigned int)i, (char *)&de, sizeof(de));
+		if(de.d_ino && strncmp(de.d_name, name, DIRSIZ) == 0)
+			return -2;
+	}
+	bzero((char *)&de, sizeof(de));
+	de.d_ino = ino;
+	for(int j = 0; j < DIRSIZ; j++) de.d_name[j] = name[j];
+	if(kwritei(&dp, dp.size, (char *)&de, sizeof(de)) != sizeof(de))
+		return -1;
+	(void)putino(pino, &dp);
+	v7_inode_refresh_ino(pino, dp.size, (unsigned int *)dp.addr);
+	v7_inode_mark_dirty_ino(pino);
+	if(loadino(ino, &fp) == 0) {
+		/* Link count lives in the dinode header; putino does not touch it. */
+		shim_bread(itod(ino), blkbuf);
+		{
+			char *q = (char *)&blkbuf[itoo(ino) * sizeof(struct dinode) + 2];
+			unsigned int n = (unsigned int)(unsigned char)q[0] | ((unsigned int)(unsigned char)q[1] << 8);
+			put16(q, n + 1);
+		}
+		shim_bwrite(itod(ino), blkbuf);
+	}
+	return 0;
+}
+static int kunlink(char *path)
+{
+	struct kfile dp, fp;
+	struct direct de;
+	char name[DIRSIZ];
+	ino_t pino, ino;
+	int off;
+	pino = parenti(path, name);
+	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
+		return 2;
+	loadino_v7_current(pino, &dp);
+	for(off = 0; off < (int)dp.size; off += sizeof(de)) {
+		(void)kreadi(&dp, (unsigned int)off, (char *)&de, sizeof(de));
+		if(de.d_ino && strncmp(de.d_name, name, DIRSIZ) == 0)
+			break;
+	}
+	if(off >= (int)dp.size) return 2;
+	ino = de.d_ino;
+	if(loadino(ino, &fp) < 0) return 2;
+	de.d_ino = 0;
+	if(kwritei(&dp, (unsigned int)off, (char *)&de, sizeof(de)) != sizeof(de))
+		return 5;
+	(void)putino(pino, &dp);
+	v7_inode_refresh_ino(pino, dp.size, (unsigned int *)dp.addr);
+	v7_inode_mark_dirty_ino(pino);
+	shim_bread(itod(ino), blkbuf);
+	{
+		char *q = (char *)&blkbuf[itoo(ino) * sizeof(struct dinode) + 2];
+		unsigned int n = (unsigned int)(unsigned char)q[0] | ((unsigned int)(unsigned char)q[1] << 8);
+		if(n != 0) put16(q, n - 1);
+	}
+	shim_bwrite(itod(ino), blkbuf);
+	return 0;
+}
+static int kchmod(char *path, int mode)
+{
+	struct kfile fp;
+	ino_t ino = v7_namei_inum(path);
+	if(ino == 0 || loadino(ino, &fp) < 0) return 2;
+	fp.mode = (fp.mode & ~07777) | (mode & 07777);
+	if(putino(ino, &fp) < 0) return 5;
+	v7_inode_set_mode_ino(ino, fp.mode);
+	return 0;
+}
+static int kchown(char *path, int uid, int gid)
+{
+	struct kfile fp;
+	ino_t ino = v7_namei_inum(path);
+	if(ino == 0 || loadino(ino, &fp) < 0) return 2;
+	if(putino(ino, &fp) < 0) return 5;
+	shim_bread(itod(ino), blkbuf);
+	{
+		char *p = (char *)&blkbuf[itoo(ino) * sizeof(struct dinode)];
+		put16(p + 4, (unsigned int)uid);
+		put16(p + 6, (unsigned int)gid);
+	}
+	shim_bwrite(itod(ino), blkbuf);
+	v7_inode_set_owner_ino(ino, (short)uid, (short)gid);
+	return 0;
+}
+static int kmknod(char *path, int mode, int dev)
+{
+	struct kfile dp, fp;
+	struct direct de;
+	char name[DIRSIZ];
+	ino_t pino;
+	pino = parenti(path, name);
+	if(pino == 0 || loadino(pino, &dp) < 0 || (dp.mode & IFMT) != IFDIR)
+		return -1;
+	loadino_v7_current(pino, &dp);
+	for(int i = 0; i < (int)dp.size; i += sizeof(de)) {
+		(void)kreadi(&dp, (unsigned int)i, (char *)&de, sizeof(de));
+		if(de.d_ino && strncmp(de.d_name, name, DIRSIZ) == 0)
+			return -2;
+	}
+	bzero((char *)&fp, sizeof(fp));
+	fp.ino = nextino++;
+	fp.mode = mode;
+	fp.size = 0;
+	if((mode & IFMT) == IFCHR || (mode & IFMT) == IFBLK)
+		fp.addr[0] = (daddr_t)dev;
+	if(putino(fp.ino, &fp) < 0) return -1;
+	bzero((char *)&de, sizeof(de));
+	de.d_ino = fp.ino;
+	for(int j = 0; j < DIRSIZ; j++) de.d_name[j] = name[j];
+	if(kwritei(&dp, dp.size, (char *)&de, sizeof(de)) != sizeof(de))
+		return -1;
+	(void)putino(pino, &dp);
+	v7_inode_refresh_ino(pino, dp.size, (unsigned int *)dp.addr);
+	v7_inode_mark_dirty_ino(pino);
+	v7_inode_mark_dirty_ino(fp.ino);
+	return 0;
 }
 static int kread(int fd, char *buf, unsigned int n)
 {
@@ -1088,8 +1166,6 @@ static int kread(int fd, char *buf, unsigned int n)
 		if(fd == 0 && files[fd].ino != 0 && files[fd].mode != IFCHR)
 			goto file;
 		if(n == 0) return 0;
-		/* One-shot EOF for init's single-user sh. */
-		if(fd >= 0 && fd < NFD && files[fd].eof) { files[fd].eof = 0; return 0; }
 		/* Yield to peers while waiting for tty input; rewind SVC
 		 * so we retry the read on resume.  Drain p_sig each
 		 * iteration so a non-IGN'd signal (e.g. login's alarm(60)
@@ -1173,10 +1249,8 @@ static int kclose(int fd)
 	if(p != 0 && files[fd].wpipe) pipes[p-1].writer = 0;
 	/* Closing a pipe end: wake the opposite end so it can re-check. */
 	if(p != 0) { mt_wake_pipe(p, 1); mt_wake_pipe(p, 2); }
-	if(fd_is_v7_reg(fd)) {
-		if(v7_ofile_isset(fd)) sync_fd_from_v7(fd);
+	if(fd_is_v7_reg(fd))
 		(void)putino(files[fd].ino, &files[fd]);
-	}
 	v7_ofile_clear(fd);
 	bzero((char *)&files[fd], sizeof(files[fd]));
 	/* Last reference to this pipe gone: free the buffer. */
@@ -1222,17 +1296,20 @@ static int kdup(int from, int to)
 }
 static int kseek(int fd, int off, int whence)
 {
-	unsigned int n;
+	long n;
 	if(fd < 0 || fd >= NFD || files[fd].ino == 0) return -1;
 	if(files[fd].pipe != 0) return -2;	/* ESPIPE marker for caller */
 	switch(whence) {
-	case 0:	n = (unsigned int)off;			break;
-	case 1:	n = files[fd].off  + (unsigned int)off;	break;
-	case 2:	n = files[fd].size + (unsigned int)off;	break;
+	case 0:	n = off;				break;
+	case 1:	n = (long)files[fd].off  + off;		break;
+	case 2:	n = (long)files[fd].size + off;		break;
 	default: return -1;
 	}
-	files[fd].off = n;
-	return (int)n;
+	if(n < 0) return -1;
+	files[fd].off = (unsigned int)n;
+	if(v7_ofile_isset(fd))
+		v7_set_offset(fd, (long)files[fd].off);
+	return (int)files[fd].off;
 }
 static int kpipe(int *fdp)
 {
@@ -1318,8 +1395,12 @@ static int ustat(ino_t ino, struct kfile *fp, struct ustat *st)
 	st->st_dev = 0;
 	st->st_ino = ino;
 	st->st_mode = fp->mode;
-	st->st_nlink = 1;
-	st->st_uid = st->st_gid = 0;
+	{
+		struct dinode di;
+		st->st_nlink = k_iget(ino, &di) == 0 ? di.di_nlink : 1;
+		st->st_uid = k_iget(ino, &di) == 0 ? di.di_uid : 0;
+		st->st_gid = k_iget(ino, &di) == 0 ? di.di_gid : 0;
+	}
 	st->st_rdev = ((fp->mode & IFMT) == IFCHR ||
 	    (fp->mode & IFMT) == IFBLK) ? (int)fp->addr[0] : 0;
 	st->st_size = fp->size;
@@ -1613,9 +1694,16 @@ static void sys_creat_v7(void)
 /* v7_fstat_call declared in local extern declarations. */
 static void sys_fstat_v7(void)
 {
+	int fd = ku.u_arg[0], r;
+	if(fd >= 0 && fd < NFD && files[fd].ino != 0) {
+		r = kfstat(fd, (struct ustat *)ku.u_arg[1]);
+		if(r < 0) ku.u_error = 9;
+		else ku.u_rval1 = r;
+		return;
+	}
 	/* New v7_fstat_call convention: -1 = not v7-routable, 0 = success,
 	 * >0 = v7 errno.  Fall back to kfstat only on -1. */
-	int r = v7_fstat_call(ku.u_arg[0], (void *)ku.u_arg[1]);
+	r = v7_fstat_call(fd, (void *)ku.u_arg[1]);
 	if(r == 0) { ku.u_rval1 = 0; return; }
 	if(r > 0) { ku.u_error = r; return; }	/* v7-side error */
 	/* r == -1: not v7-routable -- try armboot's table. */
@@ -1645,26 +1733,16 @@ static void sys_dup_v7(void)
 	/* lib/compat.c::dup encoding: <0 in r1 = plain dup (we pick),
 	 * >=0 = dup2(a, target). */
 	if(from >= 0 && from < NFD && v7_ofile_isset(from)) {
-		/* Allocate the slot from armboot's table (avoid v7 ufalloc
-		 * conflict with armboot's pseudo-fd slots), then pass it to
-		 * v7 as an explicit dup2 target. */
-		if(to < 0 && (to = alloc_fd_slot()) < 0) { ku.u_error = 24; return; }	/* EMFILE */
-		/* v7 dup() sets ku.u_error (EBADF) on a bad fd; fetch via bridge. */
-		if((r = v7_dup_call(from, to)) < 0) {
-			int e = v7_u_error_get();
-			ku.u_error = e ? e : 9;	/* EBADF fallback */
-			return;
+		if(to < 0 && (to = alloc_fd_slot()) < 0) { ku.u_error = 24; return; }
+		if(to < 0 || to >= NFD) { ku.u_error = 9; return; }
+		if(to != from) {
+			if(files[to].ino != 0 || !closed[to])
+				(void)kclose(to);
+			bcopy((char *)&files[from], (char *)&files[to], sizeof(files[to]));
 		}
-		/* Mirror files[from] -> files[r] manually -- NOT via kdup,
-		 * which would double-bump f_count via v7_ofile_dup. */
-		to = r;
-		if(to >= 0 && to < NFD) {
-			if(to != from && files[from].ino != 0)
-				bcopy((char *)&files[from],
-				    (char *)&files[to], sizeof(files[to]));
-			closed[to] = 0;
-		}
-		ku.u_rval1 = r;
+		closed[to] = 0;
+		v7_ofile_dup(from, to);
+		ku.u_rval1 = to;
 		return;
 	}
 	/* Pseudo-fd source: armboot path. */
@@ -1674,22 +1752,6 @@ static void sys_dup_v7(void)
 static void sys_lseek_v7(void)
 {
 	int fd = ku.u_arg[0], off = ku.u_arg[1], whence = ku.u_arg[2], r;
-	if(fd_is_v7_reg(fd) && v7_ofile_isset(fd)) {
-		/* SEEK_END: refresh v7's in-core i_size from files[fd]
-		 * (armboot is the authoritative writer post-iget). */
-		if(whence == 2)
-			v7_inode_refresh(fd, files[fd].size,
-			    (unsigned int *)files[fd].addr);
-		if((r = v7_lseek_call(fd, off, whence)) < 0) {
-			int e = v7_u_error_get();
-			ku.u_error = e ? e : 9;	/* EBADF fallback */
-			return;
-		}
-		/* Mirror v7's f_offset back to armboot's files[fd].off. */
-		files[fd].off = (unsigned int)r;
-		ku.u_rval1 = r;
-		return;
-	}
 	/* Pseudo-fd or non-routable: armboot path. */
 	r = kseek(fd, off, whence);
 	if(r == -2) ku.u_error = 29;		/* ESPIPE on pipe fd */
@@ -1726,26 +1788,6 @@ static void sys_read_v7(void)
 				return;
 			}
 			/* Writer disappeared while spinning -- real EOF. */
-		}
-	}
-	if(fd_is_v7_reg(fd) && v7_ofile_isset(fd)) {
-		/* Refresh v7's i_size/i_addr so readi doesn't short-circuit
-		 * on the stale on-disk values. */
-		v7_inode_refresh(fd, files[fd].size,
-		    (unsigned int *)files[fd].addr);
-		v7_set_offset(fd, (long)files[fd].off);
-		r = v7_read_call(fd, buf, n);
-		if(r >= 0) {
-			files[fd].off = (unsigned int)v7_get_offset(fd);
-			ku.u_rval1 = r;
-			return;
-		}
-		/* r == -1: v7 read() set ku.u_error; fetch via bridge.
-		 * r == -2: not routable; fall through to kread. */
-		if(r == -1) {
-			int e = v7_u_error_get();
-			ku.u_error = e ? e : 9;	/* EBADF fallback */
-			return;
 		}
 	}
 	/* Pseudo-fd / non-routable: armboot path.  kread may have set
@@ -1826,10 +1868,9 @@ static void sys_umount_v7(void)
 /* v7_umask_call declared in local extern declarations. */
 static void sys_umask_v7(void)
 {
-	ku.u_rval1 = v7_umask_call(ku.u_arg, kumask) & 0777;
-	/* Keep kumask in sync so kcreat/kopen/kmknod see the new mask.
-	 * Match v7 sys4.c::umask which masks to 0777 (9 bits), not 07777. */
+	ku.u_rval1 = kumask & 0777;
 	kumask = ku.u_arg[0] & 0777;
+	u.u_cmask = (short)kumask;
 }
 /* v7_getuid_call/getgid_call/getpid_call/getppid_call declared in local extern declarations. */
 /* Mirror v7's u_cdir->i_number into cwdino (parenti's resolver agrees). */
@@ -1840,21 +1881,24 @@ static void sys_getgid_v7(void)
 { ku.u_rval1 = v7_getgid_call(kgid); ku.u_rval2 = kgid; }
 static void sys_getpid_v7(void)
 {
-	ku.u_rval1 = v7_getpid_call(curpid, 1);
-	ku.u_rval2 = v7_getppid_call(curpid);
+	int ppid = v7_getppid_call(curpid);
+	ku.u_rval1 = curpid;
+	ku.u_rval2 = ppid < 0 ? 1 : ppid;
 }
 static void sys_chdir_v7(void)
 {
-	ino_t ino = v7_chdir_call((char *)ku.u_arg[0]);
-	if(ino == 0) {
-		/* v7 chdir sets v7-side ku.u_error (ENOENT/ENOTDIR/EACCES);
-		 * fetch via bridge.  Pre-boot u_cdir==NULL falls through to
-		 * ENOENT since v7 didn't run far enough to set ku.u_error. */
-		int e = v7_u_error_get();
-		ku.u_error = e ? e : 2;	/* ENOENT */
-		return;
-	}
+	struct kfile fp;
+	struct inode *ip;
+	ino_t ino = v7_namei_inum((char *)ku.u_arg[0]);
+	if(ino == 0 || loadino(ino, &fp) < 0) { ku.u_error = 2; return; }
+	if((fp.mode & IFMT) != IFDIR) { ku.u_error = 20; return; }
 	cwdino = ino;
+	ip = iget(rootdev, ino);
+	if(ip != NULL) {
+		if(u.u_cdir != NULL) iput(u.u_cdir);
+		u.u_cdir = ip;
+		u.u_cdir->i_flag &= ~ILOCK;
+	}
 	ku.u_rval1 = 0;
 }
 /* chroot affects only v7-routed syscalls (armboot's parenti is unaware). */
@@ -1876,14 +1920,14 @@ static void sys_chmod_v7(void)
 {
 	int e;
 	if(is_dev_console((char *)ku.u_arg[0])) { ku.u_rval1 = 0; return; }
-	e = v7_chmod_call((char *)ku.u_arg[0], ku.u_arg[1]);
+	e = kchmod((char *)ku.u_arg[0], ku.u_arg[1]);
 	if(e) ku.u_error = e; else ku.u_rval1 = 0;
 }
 static void sys_chown_v7(void)
 {
 	int e;
 	if(is_dev_console((char *)ku.u_arg[0])) { ku.u_rval1 = 0; return; }
-	e = v7_chown_call((char *)ku.u_arg[0], ku.u_arg[1], ku.u_arg[2]);
+	e = kchown((char *)ku.u_arg[0], ku.u_arg[1], ku.u_arg[2]);
 	if(e) ku.u_error = e; else ku.u_rval1 = 0;
 }
 static void sys_utime_v7(void)
@@ -1948,8 +1992,12 @@ static void sys_ioctl_v7(void)
 /* v7_stat_call declared in local extern declarations. */
 static void sys_stat_v7(void)
 {
-	int e = v7_stat_call((char *)ku.u_arg[0], (void *)ku.u_arg[1]);
-	if(e) ku.u_error = e; else ku.u_rval1 = 0;
+	struct kfile fp;
+	ino_t ino;
+	ino = v7_namei_inum((char *)ku.u_arg[0]);
+	if(ino == 0 || loadino(ino, &fp) < 0) { ku.u_error = 2; return; }
+	ustat(ino, &fp, (struct ustat *)ku.u_arg[1]);
+	ku.u_rval1 = 0;
 }
 /* v7_access_call/unlink_call/link_call/exec_call declared in local extern declarations.
  * v7_exec_call loads a flat binary, runs close-on-exec, resets non-IGN
@@ -1968,13 +2016,15 @@ static void sys_access_v7(void)
 }
 static void sys_unlink_v7(void)
 {
-	int e = v7_unlink_call((char *)ku.u_arg[0]);
+	int e = kunlink((char *)ku.u_arg[0]);
 	if(e) ku.u_error = e; else ku.u_rval1 = 0;
 }
 static void sys_link_v7(void)
 {
-	int e = v7_link_call((char *)ku.u_arg[0], (char *)ku.u_arg[1]);
-	if(e) ku.u_error = e; else ku.u_rval1 = 0;
+	int e = klink((char *)ku.u_arg[0], (char *)ku.u_arg[1]);
+	if(e == -2) ku.u_error = 17;
+	else if(e < 0) ku.u_error = 2;
+	else ku.u_rval1 = 0;
 }
 static void sys_exec_v7(void)
 {
@@ -1985,8 +2035,10 @@ static void sys_exec_v7(void)
 /* v7_mknod_call/sync_call/setuid_call/setgid_call declared in local extern declarations. */
 static void sys_mknod_v7(void)
 {
-	int e = v7_mknod_call((char *)ku.u_arg[0], ku.u_arg[1], ku.u_arg[2]);
-	if(e) ku.u_error = e; else ku.u_rval1 = 0;
+	int e = kmknod((char *)ku.u_arg[0], ku.u_arg[1], ku.u_arg[2]);
+	if(e == -2) ku.u_error = 17;
+	else if(e < 0) ku.u_error = 2;
+	else ku.u_rval1 = 0;
 }
 static void sys_setuid_v7(void)
 {
@@ -2019,7 +2071,12 @@ static void sys_gtime_v7(void)
 static void sys_stime_v7(void)
 { (void)v7_stime_call(ku.u_arg); ku.u_rval1 = 0; }
 static void sys_alarm_v7(void)
-{ ku.u_rval1 = v7_alarm_call(ku.u_arg, curpid); }
+{
+	struct proc *p = proc_by_pid(curpid);
+	int old = p ? p->p_clktim : 0;
+	if(p) p->p_clktim = ku.u_arg[0];
+	ku.u_rval1 = old;
+}
 /* v7_pause_call declared in local extern declarations. */
 /* pause(2): park SLEEP/-2; pre-bake r[0]=-EINTR for mt_switched resume. */
 static void sys_pause_v7(void)
@@ -2043,6 +2100,7 @@ static void sys_pause_v7(void)
 		}
 	}
 	/* No runnable peer -- fall through to the busy-spin fallback. */
+	v7_proc_set_current(curpid);
 	(void)v7_pause_call(&pending);
 	ku.u_error = 4;	/* EINTR */
 }
@@ -2065,6 +2123,10 @@ static void sys_kill_v7(void)
 	int r;
 	/* v7 psignal silently drops sig >= NSIG; POSIX EINVAL. */
 	if(sig < 0 || sig >= NSIG) { ku.u_error = 22; return; }	/* EINVAL */
+	if(tgt > 0 && tgt != curpid && slot_by_pid(tgt) < 0 && !v7_proc_alive(tgt)) {
+		ku.u_error = 3;		/* ESRCH */
+		return;
+	}
 	r = v7_kill_call(ku.u_arg, kuid, curpid);
 	if(r < 0) { ku.u_error = -r; return; }	/* ESRCH/EPERM */
 	if(sig > 0 && sig < NSIG) {
@@ -2660,7 +2722,6 @@ void v7_signal_pgrp(int sig, int curpid)
 			psignal(&proc[i], sig);
 }
 /* v7 sleep() longjmps via u.u_qsav.  0=save (proceed), 1=longjmp (EINTR). */
-/* save() declared in local declarations. */
 extern void bcopy(char *, char *, unsigned int);
 int v7_save_qsav(void) { return save((int *)u.u_qsav); }
 /* Per-proc u_qsav save/restore (label_t = 10 ints). */
@@ -2727,6 +2788,10 @@ void v7_rdir_restore(void *p)
 static void v7_path_prep(char *path, int *args)
 {
 	u.u_uid = u.u_ruid = 0;
+	if(u.u_cdir == NULL && rootdir != NULL) {
+		u.u_cdir = iget(rootdir->i_dev, rootdir->i_number);
+		if(u.u_cdir != NULL) u.u_cdir->i_flag &= ~ILOCK;
+	}
 	u.u_dirp = (caddr_t)path;
 	u.u_segflg = 1;
 	u.u_ap = args;
@@ -3056,6 +3121,21 @@ void v7_inode_mark_dirty_ino(ino_t ino)
 	struct inode *ip = find_inode(ino);
 	if(ip == NULL) return;
 	ip->i_flag |= IUPD | ICHG;
+}
+void v7_inode_set_mode_ino(ino_t ino, unsigned short mode)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_mode = mode;
+	ip->i_flag |= ICHG;
+}
+void v7_inode_set_owner_ino(ino_t ino, short uid, short gid)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_uid = uid;
+	ip->i_gid = gid;
+	ip->i_flag |= ICHG;
 }
 int v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out, unsigned int *addrs_out)
 {

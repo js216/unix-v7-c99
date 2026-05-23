@@ -8,60 +8,19 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* spl0/spl6/splx/panic/malloc/mfree/copyseg/save/resume come from local declarations.
- * issig comes from h/systm.h. */
+int spl0(void);
+int spl6(void);
+void splx(int s);
+void panic(char *s);
+int save(int *lp);
+void resume(int addr, int *lp);
+int malloc(struct map *mp, int size);
+void mfree(struct map *mp, int size, int a);
+void copyseg(int from, int to);
+void armboot_setrun(int pid);
+void armboot_swtch(void);
 extern void sureg(void);
 extern void xswap(struct proc *, int, int);
-
 void wakeup(register caddr_t chan);
 void setrun(register struct proc *p);
 void setrq(struct proc *p);
@@ -197,8 +156,6 @@ out:
  * armproc_state stays PSTATE_SLEEP.  No semantic change to v7's
  * state machine; just a cross-side notify.
  */
-/* armboot_setrun declared in local declarations. */
-
 void
 setrun(register struct proc *p)
 {
@@ -266,21 +223,9 @@ qswtch(void)
 
 /*
  * This routine is called to reschedule the CPU.
- *
- * PORT DIVERGENCE (documented in logs/unix-on-qemu.md): the original
- * v7 body walked `runq` (a linked list of SRUN procs), picked the
- * lowest p_pri, called save(u.u_rsav) on the current process, and
- * resume()'d into the picked one -- with idle() / proc 0 swapper
- * dance for the no-runnable case.  That model assumes per-proc u-
- * areas swapped in/out of core by an external swapper, which this
- * port does not have.  Instead we keep every proc's u-area + kernel
- * stack permanently in RAM (the save-slot pool in arch/arm.c),
- * and the equivalent save+pick+resume sequence lives in
- * armboot_swtch().  Routing through it here means v7's
- * sleep()/wakeup()/setrun()/exit()/wait()/pause() in this TU and
- * sys/sys1.c / sys/sys4.c / sys/pipe.c work unchanged.
+ * The ARM port keeps per-process stacks resident and performs the
+ * save, pick and resume sequence in arch/arm.c.
  */
-/* armboot_swtch declared in local declarations. */
 
 void
 swtch(void)
@@ -298,6 +243,12 @@ swtch(void)
  * maintains armproc[NSLOTS] in parallel with proc[NPROC]; the child's
  * register state is duplicated by the trap frame copy, not by save()/
  * resume() over the v7 u_ssav. */
+int
+newproc(void)
+{
+	panic("newproc");
+	return(0);
+}
 
 /*
  * Change the size of the data+stack regions of the process.

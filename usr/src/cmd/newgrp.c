@@ -4,10 +4,8 @@
 
 struct	group	*grp;
 struct	passwd	*pwd;
-char	*getpass(char *prompt), *crypt(char *pw, char *salt);
 
 void done(void);
-
 int
 main(int argc, char **argv)
 {

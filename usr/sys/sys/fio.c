@@ -7,58 +7,7 @@
 #include "../h/conf.h"
 #include "../h/inode.h"
 #include "../h/acct.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* wakeup() is declared in local declarations.
- * plock/iput/getfs/namei/uchar/suser/ufalloc/xrele come from h/systm.h. */
+void wakeup(caddr_t chan);
 
 /*
  * Convert a user supplied
@@ -141,9 +90,13 @@ closef(register struct file *fp)
 	(*cfunc)(dev, flag);
 }
 
+
 /* v7 openi() (per-driver d_open dispatch for IFCHR/IFBLK) is gone --
+
  * open(2) on this port routes through arch/arm.c::kopen(), which
+
  * handles the pseudo-fds and IFREG itself.  The cdevsw[]/bdevsw[]
+
  * d_open hook was never reached. */
 
 /*
@@ -248,6 +201,7 @@ ufalloc(void)
 	u.u_error = EMFILE;
 	return(-1);
 }
+
 
 /* v7 falloc() (allocate fd + file slot, return file*) is gone -- its
  * only callers were sys2.c::open1 and pipe.c::pipe, both removed.

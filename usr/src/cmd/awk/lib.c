@@ -2,7 +2,7 @@
 #include "awk.def"
 #include "awk.h"
 #include "ctype.h"
-int error(), fldbld(), setclvar(), member(), isnumber();
+int error(), fldbld(), setclvar(), member(), isnumber(), awkdigit();
 
 FILE	*infile	= NULL;
 char	*file;
@@ -240,13 +240,13 @@ isnumber(register char *s)
 		return(0);	/* empty stuff isn't number */
 	if (*s == '+' || *s == '-')
 		s++;
-	if (!isdigit(*s) && *s != '.')
+	if (!awkdigit(*s) && *s != '.')
 		return(0);
-	if (isdigit(*s)) {
+	if (awkdigit(*s)) {
 		d1++;
 		do {
 			s++;
-		} while (isdigit(*s));
+		} while (awkdigit(*s));
 	}
 	if (*s == '.') {
 		point++;
@@ -254,11 +254,11 @@ isnumber(register char *s)
 	}
 	if (d1 == 0 && point == 0)
 		return(0);
-	if (isdigit(*s)) {
+	if (awkdigit(*s)) {
 		d2++;
 		do {
 			s++;
-		} while (isdigit(*s));
+		} while (awkdigit(*s));
 	}
 	if (!(d1 || (point && d2)))
 		return(0);
@@ -266,12 +266,12 @@ isnumber(register char *s)
 		s++;
 		if (*s == '+' || *s == '-')
 			s++;
-		if (!isdigit(*s))
+		if (!awkdigit(*s))
 			return(0);
 		es = s;
 		do {
 			s++;
-		} while (isdigit(*s));
+		} while (awkdigit(*s));
 		if (s - es > 2)
 			return(0);
 		else if (s - es == 2 && 10 * (*es-'0') + *(es+1)-'0' >= MAXEXPON)
@@ -283,6 +283,13 @@ isnumber(register char *s)
 		return(1);
 	else
 		return(0);
+}
+int
+awkdigit(int c)
+{
+	if(c >= '0' && c <= '9')
+		return(1);
+	return(0);
 }
 /*
 isnumber(s) char *s; {return(0);}

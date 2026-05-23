@@ -1,3 +1,6 @@
+
+
+
 .globl creat
 creat:
 		mov ip, r7

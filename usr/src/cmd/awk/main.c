@@ -14,7 +14,6 @@ int filefd, iflag, symnum, ansfd;
 char *filelist;
 extern int maxsym, errno;
 char lexbuf[512];
-
 int
 haschar(char *s, int c)
 {
@@ -23,7 +22,6 @@ haschar(char *s, int c)
 			return(1);
 	return(0);
 }
-
 int
 kwstart(char *s, char *kw)
 {
@@ -32,19 +30,16 @@ kwstart(char *s, char *kw)
 			return(0);
 	return(*s == 0 || *s == '{' || *s == ' ' || *s == '\t');
 }
-
 int
 awkcmdstart(char *s)
 {
 	return(*s == '{' || kwstart(s, "BEGIN") || kwstart(s, "END"));
 }
-
 int
 awkcmdnext(char *s)
 {
 	return(kwstart(s, "BEGIN") || kwstart(s, "END"));
 }
-
 int
 awkcmdnextact(int argc, char *argv[], int i)
 {
@@ -54,13 +49,11 @@ awkcmdnextact(int argc, char *argv[], int i)
 		return(1);
 	return(i + 1 < argc && argv[i+1][0] == '{');
 }
-
 int
 awkcmdsplit(int argc, char *argv[])
 {
 	char *p;
 	int braces, sawbrace, i;
-
 	if (!awkcmdstart(argv[0]))
 		return(0);
 	braces = 0;
@@ -82,7 +75,6 @@ awkcmdsplit(int argc, char *argv[])
 	}
 	return(0);
 }
-
 int
 main(int argc, char *argv[]) {
 	if (argc == 1)
@@ -114,7 +106,6 @@ main(int argc, char *argv[]) {
 				char *cmdname;
 				char *p;
 				int braces, n, sawbrace, wantact;
-
 				cmdname = argv[-1];
 				p = lexbuf;
 				braces = 0;
@@ -123,7 +114,6 @@ main(int argc, char *argv[]) {
 				wantact = 0;
 				while (argc > 0) {
 					char *q;
-
 					if (n++ != 0 && p < &lexbuf[sizeof(lexbuf)-1])
 						*p++ = ' ';
 					if (awkcmdnext(argv[0]))

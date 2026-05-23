@@ -40,7 +40,6 @@ int	brkf;
 float	dx;
 char	*plotsymb;
 
-double	atof(char *s);
 struct xy;
 struct val;
 int	init(struct xy *p);
@@ -101,35 +100,29 @@ fabs(double x)
 {
 	return(x < 0 ? -x : x);
 }
-
 double
 floor(double x)
 {
 	long n;
-
 	n = x;
 	if((double)n > x)
 		n--;
 	return(n);
 }
-
 double
 ceil(double x)
 {
 	long n;
-
 	n = x;
 	if((double)n < x)
 		n++;
 	return(n);
 }
-
 double
 log10(double x)
 {
 	double y, y2, term, sum;
 	int k, i;
-
 	if(x <= 0)
 		return(-INF);
 	k = 0;
@@ -151,7 +144,6 @@ log10(double x)
 	}
 	return(k + (2*sum)/2.302585092994046);
 }
-
 int
 main(int argc, char *argv[])
 {
@@ -795,7 +787,6 @@ badarg(void)
 	exit(1);
 	return(0);
 }
-
 int
 putsi(int a)
 {
@@ -803,7 +794,6 @@ putsi(int a)
 	putc(a >> 8, stdout);
 	return(0);
 }
-
 int
 space(int x0, int y0, int x1, int y1)
 {
@@ -814,14 +804,12 @@ space(int x0, int y0, int x1, int y1)
 	putsi(y1);
 	return(0);
 }
-
 int
 erase(void)
 {
 	putc('e', stdout);
 	return(0);
 }
-
 int
 move(int xi, int yi)
 {
@@ -830,7 +818,6 @@ move(int xi, int yi)
 	putsi(yi);
 	return(0);
 }
-
 int
 cont(int xi, int yi)
 {
@@ -839,7 +826,6 @@ cont(int xi, int yi)
 	putsi(yi);
 	return(0);
 }
-
 int
 line(int x0, int y0, int x1, int y1)
 {
@@ -850,7 +836,6 @@ line(int x0, int y0, int x1, int y1)
 	putsi(y1);
 	return(0);
 }
-
 int
 point(int xi, int yi)
 {
@@ -859,31 +844,26 @@ point(int xi, int yi)
 	putsi(yi);
 	return(0);
 }
-
 int
 label(char *s)
 {
 	int i;
-
 	putc('t', stdout);
 	for(i=0; s[i]; i++)
 		putc(s[i], stdout);
 	putc('\n', stdout);
 	return(0);
 }
-
 int
 linemod(char *s)
 {
 	int i;
-
 	putc('f', stdout);
 	for(i=0; s[i]; i++)
 		putc(s[i], stdout);
 	putc('\n', stdout);
 	return(0);
 }
-
 int
 closevt(void)
 {

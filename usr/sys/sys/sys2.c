@@ -5,20 +5,15 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 
-/* getf/namei/uchar/maknode/closef/access/readi/writei/plock/prele/iput/suser
- * come from h/systm.h. */
 extern void readp(struct file *);
 extern void writep(struct file *);
 extern void wdir(struct inode *);
-
 void rdwr(int mode);
-
 /* v7's write(), open(), creat() and open1() are gone -- on this port
  * sys_{write,open,creat}_v7 in arch/arm.c implement those syscalls
  * directly (pipe/console fast paths + kopen/kcreat for the file tree),
  * so the v7 entry points were linker-dead.  read() is still routed
  * here via v7_read_call. */
-
 /*
  * read system call
  */
@@ -27,6 +22,7 @@ read(void)
 {
 	rdwr(FREAD);
 }
+
 
 /*
  * common code for read and write calls:
@@ -75,6 +71,13 @@ rdwr(register int mode)
 	}
 	u.u_r.r_val1 = uap->count-u.u_count;
 }
+
+
+
+
+
+
+
 
 /*
  * close system call

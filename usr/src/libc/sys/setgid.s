@@ -1,3 +1,6 @@
+
+
+
 .globl setgid
 setgid:
 		mov ip, r7

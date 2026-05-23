@@ -40,6 +40,7 @@ char	*tty;
 int	mode;
 char	*ttyname(int f);
 char	*ctime(long *t);
+
 void	done(void);
 void	fixtty(void);
 void	print(char *fp, char **argp);
@@ -54,6 +55,7 @@ void	onintr(void);
 int
 main(int argc, char **argv)
 {
+
 	int nfdone;
 	setbuf(stdout, obuf);
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)

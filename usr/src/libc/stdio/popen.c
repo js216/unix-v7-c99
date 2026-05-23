@@ -1,42 +1,58 @@
-#define S_EXIT 1
-#define S_FORK 2
-#define S_CLOSE 6
-#define S_EXEC 11
-#define S_DUP 41
-#define S_PIPE 42
-#define S_WAIT 7
-int syscall3(int, int, int, int);
-typedef struct { int fd; } FILE;
+#include <stdio.h>
+#include <signal.h>
+#define	tst(a,b)	(*mode == 'r'? (b) : (a))
+#define	RDR	0
+#define	WTR	1
+static	int	popen_pid[20];
 
 FILE *
-popen(char *cmd, char *mode)
+popen(cmd,mode)
+char	*cmd;
+char	*mode;
 {
-	static FILE f;
-	int fd[2];
-	char *argv[4];
+	int p[2];
+	register int myside, hisside, pid;
+	int stdside;
 
-	if(*mode != 'r')
-		return(0);
-	if(syscall3(S_PIPE, (int)fd, 0, 0) < 0)
-		return(0);
-	if(syscall3(S_FORK, 0, 0, 0) == 0) {
-		(void)syscall3(S_CLOSE, fd[0], 0, 0);
-		(void)syscall3(S_DUP, fd[1], 1, 0);
-		argv[0] = "sh";
-		argv[1] = "-c";
-		argv[2] = cmd;
-		argv[3] = 0;
-		(void)syscall3(S_EXEC, (int)"/bin/sh", (int)argv, 0);
-		(void)syscall3(S_EXIT, 1, 0, 0);
+	if(pipe(p) < 0)
+		return NULL;
+	myside = tst(p[WTR], p[RDR]);
+	hisside = tst(p[RDR], p[WTR]);
+	if((pid = fork()) == 0) {
+		/* myside and hisside reverse roles in child */
+		close(myside);
+		stdside = tst(0, 1);
+		close(stdside);
+		dup(hisside);
+		close(hisside);
+		execl("/bin/sh", "sh", "-c", cmd, 0);
+		_exit(1);
 	}
-	(void)syscall3(S_CLOSE, fd[1], 0, 0);
-	f.fd = fd[0];
-	return(&f);
+	if(pid == -1)
+		return NULL;
+	popen_pid[myside] = pid;
+	close(hisside);
+	return(fdopen(myside, mode));
 }
 
 int
-pclose(FILE *f)
+pclose(ptr)
+FILE *ptr;
 {
-	(void)syscall3(S_CLOSE, f->fd, 0, 0);
-	return(syscall3(S_WAIT, 0, 0, 0));
+	register int f, r, (*hstat)(), (*istat)(), (*qstat)();
+	int status;
+
+	f = fileno(ptr);
+	fclose(ptr);
+	istat = (int (*)())signal(SIGINT, (int)SIG_IGN);
+	qstat = (int (*)())signal(SIGQUIT, (int)SIG_IGN);
+	hstat = (int (*)())signal(SIGHUP, (int)SIG_IGN);
+	while((r = wait(&status)) != popen_pid[f] && r != -1)
+		;
+	if(r == -1)
+		status = -1;
+	signal(SIGINT, (int)istat);
+	signal(SIGQUIT, (int)qstat);
+	signal(SIGHUP, (int)hstat);
+	return(status);
 }

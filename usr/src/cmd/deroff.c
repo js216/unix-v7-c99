@@ -67,7 +67,6 @@ void tbl(void);
 void eqn(void);
 
 
-
 int
 main(int ac, char **av)
 {
@@ -473,6 +472,7 @@ sw:  switch(C)
 	case '*':
 		if(C != '(')
 			return;
+
 		/* fallthrough */
 	case '(':
 		if(C != '\n') C;

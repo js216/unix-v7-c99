@@ -161,7 +161,6 @@ int	substitute(int inglob);
 int	putline(void);
 int	rdelete(int *ad1, int *ad2);
 int	makekey(char *kp, char *km);
-
 int
 main(int argc, char **argv)
 {

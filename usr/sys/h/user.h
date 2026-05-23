@@ -17,8 +17,8 @@
 struct	user
 {
 	label_t	u_rsav;			/* save info when exchanging stacks */
-	/* v7 had `int u_fper, u_fpsaved` here -- never read or written on
-	 * this port, dropped to shrink struct user (proc[] is per-process). */
+	int	u_fper;			/* FP error register */
+	int	u_fpsaved;		/* FP regs saved for this proc */
 	struct {
 		int	u_fpsr;		/* FP status register */
 		double	u_fpregs[6];	/* FP registers */
@@ -78,14 +78,20 @@ struct	user
 	char	u_sep;			/* flag for I and D separation */
 	struct tty *u_ttyp;		/* controlling tty pointer */
 	dev_t	u_ttyd;			/* controlling tty dev */
-	/* v7 had `struct {...} u_exdata` here (the a.out header, populated
-	 * by sys1.c::getxfile and consumed by setregs).  Both functions are
-	 * gone; arch/arm.c::v7_exec_call parses the a.out itself. */
+	struct {			/* header of executable file */
+		int	ux_mag;		/* magic number */
+		unsigned ux_tsize;	/* text size */
+		unsigned ux_dsize;	/* data size */
+		unsigned ux_bsize;	/* bss size */
+		unsigned ux_ssize;	/* symbol table size */
+		unsigned ux_entloc;	/* entry location */
+		unsigned ux_unused;
+		unsigned ux_relflg;
+	} u_exdata;
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;
-	/* v7 had `short u_fpflag` here (per its comment, "unused now, will
-	 * be later") -- it never got a "later".  Dropped. */
+	short	u_fpflag;		/* unused now, will be later */
 	short	u_cmask;		/* mask for file creation */
 	int	u_stack[1];
 					/* kernel stack per user

@@ -6,8 +6,6 @@ they must be explicitly set
 */
 
 void check(FILE *f);
-void exit(int n);
-
 int
 main(int argc, char **argv)
 {

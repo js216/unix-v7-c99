@@ -124,7 +124,6 @@ char affix[40];
 
 int suffix(), strip(), putsuf(), putw(), monosyl(), vowel(),
     ise(), ztos(), dict();
-
 int
 main(int argc, char **argv)
 {

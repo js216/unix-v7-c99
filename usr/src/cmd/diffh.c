@@ -27,13 +27,7 @@ FILE	*dopen(char *f1, char *f2);
 void	progerr(char *s);
 void	error(char *s, char *t);
 int	hardsynch(void);
-static int	diffh_isspace(int c);
-
-static int
-diffh_isspace(int c)
-{
-	return(c==' ' || c=='\t' || c=='\n' || c=='\v' || c=='\r' || c=='\f');
-}
+int	space(int c);
 
 	/* return pointer to line n of file f*/
 char *getl(int f, long n)
@@ -217,9 +211,9 @@ cmp(char *s, char *t)
 	if(debug)
 		printf("%s:%s\n",s,t);
 	for(;;){
-		if(bflag&&diffh_isspace(*s)&&diffh_isspace(*t)) {
-			while(diffh_isspace(*++s)) ;
-			while(diffh_isspace(*++t)) ;
+		if(bflag&&space(*s)&&space(*t)) {
+			while(space(*++s)) ;
+			while(space(*++t)) ;
 		}
 		if(*s!=*t||*s==0)
 			break;
@@ -229,6 +223,13 @@ cmp(char *s, char *t)
 	return(*s-*t);
 }
 
+int
+space(int c)
+{
+	if(c==' ' || c=='\t' || c=='\n' || c=='\r' || c=='\f' || c=='\v')
+		return(1);
+	return(0);
+}
 FILE *
 dopen(char *f1, char *f2)
 {

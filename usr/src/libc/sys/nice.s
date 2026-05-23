@@ -1,3 +1,6 @@
+
+
+
 .globl nice
 nice:
 		mov ip, r7

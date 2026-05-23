@@ -17,7 +17,6 @@ void putx(unsigned n, int c);
 void cput(int c);
 void putn(long n, int b, int c);
 void pre(int n);
-
 int
 main(int argc, char *argv[])
 {

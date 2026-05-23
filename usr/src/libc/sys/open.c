@@ -3,6 +3,5 @@ int syscall3(int, int, int, int);
 int
 open(char *path, int mode)
 {
-	(void)mode;
-	return(syscall3(S_OPEN, (int)path, 0, 0));
+	return(syscall3(S_OPEN, (int)path, mode, 0));
 }

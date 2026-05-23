@@ -106,7 +106,6 @@ VOID	nullio(IOPTR iop)
 {
 	REG STRING	ion;
 	REG INT		iof, fd;
-
 	IF iop
 	THEN	iof=iop->iofile;
 		ion=mactrim(iop->ioname);
@@ -128,7 +127,6 @@ VOID	nullio(IOPTR iop)
 	FI
 	return(0);
 }
-
 STRING	getpath(STRING s)
 {
 	REG STRING	path;

@@ -9,21 +9,18 @@
  * mapped to v7's N_TEXT/N_DATA/N_BSS based on the ELF section's
  * SHF_EXECINSTR/SHF_WRITE flags.
  */
-
 #include <a.out.h>
 
 int	open(char *, int);
 int	close(int);
 int	read(int, char *, int);
 long	lseek(int, long, int);
-
 #define	ELF_NIDENT	16
 #define	ELFMAG0		0177
 #define	SHT_SYMTAB	2
 #define	SHT_STRTAB	3
 #define	SHF_WRITE	1
 #define	SHF_EXECINSTR	4
-
 struct elfhdr {
 	unsigned char	e_ident[ELF_NIDENT];
 	unsigned short	e_type;
@@ -40,7 +37,6 @@ struct elfhdr {
 	unsigned short	e_shnum;
 	unsigned short	e_shstrndx;
 };
-
 struct elfshdr {
 	unsigned int	sh_name;
 	unsigned int	sh_type;
@@ -53,7 +49,6 @@ struct elfshdr {
 	unsigned int	sh_addralign;
 	unsigned int	sh_entsize;
 };
-
 struct elfsym {
 	unsigned int	st_name;
 	unsigned int	st_value;
@@ -62,7 +57,6 @@ struct elfsym {
 	unsigned char	st_other;
 	unsigned short	st_shndx;
 };
-
 int
 nlist(char *name, struct nlist *list)
 {
@@ -129,6 +123,7 @@ nlist(char *name, struct nlist *list)
 		if(k <= 0)
 			continue;
 		strbuf[k] = '\0';
+
 		for(p = list; p->n_name[0]; p++) {
 			for(j = 0; j < 8; j++)
 				nb[j] = p->n_name[j];

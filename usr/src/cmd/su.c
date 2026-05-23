@@ -2,8 +2,6 @@
 #include <pwd.h>
 
 struct	passwd *pwd;
-char	*crypt(char *pw, char *salt);
-char	*getpass(char *prompt);
 char	**environ;
 
 int

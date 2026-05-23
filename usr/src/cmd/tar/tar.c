@@ -4,8 +4,6 @@
 #include <sys/dir.h>
 #include <signal.h>
 
-char	*sprintf(char *buf, char *fmt, ...);
-char	*strcat(char *a, char *b);
 daddr_t	bsrch();
 int	usage(), done(), dorep(), doxtract(), dotable(), getdir(),
 	passtape(), endtape(), getwdir(), putfile(), putempty(),

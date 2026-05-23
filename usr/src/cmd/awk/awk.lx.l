@@ -1,4 +1,3 @@
-%option noyywrap noinput nounistd
 %Start A str chc sc reg comment
 
 %{
@@ -8,7 +7,7 @@
 extern int	yylval;
 extern int	mustfld;
 
-int	lineno = 1;
+int	lineno	1;
 #ifdef	DEBUG
 #	define	RETURN(x)	{if (dbg) ptoken(x); return(x); }
 #else
@@ -18,12 +17,6 @@ int	lineno = 1;
 #define	CBUFLEN	150
 char	cbuf[CBUFLEN];
 int	clen, cflag;
-static int awk_input(void);
-#define YY_INPUT(buf,result,max_size) \
-	do { int c = awk_input(); (void)(max_size); \
-		if (c == 0) result = YY_NULL; \
-		else { (buf)[0] = (char)c; result = 1; } \
-	} while (0)
 %}
 
 A	[a-zA-Z]
@@ -32,7 +25,7 @@ D	[0-9]
 WS	[ \t]
 
 %%
-	switch (YY_START) {
+	switch (yybgin-yysvec-1) {	/* witchcraft */
 	case 0:
 		BEGIN A;
 		break;
@@ -152,13 +145,14 @@ WS	[ \t]
 
 %%
 
-static int
-awk_input(void)
+input()
 {
 	register c;
 	extern char *lexprog;
 
-	if (lexprog != NULL)
+	if (yysptr > yysbuf)
+		c = U(*--yysptr);
+	else if (yyin == NULL)
 		c = *lexprog++;
 	else
 		c = getc(yyin);
@@ -169,9 +163,6 @@ awk_input(void)
 	return(c);
 }
 
-int input(void) { return awk_input(); }
-
-void
 startreg()
 {
 	BEGIN reg;

@@ -4,10 +4,13 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/text.h"
-#include "../h/seg.h"
 
+#define	RO	02
+#define	RW	06
+#define	ED	010
+#define	TX	020
+#define	ABS	040
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-
 /*
  * v7's sureg() pushed the per-proc u_uisa/u_uisd prototype into the
  * PDP-11's UISA/UISD segment registers at 0177640 / 0177600.  On ARM
@@ -19,6 +22,7 @@ int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
  */
 void
 sureg(void)
+
 {
 }
 

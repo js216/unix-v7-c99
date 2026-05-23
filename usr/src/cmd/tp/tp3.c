@@ -4,7 +4,6 @@
 int	decode(), verify(), clrent(), bitmap(), maperr(), setmap(),
 	wrdir(), update1(), wseek(), twrite(), phserr(), done(),
 	rseek(), tread(), usage();
-
 int
 gettape(int (*how)(struct dent *))
 {

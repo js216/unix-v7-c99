@@ -1,3 +1,4 @@
+
 .globl sync
 sync:
 		mov ip, r7

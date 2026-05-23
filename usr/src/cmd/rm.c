@@ -120,15 +120,14 @@ rm(char arg[], int fflg, int rflg, int iflg, int level)
 int
 dotname(char *s)
 {
-	if(s[0] == '.') {
-		if(s[1] == '.') {
+	if(s[0] == '.')
+		if(s[1] == '.')
 			if(s[2] == '\0')
 				return(1);
 			else
 				return(0);
-		} else if(s[1] == '\0')
+		else if(s[1] == '\0')
 			return(1);
-	}
 	return(0);
 }
 

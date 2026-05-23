@@ -35,7 +35,6 @@ int	ry;
 FILE	*ttyin;
 
 int	init(void), sendpt(int a), kwait(void), execom(void);
-
 int
 main(int argc, char **argv)
 {

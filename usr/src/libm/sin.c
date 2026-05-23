@@ -17,7 +17,6 @@ static double q2	=  .9463096101538208180571257e4;
 static double q3	=  .1326534908786136358911494e3;
 
 static double sinus(double, int);
-
 double
 cos(double arg)
 {

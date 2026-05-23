@@ -107,7 +107,6 @@ extern int getuid(void);
 extern int chdir(char *p);
 extern int signal();
 extern void exit(int n) __attribute__((__noreturn__));
-
 int
 main(int c, char **av)
 {
@@ -361,7 +360,6 @@ int *syn1(char **p1, char **p2);
 int *syn2(char **p1, char **p2);
 int *syn3(char **p1, char **p2);
 int *syntax(char **p1, char **p2);
-
 int *
 syntax(char **p1, char **p2)
 {

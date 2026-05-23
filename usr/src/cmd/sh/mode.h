@@ -70,6 +70,8 @@ UNION {
 	}	address;
 
 
+
+
 /* heap storage */
 struct blk {
 	BLKPTR	word;
@@ -106,7 +108,6 @@ struct sysnod {
 	INT	sysval;
 };
 STRUCT sysnod	SYSTAB[];
-
 /* this node is a proforma for those that follow.  C99 strict: the v7
  * K&R idiom of `t->forktyp' on a TREPTR (where forknod, comnod, etc.
  * were separate structs with parallel layouts) is replaced with a
@@ -151,6 +152,15 @@ struct dolnod {
 	CHAR	dolarg[1];
 };
 
+
+
+
+
+
+
+
+
+
 struct ionod {
 	INT	iofile;
 	STRING	ioname;
@@ -168,7 +178,6 @@ struct ionod {
 #define	PARTYPE		(sizeof(struct trenod_par))
 #define	LSTTYPE		(sizeof(struct trenod_lst))
 #define	IOTYPE		(sizeof(struct ionod))
-
 /* Field-access macros: subsequent code writes `t->forktyp' etc., which
  * the preprocessor rewrites to `t->u._fork.forktyp' (literal field of
  * the named-union member).  Macros come AFTER all struct definitions

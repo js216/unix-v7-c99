@@ -6,7 +6,6 @@ int init(), commnds(), readc(), unreadc(), pushp(), sdump(), chsign(),
     load(), seekc(), salterwd(), putwd(), command(), cond(),
     more(), garbage(), ospace(), redef(), tenot(), oneot(), bigot(),
     hexot(), onintr();
-
 int
 main(int argc, char *argv[])
 {
@@ -1819,6 +1818,7 @@ garbage(char *s)
 	struct blk *p, *q;
 	struct sym *tmps;
 	int ct;
+
 	(void)s;
 /*	printf("got to garbage %s\n",s);	*/
 	for(i=0;i<TBLSZ;i++){

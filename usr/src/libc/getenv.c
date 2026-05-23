@@ -2,11 +2,8 @@
  *	getenv(name)
  *	returns ptr to value associated with name, if any, else NULL
  */
-#include <stdio.h>
 #define NULL	0
-static char *empty[] = { 0 };
-char **environ = empty;
-int errno;
+extern	char **environ;
 static char *nvmatch(register char *s1, register char *s2);
 
 char *

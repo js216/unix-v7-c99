@@ -1,3 +1,6 @@
+
+
+
 .globl link
 link:
 		mov ip, r7

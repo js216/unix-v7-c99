@@ -10,10 +10,6 @@
 char	passwd[] = "/etc/passwd";
 char	temp[]	 = "/etc/ptmp";
 struct	passwd *pwd;
-char	*strcpy(char *a, char *b);
-char	*crypt(char *pw, char *salt);
-char	*getpass(char *prompt);
-char	*getlogin(void);
 char	*pw;
 char	pwbuf[10];
 char	buf[512];

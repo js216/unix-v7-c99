@@ -8,7 +8,9 @@
 
 extern int main(int argc, char **argv);
 extern void exit(int n);
-extern char **environ;
+char **environ;
+int errno;
+int *__errno(void) { return &errno; }
 
 /* 256 entries each: v7's original crt0 hardcoded 32 and that limit
  * was visible from userspace -- `ls /tmp/f*` against 100 files only

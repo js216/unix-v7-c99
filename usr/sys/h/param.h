@@ -1,6 +1,5 @@
 #ifndef PARAM_H
 #define PARAM_H
-
 /*
  * tunable variables
  */
@@ -12,17 +11,20 @@
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
 #define	MAXMEM	(64*32)		/* max core per process - first # is Kw */
-/* MAXUPRC, SSIZE, NCARGS were used by sys1.c::fork/exec (deleted -- the
- * armboot path enforces its own per-pid limits and arg-buffer size). */
+#define	MAXUPRC	25		/* max processes per user */
+#define	SSIZE	20		/* initial stack size (*64 bytes) */
+#define	SINCR	20		/* increment of stack (*64 bytes) */
 #define	NOFILE	20		/* max open files per process */
 #define	CMAPSIZ	50		/* size of core allocation area */
 #define	SMAPSIZ	50		/* size of swap allocation area */
+#define	NCALL	20		/* max simultaneous time callouts */
 #define	NPROC	150		/* max number of processes */
 #define	NTEXT	40		/* max number of pure texts */
 #define	HZ	60		/* Ticks/second of the clock */
 #define	TIMEZONE (5*60)		/* Minutes westward from Greenwich */
 #define	DSTFLAG	1		/* Daylight Saving Time applies in this locality */
 #define	MSGBUFS	128		/* Characters saved from error messages */
+#define	NCARGS	5120		/* # characters in exec arglist */
 
 /*
  * priorities
@@ -36,9 +38,8 @@
 #define	PZERO	25
 #define	NZERO	20
 #define	PPIPE	26
-/* PWAIT (wait priority) and PSLEP (pause priority) are gone -- their
- * only sleep() callers were sys1.c::wait and sys4.c::pause, both
- * reimplemented in arch/arm.c using the multithreading primitives. */
+#define	PWAIT	30
+#define	PSLEP	40
 #define	PUSER	50
 
 /*
@@ -50,21 +51,22 @@
 /*
  * No more than 16 signals (1-16) because they are
  * stored in bits in a word.
- *
- * Only the v7 signal names actually referenced by this kernel are
- * defined here.  SIGINS/IOT/EMT/FPT/BUS/SEG/SYS/TRM are gone -- never
- * raised or named anywhere; userspace gets the long names from
- * <signal.h> instead.  The matching numeric slots (4, 6, 7, 8, 10, 11,
- * 12, 15) remain reserved in u_signal[NSIG]; arm.s raises 4 and 11 by
- * literal integer (see undef_entry / pabort_entry).
  */
 #define	SIGHUP	1	/* hangup */
 #define	SIGINT	2	/* interrupt (rubout) */
 #define	SIGQUIT	3	/* quit (FS) */
+#define	SIGINS	4	/* illegal instruction */
 #define	SIGTRC	5	/* trace or breakpoint */
+#define	SIGIOT	6	/* iot */
+#define	SIGEMT	7	/* emt */
+#define	SIGFPT	8	/* floating exception */
 #define	SIGKIL	9	/* kill, uncatchable termination */
+#define	SIGBUS	10	/* bus error */
+#define	SIGSEG	11	/* segmentation violation */
+#define	SIGSYS	12	/* bad system call */
 #define	SIGPIPE	13	/* end of pipe */
 #define	SIGCLK	14	/* alarm clock */
+#define	SIGTRM	15	/* Catchable termination */
 
 /*
  * fundamental constants of the implementation--
@@ -84,8 +86,7 @@
 #ifndef NULL
 #define	NULL	0
 #endif
-/* v7 CMASK (initial u.u_cmask from main()) is unused on this port: BSS
- * zero-init of u.u_cmask already gives the same 0. */
+#define	CMASK	0		/* default mask for file creation */
 #define	NODEV	(dev_t)(-1)
 #define	ROOTINO	((ino_t)2)	/* i number of all roots */
 #define	SUPERB	((daddr_t)1)	/* block number of the super block */
@@ -144,5 +145,4 @@ typedef	long		off_t;
 
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
-
 #endif

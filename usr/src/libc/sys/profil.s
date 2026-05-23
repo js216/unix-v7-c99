@@ -1,3 +1,5 @@
+
+
 .globl profil
 profil:
 		mov ip, r7

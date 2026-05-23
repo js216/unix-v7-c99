@@ -2,17 +2,12 @@
 
 #include <stdio.h>
 
-int atoi(char *s);
-int nice(int incr);
-int execvp(char *name, char **argv);
-void exit(int n);
-int errno;
 extern char *sys_errlist[];
-
 int
 main(int argc, char *argv[])
 {
 	int nicarg = 10;
+	extern int errno;
 
 	if(argc > 1 && argv[1][0] == '-') {
 		nicarg = atoi(&argv[1][1]);

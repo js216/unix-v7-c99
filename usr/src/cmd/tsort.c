@@ -36,7 +36,6 @@ int anypred(struct nodelist *i);
 int cmp(char *s, char *t);
 void error(char *s, char *t);
 void note(char *s, char *t);
-void exit(int n);
 char *empty = "";
 
 /*	the first for loop reads in the graph,

@@ -72,7 +72,6 @@ int	readc(void);
 int	checksum(int *b);
 int	putdir(char *b);
 int	null(void);
-
 int
 main(int argc, char *argv[])
 {

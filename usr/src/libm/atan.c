@@ -32,7 +32,6 @@ static double q0	 = .89678597403663861962481162e3;
 static double satan(double);
 static double xatan(double);
 
-
 /*
 	atan makes its argument positive and
 	calls the inner routine satan.
@@ -40,6 +39,7 @@ static double xatan(double);
 
 double
 atan(double arg)
+
 {
 	if(arg>0)
 		return(satan(arg));
@@ -55,6 +55,7 @@ atan(double arg)
 
 double
 atan2(double arg1, double arg2)
+
 {
 	if((arg1+arg2)==arg1)
 		if(arg1 >= 0.) return(pio2);
@@ -77,6 +78,7 @@ atan2(double arg1, double arg2)
 
 static double
 satan(double arg)
+
 {
 	if(arg < sq2m1)
 		return(xatan(arg));

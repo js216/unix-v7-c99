@@ -14,7 +14,7 @@ char	*dargv[] = {
 struct	filsys sblock;
 
 int	fi;
-int	errno;
+extern int	errno;
 daddr_t	alloc(void);
 void	dfree(char *file);
 void	bread(daddr_t bno, char *buf, int cnt);

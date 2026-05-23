@@ -1,3 +1,8 @@
+
+
+
+
+
 .globl ptrace
 ptrace:
 		mov ip, r7
