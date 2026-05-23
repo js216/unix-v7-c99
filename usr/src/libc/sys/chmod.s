@@ -1,3 +1,6 @@
+
+
+
 .globl chmod
 chmod:
 		mov ip, r7

@@ -10,7 +10,6 @@
 char	t1[ROTORSZ];
 char	t2[ROTORSZ];
 char	t3[ROTORSZ];
-char	*getpass(char *prompt);
 
 void
 setup(char *pw)

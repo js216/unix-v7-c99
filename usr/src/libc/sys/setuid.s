@@ -1,3 +1,6 @@
+
+
+
 .globl setuid
 setuid:
 		mov ip, r7

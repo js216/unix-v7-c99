@@ -5,8 +5,6 @@
 char	mesg[3000];
 int	msize;
 struct	utmp utmp[USERS];
-char	*strcpy(char *a, char *b);
-char	*strcat(char *a, char *b);
 void	sendmes(char *tty);
 
 int

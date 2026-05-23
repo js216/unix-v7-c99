@@ -13,7 +13,6 @@ int min(unsigned a, unsigned b);
 int max(unsigned a, unsigned b);
 int done(void);
 int timcmp(const void *vp1, const void *vp2), valcmp(const void *vp1, const void *vp2);
-
 struct stat stbuf;
 struct	nl {
 	char	name[8];

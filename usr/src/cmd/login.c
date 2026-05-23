@@ -20,12 +20,6 @@ char	homedir[64] = "HOME=";
 char	*envinit[] = {homedir, "PATH=:/bin:/usr/bin", 0};
 struct	passwd *pwd;
 
-struct	passwd *getpwnam(char *name);
-char	*strcat(char *a, char *b);
-char	*ttyname(int f);
-char	*crypt(char *pw, char *salt);
-char	*getpass(char *prompt);
-char	*rindex(char *sp, int c), *index(register char *sp, int c);
 extern	char **environ;
 void	showmotd(void);
 

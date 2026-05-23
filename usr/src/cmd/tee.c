@@ -15,7 +15,7 @@ char in[512];
 
 char out[512];
 
-int errno;
+extern int errno;
 long	lseek(int fd, long offset, int ptrname);
 int	creat(char *path, int mode);
 int	stat(char *path, struct stat *buf);

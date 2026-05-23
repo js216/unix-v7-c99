@@ -18,7 +18,6 @@ DOLPTR	freeargs(DOLPTR blk);
 INT	assnum(STRING *p, INT n);
 INT	pop(void);
 extern void free(void *p);
-
 CHAR	flagadr[10];
 
 CHAR	flagchar[] = {
@@ -75,11 +74,9 @@ LOCAL STRING	comstring(STRING av[])
 	REG STRING	cp;
 	REG STRING	s, q;
 	REG INT		n;
-
 	IF av[1]
 	THEN	return(make(*av));
 	FI
-
 	n = 1;
 	cp = *av;
 	WHILE *cp++ DO n++ OD
@@ -93,7 +90,6 @@ LOCAL STRING	comstring(STRING av[])
 	*s = 0;
 	return(q);
 }
-
 VOID	setargs(STRING argi[])
 {
 	/* count args */

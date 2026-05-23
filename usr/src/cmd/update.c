@@ -7,7 +7,6 @@
 #include <signal.h>
 
 int	dosync(void);
-
 char *fillst[] = {
 	"/bin",
 	"/usr",

@@ -8,14 +8,12 @@
  */
 #ifndef STDIO_H
 #define STDIO_H
-
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dir.h>
 #include <grp.h>		/* defines GRP_H, which gates the union-laden
 				 * struct inode block in sys/inode.h */
-
 #define	BUFSIZ	512
 #define	_NFILE	20
 # ifndef FILE
@@ -59,15 +57,10 @@ FILE	*freopen(char *name, char *mode, FILE *f);
 FILE	*fdopen(int fd, char *mode);
 long	ftell(FILE *f);
 char	*fgets(char *s, int n, FILE *f);
-
 /* -- below this line: declarations the c99 port adds to mirror what
  * u.h used to inline.  Will shrink as libc grows real .c ports. */
-
 #define	O_RDONLY	0
-
-
 int syscall3(int n, int a, int b, int c);
-
 /* syscall stubs in sys.s */
 int read(int fd, char *buf, int n);
 int write(int fd, char *buf, int n);
@@ -117,7 +110,6 @@ int stty(int fd, void *buf);
 int ioctl(int fd, int cmd, char *arg);
 int mount(char *special, char *dir, int ro);
 int umount(char *special);
-
 /* time */
 struct tm;
 struct timeb;
@@ -130,7 +122,6 @@ struct tm *localtime(long *t);
 char *asctime(struct tm *t);
 char *ctime(long *t);
 int dysize(int y);
-
 /* stdio externs */
 int fclose(FILE *f);
 int fseek(FILE *f, long off, int whence);
@@ -154,7 +145,6 @@ int fscanf(FILE *f, char *fmt, ...);
 int sscanf(char *str, char *fmt, ...);
 int system(char *s);
 void perror(char *s);
-
 /* extras */
 int isatty(int fd);
 unsigned int sleep(unsigned n);
@@ -193,5 +183,4 @@ void swab(char *from, char *to, int n);
 int getargs(char **argv, int maxarg);
 long tell(int f);
 char *timezone(int zone, int dst);
-
 #endif

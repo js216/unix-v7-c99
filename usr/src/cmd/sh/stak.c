@@ -12,7 +12,6 @@
 extern INT setbrk(INT n);
 extern void free(void *p);
 extern void rmtemp(IOPTR base);
-
 STKPTR		stakbot=nullstr;
 
 

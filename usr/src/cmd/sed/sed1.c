@@ -7,7 +7,6 @@ void	arout(void);
 int	match(char *expbuf, int gf);
 int	advance(char *alp, char *aep);
 int	ecmp(char *a, char *b, int count);
-
 char	*trans[040]  = {
 	"\\01",
 	"\\02",

@@ -16,7 +16,6 @@ extern void done(void);
 extern INT setbrk(INT n);
 extern void exitset(void);
 extern void free(void *p);
-
 VOID	stdsigs(void);
 INT	ignsig(INT n);
 VOID	getsig(INT n);
@@ -24,7 +23,6 @@ VOID	oldsigs(void);
 VOID	clrsig(INT i);
 VOID	chktrap(void);
 VOID	fault(INT sig);
-
 
 STRING		trapcom[MAXTRAP];
 BOOL		trapflg[MAXTRAP];

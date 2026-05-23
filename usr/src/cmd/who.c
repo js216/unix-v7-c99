@@ -7,14 +7,10 @@
 #include <pwd.h>
 struct utmp utmp;
 struct passwd *pw;
+struct passwd *getpwuid();
 
-char *ttyname(int f), *rindex(char *sp, int c), *ctime(long *t);
-char *strcpy(char *a, char *b), *index(register char *sp, int c);
-int getuid(void);
-int time(long *t);
+char *ttyname(), *rindex(), *ctime(), *strcpy(), *index();
 void putline(void);
-void exit(int n);
-
 int
 main(int argc, char **argv)
 {

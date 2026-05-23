@@ -42,9 +42,7 @@
 /* math software */
 #define	EDOM	33
 #define	ERANGE	34
-
 extern int errno;
-
 /* Port-side accommodation: several command sources include
  * <errno.h> and rely on it for the read/write/fstat/exit
  * syscall prototypes (a warts-and-all C99 build needs explicit
@@ -59,5 +57,4 @@ long	lseek(int, long, int);
 int	fstat(int, struct stat *);
 int	strlen(char *);
 void	exit(int);
-
 #endif

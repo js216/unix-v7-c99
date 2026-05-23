@@ -1,3 +1,7 @@
+
+
+
+
 .globl _exit
 _exit:
 		mov ip, r7

@@ -6,66 +6,31 @@
 #include "../h/text.h"
 #include "../h/inode.h"
 #include "../h/buf.h"
-#include "../h/seg.h"
 #include "../h/map.h"
+#include "../h/seg.h"
 struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* malloc/mfree/panic/wakeup/sleep come from local declarations.
- * iput comes from h/systm.h. */
+int malloc(struct map *mp, int size);
+void mfree(struct map *mp, int size, int a);
+void panic(char *s);
+void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
+void wakeup(caddr_t chan);
+void sleep(caddr_t chan, int pri);
 extern void xlock(struct text *);
 extern void xunlock(struct text *);
 extern void xccdec(struct text *);
 extern void xuntext(struct text *);
-
 void xswap(register struct proc *p, int ff, int os);
+extern void xexpand(struct text *);
+extern void xfree(void);
+extern void xalloc(struct inode *);
+void readi(struct inode *ip);
+void psignal(struct proc *p, int sig);
+void printf(char *fmt, ...);
+void iput(struct inode *ip);
+void sureg(void);
+void qswtch(void);
+int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+int save(int *lp);
 
 /*
  * Swap out process p.
@@ -100,13 +65,124 @@ xswap(register struct proc *p, int ff, int os)
 	}
 }
 
-/* v7 xfree() (drop process's text reference, free swap+core if last
- * holder), xalloc() (attach to shared text, swap-in if needed) and
- * xexpand() (allocate core for text, swap-out current proc if no core)
- * are gone -- their only callers were sys1.c::exit/getxfile, both of
- * which are also gone.  The remaining text-table operations (xswap,
- * xccdec, xumount, xrele, xuntext) stay because they're still reached
- * via slp.c::expand and umount(2)/closef(). */
+void
+xfree(void)
+{
+	register struct text *xp;
+	register struct inode *ip;
+
+	if((xp=u.u_procp->p_textp) == NULL)
+		return;
+	xlock(xp);
+	xp->x_flag &= ~XLOCK;
+	u.u_procp->p_textp = NULL;
+	ip = xp->x_iptr;
+	if(--xp->x_count==0 && (ip->i_mode&ISVTX)==0) {
+		xp->x_iptr = NULL;
+		mfree(swapmap, ctod(xp->x_size), xp->x_daddr);
+		mfree(coremap, xp->x_size, xp->x_caddr);
+		ip->i_flag &= ~ITEXT;
+		if (ip->i_flag&ILOCK)
+			ip->i_count--;
+		else
+			iput(ip);
+	} else
+		xccdec(xp);
+}
+
+/*
+ * Attach to a shared text segment.
+ * If there is no shared text, just return.
+ * If there is, hook up to it:
+ * if it is not currently being used, it has to be read
+ * in from the inode (ip); the written bit is set to force it
+ * to be written out as appropriate.
+ * If it is being used, but is not currently in core,
+ * a swap has to be done to get it back.
+ */
+void
+xalloc(register struct inode *ip)
+{
+	register struct text *xp;
+	register unsigned ts;
+	register struct text *xp1;
+
+	if(u.u_exdata.ux_tsize == 0)
+		return;
+	xp1 = NULL;
+	for (xp = &text[0]; xp < &text[NTEXT]; xp++) {
+		if(xp->x_iptr == NULL) {
+			if(xp1 == NULL)
+				xp1 = xp;
+			continue;
+		}
+		if(xp->x_iptr == ip) {
+			xlock(xp);
+			xp->x_count++;
+			u.u_procp->p_textp = xp;
+			if (xp->x_ccount == 0)
+				xexpand(xp);
+			else
+				xp->x_ccount++;
+			xunlock(xp);
+			return;
+		}
+	}
+	if((xp=xp1) == NULL) {
+		printf("out of text");
+		psignal(u.u_procp, SIGKIL);
+		return;
+	}
+	xp->x_flag = XLOAD|XLOCK;
+	xp->x_count = 1;
+	xp->x_ccount = 0;
+	xp->x_iptr = ip;
+	ip->i_flag |= ITEXT;
+	ip->i_count++;
+	ts = btoc(u.u_exdata.ux_tsize);
+	xp->x_size = ts;
+	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
+		panic("out of swap space");
+	u.u_procp->p_textp = xp;
+	xexpand(xp);
+	estabur(ts, (unsigned)0, (unsigned)0, 0, RW);
+	u.u_count = u.u_exdata.ux_tsize;
+	u.u_offset = sizeof(u.u_exdata);
+	u.u_base = 0;
+	u.u_segflg = 2;
+	u.u_procp->p_flag |= SLOCK;
+	readi(ip);
+	u.u_procp->p_flag &= ~SLOCK;
+	u.u_segflg = 0;
+	xp->x_flag = XWRIT;
+}
+
+/*
+ * Assure core for text segment
+ * Text must be locked to keep someone else from
+ * freeing it in the meantime.
+ * x_ccount must be 0.
+ */
+void
+xexpand(register struct text *xp)
+{
+	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
+		if ((xp->x_flag&XLOAD)==0)
+			swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);
+		xp->x_ccount++;
+		xunlock(xp);
+		return;
+	}
+	if (save(u.u_ssav)) {
+		sureg();
+		return;
+	}
+	xswap(u.u_procp, 1, 0);
+	xunlock(xp);
+	u.u_procp->p_flag |= SSWAP;
+	qswtch();
+	/* no return */
+}
 
 /*
  * Lock and unlock a text segment from swapping

@@ -119,6 +119,7 @@ main(int argc, char **argv)
 				}
 				break;
 			}
+
 			/* fallthrough */
 		case 't':
 			if(wlen == 0)
@@ -239,6 +240,7 @@ main(int argc, char **argv)
 
 	case -1:	/* cannot fork */
 		diag("Cannot fork",empty);
+
 		/* fallthrough */
 	case 0:		/* child */
 		execl(SORT, SORT, sortopt, "+0", "-1", "+1",
@@ -507,6 +509,7 @@ putout(char *strt, char *end)
 int
 onintr(int sig)
 {
+
 	(void)sig;
 	if(*sortfile)
 		unlink(sortfile);

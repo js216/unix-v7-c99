@@ -1,7 +1,5 @@
 #include <stdio.h>
-
 int number(char *s);
-
 int
 main(int argc, char **argv)
 {

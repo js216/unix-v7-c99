@@ -5,7 +5,6 @@
 
 int	getnum(char *s), random(int range), skrand(int range);
 int	score(void), getline(char *s), delete(void);
-
 char	types[10];
 int	right[MAX];
 int	left[MAX];

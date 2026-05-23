@@ -19,7 +19,6 @@ struct room
 
 int	tunnel(int i), rline(void), rnum(int n), rin(void);
 int	near(struct room *ap, int ahaz), icomp(const void *p1, const void *p2);
-
 char	*intro[] =
 {
 	"\n",

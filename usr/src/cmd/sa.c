@@ -24,7 +24,6 @@
  * pretty-printer / expand() pseudo-float decode) is byte-for-byte from
  * the v7 source.
  */
-
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -129,7 +128,6 @@ void strip(void);
 void printmoney(void);
 void column(double n, double a, double b, double c);
 void col(double n, double a, double m);
-
 int
 main(int argc, char **argv)
 {
@@ -458,7 +456,6 @@ bcmp(struct tab *p1, struct tab *p2)
 	}
 	return(0);
 }
-
 int
 tcmp(struct tab *p1, struct tab *p2)
 {

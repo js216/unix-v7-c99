@@ -14,7 +14,6 @@ int	perm(char *u[], int m, char *v[], int n, int p[]);
 int	find(char *u[], int m), readindex(void), talloc(void);
 int	query(char *r), next(void), done(void);
 int	instruct(char *info), badinfo(void), dunno(void);
-
 int tflag;
 int xx[NL];
 char score[NL];

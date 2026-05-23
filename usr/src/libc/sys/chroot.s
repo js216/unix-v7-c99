@@ -1,3 +1,6 @@
+
+
+
 .globl chroot
 chroot:
 		mov ip, r7

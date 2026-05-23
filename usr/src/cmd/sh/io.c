@@ -28,7 +28,6 @@ INT	create(STRING s);
 INT	cf(STRING s1, STRING s2);
 STRING	mactrim(STRING s);
 
-
 /* ========	input output and file copying ======== */
 
 INT initf(UFD fd)

@@ -8,8 +8,6 @@ char	*ofil;
 FILE	*is;
 FILE	*os;
 
-int atoi(char *s);
-void exit(int n);
 int
 main(int argc, char *argv[])
 {

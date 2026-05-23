@@ -5,60 +5,8 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/timeb.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* suser/update/namei/uchar/iget/access/owner/iput/writei/prele/plock/iupdat
- * /xrele/psignal/copyin/copyout come from h/systm.h.
- * sleep/spl0/spl7 come from local declarations. */
-
+int spl0(void);
+int spl7(void);
 void chdirec(struct inode **ipp);
 
 /*
@@ -253,7 +201,6 @@ out:
 out1:
 	iput(pp);
 }
-
 void
 chdir(void)
 {
@@ -441,6 +388,7 @@ alarm(void)
 /* v7's pause(2) implementation is gone -- arch/arm.c has its own
  * sys_pause_v7 that uses the mt_block_on_pipe + clock-tick wake path
  * instead of the v7 sleep()/wakeup() handoff. */
+
 
 /*
  * mode mask for creation of files

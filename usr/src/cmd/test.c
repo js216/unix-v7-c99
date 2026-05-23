@@ -25,7 +25,6 @@ int ftype(char *f);
 int fsizep(char *f);
 void synbad(char *s1, char *s2);
 int length(char *s);
-
 int
 main(int argc, char *argv[])
 {

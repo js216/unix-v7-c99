@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #define	NMOUNT	16
 #define	NAMSIZ	32
 

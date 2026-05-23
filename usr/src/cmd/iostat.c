@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 int	bflg;
 int	dflg;
 int	tflg;
@@ -49,7 +48,6 @@ int	stats3(double);
 int	biostats(void);
 int	atoi(char *);
 int	nlist(char *, struct nlent *);
-
 int
 main(int argc, char *argv[])
 {

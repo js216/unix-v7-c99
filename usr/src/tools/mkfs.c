@@ -158,6 +158,7 @@ main(int argc, char *argv[])
 	if(f < 0)
 		printf("%s: cannot open init\n", string);
 	else
+
 		close(f);
 
 	/*
@@ -641,6 +642,7 @@ iput(struct inode *ip, int *aibc, daddr_t *ib)
 int
 badblk(daddr_t bno)
 {
+
 	(void)bno;
 	return(0);
 }

@@ -1,3 +1,7 @@
+
+
+
+
 .globl fstat
 fstat:
 		mov ip, r7

@@ -15,7 +15,6 @@ typedef char HAND[CTSIZ];
 int	shuffle(), choose(), draw(), error(), empty(), mark(), deal(),
 	stats(), phand(), instruct(), game(), move(), madebook(),
 	score(), guess(), start(), hedrew(), heguessed(), myguess();
-
 short debug;
 
 HAND myhand;

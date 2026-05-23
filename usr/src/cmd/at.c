@@ -59,7 +59,6 @@ FILE	*openjob(char *name);
 int	makeutime(char *pp), makeuday(int argc, char **argv);
 int	filename(char *dir, int y, int d, int t);
 int	onintr(int sig), getpwd(char *buf, int nbuf);
-
 int
 main(int argc, char **argv)
 {
@@ -123,7 +122,6 @@ FILE *
 openjob(char *name)
 {
 	int fd;
-
 	file = fopen(name, "a");
 	if (file == NULL) {
 		fd = creat(name, 0644);
@@ -134,13 +132,11 @@ openjob(char *name)
 	chmod(name, 0644);
 	return(file);
 }
-
 int
 getpwd(char *buf, int nbuf)
 {
 	int fd[2], status;
 	register int n;
-
 	if (pipe(fd) < 0)
 		return(-1);
 	if (fork() == 0) {
@@ -165,7 +161,6 @@ getpwd(char *buf, int nbuf)
 		}
 	return(0);
 }
-
 int
 makeutime(char *pp)
 {
@@ -195,6 +190,7 @@ makeutime(char *pp)
 			}
 			fprintf(stderr, "at: bad time format:\n");
 			exit(1);
+
 			/* fallthrough */
 		case 'A':
 		case 'a':

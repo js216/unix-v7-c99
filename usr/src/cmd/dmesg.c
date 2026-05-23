@@ -24,7 +24,6 @@ struct nlist nl[3] = {
 
 int done(char *);
 int pdate(void);
-
 int
 main(int argc, char **argv)
 {

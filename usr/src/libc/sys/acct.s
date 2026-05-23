@@ -1,3 +1,6 @@
+
+
+
 .globl acct
 acct:
 		mov ip, r7

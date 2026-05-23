@@ -4,58 +4,8 @@
 #include "../h/user.h"
 #include "../h/inode.h"
 #include "../h/file.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-/* readi/writei/plock/prele/psignal/min come from h/systm.h.
- * sleep/wakeup come from local declarations. */
+void sleep(caddr_t chan, int pri);
+void wakeup(caddr_t chan);
 
 /*
  * Max allowable buffering per pipe.
@@ -73,6 +23,7 @@ extern void virtio_init(void);
  * readp() and writep() are still kept because v7's read(2)/write(2)
  * fast path on FPIPE-flagged file structs lands here, even though new
  * pipe creation no longer creates such structs in this port. */
+
 
 /*
  * Read call directed to a pipe.
@@ -200,6 +151,32 @@ loop:
 	goto loop;
 }
 
-/* v7's plock/prele are in sys/arch/arm.c -- cooperative-scheduling
- * variants that just flip ILOCK without ever sleeping, since the ARM
- * port runs without the v7 sleep()/wakeup() handoff path. */
+/*
+ * Lock a pipe.
+ * If its already locked,
+ * set the WANT bit and sleep.
+ */
+void
+plock(register struct inode *ip)
+{
+
+	if(ip) {
+		ip->i_flag &= ~IWANT;
+		ip->i_flag |= ILOCK;
+	}
+}
+
+/*
+ * Unlock a pipe.
+ * If WANT bit is on,
+ * wakeup.
+ * This routine is also used
+ * to unlock inodes in general.
+ */
+void
+prele(register struct inode *ip)
+{
+
+	if(ip)
+		ip->i_flag &= ~(ILOCK|IWANT);
+}

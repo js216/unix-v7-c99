@@ -14,12 +14,10 @@
 struct stat sbuf;
 
 char *tty;
-char *ttyname(int f);
+char *ttyname();
 
 void error(char *s);
 void newmode(int m);
-void exit(int n);
-
 int
 main(int argc, char *argv[])
 {

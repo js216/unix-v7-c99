@@ -26,7 +26,7 @@ struct lbuf {
 	long	lmtime;
 };
 
-int	aflg, dflg, lflg, sflg, tflg, uflg, iflg, fflg, gflg, cflg, Rflg, Fflg, pflg;
+int	aflg, dflg, lflg, sflg, tflg, uflg, iflg, fflg, gflg, cflg;
 int	rflg	= 1;
 long	year;
 int	flags;
@@ -49,7 +49,6 @@ void	pmode(int aflag);
 void	select(int *pairp);
 void	readdir(char *dir);
 int	compar(struct lbuf **pp1, struct lbuf **pp2);
-void	descend_R(char *dir, struct lbuf **start, struct lbuf **end);
 
 #define	ISARG	0100000
 
@@ -118,21 +117,6 @@ main(int argc, char *argv[])
 			fflg++;
 			continue;
 
-		case 'R':
-			Rflg++;
-			statreq++;
-			continue;
-
-		case 'F':
-			Fflg++;
-			statreq++;
-			continue;
-
-		case 'p':
-			pflg++;
-			statreq++;
-			continue;
-
 		default:
 			continue;
 		}
@@ -166,7 +150,7 @@ main(int argc, char *argv[])
 	for (epp=firstp; epp<slastp; epp++) {
 		ep = *epp;
 		if ((ep->ltype=='d' && dflg==0) || fflg) {
-			if (argc>1 || Rflg)
+			if (argc>1)
 				printf("\n%s:\n", ep->ln.namep);
 			lastp = slastp;
 			readdir(ep->ln.namep);
@@ -176,56 +160,10 @@ main(int argc, char *argv[])
 				printf("total %D\n", tblocks);
 			for (ep1=slastp; ep1<lastp; ep1++)
 				pentry(*ep1);
-			if (Rflg) descend_R(ep->ln.namep, slastp, lastp);
 		} else
 			pentry(ep);
 	}
 	exit(0);
-}
-
-/* For each subdirectory under `dir` named by entries in [start,end),
- * print a header and a recursive listing.  Operates after the caller
- * has already printed `dir` itself, so output mirrors POSIX ls -R. */
-void
-descend_R(char *dir, struct lbuf **start, struct lbuf **end)
-{
-	struct lbuf **ep;
-	struct lbuf **save_first;
-	char path[256];
-	int i, j;
-
-	for (ep = start; ep < end; ep++) {
-		struct lbuf *e = *ep;
-		struct lbuf **rstart, **rend;
-		struct lbuf **p;
-		if (e->ltype != 'd') continue;
-		/* Skip . and .. -- both have the directory bit but aren't
-		 * fresh subtrees.  In v7 ls's lbuf, lname is fixed-width
-		 * (not necessarily NUL-terminated) so check explicit length. */
-		if (e->ln.lname[0] == '.' &&
-		    (e->ln.lname[1] == '\0' ||
-		     (e->ln.lname[1] == '.' && e->ln.lname[2] == '\0')))
-			continue;
-		for (i = 0; dir[i] && i < 200; i++) path[i] = dir[i];
-		if (i > 0 && path[i-1] != '/') path[i++] = '/';
-		for (j = 0; j < 14 && e->ln.lname[j]; j++) path[i++] = e->ln.lname[j];
-		path[i] = '\0';
-		printf("\n%s:\n", path);
-		save_first = firstp;
-		firstp = lastp;	/* start of fresh window */
-		rstart = lastp;
-		tblocks = 0;
-		readdir(path);
-		rend = lastp;
-		if (fflg == 0)
-			qsort(rstart, rend - rstart, sizeof *rstart, compar);
-		if (lflg || sflg)
-			printf("total %D\n", tblocks);
-		for (p = rstart; p < rend; p++)
-			pentry(*p);
-		descend_R(path, rstart, rend);
-		firstp = save_first;
-	}
 }
 
 void
@@ -263,15 +201,9 @@ pentry(struct lbuf *ap)
 			printf(" %-12.12s ", cp+4);
 	}
 	if (p->lflags&ISARG)
-		printf("%s", p->ln.namep);
+		printf("%s\n", p->ln.namep);
 	else
-		printf("%.14s", p->ln.lname);
-	/* -F: directory gets '/', executable gets '*'; -p: directory '/'. */
-	if (Fflg || pflg) {
-		if (p->ltype == 'd') putchar('/');
-		else if (Fflg && (p->lflags & 0111)) putchar('*');
-	}
-	putchar('\n');
+		printf("%.14s\n", p->ln.lname);
 }
 
 int

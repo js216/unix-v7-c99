@@ -31,5 +31,4 @@ struct	nlist {	/* symbol table entry */
 #define	N_FN	037	/* file name symbol */
 #define	N_EXT	040	/* external bit, or'ed in */
 #define	FORMAT	"%06o"	/* to print a value */
-
 int	nlist(char *, struct nlist *);

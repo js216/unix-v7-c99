@@ -4,7 +4,6 @@
 #define	NTAB	601
 char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
-
 struct unit
 {
 	double	factor;
@@ -17,7 +16,6 @@ struct table
 	char	dim[NDIM];
 	char	*name;
 } table[NTAB];
-
 double	getflt(void);
 int	fperr(int sig);
 struct	table	*hash(char *name);
@@ -467,6 +465,7 @@ l0:
 int
 fperr(int sig)
 {
+
 	(void)sig;
 	signal(8, (int)fperr);
 	fperrc++;

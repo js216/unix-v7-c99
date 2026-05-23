@@ -12,7 +12,6 @@
 # define LASTF "/usr/spool/at/lasttimedone"
 
 int	makenowtime(void), updatetime(int t), run(char *file), movefile(char *file, char *dir);
-
 int	nowtime;
 int	nowdate;
 int	nowyear;
@@ -114,12 +113,10 @@ run(char *file)
 	exit(1);
 	return(0);
 }
-
 int
 movefile(char *file, char *dir)
 {
 	int pid, status;
-
 	pid = fork();
 	if (pid == 0) {
 		execl("/bin/mv", "mv", file, dir, 0);

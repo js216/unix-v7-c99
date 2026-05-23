@@ -1,3 +1,6 @@
+
+
+
 .globl getgid
 getgid:
 	mov ip, r7

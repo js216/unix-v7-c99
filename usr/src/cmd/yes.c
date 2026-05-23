@@ -1,5 +1,4 @@
 int printf(char *fmt, ...);
-
 int
 main(int argc, char *argv[])
 {

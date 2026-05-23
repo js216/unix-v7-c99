@@ -1,3 +1,6 @@
+
+
+
 .globl kill
 kill:
 		mov ip, r7

@@ -31,7 +31,7 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/restor bin/tk bin/dc bin/tar bin/tp \
 	bin/prof bin/tc bin/graph bin/factor bin/primes \
 	bin/expr bin/iostat \
-	bin/spell bin/deroff bin/printf bin/chroot bin/mktemp bin/link bin/unlink \
+	bin/spell bin/deroff \
 	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 	usr/games/backgammon usr/games/fish usr/games/quiz \
 	usr/games/wump \
@@ -51,13 +51,95 @@ unix: usr/sys/sys/*.c usr/sys/arch/*.c usr/sys/arch/*.s usr/sys/arch/*.ld usr/sy
 qemu:	unix root.img
 	$(MAKE) -C usr/sys/conf qemu
 
-root.img: unix Makefile usr/src/tools/mkfs usr/sys/conf/root.proto usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/Makefile usr/src/libc/u.ld bin/spell etc/passwd etc/rc etc/ttys usr/dict/words usr/dict/hlista usr/dict/hlistb usr/dict/hstop usr/dict/spellhist usr/games/lib/fortunes usr/lib/units usr/lib/crontab etc/auxfs
-	$(MAKE) -C usr/src/libc
-	usr/src/tools/mkfs root.img usr/sys/conf/root.proto
+root.img: force-root-image unix Makefile usr/src/tools/mkfs usr/sys/conf/root.proto usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/compall usr/src/libc/mklib usr/src/libc/u.ld bin/spell etc/passwd etc/rc etc/ttys usr/dict/words usr/dict/hlista usr/dict/hlistb usr/dict/hstop usr/dict/spellhist usr/games/lib/fortunes usr/lib/units usr/lib/crontab etc/auxfs
+	cd usr/src/libc && sh compall && sh mklib
+	$(MAKE) userland-extra
 	# v7 mkfs only writes the blocks it touches.  Pad root.img to its
 	# declared filesystem size (FSIZE * BSIZE = 16384 * 512) so qemu's
 	# virtio block backend can serve any sector the kernel asks for.
-	truncate -s 8388608 root.img
+	trap 'rm -f root.img.tmp' EXIT; \
+	    usr/src/tools/mkfs root.img.tmp usr/sys/conf/root.proto; \
+	    truncate -s 8388608 root.img.tmp; \
+	    mv root.img.tmp root.img
+	$(MAKE) userland-clean
+
+USERCC = arm-none-eabi-gcc
+USEROBJCOPY = arm-none-eabi-objcopy
+USERCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Iusr/include -Iusr/src
+USERAWKCFLAGS = $(USERCFLAGS) -Os -fno-asynchronous-unwind-tables -fno-unwind-tables -Dmalloc=malloc -Dfree=free -Iusr/src/cmd/awk -Wno-int-conversion -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -Wno-implicit-int -Wno-return-type -Wno-unused-function -Wno-discarded-qualifiers
+USERYACCCFLAGS = $(USERCFLAGS) -DYYSTACK_USE_ALLOCA=1 -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-type -Wno-return-mismatch -Wno-int-conversion -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-char-subscripts -Wno-implicit-fallthrough -Wno-type-limits -Wno-unused-parameter
+USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld
+USERLDLIBS = -Lusr/src/libc -lc -lgcc
+USERCRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
+
+.PHONY: force-root-image userland-extra userland-clean
+force-root-image:
+
+userland-extra:
+	mkdir -p bin usr/lib
+	set -e; for i in tabs diff wall write df clri dcheck icheck ncheck cb sp find sort passwd iostat deroff dmesg ed factor primes; do \
+		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \
+	done
+	set -e; for i in makekey diffh; do \
+		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf usr/lib/$$i; \
+	done
+	$(USERCC) $(USERCFLAGS) -Wno-dangling-else -c usr/src/cmd/rm.c -o usr/src/libc/cmd-rm.o
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/rm.elf $(USERCRT) usr/src/libc/cmd-rm.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/rm.elf bin/rm
+	$(USERCC) $(USERCFLAGS) -Wno-missing-braces -c usr/src/cmd/stty.c -o usr/src/libc/cmd-stty.o
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/stty.elf $(USERCRT) usr/src/libc/cmd-stty.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/stty.elf bin/stty
+	set -e; trap 'rm -f usr/src/cmd/egrep.c usr/src/cmd/expr.c' EXIT; \
+	for i in egrep expr; do \
+		(cd usr/src/cmd && bison -y $$i.y && mv y.tab.c $$i.c); \
+		$(USERCC) $(USERYACCCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERYACCCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \
+	done
+	set -e; for i in sed0 sed1; do \
+		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/sed -c usr/src/cmd/sed/$$i.c -o usr/src/libc/$$i.o; \
+	done
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/sed.elf $(USERCRT) usr/src/libc/sed0.o usr/src/libc/sed1.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/sed.elf bin/sed
+	set -e; for i in args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec; do \
+		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/sh -c usr/src/cmd/sh/$$i.c -o usr/src/libc/sh-$$i.o; \
+	done
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/sh.elf $(USERCRT) usr/src/libc/sh-*.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/sh.elf bin/sh
+	$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/dc -c usr/src/cmd/dc/dc.c -o usr/src/libc/dc.o
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/dc.elf $(USERCRT) usr/src/libc/dc.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/dc.elf bin/dc
+	$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/tar -c usr/src/cmd/tar/tar.c -o usr/src/libc/tar.o
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/tar.elf $(USERCRT) usr/src/libc/tar.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/tar.elf bin/tar
+	set -e; for i in tp0 tp1 tp2 tp3; do \
+		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/tp -c usr/src/cmd/tp/$$i.c -o usr/src/libc/$$i.o; \
+	done
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/tp.elf $(USERCRT) usr/src/libc/tp0.o usr/src/libc/tp1.o usr/src/libc/tp2.o usr/src/libc/tp3.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/tp.elf bin/tp
+	cd usr/src/cmd/awk && bison -y -d awk.g.y && mv y.tab.c awk.g.c && mv y.tab.h awk.h
+	cd usr/src/cmd/awk && awk 'BEGIN { print "%option noyywrap noinput nounistd" } { if ($$0 == "%}") { print "#undef YY_INPUT"; print "#define YY_INPUT(buf,result,max_size) \\"; print "do { \\"; print "	int c = input(); \\"; print "	if (c == 0) result = YY_NULL; \\"; print "	else { buf[0] = c; result = 1; } \\"; print "} while (0)" } print }' awk.lx.l > awk.lx.tmp.l
+	cd usr/src/cmd/awk && perl -0pi -e 's/\tif \(yysptr > yysbuf\)\n\t\tc = U\(\*--yysptr\);\n\telse if \(yyin == NULL\)/\tif (lexprog != NULL)/' awk.lx.tmp.l
+	cd usr/src/cmd/awk && flex -o awk.lx.c awk.lx.tmp.l && rm -f awk.lx.tmp.l
+	cd usr/src/cmd/awk && sed -i '/#include <string.h>/d;/#include <stdlib.h>/d' awk.lx.c
+	cd usr/src/cmd/awk && sed -i '1i #include <stddef.h>' awk.lx.c
+	cd usr/src/cmd/awk && perl -0pi -e 's/#define ECHO [^\n]+/#define ECHO do { } while (0)/' awk.lx.c
+	cd usr/src/cmd/awk && perl -0pi -e 's/int\tlineno\t1;/int\tlineno = 1;/' awk.lx.c
+	cd usr/src/cmd/awk && perl -0pi -e 's/yybgin-yysvec-1/YY_START/g' awk.lx.c
+	cd usr/src/cmd/awk && cc -std=gnu89 -w -c token.c -o proc-token.o && cc -std=gnu89 -w -o proc proc.c proc-token.o && ./proc > proctab.c && rm -f proc proc-token.o
+	set -e; for i in awk.g awk.lx b main token tran lib run parse proctab; do \
+		$(USERCC) $(USERAWKCFLAGS) -c usr/src/cmd/awk/$$i.c -o usr/src/libc/awk-$$i.o; \
+	done
+	$(USERCC) $(USERAWKCFLAGS) $(USERLDFLAGS) -o usr/src/libc/awk.elf $(USERCRT) usr/src/libc/awk-awk.g.o usr/src/libc/awk-awk.lx.o usr/src/libc/awk-b.o usr/src/libc/awk-main.o usr/src/libc/awk-token.o usr/src/libc/awk-tran.o usr/src/libc/awk-lib.o usr/src/libc/awk-run.o usr/src/libc/awk-parse.o usr/src/libc/awk-proctab.o -Lusr/src/libc -lm -lc -lgcc
+	$(USEROBJCOPY) -O binary usr/src/libc/awk.elf bin/awk
+	rm -f usr/src/cmd/awk/awk.g.c usr/src/cmd/awk/awk.h usr/src/cmd/awk/awk.lx.c usr/src/cmd/awk/proctab.c
+
+userland-clean:
+	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf
 
 # mkfs is a v7 K&R program built as a Linux/ARM ELF (armhf glibc) so it
 # can run on the host via binfmt_misc.  Building for the same word width
@@ -127,5 +209,5 @@ usr/lib/crontab: v7/usr/lib/crontab
 
 clean:
 	$(MAKE) -C usr/sys/conf clean
-	$(MAKE) -C usr/src/libc clean
-	rm -f unix root.img usr/src/tools/mkfs
+	cd usr/src/libc && ./compall clean
+	rm -f unix root.img root.img.tmp usr/src/tools/mkfs

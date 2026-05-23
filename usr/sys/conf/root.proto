@@ -45,21 +45,16 @@ d--755 0 0
 		find	---755 0 0 bin/find
 		false	---755 0 0 bin/false
 		grep	---755 0 0 bin/grep
-		chroot	---755 0 0 bin/chroot
-		printf	---755 0 0 bin/printf
 		graph	---755 0 0 bin/graph
 		icheck	---755 0 0 bin/icheck
 		iostat	---755 0 0 bin/iostat
 		join	---755 0 0 bin/join
 		kill	---755 0 0 bin/kill
-		link	---755 0 0 bin/link
-		unlink	---755 0 0 bin/unlink
 		ln	---755 0 0 bin/ln
 		login	---755 0 0 bin/login
 		look	---755 0 0 bin/look
 		ls	---755 0 0 bin/ls
 		mesg	---755 0 0 bin/mesg
-		mktemp	---755 0 0 bin/mktemp
 		mkdir	---755 0 0 bin/mkdir
 		mknod	---755 0 0 bin/mknod
 		mount	---755 0 0 bin/mount

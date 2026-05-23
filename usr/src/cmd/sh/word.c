@@ -24,7 +24,6 @@ extern int read(int fd, char *buf, int n);
 extern int close(int fd);
 LOCAL	INT readb(void);
 
-
 /* ========	character handling for command lines	========*/
 
 

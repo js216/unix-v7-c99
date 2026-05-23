@@ -15,8 +15,6 @@ struct {
 		ino;
 } ml[ML];
 long	descend(char *np, char *fname);
-char	*rindex(char *sp, int c);
-char	*strcpy(char *a, char *b);
 
 int
 main(int argc, char **argv)

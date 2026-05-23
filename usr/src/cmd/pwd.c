@@ -16,7 +16,6 @@ struct	direct	dir;
 
 void prname(void);
 void cat(void);
-
 int
 main(void)
 {

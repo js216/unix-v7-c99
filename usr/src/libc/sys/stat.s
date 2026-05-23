@@ -1,3 +1,6 @@
+
+
+
 .globl stat
 stat:
 		mov ip, r7

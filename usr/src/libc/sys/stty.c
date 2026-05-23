@@ -1,7 +1,10 @@
-#define S_STTY 31
-int syscall3(int, int, int, int);
+
+#include <sgtty.h>
+
+int ioctl(int, int, char *);
+
 int
-stty(int fd, char *buf)
+stty(int fd, struct sgttyb *ap)
 {
-	return(syscall3(S_STTY, fd, (int)buf, 0));
+	return(ioctl(fd, TIOCSETP, (char *)ap));
 }

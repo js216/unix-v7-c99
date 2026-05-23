@@ -180,6 +180,7 @@ int	cant(char *f);
 int	rline(struct merg *mp);
 int	disorder(char *s, char *t);
 int	term(void);
+int	digit(int c);
 int	blank(int c);
 int	number(char **ppa);
 int	qsort(char **a, char **l);
@@ -213,38 +214,6 @@ main(int argc, char **argv)
 				if (--argc > 0)
 					dirtry[0] = *++argv;
 				continue;
-
-			case 'k': {
-				/* POSIX -k N (single-field form) -> v7 +N-1.
-				 * -k 2 sorts by the second whitespace-separated
-				 * field.  More complex forms (-k F1,F2) aren't
-				 * supported; falls back to single field. */
-				static char kbuf[16];
-				char *kp;
-				int n = 0;
-				if (--argc <= 0) break;
-				kp = *++argv;
-				while (*kp >= '0' && *kp <= '9') {
-					n = n*10 + (*kp++ - '0');
-				}
-				if (n > 0) {
-					int v = n - 1, ki = 0;
-					char tmp[12]; int ti = 0;
-					if (v == 0) kbuf[ki++] = '0';
-					else {
-						while (v > 0) { tmp[ti++] = '0' + (v%10); v /= 10; }
-						while (ti > 0) kbuf[ki++] = tmp[--ti];
-					}
-					kbuf[ki] = '\0';
-					if (++nfields >= NF) {
-						diag("too many keys","");
-						exit(1);
-					}
-					copyproto();
-					field(kbuf, 0);
-				}
-				continue;
-			}
 
 			default:
 				field(++*argv,nfields>0);
@@ -484,8 +453,8 @@ merge(int a, int b)
 				continue;
 			break;
 		}
-	}
-	p = (struct merg *)lspace;
+		}
+		p = (struct merg *)lspace;
 	for(i=a; i<b; i++) {
 		fclose(p->b);
 		p++;
@@ -670,8 +639,8 @@ cmp(char *i, char *j)
 				pb++;
 				sb = -sb;
 			}
-			for(ipa = pa; ipa<la&&isdigit(*ipa); ipa++) ;
-			for(ipb = pb; ipb<lb&&isdigit(*ipb); ipb++) ;
+			for(ipa = pa; ipa<la&&digit(*ipa); ipa++) ;
+			for(ipb = pb; ipb<lb&&digit(*ipb); ipb++) ;
 			jpa = ipa;
 			jpb = ipb;
 			a = 0;
@@ -691,14 +660,14 @@ cmp(char *i, char *j)
 			if(*(pb=jpb) == '.')
 				pb++;
 			if(sa==sb)
-				while(pa<la && isdigit(*pa)
-				   && pb<lb && isdigit(*pb))
+				while(pa<la && digit(*pa)
+				   && pb<lb && digit(*pb))
 					if((a = *pb++ - *pa++))
 						return(a*sa);
-			while(pa<la && isdigit(*pa))
+			while(pa<la && digit(*pa))
 				if(*pa++ != '0')
 					return(-sa);
-			while(pb<lb && isdigit(*pb))
+			while(pb<lb && digit(*pb))
 				if(*pb++ != '0')
 					return(sb);
 			continue;
@@ -854,6 +823,7 @@ field(char *s, int k)
 			if(p->m[k] == -1)	/* -m.n with m missing */
 				p->m[k] = 0;
 			d = &fields[0].n[0]-&fields[0].m[0];
+
 			/* fallthrough */
 		default:
 			p->m[k+d] = number(&s);
@@ -870,13 +840,20 @@ number(char **ppa)
 	register char *pa;
 	pa = *ppa;
 	n = 0;
-	while(isdigit(*pa)) {
+	while(digit(*pa)) {
 		n = n*10 + *pa - '0';
 		*ppa = pa++;
 	}
 	return(n);
 }
 
+int
+digit(int c)
+{
+	if(c >= '0' && c <= '9')
+		return(1);
+	return(0);
+}
 int
 blank(int c)
 {
@@ -962,9 +939,9 @@ loop:
 		}
 
 
-		--lp;
-		qstexc(j, lp, i);
-		j = --hp;
-	}
-}
+			--lp;
+			qstexc(j, lp, i);
+			j = --hp;
+		}
 
+	}

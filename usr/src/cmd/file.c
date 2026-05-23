@@ -25,7 +25,6 @@ int lookup(char *tab[]);
 int ccom(void);
 int ascom(void);
 int english(char *bp, int n);
-void exit(int n);
 #undef major
 #undef minor
 #define major(x)	(((x)>>8)&0377)
@@ -111,6 +110,7 @@ spcl:
 
 	case 0411:
 		printf("separate ");
+
 		/* fallthrough */
 	case 0407:
 exec:

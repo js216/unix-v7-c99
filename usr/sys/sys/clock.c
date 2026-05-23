@@ -1,60 +1,16 @@
 #include "../h/param.h"
 #include "../h/systm.h"
+#include "../h/callo.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-struct map;
-struct buf;
-extern int malloc(struct map *mp, int size);
-extern void mfree(struct map *mp, int size, int a);
-extern void printf(char *fmt, ...);
-extern void panic(char *s);
-extern void prdev(char *str, dev_t dev);
-extern void putchar(char c);
-extern int getchar(void);
-extern void trap(int *frame);
-extern void panictrap(void);
-extern void run_user(unsigned int pc, unsigned int sp);
-extern void mmu_on(unsigned int ttb);
-extern void dmbsy(void);
-extern void mmuinit(void);
-extern void startup(void);
-extern void armboot(void);
-extern void armboot_setrun(int pid);
-extern void armboot_swtch(void);
-extern int save(int *lp);
-extern void resume(int addr, int *lp);
-extern struct buf *bread(dev_t dev, daddr_t blkno);
-extern struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-extern void bwrite(struct buf *bp);
-extern void bdwrite(struct buf *bp);
-extern void brelse(struct buf *bp);
-extern int incore(dev_t dev, daddr_t blkno);
-extern struct buf *getblk(dev_t dev, daddr_t blkno);
-extern struct buf *geteblk(void);
-extern void iowait(struct buf *bp);
-extern void notavail(struct buf *bp);
-extern void iodone(struct buf *bp);
-extern void clrbuf(struct buf *bp);
-extern void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-extern void bflush(dev_t dev);
-extern void geterror(struct buf *bp);
-extern void wakeup(caddr_t chan);
-extern void sleep(caddr_t chan, int pri);
-extern int spl0(void);
-extern int spl1(void);
-extern int spl6(void);
-extern int spl7(void);
-extern void splx(int s);
-extern void binit(void);
-extern void copyseg(int from, int to);
-extern void clearseg(int a);
-extern dev_t rootdev;
-extern int virtio_strategy(struct buf *bp);
-extern void virtio_init(void);
-
-extern void addupc(caddr_t pc, void *prof, int inc);	/* sys/arch/arm.c stub */
-/* wakeup/spl1 come from local declarations.  psignal/setpri come from h/systm.h. */
+extern void addupc(caddr_t pc, void *prof, int inc);
+int spl1(void);
+int spl5(void);
+int spl7(void);
+void splx(int s);
+void wakeup(caddr_t chan);
+void panic(char *s);
 
 #define	SCHMAG	8/10
 
@@ -77,23 +33,61 @@ extern void addupc(caddr_t pc, void *prof, int inc);	/* sys/arch/arm.c stub */
 void
 clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 {
+	register struct callo *p1, *p2;
 	register struct proc *pp;
 	int a;
 	extern caddr_t waitloc;
 	(void)dev; (void)sp; (void)r1; (void)nps; (void)r0;
 
-	/* v7 rearmed the KW11-L by writing 0115 to lks->r[0] and snapshotted
-	 * the front-panel switch register via display(); on this port the
-	 * timer is rearmed by clock_irq_handler's cntv_tval_set and there is
-	 * no front panel, so both calls are gone. */
-	/* v7's per-tick callout[] dispatch is gone on this port -- nothing
-	 * registers via timeout() so the callout table is permanently empty. */
+	/*
+	 * restart clock
+	 */
+
+	/* ARM timer is rearmed in the interrupt handler. */
+
+	/*
+	 * display register
+	 */
+
+	/* no front-panel display on ARM/QEMU */
+	/*
+	 * callouts
+	 * if none, just continue
+	 * else update first non-zero time
+	 */
+
+	if(callout[0].c_func == NULL)
+		goto out;
+	p2 = &callout[0];
+	while(p2->c_time<=0 && p2->c_func!=NULL)
+		p2++;
+	p2->c_time--;
 
 	/*
 	 * if ps is high, just return
 	 */
 	if (BASEPRI(ps))
 		goto out;
+
+	/*
+	 * callout
+	 */
+
+	spl5();
+	if(callout[0].c_time <= 0) {
+		p1 = &callout[0];
+		while(p1->c_func != 0 && p1->c_time <= 0) {
+			(*p1->c_func)(p1->c_arg);
+			p1++;
+		}
+		p2 = &callout[0];
+		while((p2->c_func = p1->c_func) != 0) {
+			p2->c_time = p1->c_time;
+			p2->c_arg = p1->c_arg;
+			p1++;
+			p2++;
+		}
+	}
 
 	/*
 	 * lightning bolt time-out
@@ -148,7 +142,48 @@ out:
 	}
 }
 
-/* v7's timeout() registered fun(arg) for deferred call after tim/HZ
- * seconds via the callout[] table.  No driver on this port registers
- * timeouts (the v7 callers were in dh.c / kl.c / etc., none of which
- * exist here), so the function and the table are removed. */
+/*
+ * timeout is called to arrange that
+ * fun(arg) is called in tim/HZ seconds.
+ * An entry is sorted into the callout
+ * structure. The time in each structure
+ * entry is the number of HZ's more
+ * than the previous entry.
+ * In this way, decrementing the
+ * first entry has the effect of
+ * updating all entries.
+ *
+ * The panic is there because there is nothing
+ * intelligent to be done if an entry won't fit.
+ */
+void
+timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
+{
+	register struct callo *p1, *p2;
+	register int t;
+	int s;
+
+	t = tim;
+	p1 = &callout[0];
+	s = spl7();
+	while(p1->c_func != 0 && p1->c_time <= t) {
+		t -= p1->c_time;
+		p1++;
+	}
+	if (p1 >= &callout[NCALL-1])
+		panic("Timeout table overflow");
+	p1->c_time -= t;
+	p2 = p1;
+	while(p2->c_func != 0)
+		p2++;
+	while(p2 >= p1) {
+		(p2+1)->c_time = p2->c_time;
+		(p2+1)->c_func = p2->c_func;
+		(p2+1)->c_arg = p2->c_arg;
+		p2--;
+	}
+	p1->c_time = t;
+	p1->c_func = fun;
+	p1->c_arg = arg;
+	splx(s);
+}

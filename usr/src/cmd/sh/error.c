@@ -20,7 +20,6 @@ void	done(void);
 void	clearup(void);
 void	execexp(STRING s, UFD f);
 
-
 /* ========	error handling	======== */
 
 INT exitset(void)

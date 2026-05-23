@@ -23,11 +23,9 @@ char *month[] = {
 	"[Nn]ov",
 	"[Dd]ec"
 };
-struct tm *localtime(long *tim);
+struct tm *localtime();
 
 void tprint(long t);
-int time(long *t);
-
 void
 tprint(long t)
 {

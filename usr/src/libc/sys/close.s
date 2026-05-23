@@ -1,3 +1,6 @@
+
+
+
 .globl close
 close:
 		mov ip, r7

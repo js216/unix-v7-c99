@@ -51,7 +51,6 @@ int skip(int i, int from, char *pr);
 int duplicate(struct range *r1, struct range *r2);
 int repos(int nchar), trouble(void);
 int edit(struct diff *diff, int dup, int j), edscript(int n);
-
 int
 main(int argc, char **argv)
 {

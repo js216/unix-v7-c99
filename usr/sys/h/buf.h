@@ -1,6 +1,5 @@
 #ifndef BUF_H
 #define BUF_H
-
 /*
  * Each buffer in the pool is usually doubly linked into 2 lists:
  * the device with which it is currently associated (always)
@@ -38,8 +37,7 @@ struct buf
 	    daddr_t *b_daddr;		/* indirect block */
 	} b_un;
 	daddr_t	b_blkno;		/* block # on device */
-	/* v7's `char b_xmem` (high 6 bits of an 18-bit UNIBUS phys
-	 * address) is gone -- ARM uses a flat 32-bit b_un.b_addr. */
+	char	b_xmem;			/* high order core address */
 	char	b_error;		/* returned after I/O */
 	unsigned int b_resid;		/* words not transferred after error */
 };
@@ -55,11 +53,14 @@ extern struct buf bfreelist;		/* head of available list */
 #define	B_DONE	02	/* transaction finished */
 #define	B_ERROR	04	/* transaction aborted */
 #define	B_BUSY	010	/* not on av_forw/back list */
-/* B_PHYS (physio UNIBUS-map), B_MAP (block has map allocated) and
- * B_TAPE (ordered-write magtape) are gone -- never read on this port. */
+#define	B_PHYS	020	/* Physical IO potentially using UNIBUS map */
+#define	B_MAP	040	/* This block has the UNIBUS map allocated */
 #define	B_WANTED 0100	/* issue wakeup when BUSY goes off */
 #define	B_AGE	0200	/* delayed write for correct aging */
 #define	B_ASYNC	0400	/* don't wait for I/O completion */
 #define	B_DELWRI 01000	/* don't write till block leaves available list */
+#define	B_TAPE 02000	/* this is a magtape (no bdwrite) */
+#define	B_PBUSY	04000
+#define	B_PACK	010000
 
 #endif

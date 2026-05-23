@@ -1,3 +1,6 @@
+
+
+
 .globl fork
 fork:
 		mov ip, r7

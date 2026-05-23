@@ -1,3 +1,6 @@
+
+
+
 .globl umount
 umount:
 		mov ip, r7

@@ -1,4 +1,6 @@
 #include <setjmp.h>
+
+
 static jmp_buf sleep_jmp;
 static void
 sleepx(int signo)
@@ -14,7 +16,6 @@ sleep(unsigned n)
 {
 	unsigned altime;
 	void (*alsig)(int) = (void (*)(int))0;
-
 	if(n == 0)
 		return(0);
 	altime = (unsigned)alarm(1000);
@@ -22,6 +23,7 @@ sleep(unsigned n)
 		(void)signal(14, alsig);
 		(void)alarm((int)altime);
 		return(0);
+
 	}
 	if(altime) {
 		if(altime > n)

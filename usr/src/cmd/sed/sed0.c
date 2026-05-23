@@ -6,7 +6,6 @@ void	dechain(void);
 void	execute(char *file);
 int	rline(char *lbuf);
 int	cmp(char *a, char *b);
-
 struct label	*labtab = ltab;
 char	CGMES[]	= "command garbled: %s\n";
 char	TMMES[]	= "Too much text: %s\n";
@@ -86,7 +85,6 @@ main(int argc, char *argv[])
 		case 'i':
 			iflag++;
 			continue;
-
 		default:
 			fprintf(stdout, "Unknown flag: %c\n", eargv[0][1]);
 			continue;

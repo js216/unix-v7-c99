@@ -1,3 +1,5 @@
+
+
 .globl getpid
 getpid:
 	mov ip, r7

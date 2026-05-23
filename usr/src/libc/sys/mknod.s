@@ -1,3 +1,6 @@
+
+
+
 .globl mknod
 mknod:
 		mov ip, r7

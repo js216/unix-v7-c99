@@ -7,7 +7,6 @@
 int	rseek(), wseek(), tread(), twrite(), seekerr(), swabdir(),
 	encode(), decode(), done(), bitmap(), fserr(), callout(),
 	expand(), clrent();
-
 struct direct	direct;
 struct stat	statb;
 

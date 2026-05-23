@@ -415,6 +415,7 @@ number(int big)
 	case 'x':
 		string = cs;
 		n *= number(BIG);
+
 		/* fallthrough */
 	case '\0':
 		if (n>=big || n<0) {

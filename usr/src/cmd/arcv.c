@@ -37,7 +37,6 @@ putshort(char *p, unsigned short v)
 	p[0] = v & 0377;
 	p[1] = (v >> 8) & 0377;
 }
-
 static void
 putlong(char *p, char *v)
 {
@@ -46,12 +45,10 @@ putlong(char *p, char *v)
 	p[2] = v[2];
 	p[3] = v[3];
 }
-
 static void
 putarhdr(char *p, struct oar_hdr *oh)
 {
 	int i;
-
 	for(i = 0; i < 8; i++)
 		p[i] = oh->oname[i];
 	for(; i < 14; i++)
@@ -118,13 +115,11 @@ out:
 	close(f);
 	close(tf);
 }
-
 int
 main(int argc, char **argv)
 {
 	int i;
 	char tbuf[] = "/tmp/arcXXXXX";
-
 	tmp = mktemp(tbuf);
 	for(i = 1; i < 4; i++)
 		signal(i, SIG_IGN);

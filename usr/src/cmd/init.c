@@ -48,7 +48,6 @@ int get(void);
 int dfork(struct tab *p);
 int rmut(struct tab *p);
 void reset(void);
-
 int
 main(void)
 {

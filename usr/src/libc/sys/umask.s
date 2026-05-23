@@ -1,3 +1,6 @@
+
+
+
 .globl umask
 umask:
 		mov ip, r7

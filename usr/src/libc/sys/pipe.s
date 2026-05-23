@@ -1,3 +1,7 @@
+
+
+
+
 .globl pipe
 pipe:
 		mov ip, r7

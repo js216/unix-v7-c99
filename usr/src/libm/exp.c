@@ -21,7 +21,6 @@ static double	maxf	= 10000;
 
 extern double floor(double);
 extern double ldexp(double, int);
-
 double
 exp(double arg)
 {

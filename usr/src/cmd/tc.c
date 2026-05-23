@@ -64,7 +64,6 @@ int sendpt(void);
 int tcatoi(void);
 int getch(void);
 long tscale(int n);
-
 int main(int argc, char **argv)
 {
 	register int i, j;

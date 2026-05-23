@@ -1,3 +1,7 @@
+
+
+
+
 .globl lock
 lock:
 		mov ip, r7

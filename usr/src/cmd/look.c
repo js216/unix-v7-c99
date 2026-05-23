@@ -14,7 +14,6 @@ char key[50];
 void canon(char *old, char *new);
 int compare(register char *s, register char *t);
 int getword(char *w);
-
 int
 main(int argc, char *argv[])
 {

@@ -1,3 +1,6 @@
+
+
+
 .globl write
 write:
 		mov ip, r7
