@@ -4,26 +4,19 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/text.h"
-
-#define	RO	02
-#define	RW	06
-#define	ED	010
-#define	TX	020
-#define	ABS	040
+#include "../h/seg.h"
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+
 /*
- * v7's sureg() pushed the per-proc u_uisa/u_uisd prototype into the
- * PDP-11's UISA/UISD segment registers at 0177640 / 0177600.  On ARM
- * those literal addresses fall inside l1[0]'s identity-mapped user
- * page (USERPHYS+0xFF80..0xFFFE), so the original loop would silently
- * scribble over the bottom of every process's address space.  ARM
- * userspace runs out of a single 1 MiB identity-mapped window with
- * no per-segment registers to reload, so this is a no-op.
+ * Load the user hardware segmentation
+ * registers from the software prototype.
+ * The software registers must have
+ * been setup prior by estabur.
  */
 void
 sureg(void)
-
 {
+
 }
 
 /*

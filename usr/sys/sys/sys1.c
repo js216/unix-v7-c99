@@ -257,13 +257,13 @@ getxfile(register struct inode *ip, int nargc)
 	} else {
 		if(estabur(ts, ds, ss, sep, RO))
 			goto bad;
-
+	
 		/*
 		 * allocate and clear core
 		 * at this point, committed
 		 * to the new image
 		 */
-
+	
 		u.u_prof.pr_scale = 0;
 		xfree();
 		i = USIZE+ds+ss;
@@ -271,11 +271,11 @@ getxfile(register struct inode *ip, int nargc)
 		while(--i >= USIZE)
 			clearseg(u.u_procp->p_addr+i);
 		xalloc(ip);
-
+	
 		/*
 		 * read in data segment
 		 */
-
+	
 		estabur((unsigned)0, ds, (unsigned)0, 0, RO);
 		u.u_base = 0;
 		u.u_offset = sizeof(u.u_exdata)+u.u_exdata.ux_tsize;

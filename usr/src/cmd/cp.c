@@ -15,12 +15,12 @@ main(int argc, char *argv[])
 {
 	register int i, r;
 
-	if (argc < 3)
+	if (argc < 3) 
 		goto usage;
 	if (argc > 3) {
 		if (stat(argv[argc-1], &stbuf2) < 0)
 			goto usage;
-		if ((stbuf2.st_mode&S_IFMT) != S_IFDIR)
+		if ((stbuf2.st_mode&S_IFMT) != S_IFDIR) 
 			goto usage;
 	}
 	r = 0;
@@ -61,7 +61,7 @@ copy(char *from, char *to)
 	}
 	if (stat(to, &stbuf2) >= 0) {
 		if (stbuf1.st_dev == stbuf2.st_dev &&
-		    stbuf1.st_ino == stbuf2.st_ino) {
+		   stbuf1.st_ino == stbuf2.st_ino) {
 			fprintf(stderr, "cp: cannot copy file to itself.\n");
 			return(1);
 		}
@@ -71,19 +71,19 @@ copy(char *from, char *to)
 		close(fold);
 		return(1);
 	}
-	while ((n = read(fold, iobuf, BSIZE))) {
+	while((n = read(fold,  iobuf,  BSIZE))) {
 		if (n < 0) {
 			fprintf(stderr, "cp: read error\n");
 			close(fold);
 			close(fnew);
 			return(1);
-		}
-		if (write(fnew, iobuf, n) != n) {
-			fprintf(stderr, "cp: write error.\n");
-			close(fold);
-			close(fnew);
-			return(1);
-		}
+		} else
+			if (write(fnew, iobuf, n) != n) {
+				fprintf(stderr, "cp: write error.\n");
+				close(fold);
+				close(fnew);
+				return(1);
+			}
 	}
 	close(fold);
 	close(fnew);

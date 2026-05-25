@@ -39,7 +39,6 @@ long	Blocks;
 char *rindex(char *sp, int c);
 char *sbrk(int);
 int	pr(char *s);
-int	gethome(void);
 int	descend(char *name, char *fname, struct anode *exlist);
 int	cpio(void);
 int	getunum(char *f, char *s);
@@ -56,9 +55,14 @@ main(int argc, char *argv[])
 	struct anode *exlist;
 	int paths;
 	register char *cp, *sp = 0;
+	FILE *pwd, *popen();
+	int pclose(FILE *);
 
 	time(&Now);
-	gethome();
+	pwd = popen("pwd", "r");
+	fgets(Home, 128, pwd);
+	pclose(pwd);
+	Home[strlen(Home) - 1] = '\0';
 	Argc = argc; Argv = argv;
 	if(argc<3) {
 usage:		pr("Usage: find path-list predicate-list\n");
@@ -468,68 +472,6 @@ newer(void)
 }
 
 /* support functions */
-int
-gethome(void)
-{
-	char name[128];
-	int file, off, i, j;
-	struct stat d, dd, root;
-	struct direct dir;
-
-	off = -1;
-	stat("/", &root);
-	for (;;) {
-		stat(".", &d);
-		if(d.st_ino == root.st_ino && d.st_dev == root.st_dev) {
-			Home[0] = '/';
-			if(off < 0) {
-				Home[1] = '\0';
-			} else {
-				if(off + 2 > (int)sizeof Home) {
-					pr("find: pathname too long\n");
-					exit(1);
-				}
-				strcpy(Home + 1, name);
-			}
-			chdir(Home);
-			return(0);
-		}
-		if((file = open("..", 0)) < 0) {
-			pr("find: cannot open ..\n");
-			exit(1);
-		}
-		fstat(file, &dd);
-		chdir("..");
-		if(d.st_dev == dd.st_dev) {
-			do {
-				if(read(file, (char *)&dir, sizeof dir) < (int)sizeof dir) {
-					pr("find: cannot read ..\n");
-					exit(1);
-				}
-			} while(dir.d_ino != d.st_ino);
-		} else do {
-			if(read(file, (char *)&dir, sizeof dir) < (int)sizeof dir) {
-				pr("find: cannot read ..\n");
-				exit(1);
-			}
-			stat(dir.d_name, &dd);
-		} while(dd.st_ino != d.st_ino || dd.st_dev != d.st_dev);
-		close(file);
-		i = -1;
-		while(dir.d_name[++i] != 0);
-		if(off + i + 2 >= (int)sizeof name) {
-			pr("find: pathname too long\n");
-			exit(1);
-		}
-		for(j = off + 1; j >= 0; --j)
-			name[j + i + 1] = name[j];
-		off = i + off + 1;
-		name[i] = '/';
-		for(--i; i >= 0; --i)
-			name[i] = dir.d_name[i];
-	}
-	return(0);
-}
 int
 scomp(register int a, register int b, register int s) /* funny signed compare */
 {

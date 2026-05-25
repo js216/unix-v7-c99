@@ -18,8 +18,7 @@ struct {
 } omesg;
 struct nlist nl[3] = {
 	{"_msgbuf",  0, 0},
-	{"_msgbufp", 0, 0},
-	{"",         0, 0}
+	{"_msgbufp", 0, 0}
 };
 
 int done(char *);

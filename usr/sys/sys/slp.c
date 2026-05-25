@@ -7,7 +7,15 @@
 #include "../h/map.h"
 #include "../h/file.h"
 #include "../h/inode.h"
-struct map;
+#include "../h/buf.h"
+void sleep(caddr_t chan, int pri);
+void wakeup(register caddr_t chan);
+void setrun(register struct proc *p);
+void setrq(struct proc *p);
+void sched(void);
+int swapin(register struct proc *p);
+void swtch(void);
+void qswtch(void);
 int spl0(void);
 int spl6(void);
 void splx(int s);
@@ -16,16 +24,14 @@ int save(int *lp);
 void resume(int addr, int *lp);
 int malloc(struct map *mp, int size);
 void mfree(struct map *mp, int size, int a);
+void xswap(register struct proc *p, int ff, int os);
+void xlock(register struct text *xp);
+void xunlock(register struct text *xp);
+void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
+void sureg(void);
 void copyseg(int from, int to);
 void armboot_setrun(int pid);
 void armboot_swtch(void);
-extern void sureg(void);
-extern void xswap(struct proc *, int, int);
-void wakeup(register caddr_t chan);
-void setrun(register struct proc *p);
-void setrq(struct proc *p);
-void swtch(void);
-void qswtch(void);
 
 #define SQSIZE 0100	/* Must be power of 2 */
 #define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
@@ -127,9 +133,12 @@ wakeup(register caddr_t chan)
 	splx(s);
 }
 
-/* PORT: our scheduler doesn't unlink from v7's runq during swtch, so
- * wakeup()->setrun() races re-add procs already linked.  Silently
- * dedupe instead of printing; functionally a no-op. */
+/*
+ * when you are sure that it
+ * is impossible to get the
+ * 'proc on q' diagnostic, the
+ * diagnostic loop can be removed.
+ */
 void
 setrq(struct proc *p)
 {
@@ -138,7 +147,8 @@ setrq(struct proc *p)
 
 	s = spl6();
 	for(q=runq; q!=NULL; q=q->p_link)
-		if(q == p) goto out;
+		if(q == p)
+			goto out;
 	p->p_link = runq;
 	runq = p;
 out:
@@ -148,13 +158,6 @@ out:
 /*
  * Set the process running;
  * arrange for it to be swapped in if necessary.
- *
- * PORT DIVERGENCE: armboot_setrun(p->p_pid) added so the port's
- * scheduler (which keeps its own armproc_state[] table) sees the
- * wakeup.  Without it, v7's wakeup()->setrun() flips p_stat = SRUN
- * but mt_pick_runnable() never picks the slot because its
- * armproc_state stays PSTATE_SLEEP.  No semantic change to v7's
- * state machine; just a cross-side notify.
  */
 void
 setrun(register struct proc *p)
@@ -203,10 +206,144 @@ setpri(register struct proc *pp)
 	return(p);
 }
 
-/* v7's sched() main loop (the proc-0 "swapper" task) and its swapin()
- * helper drove the per-process swap-in/swap-out cycle.  This port keeps
- * every proc resident, so neither runs -- the C scheduler is in
- * armboot_swtch() (see swtch() below). */
+/*
+ * The main loop of the scheduling (swapping)
+ * process.
+ * The basic idea is:
+ *  see if anyone wants to be swapped in;
+ *  swap out processes until there is room;
+ *  swap him in;
+ *  repeat.
+ * The runout flag is set whenever someone is swapped out.
+ * Sched sleeps on it awaiting work.
+ *
+ * Sched sleeps on runin whenever it cannot find enough
+ * core (by swapping out or otherwise) to fit the
+ * selected swapped process.  It is awakened when the
+ * core situation changes and in any case once per second.
+ */
+void
+sched(void)
+{
+	register struct proc *rp, *p;
+	register int outage, inage;
+	int maxsize;
+
+	/*
+	 * find user to swap in;
+	 * of users ready, select one out longest
+	 */
+
+loop:
+	spl6();
+	outage = -20000;
+	for (rp = &proc[0]; rp < &proc[NPROC]; rp++)
+	if (rp->p_stat==SRUN && (rp->p_flag&SLOAD)==0 &&
+	    rp->p_time - (rp->p_nice-NZERO)*8 > outage) {
+		p = rp;
+		outage = rp->p_time - (rp->p_nice-NZERO)*8;
+	}
+	/*
+	 * If there is no one there, wait.
+	 */
+	if (outage == -20000) {
+		runout++;
+		sleep((caddr_t)&runout, PSWP);
+		goto loop;
+	}
+	spl0();
+
+	/*
+	 * See if there is core for that process;
+	 * if so, swap it in.
+	 */
+
+	if (swapin(p))
+		goto loop;
+
+	/*
+	 * none found.
+	 * look around for core.
+	 * Select the largest of those sleeping
+	 * at bad priority; if none, select the oldest.
+	 */
+
+	spl6();
+	p = NULL;
+	maxsize = -1;
+	inage = -1;
+	for (rp = &proc[0]; rp < &proc[NPROC]; rp++) {
+		if (rp->p_stat==SZOMB
+		 || (rp->p_flag&(SSYS|SLOCK|SULOCK|SLOAD))!=SLOAD)
+			continue;
+		if (rp->p_textp && (rp->p_textp->x_flag&XLOCK))
+			continue;
+		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) || rp->p_stat==SSTOP) {
+			if (maxsize < rp->p_size) {
+				p = rp;
+				maxsize = rp->p_size;
+			}
+		} else if (maxsize<0 && (rp->p_stat==SRUN||rp->p_stat==SSLEEP)) {
+			if (rp->p_time+rp->p_nice-NZERO > inage) {
+				p = rp;
+				inage = rp->p_time+rp->p_nice-NZERO;
+			}
+		}
+	}
+	spl0();
+	/*
+	 * Swap found user out if sleeping at bad pri,
+	 * or if he has spent at least 2 seconds in core and
+	 * the swapped-out process has spent at least 3 seconds out.
+	 * Otherwise wait a bit and try again.
+	 */
+	if (maxsize>=0 || (outage>=3 && inage>=2)) {
+		p->p_flag &= ~SLOAD;
+		xswap(p, 1, 0);
+		goto loop;
+	}
+	spl6();
+	runin++;
+	sleep((caddr_t)&runin, PSWP);
+	goto loop;
+}
+
+/*
+ * Swap a process in.
+ * Allocate data and possible text separately.
+ * It would be better to do largest first.
+ */
+int
+swapin(register struct proc *p)
+{
+	register struct text *xp;
+	register int a;
+	int x;
+
+	if ((a = malloc(coremap, p->p_size)) == NULL)
+		return(0);
+	if ((xp = p->p_textp)) {
+		xlock(xp);
+		if (xp->x_ccount==0) {
+			if ((x = malloc(coremap, xp->x_size)) == NULL) {
+				xunlock(xp);
+				mfree(coremap, p->p_size, a);
+				return(0);
+			}
+			xp->x_caddr = x;
+			if ((xp->x_flag&XLOAD)==0)
+				swap(xp->x_daddr,x,xp->x_size,B_READ);
+		}
+		xp->x_ccount++;
+		xunlock(xp);
+	}
+	swap(p->p_addr, a, p->p_size, B_READ);
+	mfree(swapmap, ctod(p->p_size), p->p_addr);
+	p->p_addr = a;
+	p->p_flag |= SLOAD;
+	p->p_time = 0;
+	return(1);
+}
 
 /*
  * put the current process on
@@ -223,13 +360,19 @@ qswtch(void)
 
 /*
  * This routine is called to reschedule the CPU.
- * The ARM port keeps per-process stacks resident and performs the
- * save, pick and resume sequence in arch/arm.c.
+ * if the calling process is not in RUN state,
+ * arrangements for it to restart must have
+ * been made elsewhere, usually by calling via sleep.
+ * There is a race here. A process may become
+ * ready after it has been examined.
+ * In this case, idle() will be called and
+ * will return in at most 1HZ time.
+ * i.e. its not worth putting an spl() in.
  */
-
 void
 swtch(void)
 {
+
 	armboot_swtch();
 }
 
@@ -238,15 +381,15 @@ swtch(void)
  * sys fork.
  * It returns 1 in the new process, 0 in the old.
  */
-/* v7 newproc() (alloc proc[] slot, copy parent's image into child) is
- * gone -- fork(2) routes through arch/arm.c::mt_alloc_slot, which
- * maintains armproc[NSLOTS] in parallel with proc[NPROC]; the child's
- * register state is duplicated by the trap frame copy, not by save()/
- * resume() over the v7 u_ssav. */
 int
 newproc(void)
 {
+
 	panic("newproc");
+
+
+
+
 	return(0);
 }
 

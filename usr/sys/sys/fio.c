@@ -8,6 +8,7 @@
 #include "../h/inode.h"
 #include "../h/acct.h"
 void wakeup(caddr_t chan);
+void printf(char *fmt, ...);
 
 /*
  * Convert a user supplied
@@ -47,7 +48,8 @@ closef(register struct file *fp)
 	register struct inode *ip;
 	int flag, mode;
 	dev_t dev;
-	register int (*cfunc)(dev_t, int);
+	register int (*cfunc)();
+	struct chan *cp;
 
 	if(fp == NULL)
 		return;
@@ -57,6 +59,7 @@ closef(register struct file *fp)
 	}
 	ip = fp->f_inode;
 	flag = fp->f_flag;
+	cp = fp->f_un.f_chan;
 	dev = (dev_t)ip->i_un.i_rdev;
 	mode = ip->i_mode;
 
@@ -84,20 +87,46 @@ closef(register struct file *fp)
 		return;
 	}
 
-	for(fp=file; fp < &file[NFILE]; fp++)
-		if (fp->f_count && fp->f_inode==ip)
-			return;
-	(*cfunc)(dev, flag);
+	if ((flag & FMP) == 0)
+		for(fp=file; fp < &file[NFILE]; fp++)
+			if (fp->f_count && fp->f_inode==ip)
+				return;
+	(*cfunc)(dev, flag, cp);
 }
 
+/*
+ * openi called to allow handler
+ * of special files to initialize and
+ * validate before actual IO.
+ */
+void
+openi(register struct inode *ip, int rw)
+{
+	dev_t dev;
+	register unsigned int maj;
 
-/* v7 openi() (per-driver d_open dispatch for IFCHR/IFBLK) is gone --
+	dev = (dev_t)ip->i_un.i_rdev;
+	maj = major(dev);
+	switch(ip->i_mode&IFMT) {
 
- * open(2) on this port routes through arch/arm.c::kopen(), which
+	case IFCHR:
+	case IFMPC:
+		if(maj >= (unsigned int)nchrdev)
+			goto bad;
+		(*cdevsw[maj].d_open)(dev, rw);
+		break;
 
- * handles the pseudo-fds and IFREG itself.  The cdevsw[]/bdevsw[]
+	case IFBLK:
+	case IFMPB:
+		if(maj >= (unsigned int)nblkdev)
+			goto bad;
+		(*bdevsw[maj].d_open)(dev, rw);
+	}
+	return;
 
- * d_open hook was never reached. */
+bad:
+	u.u_error = ENXIO;
+}
 
 /*
  * Check mode permission on inode pointer.
@@ -202,7 +231,32 @@ ufalloc(void)
 	return(-1);
 }
 
+/*
+ * Allocate a user file descriptor
+ * and a file structure.
+ * Initialize the descriptor
+ * to point at the file structure.
+ *
+ * no file -- if there are no available
+ * 	file structures.
+ */
+struct file *
+falloc(void)
+{
+	register struct file *fp;
+	register int i;
 
-/* v7 falloc() (allocate fd + file slot, return file*) is gone -- its
- * only callers were sys2.c::open1 and pipe.c::pipe, both removed.
- * arch/arm.c uses its own files[NFD] table instead of file[NFILE]. */
+	i = ufalloc();
+	if(i < 0)
+		return(NULL);
+	for(fp = &file[0]; fp < &file[NFILE]; fp++)
+		if(fp->f_count == 0) {
+			u.u_ofile[i] = fp;
+			fp->f_count++;
+			fp->f_un.f_offset = 0;
+			return(fp);
+		}
+	printf("no file\n");
+	u.u_error = ENFILE;
+	return(NULL);
+}

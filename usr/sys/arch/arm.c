@@ -865,6 +865,7 @@ static int pseudo_fd_open(ino_t ino, int mode, unsigned int size)
 {
 	int fd = alloc_fd_slot();
 	if(fd < 0) return -1;
+	v7_ofile_clear(fd);
 	bzero((char *)&files[fd], sizeof(files[fd]));
 	files[fd].ino = ino;
 	files[fd].mode = mode;
@@ -2051,8 +2052,18 @@ static void sys_setgid_v7(void)
 	int new = v7_setgid_call(kgid, ku.u_arg);
 	if(!ku.u_error) { kgid = new; ku.u_rval1 = 0; }
 }
+static void scrub_pseudo_inode_updates(void)
+{
+	for(struct inode *ip = &inode[0]; ip < &inode[NINODE]; ip++)
+		if((ip->i_flag&(IUPD|IACC|ICHG)) != 0 && ip->i_dev != rootdev)
+			ip->i_flag &= ~(IUPD|IACC|ICHG);
+}
 static void sys_sync_v7(void)
-{ (void)v7_sync_call(); ku.u_rval1 = 0; }
+{
+	scrub_pseudo_inode_updates();
+	(void)v7_sync_call();
+	ku.u_rval1 = 0;
+}
 /* v7_nice_call/alarm_call/gtime_call/stime_call declared in local extern declarations. */
 static void sys_nice_v7(void)
 {
@@ -2168,10 +2179,10 @@ static void sys_ptrace_v7(void) { ptrace(); }
  * v7 mapped to `nosys` (EINVAL) use sys_nosys.  Slots 1 (exit), 2
  * (fork), 48 (signal) and 139 (sigreturn) are handled inline in trap()
  * so their entries are never actually dispatched. */
-static struct sysent {
+static struct arm_sysent {
 	int	sy_narg;
 	void	(*sy_call)(void);
-} sysent[64] = {
+} arm_sysent[64] = {
 	/* 0 indir, 1 exit */		{0, sys_nullsys},   {1, sys_nosys},
 	/* 2 fork, 3 read */		{0, sys_nosys},     {3, sys_read_v7},
 	/* 4 write, 5 open */		{3, sys_write_v7},  {2, sys_open_v7},
@@ -2211,13 +2222,13 @@ static void sysent_dispatch(int n)
 	ku.u_error = 0;
 	ku.u_rval1 = ku.u_rval2 = 0;
 	if(n < 0 || n >= 64) { ku.u_error = 22; return; }	/* EINVAL */
-	for(int i = 0; i < sysent[n].sy_narg && i < 6; i++)
+	for(int i = 0; i < arm_sysent[n].sy_narg && i < 6; i++)
 		ku.u_arg[i] = trap_r[i];
 	/* Seed u_qsav; sleep() in the handler longjmps back here on a
 	 * caught signal, returning 1 and skipping the syscall (already
 	 * EINTR'd by sig.c::psig). */
 	if(v7_save_qsav()) return;
-	(*sysent[n].sy_call)();
+	(*arm_sysent[n].sy_call)();
 }
 /* clock_irq_handler skips v7 clock() when set (avoid trap() re-entry). */
 volatile int in_trap;
@@ -2236,6 +2247,7 @@ void do_exit(int code, int *r)
 		if(childdone[i].ppid == my_pid)
 			childdone[i].ppid = 1;
 	v7_proc_exit(my_pid, code);
+	scrub_pseudo_inode_updates();
 	kflush();
 	/* Drop pipe FDs so pipes[] entry frees when last ref leaves; otherwise
 	 * NPIPES=4 fills up after a handful of `cmd | nonexistent` runs. */
@@ -2907,7 +2919,20 @@ void v7_ofile_clear(int fd)
 	fp->f_inode = NULL;
 	fp->f_flag = 0;
 	fp->f_un.f_offset = 0;
-	if(ip) iput(ip);
+	if(ip) {
+		if(ip->i_dev != rootdev) {
+			ip->i_flag &= ~(IUPD|IACC|ICHG);
+			if(ip->i_count > 0) ip->i_count--;
+			return;
+		}
+		struct mount *mp;
+		for(mp = &mount[0]; mp < &mount[NMOUNT]; mp++)
+			if(mp->m_bufp != NULL && mp->m_dev == ip->i_dev)
+				break;
+		if(mp == &mount[NMOUNT])
+			ip->i_flag &= ~(IUPD|IACC|ICHG);
+		iput(ip);
+	}
 }
 void v7_ofile_dup(int from, int to)
 {

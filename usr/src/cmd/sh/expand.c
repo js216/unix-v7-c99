@@ -24,7 +24,7 @@
  *
  */
 
-PROC VOID	addg(STRING as1, STRING as2, STRING as3);
+LOCAL VOID	addg(STRING as1, STRING as2, STRING as3);
 INT	gmatch(REG STRING s, REG STRING p);
 INT	makearg(REG ARGPTR args);
 extern int stat(char *p, STATBUF *s);

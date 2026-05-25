@@ -17,13 +17,45 @@ void wakeup(caddr_t chan);
  */
 #define	PIPSIZ	4096
 
-/* v7's pipe(2) implementation (allocate inode + two file structs + wire
- * FREAD/FWRITE) is gone -- arch/arm.c::sys_pipe maintains its own
- * pipes[NPIPES] table that doesn't touch the v7 inode[]/file[] arrays.
- * readp() and writep() are still kept because v7's read(2)/write(2)
- * fast path on FPIPE-flagged file structs lands here, even though new
- * pipe creation no longer creates such structs in this port. */
+/*
+ * The sys-pipe entry.
+ * Allocate an inode on the root device.
+ * Allocate 2 file structures.
+ * Put it all together with flags.
+ */
+void
+pipe(void)
+{
+	register struct inode *ip;
+	register struct file *rf, *wf;
+	int r;
 
+	ip = ialloc(pipedev);
+	if(ip == NULL)
+		return;
+	rf = falloc();
+	if(rf == NULL) {
+		iput(ip);
+		return;
+	}
+	r = u.u_r.r_val1;
+	wf = falloc();
+	if(wf == NULL) {
+		rf->f_count = 0;
+		u.u_ofile[r] = NULL;
+		iput(ip);
+		return;
+	}
+	u.u_r.r_val2 = u.u_r.r_val1;
+	u.u_r.r_val1 = r;
+	wf->f_flag = FWRITE|FPIPE;
+	wf->f_inode = ip;
+	rf->f_flag = FREAD|FPIPE;
+	rf->f_inode = ip;
+	ip->i_count = 2;
+	ip->i_mode = IFREG;
+	ip->i_flag = IACC|IUPD|ICHG;
+}
 
 /*
  * Read call directed to a pipe.
@@ -160,10 +192,11 @@ void
 plock(register struct inode *ip)
 {
 
-	if(ip) {
-		ip->i_flag &= ~IWANT;
-		ip->i_flag |= ILOCK;
+	while(ip->i_flag&ILOCK) {
+		ip->i_flag |= IWANT;
+		sleep((caddr_t)ip, PINOD);
 	}
+	ip->i_flag |= ILOCK;
 }
 
 /*
@@ -177,6 +210,9 @@ void
 prele(register struct inode *ip)
 {
 
-	if(ip)
-		ip->i_flag &= ~(ILOCK|IWANT);
+	ip->i_flag &= ~ILOCK;
+	if(ip->i_flag&IWANT) {
+		ip->i_flag &= ~IWANT;
+		wakeup((caddr_t)ip);
+	}
 }

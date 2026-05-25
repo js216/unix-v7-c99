@@ -76,8 +76,7 @@
 #include	"name.h"
 
 
-/* result type declarations.  copyto/execs/staknam are LOCAL to their
- * .c files; REAL expr() was never defined or called, dropped. */
+/* result type declarations */
 #define alloc malloc
 ADDRESS		alloc(POS nbytes);
 VOID		addblok(POS reqd);

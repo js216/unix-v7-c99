@@ -63,4 +63,13 @@ extern struct buf bfreelist;		/* head of available list */
 #define	B_PBUSY	04000
 #define	B_PACK	010000
 
+/*
+ * special redeclarations for
+ * the head of the queue per
+ * device driver.
+ */
+#define	b_actf	av_forw
+#define	b_actl	av_back
+#define	b_active b_bcount
+#define	b_errcnt b_resid
 #endif

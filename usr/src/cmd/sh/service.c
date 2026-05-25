@@ -10,7 +10,7 @@
 #include	"defs.h"
 
 
-PROC VOID	gsort(STRING from[], STRING to[]);
+LOCAL VOID	gsort(STRING from[], STRING to[]);
 LOCAL STRING	execs(STRING ap, REG STRING t[]);
 LOCAL INT	split(REG STRING s);
 INT	subst(INT in, INT ot);

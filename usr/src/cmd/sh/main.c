@@ -22,7 +22,7 @@ FILEBLK		stdfile;
 FILE		standin = &stdfile;
 #include	<execargs.h>
 
-PROC VOID	exfile(BOOL prof);
+LOCAL VOID	exfile(BOOL prof);
 INT	stdsigs(void);
 INT	addblok(POS reqd);
 INT	options(INT argc, STRING *argv);

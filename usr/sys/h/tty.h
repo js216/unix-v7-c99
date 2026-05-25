@@ -61,12 +61,6 @@ struct tty
 	} t_un;
 };
 
-#define	t_intrc	t_un.tc.t_intrc
-#define	t_quitc	t_un.tc.t_quitc
-#define	t_startc t_un.tc.t_startc
-#define	t_stopc	t_un.tc.t_stopc
-#define	t_eofc	t_un.tc.t_eofc
-#define	t_brkc	t_un.tc.t_brkc
 #define	tun	tp->t_un
 
 /*

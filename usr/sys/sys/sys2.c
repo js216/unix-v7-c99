@@ -8,12 +8,13 @@
 extern void readp(struct file *);
 extern void writep(struct file *);
 extern void wdir(struct inode *);
+extern void itrunc(struct inode *);
+extern void openi(struct inode *, int);
 void rdwr(int mode);
-/* v7's write(), open(), creat() and open1() are gone -- on this port
- * sys_{write,open,creat}_v7 in arch/arm.c implement those syscalls
- * directly (pipe/console fast paths + kopen/kcreat for the file tree),
- * so the v7 entry points were linker-dead.  read() is still routed
- * here via v7_read_call. */
+void write(void);
+void open(void);
+void creat(void);
+void open1(struct inode *ip, int mode, int trf);
 /*
  * read system call
  */
@@ -23,6 +24,14 @@ read(void)
 	rdwr(FREAD);
 }
 
+/*
+ * write system call
+ */
+void
+write(void)
+{
+	rdwr(FWRITE);
+}
 
 /*
  * common code for read and write calls:
@@ -58,7 +67,10 @@ rdwr(register int mode)
 			writep(fp);
 	} else {
 		ip = fp->f_inode;
-		u.u_offset = fp->f_un.f_offset;
+		if (fp->f_flag&FMP)
+			u.u_offset = 0;
+		else
+			u.u_offset = fp->f_un.f_offset;
 		if((ip->i_mode&(IFCHR&IFBLK)) == 0)
 			plock(ip);
 		if(mode == FREAD)
@@ -67,17 +79,95 @@ rdwr(register int mode)
 			writei(ip);
 		if((ip->i_mode&(IFCHR&IFBLK)) == 0)
 			prele(ip);
-		fp->f_un.f_offset += uap->count-u.u_count;
+		if ((fp->f_flag&FMP) == 0)
+			fp->f_un.f_offset += uap->count-u.u_count;
 	}
 	u.u_r.r_val1 = uap->count-u.u_count;
 }
 
+/*
+ * open system call
+ */
+void
+open(void)
+{
+	register struct inode *ip;
+	register struct a {
+		char	*fname;
+		int	rwmode;
+	} *uap;
 
+	uap = (struct a *)u.u_ap;
+	ip = namei(uchar, 0);
+	if(ip == NULL)
+		return;
+	open1(ip, ++uap->rwmode, 0);
+}
 
+/*
+ * creat system call
+ */
+void
+creat(void)
+{
+	register struct inode *ip;
+	register struct a {
+		char	*fname;
+		int	fmode;
+	} *uap;
 
+	uap = (struct a *)u.u_ap;
+	ip = namei(uchar, 1);
+	if(ip == NULL) {
+		if(u.u_error)
+			return;
+		ip = maknode(uap->fmode&07777&(~ISVTX));
+		if (ip==NULL)
+			return;
+		open1(ip, FWRITE, 2);
+	} else
+		open1(ip, FWRITE, 1);
+}
 
+/*
+ * common code for open and creat.
+ * Check permissions, allocate an open file structure,
+ * and call the device open routine if any.
+ */
+void
+open1(register struct inode *ip, register int mode, int trf)
+{
+	register struct file *fp;
+	int i;
 
+	if(trf != 2) {
+		if(mode&FREAD)
+			access(ip, IREAD);
+		if(mode&FWRITE) {
+			access(ip, IWRITE);
+			if((ip->i_mode&IFMT) == IFDIR)
+				u.u_error = EISDIR;
+		}
+	}
+	if(u.u_error)
+		goto out;
+	if(trf == 1)
+		itrunc(ip);
+	prele(ip);
+	if ((fp = falloc()) == NULL)
+		goto out;
+	fp->f_flag = mode&(FREAD|FWRITE);
+	fp->f_inode = ip;
+	i = u.u_r.r_val1;
+	openi(ip, mode&FWRITE);
+	if(u.u_error == 0)
+		return;
+	u.u_ofile[i] = NULL;
+	fp->f_count--;
 
+out:
+	iput(ip);
+}
 
 /*
  * close system call
@@ -115,7 +205,7 @@ seek(void)
 	fp = getf(uap->fdes);
 	if(fp == NULL)
 		return;
-	if(fp->f_flag&FPIPE) {
+	if(fp->f_flag&(FPIPE|FMP)) {
 		u.u_error = ESPIPE;
 		return;
 	}

@@ -14,13 +14,13 @@ main(int argc, char **argv)
 	register char *p1, *p2;
 	int mf;
 
-	sync();
-	mf = open("/etc/mtab", 0);
-	read(mf, (char *)mtab, NMOUNT*2*NAMSIZ);
 	if(argc != 2) {
 		printf("arg count\n");
 		return(1);
 	}
+	sync();
+	mf = open("/etc/mtab", 0);
+	read(mf, (char *)mtab, NMOUNT*2*NAMSIZ);
 	if (umount(argv[1]) < 0) {
 		perror("umount");
 		return(1);

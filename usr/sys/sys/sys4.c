@@ -8,6 +8,7 @@
 int spl0(void);
 int spl7(void);
 void chdirec(struct inode **ipp);
+void sleep(caddr_t chan, int pri);
 
 /*
  * Everything in this file is a routine implementing a system call.
@@ -158,6 +159,9 @@ void
 unlink(void)
 {
 	register struct inode *ip, *pp;
+	struct a {
+		char	*fname;
+	};
 
 	pp = namei(uchar, 2);
 	if(pp == NULL)
@@ -218,6 +222,9 @@ void
 chdirec(register struct inode **ipp)
 {
 	register struct inode *ip;
+	struct a {
+		char	*fname;
+	};
 
 	ip = namei(uchar, 0);
 	if(ip == NULL)
@@ -385,10 +392,17 @@ alarm(void)
 	u.u_r.r_val1 = c;
 }
 
-/* v7's pause(2) implementation is gone -- arch/arm.c has its own
- * sys_pause_v7 that uses the mt_block_on_pipe + clock-tick wake path
- * instead of the v7 sleep()/wakeup() handoff. */
+/*
+ * indefinite wait.
+ * no one should wakeup(&u)
+ */
+void
+pause(void)
+{
 
+	for(;;)
+		sleep((caddr_t)&u, PSLEP);
+}
 
 /*
  * mode mask for creation of files

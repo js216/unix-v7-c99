@@ -9,7 +9,7 @@
 
 #include	"defs.h"
 
-PROC BOOL	chkid(STRING nam);
+LOCAL BOOL	chkid(STRING nam);
 
 
 LOCAL VOID	namwalk(REG NAMPTR np);
