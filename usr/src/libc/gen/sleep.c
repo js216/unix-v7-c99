@@ -1,40 +1,44 @@
+#include <signal.h>
 #include <setjmp.h>
 
-
-static jmp_buf sleep_jmp;
-static void
-sleepx(int signo)
-{
-	(void)signo;
-	longjmp(sleep_jmp, 1);
-}
-extern int signal(int sig, void (*fun)(int));
+static jmp_buf jmp;
+static void sleepx(int signo);
+extern void (*signal(int sig, void (*fun)(int)))(int);
 extern int alarm(int n);
 extern int pause(void);
+
 unsigned
 sleep(unsigned n)
 {
 	unsigned altime;
-	void (*alsig)(int) = (void (*)(int))0;
-	if(n == 0)
-		return(0);
-	altime = (unsigned)alarm(1000);
-	if(setjmp(sleep_jmp)) {
-		(void)signal(14, alsig);
-		(void)alarm((int)altime);
-		return(0);
+	void (*alsig)(int) = SIG_DFL;
 
+	if (n==0)
+		return(0);
+	altime = alarm(1000);	/* time to maneuver */
+	if (setjmp(jmp)) {
+		signal(SIGALRM, alsig);
+		alarm(altime);
+		return(0);
 	}
-	if(altime) {
-		if(altime > n)
+	if (altime) {
+		if (altime > n)
 			altime -= n;
 		else {
 			n = altime;
 			altime = 1;
 		}
 	}
-	alsig = (void (*)(int))(long)signal(14, sleepx);
-	(void)alarm((int)n);
+	alsig = signal(SIGALRM, sleepx);
+	alarm(n);
 	for(;;)
-		(void)pause();
+		pause();
+	/*NOTREACHED*/
+}
+
+static void
+sleepx(int signo)
+{
+	(void)signo;
+	longjmp(jmp, 1);
 }

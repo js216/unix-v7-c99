@@ -98,10 +98,6 @@ main(int argc, char *argv[])
 	}
 
 loop:
-	/* The v7 original assumed dk_busy/etime/numb/wds/tin/tout were
-	 * laid out contiguously in kernel .bss so a single read() filled
-	 * `s`.  ELF link order doesn't honour that, so read each symbol
-	 * individually into the matching slot. */
 	lseek(mf, (long)nl[0].value, 0);
 	read(mf, (char *)&s.busy, sizeof(s.busy));
 	if (nl[2].type != 0) {
@@ -209,16 +205,6 @@ stats(int dn)
 	f4 = f4*1.0e-6;
 	f5 = f1 - f4*f3;
 	f6 = f1 - f5;
-	/* v7-era arithmetic artifact: f1 is the disk-busy time sampled by
-	 * the HZ-tick clock IRQ (clock.c's `dk_time[dk_busy&07]++`).  The
-	 * v7 RK/RF/RP drivers held dk_busy across the seek+transfer (tens
-	 * of ms), so f1 was always >= the f4*f3 model term.  This port's
-	 * virtio_blk strategy is a synchronous busy-wait that finishes in
-	 * microseconds -- almost always inside a single clock tick -- so
-	 * f1 is usually 0 even with non-zero numb/wds, and f5 = f1 - f4*f3
-	 * comes out negative (and f6 = -f5).  v7 doesn't clamp, and we
-	 * deliberately don't either, so the printed msps/mspt match what
-	 * the original code would have produced on the same inputs. */
 	printf("%6.0f", f2*60./etime);
 	printf("%6.1f", f5*1000./f2);
 	printf("%6.1f", f6*1000./f2);

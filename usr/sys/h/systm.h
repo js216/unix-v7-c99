@@ -19,9 +19,11 @@ time_t	time;			/* time in sec from 1970 */
  */
 int	nblkdev;
 
-/* v7's `int nchrdev` (character-switch row count, set by cinit()) is
- * gone -- this port doesn't dispatch through cdevsw[], so no caller
- * ever reads it. */
+/*
+ * Number of character switch entries.
+ * Set by cinit/tty.c
+ */
+int	nchrdev;
 
 int	mpid;			/* generic for unique process id's */
 char	runin;			/* scheduling flag */
@@ -39,9 +41,7 @@ extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
 char	msgbuf[MSGBUFS];	/* saved "printf" characters */
 dev_t	rootdev;		/* device of the root */
 dev_t	swapdev;		/* swapping device */
-/* `dev_t pipedev` (the device pipe(2) ialloc'd against) is gone --
- * sys/pipe.c::pipe() was removed; arch/arm.c::kpipe uses its own
- * pipes[] table that doesn't allocate inodes. */
+dev_t	pipedev;		/* pipe device */
 
 dev_t	getmdev(void);
 daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
@@ -63,7 +63,7 @@ struct buf *bread(dev_t dev, daddr_t blkno);
 struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
 struct filsys *getfs(dev_t dev);
 struct file *getf(int fdes);
-/* falloc() (allocate file slot) is gone -- see sys/fio.c. */
+struct file *falloc(void);
 int	uchar(void);
 void	free(dev_t dev, daddr_t bno);
 void	ifree(dev_t dev, ino_t ino);
@@ -95,3 +95,11 @@ long	dk_wds[3];
 long	tk_nin;
 long	tk_nout;
 
+/*
+ * Structure of the system-entry table
+ */
+extern struct sysent {
+	char	sy_narg;		/* total number of arguments */
+	char	sy_nrarg;		/* number of args in registers */
+	int	(*sy_call)();		/* handler */
+} sysent[];

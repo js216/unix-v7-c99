@@ -30,7 +30,7 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/quot bin/dump bin/dumpdir \
 	bin/restor bin/tk bin/dc bin/tar bin/tp \
 	bin/prof bin/tc bin/graph bin/factor bin/primes \
-	bin/expr bin/iostat \
+	bin/expr bin/iostat bin/pstat \
 	bin/spell bin/deroff \
 	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 	usr/games/backgammon usr/games/fish usr/games/quiz \
@@ -77,7 +77,7 @@ force-root-image:
 
 userland-extra:
 	mkdir -p bin usr/lib
-	set -e; for i in tabs diff wall write df clri dcheck icheck ncheck cb sp find sort passwd iostat deroff dmesg ed factor primes; do \
+	set -e; for i in tabs diff wall write df clri dcheck icheck ncheck cb sp find sort passwd iostat pstat quot calendar deroff dmesg ed factor primes umount; do \
 		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
 		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \

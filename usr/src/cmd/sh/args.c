@@ -9,8 +9,7 @@
 
 #include	"defs.h"
 
-PROC DOLPTR	copyargs(STRING from[], INT n);
-LOCAL STRING	comstring(STRING av[]);
+LOCAL DOLPTR	copyargs(STRING from[], INT n);
 LOCAL DOLPTR	dolh;
 
 INT	failed(STRING s1, STRING s2);
@@ -47,7 +46,7 @@ INT	options(INT argc, STRING *argv)
 			IF *cp == *flagc
 			THEN	flags |= flagval[flagc-flagchar];
 			ELIF *cp=='c' ANDF argc>2 ANDF comdiv==0
-			THEN	comdiv=comstring(&argp[2]);
+			THEN	comdiv=argp[2];
 				argp[1]=argp[0]; argp++; argc--;
 			ELSE	failed(argv[1],badopt);
 			FI
@@ -69,27 +68,6 @@ INT	options(INT argc, STRING *argv)
 	return(argc);
 }
 
-LOCAL STRING	comstring(STRING av[])
-{
-	REG STRING	cp;
-	REG STRING	s, q;
-	REG INT		n;
-	IF av[1]
-	THEN	return(make(*av));
-	FI
-	n = 1;
-	cp = *av;
-	WHILE *cp++ DO n++ OD
-	q = alloc(n);
-	s = q;
-	cp = *av;
-	WHILE *cp
-	DO	*s++ = (*cp == 037 ? SP : *cp);
-		cp++;
-	OD
-	*s = 0;
-	return(q);
-}
 VOID	setargs(STRING argi[])
 {
 	/* count args */

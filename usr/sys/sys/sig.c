@@ -137,7 +137,7 @@ loop:
 	do_exit(0x100 | fsig(u.u_procp), trap_frame);
 }
 static void
-sendsig(caddr_t handler, int sig)
+sendsig(int handler, int sig)
 {
 	register int *r;
 	register unsigned int sp;
@@ -178,7 +178,7 @@ psig(void)
 		u.u_error = 0;
 		if(n != SIGINS && n != SIGTRC)
 			u.u_signal[n] = 0;
-		sendsig((caddr_t)p, n);
+		sendsig(p, n);
 		return;
 	}
 	switch(n) {
@@ -301,22 +301,16 @@ grow(unsigned sp)
 
 /*
  * sys-trace system call.
- *
- * v7's PDP-11 libc/sys/ptrace.s shuffled C args -- it copied req, pid,
- * addr into trailing-word indirect slots and put data in r0 -- so the
- * kernel's struct a came out (data, pid, addr, req).  On this ARM port
- * the SYS macro passes args straight in r0..r3, so u.u_arg[0..3] is
- * (req, pid, addr, data) -- the natural C order.  Match that here.
  */
 void
 ptrace(void)
 {
 	register struct proc *p;
 	register struct a {
-		int	req;
+		int	data;
 		int	pid;
 		int	*addr;
-		int	data;
+		int	req;
 	} *uap;
 
 	uap = (struct a *)u.u_ap;
@@ -324,7 +318,7 @@ ptrace(void)
 		u.u_procp->p_flag |= STRC;
 		return;
 	}
-	for (p=proc; p < &proc[NPROC]; p++)
+	for (p=proc; p < &proc[NPROC]; p++) 
 		if (p->p_stat==SSTOP
 		 && p->p_pid==uap->pid
 		 && p->p_ppid==u.u_procp->p_pid)

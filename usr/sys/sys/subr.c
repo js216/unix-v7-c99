@@ -127,9 +127,7 @@ bmap(register struct inode *ip, daddr_t bn, int rwflg)
 int
 passc(register int c)
 {
-	/* v7 had a u_segflg==2 (user I-space) branch dispatching to
 
-	 * suibyte; this port never sets u_segflg to 2. */
 	if(u.u_segflg == 1)
 		*u.u_base = c;
 	else if(subyte(u.u_base, c) < 0) {
@@ -163,16 +161,35 @@ cpass(void)
 		return(-1);
 	}
 	u.u_count--;
-
 	u.u_offset++;
-
 	u.u_base++;
-
 	return(c&0377);
 }
 
 /*
- * Copy count bytes from from to to.
+ * Routine which sets a user error; placed in
+ * illegal entries in the bdevsw and cdevsw tables.
+ */
+int
+nodev(void)
+{
+
+	u.u_error = ENODEV;
+	return(0);
+}
+
+/*
+ * Null routine; placed in insignificant entries
+ * in the bdevsw and cdevsw tables.
+ */
+int
+nulldev(void)
+{
+	return(0);
+}
+
+/*
+ * copy count bytes from from to to.
  */
 void
 bcopy(caddr_t from, caddr_t to, register unsigned int count)

@@ -43,13 +43,13 @@ clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 	 * restart clock
 	 */
 
-	/* ARM timer is rearmed in the interrupt handler. */
+	/* timer is rearmed by the interrupt handler */
 
 	/*
 	 * display register
 	 */
 
-	/* no front-panel display on ARM/QEMU */
+	/* no front-panel display register */
 	/*
 	 * callouts
 	 * if none, just continue

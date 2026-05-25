@@ -7,7 +7,7 @@
  *
  */
 
-#define LOCAL
+#define LOCAL	static
 #define PROC	extern
 #define TYPE	typedef
 #define STRUCT	TYPE struct

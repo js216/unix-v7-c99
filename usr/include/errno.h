@@ -1,7 +1,5 @@
 /*
- * Error codes -- ported from v7/usr/include/errno.h.
- * Numeric values are unchanged; these are the canonical V7 errnos
- * the ported libc relies on.
+ * Error codes
  */
 #ifndef ERRNO_H
 #define ERRNO_H
@@ -43,18 +41,4 @@
 #define	EDOM	33
 #define	ERANGE	34
 extern int errno;
-/* Port-side accommodation: several command sources include
- * <errno.h> and rely on it for the read/write/fstat/exit
- * syscall prototypes (a warts-and-all C99 build needs explicit
- * decls).  Kept here so we do not have to edit every
- * not-yet-converted-from-K&R command. */
-struct stat;
-int	read(int, char *, int);
-int	write(int, char *, int);
-int	open(char *, int);
-int	close(int);
-long	lseek(int, long, int);
-int	fstat(int, struct stat *);
-int	strlen(char *);
-void	exit(int);
 #endif

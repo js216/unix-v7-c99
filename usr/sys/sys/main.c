@@ -25,7 +25,13 @@ void sched(void);
 int icode[1];
 int szicode;
 void clkstart(void) { }
-void cinit(void) { }
+void cinit(void)
+{
+	register struct cdevsw *cdp;
+	nchrdev = 0;
+	for(cdp = cdevsw; cdp->d_open; cdp++)
+		nchrdev++;
+}
 
 /*
  * Initialization code.

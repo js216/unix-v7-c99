@@ -6,6 +6,7 @@
 #include "../h/inode.h"
 #include "../h/ino.h"
 #include "../h/filsys.h"
+#include "../h/conf.h"
 #include "../h/buf.h"
 void sleep(caddr_t chan, int pri);
 void panic(char *s);

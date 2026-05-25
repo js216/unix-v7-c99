@@ -23,8 +23,7 @@ struct	user
 		int	u_fpsr;		/* FP status register */
 		double	u_fpregs[6];	/* FP registers */
 	} u_fps;
-	char	u_segflg;		/* IO flag: 0:user; 1:system (v7's 2
-					 * "user I" path is not used here) */
+	char	u_segflg;		/* IO flag: 0:user D; 1:system; 2:user I */
 	char	u_error;		/* return error code */
 	short	u_uid;			/* effective user id */
 	short	u_gid;			/* effective group id */
@@ -40,7 +39,6 @@ struct	user
 		off_t	r_off;
 		time_t	r_time;
 	} u_r;
-/* Caller-side shorthand for the named inner pair (kept v7-flavoured). */
 #define	r_val1	u_pair.r_val1
 #define	r_val2	u_pair.r_val2
 	caddr_t	u_base;			/* base address for IO */

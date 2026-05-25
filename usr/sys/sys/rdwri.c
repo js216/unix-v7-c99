@@ -134,7 +134,18 @@ writei(register struct inode *ip)
 	} while(u.u_error==0 && u.u_count!=0);
 }
 
+/*
+ * Return the logical maximum
+ * of the 2 arguments.
+ */
+unsigned
+max(unsigned a, unsigned b)
+{
 
+	if(a > b)
+		return(a);
+	return(b);
+}
 
 /*
  * Return the logical minimum
@@ -171,10 +182,7 @@ iomove(register caddr_t cp, register int n, int flag)
 
 	if (n==0)
 		return;
-	/* v7 had a u_segflg==2 (user I-space) branch here that called
-	 * copyiin/copyiout; this port never sets u_segflg to 2, so the
-	 * fast path is just user (==0) vs system (==1). */
-	if(u.u_segflg == 0 &&
+	if(u.u_segflg != 1 &&
 	  (n&(NBPW-1)) == 0 &&
 	  ((int)cp&(NBPW-1)) == 0 &&
 	  ((int)u.u_base&(NBPW-1)) == 0) {

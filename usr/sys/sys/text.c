@@ -65,6 +65,10 @@ xswap(register struct proc *p, int ff, int os)
 	}
 }
 
+/*
+ * relinquish use of the shared text segment
+ * of a process.
+ */
 void
 xfree(void)
 {

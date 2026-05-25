@@ -578,6 +578,7 @@ armconf()
 	printf("extern int virtio_strategy(struct buf *bp);\n");
 	printf("static int nulldev_dev(dev_t dev, int flag) { (void)dev; (void)flag; return 0; }\n");
 	printf("dev_t rootdev = 0;\n");
+	printf("dev_t pipedev = 0;\n");
 	printf("int nblkdev = 0;\n");
 	printf("struct bdevsw bdevsw[2] = { { nulldev_dev, nulldev_dev, virtio_strategy, &virtio_tab }, { 0, 0, 0, 0 } };\n");
 	printf("struct proc proc[NPROC];\n");

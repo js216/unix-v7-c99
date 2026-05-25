@@ -7,6 +7,7 @@
 #include "../h/proc.h"
 #include "../h/seg.h"
 void brelse(struct buf *bp);
+void bawrite(register struct buf *bp);
 void iowait(struct buf *bp);
 void notavail(struct buf *bp);
 void geterror(struct buf *bp);
@@ -154,16 +155,23 @@ bwrite(struct buf *bp)
 /*
  * Release the buffer, marking it so that if it is grabbed
  * for another purpose it will be written out before being
- * given up.  v7 checked dp->b_flags&B_TAPE here for an
- * ordered-write tape path, but this port has no magtape device,
- * so the branch was unreachable and is gone.
+ * given up (e.g. when writing a partial block where it is
+ * assumed that another write for the same block will soon follow).
+ * This can't be done for magtape, since writes must be done
+ * in the same order as requested.
  */
 void
 bdwrite(struct buf *bp)
 {
+	register struct buf *dp;
 
-	bp->b_flags |= B_DELWRI | B_DONE;
-	brelse(bp);
+	dp = bdevsw[major(bp->b_dev)].d_tab;
+	if(dp->b_flags & B_TAPE)
+		bawrite(bp);
+	else {
+		bp->b_flags |= B_DELWRI | B_DONE;
+		brelse(bp);
+	}
 }
 
 /*

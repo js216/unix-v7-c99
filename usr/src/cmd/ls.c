@@ -160,7 +160,7 @@ main(int argc, char *argv[])
 				printf("total %D\n", tblocks);
 			for (ep1=slastp; ep1<lastp; ep1++)
 				pentry(*ep1);
-		} else
+		} else 
 			pentry(ep);
 	}
 	exit(0);

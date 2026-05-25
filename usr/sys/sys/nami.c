@@ -63,6 +63,8 @@ cloop:
 
 	cp = &u.u_dbuf[0];
 	while (c != '/' && c != '\0' && u.u_error == 0 ) {
+		if (mpxip!=NULL && c=='!')
+			break;
 		if(cp < &u.u_dbuf[DIRSIZ])
 			*cp++ = c;
 		c = (*func)();
@@ -71,8 +73,12 @@ cloop:
 		*cp++ = '\0';
 	while(c == '/')
 		c = (*func)();
-	/* v7's `path!subpath` mpx multiplexor lookup is gone -- mpxip was
-	 * never assigned on this port, so the branch was unreachable. */
+	if (c == '!' && mpxip != NULL) {
+		iput(dp);
+		plock(mpxip);
+		mpxip->i_count++;
+		return(mpxip);
+	}
 
 seloop:
 	/*
@@ -193,10 +199,16 @@ out:
 	return(NULL);
 }
 
-/* schar() (kernel-side name-fetcher passed to namei) was only used by
- * sys/sig.c::core() which is gone on this port; uchar() remains for the
- * user-space namei path. */
+/*
+ * Return the next character from the
+ * kernel string pointed at by dirp.
+ */
+int
+schar(void)
+{
 
+	return(*u.u_dirp++ & 0377);
+}
 
 /*
  * Return the next character from the

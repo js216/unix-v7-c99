@@ -1,4 +1,5 @@
 #include "../h/param.h"
+#include "../h/buf.h"
 #include <stdarg.h>
 void putchar(char c);
 
@@ -94,4 +95,19 @@ prdev(char *str, dev_t dev)
 {
 
 	printf("%s on dev %u/%u\n", str, major(dev), minor(dev));
+}
+
+/*
+ * deverr prints a diagnostic from
+ * a device driver.
+ * It prints the device, block number,
+ * and an octal word (usually some error
+ * status register) passed as argument.
+ */
+void
+deverror(register struct buf *bp, int o1, int o2)
+{
+
+	prdev("err", bp->b_dev);
+	printf("bn=%D er=%o,%o\n", bp->b_blkno, o1, o2);
 }

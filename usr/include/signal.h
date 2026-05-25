@@ -4,7 +4,7 @@
 #define	SIGINT	2	/* interrupt */
 #define	SIGQUIT	3	/* quit */
 #define	SIGILL	4	/* illegal instruction (not reset when caught) */
-#define	SIGTRAP	5	/* trace trap */
+#define	SIGTRAP	5	/* trace trap (not reset when caught) */
 #define	SIGIOT	6	/* IOT instruction */
 #define	SIGEMT	7	/* EMT instruction */
 #define	SIGFPE	8	/* floating point exception */
