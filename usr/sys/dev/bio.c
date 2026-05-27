@@ -202,6 +202,8 @@ brelse(struct buf *bp)
 	}
 	if (bp->b_flags&B_ERROR)
 		bp->b_dev = NODEV;  /* no assoc. on error */
+	if((bp->b_flags&B_BUSY) == 0)
+		return;
 	s = spl6();
 	if(bp->b_flags & B_AGE) {
 		backp = &bfreelist.av_forw;
@@ -381,7 +383,7 @@ void
 iodone(struct buf *bp)
 {
 
-	if (bp->b_flags&B_MAP)
+	if(bp->b_flags&B_MAP)
 		mapfree(bp);
 	bp->b_flags |= B_DONE;
 	if (bp->b_flags&B_ASYNC)
@@ -549,7 +551,7 @@ physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
 	u.u_count = bp->b_resid;
 	geterror(bp);
 	return;
-bad:
+    bad:
 	u.u_error = EFAULT;
 }
 

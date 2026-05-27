@@ -1,9 +1,3 @@
-/*
- * crt0.c -- userland entry point.  _start (in crt0.s) calls _startc,
- * which parses argv out of the exec-staged page at UARGV and dispatches
- * to main(), then exits via libc's exit() so stdio buffers are flushed.
- */
-
 #define	UARGV		0x0000f000
 
 extern int main(int argc, char **argv);
@@ -12,16 +6,10 @@ char **environ;
 int errno;
 int *__errno(void) { return &errno; }
 
-/* 256 entries each: v7's original crt0 hardcoded 32 and that limit
- * was visible from userspace -- `ls /tmp/f*` against 100 files only
- * passed 30 names through.  256 is still bounded but plenty for sh
- * glob expansions of typical directory sizes. */
 static char *argv[256];
 static char *envp[256];
 static char *emptyenv[] = { 0 };
 
-/* arch/arm.c::kargs lays out argv as NUL-separated strings, an
- * empty-string sentinel, then envp the same way.  We parse both. */
 static char *argv_end;
 
 static int
@@ -36,10 +24,10 @@ getargs(char **argv, int maxarg)
 		argv[argc++] = p;
 		while(*p)
 			p++;
-		p++;	/* past arg's terminating NUL */
+		p++;
 	}
 	argv[argc] = 0;
-	if(*p == 0) p++;	/* past the empty-string sentinel */
+	if(*p == 0) p++;
 	argv_end = p;
 	return(argc);
 }

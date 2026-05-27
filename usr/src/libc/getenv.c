@@ -4,7 +4,7 @@
  */
 #define NULL	0
 extern	char **environ;
-static char *nvmatch(register char *s1, register char *s2);
+char	*nvmatch(register char *s1, register char *s2);
 
 char *
 getenv(register char *name)
@@ -25,7 +25,7 @@ getenv(register char *name)
  *	used for environment searching: see getenv
  */
 
-static char *
+char *
 nvmatch(register char *s1, register char *s2)
 {
 

@@ -1,9 +1,3 @@
-/* mkdir(3) -- v7 has no mkdir(2) syscall, so this is the cmd/mkdir.c
- * recipe wrapped as a callable libc helper:  mknod (IFDIR | mode) on
- * the new path, then link target to its "." and parent to its ".."
- * Returns 0 on success, -1 on failure.  Only succeeds for root, since
- * mknod(2) is privileged. */
-
 #include <stdio.h>
 extern int mknod(char *path, int mode, int dev);
 extern int link(char *old, char *new);

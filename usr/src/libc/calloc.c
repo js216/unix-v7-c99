@@ -21,3 +21,10 @@ calloc(unsigned num, unsigned size)
 	return(mp);
 }
 
+void
+cfree(char *p, unsigned num, unsigned size)
+{
+	(void)num;
+	(void)size;
+	free(p);
+}

@@ -4,9 +4,7 @@
  * tunable variables
  */
 
-#define	NBUF	64		/* size of buffer cache (raised from v7's 29
-				 * to help long-running pipelines; 64*512=32KB
-				 * BSS, trivial on 128 MiB qemu). */
+#define	NBUF	64		/* size of buffer cache */
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
@@ -15,11 +13,13 @@
 #define	SSIZE	20		/* initial stack size (*64 bytes) */
 #define	SINCR	20		/* increment of stack (*64 bytes) */
 #define	NOFILE	20		/* max open files per process */
+#define	CANBSIZ	256		/* max size of typewriter line */
 #define	CMAPSIZ	50		/* size of core allocation area */
 #define	SMAPSIZ	50		/* size of swap allocation area */
 #define	NCALL	20		/* max simultaneous time callouts */
 #define	NPROC	150		/* max number of processes */
 #define	NTEXT	40		/* max number of pure texts */
+#define	NCLIST	100		/* max total clist size */
 #define	HZ	60		/* Ticks/second of the clock */
 #define	TIMEZONE (5*60)		/* Minutes westward from Greenwich */
 #define	DSTFLAG	1		/* Daylight Saving Time applies in this locality */
@@ -75,14 +75,15 @@
 
 #define	NBPW	sizeof(int)	/* number of bytes in an integer */
 #define	BSIZE	512		/* size of secondary block (bytes) */
-/* BSLOP was v7 slop for TIU/Spider devices; this port has no such device. */
-#define	BSLOP	0
+/* BSLOP can be 0 unless you have a TIU/Spider */
+#define	BSLOP	2		/* In case some device needs bigger buffers */
 #define	NINDIR	(BSIZE/sizeof(daddr_t))
 #define	BMASK	0777		/* BSIZE-1 */
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
 #define	USIZE	16		/* size of user block (*64) */
+#define	UBASE	0140000		/* abs. addr of user block */
 #ifndef NULL
 #define	NULL	0
 #endif
@@ -93,9 +94,9 @@
 #define	DIRSIZ	14		/* max characters per directory */
 #define	NICINOD	100		/* number of superblock inodes */
 #define	NICFREE	50		/* number of superblock free blocks */
-/* UBASE (PDP-11 user-block VA) and the clist CBSIZE/CROUND constants
- * are gone -- ARM USERBASE is in arch/arm.h, and the v7 clist subsystem
- * (prim.c) was removed this session. */
+#define	INFSIZE	138		/* size of per-proc info for users */
+#define	CBSIZE	14		/* number of chars in a clist block */
+#define	CROUND	017		/* clist rounding: sizeof(int *) + CBSIZE - 1*/
 
 /*
  * Some macros for units conversion

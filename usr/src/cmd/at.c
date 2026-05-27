@@ -170,7 +170,7 @@ makeutime(char *pp)
 	/* p points to a user time */
 	p = pp;
 	val = 0;
-	while(isdigit(*p)) {
+	while(isdigit((unsigned char)*p)) {
 		val = val*10+(*p++ -'0');
 	}
 	if (p-pp < 3)
@@ -181,8 +181,8 @@ makeutime(char *pp)
 
 		case ':':
 			++p;
-			if (isdigit(*p)) {
-				if (isdigit(p[1])) {
+			if (isdigit((unsigned char)*p)) {
+				if (isdigit((unsigned char)p[1])) {
 					val +=(10* *p + p[1] - 11*'0');
 					p += 2;
 					continue;

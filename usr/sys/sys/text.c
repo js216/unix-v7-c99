@@ -241,7 +241,7 @@ xumount(register dev_t dev)
 {
 	register struct text *xp;
 
-	for (xp = &text[0]; xp < &text[NTEXT]; xp++)
+	for (xp = &text[0]; xp < &text[NTEXT]; xp++) 
 		if (xp->x_iptr!=NULL && dev==xp->x_iptr->i_dev)
 			xuntext(xp);
 }

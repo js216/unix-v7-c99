@@ -1,19 +1,6 @@
-/*
- * stdio.h --- v7's stdio.h plus the small set of libc extern
- * declarations the unix-v7-c99 commands lean on.  The historical
- * stdio defs (struct _iobuf, getc/putc macros, fopen/freopen/...)
- * are byte-identical to v7/usr/include/stdio.h; everything below
- * the v7 block is the ad-hoc catch-all the port still needs while
- * the rest of libc migrates out of u.h.
- */
 #ifndef STDIO_H
 #define STDIO_H
-#include <stdarg.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/dir.h>
-#include <grp.h>		/* defines GRP_H, which gates the union-laden
-				 * struct inode block in sys/inode.h */
+struct stat;
 #define	BUFSIZ	512
 #define	_NFILE	20
 # ifndef FILE
@@ -57,11 +44,8 @@ FILE	*freopen(char *name, char *mode, FILE *f);
 FILE	*fdopen(int fd, char *mode);
 long	ftell(FILE *f);
 char	*fgets(char *s, int n, FILE *f);
-/* -- below this line: declarations the c99 port adds to mirror what
- * u.h used to inline.  Will shrink as libc grows real .c ports. */
 #define	O_RDONLY	0
 int syscall3(int n, int a, int b, int c);
-/* syscall stubs in sys.s */
 int read(int fd, char *buf, int n);
 int write(int fd, char *buf, int n);
 int open(char *path, int mode);
@@ -88,7 +72,7 @@ int execlp(char *name, char *arg0, ...);
 void exit(int n) __attribute__((__noreturn__));
 void _exit(int n) __attribute__((__noreturn__));
 void abort(void) __attribute__((__noreturn__));
-int dup();		/* dup(fd) or dup(fd|0100, newfd); kept unprototyped because callers pass 1 or 2 args */
+int dup();
 int pipe(int *fd);
 int getuid(void);
 int setuid(int uid);
@@ -98,9 +82,6 @@ int getpid(void);
 int umask(int n);
 int sync(void);
 int kill(int pid, int sig);
-/* signal()'s second argument is a function pointer or the special values
- * SIG_DFL/SIG_IGN; left unprototyped to accept both function pointers and
- * the integer sentinels without forcing casts at every call site. */
 int signal();
 int alarm(int n);
 int pause(void);
@@ -110,19 +91,17 @@ int stty(int fd, void *buf);
 int ioctl(int fd, int cmd, char *arg);
 int mount(char *special, char *dir, int ro);
 int umount(char *special);
-/* time */
 struct tm;
 struct timeb;
 int time(long *t);
 int stime(long *t);
-int times();		/* arg may be long * or struct tms * */
+int times();
 int ftime(struct timeb *t);
 struct tm *gmtime(long *t);
 struct tm *localtime(long *t);
 char *asctime(struct tm *t);
 char *ctime(long *t);
 int dysize(int y);
-/* stdio externs */
 int fclose(FILE *f);
 int fseek(FILE *f, long off, int whence);
 void rewind(FILE *f);
@@ -132,7 +111,7 @@ int fputc(int c, FILE *f);
 int fread(char *buf, unsigned size, unsigned n, FILE *f);
 int fwrite(char *buf, unsigned size, unsigned n, FILE *f);
 char *gets(char *buf);
-int puts();		/* v7 had no prototype -- many callers pass FILE* as a stray 2nd arg */
+int puts();
 int fputs(char *s, FILE *f);
 int ungetc(int c, FILE *f);
 int fflush(FILE *f);
@@ -145,7 +124,6 @@ int fscanf(FILE *f, char *fmt, ...);
 int sscanf(char *str, char *fmt, ...);
 int system(char *s);
 void perror(char *s);
-/* extras */
 int isatty(int fd);
 unsigned int sleep(unsigned n);
 char *mktemp(char *s);
@@ -170,16 +148,12 @@ long atol(char *s);
 double atof(char *s);
 void srand(unsigned int x);
 int rand(void);
-/* compar kept unprototyped: v7 callers pass (char *, char *), (void *,
- * void *), and (struct lbuf **, struct lbuf **) variants. */
 void qsort(void *base, unsigned n, int size, int (*compar)());
 char *malloc(unsigned n);
 void free(char *p);
 char *realloc(char *p, unsigned n);
 char *calloc(unsigned num, unsigned size);
 void swab(char *from, char *to, int n);
-/* sbrk/brk: not declared here -- callers (sort.c) declare them with
- * their own preferred type; the actual stubs live in lib/compat.c */
 int getargs(char **argv, int maxarg);
 long tell(int f);
 char *timezone(int zone, int dst);

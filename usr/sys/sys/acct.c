@@ -107,9 +107,6 @@ compress(time_t t)
 	return((exp<<13) + t);
 }
 
-/* lock(2): v7 toggled SULOCK to pin the process resident.  This port
- * keeps every proc permanently in RAM, so the only remaining behavior
- * is to enforce the superuser check (matching v7's EPERM for non-root). */
 void
 syslock(void)
 {

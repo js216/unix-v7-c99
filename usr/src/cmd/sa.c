@@ -1,62 +1,11 @@
-/* sa(1) -- interpret command time accounting.
- *
- * Ported from v7/usr/src/cmd/sa.c with the minimum set of K&R -> C99
- * edits needed to build under the project's strict cmd-build CFLAGS:
- *
- *   - Replaced the K&R-style function definitions with C99 prototypes
- *     for the static helpers used inside this TU.
- *   - Inlined the v7 sys/acct.h definitions (struct acct, AFORK).  The
- *     port's include tree carries only kernel-side h/acct.h; userland
- *     does not get a <sys/acct.h>, so the struct is reproduced here
- *     instead of adding a new public header.
- *   - Renamed the file-scope `struct user user[256]` to `usr[]` so it
- *     does not shadow the kernel's struct user (the cmd build does not
- *     include h/user.h, but keeping the name distinct is harmless and
- *     reads more naturally).
- *   - Switched the v7-only `getpw(uid, buf)` lookup in printmoney() to
- *     getpwuid(), which is what this libc provides.  The fallback
- *     printing path (numeric uid) is unchanged.
- *   - Forward-declared the comparison functions and sum() with proper
- *     prototypes so qsort()'s function-pointer arg type-checks against
- *     stdio.h's declaration.
- *
- * Everything else (the hash-table enter() / cleanup pass / column()
- * pretty-printer / expand() pseudo-float decode) is byte-for-byte from
- * the v7 source.
- */
 #include <stdio.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <signal.h>
 #include <pwd.h>
 
-/* Acct record layout.
- *
- * v7's h/acct.h declares comp_t (16-bit pseudo-float) fields for ac_utime,
- * ac_stime, ac_etime, ac_io.  The kernel writei()s `&acctbuf` for
- * `sizeof(acctbuf)` bytes; in this port `acctbuf` is the global declared
- * in conf.c -- which uses *long* for utime/stime/etime and *short*
- * for ac_io.  The on-disk record we read back here therefore mirrors that
- * 44-byte struct, not h/acct.h's 36-byte one.
- *
- * (sys/acct.c::acct() truncates its writei() length to sizeof(acctbuf) as
- * seen from sys/acct.c -- which sees h/acct.h's 36-byte struct via the
- * include, so the *cut* is at byte 36.  That covers the 10-byte ac_comm,
- * the 2-byte alignment pad, and the four 4-byte time fields, plus the
- * three shorts ac_uid/ac_gid/ac_mem and the half of ac_io.  The kernel
- * never writes ac_tty/ac_flag, so we read them as zero here.)
- *
- * comp_t pseudo-float decode is in expand(); ac_btime/ac_uid/ac_gid are
- * passed through verbatim.  The wider-than-comp_t fields are still
- * decoded with expand() because compress() in sys/acct.c emits the same
- * pseudo-float (just zero-extended to a long here). */
-typedef	unsigned short comp_t;
 struct	acct {
 	char	ac_comm[10];
-	char	ac_pad[2];	/* alignment pad between ac_comm and ac_utime
-				 * in conf.c's struct -- the kernel
-				 * writes this byte-for-byte even though
-				 * h/acct.h's matching field is comp_t. */
+	char	ac_pad[2];
 	long	ac_utime;
 	long	ac_stime;
 	long	ac_etime;
@@ -65,13 +14,7 @@ struct	acct {
 	short	ac_gid;
 	short	ac_mem;
 	short	ac_io;
-	/* The kernel side never writes ac_tty / ac_flag: sys/acct.c::acct()
-	 * caps writei() at sizeof(acctbuf) as seen through h/acct.h (36
-	 * bytes), and that cut lands right after ac_io.  We don't carry
-	 * the fields in this on-disk struct because their bytes are not
-	 * actually persisted; the references below treat them as zero. */
 };
-#define	AFORK	01
 
 #define	size 	1000
 #define	NC	sizeof(acctbuf.ac_comm)
@@ -113,8 +56,6 @@ int	junkp = -1;
 char	*sname;
 float	ncom;
 
-/* Forward declarations -- needed under C99 strict prototypes so qsort()
- * and the inter-routine calls type-check. */
 extern int acct(char *);
 time_t expand(unsigned t);
 int tcmp(struct tab *p1, struct tab *p2);
@@ -213,22 +154,6 @@ main(int argc, char **argv)
 			break;
 		}
 	}
-	/* Force iupdat() of the acct file's in-core inode so armboot's
-	 * loadino() / kopen() path reads the fresh i_size when we fopen()
-	 * below.  The kernel writei() in sys/acct.c::acct() bumps the
-	 * in-core i_size on every process exit, but it leaves IUPD set
-	 * without writing the dinode block back -- iput() only iupdat()s
-	 * the inode when its refcount drops to 1, and acctp holds an
-	 * extra reference that never lets that happen while accounting
-	 * stays on.
-	 *
-	 * Toggling accounting off-then-on takes that extra reference away
-	 * (sysacct(NULL) iput()s acctp -> i_count drops to 1 -> iupdat()
-	 * pushes the dinode), then the re-enable sysacct() re-namei()s
-	 * the (now-flushed) inode so subsequent exits keep accruing.  The
-	 * read path our fopen() drives next sees the post-iupdat() dinode
-	 * via armboot's loadino(), and fread() walks all the records on
-	 * disk. */
 	(void)acct((char *)0);
 	(void)acct("/usr/adm/acct");
 	if (iflg==0)
@@ -394,7 +319,7 @@ doacct(char *f)
 				*cp = '?';
 			}
 		}
-		if (0/*fbuf.ac_flag*/&AFORK) {
+		if (0) {
 			for (cp=fbuf.ac_comm; cp < &fbuf.ac_comm[NC]; cp++)
 				if (*cp==0) {
 					*cp = '*';

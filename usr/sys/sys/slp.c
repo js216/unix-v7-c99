@@ -20,6 +20,7 @@ int spl0(void);
 int spl6(void);
 void splx(int s);
 void panic(char *s);
+void printf(char *fmt, ...);
 int save(int *lp);
 void resume(int addr, int *lp);
 int malloc(struct map *mp, int size);
@@ -147,8 +148,10 @@ setrq(struct proc *p)
 
 	s = spl6();
 	for(q=runq; q!=NULL; q=q->p_link)
-		if(q == p)
+		if(q == p) {
+			printf("proc on q\n");
 			goto out;
+		}
 	p->p_link = runq;
 	runq = p;
 out:

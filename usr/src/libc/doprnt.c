@@ -1,15 +1,3 @@
-/*
- * C99/Armv7 replacement for v7's libc/stdio/doprnt.s -- the original
- * is PDP-11 assembly and cannot be ported as-is.  This implementation
- * handles the integer/string/char specifiers v7 supports (%d %u %o %x
- * %D %O %X %U %ld %lu %s %c) plus width, '-' left-justify, '0' zero-
- * pad, and '.prec'.  A minimal %f / %F / %e / %E / %g / %G is also
- * provided: ARMv7 has no FPU instructions when we build with the
- * default softvfp ABI, but libgcc's __aeabi_d* helpers do the actual
- * arithmetic, so floats cost a handful of helper calls per format and
- * iostat's ratios print correctly.  Special-cases inf/-inf/nan; no
- * %a, no '+' flag, no locale.
- */
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -48,19 +36,6 @@ sputn(char *buf, long n, int base, int upper)
 	return(len);
 }
 
-/*
- * Format a double into buf as "[-]int.frac".  Returns the number of
- * bytes written.  prec is the number of fractional digits (default 6).
- * Handles negative, NaN, and infinity.  No exponent form.  Rounds the
- * trailing fractional digit by adding 0.5 ulp before truncation.
- *
- * The algorithm is the obvious one: split into integer and fractional
- * parts, format the integer with sputn(), then walk the fraction one
- * digit at a time (multiply by 10, take int part).  This is enough for
- * iostat-style ratios; it loses precision for very large magnitudes
- * (|x| >= 2^31) and we explicitly bail out to "ovf" there rather than
- * silently print garbage.
- */
 static int
 fputn(char *buf, double v, int prec, int upper)
 {
@@ -70,9 +45,6 @@ fputn(char *buf, double v, int prec, int upper)
 	union { double d; unsigned long u[2]; } u;
 
 	len = 0;
-	/* NaN / +-Inf detection without libm.  IEEE-754 double:
-	 * exponent == 0x7ff -> NaN (mantissa != 0) or +-Inf (mantissa == 0).
-	 * Bytes are little-endian on ARM EABI, so u[1] holds the high word. */
 	u.d = v;
 	{
 		unsigned long hi = u.u[1];
@@ -101,16 +73,11 @@ fputn(char *buf, double v, int prec, int upper)
 		v = -v;
 	}
 
-	/* Round to `prec` fractional digits before splitting, so that
-	 * e.g. 0.999999 with prec=2 prints "1.00" and not "0.99". */
 	pow10 = 1.0;
 	for (i = 0; i < prec; i++)
 		pow10 = pow10 * 10.0;
 	v = v + 0.5 / pow10;
 
-	/* Refuse magnitudes that don't fit a signed long -- the only
-	 * sane thing without a real %e fallback is to surface the limit.
-	 * iostat ratios are always small, so this never trips in practice. */
 	if (v >= 2147483647.0) {
 		if (neg) buf[len++] = '-';
 		buf[len++] = 'o';
@@ -122,7 +89,7 @@ fputn(char *buf, double v, int prec, int upper)
 	ipart = (long)v;
 	frac = v - (double)ipart;
 	if (frac < 0.0)
-		frac = 0.0;	/* guard against rounding-mode quirks */
+		frac = 0.0;
 
 	if (neg)
 		buf[len++] = '-';
@@ -141,11 +108,6 @@ fputn(char *buf, double v, int prec, int upper)
 	return(len);
 }
 
-/*
- * Same as fputn() but emits scientific form "d.dddedd".  Used by
- * %e/%E and as %g's exponent-form fallback.  We compute the decimal
- * exponent by repeated multiplication/division -- no log10, no libm.
- */
 static int
 eputn(char *buf, double v, int prec, int upper)
 {
@@ -195,7 +157,6 @@ eputn(char *buf, double v, int prec, int upper)
 			if (exp10 < -308) break;
 		}
 	}
-	/* Round after normalization. */
 	{
 		double p = 1.0;
 		for (i = 0; i < prec; i++) p = p * 10.0;
@@ -330,13 +291,6 @@ _doprnt(char *fmt, va_list *argp, FILE *file)
 				} else if (c == 'e' || c == 'E') {
 					len = eputn(numbuf, dv, prec, isupper);
 				} else {
-					/* %g/%G: pick %e if exponent < -4 or
-					 * >= prec, else %f.  Treat prec==0 as 1
-					 * per C89.  Trim trailing zeros (and the
-					 * trailing '.' if no fractional digits
-					 * remain) to match C printf semantics --
-					 * awk's default OFMT is %.6g and v7 awk
-					 * prints integer floats as plain ints. */
 					double av = dv < 0.0 ? -dv : dv;
 					int exp10 = 0;
 					if (av != 0.0) {

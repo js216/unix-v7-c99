@@ -1,26 +1,9 @@
-/*
- * Virtio-blk strategy routine for qemu-virt.
- *
- * Factored out of arch/arm.c's bio()/virtioinit() so that a
- * real V7 buffer-cache caller can dispatch through bdevsw[0] on
- * qemu through the same static config table shape v7 used for block
- * devices.  Parity
- * scaffolding only in this sub-step: nothing yet calls into
- * virtio_strategy() through the bdevsw, so the existing
- * arm.c::bio() virtio path remains the active one on qemu.
- */
-
 #include "../h/param.h"
 #include "../h/buf.h"
 void panic(char *s);
 void dmbsy(void);
 void iodone(struct buf *bp);
 
-/* Per-drive busy bitmap + transfer counters, declared by sys/systm.h.
- * The PDP-11 driver suite (dev/hp.c, dev/rl.c) bumps these from the
- * start/end of every strategy(); iostat snoops them via /dev/kmem.
- * Slot 0 is "drive 0" -- there is only ever one virtio-blk device on
- * the qemu-virt machine. */
 extern int	dk_busy;
 extern long	dk_numb[3];
 extern long	dk_wds[3];
@@ -66,7 +49,6 @@ struct virtio_blk_req {
 	unsigned long long sector;
 };
 
-/* Per-device buffer-list head, matching the V7 bdevsw ABI. */
 struct buf virtio_tab;
 
 #ifndef EVB
@@ -143,17 +125,11 @@ virtio_strategy(struct buf *bp)
 	unsigned int type;
 	unsigned int saved_cpsr;
 
-	/* Mask IRQs around the virtio kick+poll handshake.  qemu virt's
-	 * virtio device handshake is timing-sensitive: taking a timer IRQ
-	 * mid-poll (after the kick MMIO write, before qused.idx advances)
-	 * leaves virtio_vstatus != 0 and we panic("blk").  Save the
-	 * caller's CPSR.I bit so we restore the original IRQ mask state
-	 * on exit rather than blanket-unmask. */
 	__asm__ volatile("mrs %0, cpsr" : "=r"(saved_cpsr));
 	__asm__ volatile("cpsid i" ::: "memory");
 	dk_busy |= 1;
 	dk_numb[0]++;
-	dk_wds[0] += bp->b_bcount / 2;	/* v7 wds counts 16-bit words */
+	dk_wds[0] += bp->b_bcount / 2;
 	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
 	virtio_vreq.type = type;
 	virtio_vreq.reserved = 0;
@@ -187,11 +163,6 @@ virtio_strategy(struct buf *bp)
 		if(++spin == 100000000)
 			spin = 0;
 	}
-	/* Memory barrier: ARM is weakly ordered.  Without this, reading
-	 * qused.idx can be reordered with the (preceding) device write to
-	 * virtio_vstatus, so vstatus may still read as the 0xff sentinel
-	 * even though qused.idx has advanced -- causing a spurious panic
-	 * under high I/O throughput (caught by `cat A B C D > /tmp/big`). */
 	dmbsy();
 	virtio_lastused++;
 	if(virtio_vstatus != 0)
@@ -199,7 +170,6 @@ virtio_strategy(struct buf *bp)
 	bp->b_resid = 0;
 	dk_busy &= ~1;
 	iodone(bp);
-	/* Restore caller's IRQ mask (CPSR.I bit only). */
 	if((saved_cpsr & 0x80U) == 0)
 		__asm__ volatile("cpsie i" ::: "memory");
 	return 0;

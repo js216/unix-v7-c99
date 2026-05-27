@@ -16,13 +16,12 @@
 #include <fcntl.h>
 #include <time.h>
 #endif
-#include "../../include/sys/param.h"
-#include "../../include/sys/ino.h"
-#include "../../include/sys/inode.h"
-#include "../../include/sys/filsys.h"
-#include "../../include/sys/fblk.h"
-#include "../../include/sys/dir.h"
-/* Pack longs into pure LE 24-bit; matches arch/arm.c::addr(). */
+#include <sys/param.h>
+#include <sys/ino.h>
+#include <sys/inode.h>
+#include <sys/filsys.h>
+#include <sys/fblk.h>
+#include <sys/dir.h>
 int ltol3(cp, lp, n) char *cp; long *lp; int n; {
 	int i; long v;
 	for(i=0; i<n; i++) {
@@ -41,9 +40,6 @@ int	fsi;
 int	fso;
 char	*charp;
 char	buf[BSIZE];
-/* The v7 K&R-era "anonymous struct as union member" idiom (`struct fblk;`
- * inside a union) is not strict C99.  Named members + macro aliases keep
- * the call-site spelling (`fbuf.df_nfree`, `filsys.s_fsize`) unchanged. */
 union fbuf_u {
 	struct fblk fb;
 	char pad1[BSIZE];
@@ -150,7 +146,6 @@ main(int argc, char *argv[])
 #ifndef STANDALONE
 	/*
 	 * get name of boot load program
-	 * (skipped: PDP-11 a.out format is not used on this port)
 	 */
 
 	getstr();
@@ -159,7 +154,7 @@ main(int argc, char *argv[])
 		printf("%s: cannot open init\n", string);
 	else
 
-		close(f);
+	close(f);
 
 	/*
 	 * get total disk size

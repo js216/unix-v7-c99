@@ -61,7 +61,6 @@ char	*spend;
 char	*hspend;
 int	nflag;
 int	gflag;
-int	iflag;
 char	*braelist[NBRA];
 char	*braslist[NBRA];
 long	tlno[NLINES];
@@ -102,10 +101,6 @@ char	*cp;
 char	*reend;
 char	*lbend;
 
-/* Strict C99: v7 sed had struct reptr { struct reptr1; struct reptr2; }
- * where reptr1/reptr2 differed only by re1(char*)/lb1(reptr*) in one
- * slot.  Collapsed to a single struct with a named inner union for that
- * slot -- callers reach the slot via ipc->u.re1 / ipc->u.lb1. */
 struct reptr {
 	char	*ad1;
 	char	*ad2;

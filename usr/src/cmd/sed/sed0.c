@@ -82,9 +82,6 @@ main(int argc, char *argv[])
 			gflag++;
 			continue;
 
-		case 'i':
-			iflag++;
-			continue;
 		default:
 			fprintf(stdout, "Unknown flag: %c\n", eargv[0][1]);
 			continue;
@@ -114,29 +111,8 @@ main(int argc, char *argv[])
 
 	if(eargc <= 0)
 		execute((char *)NULL);
-	else while(--eargc >= 0) {
-		char *src = *eargv++;
-		if(iflag && src) {
-			char tmpname[256];
-			int i, n = 0;
-			for(i = 0; src[i] && n < 240; i++) tmpname[n++] = src[i];
-			tmpname[n++] = '.'; tmpname[n++] = 's'; tmpname[n++] = 'e';
-			tmpname[n++] = 'd'; tmpname[n++] = 't'; tmpname[n++] = 'm';
-			tmpname[n++] = 'p'; tmpname[n] = '\0';
-			if(freopen(tmpname, "w", stdout) == NULL) {
-				fprintf(stderr, "sed: can't write %s\n", tmpname);
-				continue;
-			}
-			fcode[0] = stdout;
-			execute(src);
-			fflush(stdout);
-			unlink(src);
-			link(tmpname, src);
-			unlink(tmpname);
-		} else {
-			execute(src);
-		}
-	}
+	else while(--eargc >= 0)
+		execute(*eargv++);
 	fclose(stdout);
 	exit(0);
 }

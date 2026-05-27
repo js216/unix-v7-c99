@@ -20,6 +20,7 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/wall bin/write bin/df bin/clri \
 	bin/dcheck bin/icheck bin/ncheck \
 	bin/cb bin/sp bin/find bin/sort bin/ed \
+	bin/deroff \
 	bin/1 bin/sed bin/awk bin/true bin/false \
 	bin/nohup \
 	bin/mount bin/umount \
@@ -31,7 +32,7 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/restor bin/tk bin/dc bin/tar bin/tp \
 	bin/prof bin/tc bin/graph bin/factor bin/primes \
 	bin/expr bin/iostat bin/pstat \
-	bin/spell bin/deroff \
+	bin/spell \
 	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 	usr/games/backgammon usr/games/fish usr/games/quiz \
 	usr/games/wump \
@@ -45,15 +46,19 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 
 all:	unix root.img
 
-unix: usr/sys/sys/*.c usr/sys/arch/*.c usr/sys/arch/*.s usr/sys/arch/*.ld usr/sys/dev/*.c usr/sys/h/*.h usr/sys/conf/makefile usr/sys/conf/mkconf.c usr/sys/conf/$(CONF)
+unix: usr/sys/sys/*.c usr/sys/dev/*.c usr/sys/h/*.h usr/sys/conf/*.s usr/sys/conf/makefile usr/sys/conf/mkconf.c usr/sys/conf/$(CONF)
 	$(MAKE) -C usr/sys/conf unix
 
 qemu:	unix root.img
 	$(MAKE) -C usr/sys/conf qemu
 
-root.img: force-root-image unix Makefile usr/src/tools/mkfs usr/sys/conf/root.proto usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/compall usr/src/libc/mklib usr/src/libc/u.ld bin/spell etc/passwd etc/rc etc/ttys usr/dict/words usr/dict/hlista usr/dict/hlistb usr/dict/hstop usr/dict/spellhist usr/games/lib/fortunes usr/lib/units usr/lib/crontab etc/auxfs
+root.img: force-root-image unix Makefile usr/src/tools/mkfs usr/sys/conf/root.proto nullboot .profile usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/compall usr/src/libc/mklib usr/src/libc/u.ld
 	cd usr/src/libc && sh compall && sh mklib
 	$(MAKE) userland-extra
+	rm -f bin/bc
+	set -e; for i in $(ROOT); do \
+		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
+	done
 	# v7 mkfs only writes the blocks it touches.  Pad root.img to its
 	# declared filesystem size (FSIZE * BSIZE = 16384 * 512) so qemu's
 	# virtio block backend can serve any sector the kernel asks for.
@@ -71,16 +76,39 @@ USERYACCCFLAGS = $(USERCFLAGS) -DYYSTACK_USE_ALLOCA=1 -Wno-implicit-function-dec
 USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld
 USERLDLIBS = -Lusr/src/libc -lc -lgcc
 USERCRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
+AWKGEN = usr/src/cmd/awk/awk.g.c usr/src/cmd/awk/awk.h \
+	usr/src/cmd/awk/awk.lx.c usr/src/cmd/awk/awk.lx.tmp.l \
+	usr/src/cmd/awk/proc usr/src/cmd/awk/proc-token.o \
+	usr/src/cmd/awk/proctab.c
 
 .PHONY: force-root-image userland-extra userland-clean
 force-root-image:
 
+nullboot:
+	: > nullboot
+
 userland-extra:
 	mkdir -p bin usr/lib
-	set -e; for i in tabs diff wall write df clri dcheck icheck ncheck cb sp find sort passwd iostat pstat quot calendar deroff dmesg ed factor primes umount; do \
-		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+	set -e; for i in echo date at ls pwd tabs diff diff3 wall write df clri dcheck icheck ncheck cb sp find sort grep passwd iostat ps pstat quot calendar dmesg ed factor primes umount deroff osh; do \
+		cflags="$(USERCFLAGS)"; \
+		if test "$$i" = grep; then cflags="$$cflags -Wno-char-subscripts"; fi; \
+		$(USERCC) $$cflags -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
 		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \
+	done
+	set -e; for i in init login; do \
+		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+	done
+	$(USEROBJCOPY) -O binary usr/src/libc/init.elf etc/init
+	$(USEROBJCOPY) -O binary usr/src/libc/login.elf bin/login
+	$(USERCC) $(USERCFLAGS) -Wno-missing-braces -c usr/src/cmd/getty.c -o usr/src/libc/cmd-getty.o
+	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/getty.elf $(USERCRT) usr/src/libc/cmd-getty.o $(USERLDLIBS)
+	$(USEROBJCOPY) -O binary usr/src/libc/getty.elf etc/getty
+	set -e; for i in accton update atrun cron; do \
+		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf etc/$$i; \
 	done
 	set -e; for i in makekey diffh; do \
 		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
@@ -121,25 +149,25 @@ userland-extra:
 	done
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/tp.elf $(USERCRT) usr/src/libc/tp0.o usr/src/libc/tp1.o usr/src/libc/tp2.o usr/src/libc/tp3.o $(USERLDLIBS)
 	$(USEROBJCOPY) -O binary usr/src/libc/tp.elf bin/tp
-	cd usr/src/cmd/awk && bison -y -d awk.g.y && mv y.tab.c awk.g.c && mv y.tab.h awk.h
-	cd usr/src/cmd/awk && awk 'BEGIN { print "%option noyywrap noinput nounistd" } { if ($$0 == "%}") { print "#undef YY_INPUT"; print "#define YY_INPUT(buf,result,max_size) \\"; print "do { \\"; print "	int c = input(); \\"; print "	if (c == 0) result = YY_NULL; \\"; print "	else { buf[0] = c; result = 1; } \\"; print "} while (0)" } print }' awk.lx.l > awk.lx.tmp.l
-	cd usr/src/cmd/awk && perl -0pi -e 's/\tif \(yysptr > yysbuf\)\n\t\tc = U\(\*--yysptr\);\n\telse if \(yyin == NULL\)/\tif (lexprog != NULL)/' awk.lx.tmp.l
-	cd usr/src/cmd/awk && flex -o awk.lx.c awk.lx.tmp.l && rm -f awk.lx.tmp.l
-	cd usr/src/cmd/awk && sed -i '/#include <string.h>/d;/#include <stdlib.h>/d' awk.lx.c
-	cd usr/src/cmd/awk && sed -i '1i #include <stddef.h>' awk.lx.c
-	cd usr/src/cmd/awk && perl -0pi -e 's/#define ECHO [^\n]+/#define ECHO do { } while (0)/' awk.lx.c
-	cd usr/src/cmd/awk && perl -0pi -e 's/int\tlineno\t1;/int\tlineno = 1;/' awk.lx.c
-	cd usr/src/cmd/awk && perl -0pi -e 's/yybgin-yysvec-1/YY_START/g' awk.lx.c
-	cd usr/src/cmd/awk && cc -std=gnu89 -w -c token.c -o proc-token.o && cc -std=gnu89 -w -o proc proc.c proc-token.o && ./proc > proctab.c && rm -f proc proc-token.o
-	set -e; for i in awk.g awk.lx b main token tran lib run parse proctab; do \
+	set -e; trap 'cd "$(CURDIR)" && rm -f $(AWKGEN)' EXIT; \
+	(cd usr/src/cmd/awk && bison -y -d awk.g.y && mv y.tab.c awk.g.c && mv y.tab.h awk.h); \
+	(cd usr/src/cmd/awk && awk 'BEGIN { print "%option noyywrap noinput nounistd" } { if ($$0 == "%}") { print "#undef YY_INPUT"; print "#define YY_INPUT(buf,result,max_size) \\"; print "do { \\"; print "	int c = input(); \\"; print "	if (c == 0) result = YY_NULL; \\"; print "	else { buf[0] = c; result = 1; } \\"; print "} while (0)" } print }' awk.lx.l > awk.lx.tmp.l); \
+	(cd usr/src/cmd/awk && perl -0pi -e 's/\tif \(yysptr > yysbuf\)\n\t\tc = U\(\*--yysptr\);\n\telse if \(yyin == NULL\)/\tif (lexprog != NULL)/' awk.lx.tmp.l); \
+	(cd usr/src/cmd/awk && flex -o awk.lx.c awk.lx.tmp.l); \
+	(cd usr/src/cmd/awk && sed -i '/#include <string.h>/d;/#include <stdlib.h>/d' awk.lx.c); \
+	(cd usr/src/cmd/awk && sed -i '1i #include <stddef.h>' awk.lx.c); \
+	(cd usr/src/cmd/awk && perl -0pi -e 's/#define ECHO [^\n]+/#define ECHO do { } while (0)/' awk.lx.c); \
+	(cd usr/src/cmd/awk && perl -0pi -e 's/int\tlineno\t1;/int\tlineno = 1;/' awk.lx.c); \
+	(cd usr/src/cmd/awk && perl -0pi -e 's/yybgin-yysvec-1/YY_START/g' awk.lx.c); \
+	(cd usr/src/cmd/awk && cc -std=gnu89 -w -c token.c -o proc-token.o && cc -std=gnu89 -w -o proc proc.c proc-token.o && ./proc > proctab.c); \
+	for i in awk.g awk.lx b main token tran lib run parse proctab; do \
 		$(USERCC) $(USERAWKCFLAGS) -c usr/src/cmd/awk/$$i.c -o usr/src/libc/awk-$$i.o; \
-	done
-	$(USERCC) $(USERAWKCFLAGS) $(USERLDFLAGS) -o usr/src/libc/awk.elf $(USERCRT) usr/src/libc/awk-awk.g.o usr/src/libc/awk-awk.lx.o usr/src/libc/awk-b.o usr/src/libc/awk-main.o usr/src/libc/awk-token.o usr/src/libc/awk-tran.o usr/src/libc/awk-lib.o usr/src/libc/awk-run.o usr/src/libc/awk-parse.o usr/src/libc/awk-proctab.o -Lusr/src/libc -lm -lc -lgcc
+	done; \
+	$(USERCC) $(USERAWKCFLAGS) $(USERLDFLAGS) -o usr/src/libc/awk.elf $(USERCRT) usr/src/libc/awk-awk.g.o usr/src/libc/awk-awk.lx.o usr/src/libc/awk-b.o usr/src/libc/awk-main.o usr/src/libc/awk-token.o usr/src/libc/awk-tran.o usr/src/libc/awk-lib.o usr/src/libc/awk-run.o usr/src/libc/awk-parse.o usr/src/libc/awk-proctab.o -Lusr/src/libc -lm -lc -lgcc; \
 	$(USEROBJCOPY) -O binary usr/src/libc/awk.elf bin/awk
-	rm -f usr/src/cmd/awk/awk.g.c usr/src/cmd/awk/awk.h usr/src/cmd/awk/awk.lx.c usr/src/cmd/awk/proctab.c
 
 userland-clean:
-	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf
+	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf $(AWKGEN)
 
 # mkfs is a v7 K&R program built as a Linux/ARM ELF (armhf glibc) so it
 # can run on the host via binfmt_misc.  Building for the same word width
@@ -153,9 +181,13 @@ userland-clean:
 # assumes PDP-11 middle-endian long byte layout, which discards the
 # second byte on a straight little-endian Armv7 long.
 usr/src/tools/mkfs: usr/src/tools/mkfs.c
-	arm-linux-gnueabihf-gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
-	    -D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32 \
-	    -o usr/src/tools/mkfs usr/src/tools/mkfs.c
+	tmpinc="$${TMPDIR:-/tmp}/unix-v7-c99-mkfs-include.$$$$"; \
+	    trap 'rm -rf "$$tmpinc"' EXIT; \
+	    mkdir -p "$$tmpinc"; \
+	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
+	    arm-linux-gnueabihf-gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
+	        -I"$$tmpinc" -D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32 \
+	        -o usr/src/tools/mkfs usr/src/tools/mkfs.c
 
 # A pocket-sized fs image holding just /a=etc/passwd, mounted as
 # /etc/auxfs by the icheck/dcheck/ncheck mission step.
@@ -210,4 +242,4 @@ usr/lib/crontab: v7/usr/lib/crontab
 clean:
 	$(MAKE) -C usr/sys/conf clean
 	cd usr/src/libc && ./compall clean
-	rm -f unix root.img root.img.tmp usr/src/tools/mkfs
+	rm -f unix root.img root.img.tmp nullboot usr/src/tools/mkfs $(AWKGEN)

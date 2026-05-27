@@ -11,7 +11,7 @@
 # define PDIR	"past"
 # define LASTF "/usr/spool/at/lasttimedone"
 
-int	makenowtime(void), updatetime(int t), run(char *file), movefile(char *file, char *dir);
+int	makenowtime(void), updatetime(int t), run(char *file);
 int	nowtime;
 int	nowdate;
 int	nowyear;
@@ -84,14 +84,15 @@ run(char *file)
 {
 	struct stat stbuf;
 	register int pid, i;
+	char sbuf[64];
 
 	if (fork()!=0)
 		return(0);
 	for (i=0; i<15; i++)
 		close(i);
 	dup(dup(open("/dev/null", 0)));
-	if (movefile(file, PDIR) < 0)
-		exit(1);
+	sprintf(sbuf, "/bin/mv %.14s %s", file, PDIR);
+	system(sbuf);
 	chdir(PDIR);
 	if (stat(file, &stbuf) == -1)
 		exit(1);
@@ -100,34 +101,14 @@ run(char *file)
 	if ((pid = fork())) {
 		if (pid == -1)
 			exit(1);
-	wait((int *)0);
-	unlink(file);
+		wait((int *)0);
+		unlink(file);
 		exit(0);
 	}
 	nice(3);
-	close(0);
-	open(file, 0);
-	execl("/bin/sh", "sh", 0);
-	execl("/usr/bin/sh", "sh", 0);
+	execl("/bin/sh", "sh", file, 0);
+	execl("/usr/bin/sh", "sh", file, 0);
 	fprintf(stderr, "Can't execl shell\n");
 	exit(1);
-	return(0);
-}
-int
-movefile(char *file, char *dir)
-{
-	int pid, status;
-	pid = fork();
-	if (pid == 0) {
-		execl("/bin/mv", "mv", file, dir, 0);
-		execl("/usr/bin/mv", "mv", file, dir, 0);
-		exit(1);
-	}
-	if (pid == -1)
-		return(-1);
-	while (wait(&status) != pid)
-		;
-	if (status)
-		return(-1);
 	return(0);
 }

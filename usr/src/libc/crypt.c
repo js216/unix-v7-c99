@@ -94,7 +94,7 @@ static	char	KS[16][48];
  * Set up the key schedule from the key.
  */
 
-static void
+void
 setkey(char *key)
 {
 	register int i, j, k;
@@ -232,7 +232,7 @@ static	char	preS[48];
  * The payoff: encrypt a block.
  */
 
-static void
+void
 encrypt(char *block, int edflag)
 {
 	int i, ii;

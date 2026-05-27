@@ -42,7 +42,7 @@ INT sigchk(void)
 
 INT failed(STRING s1, STRING s2)
 {
-	prp(); prs(s1);
+	prp(); prs(s1); 
 	IF s2
 	THEN	prs(colon); prs(s2);
 	FI
