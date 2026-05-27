@@ -393,7 +393,7 @@ int
 repos(int nchar)
 {
 	register int i;
-	for(i=0;i<2;i++)
+	for(i=0;i<2;i++) 
 		fseek(fp[i], (long)-nchar, 1);
 	return(0);
 }

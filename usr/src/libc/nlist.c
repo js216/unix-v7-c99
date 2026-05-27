@@ -75,8 +75,8 @@ readstr(int fd, char *buf, int n)
 	buf[total] = '\0';
 	return(total);
 }
-static int
-nlist1(char *name, struct nlist *list)
+int
+nlist(char *name, struct nlist *list)
 {
 	struct nlist *p;
 	struct elfhdr eh;
@@ -176,20 +176,4 @@ nlist1(char *name, struct nlist *list)
 	}
 	close(f);
 	return(0);
-}
-int
-nlist(char *name, struct nlist *list)
-{
-	struct nlist *p;
-	int tries, rc, matched;
-	for(tries = 0; tries < 3; tries++) {
-		rc = nlist1(name, list);
-		matched = 0;
-		for(p = list; p->n_name[0]; p++)
-			if(p->n_type != 0)
-				matched = 1;
-		if(rc == 0 && matched)
-			return(0);
-	}
-	return(rc);
 }

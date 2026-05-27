@@ -121,7 +121,7 @@
 #define	btoc(x)	((((unsigned)x+63)>>6))
 
 /* major part of a device */
-#define	major(x)	(int)(((unsigned)x>>8))
+#define	major(x)	(int)(((unsigned)x>>8)&0377)
 
 /* minor part of a device */
 #define	minor(x)	(int)(x&0377)

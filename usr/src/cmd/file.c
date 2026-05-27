@@ -25,10 +25,6 @@ int lookup(char *tab[]);
 int ccom(void);
 int ascom(void);
 int english(char *bp, int n);
-#undef major
-#undef minor
-#define major(x)	(((x)>>8)&0377)
-#define minor(x)	((x)&0377)
 int
 main(int argc, char **argv)
 {

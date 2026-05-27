@@ -24,7 +24,6 @@ int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void sched(void);
 int icode[1];
 int szicode;
-void clkstart(void) { }
 void cinit(void)
 {
 	register struct cdevsw *cdp;
