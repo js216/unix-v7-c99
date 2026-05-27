@@ -329,7 +329,7 @@ loop:
 	if(argc>1&&*argv[1]=='-') {
 		switch(argv[1][1]) {
 		case 'i':
-			if(argc>2)
+			if(argc>2) 
 				info = argv[2];
 			argc -= 2;
 			argv += 2;

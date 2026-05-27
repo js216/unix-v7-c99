@@ -1,12 +1,12 @@
 /*
  * Convert old to new archive format
- */
+*/
 
 #include <signal.h>
 #include <stdio.h>
 #include <ar.h>
 
-#define	OMAG	0177555
+#define	omag	0177555
 
 struct oar_hdr {
 	char	oname[8];
@@ -16,21 +16,35 @@ struct oar_hdr {
 	char	osize[2];
 };
 
-static char	*tmp;
-static int	f;
-static int	tf;
-static union {
+char	*tmp;
+int	f;
+int	tf;
+static void conv(char *fil);
+union {
 	char	buf[512];
 	char	magic[2];
 } b;
 
+int
+main(int argc, char **argv)
+{
+	int i;
+	char tbuf[] = "/tmp/arcXXXXX";
+
+	tmp = mktemp(tbuf);
+	for(i=1; i<4; i++)
+		signal(i, SIG_IGN);
+	for(i=1; i<argc; i++)
+		conv(argv[i]);
+	unlink(tmp);
+	return 0;
+}
 static unsigned short
 getshort(char *p)
 {
 	return ((unsigned short)(unsigned char)p[0]) |
 	    ((unsigned short)(unsigned char)p[1] << 8);
 }
-
 static void
 putshort(char *p, unsigned short v)
 {
@@ -49,9 +63,9 @@ static void
 putarhdr(char *p, struct oar_hdr *oh)
 {
 	int i;
-	for(i = 0; i < 8; i++)
+	for(i=0; i<8; i++)
 		p[i] = oh->oname[i];
-	for(; i < 14; i++)
+	for(; i<14; i++)
 		p[i] = 0;
 	putlong(&p[14], oh->odate);
 	p[18] = oh->ouid;
@@ -83,7 +97,7 @@ conv(char *fil)
 	b.magic[0] = 0;
 	b.magic[1] = 0;
 	read(f, b.magic, sizeof(b.magic));
-	if(getshort(b.magic) != OMAG) {
+	if(getshort(b.magic) != omag) {
 		printf("arcv: %s not archive format\n", fil);
 		close(tf);
 		close(f);
@@ -110,21 +124,8 @@ loop:
 out:
 	lseek(f, 0L, 0);
 	lseek(tf, 0L, 0);
-	while((i = read(tf, b.buf, 512)) > 0)
+	while((i=read(tf, b.buf, 512)) > 0)
 		write(f, b.buf, i);
 	close(f);
 	close(tf);
-}
-int
-main(int argc, char **argv)
-{
-	int i;
-	char tbuf[] = "/tmp/arcXXXXX";
-	tmp = mktemp(tbuf);
-	for(i = 1; i < 4; i++)
-		signal(i, SIG_IGN);
-	for(i = 1; i < argc; i++)
-		conv(argv[i]);
-	unlink(tmp);
-	return 0;
 }

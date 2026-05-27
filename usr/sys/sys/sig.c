@@ -6,7 +6,6 @@
 #include "../h/inode.h"
 #include "../h/text.h"
 #include "../h/seg.h"
-#include "../arch/arm.h"
 void sleep(caddr_t chan, int pri);
 void wakeup(caddr_t chan);
 int fsig(struct proc *p);

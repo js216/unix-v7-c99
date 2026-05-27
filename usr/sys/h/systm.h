@@ -31,9 +31,6 @@ char	runout;			/* scheduling flag */
 char	runrun;			/* scheduling flag */
 char	curpri;			/* more scheduling */
 int	maxmem;			/* actual max memory per process */
-/* `physadr lks` (PDP-11 KW11-L clock-device CSR pointer) is gone --
- * the ARM port rearms the timer via cntv_tval_set, not by writing
- * lks->r[0] = 0115. */
 daddr_t	swplo;			/* block number of swap space */
 int	updlock;		/* lock for sync */
 daddr_t	rablock;		/* block to be read ahead */

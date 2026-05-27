@@ -6,6 +6,7 @@
 #include "../h/text.h"
 #include "../h/seg.h"
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+void arm_sureg(int *uisa, int *uisd, int nseg);
 
 /*
  * Load the user hardware segmentation
@@ -16,7 +17,25 @@ int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void
 sureg(void)
 {
+	register int *udp, *uap, *rap;
+	int auisa[16];
+	int *limudp;
+	int taddr, daddr;
+	struct text *tp;
 
+	taddr = daddr = u.u_procp->p_addr;
+	if ((tp=u.u_procp->p_textp) != NULL)
+		taddr = tp->x_caddr;
+	limudp = &u.u_uisd[16];
+	if (cputype==40)
+		limudp = &u.u_uisd[8];
+	rap = &auisa[0];
+	uap = &u.u_uisa[0];
+	for (udp = &u.u_uisd[0]; udp < limudp;) {
+		*rap++ = *uap++ + (*udp&TX? taddr: (*udp&ABS? 0: daddr));
+		udp++;
+	}
+	arm_sureg(auisa, &u.u_uisd[0], limudp - &u.u_uisd[0]);
 }
 
 /*

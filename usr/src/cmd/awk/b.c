@@ -181,7 +181,8 @@ cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[
 }
 
 int
-first(register node *p)			/* collects initially active leaves of p into setvec; returns 0 or 1 depending on whether p matches empty string */
+first(register node *p)			/* collects initially active leaves of p into setvec */
+				/* returns 0 or 1 depending on whether p matches empty string */
 {
 	register int b;
 

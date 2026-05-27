@@ -1,9 +1,4 @@
-root::0:root
 other::1:
-bin::2:
-sys::3:
-adm::4:
-mail::5:
-news::6:
-uucp::7:
-daemon::12:
+sys::2:bin,sys
+bin::3:sys,bin
+uucp::4:

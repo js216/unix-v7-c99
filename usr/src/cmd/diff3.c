@@ -3,7 +3,7 @@
 
 /* diff3 - 3-way differential file comparison*/
 
-/* diff3 [-e] d13 d23 f1 f2 f3
+/* diff3 [-e] d13 d23 f1 f2 f3 
  *
  * d13 = diff report on f1 vs f3
  * d23 = diff report on f2 vs f3

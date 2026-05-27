@@ -11,7 +11,6 @@
 #include "../h/conf.h"
 #include "../h/buf.h"
 void startup(void);
-void armboot(void);
 void brelse(struct buf *bp);
 void binit(void);
 void iinit(void);
@@ -19,6 +18,7 @@ void panic(char *s);
 void clkstart(void);
 void cinit(void);
 int newproc(void);
+void v7_proc_init(void);
 void expand(int newsize);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void sched(void);
@@ -54,8 +54,6 @@ main(void)
 {
 
 	startup();
-	armboot();
-	return;
 	/*
 	 * set up system process
 	 */
@@ -90,6 +88,7 @@ main(void)
 	 */
 
 	if(newproc()) {
+		v7_proc_init();
 		expand(USIZE + (int)btoc(szicode));
 		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);

@@ -2,21 +2,15 @@
 	C library - ascii to floating
 */
 
+#include <math.h>
 #include <ctype.h>
-#define LOGHUGE 39
-static double
-ldexp(double value, int n)
-{
-	while (n > 0) { value *= 2.0; n--; }
-	while (n < 0) { value *= 0.5; n++; }
-	return(value);
-}
 
 double
 atof(register char *p)
 {
 	register int c;
 	double fl, flexp, exp5;
+	double ldexp(double value, int n);
 	double big = 72057594037927936.;  /*2^56*/
 	int nd;
 	register int eexp, exp, neg, negexp, bexp;

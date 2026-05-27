@@ -1,6 +1,7 @@
 char end[1];
 static char *curbrk = (char *)0x00050000;
 
+
 char *
 sbrk(int n)
 {
@@ -9,6 +10,7 @@ sbrk(int n)
 	curbrk += n;
 	return(old);
 }
+
 
 int
 brk(char *p)

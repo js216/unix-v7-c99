@@ -5,32 +5,23 @@
 
 #include <stdio.h>
 #include <a.out.h>
-/* core.h is not present in this port; inline the three macros it
- * defines (v7 PDP-11 values).  Feeds the user-text/data/stack
- * address-map setup in prcom(); only meaningful when the port can
- * read a user struct out of swap, which is best-effort. */
 #define TXTRNDSIZ 8192L
 #define stacktop(siz) (0x10000L)
 #define stackbas(siz) (0x10000L-siz)
 #include <sys/param.h>
-/* v7 kernel-internal headers live under h/ in this port. */
 #include "../../sys/h/proc.h"
-/* sys/tty.h is not needed by this source (no struct tty fields are
- * touched here); a forward declaration is enough for the struct tty *
- * member referenced through u.u_ttyp. */
 struct tty;
 #include <sys/dir.h>
+#include <sys/stat.h>
 #include "../../sys/h/user.h"
 
 struct nlist nl[] = {
 	{ "_proc",    0, 0 },
 	{ "_swapdev", 0, 0 },
 	{ "_swplo",   0, 0 },
-	{ "_pcomm",   0, 0 },
 	{ "",         0, 0 },
 };
 
-static int cur_slot;	/* index of mproc within proc[]; passed to prcom indirectly */
 struct	proc mproc;
 
 struct	user u;
@@ -44,8 +35,6 @@ char	*tptr;
 long	lseek(int fd, long offset, int ptrname);
 char	*gettty(void);
 char	*getptr(char **adr);
-/* strncmp() is declared in <stdio.h> with the standard prototype in
- * this port; the v7 K&R-era `char *strncmp()` line is dropped. */
 int	getdev(void);
 int	prcom(int puid);
 int	getbyte(char *adr);
@@ -160,7 +149,6 @@ bbreak:
 		if ((uid != puid && aflg==0) ||
 		    (chkpid!=0 && chkpid!=mproc.p_pid))
 			continue;
-		cur_slot = i;
 		if(prcom(puid)) {
 			printf("\n");
 			retcode=0;
@@ -172,10 +160,11 @@ bbreak:
 int
 getdev(void)
 {
-#include <sys/stat.h>
 	register FILE *df;
+	register int i;
 	struct stat sbuf;
 	struct direct dbuf;
+	char dpath[DIRSIZ+1];
 
 	if ((df = fopen("/dev", "r")) == NULL) {
 		fprintf(stderr, "Can't open /dev\n");
@@ -185,18 +174,20 @@ getdev(void)
 	while (fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
 		if(dbuf.d_ino == 0)
 			continue;
-		if(stat(dbuf.d_name, &sbuf) < 0)
+		for (i=0; i<DIRSIZ; i++)
+			dpath[i] = dbuf.d_name[i];
+		dpath[DIRSIZ] = '\0';
+		if(stat(dpath, &sbuf) < 0)
 			continue;
 		if ((sbuf.st_mode&S_IFMT) != S_IFCHR)
 			continue;
-		strcpy(devl[ndev].dname, dbuf.d_name);
+		for (i=0; i<DIRSIZ; i++)
+			devl[ndev].dname[i] = dbuf.d_name[i];
 		devl[ndev].dev = sbuf.st_rdev;
 		ndev++;
 	}
 	fclose(df);
 	if ((swap = open("/dev/swap", 0)) < 0) {
-		/* /dev/swap is absent on the ARM port; ps still prints proc
-		 * table entries, but cannot reach swapped-out user pages. */
 		swap = -1;
 	}
 	return(0);
@@ -219,7 +210,7 @@ int	file;
 int
 prcom(int puid)
 {
-	char abuf[512];
+	int abuf[128];
 	long addr;
 	register int *ip;
 	register char *cp, *cp1;
@@ -230,7 +221,6 @@ prcom(int puid)
 	int septxt;
 	int lw=(lflg?35:80);
 	char **ap;
-	(void)lw;
 
 	if (mproc.p_flag&SLOAD) {
 		addr = ctob((long)mproc.p_addr);
@@ -292,81 +282,68 @@ prcom(int puid)
 		tm %= 60;
 		printf(tm<10?"0%ld":"%ld", tm);
 	}
-	/* For parked processes the live USERBASE window doesn't cover their
-	 * UARGV buffer, so fall back to the per-slot pcomm[] table the
-	 * kernel populates at exec() time.  The running ps has its own
-	 * argv in UARGV and prefers that. */
-	{
-		char nb[16];
-		lseek(swmem, (long)nl[3].n_value + (long)cur_slot * 16, 0);
-		if (read(swmem, nb, 16) == 16) {
-			nb[15] = '\0';
-			if (nb[0] && mproc.p_size == 0) {
-				printf(" %.15s", nb);
-				return(1);
-			}
-		}
-	}
 	if (mproc.p_pid == 0) {
 		printf(" swapper");
 		return(1);
 	}
-	/* In real v7, p_addr*64 / p_size*64 describe the swap-clicks layout
+	addr += ctob((long)mproc.p_size) - 512;
 
-	 * of a process's user struct + text/data/stack image, and the scan
-	 * below walks the top of the user stack (where exec() laid out
-	 * argv[]) byte by byte through a saved struct user{} address map.
-	 *
-	 * This port has no swap and only one live user image at a time
-	 * (USERBASE..USERBASE+USERSIZE), with argv kept as a single
-	 * NUL-terminated, space-separated buffer at the fixed user VA
-	 * UARGV (see arch/arm.c::kexec2 / kspawn).  arch/arm.c::
-	 * v7_proc_set_current() steers p_addr/p_size for the currently
-	 * running proc at UARGV/UARGLEN respectively, so the lseek+read
-	 * below lands directly on that buffer; every other proc gets
-	 * p_size==0 and we just print pid/tty/time with no command.
-	 *
-	 * The "sh special" indirect-argv walk and the backward stack scan
-	 * from the original v7 source are dropped: our argv buffer is a
-	 * single contiguous C string, not a v7 user-stack layout. */
-	if (mproc.p_size == 0)
+	/* look for sh special */
+	lseek(file, addr+512-sizeof(char **), 0);
+	if (read(file, (char *)&ap, sizeof(char *)) != sizeof(char *))
 		return(1);
-	/* Read from the START of UARGV (where kargs lays out NUL-separated
-	 * argv strings).  Original v7 read at addr+size-512 because v7 placed
-	 * argv at the top of the user stack; in this port the buffer base is
-	 * UARGV itself. */
+	if (ap) {
+		char b[82];
+		char *bp = b;
+		while((cp=getptr(ap++)) && cp && (bp<b+lw) ) {
+			nbad = 0;
+			while((c=getbyte(cp++)) && (bp<b+lw)) {
+				if (c<' ' || c>'~') {
+					if (nbad++>3)
+						break;
+					continue;
+				}
+				*bp++ = c;
+			}
+			*bp++ = ' ';
+		}
+		*bp++ = 0;
+		printf(lflg?" %.30s":" %.60s", b);
+		return(1);
+	}
 
 	lseek(file, addr, 0);
-	if (read(file, abuf, sizeof(abuf)) != sizeof(abuf))
+	if (read(file, (char *)abuf, sizeof(abuf)) != sizeof(abuf))
 		return(1);
-	abuf[sizeof(abuf)-1] = '\0';
-	if (abuf[0] == '\0')
-		return(1);
-	/* argv args are NUL-separated; replace NULs between non-empty strings
-	 * with spaces so the whole command line prints as one row.  Stop at
-	 * the argv terminator (two NULs in a row -> empty-string sentinel). */
-	{
-		int z;
-		for (z = 0; z < (int)sizeof(abuf) - 1; z++) {
-			if (abuf[z] == '\0' && abuf[z+1] == '\0') { abuf[z] = '\0'; break; }
-			if (abuf[z] == '\0') abuf[z] = ' ';
+	for (ip = &abuf[128]-2; ip > abuf; ) {
+		if (*--ip == -1 || *ip==0) {
+			cp = (char *)(ip+1);
+			if (*cp==0)
+				cp++;
+			nbad = 0;
+			for (cp1 = cp; cp1 < (char *)abuf + sizeof(abuf); cp1++) {
+				c = *cp1&0177;
+				if (c==0)
+					*cp1 = ' ';
+				else if (c < ' ' || c > 0176) {
+					if (++nbad >= 5) {
+						*cp1++ = ' ';
+						break;
+					}
+					*cp1 = '?';
+				} else if (c=='=') {
+					*cp1 = 0;
+					while (cp1>cp && *--cp1!=' ')
+						*cp1 = 0;
+					break;
+				}
+			}
+			while (*--cp1==' ')
+				*cp1 = 0;
+			printf(lflg?" %.30s":" %.60s", cp);
+			return(1);
 		}
 	}
-	/* Sanitize non-printables and trim trailing space so the line stays
-	 * one row even if the in-kernel buffer had stale tail bytes. */
-	for (cp = abuf; *cp; cp++) {
-		c = *cp & 0177;
-		if (c < ' ' || c > '~')
-			*cp = '?';
-	}
-	while (cp > abuf && cp[-1] == ' ')
-		*--cp = '\0';
-	/* ip/cp1/ap/nbad/getbyte/within/getptr are inherited from the
-	 * historical v7 argv-scan and become unused once we just print the
-	 * raw argbuf; cast them to void so -Wunused stays quiet without
-	 * disturbing the surrounding declarations. */
-	(void)ap; (void)cp1; (void)ip; (void)nbad;
-	printf(lflg?" %.30s":" %.60s", abuf);
 	return(1);
 }
 

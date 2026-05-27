@@ -126,13 +126,7 @@ void	range(int a, int b, char *separator);
 void	fetch(long *f, int a, int b, FILE *lb, char *s);
 int	readhash(FILE *f);
 void	mesg(char *s, char *t);
-static int	diff_isspace(int c);
 
-static int
-diff_isspace(int c)
-{
-	return(c==' ' || c=='\t' || c=='\n' || c=='\v' || c=='\r' || c=='\f');
-}
 void
 done(void)
 {
@@ -501,15 +495,15 @@ check(char **argv)
 			d = getc(input[1]);
 			ctold++;
 			ctnew++;
-			if(bflag && diff_isspace(c) && diff_isspace(d)) {
+			if(bflag && isspace(c) && isspace(d)) {
 				do {
 					if(c=='\n') break;
 					ctold++;
-				} while(diff_isspace(c=getc(input[0])));
+				} while(isspace(c=getc(input[0])));
 				do {
 					if(d=='\n') break;
 					ctnew++;
-				} while(diff_isspace(d=getc(input[1])));
+				} while(isspace(d=getc(input[1])));
 			}
 			if(c!=d) {
 				jackpot++;
@@ -648,7 +642,7 @@ readhash(FILE *f)
 			return(0);
 		if(t == '\n')
 			break;
-		if(diff_isspace(t)) {
+		if(isspace(t)) {
 			space++;
 			continue;
 		}

@@ -3,20 +3,8 @@
  */
 
 #define mask(x) (x&0377)
-/* h/inode.h carries a v7-style `struct group` (the mpx multiplexer
- * descriptor), which collides with libc's <grp.h> `struct group`
- * (getgrent).  Suppress the libc form by predefining GRP_H before
- * any libc header gets a chance to pull <grp.h>; pstat does not
- * call getgr* and so does not need the POSIX struct. */
-#define GRP_H
 #include <stdio.h>
 #include <sys/param.h>
-/* sys/conf.h is unused by this source.  Pull kernel-internal headers
- * from the in-tree h/ directory; this port keeps them there.  v7
- * had these as in-function #includes (just to scope a few struct
- * defs); C99 chokes on the file-scope `inode[]` / `mpxip` decls
- * showing up as unused function-local variables, so they are hoisted
- * to file scope here. */
 #include "../../sys/h/tty.h"
 #include "../../sys/h/inode.h"
 #include "../../sys/h/text.h"
@@ -24,10 +12,7 @@
 #include <sys/dir.h>
 #include "../../sys/h/user.h"
 #include "../../sys/h/file.h"
-#include <sys/stat.h>
-#include <a.out.h>		/* nlist() prototype */
-/* exit/open/read/lseek prototypes are pulled in via stdio.h on this
- * port; no extra K&R-style declarations are needed here. */
+#include <a.out.h>
 
 char	*fcore	= "/dev/mem";
 char	*fnlist	= "/unix";

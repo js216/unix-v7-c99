@@ -11,6 +11,12 @@ available nowadays, following these principles:
 Getting Started
 -------------------------
 
+Prerequisites on Debian, Ubuntu, or WSL2:
+
+    sudo apt install build-essential bison flex gcc-arm-none-eabi \
+        binutils-arm-none-eabi gcc-arm-linux-gnueabihf qemu-user-static \
+        binfmt-support qemu-system-arm
+
 Build the system and run it under Qemu:
 
     make CONF=arm_qemu

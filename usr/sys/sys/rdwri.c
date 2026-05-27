@@ -118,7 +118,7 @@ writei(register struct inode *ip)
 				return;
 			dev = ip->i_dev;
 		}
-		if(n == BSIZE)
+		if(n == BSIZE) 
 			bp = getblk(dev, bn);
 		else
 			bp = bread(dev, bn);

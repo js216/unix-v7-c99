@@ -21,3 +21,12 @@ physadr	ka6;		/* 11/40 KISA6; 11/45 KDSA6 */
  * address to access 11/70 UNIBUS map
  */
 #define	UBMAP	((physadr)0170200)
+#define KERNBASE	0x40000000U
+#define USERBASE	0x00000000U
+#define USERPHYS	0x44000000U
+#define USERSIZE	0x00100000U
+#define UENTRY		0x00010000U
+#define USTACK		0x000f0000U
+#define UARGV		0x0000f000U
+#define UARGLEN		3072
+#define UENTRY_SIGTRAMP	0x0000fe00U

@@ -1,5 +1,5 @@
 
-static int	(*qscmp)(char *, char *);
+static int	(*qscmp)();
 static int	qses;
 static void qs1(char *a, char *l);
 static void qsexc(char *i, char *j);

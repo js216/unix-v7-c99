@@ -1,0 +1,2 @@
+PATH=/bin:/usr/bin
+export PATH

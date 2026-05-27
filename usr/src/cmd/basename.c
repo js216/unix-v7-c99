@@ -16,7 +16,7 @@ main(int argc, char *argv[])
 			p2 = p1;
 	}
 	if (argc>2) {
-		for(p3=argv[2]; *p3; p3++)
+		for(p3=argv[2]; *p3; p3++) 
 			;
 		while(p1>p2 && p3>argv[2])
 			if(*--p3 != *--p1)

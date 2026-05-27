@@ -1,14 +1,3 @@
-/* ARM/ELF nlist(3) -- v7's nlist parsed v7 a.out, but the C99/ARM
- * kernel is an ELF32 image, so this walks ELF .symtab/.strtab.  The
- * v7 C compiler prefixed every C symbol with `_'; strip one leading
- * underscore from each search-list name before matching against the
- * ELF symbol-string.  n_name[] is a fixed 8-byte field; we compare
- * against the ELF name with exact-match semantics, which is enough
- * for the kernel symbols that dmesg/ps look up (_msgbuf, _msgbufp,
- * _proc, _file, _swapdev, _dk_xfer, etc., all <=7 chars).  n_type is
- * mapped to v7's N_TEXT/N_DATA/N_BSS based on the ELF section's
- * SHF_EXECINSTR/SHF_WRITE flags.
- */
 #include <a.out.h>
 
 int	open(char *, int);
@@ -18,7 +7,6 @@ long	lseek(int, long, int);
 #define	ELF_NIDENT	16
 #define	ELFMAG0		0177
 #define	SHT_SYMTAB	2
-#define	SHT_STRTAB	3
 #define	SHF_WRITE	1
 #define	SHF_EXECINSTR	4
 struct elfhdr {
@@ -57,8 +45,38 @@ struct elfsym {
 	unsigned char	st_other;
 	unsigned short	st_shndx;
 };
-int
-nlist(char *name, struct nlist *list)
+static int
+readn(int fd, char *buf, int n)
+{
+	int nr, total;
+	total = 0;
+	while(total < n) {
+		nr = read(fd, buf + total, n - total);
+		if(nr <= 0)
+			return(total);
+		total += nr;
+	}
+	return(total);
+}
+static int
+readstr(int fd, char *buf, int n)
+{
+	int nr, total;
+	char c;
+	total = 0;
+	while(total < n - 1) {
+		nr = read(fd, &c, 1);
+		if(nr <= 0)
+			break;
+		buf[total++] = c;
+		if(c == '\0')
+			return(total);
+	}
+	buf[total] = '\0';
+	return(total);
+}
+static int
+nlist1(char *name, struct nlist *list)
 {
 	struct nlist *p;
 	struct elfhdr eh;
@@ -80,7 +98,7 @@ nlist(char *name, struct nlist *list)
 	f = open(name, 0);
 	if(f < 0)
 		return(-1);
-	if(read(f, (char *)&eh, sizeof(eh)) != sizeof(eh)
+	if(readn(f, (char *)&eh, sizeof(eh)) != sizeof(eh)
 	    || eh.e_ident[0] != ELFMAG0 || eh.e_ident[1] != 'E'
 	    || eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F') {
 		close(f);
@@ -90,9 +108,10 @@ nlist(char *name, struct nlist *list)
 	symsz = 0;
 	symesz = sizeof(sym);
 	stroff = 0;
+
 	for(i = 0; i < eh.e_shnum && i < 64; i++) {
 		lseek(f, (long)(eh.e_shoff + i * eh.e_shentsize), 0);
-		if(read(f, (char *)&sh, sizeof(sh)) != sizeof(sh)) {
+		if(readn(f, (char *)&sh, sizeof(sh)) != sizeof(sh)) {
 			close(f);
 			return(-1);
 		}
@@ -103,7 +122,10 @@ nlist(char *name, struct nlist *list)
 			if(sh.sh_entsize)
 				symesz = sh.sh_entsize;
 			lseek(f, (long)(eh.e_shoff + sh.sh_link * eh.e_shentsize), 0);
-			read(f, (char *)&sh, sizeof(sh));
+			if(readn(f, (char *)&sh, sizeof(sh)) != sizeof(sh)) {
+				close(f);
+				return(-1);
+			}
 			stroff = sh.sh_offset;
 		}
 	}
@@ -114,16 +136,18 @@ nlist(char *name, struct nlist *list)
 	nsyms = (int)(symsz / symesz);
 	for(i = 0; i < nsyms; i++) {
 		lseek(f, (long)(symoff + i * symesz), 0);
-		if(read(f, (char *)&sym, sizeof(sym)) != sizeof(sym))
-			break;
+		if(readn(f, (char *)&sym, sizeof(sym)) != sizeof(sym)) {
+			close(f);
+			return(-1);
+		}
 		if(sym.st_name == 0)
 			continue;
 		lseek(f, (long)(stroff + sym.st_name), 0);
-		k = read(f, strbuf, sizeof(strbuf) - 1);
-		if(k <= 0)
-			continue;
-		strbuf[k] = '\0';
-
+		k = readstr(f, strbuf, sizeof(strbuf));
+		if(k <= 0) {
+			close(f);
+			return(-1);
+		}
 		for(p = list; p->n_name[0]; p++) {
 			for(j = 0; j < 8; j++)
 				nb[j] = p->n_name[j];
@@ -152,4 +176,20 @@ nlist(char *name, struct nlist *list)
 	}
 	close(f);
 	return(0);
+}
+int
+nlist(char *name, struct nlist *list)
+{
+	struct nlist *p;
+	int tries, rc, matched;
+	for(tries = 0; tries < 3; tries++) {
+		rc = nlist1(name, list);
+		matched = 0;
+		for(p = list; p->n_name[0]; p++)
+			if(p->n_type != 0)
+				matched = 1;
+		if(rc == 0 && matched)
+			return(0);
+	}
+	return(rc);
 }

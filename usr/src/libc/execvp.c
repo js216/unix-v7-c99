@@ -7,7 +7,7 @@
 #define	NULL	0
 
 static	char shell[] =	"/bin/sh";
-static char *execat(register char *s1, register char *s2, char *si);
+char	*execat(register char *s1, register char *s2, char *si);
 extern	int errno;
 
 int
@@ -65,7 +65,7 @@ execvp(char *name, char **argv)
 	return(-1);
 }
 
-static char *
+char *
 execat(register char *s1, register char *s2, char *si)
 {
 	register char *s;

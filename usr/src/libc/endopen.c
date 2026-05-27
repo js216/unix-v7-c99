@@ -1,6 +1,6 @@
 #include	<stdio.h>
 #include	<errno.h>
-static int create(register char *file, int rw);
+int create(register char *file, int rw);
 
 FILE *
 _endopen(char *file, char *mode, register FILE *iop)
@@ -51,7 +51,7 @@ _endopen(char *file, char *mode, register FILE *iop)
 	return(iop);
 }
 
-static int
+int
 create(register char *file, int rw)
 {
 	register int f;

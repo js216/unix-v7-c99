@@ -68,11 +68,12 @@ static struct {
 	{ 58, 303 },	/* 1975: Last Sun. in Feb - last Sun in Oct */
 };
 
-struct tm	*gmtime(long *tim);
-static char	*ct_numb(register char *cp, int n);
-struct tm	*localtime(long *tim);
-char	*ctime(long *t);
-char	*asctime(struct tm *t);
+struct tm	*gmtime();
+char		*ct_numb();
+struct tm	*localtime();
+char	*ctime();
+char	*ct_num();
+char	*asctime();
 static int	sunday(register struct tm *t, register int d);
 int	dysize(int y);
 int	ftime(struct timeb *tp);
@@ -229,7 +230,7 @@ dysize(int y)
 	return(365);
 }
 
-static char *
+char *
 ct_numb(register char *cp, int n)
 {
 	cp++;
