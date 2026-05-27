@@ -24,6 +24,7 @@ void bdwrite(struct buf *bp);
 void run_user(unsigned int pc, unsigned int sp);
 void virtio_init(void);
 void binit(void);
+void clkstart(void);
 #define S_EXIT		1
 #define S_FORK		2
 #define S_READ		3
@@ -198,7 +199,7 @@ void pause_spin_barrier(void)
 static void clocked_spin_barrier(void)
 {
 	in_spin_wait = 1;
-	pause_spin_barrier();
+	__asm__ volatile("cpsie i\n\twfi\n\tcpsid i" ::: "memory");
 	in_spin_wait = 0;
 }
 #define V7_FREAD	01
@@ -2545,7 +2546,7 @@ void armboot(void)
 	if(kexec2("/etc/init", initargv, 0) < 0)
 		panic("init");
 #endif
-	{ extern void arm_timer_init(void); arm_timer_init(); }
+	clkstart();
 	run_user(UENTRY, USTACK);
 }
 extern void umask(void), getuid(void), getgid(void), getpid(void);
@@ -3372,4 +3373,10 @@ void arm_timer_init(void)
 	cntv_ctl_set(1);
 	irq_ready = 1;
 	irq_enable();
+}
+
+void clkstart(void)
+{
+
+	arm_timer_init();
 }

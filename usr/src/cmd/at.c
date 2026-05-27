@@ -26,7 +26,7 @@ char *days[] = {
 };
 
 struct monstr {
-	char *mname;
+	char *mname; 
 	int mlen;
 } months[] = {
 	{ "january", 31 },
@@ -54,17 +54,19 @@ FILE	*file;
 FILE	*ifile;
 char	**environ;
 char	*prefix(char *begin, char *full);
+FILE	*popen();
 
-FILE	*openjob(char *name);
+int	pclose(FILE *ptr);
 int	makeutime(char *pp), makeuday(int argc, char **argv);
 int	filename(char *dir, int y, int d, int t);
-int	onintr(int sig), getpwd(char *buf, int nbuf);
+int	onintr(int sig);
 int
 main(int argc, char **argv)
 {
 	extern int onintr(int sig);
 	register int c;
 	char pwbuf[100];
+	FILE *pwfil;
 	int larg;
 
 	/* argv[1] is the user's time: e.g.,  3AM */
@@ -94,23 +96,23 @@ main(int argc, char **argv)
 	}
 	if ((int (*)())signal(SIGINT, (int)SIG_IGN) != (int (*)())SIG_IGN)
 		signal(SIGINT, (int)onintr);
-	file = openjob(fname);
+	file = fopen(fname, "a");
+	chmod(fname, 0644);
 	if (file == NULL) {
 		fprintf(stderr, "at: cannot open memo file\n");
 		exit(1);
 	}
-	if (getpwd(pwbuf, sizeof(pwbuf)) < 0) {
+	if ((pwfil = popen("pwd", "r")) == NULL) {
 		fprintf(stderr, "at: can't execute pwd\n");
 		exit(1);
 	}
+	fgets(pwbuf, 100, pwfil);
+	pclose(pwfil);
 	fprintf(file, "cd %s", pwbuf);
 	if (environ) {
 		char **ep = environ;
 		while(*ep)
-			if (index(*ep, '='))
-				fprintf(file, "%s\n", *ep++);
-			else
-				ep++;
+			fprintf(file, "%s\n", *ep++);
 	}
 	while((c = getc(ifile)) != EOF) {
 		putc(c, file);
@@ -118,49 +120,6 @@ main(int argc, char **argv)
 	exit(0);
 }
 
-FILE *
-openjob(char *name)
-{
-	int fd;
-	file = fopen(name, "a");
-	if (file == NULL) {
-		fd = creat(name, 0644);
-		if (fd >= 0)
-			close(fd);
-		file = fopen(name, "a");
-	}
-	chmod(name, 0644);
-	return(file);
-}
-int
-getpwd(char *buf, int nbuf)
-{
-	int fd[2], status;
-	register int n;
-	if (pipe(fd) < 0)
-		return(-1);
-	if (fork() == 0) {
-		close(fd[0]);
-		dup(fd[1] | 0100, 1);
-		close(fd[1]);
-		execl("/bin/pwd", "pwd", 0);
-		exit(1);
-	}
-	close(fd[1]);
-	n = read(fd[0], buf, nbuf-1);
-	close(fd[0]);
-	wait(&status);
-	if (n <= 0 || status)
-		return(-1);
-	buf[n] = '\0';
-	n = 0;
-	while (buf[n])
-		if (buf[n++] == '\n') {
-			buf[n] = '\0';
-			break;
-		}
-	return(0);
-}
 int
 makeutime(char *pp)
 {
@@ -191,7 +150,6 @@ makeutime(char *pp)
 			fprintf(stderr, "at: bad time format:\n");
 			exit(1);
 
-			/* fallthrough */
 		case 'A':
 		case 'a':
 			if (val >= HALFDAY+HOUR)
