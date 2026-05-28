@@ -6,8 +6,8 @@
 #define RXFE (1 << 4)
 
 #define MSGBUFS	128
-extern char msgbuf[MSGBUFS];
-extern char *msgbufp;
+char	msgbuf[MSGBUFS];
+char	*msgbufp = msgbuf;
 
 void
 putchar(char c)

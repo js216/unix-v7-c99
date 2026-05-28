@@ -9,13 +9,15 @@ conf/test_malloc
 sys/unix
 unix
 root.img
+boot/unix
+boot/rootfs.img
+boot/rootfs.img.tmp
 nullboot
 bin/
 usr/adm/
 usr/spool/
 etc/accton
 etc/atrun
-etc/auxfs
 etc/cron
 etc/getty
 etc/init
@@ -44,7 +46,6 @@ usr/lib/spellout
 usr/lib/units
 usr/src/tools/mkfs
 usr/src/tools/minimkfs
-usr/sys/conf/c.c
 usr/sys/conf/mkconf
 usr/src/cmd/awk/awk.g.c
 usr/src/cmd/awk/awk.h

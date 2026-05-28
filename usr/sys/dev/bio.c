@@ -270,6 +270,7 @@ getblk(dev_t dev, daddr_t blkno)
 			sleep((caddr_t)bp, PRIBIO+1);
 			goto loop;
 		}
+		notavail(bp);
 		spl0();
 #ifdef	DISKMON
 		i = 0;
@@ -281,7 +282,6 @@ getblk(dev_t dev, daddr_t blkno)
 		if (i<NBUF)
 			io_info.bufcount[i]++;
 #endif
-		notavail(bp);
 		return(bp);
 	}
 	spl6();
@@ -290,8 +290,9 @@ getblk(dev_t dev, daddr_t blkno)
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
 		goto loop;
 	}
+	bp = bfreelist.av_forw;
+	notavail(bp);
 	spl0();
-	notavail(bp = bfreelist.av_forw);
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -325,9 +326,10 @@ loop:
 		bfreelist.b_flags |= B_WANTED;
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
 	}
-	spl0();
 	dp = &bfreelist;
-	notavail(bp = bfreelist.av_forw);
+	bp = bfreelist.av_forw;
+	notavail(bp);
+	spl0();
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -532,7 +534,7 @@ physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
 	 * Compute physical address by simulating
 	 * the segmentation hardware.
 	 */
-	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
+	ts = (u.u_sep? &u.u_uisa[8]: &u.u_uisa[0])[nb>>7] + (nb&0177);
 	bp->b_un.b_addr = (caddr_t)((ts<<6) + (base&077));
 	bp->b_xmem = (ts>>10) & 077;
 	bp->b_blkno = u.u_offset >> BSHIFT;

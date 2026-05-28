@@ -185,3 +185,70 @@ timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
 	p1->c_arg = arg;
 	splx(s);
 }
+#define GICD_BASE	0x08000000U
+#define GICC_BASE	0x08010000U
+#define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
+#define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))
+#define GICD_IPRIORITYR(n) (*(volatile unsigned int *)(GICD_BASE + 0x400 + 4*(n)))
+#define GICC_CTLR	(*(volatile unsigned int *)(GICC_BASE + 0x000))
+#define GICC_PMR	(*(volatile unsigned int *)(GICC_BASE + 0x004))
+#define GICC_IAR	(*(volatile unsigned int *)(GICC_BASE + 0x00c))
+#define GICC_EOIR	(*(volatile unsigned int *)(GICC_BASE + 0x010))
+#define TIMER_IRQ	27
+#define TIMER_HZ	HZ
+extern unsigned int cntfrq_get(void);
+extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
+extern void irq_enable(void);
+extern void mt_clock_tick(void);
+extern volatile int in_spin_wait;
+static unsigned int timer_reload;
+int irq_ready;
+volatile int in_clock_irq;
+void
+clock_irq_handler(int *tf)
+{
+	unsigned int iar = GICC_IAR;
+	unsigned int intid = iar & 0x3ff;
+	if(intid == 1023) return;
+	if(intid == TIMER_IRQ) {
+		int mode = tf[16] & 0x1f;
+		int usermode = (mode == 0x10) || (mode == 0x1f);
+		cntv_tval_set(timer_reload);
+		if((usermode || in_spin_wait) && u.u_procp != NULL &&
+		   !in_clock_irq) {
+			in_clock_irq = 1;
+			clock(0, 0, 0, 0, 0, (caddr_t)0,
+			    usermode ? 0xf000 : 0);
+			in_clock_irq = 0;
+			mt_clock_tick();
+		}
+	}
+	GICC_EOIR = iar;
+}
+void
+arm_timer_init(void)
+{
+	unsigned int freq, prio_reg, prio_off, prio_val;
+	freq = cntfrq_get();
+	if(freq == 0) freq = 62500000U;
+	timer_reload = freq / TIMER_HZ;
+	prio_reg = TIMER_IRQ / 4;
+	prio_off = (TIMER_IRQ % 4) * 8;
+	prio_val = GICD_IPRIORITYR(prio_reg);
+	prio_val &= ~(0xffU << prio_off);
+	prio_val |=  (0x80U << prio_off);
+	GICD_IPRIORITYR(prio_reg) = prio_val;
+	GICD_ISENABLER(TIMER_IRQ / 32) = 1U << (TIMER_IRQ % 32);
+	GICD_CTLR = 1;
+	GICC_PMR  = 0xff;
+	GICC_CTLR = 1;
+	cntv_tval_set(timer_reload);
+	cntv_ctl_set(1);
+	irq_ready = 1;
+	irq_enable();
+}
+void
+clkstart(void)
+{
+	arm_timer_init();
+}

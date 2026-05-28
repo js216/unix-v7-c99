@@ -19,7 +19,7 @@ Prerequisites on Debian, Ubuntu, or WSL2:
 
 Build the system and run it under Qemu:
 
-    make CONF=arm_qemu
+    make
     make qemu
 
 

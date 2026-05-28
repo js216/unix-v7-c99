@@ -118,13 +118,15 @@ d--755 0 0
 		$
 	dev	d--755 0 0
 		console	c--644 0 0 0 0
+		mem	c--640 0 0 1 0
+		kmem	c--640 0 0 1 1
 		null	c--666 0 0 1 2
+		root	b--640 0 0 0 0
 		tty	c--666 0 0 0 0
 		$
 	etc	d--755 0 0
 		accton	---755 0 0 etc/accton
 		atrun	---755 0 0 etc/atrun
-		auxfs	---644 0 0 etc/auxfs
 		cron	---755 0 0 etc/cron
 		ddate	---644 0 0 /dev/null
 		getty	---755 0 0 etc/getty
@@ -181,6 +183,6 @@ d--755 0 0
 				$
 			$
 		$
-	unix	---644 0 0 unix
+	unix	---644 0 0 boot/unix
 	.profile	---644 0 0 .profile
 $

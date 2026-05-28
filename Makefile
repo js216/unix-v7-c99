@@ -2,8 +2,6 @@
 # Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 # Copyright (c) 2026 Jakob Kastelic
 
-CONF ?= arm_qemu
-
 ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/cat bin/echo bin/ls bin/pwd bin/sync \
 	bin/arcv bin/rev bin/yes bin/wc bin/basename bin/sum \
@@ -41,34 +39,68 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	etc/passwd etc/group etc/ttys usr/dict/words usr/lib/units \
 	usr/lib/crontab \
 	usr/dict/hlista usr/dict/hlistb usr/dict/hstop \
-	usr/dict/spellhist \
-	etc/auxfs
+	usr/dict/spellhist
 
-all:	unix root.img
+all:	boot/unix boot/rootfs.img
 
-unix: usr/sys/sys/*.c usr/sys/dev/*.c usr/sys/h/*.h usr/sys/conf/*.s usr/sys/conf/makefile usr/sys/conf/mkconf.c usr/sys/conf/$(CONF)
-	$(MAKE) -C usr/sys/conf unix
+KCC = arm-none-eabi-gcc
+KAS = arm-none-eabi-as
+KCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin \
+	-fcommon -mcpu=cortex-a7 -marm -ffreestanding
+KLDFLAGS = -nostdlib -T usr/sys/conf/arm_qemu.ld -Wl,-z,max-page-size=0x200
+KV7OBJS = usr/sys/sys/alloc.o usr/sys/sys/subr.o usr/sys/sys/fio.o \
+	usr/sys/sys/sys2.o usr/sys/sys/sys3.o usr/sys/sys/sys4.o \
+	usr/sys/sys/clock.o usr/sys/sys/acct.o usr/sys/sys/ureg.o \
+	usr/sys/sys/text.o usr/sys/sys/rdwri.o usr/sys/sys/sig.o \
+	usr/sys/sys/slp.o usr/sys/sys/sys1.o usr/sys/sys/pipe.o \
+	usr/sys/sys/sysent.o
+KOBJS = usr/sys/conf/l.o usr/sys/sys/main.o usr/sys/sys/malloc.o \
+	usr/sys/sys/prf.o usr/sys/sys/iget.o usr/sys/sys/nami.o \
+	usr/sys/sys/machdep.o $(KV7OBJS) usr/sys/dev/bio.o \
+	usr/sys/conf/c.o usr/sys/dev/pl011.o usr/sys/dev/mem.o \
+	usr/sys/dev/virtio_blk.o
 
-qemu:	unix root.img
-	$(MAKE) -C usr/sys/conf qemu
+boot:
+	mkdir -p boot
 
-root.img: force-root-image unix Makefile usr/src/tools/mkfs usr/sys/conf/root.proto nullboot .profile usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/compall usr/src/libc/mklib usr/src/libc/u.ld
-	cd usr/src/libc && sh compall && sh mklib
+boot/unix: $(KOBJS) | boot
+	$(KCC) $(KCFLAGS) $(KLDFLAGS) -o $@ $^
+
+usr/sys/conf/l.o: usr/sys/conf/l.s
+	$(KAS) -mcpu=cortex-a7 -o $@ $<
+
+usr/sys/sys/%.o: usr/sys/sys/%.c
+	$(KCC) $(KCFLAGS) -c $< -o $@
+
+usr/sys/dev/%.o: usr/sys/dev/%.c
+	$(KCC) $(KCFLAGS) -c $< -o $@
+
+usr/sys/conf/%.o: usr/sys/conf/%.c
+	$(KCC) $(KCFLAGS) -c $< -o $@
+
+qemu:	boot/unix boot/rootfs.img
+	qemu-system-arm -machine virt -cpu cortex-a7 -nographic \
+	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
+	    -device virtio-blk-device,drive=hd0
+
+boot/rootfs.img: force-root-image boot/unix Makefile usr/src/tools/mkfs boot/rootfs.proto nullboot .profile usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/u.ld
+	$(MAKE) libc
 	$(MAKE) userland-extra
 	rm -f bin/bc
 	set -e; for i in $(ROOT); do \
 		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
 	done
-	# v7 mkfs only writes the blocks it touches.  Pad root.img to its
+	# v7 mkfs only writes the blocks it touches.  Pad rootfs.img to its
 	# declared filesystem size (FSIZE * BSIZE = 16384 * 512) so qemu's
 	# virtio block backend can serve any sector the kernel asks for.
-	trap 'rm -f root.img.tmp' EXIT; \
-	    usr/src/tools/mkfs root.img.tmp usr/sys/conf/root.proto; \
-	    truncate -s 8388608 root.img.tmp; \
-	    mv root.img.tmp root.img
+	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
+	    usr/src/tools/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
+	    truncate -s 8388608 boot/rootfs.img.tmp; \
+	    mv boot/rootfs.img.tmp boot/rootfs.img
 	$(MAKE) userland-clean
 
 USERCC = arm-none-eabi-gcc
+USERAR = arm-none-eabi-ar
 USEROBJCOPY = arm-none-eabi-objcopy
 USERCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Iusr/include -Iusr/src
 USERAWKCFLAGS = $(USERCFLAGS) -Os -fno-asynchronous-unwind-tables -fno-unwind-tables -Dmalloc=malloc -Dfree=free -Iusr/src/cmd/awk -Wno-int-conversion -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -Wno-implicit-int -Wno-return-type -Wno-unused-function -Wno-discarded-qualifiers
@@ -76,16 +108,59 @@ USERYACCCFLAGS = $(USERCFLAGS) -DYYSTACK_USE_ALLOCA=1 -Wno-implicit-function-dec
 USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld
 USERLDLIBS = -Lusr/src/libc -lc -lgcc
 USERCRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
+LIBC_CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon \
+	-fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm \
+	-I../../include -I../..
+LIBC_SYS_ASM = access acct chdir chmod chown chroot close creat fork fstat \
+	getgid getpid getuid ioctl kill link lock lseek mknod mount nice pipe \
+	profil ptrace read setgid setuid signal stat sync times umask umount \
+	unlink utime wait write
+LIBC_SYS_C = alarm brk dup execv execl execve ftime gtty open pause stime \
+	stty
+LIBC_GEN_C = abort exit sleep
+LIBC_STDIO_C = popen
+LIBC_C = l3 getpwent getpwnam getpwuid strncat ttyslot execvp getenv atoi \
+	atol atof index rindex isatty perror strcat strcmp strcpy strlen \
+	strncmp strncpy swab rand mktemp errlst ttyname mkdir qsort calloc \
+	tell timezone getlogin data ctype_ fopen freopen findiop endopen \
+	filbuf flsbuf fgetc fputc fgets fputs gets puts rdwr fseek ftell \
+	rew setbuf ungetc clrerr getchar putchar strout doprnt printf \
+	fprintf sprintf doscan scanf malloc getpass ctime system memcpy nlist \
+	math_helpers ecvt fdopen gcvt getgrent getgrgid getgrnam getw putw
 AWKGEN = usr/src/cmd/awk/awk.g.c usr/src/cmd/awk/awk.h \
 	usr/src/cmd/awk/awk.lx.c usr/src/cmd/awk/awk.lx.tmp.l \
 	usr/src/cmd/awk/proc usr/src/cmd/awk/proc-token.o \
 	usr/src/cmd/awk/proctab.c
 
-.PHONY: force-root-image userland-extra userland-clean
+.PHONY: force-root-image libc userland-extra userland-clean
 force-root-image:
 
 nullboot:
 	: > nullboot
+
+libc:
+	cd usr/src/libc && rm -f *.o *.a *.elf && \
+	    $(USERCC) $(LIBC_CFLAGS) -c crt0.s && \
+	    $(USERCC) $(LIBC_CFLAGS) -c crt0.c -o crt0c.o && \
+	    $(USERCC) $(LIBC_CFLAGS) -c syscall.s && \
+	    for i in $(LIBC_SYS_ASM); do \
+	        $(USERCC) $(LIBC_CFLAGS) -c sys/$$i.s || exit 1; \
+	    done && \
+	    $(USERCC) $(LIBC_CFLAGS) -c sys/exit.s -o exit_sys.o && \
+	    for i in $(LIBC_SYS_C); do \
+	        $(USERCC) $(LIBC_CFLAGS) -c sys/$$i.c || exit 1; \
+	    done && \
+	    $(USERCC) $(LIBC_CFLAGS) -c sys/time.c -o time_sys.o && \
+	    for i in $(LIBC_GEN_C); do \
+	        $(USERCC) $(LIBC_CFLAGS) -c gen/$$i.c -o $$i.o || exit 1; \
+	    done && \
+	    $(USERCC) $(LIBC_CFLAGS) -c stdio/popen.c -o popen.o && \
+	    $(USERCC) $(LIBC_CFLAGS) -c crypt.c -o v7crypt.o && \
+	    for i in $(LIBC_C); do \
+	        $(USERCC) $(LIBC_CFLAGS) -c $$i.c || exit 1; \
+	    done && \
+	    objs=`ls *.o | grep -v '^crt0.o$$' | grep -v '^crt0c.o$$'`; \
+	    $(USERAR) rc libc.a $$objs
 
 userland-extra:
 	mkdir -p bin usr/lib
@@ -189,13 +264,6 @@ usr/src/tools/mkfs: usr/src/tools/mkfs.c
 	        -I"$$tmpinc" -D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32 \
 	        -o usr/src/tools/mkfs usr/src/tools/mkfs.c
 
-# A pocket-sized fs image holding just /a=etc/passwd, mounted as
-# /etc/auxfs by the icheck/dcheck/ncheck mission step.
-etc/auxfs: usr/src/tools/mkfs usr/sys/conf/auxfs.proto etc/passwd
-	mkdir -p etc
-	usr/src/tools/mkfs etc/auxfs usr/sys/conf/auxfs.proto
-	truncate -s 32768 etc/auxfs
-
 usr/dict/words: v7/usr/dict/words
 	mkdir -p usr/dict
 	rm -f usr/dict/words
@@ -240,6 +308,6 @@ usr/lib/crontab: v7/usr/lib/crontab
 
 
 clean:
-	$(MAKE) -C usr/sys/conf clean
-	cd usr/src/libc && ./compall clean
-	rm -f unix root.img root.img.tmp nullboot usr/src/tools/mkfs $(AWKGEN)
+	rm -f $(KOBJS) boot/unix boot/rootfs.img boot/rootfs.img.tmp
+	rm -f nullboot usr/src/tools/mkfs $(AWKGEN)
+	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf
