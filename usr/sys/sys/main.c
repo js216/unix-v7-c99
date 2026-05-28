@@ -22,8 +22,9 @@ void v7_proc_init(void);
 void expand(int newsize);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void sched(void);
-int icode[1];
-int szicode;
+extern int icode[];
+extern int szicode;
+void arm_sync_icache(void);
 void cinit(void)
 {
 	register struct cdevsw *cdp;
@@ -57,7 +58,7 @@ main(void)
 	 * set up system process
 	 */
 
-	proc[0].p_addr = ka6->r[0];
+	proc[0].p_addr = 0;
 	proc[0].p_size = USIZE;
 	proc[0].p_stat = SRUN;
 	proc[0].p_flag |= SLOAD|SSYS;
@@ -91,6 +92,7 @@ main(void)
 		expand(USIZE + (int)btoc(szicode));
 		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
+		arm_sync_icache();
 		/*
 		 * Return goes to loc. 0 of user init
 		 * code just copied out.

@@ -17,6 +17,16 @@ void wakeup(caddr_t chan);
  */
 #define	PIPSIZ	4096
 
+int
+pipe_writers(register struct inode *ip)
+{
+	register struct file *fp;
+	for(fp = file; fp < &file[NFILE]; fp++)
+		if(fp->f_count && fp->f_inode == ip &&
+		   (fp->f_flag&FPIPE) && (fp->f_flag&FWRITE))
+			return(1);
+	return(0);
+}
 /*
  * The sys-pipe entry.
  * Allocate an inode on the root device.
@@ -64,8 +74,15 @@ void
 readp(register struct file *fp)
 {
 	register struct inode *ip;
+	unsigned count;
+	unsigned rcount;
+	caddr_t rbase;
+	int rsegflg;
 
 	ip = fp->f_inode;
+	rcount = u.u_count;
+	rbase = u.u_base;
+	rsegflg = u.u_segflg;
 
 loop:
 	/*
@@ -83,10 +100,13 @@ loop:
 		 * satisfying read.
 		 */
 		prele(ip);
-		if(ip->i_count < 2)
+		if(!pipe_writers(ip))
 			return;
 		ip->i_mode |= IREAD;
 		sleep((caddr_t)ip+2, PPIPE);
+		u.u_count = rcount;
+		u.u_base = rbase;
+		u.u_segflg = rsegflg;
 		goto loop;
 	}
 
@@ -95,8 +115,14 @@ loop:
 	 */
 
 	u.u_offset = fp->f_un.f_offset;
+	count = u.u_count;
+	if(u.u_count > (unsigned)(ip->i_size - fp->f_un.f_offset))
+		u.u_count = ip->i_size - fp->f_un.f_offset;
+	count -= u.u_count;
 	readi(ip);
+	u.u_count += count;
 	fp->f_un.f_offset = u.u_offset;
+	u.u_r.r_val1 = rcount - u.u_count;
 	/*
 	 * If reader has caught up with writer, reset
 	 * offset and size to 0.

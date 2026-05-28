@@ -68,7 +68,7 @@ main(void)
 	}
 	pause();
 
-	for (;; itime+=60, slp()) {
+	for (itime+=60;; itime+=60, slp()) {
 		if (stat(crontab, &cstat) == -1)
 			continue;
 		if (cstat.st_mtime > filetime) {
@@ -150,8 +150,10 @@ int
 ex(char *s)
 
 {
-	if(fork())
+	if(fork()) {
+		wait((int *)0);
 		return(0);
+	}
 	freopen("/", "r", stdin);
 	execl("/bin/sh", "sh", "-c", s, 0);
 	exit(0);

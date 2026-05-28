@@ -30,6 +30,10 @@ int fubyte(caddr_t addr);
 void bawrite(struct buf *bp);
 void suword(caddr_t addr, int val);
 void brelse(struct buf *bp);
+struct buf *bread(dev_t dev, daddr_t blkno);
+daddr_t bmap(struct inode *ip, daddr_t bn, int rwflg);
+void bcopy(char *from, char *to, unsigned int n);
+int schar(void);
 void xfree(void);
 void xalloc(struct inode *ip);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
@@ -38,10 +42,14 @@ void clearseg(int a);
 void acct(void);
 void wakeup(caddr_t chan);
 void swtch(void);
+void closef(struct file *fp);
+int v7_load_image(char *path, char **argv, char **envp);
+extern int *trap_frame;
 int fsig(struct proc *p);
 void sleep(caddr_t chan, int pri);
 int newproc(void);
 void copyseg(int from, int to);
+void arm_sync_icache(void);
 /*
  * exec system call, with and without environments.
  */
@@ -560,4 +568,239 @@ bigger:
 	}
 	while(d--)
 		clearseg(--a);
+}
+static char argbuf[UARGLEN];
+#define	KENOEXEC		8
+char *slot_user_base(int slot);
+void install_sigtramp(char *base);
+void usermap(int slot);
+int slot_by_pid(int pid);
+extern int curpid, live_slot;
+#define	NPROCSAVE	32
+#define	V7_STACK_TOP	0x10000U
+#define	PROC_SLOT_BYTES	0x100000
+#define	SIG_DFL		0L
+#define	SIG_IGN		1L
+extern unsigned char usermem[NPROCSAVE][PROC_SLOT_BYTES];
+extern unsigned int pending;
+void arm_exec_reset_signals(void);
+static void bzero(char *p, unsigned int n) { while(n--) *p++ = 0; }
+static int kexec(char *path)
+{
+	struct inode *ip;
+	struct buf *bp;
+	unsigned int insn;
+	unsigned int size, off, n, on;
+	daddr_t bn;
+	int slot;
+	char *base;
+	u.u_dirp = path;
+	u.u_error = 0;
+	u.u_segflg = 1;
+	ip = namei(schar, 0);
+	if(ip == NULL) return -2;
+	if((ip->i_mode & IFMT) != IFREG) { iput(ip); return -13; }
+	if((ip->i_mode & 0111) == 0) { iput(ip); return -13; }
+	size = (unsigned int)ip->i_size;
+	if(size >= USERSIZE - UENTRY) { iput(ip); return -2; }
+	if(size < sizeof(insn)) { iput(ip); return -KENOEXEC; }
+	ip->i_count++;
+	slot = slot_by_pid(curpid);
+	base = slot >= 0 ? slot_user_base(slot) : (char *)USERBASE;
+	__asm__ volatile("cpsid i" ::: "memory");
+	bzero(base, USERSIZE);
+	__asm__ volatile("cpsie i\n\tisb" ::: "memory");
+	for(off = 0; off < size; off += n) {
+		on = off & BMASK;
+		n = BSIZE - on;
+		if(n > size - off)
+			n = size - off;
+		bn = bmap(ip, off >> BSHIFT, B_READ);
+		if(u.u_error || (long)bn < 0) {
+			iput(ip);
+			iput(ip);
+			return -5;
+		}
+		bp = bread(ip->i_dev, bn);
+		if(bp->b_flags & B_ERROR) {
+			brelse(bp);
+			iput(ip);
+			iput(ip);
+			return -5;
+		}
+		bcopy(bp->b_un.b_addr + on, base + UENTRY + off, n);
+		brelse(bp);
+	}
+	__asm__ volatile("cpsid i" ::: "memory");
+	if(slot >= 0 && base != (char *)usermem[slot])
+		bcopy(base, (char *)usermem[slot], USERSIZE);
+	insn = *(volatile unsigned int *)(base + UENTRY);
+	if((insn & 0xff000000U) != 0xeb000000U) {
+		iput(ip);
+		iput(ip);
+		return -KENOEXEC;
+	}
+	iput(ip);
+	iput(ip);
+	u.u_tsize = 0;
+	u.u_dsize = 0;
+	u.u_ssize = SSIZE;
+	u.u_sep = 0;
+	if(u.u_procp)
+		u.u_procp->p_size = USIZE + SSIZE;
+	install_sigtramp(base);
+	arm_exec_reset_signals();
+	pending = 0;
+	if(slot >= 0) {
+		usermap(slot);
+		live_slot = slot;
+	}
+	arm_sync_icache();
+	return 0;
+}
+static void kargs(char *path, char **argv, char **envp)
+{
+	char *p;
+	int n = 0;
+	bzero(argbuf, sizeof(argbuf));
+	if(argv != 0 && argv[0] != 0) {
+		for(int i = 0; argv[i] != 0 && n < (int)sizeof(argbuf)-2; i++) {
+			for(p = argv[i]; *p && n < (int)sizeof(argbuf)-2; p++)
+				argbuf[n++] = *p;
+			argbuf[n++] = 0;
+		}
+	} else {
+		p = path;
+		while(*p) p++;
+		while(p > path && p[-1] != '/') p--;
+		while(*p && n < (int)sizeof(argbuf)-2) argbuf[n++] = *p++;
+		argbuf[n++] = 0;
+	}
+	argbuf[n++] = 0;
+	if(envp != 0)
+		for(int i = 0; envp[i] != 0 && n < (int)sizeof(argbuf)-2; i++) {
+			for(p = envp[i]; *p && n < (int)sizeof(argbuf)-2; p++)
+				argbuf[n++] = *p;
+			argbuf[n++] = 0;
+		}
+	argbuf[n++] = 0;
+}
+static int argstrlen(char *p)
+{
+	int n = 0;
+	while(p[n])
+		n++;
+	return n;
+}
+static void install_v7_user_stack(char *base)
+{
+	char *p;
+	unsigned int ap, strp, nc, stack_bytes, need;
+	int argc, envc, len;
+	int *wp;
+	argc = 0;
+	envc = 0;
+	nc = 0;
+	p = argbuf;
+	while(*p) {
+		len = argstrlen(p) + 1;
+		argc++;
+		nc += (unsigned int)len;
+		p += len;
+	}
+	if(*p == 0)
+		p++;
+	while(*p) {
+		len = argstrlen(p) + 1;
+		envc++;
+		nc += (unsigned int)len;
+		p += len;
+	}
+	nc = (nc + (unsigned int)NBPW - 1U) & ~((unsigned int)NBPW - 1U);
+	need = nc + (unsigned int)NBPW +
+	    (unsigned int)(argc + envc + 3) * (unsigned int)NBPW;
+	stack_bytes = (unsigned int)ctob(u.u_ssize);
+	if(need > stack_bytes) {
+		u.u_ssize = (need + 63U) >> 6;
+		stack_bytes = (unsigned int)ctob(u.u_ssize);
+		if(u.u_procp)
+			u.u_procp->p_size = (short)(USIZE + u.u_ssize);
+	}
+	if(stack_bytes > V7_STACK_TOP)
+		stack_bytes = V7_STACK_TOP;
+	strp = V7_STACK_TOP - nc - (unsigned int)NBPW;
+	ap = strp - (unsigned int)(argc + envc + 3) * (unsigned int)NBPW;
+	bzero(base + ap, V7_STACK_TOP - ap);
+	wp = (int *)(base + ap);
+	*wp++ = argc;
+	p = argbuf;
+	while(*p) {
+		len = argstrlen(p) + 1;
+		*wp++ = (int)strp;
+		bcopy(p, base + strp, (unsigned int)len);
+		strp += (unsigned int)len;
+		p += len;
+	}
+	*wp++ = 0;
+	if(*p == 0)
+		p++;
+	while(*p) {
+		len = argstrlen(p) + 1;
+		*wp++ = (int)strp;
+		bcopy(p, base + strp, (unsigned int)len);
+		strp += (unsigned int)len;
+		p += len;
+	}
+	*wp++ = 0;
+	*(int *)(base + strp) = 0;
+}
+static int kexec2(char *path, char **argv, char **envp)
+{
+	int e, i;
+	char kpath[128];
+	for(i = 0; i < (int)sizeof(kpath)-1 && path[i]; i++)
+		kpath[i] = path[i];
+	kpath[i] = 0;
+	kargs(path, argv, envp);
+	e = kexec(kpath);
+	if(e == 0) {
+		int slot = slot_by_pid(curpid);
+		char *ubase = slot >= 0 ? slot_user_base(slot) : (char *)USERBASE;
+		bzero((char *)UARGV, UARGLEN);
+		bcopy(argbuf, (char *)UARGV, UARGLEN-1);
+		install_v7_user_stack(ubase);
+		if(slot >= 0 && ubase != (char *)usermem[slot])
+			install_v7_user_stack((char *)usermem[slot]);
+		install_sigtramp(ubase);
+		if(slot >= 0 && ubase != (char *)usermem[slot])
+			install_sigtramp((char *)usermem[slot]);
+	}
+	return e;
+}
+int v7_load_image(char *path, char **argv, char **envp)
+{ return kexec2(path, argv, envp); }
+int
+v7_exec_call(char *path, char **argv, char **envp)
+{
+	int rc;
+	rc = v7_load_image(path, argv, envp);
+	if(rc != 0)
+		return(rc < 0 ? -rc : 1);
+	for(int i = 0; i < NOFILE; i++)
+		if(u.u_pofile[i] & EXCLOSE) {
+			if(u.u_ofile[i])
+				closef(u.u_ofile[i]);
+			u.u_ofile[i] = NULL;
+			u.u_pofile[i] &= ~EXCLOSE;
+		}
+	for(int i = 1; i < NSIG; i++)
+		if(u.u_signal[i] != 1)
+			u.u_signal[i] = 0;
+	if(trap_frame) {
+		trap_frame[13] = (int)USTACK;
+		trap_frame[14] = 0;
+		trap_frame[15] = (int)UENTRY;
+	}
+	u.u_ap = NULL;
+	return(0);
 }

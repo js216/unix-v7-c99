@@ -19,6 +19,7 @@ void tloop(dev_t dev, daddr_t bn, int f1, int f2);
 void wdir(struct inode *ip);
 void iput(register struct inode *ip);
 int iupdat(register struct inode *ip, time_t *ta, time_t *tm);
+extern dev_t rootdev;
 
 /*
  * Look up an inode by device,inumber.
@@ -200,6 +201,74 @@ iupdat(register struct inode *ip, time_t *ta, time_t *tm)
 	return(0);
 }
 
+struct inode *
+find_inode(ino_t ino)
+{
+	struct inode *ip;
+	for(ip = &inode[0]; ip < &inode[NINODE]; ip++)
+		if(ip->i_count != 0 && ip->i_dev == rootdev &&
+		   ip->i_number == ino)
+			return(ip);
+	return(NULL);
+}
+void
+v7_inode_pack_addr(struct inode *ip, unsigned int *addrs)
+{
+	int i;
+	if(ip && addrs)
+		for(i = 0; i < NADDR; i++)
+			ip->i_un.i_addr[i] = (daddr_t)addrs[i];
+}
+void
+v7_inode_unpack_addr(struct inode *ip, unsigned int *addrs)
+{
+	int i;
+	if(ip && addrs)
+		for(i = 0; i < NADDR; i++)
+			addrs[i] = (unsigned int)ip->i_un.i_addr[i];
+}
+void
+v7_inode_refresh_ino(ino_t ino, unsigned int size, unsigned int *addrs)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_size = (off_t)size;
+	v7_inode_pack_addr(ip, addrs);
+}
+void
+v7_inode_mark_dirty_ino(ino_t ino)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_flag |= IUPD | ICHG;
+}
+void
+v7_inode_set_mode_ino(ino_t ino, unsigned short mode)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_mode = mode;
+	ip->i_flag |= ICHG;
+}
+void
+v7_inode_set_owner_ino(ino_t ino, short uid, short gid)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return;
+	ip->i_uid = uid;
+	ip->i_gid = gid;
+	ip->i_flag |= ICHG;
+}
+int
+v7_inode_snapshot_ino(ino_t ino, unsigned int *size_out,
+    unsigned int *addrs_out)
+{
+	struct inode *ip = find_inode(ino);
+	if(ip == NULL) return(-1);
+	if(size_out) *size_out = (unsigned int)ip->i_size;
+	if(addrs_out) v7_inode_unpack_addr(ip, addrs_out);
+	return(0);
+}
 /*
  * Free all the disk blocks associated
  * with the specified inode structure.

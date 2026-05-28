@@ -224,3 +224,26 @@ uchar(void)
 		u.u_error = EFAULT;
 	return(c);
 }
+extern dev_t rootdev;
+extern struct inode *rootdir;
+ino_t
+v7_namei_inum(char *path)
+{
+	struct inode *ip;
+	ino_t inum;
+	if(rootdir == NULL) {
+		rootdir = iget(rootdev, (ino_t)ROOTINO);
+		if(rootdir == NULL) return((ino_t)0);
+		rootdir->i_flag &= ~ILOCK;
+		u.u_cdir = iget(rootdev, (ino_t)ROOTINO);
+		if(u.u_cdir == NULL) return((ino_t)0);
+		u.u_cdir->i_flag &= ~ILOCK;
+	}
+	u.u_dirp = (caddr_t)path;
+	u.u_error = 0;
+	u.u_segflg = 1;
+	if((ip = namei(uchar, 0)) == NULL) return((ino_t)0);
+	inum = ip->i_number;
+	iput(ip);
+	return(inum);
+}

@@ -34,7 +34,8 @@ INT initf(UFD fd)
 {
 	REG FILE	f=standin;
 
-	f->fdes=fd; f->fsiz=((flags&(oneflg|ttyflg))==0 ? BUFSIZ : 1);
+	f->fdes=fd; f->fsiz=(fd > 2 ? BUFSIZ :
+	    ((flags&(oneflg|ttyflg))==0 ? BUFSIZ : 1));
 	f->fnxt=f->fend=f->fbuf; f->feval=0; f->flin=1;
 	f->feof=FALSE;
 	return(0);

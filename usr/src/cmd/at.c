@@ -66,7 +66,6 @@ main(int argc, char **argv)
 	extern int onintr(int sig);
 	register int c;
 	char pwbuf[100];
-	FILE *pwfil;
 	int larg;
 
 	/* argv[1] is the user's time: e.g.,  3AM */
@@ -102,12 +101,9 @@ main(int argc, char **argv)
 		fprintf(stderr, "at: cannot open memo file\n");
 		exit(1);
 	}
-	if ((pwfil = popen("pwd", "r")) == NULL) {
-		fprintf(stderr, "at: can't execute pwd\n");
-		exit(1);
-	}
-	fgets(pwbuf, 100, pwfil);
-	pclose(pwfil);
+	pwbuf[0] = '/';
+	pwbuf[1] = '\n';
+	pwbuf[2] = 0;
 	fprintf(file, "cd %s", pwbuf);
 	if (environ) {
 		char **ep = environ;

@@ -14,11 +14,19 @@ int procxmt(void);
 int core(void);
 void swtch(void);
 void do_exit(int code, int *r);
+void kill(void);
+void ssig(void);
 void itrunc(struct inode *ip);
 void expand(int newsize);
 void copyseg(int from, int to);
 void clearseg(int a);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+void v7_call_prep(int *args);
+void v7_proc_set_current(int pid);
+struct proc *proc_by_pid(int pid);
+int save(int *lp);
+void bcopy(char *from, char *to, unsigned int n);
+void arm_sigreturn(int *r);
 extern int *trap_frame;
 #define	SINCR	20
 #define	ARM_SP	13
@@ -110,6 +118,30 @@ issig(void)
 	return(0);
 }
 
+int
+v7_save_qsav(void)
+{
+	return(save((int *)u.u_qsav));
+}
+void
+v7_u_qsav_save(int *dst)
+{
+	bcopy((char *)u.u_qsav, (char *)dst, sizeof(u.u_qsav));
+}
+void
+v7_u_qsav_restore(const int *src)
+{
+	bcopy((char *)src, (char *)u.u_qsav, sizeof(u.u_qsav));
+}
+int
+v7_sigreturn_call(int *r)
+{
+	arm_sigreturn(r);
+	if(u.u_procp == NULL)
+		u.u_procp = &proc[0];
+	v7_call_prep(NULL);
+	return(0);
+}
 /*
  * Enter the tracing STOP state.
  * In this state, the parent is
@@ -342,6 +374,7 @@ ptrace(void)
 	ipc.ip_lock = 0;
 	wakeup((caddr_t)&ipc);
 }
+
 static int
 sig_fuword(caddr_t addr)
 {
@@ -353,7 +386,48 @@ sig_suword(caddr_t addr, int data)
 	*(int *)addr = data;
 	return(0);
 }
-
+int
+v7_kill_call(int *args, int kuid, int curpid)
+{
+	u.u_uid = u.u_ruid = (short)kuid;
+	v7_proc_set_current(curpid);
+	v7_call_prep(args);
+	kill();
+	return(u.u_error ? -u.u_error : 0);
+}
+int
+v7_signal_call(int signo, int func, int curpid)
+{
+	int args[2] = { signo, func };
+	v7_proc_set_current(curpid);
+	u.u_uid = u.u_ruid = 0;
+	v7_call_prep(args);
+	ssig();
+	return(u.u_error ? -1 : u.u_r.r_val1);
+}
+void
+v7_signal_pgrp(int sig, int curpid)
+{
+	struct proc *me = proc_by_pid(curpid);
+	short pgrp;
+	int i;
+	if(me == NULL || (pgrp = me->p_pgrp) == 0) return;
+	for(i = 2; i < NPROC; i++)
+		if(proc[i].p_stat != 0 && proc[i].p_pgrp == pgrp)
+			psignal(&proc[i], sig);
+}
+void
+v7_u_signal_save(long *out_sig)
+{
+	int i;
+	for(i = 0; i < NSIG; i++) out_sig[i] = (long)u.u_signal[i];
+}
+void
+v7_u_signal_restore(const long *in_sig)
+{
+	int i;
+	for(i = 0; i < NSIG; i++) u.u_signal[i] = (int)in_sig[i];
+}
 /*
  * Code that the child process
  * executes to implement the command
