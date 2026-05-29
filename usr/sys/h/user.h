@@ -98,7 +98,18 @@ struct	user
 					 */
 };
 
+/*
+ * The u-area is not a fixed kernel object on Armv7; it lives at the base
+ * of each process's core image and is made current by remapping the UBASE
+ * window in resume() (the KISA6 trick).  `u` therefore names the window.
+ * Userland (no KERNEL) keeps the plain declaration so it can read the
+ * u-area layout via /dev/mem.
+ */
+#ifdef KERNEL
+#define	u	(*(struct user *)UBASE)
+#else
 extern struct user u;
+#endif
 
 /* u_error codes */
 #define	EPERM	1

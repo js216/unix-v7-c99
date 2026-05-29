@@ -7,12 +7,11 @@
  * device switches is in the
  * file conf.c.
  */
-struct buf;
 extern struct bdevsw
 {
-	int	(*d_open)(dev_t dev, int rw);
-	int	(*d_close)(dev_t dev, int flag);
-	int	(*d_strategy)(struct buf *bp);
+	int	(*d_open)();
+	int	(*d_close)();
+	int	(*d_strategy)();
 	struct buf *d_tab;
 } bdevsw[];
 
@@ -21,10 +20,10 @@ extern struct bdevsw
  */
 extern struct cdevsw
 {
-	int	(*d_open)(dev_t dev, int rw);
-	int	(*d_close)(dev_t dev, int flag);
-	int	(*d_read)(dev_t dev);
-	int	(*d_write)(dev_t dev);
+	int	(*d_open)();
+	int	(*d_close)();
+	int	(*d_read)();
+	int	(*d_write)();
 	int	(*d_ioctl)();
 	int	(*d_stop)();
 	struct tty *d_ttys;

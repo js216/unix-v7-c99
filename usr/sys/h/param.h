@@ -1,10 +1,8 @@
-#ifndef PARAM_H
-#define PARAM_H
 /*
  * tunable variables
  */
 
-#define	NBUF	64		/* size of buffer cache */
+#define	NBUF	29		/* size of buffer cache */
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
@@ -82,8 +80,8 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	16		/* size of user block (*64) */
-#define	UBASE	0140000		/* abs. addr of user block */
+#define	USIZE	256		/* size of user block (*64): 16KB u-area+kstack */
+#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
 #ifndef NULL
 #define	NULL	0
 #endif
@@ -146,4 +144,3 @@ typedef	long		off_t;
 
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
-#endif

@@ -8,26 +8,29 @@
 #include "../h/seg.h"
 void sleep(caddr_t chan, int pri);
 void wakeup(caddr_t chan);
+void setrun(struct proc *p);
 int fsig(struct proc *p);
 void psignal(struct proc *p, int sig);
+int issig(void);
 int procxmt(void);
 int core(void);
 void swtch(void);
-void do_exit(int code, int *r);
-void kill(void);
-void ssig(void);
+void exit(int rv);
 void itrunc(struct inode *ip);
 void expand(int newsize);
 void copyseg(int from, int to);
 void clearseg(int a);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-void v7_call_prep(int *args);
-void v7_proc_set_current(int pid);
-struct proc *proc_by_pid(int pid);
+int fubyte(caddr_t addr);
+int fuword(caddr_t addr);
+int suword(caddr_t addr, int v);
+struct inode *namei(int (*func)(void), int flag);
+struct inode *maknode(int mode);
+int access(struct inode *ip, int mode);
+void writei(struct inode *ip);
+void iput(struct inode *ip);
 int save(int *lp);
 void bcopy(char *from, char *to, unsigned int n);
-void arm_sigreturn(int *r);
-extern int *trap_frame;
 #define	SINCR	20
 #define	ARM_SP	13
 #define	ARM_LR	14
@@ -118,29 +121,22 @@ issig(void)
 	return(0);
 }
 
-int
-v7_save_qsav(void)
-{
-	return(save((int *)u.u_qsav));
-}
+/*
+ * sigreturn: invoked by the signal trampoline (UENTRY_SIGTRAMP) to
+ * restore the pre-signal pc/r0/lr/sp that sendsig() pushed on the user
+ * stack.  trap()'s tail writes r0 from u.u_r.r_val1, so the restored r0
+ * is returned through there.
+ */
 void
-v7_u_qsav_save(int *dst)
+sigreturn(void)
 {
-	bcopy((char *)u.u_qsav, (char *)dst, sizeof(u.u_qsav));
-}
-void
-v7_u_qsav_restore(const int *src)
-{
-	bcopy((char *)src, (char *)u.u_qsav, sizeof(u.u_qsav));
-}
-int
-v7_sigreturn_call(int *r)
-{
-	arm_sigreturn(r);
-	if(u.u_procp == NULL)
-		u.u_procp = &proc[0];
-	v7_call_prep(NULL);
-	return(0);
+	register int *r = u.u_ar0;
+	register unsigned int sp = (unsigned int)r[ARM_SP];
+	r[ARM_PC] = *(int *)sp;
+	u.u_r.r_val1 = *(int *)(sp + 4);
+	r[ARM_LR] = *(int *)(sp + 8);
+	r[ARM_SP] = (int)(sp + 12);
+	u.u_error = 0;
 }
 /*
  * Enter the tracing STOP state.
@@ -165,14 +161,14 @@ loop:
 				return;
 			goto loop;
 		}
-	do_exit(0x100 | fsig(u.u_procp), trap_frame);
+	exit(0x100 | fsig(u.u_procp));
 }
 static void
 sendsig(int handler, int sig)
 {
 	register int *r;
 	register unsigned int sp;
-	r = trap_frame != NULL ? trap_frame : u.u_ar0;
+	r = u.u_ar0;
 	if(r == NULL)
 		return;
 	sp = (unsigned int)r[ARM_SP] - 12U;
@@ -226,7 +222,7 @@ psig(void)
 		if(core())
 			n += 0200;
 	}
-	do_exit(0x100 | n, trap_frame);
+	exit(0x100 | n);
 }
 
 /*
@@ -246,11 +242,6 @@ fsig(struct proc *p)
 	}
 	return(0);
 }
-static int
-schar(void)
-{
-	return((unsigned char)*u.u_dirp++);
-}
 
 /*
  * Create a core image on the file "core"
@@ -267,6 +258,7 @@ core(void)
 {
 	register struct inode *ip;
 	register unsigned s;
+	extern int schar(void);
 
 	u.u_error = 0;
 	u.u_dirp = "core";
@@ -301,8 +293,8 @@ core(void)
 /*
  * grow the stack to include the SP
  * true return if successful.
-
  */
+
 int
 grow(unsigned sp)
 {
@@ -375,59 +367,6 @@ ptrace(void)
 	wakeup((caddr_t)&ipc);
 }
 
-static int
-sig_fuword(caddr_t addr)
-{
-	return(*(int *)addr);
-}
-static int
-sig_suword(caddr_t addr, int data)
-{
-	*(int *)addr = data;
-	return(0);
-}
-int
-v7_kill_call(int *args, int kuid, int curpid)
-{
-	u.u_uid = u.u_ruid = (short)kuid;
-	v7_proc_set_current(curpid);
-	v7_call_prep(args);
-	kill();
-	return(u.u_error ? -u.u_error : 0);
-}
-int
-v7_signal_call(int signo, int func, int curpid)
-{
-	int args[2] = { signo, func };
-	v7_proc_set_current(curpid);
-	u.u_uid = u.u_ruid = 0;
-	v7_call_prep(args);
-	ssig();
-	return(u.u_error ? -1 : u.u_r.r_val1);
-}
-void
-v7_signal_pgrp(int sig, int curpid)
-{
-	struct proc *me = proc_by_pid(curpid);
-	short pgrp;
-	int i;
-	if(me == NULL || (pgrp = me->p_pgrp) == 0) return;
-	for(i = 2; i < NPROC; i++)
-		if(proc[i].p_stat != 0 && proc[i].p_pgrp == pgrp)
-			psignal(&proc[i], sig);
-}
-void
-v7_u_signal_save(long *out_sig)
-{
-	int i;
-	for(i = 0; i < NSIG; i++) out_sig[i] = (long)u.u_signal[i];
-}
-void
-v7_u_signal_restore(const long *in_sig)
-{
-	int i;
-	for(i = 0; i < NSIG; i++) u.u_signal[i] = (int)in_sig[i];
-}
 /*
  * Code that the child process
  * executes to implement the command
@@ -451,14 +390,14 @@ procxmt(void)
 	case 1:
 		if (fubyte((caddr_t)ipc.ip_addr) == -1)
 			goto error;
-		ipc.ip_data = sig_fuword((caddr_t)ipc.ip_addr);
+		ipc.ip_data = fuword((caddr_t)ipc.ip_addr);
 		break;
 
 	/* read user D */
 	case 2:
 		if (fubyte((caddr_t)ipc.ip_addr) == -1)
 			goto error;
-		ipc.ip_data = sig_fuword((caddr_t)ipc.ip_addr);
+		ipc.ip_data = fuword((caddr_t)ipc.ip_addr);
 		break;
 
 	/* read u */
@@ -482,8 +421,8 @@ procxmt(void)
 			xp->x_iptr->i_flag &= ~ITEXT;
 		}
 		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RW);
-		i = sig_suword((caddr_t)ipc.ip_addr, 0);
-		sig_suword((caddr_t)ipc.ip_addr, ipc.ip_data);
+		i = suword((caddr_t)ipc.ip_addr, 0);
+		suword((caddr_t)ipc.ip_addr, ipc.ip_data);
 		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
 		if (i<0)
 			goto error;
@@ -493,9 +432,9 @@ procxmt(void)
 
 	/* write user D */
 	case 5:
-		if (sig_suword((caddr_t)ipc.ip_addr, 0) < 0)
+		if (suword((caddr_t)ipc.ip_addr, 0) < 0)
 			goto error;
-		sig_suword((caddr_t)ipc.ip_addr, ipc.ip_data);
+		suword((caddr_t)ipc.ip_addr, ipc.ip_data);
 		break;
 
 	/* write u */
@@ -517,7 +456,7 @@ procxmt(void)
 	case 9:
 	case 7:
 		if ((int)ipc.ip_addr != 1) {
-			p = trap_frame != NULL ? trap_frame : u.u_ar0;
+			p = u.u_ar0;
 			if (p != NULL)
 				p[ARM_PC] = (int)ipc.ip_addr;
 		}
@@ -528,7 +467,7 @@ procxmt(void)
 
 	/* force exit */
 	case 8:
-		do_exit(0x100 | fsig(u.u_procp), trap_frame);
+		exit(0x100 | fsig(u.u_procp));
 		return(1);
 
 	default:

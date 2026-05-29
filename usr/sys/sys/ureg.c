@@ -52,92 +52,19 @@ sureg(void)
 int
 estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 {
-	register int a, *ap, *dp;
+	(void)sep; (void)xrw;
+	/*
+	 * Armv7: user memory is mapped by page tables (arm_sureg), not the
+	 * PDP-11 8-segment scheme, so the per-segment limit checks and the
+	 * u_uisa/u_uisd prototype build do not apply.  Validate the total
+	 * image size against maxmem and (re)load the page tables via sureg().
+	 */
 
-	if(sep) {
-		if(cputype == 40)
-			goto err;
-		if(ctos(nt) > 8 || ctos(nd)+ctos(ns) > 8)
-			goto err;
-	} else
-		if(ctos(nt)+ctos(nd)+ctos(ns) > 8)
-			goto err;
-	if((int)(nt+nd+ns+USIZE) > maxmem)
-		goto err;
-	a = 0;
-	ap = &u.u_uisa[0];
-	dp = &u.u_uisd[0];
-	while(nt >= 128) {
-		*dp++ = (127<<8) | xrw|TX;
-		*ap++ = a;
-		a += 128;
-		nt -= 128;
-	}
-	if(nt) {
-		*dp++ = ((nt-1)<<8) | xrw|TX;
-		*ap++ = a;
-	}
-	if(sep)
-	while(ap < &u.u_uisa[8]) {
-		*ap++ = 0;
-		*dp++ = 0;
-	}
-	a = USIZE;
-	while(nd >= 128) {
-		*dp++ = (127<<8) | RW;
-		*ap++ = a;
-		a += 128;
-		nd -= 128;
-	}
-	if(nd) {
-		*dp++ = ((nd-1)<<8) | RW;
-		*ap++ = a;
-		a += nd;
-	}
-	while(ap < &u.u_uisa[8]) {
-		if(*dp &ABS) {
-			dp++;
-			ap++;
-			continue;
-		}
-		*dp++ = 0;
-		*ap++ = 0;
-	}
-	if(sep)
-	while(ap < &u.u_uisa[16]) {
-		if(*dp & ABS) {
-			dp++;
-			ap++;
-			continue;
-		}
-		*dp++ = 0;
-		*ap++ = 0;
-	}
-	a += ns;
-	while(ns >= 128) {
-		a -= 128;
-		ns -= 128;
-		*--dp = (127<<8) | RW;
-		*--ap = a;
-	}
-	if(ns) {
-		*--dp = ((128-ns)<<8) | RW | ED;
-		*--ap = a-128;
-	}
-	if(!sep) {
-		ap = &u.u_uisa[0];
-		dp = &u.u_uisa[8];
-		while(ap < &u.u_uisa[8])
-			*dp++ = *ap++;
-		ap = &u.u_uisd[0];
-		dp = &u.u_uisd[8];
-		while(ap < &u.u_uisd[8])
-			*dp++ = *ap++;
+	if((int)(nt+nd+ns+USIZE) > maxmem) {
+		u.u_error = ENOMEM;
+		return(-1);
 	}
 	sureg();
 	return(0);
 
-err:
-	u.u_error = ENOMEM;
-	return(-1);
 }

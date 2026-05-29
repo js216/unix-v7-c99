@@ -10,9 +10,6 @@
 #include "../h/seg.h"
 #include "../h/acct.h"
 
-struct map;
-struct buf;
-struct inode;
 void exec(void);
 void exece(void);
 int getxfile(struct inode *ip, int nargc);
@@ -25,15 +22,13 @@ void sbreak(void);
 int malloc(struct map *mp, int size);
 void mfree(struct map *mp, int size, int a);
 void panic(char *s);
+void printf(char *fmt, ...);
 int fuword(caddr_t addr);
 int fubyte(caddr_t addr);
-void bawrite(struct buf *bp);
-void suword(caddr_t addr, int val);
-void brelse(struct buf *bp);
-struct buf *bread(dev_t dev, daddr_t blkno);
-daddr_t bmap(struct inode *ip, daddr_t bn, int rwflg);
+int subyte(caddr_t addr, char c);
+int suword(caddr_t addr, int v);
+int copyout(caddr_t f, caddr_t t, unsigned int n);
 void bcopy(char *from, char *to, unsigned int n);
-int schar(void);
 void xfree(void);
 void xalloc(struct inode *ip);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
@@ -41,15 +36,21 @@ void expand(int newsize);
 void clearseg(int a);
 void acct(void);
 void wakeup(caddr_t chan);
+void setrun(struct proc *p);
 void swtch(void);
 void closef(struct file *fp);
-int v7_load_image(char *path, char **argv, char **envp);
-extern int *trap_frame;
 int fsig(struct proc *p);
 void sleep(caddr_t chan, int pri);
+void psignal(struct proc *p, int sig);
 int newproc(void);
 void copyseg(int from, int to);
 void arm_sync_icache(void);
+void readi(struct inode *ip);
+void iput(struct inode *ip);
+int access(struct inode *ip, int mode);
+void plock(struct inode *ip);
+struct inode *namei(int (*func)(void), int flag);
+int uchar(void);
 /*
  * exec system call, with and without environments.
  */
@@ -66,20 +67,25 @@ exec(void)
 	exece();
 }
 
+/*
+ * exece: load and run a new program image.
+ *
+ * Args/environment are collected (NUL-separated) into a kernel buffer
+ * from the old user image, then -- after getxfile() builds the new
+ * image -- written as the initial stack frame (see below).  This Armv7
+ * image has ample RAM, so no swap round-trip is needed for the arg list.
+ */
+static char e_argbuf[UARGLEN];
 void
 exece(void)
 {
-	register int nc;
-	register char *cp;
-	register struct buf *bp;
 	register struct execa *uap;
-	int na, ne, bno, ucp, ap, c;
+	register int nc, c, ap;
 	struct inode *ip;
+	int i;
 
 	if ((ip = namei(uchar, 0)) == NULL)
 		return;
-	bno = 0;
-	bp = 0;
 	if(access(ip, IEXEC))
 		goto bad;
 	if((ip->i_mode & IFMT) != IFREG ||
@@ -87,229 +93,240 @@ exece(void)
 		u.u_error = EACCES;
 		goto bad;
 	}
-	/*
-	 * Collect arguments on "file" in swap space.
-	 */
-	na = 0;
-	ne = 0;
-	nc = 0;
 	uap = (struct execa *)u.u_ap;
-	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
-		panic("Out of swap");
+	nc = 0;
 	if (uap->argp) for (;;) {
-		ap = NULL;
-		if (uap->argp) {
-			ap = fuword((caddr_t)uap->argp);
-			uap->argp++;
-		}
-		if (ap==NULL && uap->envp) {
-			uap->argp = NULL;
-			if ((ap = fuword((caddr_t)uap->envp)) == NULL)
-				break;
-			uap->envp++;
-			ne++;
-		}
-		if (ap==NULL)
+		ap = fuword((caddr_t)uap->argp);
+		uap->argp++;
+		if (ap == 0)
 			break;
-		na++;
-		if(ap == -1)
+		if (ap == -1) {
 			u.u_error = EFAULT;
+			goto bad;
+		}
 		do {
-			if (nc >= NCARGS-1)
-				u.u_error = E2BIG;
-			if ((c = fubyte((caddr_t)ap++)) < 0)
+			if ((c = fubyte((caddr_t)ap++)) < 0) {
 				u.u_error = EFAULT;
-			if (u.u_error)
 				goto bad;
-			if ((nc&BMASK) == 0) {
-				if (bp)
-					bawrite(bp);
-				bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));
-				cp = bp->b_un.b_addr;
 			}
-			nc++;
-			*cp++ = c;
-		} while (c>0);
+			if (nc >= UARGLEN-2) {
+				u.u_error = E2BIG;
+				goto bad;
+			}
+			e_argbuf[nc++] = c;
+		} while (c);
 	}
-	if (bp)
-		bawrite(bp);
-	bp = 0;
-	nc = (nc + NBPW-1) & ~(NBPW-1);
+	e_argbuf[nc++] = 0;		/* empty string terminates arg list */
+	if (uap->envp) for (;;) {
+		ap = fuword((caddr_t)uap->envp);
+		uap->envp++;
+		if (ap == 0)
+			break;
+		if (ap == -1) {
+			u.u_error = EFAULT;
+			goto bad;
+		}
+		do {
+			if ((c = fubyte((caddr_t)ap++)) < 0) {
+				u.u_error = EFAULT;
+				goto bad;
+			}
+			if (nc >= UARGLEN-2) {
+				u.u_error = E2BIG;
+				goto bad;
+			}
+			e_argbuf[nc++] = c;
+		} while (c);
+	}
+	e_argbuf[nc++] = 0;		/* empty string terminates env list */
 	if (getxfile(ip, nc) || u.u_error)
 		goto bad;
 
 	/*
-	 * copy back arglist
+	 * set SUID/SGID protections, if no tracing
 	 */
 
-	ucp = -nc - NBPW;
-	ap = ucp - na*NBPW - 3*NBPW;
-	u.u_ar0[R6] = ap;
-	suword((caddr_t)ap, na-ne);
-	nc = 0;
-	for (;;) {
-		ap += NBPW;
-		if (na==ne) {
-			suword((caddr_t)ap, 0);
-			ap += NBPW;
-		}
-		if (--na < 0)
-			break;
-		suword((caddr_t)ap, ucp);
-		do {
-			if ((nc&BMASK) == 0) {
-				if (bp)
-					brelse(bp);
-				bp = bread(swapdev, swplo+bno+(nc>>BSHIFT));
-				cp = bp->b_un.b_addr;
+	if ((u.u_procp->p_flag&STRC)==0) {
+		if(ip->i_mode&ISUID)
+			if(u.u_uid != 0) {
+				u.u_uid = ip->i_uid;
+				u.u_procp->p_uid = ip->i_uid;
 			}
-			subyte((caddr_t)ucp++, (c = *cp++));
-			nc++;
-		} while(c&0377);
+		if(ip->i_mode&ISGID)
+			u.u_gid = ip->i_gid;
+	} else
+		psignal(u.u_procp, SIGTRC);
+	/*
+	 * Build the initial user stack frame at the top of the address space
+	 * (V7 layout): the NUL-separated string image sits at the very top,
+	 * with the argc/argv[]/0/envp[]/0 vector just below it and sp pointing
+	 * at argc.  crt0 reads the frame straight off sp.  Placing the strings
+	 * at the top is also what lets ps(1) recover a process's command line.
+	 */
+	{
+		unsigned int strbase, sp;
+		int na, ne, j, k;
+		/* leave the top word zero: ps(1) treats a non-zero top-of-stack
+		 * word as an argv pointer, so a string there would mislead it. */
+		strbase = (USERSIZE - 4U - (unsigned)nc) & ~3U;
+		for (i = 0; i < nc; i++)
+			subyte((caddr_t)(strbase + (unsigned)i), e_argbuf[i]);
+		i = 0;
+		na = 0;
+		while (e_argbuf[i]) {
+			na++;
+			while (e_argbuf[i])
+				i++;
+			i++;
+		}
+		i++;
+		ne = 0;
+		while (e_argbuf[i]) {
+			ne++;
+			while (e_argbuf[i])
+				i++;
+			i++;
+		}
+		sp = (strbase - 4U*(unsigned)(na + ne + 3)) & ~7U;
+		suword((caddr_t)sp, na);
+		i = 0;
+		j = 0;
+		while (j < na) {
+			suword((caddr_t)(sp + 4U*(unsigned)(1 + j)),
+			    (int)(strbase + (unsigned)i));
+			while (e_argbuf[i])
+				i++;
+			i++;
+			j++;
+		}
+		suword((caddr_t)(sp + 4U*(unsigned)(1 + na)), 0);
+		i++;
+		k = 0;
+		while (k < ne) {
+			suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + k)),
+			    (int)(strbase + (unsigned)i));
+			while (e_argbuf[i])
+				i++;
+			i++;
+			k++;
+		}
+		suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + ne)), 0);
+		setregs();
+		u.u_ar0[R6] = (int)sp;	/* user stack pointer */
 	}
-	suword((caddr_t)ap, 0);
-	suword((caddr_t)ucp, 0);
-	setregs();
 bad:
-	if (bp)
-		brelse(bp);
-	if(bno)
-		mfree(swapmap, (NCARGS+BSIZE-1)/BSIZE, bno);
 	iput(ip);
 }
 
 /*
- * Read in and set up memory for executed file.
- * Zero return is normal;
- * non-zero means only the text is being replaced
+ * ELF32 header / program-header subset (the Armv7 toolchain emits ELF;
+ * this replaces the PDP-11 a.out reader).
+ */
+struct elf32_ehdr {
+	unsigned char e_ident[16];
+	unsigned short e_type;
+	unsigned short e_machine;
+	unsigned int e_version;
+	unsigned int e_entry;
+	unsigned int e_phoff;
+	unsigned int e_shoff;
+	unsigned int e_flags;
+	unsigned short e_ehsize;
+	unsigned short e_phentsize;
+	unsigned short e_phnum;
+	unsigned short e_shentsize;
+	unsigned short e_shnum;
+	unsigned short e_shstrndx;
+};
+
+struct elf32_phdr {
+	unsigned int p_type;
+	unsigned int p_offset;
+	unsigned int p_vaddr;
+	unsigned int p_paddr;
+	unsigned int p_filesz;
+	unsigned int p_memsz;
+	unsigned int p_flags;
+	unsigned int p_align;
+};
+#define	PT_LOAD	1
+
+static void
+readbytes(struct inode *ip, caddr_t kbuf, unsigned int off, unsigned int n)
+{
+	u.u_base = kbuf;
+	u.u_count = n;
+	u.u_offset = off;
+	u.u_segflg = 1;
+	readi(ip);
+	u.u_segflg = 0;
+}
+/*
+ * Read in and set up memory for an ELF executable.
+ * The Armv7 user image is a flat 1 MB window; arm_sureg maps it, so we
+ * allocate the full image, zero it, then read each PT_LOAD segment to
+ * its virtual address.  Entry goes through u_exdata.ux_entloc (used by
+ * setregs).  Zero return is normal.
  */
 int
 getxfile(register struct inode *ip, int nargc)
 {
-	register unsigned ds;
-	register int sep;
-	register unsigned ts, ss;
-	register int i, overlay;
-	long lsize;
-
-	/*
-	 * read in first few bytes
-	 * of file for segment
-	 * sizes:
-	 * ux_mag = 407/410/411/405
-	 *  407 is plain executable
-	 *  410 is RO text
-	 *  411 is separated ID
-	 *  405 is overlaid text
-	 */
-
-	u.u_base = (caddr_t)&u.u_exdata;
-	u.u_count = sizeof(u.u_exdata);
-	u.u_offset = 0;
-	u.u_segflg = 1;
-	readi(ip);
-	u.u_segflg = 0;
+	struct elf32_ehdr eh;
+	struct elf32_phdr ph;
+	register int i;
+	int n;
+	(void)nargc;
+	readbytes(ip, (caddr_t)&eh, 0, sizeof(eh));
 	if(u.u_error)
 		goto bad;
-	if (u.u_count!=0) {
+	if(eh.e_ident[0] != 0x7f || eh.e_ident[1] != 'E' ||
+	   eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F' || eh.e_type != 2) {
 		u.u_error = ENOEXEC;
-		goto bad;
-	}
-	sep = 0;
-	overlay = 0;
-	if(u.u_exdata.ux_mag == 0407) {
-		lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_tsize;
-		u.u_exdata.ux_dsize = lsize;
-		if (lsize != (long)u.u_exdata.ux_dsize) {	/* check overflow */
-			u.u_error = ENOMEM;
-			goto bad;
-		}
-		u.u_exdata.ux_tsize = 0;
-	} else if (u.u_exdata.ux_mag == 0411)
-		sep++;
-	else if (u.u_exdata.ux_mag == 0405)
-		overlay++;
-	else if (u.u_exdata.ux_mag != 0410) {
-		u.u_error = ENOEXEC;
-		goto bad;
-	}
-	if(u.u_exdata.ux_tsize!=0 && (ip->i_flag&ITEXT)==0 && ip->i_count!=1) {
-		u.u_error = ETXTBSY;
 		goto bad;
 	}
 
 	/*
-	 * find text and data sizes
-	 * try them out for possible
-	 * overflow of max sizes
+	 * Commit to the new image: release old text, allocate and clear
+	 * the full user image, and map it.
 	 */
-	ts = btoc(u.u_exdata.ux_tsize);
-	lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_bsize;
-	if (lsize != (long)(unsigned)lsize) {
-		u.u_error = ENOMEM;
+	u.u_prof.pr_scale = 0;
+	xfree();
+	n = USIZE + (int)(USERSIZE >> 6);
+	expand(n);
+	for(i = USIZE; i < n; i++)
+		clearseg(u.u_procp->p_addr + i);
+	u.u_tsize = 0;
+	u.u_dsize = (USERSIZE >> 6) - SSIZE;
+	u.u_ssize = SSIZE;
+	u.u_sep = 0;
+	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
 		goto bad;
-	}
-	ds = btoc(lsize);
-	ss = SSIZE + btoc(nargc);
-	if (overlay) {
-		if ((u.u_sep==0 && ctos(ts) != ctos(u.u_tsize)) || nargc) {
+	/*
+	 * Load each PT_LOAD segment to its virtual address.
+	 */
+	for(i = 0; i < (int)eh.e_phnum; i++) {
+		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
+		    sizeof(ph));
+		if(u.u_error)
+			goto bad;
+		if(ph.p_type != PT_LOAD || ph.p_filesz == 0)
+			continue;
+		if(ph.p_vaddr >= USERSIZE || ph.p_filesz > USERSIZE - ph.p_vaddr) {
 			u.u_error = ENOMEM;
 			goto bad;
 		}
-		ds = u.u_dsize;
-		ss = u.u_ssize;
-		sep = u.u_sep;
-		xfree();
-		xalloc(ip);
-		u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
-	} else {
-		if(estabur(ts, ds, ss, sep, RO))
-			goto bad;
-	
-		/*
-		 * allocate and clear core
-		 * at this point, committed
-		 * to the new image
-		 */
-	
-		u.u_prof.pr_scale = 0;
-		xfree();
-		i = USIZE+ds+ss;
-		expand(i);
-		while(--i >= USIZE)
-			clearseg(u.u_procp->p_addr+i);
-		xalloc(ip);
-	
-		/*
-		 * read in data segment
-		 */
-	
-		estabur((unsigned)0, ds, (unsigned)0, 0, RO);
-		u.u_base = 0;
-		u.u_offset = sizeof(u.u_exdata)+u.u_exdata.ux_tsize;
-		u.u_count = u.u_exdata.ux_dsize;
+		u.u_base = (caddr_t)ph.p_vaddr;
+		u.u_count = ph.p_filesz;
+		u.u_offset = ph.p_offset;
+		u.u_segflg = 0;
 		readi(ip);
-		/*
-		 * set SUID/SGID protections, if no tracing
-		 */
-		if ((u.u_procp->p_flag&STRC)==0) {
-			if(ip->i_mode&ISUID)
-				if(u.u_uid != 0) {
-					u.u_uid = ip->i_uid;
-					u.u_procp->p_uid = ip->i_uid;
-				}
-			if(ip->i_mode&ISGID)
-				u.u_gid = ip->i_gid;
-		} else
-			psignal(u.u_procp, SIGTRC);
+		if(u.u_error)
+			goto bad;
 	}
-	u.u_tsize = ts;
-	u.u_dsize = ds;
-	u.u_ssize = ss;
-	u.u_sep = sep;
-	estabur(ts, ds, ss, sep, RO);
+	u.u_exdata.ux_entloc = eh.e_entry;
+	arm_sync_icache();
 bad:
-	return(overlay);
+	return(0);
 }
 
 /*
@@ -337,10 +354,10 @@ setregs(void)
 			u.u_pofile[i] &= ~EXCLOSE;
 		}
 	}
+	u.u_acflag &= ~AFORK;
 	/*
 	 * Remember file name for accounting.
 	 */
-	u.u_acflag &= ~AFORK;
 	bcopy((caddr_t)u.u_dbuf, (caddr_t)u.u_comm, DIRSIZ);
 }
 
@@ -500,9 +517,9 @@ fork(void)
 		u.u_error = EAGAIN;
 		goto out;
 	}
-	p1 = u.u_procp;
 	if(newproc()) {
-		u.u_r.r_val1 = p1->p_pid;
+		/* child: fork() returns 0 */
+		u.u_r.r_val1 = 0;
 		u.u_start = time;
 		u.u_cstime = 0;
 		u.u_stime = 0;
@@ -513,8 +530,7 @@ fork(void)
 	}
 	u.u_r.r_val1 = p2->p_pid;
 
-out:
-	u.u_ar0[R7] += NBPW;
+out:	;
 }
 
 /*
@@ -568,239 +584,4 @@ bigger:
 	}
 	while(d--)
 		clearseg(--a);
-}
-static char argbuf[UARGLEN];
-#define	KENOEXEC		8
-char *slot_user_base(int slot);
-void install_sigtramp(char *base);
-void usermap(int slot);
-int slot_by_pid(int pid);
-extern int curpid, live_slot;
-#define	NPROCSAVE	32
-#define	V7_STACK_TOP	0x10000U
-#define	PROC_SLOT_BYTES	0x100000
-#define	SIG_DFL		0L
-#define	SIG_IGN		1L
-extern unsigned char usermem[NPROCSAVE][PROC_SLOT_BYTES];
-extern unsigned int pending;
-void arm_exec_reset_signals(void);
-static void bzero(char *p, unsigned int n) { while(n--) *p++ = 0; }
-static int kexec(char *path)
-{
-	struct inode *ip;
-	struct buf *bp;
-	unsigned int insn;
-	unsigned int size, off, n, on;
-	daddr_t bn;
-	int slot;
-	char *base;
-	u.u_dirp = path;
-	u.u_error = 0;
-	u.u_segflg = 1;
-	ip = namei(schar, 0);
-	if(ip == NULL) return -2;
-	if((ip->i_mode & IFMT) != IFREG) { iput(ip); return -13; }
-	if((ip->i_mode & 0111) == 0) { iput(ip); return -13; }
-	size = (unsigned int)ip->i_size;
-	if(size >= USERSIZE - UENTRY) { iput(ip); return -2; }
-	if(size < sizeof(insn)) { iput(ip); return -KENOEXEC; }
-	ip->i_count++;
-	slot = slot_by_pid(curpid);
-	base = slot >= 0 ? slot_user_base(slot) : (char *)USERBASE;
-	__asm__ volatile("cpsid i" ::: "memory");
-	bzero(base, USERSIZE);
-	__asm__ volatile("cpsie i\n\tisb" ::: "memory");
-	for(off = 0; off < size; off += n) {
-		on = off & BMASK;
-		n = BSIZE - on;
-		if(n > size - off)
-			n = size - off;
-		bn = bmap(ip, off >> BSHIFT, B_READ);
-		if(u.u_error || (long)bn < 0) {
-			iput(ip);
-			iput(ip);
-			return -5;
-		}
-		bp = bread(ip->i_dev, bn);
-		if(bp->b_flags & B_ERROR) {
-			brelse(bp);
-			iput(ip);
-			iput(ip);
-			return -5;
-		}
-		bcopy(bp->b_un.b_addr + on, base + UENTRY + off, n);
-		brelse(bp);
-	}
-	__asm__ volatile("cpsid i" ::: "memory");
-	if(slot >= 0 && base != (char *)usermem[slot])
-		bcopy(base, (char *)usermem[slot], USERSIZE);
-	insn = *(volatile unsigned int *)(base + UENTRY);
-	if((insn & 0xff000000U) != 0xeb000000U) {
-		iput(ip);
-		iput(ip);
-		return -KENOEXEC;
-	}
-	iput(ip);
-	iput(ip);
-	u.u_tsize = 0;
-	u.u_dsize = 0;
-	u.u_ssize = SSIZE;
-	u.u_sep = 0;
-	if(u.u_procp)
-		u.u_procp->p_size = USIZE + SSIZE;
-	install_sigtramp(base);
-	arm_exec_reset_signals();
-	pending = 0;
-	if(slot >= 0) {
-		usermap(slot);
-		live_slot = slot;
-	}
-	arm_sync_icache();
-	return 0;
-}
-static void kargs(char *path, char **argv, char **envp)
-{
-	char *p;
-	int n = 0;
-	bzero(argbuf, sizeof(argbuf));
-	if(argv != 0 && argv[0] != 0) {
-		for(int i = 0; argv[i] != 0 && n < (int)sizeof(argbuf)-2; i++) {
-			for(p = argv[i]; *p && n < (int)sizeof(argbuf)-2; p++)
-				argbuf[n++] = *p;
-			argbuf[n++] = 0;
-		}
-	} else {
-		p = path;
-		while(*p) p++;
-		while(p > path && p[-1] != '/') p--;
-		while(*p && n < (int)sizeof(argbuf)-2) argbuf[n++] = *p++;
-		argbuf[n++] = 0;
-	}
-	argbuf[n++] = 0;
-	if(envp != 0)
-		for(int i = 0; envp[i] != 0 && n < (int)sizeof(argbuf)-2; i++) {
-			for(p = envp[i]; *p && n < (int)sizeof(argbuf)-2; p++)
-				argbuf[n++] = *p;
-			argbuf[n++] = 0;
-		}
-	argbuf[n++] = 0;
-}
-static int argstrlen(char *p)
-{
-	int n = 0;
-	while(p[n])
-		n++;
-	return n;
-}
-static void install_v7_user_stack(char *base)
-{
-	char *p;
-	unsigned int ap, strp, nc, stack_bytes, need;
-	int argc, envc, len;
-	int *wp;
-	argc = 0;
-	envc = 0;
-	nc = 0;
-	p = argbuf;
-	while(*p) {
-		len = argstrlen(p) + 1;
-		argc++;
-		nc += (unsigned int)len;
-		p += len;
-	}
-	if(*p == 0)
-		p++;
-	while(*p) {
-		len = argstrlen(p) + 1;
-		envc++;
-		nc += (unsigned int)len;
-		p += len;
-	}
-	nc = (nc + (unsigned int)NBPW - 1U) & ~((unsigned int)NBPW - 1U);
-	need = nc + (unsigned int)NBPW +
-	    (unsigned int)(argc + envc + 3) * (unsigned int)NBPW;
-	stack_bytes = (unsigned int)ctob(u.u_ssize);
-	if(need > stack_bytes) {
-		u.u_ssize = (need + 63U) >> 6;
-		stack_bytes = (unsigned int)ctob(u.u_ssize);
-		if(u.u_procp)
-			u.u_procp->p_size = (short)(USIZE + u.u_ssize);
-	}
-	if(stack_bytes > V7_STACK_TOP)
-		stack_bytes = V7_STACK_TOP;
-	strp = V7_STACK_TOP - nc - (unsigned int)NBPW;
-	ap = strp - (unsigned int)(argc + envc + 3) * (unsigned int)NBPW;
-	bzero(base + ap, V7_STACK_TOP - ap);
-	wp = (int *)(base + ap);
-	*wp++ = argc;
-	p = argbuf;
-	while(*p) {
-		len = argstrlen(p) + 1;
-		*wp++ = (int)strp;
-		bcopy(p, base + strp, (unsigned int)len);
-		strp += (unsigned int)len;
-		p += len;
-	}
-	*wp++ = 0;
-	if(*p == 0)
-		p++;
-	while(*p) {
-		len = argstrlen(p) + 1;
-		*wp++ = (int)strp;
-		bcopy(p, base + strp, (unsigned int)len);
-		strp += (unsigned int)len;
-		p += len;
-	}
-	*wp++ = 0;
-	*(int *)(base + strp) = 0;
-}
-static int kexec2(char *path, char **argv, char **envp)
-{
-	int e, i;
-	char kpath[128];
-	for(i = 0; i < (int)sizeof(kpath)-1 && path[i]; i++)
-		kpath[i] = path[i];
-	kpath[i] = 0;
-	kargs(path, argv, envp);
-	e = kexec(kpath);
-	if(e == 0) {
-		int slot = slot_by_pid(curpid);
-		char *ubase = slot >= 0 ? slot_user_base(slot) : (char *)USERBASE;
-		bzero((char *)UARGV, UARGLEN);
-		bcopy(argbuf, (char *)UARGV, UARGLEN-1);
-		install_v7_user_stack(ubase);
-		if(slot >= 0 && ubase != (char *)usermem[slot])
-			install_v7_user_stack((char *)usermem[slot]);
-		install_sigtramp(ubase);
-		if(slot >= 0 && ubase != (char *)usermem[slot])
-			install_sigtramp((char *)usermem[slot]);
-	}
-	return e;
-}
-int v7_load_image(char *path, char **argv, char **envp)
-{ return kexec2(path, argv, envp); }
-int
-v7_exec_call(char *path, char **argv, char **envp)
-{
-	int rc;
-	rc = v7_load_image(path, argv, envp);
-	if(rc != 0)
-		return(rc < 0 ? -rc : 1);
-	for(int i = 0; i < NOFILE; i++)
-		if(u.u_pofile[i] & EXCLOSE) {
-			if(u.u_ofile[i])
-				closef(u.u_ofile[i]);
-			u.u_ofile[i] = NULL;
-			u.u_pofile[i] &= ~EXCLOSE;
-		}
-	for(int i = 1; i < NSIG; i++)
-		if(u.u_signal[i] != 1)
-			u.u_signal[i] = 0;
-	if(trap_frame) {
-		trap_frame[13] = (int)USTACK;
-		trap_frame[14] = 0;
-		trap_frame[15] = (int)UENTRY;
-	}
-	u.u_ap = NULL;
-	return(0);
 }

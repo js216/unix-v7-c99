@@ -126,8 +126,6 @@ writei(register struct inode *ip)
 		iomove(bp->b_un.b_addr+on, n, B_WRITE);
 		if(u.u_error != 0)
 			brelse(bp);
-		else if(type==IFREG)
-			bwrite(bp);
 		else
 			bdwrite(bp);
 		if(u.u_offset > ip->i_size &&

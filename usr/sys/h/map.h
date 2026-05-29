@@ -1,12 +1,8 @@
-#ifndef MAP_H
-#define MAP_H
-#include "../h/param.h"
 struct map
 {
-	short	m_size;
-	unsigned short m_addr;
+	int		m_size;		/* Armv7: 32-bit (clicks exceed 16 bits) */
+	unsigned int	m_addr;
 };
 
-extern struct map coremap[CMAPSIZ];	/* space for core allocation */
-extern struct map swapmap[SMAPSIZ];	/* space for swap allocation */
-#endif
+struct map coremap[CMAPSIZ];	/* space for core allocation */
+struct map swapmap[SMAPSIZ];	/* space for swap allocation */

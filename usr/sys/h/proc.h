@@ -1,5 +1,3 @@
-#ifndef PROC_H
-#define PROC_H
 /*
  * One structure allocated per active
  * process. It contains all data needed
@@ -20,8 +18,8 @@ struct	proc {
 	short	p_pgrp;		/* name of process group leader */
 	short	p_pid;		/* unique process id */
 	short	p_ppid;		/* process id of parent */
-	short	p_addr;		/* address of swappable image */
-	short	p_size;		/* size of swappable image (clicks) */
+	int	p_addr;		/* address of swappable image (Armv7: 32-bit click index) */
+	int	p_size;		/* size of swappable image (clicks) */
 	caddr_t p_wchan;	/* event process is awaiting */
 	struct text *p_textp;	/* pointer to text structure */
 	struct proc *p_link;	/* linked list of running processes */
@@ -69,4 +67,3 @@ struct	xproc {
 	time_t	xp_utime;	/* user time, this proc */
 	time_t	xp_stime;	/* system time, this proc */
 };
-#endif

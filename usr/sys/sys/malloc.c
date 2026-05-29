@@ -1,7 +1,7 @@
 #include "../h/param.h"
+#include "../h/systm.h"
 #include "../h/map.h"
-struct map coremap[CMAPSIZ];	/* space for core allocation */
-struct map swapmap[SMAPSIZ];	/* space for swap allocation */
+void wakeup(caddr_t chan);
 
 /*
  * Allocate 'size' units from the given
@@ -47,11 +47,14 @@ mfree(struct map *mp, int size, int a)
 	register struct map *bp;
 	register unsigned int t;
 
-	bp = mp;
-	for (; bp->m_addr<=a && bp->m_size!=0; bp++);
-	if (bp>mp && (bp-1)->m_addr+(bp-1)->m_size == a) {
+	if ((bp = mp)==coremap && runin) {
+		runin = 0;
+		wakeup((caddr_t)&runin);
+	}
+	for (; bp->m_addr<=(unsigned)a && bp->m_size!=0; bp++);
+	if (bp>mp && (bp-1)->m_addr+(bp-1)->m_size == (unsigned)a) {
 		(bp-1)->m_size += size;
-		if (a+size == bp->m_addr) {
+		if ((unsigned)(a+size) == bp->m_addr) {
 			(bp-1)->m_size += bp->m_size;
 			while (bp->m_size) {
 				bp++;
@@ -60,7 +63,7 @@ mfree(struct map *mp, int size, int a)
 			}
 		}
 	} else {
-		if (a+size == bp->m_addr && bp->m_size) {
+		if ((unsigned)(a+size) == bp->m_addr && bp->m_size) {
 			bp->m_addr -= size;
 			bp->m_size += size;
 		} else if (size) {

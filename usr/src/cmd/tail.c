@@ -1,3 +1,4 @@
+#include <stdio.h>
 /* tail command 
  *
  *	tail where [file]

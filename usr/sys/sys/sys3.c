@@ -256,31 +256,3 @@ getmdev(void)
 	iput(ip);
 	return(dev);
 }
-extern dev_t rootdev;
-extern struct inode *rootdir;
-extern time_t time;
-struct buf *geteblk(void);
-int
-v7_mount_init(void)
-{
-	struct buf *bp, *mb;
-	struct filsys *fp;
-	if(mount[0].m_bufp != NULL) return(0);
-	if(rootdir == NULL) return(-1);
-	bp = bread(rootdev, (daddr_t)SUPERB);
-	if(bp->b_flags & B_ERROR) {
-		brelse(bp);
-		return(-1);
-	}
-	mb = geteblk();
-	bcopy((char *)bp->b_un.b_addr, (char *)mb->b_un.b_addr,
-	    (unsigned int)BSIZE);
-	fp = mb->b_un.b_filsys;
-	fp->s_ilock = fp->s_flock = fp->s_ronly = 0;
-	time = fp->s_time;
-	brelse(bp);
-	mount[0].m_dev = rootdev;
-	mount[0].m_bufp = mb;
-	mount[0].m_inodp = rootdir;
-	return(0);
-}

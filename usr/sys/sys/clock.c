@@ -5,10 +5,8 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 extern void addupc(caddr_t pc, void *prof, int inc);
-int spl1(void);
-int spl5(void);
-int spl7(void);
-void splx(int s);
+int intr_disable(void);
+void intr_restore(int s);
 void wakeup(caddr_t chan);
 void panic(char *s);
 
@@ -71,7 +69,7 @@ clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 	 * callout
 	 */
 
-	spl5();
+	intr_disable();
 	if(callout[0].c_time <= 0) {
 		p1 = &callout[0];
 		while(p1->c_func != 0 && p1->c_time <= 0) {
@@ -114,7 +112,7 @@ out:
 			return;
 		lbolt -= HZ;
 		++time;
-		spl1();
+		intr_disable();
 		runrun++;
 		wakeup((caddr_t)&lbolt);
 		for(pp = &proc[0]; pp < &proc[NPROC]; pp++)
@@ -163,7 +161,7 @@ timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
 
 	t = tim;
 	p1 = &callout[0];
-	s = spl7();
+	s = intr_disable();
 	while(p1->c_func != 0 && p1->c_time <= t) {
 		t -= p1->c_time;
 		p1++;
@@ -183,7 +181,7 @@ timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
 	p1->c_time = t;
 	p1->c_func = fun;
 	p1->c_arg = arg;
-	splx(s);
+	intr_restore(s);
 }
 #define GICD_BASE	0x08000000U
 #define GICC_BASE	0x08010000U
@@ -199,11 +197,16 @@ timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
-extern void mt_clock_tick(void);
-extern volatile int in_spin_wait;
 static unsigned int timer_reload;
 int irq_ready;
-volatile int in_clock_irq;
+caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
+void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
+/*
+ * Real-time clock interrupt: acknowledge the GIC, reprime the timer, and
+ * call the v7 clock() with the trapped pc/ps.  clock() runs with IRQs
+ * masked (we are in the IRQ handler) and never lowers priority, so it is
+ * not re-entrant; preemption happens on return to user via trap()'s tail.
+ */
 void
 clock_irq_handler(int *tf)
 {
@@ -214,19 +217,14 @@ clock_irq_handler(int *tf)
 		int mode = tf[16] & 0x1f;
 		int usermode = (mode == 0x10) || (mode == 0x1f);
 		cntv_tval_set(timer_reload);
-		if((usermode || in_spin_wait) && u.u_procp != NULL &&
-		   !in_clock_irq) {
-			in_clock_irq = 1;
-			clock(0, 0, 0, 0, 0, (caddr_t)0,
+		if(u.u_procp != NULL)
+			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
 			    usermode ? 0xf000 : 0);
-			in_clock_irq = 0;
-			mt_clock_tick();
-		}
 	}
 	GICC_EOIR = iar;
 }
 void
-arm_timer_init(void)
+clkstart(void)
 {
 	unsigned int freq, prio_reg, prio_off, prio_val;
 	freq = cntfrq_get();
@@ -246,9 +244,4 @@ arm_timer_init(void)
 	cntv_ctl_set(1);
 	irq_ready = 1;
 	irq_enable();
-}
-void
-clkstart(void)
-{
-	arm_timer_init();
 }
