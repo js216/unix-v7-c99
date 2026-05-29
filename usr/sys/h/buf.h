@@ -1,5 +1,3 @@
-#ifndef BUF_H
-#define BUF_H
 /*
  * Each buffer in the pool is usually doubly linked into 2 lists:
  * the device with which it is currently associated (always)
@@ -72,4 +70,3 @@ extern struct buf bfreelist;		/* head of available list */
 #define	b_actl	av_back
 #define	b_active b_bcount
 #define	b_errcnt b_resid
-#endif

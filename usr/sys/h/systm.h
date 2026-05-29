@@ -3,6 +3,7 @@
  * used by more than one
  * routine.
  */
+char	canonb[CANBSIZ];	/* buffer for erase and kill (#@) */
 struct inode *rootdir;		/* pointer to inode of root directory */
 struct proc *runq;		/* head of linked list of running processes */
 int	cputype;		/* type of cpu =40, 45, or 70 */
@@ -31,7 +32,9 @@ char	runout;			/* scheduling flag */
 char	runrun;			/* scheduling flag */
 char	curpri;			/* more scheduling */
 int	maxmem;			/* actual max memory per process */
+physadr	lks;			/* pointer to clock device */
 daddr_t	swplo;			/* block number of swap space */
+int	nswap;			/* size of swap space */
 int	updlock;		/* lock for sync */
 daddr_t	rablock;		/* block to be read ahead */
 extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
@@ -39,6 +42,8 @@ char	msgbuf[MSGBUFS];	/* saved "printf" characters */
 dev_t	rootdev;		/* device of the root */
 dev_t	swapdev;		/* swapping device */
 dev_t	pipedev;		/* pipe device */
+extern	int	icode[];	/* user init code */
+extern	int	szicode;	/* its size */
 
 dev_t	getmdev(void);
 daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
@@ -98,5 +103,5 @@ long	tk_nout;
 extern struct sysent {
 	char	sy_narg;		/* total number of arguments */
 	char	sy_nrarg;		/* number of args in registers */
-	int	(*sy_call)();		/* handler */
+	void	(*sy_call)(void);	/* handler (Armv7/C99: void(void)) */
 } sysent[];

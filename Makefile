@@ -30,23 +30,19 @@ ROOT = etc/init etc/getty bin/login bin/sh \
 	bin/restor bin/tk bin/dc bin/tar bin/tp \
 	bin/prof bin/tc bin/graph bin/factor bin/primes \
 	bin/expr bin/iostat bin/pstat \
-	bin/spell \
 	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 	usr/games/backgammon usr/games/fish usr/games/quiz \
 	usr/games/wump \
-	usr/lib/spell usr/lib/spellin usr/lib/spellout \
 	usr/games/lib/fortunes \
 	etc/passwd etc/group etc/ttys usr/dict/words usr/lib/units \
-	usr/lib/crontab \
-	usr/dict/hlista usr/dict/hlistb usr/dict/hstop \
-	usr/dict/spellhist
+	usr/lib/crontab
 
 all:	boot/unix boot/rootfs.img
 
 KCC = arm-none-eabi-gcc
 KAS = arm-none-eabi-as
 KCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin \
-	-fcommon -mcpu=cortex-a7 -marm -ffreestanding
+	-fcommon -mcpu=cortex-a7 -marm -ffreestanding -Wno-clobbered -DKERNEL
 KLDFLAGS = -nostdlib -T usr/sys/conf/arm_qemu.ld -Wl,-z,max-page-size=0x200
 KV7OBJS = usr/sys/sys/alloc.o usr/sys/sys/subr.o usr/sys/sys/fio.o \
 	usr/sys/sys/sys2.o usr/sys/sys/sys3.o usr/sys/sys/sys4.o \
@@ -54,7 +50,8 @@ KV7OBJS = usr/sys/sys/alloc.o usr/sys/sys/subr.o usr/sys/sys/fio.o \
 	usr/sys/sys/text.o usr/sys/sys/rdwri.o usr/sys/sys/sig.o \
 	usr/sys/sys/slp.o usr/sys/sys/sys1.o usr/sys/sys/pipe.o \
 	usr/sys/sys/sysent.o
-KOBJS = usr/sys/conf/l.o usr/sys/sys/main.o usr/sys/sys/malloc.o \
+KOBJS = usr/sys/conf/l.o usr/sys/conf/mch.o usr/sys/sys/main.o \
+	usr/sys/sys/malloc.o \
 	usr/sys/sys/prf.o usr/sys/sys/iget.o usr/sys/sys/nami.o \
 	usr/sys/sys/machdep.o $(KV7OBJS) usr/sys/dev/bio.o \
 	usr/sys/conf/c.o usr/sys/dev/pl011.o usr/sys/dev/mem.o \
@@ -67,6 +64,9 @@ boot/unix: $(KOBJS) | boot
 	$(KCC) $(KCFLAGS) $(KLDFLAGS) -o $@ $^
 
 usr/sys/conf/l.o: usr/sys/conf/l.s
+	$(KAS) -mcpu=cortex-a7 -o $@ $<
+
+usr/sys/conf/mch.o: usr/sys/conf/mch.s
 	$(KAS) -mcpu=cortex-a7 -o $@ $<
 
 usr/sys/sys/%.o: usr/sys/sys/%.c
@@ -83,7 +83,7 @@ qemu:	boot/unix boot/rootfs.img
 	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0
 
-boot/rootfs.img: force-root-image boot/unix Makefile usr/src/tools/mkfs boot/rootfs.proto nullboot .profile usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup v7/bin/spell usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/u.ld
+boot/rootfs.img: force-root-image boot/unix Makefile usr/src/tools/mkfs boot/rootfs.proto nullboot .profile usr/src/cmd/*.c usr/src/cmd/sh/* usr/src/cmd/sed/* usr/src/cmd/awk/* usr/src/cmd/dc/* usr/src/cmd/tar/* usr/src/cmd/tp/* v7/bin/1 v7/bin/true v7/bin/false v7/bin/nohup usr/src/libc/*.c usr/src/libc/*.s usr/src/libc/sys/* usr/src/libc/gen/* usr/src/libc/stdio/* usr/src/libc/u.ld
 	$(MAKE) libc
 	$(MAKE) userland-extra
 	rm -f bin/bc
@@ -91,11 +91,11 @@ boot/rootfs.img: force-root-image boot/unix Makefile usr/src/tools/mkfs boot/roo
 		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
 	done
 	# v7 mkfs only writes the blocks it touches.  Pad rootfs.img to its
-	# declared filesystem size (FSIZE * BSIZE = 16384 * 512) so qemu's
+	# declared filesystem size (FSIZE * BSIZE = 32768 * 512) so qemu's
 	# virtio block backend can serve any sector the kernel asks for.
 	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
 	    usr/src/tools/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
-	    truncate -s 8388608 boot/rootfs.img.tmp; \
+	    truncate -s 16777216 boot/rootfs.img.tmp; \
 	    mv boot/rootfs.img.tmp boot/rootfs.img
 	$(MAKE) userland-clean
 
@@ -169,61 +169,78 @@ userland-extra:
 		if test "$$i" = grep; then cflags="$$cflags -Wno-char-subscripts"; fi; \
 		$(USERCC) $$cflags -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
-		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \
+		$(USEROBJCOPY) --strip-all usr/src/libc/$$i.elf bin/$$i; \
 	done
+	set -e; for i in ac arcv basename cal cat checkeq chgrp chmod chown cmp \
+	    col comm cp crypt dd du dump dumpdir fgrep file graph join kill ln \
+	    look mesg mkdir mknod mount mv newgrp nice od pr prof ptx random \
+	    restor rev rmdir sa sleep spline split su sum sync tail tc tee test \
+	    time tk touch tr tsort tty uniq units vpr wc who yes; do \
+		cflags="$(USERCFLAGS)"; \
+		case $$i in \
+		cmp|file|graph|uniq|ptx) cflags="$$cflags -Wno-char-subscripts";; \
+		tk|units) cflags="$$cflags -Wno-misleading-indentation";; \
+		tee) cflags="$$cflags -Wno-implicit-function-declaration";; \
+		esac; \
+		$(USERCC) $$cflags -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
+		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
+		$(USEROBJCOPY) --strip-all usr/src/libc/$$i.elf bin/$$i; \
+	done
+	cp v7/bin/1 bin/1; cp v7/bin/true bin/true
+	cp v7/bin/false bin/false; cp v7/bin/nohup bin/nohup
 	set -e; for i in init login; do \
 		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
 	done
-	$(USEROBJCOPY) -O binary usr/src/libc/init.elf etc/init
-	$(USEROBJCOPY) -O binary usr/src/libc/login.elf bin/login
+	$(USEROBJCOPY) --strip-all usr/src/libc/init.elf etc/init
+	$(USEROBJCOPY) --strip-all usr/src/libc/login.elf bin/login
 	$(USERCC) $(USERCFLAGS) -Wno-missing-braces -c usr/src/cmd/getty.c -o usr/src/libc/cmd-getty.o
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/getty.elf $(USERCRT) usr/src/libc/cmd-getty.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/getty.elf etc/getty
+	$(USEROBJCOPY) --strip-all usr/src/libc/getty.elf etc/getty
 	set -e; for i in accton update atrun cron; do \
 		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
-		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf etc/$$i; \
+		$(USEROBJCOPY) --strip-all usr/src/libc/$$i.elf etc/$$i; \
 	done
 	set -e; for i in makekey diffh; do \
 		$(USERCC) $(USERCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
-		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf usr/lib/$$i; \
+		$(USEROBJCOPY) --strip-all usr/src/libc/$$i.elf usr/lib/$$i; \
 	done
 	$(USERCC) $(USERCFLAGS) -Wno-dangling-else -c usr/src/cmd/rm.c -o usr/src/libc/cmd-rm.o
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/rm.elf $(USERCRT) usr/src/libc/cmd-rm.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/rm.elf bin/rm
+	$(USEROBJCOPY) --strip-all usr/src/libc/rm.elf bin/rm
 	$(USERCC) $(USERCFLAGS) -Wno-missing-braces -c usr/src/cmd/stty.c -o usr/src/libc/cmd-stty.o
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/stty.elf $(USERCRT) usr/src/libc/cmd-stty.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/stty.elf bin/stty
+	$(USEROBJCOPY) --strip-all usr/src/libc/stty.elf bin/stty
 	set -e; trap 'rm -f usr/src/cmd/egrep.c usr/src/cmd/expr.c' EXIT; \
 	for i in egrep expr; do \
 		(cd usr/src/cmd && bison -y $$i.y && mv y.tab.c $$i.c); \
 		$(USERCC) $(USERYACCCFLAGS) -c usr/src/cmd/$$i.c -o usr/src/libc/cmd-$$i.o; \
 		$(USERCC) $(USERYACCCFLAGS) $(USERLDFLAGS) -o usr/src/libc/$$i.elf $(USERCRT) usr/src/libc/cmd-$$i.o $(USERLDLIBS); \
-		$(USEROBJCOPY) -O binary usr/src/libc/$$i.elf bin/$$i; \
+		$(USEROBJCOPY) --strip-all usr/src/libc/$$i.elf bin/$$i; \
 	done
 	set -e; for i in sed0 sed1; do \
 		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/sed -c usr/src/cmd/sed/$$i.c -o usr/src/libc/$$i.o; \
 	done
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/sed.elf $(USERCRT) usr/src/libc/sed0.o usr/src/libc/sed1.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/sed.elf bin/sed
+	$(USEROBJCOPY) --strip-all usr/src/libc/sed.elf bin/sed
 	set -e; for i in args blok builtin cmd ctype error expand fault io macro main msg name print service setbrk stak string word xec; do \
 		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/sh -c usr/src/cmd/sh/$$i.c -o usr/src/libc/sh-$$i.o; \
 	done
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/sh.elf $(USERCRT) usr/src/libc/sh-*.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/sh.elf bin/sh
+	$(USEROBJCOPY) --strip-all usr/src/libc/sh.elf bin/sh
 	$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/dc -c usr/src/cmd/dc/dc.c -o usr/src/libc/dc.o
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/dc.elf $(USERCRT) usr/src/libc/dc.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/dc.elf bin/dc
+	$(USEROBJCOPY) --strip-all usr/src/libc/dc.elf bin/dc
 	$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/tar -c usr/src/cmd/tar/tar.c -o usr/src/libc/tar.o
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/tar.elf $(USERCRT) usr/src/libc/tar.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/tar.elf bin/tar
+	$(USEROBJCOPY) --strip-all usr/src/libc/tar.elf bin/tar
 	set -e; for i in tp0 tp1 tp2 tp3; do \
 		$(USERCC) $(USERCFLAGS) -Iusr/src/cmd/tp -c usr/src/cmd/tp/$$i.c -o usr/src/libc/$$i.o; \
 	done
 	$(USERCC) $(USERCFLAGS) $(USERLDFLAGS) -o usr/src/libc/tp.elf $(USERCRT) usr/src/libc/tp0.o usr/src/libc/tp1.o usr/src/libc/tp2.o usr/src/libc/tp3.o $(USERLDLIBS)
-	$(USEROBJCOPY) -O binary usr/src/libc/tp.elf bin/tp
+	$(USEROBJCOPY) --strip-all usr/src/libc/tp.elf bin/tp
 	set -e; trap 'cd "$(CURDIR)" && rm -f $(AWKGEN)' EXIT; \
 	(cd usr/src/cmd/awk && bison -y -d awk.g.y && mv y.tab.c awk.g.c && mv y.tab.h awk.h); \
 	(cd usr/src/cmd/awk && awk 'BEGIN { print "%option noyywrap noinput nounistd" } { if ($$0 == "%}") { print "#undef YY_INPUT"; print "#define YY_INPUT(buf,result,max_size) \\"; print "do { \\"; print "	int c = input(); \\"; print "	if (c == 0) result = YY_NULL; \\"; print "	else { buf[0] = c; result = 1; } \\"; print "} while (0)" } print }' awk.lx.l > awk.lx.tmp.l); \
@@ -239,7 +256,7 @@ userland-extra:
 		$(USERCC) $(USERAWKCFLAGS) -c usr/src/cmd/awk/$$i.c -o usr/src/libc/awk-$$i.o; \
 	done; \
 	$(USERCC) $(USERAWKCFLAGS) $(USERLDFLAGS) -o usr/src/libc/awk.elf $(USERCRT) usr/src/libc/awk-awk.g.o usr/src/libc/awk-awk.lx.o usr/src/libc/awk-b.o usr/src/libc/awk-main.o usr/src/libc/awk-token.o usr/src/libc/awk-tran.o usr/src/libc/awk-lib.o usr/src/libc/awk-run.o usr/src/libc/awk-parse.o usr/src/libc/awk-proctab.o -Lusr/src/libc -lm -lc -lgcc; \
-	$(USEROBJCOPY) -O binary usr/src/libc/awk.elf bin/awk
+	$(USEROBJCOPY) --strip-all usr/src/libc/awk.elf bin/awk
 
 userland-clean:
 	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf $(AWKGEN)
@@ -268,31 +285,6 @@ usr/dict/words: v7/usr/dict/words
 	mkdir -p usr/dict
 	rm -f usr/dict/words
 	cp v7/usr/dict/words usr/dict/words
-
-usr/dict/hlista: v7/usr/dict/hlista
-	mkdir -p usr/dict
-	rm -f usr/dict/hlista
-	cp v7/usr/dict/hlista usr/dict/hlista
-
-usr/dict/hlistb: v7/usr/dict/hlistb
-	mkdir -p usr/dict
-	rm -f usr/dict/hlistb
-	cp v7/usr/dict/hlistb usr/dict/hlistb
-
-usr/dict/hstop: v7/usr/dict/hstop
-	mkdir -p usr/dict
-	rm -f usr/dict/hstop
-	cp v7/usr/dict/hstop usr/dict/hstop
-
-usr/dict/spellhist: v7/usr/dict/spellhist
-	mkdir -p usr/dict
-	rm -f usr/dict/spellhist
-	cp v7/usr/dict/spellhist usr/dict/spellhist
-
-bin/spell: v7/bin/spell
-	mkdir -p bin
-	cp v7/bin/spell bin/spell
-	chmod 755 bin/spell
 
 usr/games/lib/fortunes: v7/usr/games/lib/fortunes
 	mkdir -p usr/games/lib

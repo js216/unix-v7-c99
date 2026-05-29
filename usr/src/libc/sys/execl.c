@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#define S_EXEC 11
+#define S_EXECE 59
 int syscall3(int, int, int, int);
 extern char **environ;
 char *malloc(unsigned nbytes);
@@ -28,7 +28,7 @@ execl(char *path, char *arg0, ...)
 	}
 	va_end(ap);
 	argv[n] = 0;
-	r = syscall3(S_EXEC, (int)path, (int)argv, (int)environ);
+	r = syscall3(S_EXECE, (int)path, (int)argv, (int)environ);
 	free((char *)argv);
 	return(r);
 }

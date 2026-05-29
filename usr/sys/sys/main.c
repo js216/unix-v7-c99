@@ -15,15 +15,13 @@ void brelse(struct buf *bp);
 void binit(void);
 void iinit(void);
 void panic(char *s);
+void printf(char *fmt, ...);
 void clkstart(void);
 void cinit(void);
 int newproc(void);
-void v7_proc_init(void);
 void expand(int newsize);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void sched(void);
-extern int icode[];
-extern int szicode;
 void arm_sync_icache(void);
 void cinit(void)
 {
@@ -58,7 +56,7 @@ main(void)
 	 * set up system process
 	 */
 
-	proc[0].p_addr = 0;
+	proc[0].p_addr = 64;
 	proc[0].p_size = USIZE;
 	proc[0].p_stat = SRUN;
 	proc[0].p_flag |= SLOAD|SSYS;
@@ -88,7 +86,6 @@ main(void)
 	 */
 
 	if(newproc()) {
-		v7_proc_init();
 		expand(USIZE + (int)btoc(szicode));
 		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);

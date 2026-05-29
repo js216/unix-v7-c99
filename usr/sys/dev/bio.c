@@ -14,9 +14,9 @@ void geterror(struct buf *bp);
 int incore(dev_t dev, daddr_t blkno);
 void wakeup(caddr_t chan);
 void sleep(caddr_t chan, int pri);
-int spl0(void);
-int spl6(void);
-void splx(int s);
+int intr_enable(void);
+int intr_disable(void);
+void intr_restore(int s);
 void panic(char *s);
 void mapfree(struct buf *bp);
 
@@ -202,9 +202,7 @@ brelse(struct buf *bp)
 	}
 	if (bp->b_flags&B_ERROR)
 		bp->b_dev = NODEV;  /* no assoc. on error */
-	if((bp->b_flags&B_BUSY) == 0)
-		return;
-	s = spl6();
+	s = intr_disable();
 	if(bp->b_flags & B_AGE) {
 		backp = &bfreelist.av_forw;
 		(*backp)->av_back = bp;
@@ -219,7 +217,7 @@ brelse(struct buf *bp)
 		bp->av_forw = &bfreelist;
 	}
 	bp->b_flags &= ~(B_WANTED|B_BUSY|B_ASYNC|B_AGE);
-	splx(s);
+	intr_restore(s);
 }
 
 /*
@@ -257,21 +255,21 @@ getblk(dev_t dev, daddr_t blkno)
 		panic("blkdev");
 
     loop:
-	spl0();
+	intr_enable();
 	dp = bdevsw[major(dev)].d_tab;
 	if(dp == NULL)
 		panic("devtab");
 	for (bp=dp->b_forw; bp != dp; bp = bp->b_forw) {
 		if (bp->b_blkno!=blkno || bp->b_dev!=dev)
 			continue;
-		spl6();
+		intr_disable();
 		if (bp->b_flags&B_BUSY) {
 			bp->b_flags |= B_WANTED;
 			sleep((caddr_t)bp, PRIBIO+1);
 			goto loop;
 		}
 		notavail(bp);
-		spl0();
+		intr_enable();
 #ifdef	DISKMON
 		i = 0;
 		dp = bp->av_forw;
@@ -284,7 +282,7 @@ getblk(dev_t dev, daddr_t blkno)
 #endif
 		return(bp);
 	}
-	spl6();
+	intr_disable();
 	if (bfreelist.av_forw == &bfreelist) {
 		bfreelist.b_flags |= B_WANTED;
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
@@ -292,7 +290,7 @@ getblk(dev_t dev, daddr_t blkno)
 	}
 	bp = bfreelist.av_forw;
 	notavail(bp);
-	spl0();
+	intr_enable();
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -321,7 +319,7 @@ geteblk(void)
 	register struct buf *dp;
 
 loop:
-	spl6();
+	intr_disable();
 	while (bfreelist.av_forw == &bfreelist) {
 		bfreelist.b_flags |= B_WANTED;
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
@@ -329,7 +327,7 @@ loop:
 	dp = &bfreelist;
 	bp = bfreelist.av_forw;
 	notavail(bp);
-	spl0();
+	intr_enable();
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -354,10 +352,10 @@ void
 iowait(struct buf *bp)
 {
 
-	spl6();
+	intr_disable();
 	while ((bp->b_flags&B_DONE)==0)
 		sleep((caddr_t)bp, PRIBIO);
-	spl0();
+	intr_enable();
 	geterror(bp);
 }
 
@@ -370,11 +368,11 @@ notavail(struct buf *bp)
 {
 	register int s;
 
-	s = spl6();
+	s = intr_disable();
 	bp->av_back->av_forw = bp->av_forw;
 	bp->av_forw->av_back = bp->av_back;
 	bp->b_flags |= B_BUSY;
-	splx(s);
+	intr_restore(s);
 }
 
 /*
@@ -426,7 +424,7 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 	if(bp->b_flags & B_BUSY)
 		if((swbuf2.b_flags&B_WANTED) == 0)
 			bp = &swbuf2;
-	spl6();
+	intr_disable();
 	while (bp->b_flags&B_BUSY) {
 		bp->b_flags |= B_WANTED;
 		sleep((caddr_t)bp, PSWP+1);
@@ -442,7 +440,7 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 		bp->b_un.b_addr = (caddr_t)(coreaddr<<6);
 		bp->b_xmem = (coreaddr>>10) & 077;
 		(*bdevsw[major(swapdev)].d_strategy)(bp);
-		spl6();
+		intr_disable();
 		while((bp->b_flags&B_DONE)==0)
 			sleep((caddr_t)bp, PSWP);
 		count -= tcount;
@@ -451,7 +449,7 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
 	}
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
-	spl0();
+	intr_enable();
 	bp->b_flags &= ~(B_BUSY|B_WANTED);
 	if (bp->b_flags & B_ERROR)
 		panic("IO err in swap");
@@ -469,7 +467,7 @@ bflush(dev_t dev)
 	register struct buf *bp;
 
 loop:
-	spl6();
+	intr_disable();
 	for (bp = bfreelist.av_forw; bp != &bfreelist; bp = bp->av_forw) {
 		if (bp->b_flags&B_DELWRI && (dev == NODEV||dev==bp->b_dev)) {
 			bp->b_flags |= B_ASYNC;
@@ -478,7 +476,7 @@ loop:
 			goto loop;
 		}
 	}
-	spl0();
+	intr_enable();
 }
 
 /*
@@ -523,7 +521,7 @@ physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
 	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
 	    && (unsigned)nb < 1024-u.u_ssize)
 		goto bad;
-	spl6();
+	intr_disable();
 	while (bp->b_flags&B_BUSY) {
 		bp->b_flags |= B_WANTED;
 		sleep((caddr_t)bp, PRIBIO+1);
@@ -542,13 +540,13 @@ physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
 	bp->b_error = 0;
 	u.u_procp->p_flag |= SLOCK;
 	(*strat)(bp);
-	spl6();
+	intr_disable();
 	while ((bp->b_flags&B_DONE) == 0)
 		sleep((caddr_t)bp, PRIBIO);
 	u.u_procp->p_flag &= ~SLOCK;
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
-	spl0();
+	intr_enable();
 	bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
 	u.u_count = bp->b_resid;
 	geterror(bp);

@@ -43,7 +43,6 @@ rdwr(register int mode)
 {
 	register struct file *fp;
 	register struct inode *ip;
-	unsigned count;
 	register struct a {
 		int	fdes;
 		char	*cbuf;
@@ -58,19 +57,14 @@ rdwr(register int mode)
 		u.u_error = EBADF;
 		return;
 	}
-	count = uap->count;
 	u.u_base = (caddr_t)uap->cbuf;
-	u.u_count = count;
+	u.u_count = uap->count;
 	u.u_segflg = 0;
 	if((fp->f_flag&FPIPE) != 0) {
-		if(mode == FREAD) {
+		if(mode == FREAD)
 			readp(fp);
-			return;
-		} else {
+		else
 			writep(fp);
-			u.u_r.r_val1 = count-u.u_count;
-			return;
-		}
 	} else {
 		ip = fp->f_inode;
 		if (fp->f_flag&FMP)
@@ -86,9 +80,9 @@ rdwr(register int mode)
 		if((ip->i_mode&(IFCHR&IFBLK)) == 0)
 			prele(ip);
 		if ((fp->f_flag&FMP) == 0)
-			fp->f_un.f_offset += count-u.u_count;
+			fp->f_un.f_offset += uap->count-u.u_count;
 	}
-	u.u_r.r_val1 = count-u.u_count;
+	u.u_r.r_val1 = uap->count-u.u_count;
 }
 
 /*

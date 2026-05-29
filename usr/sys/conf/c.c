@@ -32,6 +32,30 @@ nulldev_dev(dev_t dev, int flag)
 	return(0);
 }
 
+/*
+ * Console open.  This port has no general tty layer, but the controlling
+ * -terminal/process-group handshake of v7 ttyopen() (dev/tty.c) is what
+ * lets a session's processes carry a p_pgrp.  Replicate just that: the
+ * first pgrp-less opener becomes the console's group leader, and every
+ * later pgrp-less opener joins that group.
+ */
+static int console_pgrp = 0;
+static int
+console_open(dev_t dev, int flag)
+{
+	register struct proc *pp;
+
+	(void)dev;
+	(void)flag;
+	pp = u.u_procp;
+	if(pp->p_pgrp == 0) {
+		if(console_pgrp == 0)
+			console_pgrp = pp->p_pid;
+		pp->p_pgrp = console_pgrp;
+	}
+	return(0);
+}
+
 static int
 console_read(dev_t dev)
 {
@@ -69,7 +93,7 @@ struct bdevsw bdevsw[] = {
 };
 
 struct cdevsw cdevsw[] = {
-	{ nulldev_dev, nulldev_dev, console_read, console_write, nodev,
+	{ console_open, nulldev_dev, console_read, console_write, nodev,
 	    nodev, 0 },
 	{ nulldev_dev, nulldev_dev, mmread, mmwrite, nodev, nodev, 0 },
 	{ 0, 0, 0, 0, 0, 0, 0 }
@@ -88,7 +112,6 @@ struct file file[NFILE];
 struct inode inode[NINODE];
 struct proc proc[NPROC];
 struct text text[NTEXT];
-struct user u;
 struct buf bfreelist;
 struct acct acctbuf;
 struct inode *acctp;

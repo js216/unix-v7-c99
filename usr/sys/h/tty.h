@@ -38,8 +38,8 @@ struct tty
 	struct	clist t_rawq;	/* input chars right off device */
 	struct	clist t_canq;	/* input chars after erase and kill */
 	struct	clist t_outq;	/* output list to device */
-	int	(* t_oproc)(void);	/* routine to start output */
-	int	(* t_iproc)(void);	/* routine to start input */
+	int	(* t_oproc)();	/* routine to start output */
+	int	(* t_iproc)();	/* routine to start input */
 	struct chan *t_chan;	/* destination channel */
 	caddr_t	t_linep;	/* aux line discipline pointer */
 	caddr_t	t_addr;		/* device address */

@@ -8,7 +8,7 @@
 struct	file
 {
 	char	f_flag;
-	short	f_count;	/* reference count */
+	char	f_count;	/* reference count */
 	struct inode *f_inode;	/* pointer to inode structure */
 	union {
 		off_t	f_offset;	/* read/write character pointer */

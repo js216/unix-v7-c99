@@ -107,9 +107,24 @@ compress(time_t t)
 	return((exp<<13) + t);
 }
 
+/*
+ * lock user into core as much
+ * as possible. swapping may still
+ * occur if core grows.
+ */
 void
 syslock(void)
 {
-	(void)suser();
+	register struct proc *p;
+	register struct a {
+		int	flag;
+	} *uap;
 
+	uap = (struct a *)u.u_ap;
+	if(suser()) {
+		p = u.u_procp;
+		p->p_flag &= ~SULOCK;
+		if(uap->flag)
+			p->p_flag |= SULOCK;
+	}
 }

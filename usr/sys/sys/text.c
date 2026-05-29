@@ -52,12 +52,13 @@ xswap(register struct proc *p, int ff, int os)
 	a = malloc(swapmap, ctod(p->p_size));
 	if(a == NULL)
 		panic("out of swap space");
+	p->p_flag |= SLOCK;
 	xccdec(p->p_textp);
 	swap(a, p->p_addr, os, B_WRITE);
 	if(ff)
 		mfree(coremap, os, p->p_addr);
 	p->p_addr = a;
-	p->p_flag &= ~SLOAD;
+	p->p_flag &= ~(SLOAD|SLOCK);
 	p->p_time = 0;
 	if(runout) {
 		runout = 0;
