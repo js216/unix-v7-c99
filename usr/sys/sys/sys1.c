@@ -70,12 +70,14 @@ exec(void)
 /*
  * exece: load and run a new program image.
  *
- * Args/environment are collected (NUL-separated) into a kernel buffer
- * from the old user image, then -- after getxfile() builds the new
- * image -- written as the initial stack frame (see below).  This Armv7
- * image has ample RAM, so no swap round-trip is needed for the arg list.
+ * Args/environment are collected (NUL-separated) into e_argbuf from the
+ * old user image, then -- after getxfile() builds the new image -- written
+ * as the initial stack frame (see below).  This Armv7 image has ample RAM,
+ * so no swap round-trip is needed for the arg list.  e_argbuf is a per-
+ * process kernel-stack local rather than a shared global: getxfile() sleeps
+ * on its (interrupt-driven) disk read, so a global buffer would be clobbered
+ * by a second process exec-ing concurrently (e.g. both ends of a pipe).
  */
-static char e_argbuf[UARGLEN];
 void
 exece(void)
 {
@@ -83,6 +85,7 @@ exece(void)
 	register int nc, c, ap;
 	struct inode *ip;
 	int i;
+	char e_argbuf[UARGLEN];
 
 	if ((ip = namei(uchar, 0)) == NULL)
 		return;

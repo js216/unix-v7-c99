@@ -121,7 +121,7 @@ d--755 0 0
 		kmem	c--640 0 0 1 1
 		null	c--666 0 0 1 2
 		root	b--640 0 0 0 0
-		tty	c--666 0 0 0 0
+		tty	c--666 0 0 2 0
 		$
 	etc	d--755 0 0
 		accton	---755 0 0 etc/accton

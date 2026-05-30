@@ -29,9 +29,6 @@ void panic(char *s);
 void printf(char *fmt, ...);
 int save(int *lp) __attribute__((returns_twice));
 void bcopy(char *from, char *to, unsigned int n);
-struct ttiocb console_sgtty = {
-	13, 13, '#', '@', EVENP|ODDP|ECHO|CRMOD|XTABS
-};
 
 /*
  * This table is the switch used to transfer
@@ -184,70 +181,3 @@ user_trap_handler(int signo, int *r)
 }
 void nosys(void)   { u.u_error = EINVAL; }
 void nullsys(void) { }
-/*
- * Console line discipline control (stty/gtty/ioctl).  This port has a
- * single console and no general tty layer, so these operate on the
- * console_sgtty block.
- */
-static int
-is_tty_fd(int fd)
-{
-	struct file *fp;
-	if(fd < 0 || fd >= NOFILE)
-		return(0);
-	fp = u.u_ofile[fd];
-	if(fp == NULL || fp->f_inode == NULL)
-		return(0);
-	return((fp->f_inode->i_mode & IFMT) == IFCHR);
-}
-void
-stty(void)
-{
-	u.u_r.r_val1 = 0;
-	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) {
-		u.u_error = ENOTTY;
-		return;
-	}
-	bcopy((char *)u.u_arg[1], (char *)&console_sgtty, sizeof(console_sgtty));
-}
-void
-gtty(void)
-{
-	u.u_r.r_val1 = 0;
-	if(!is_tty_fd(u.u_arg[0]) || u.u_arg[1] == 0) {
-		u.u_error = ENOTTY;
-		return;
-	}
-	bcopy((char *)&console_sgtty, (char *)u.u_arg[1], sizeof(console_sgtty));
-}
-void
-ioctl(void)
-{
-	int fd = u.u_arg[0], cmd = u.u_arg[1];
-	char *arg = (char *)u.u_arg[2];
-	u.u_r.r_val1 = 0;
-	if(fd < 0 || fd >= NOFILE || u.u_ofile[fd] == NULL) {
-		u.u_error = EBADF;
-		return;
-	}
-	switch(cmd) {
-	case FIOCLEX:
-		u.u_pofile[fd] |= EXCLOSE;
-		return;
-	case FIONCLEX:
-		u.u_pofile[fd] &= ~EXCLOSE;
-		return;
-	case TIOCGETP:
-	case TIOCSETP:
-		if(!is_tty_fd(fd) || arg == 0) {
-			u.u_error = ENOTTY;
-			return;
-		}
-		if(cmd == TIOCGETP)
-			bcopy((char *)&console_sgtty, arg, sizeof(console_sgtty));
-		else
-			bcopy(arg, (char *)&console_sgtty, sizeof(console_sgtty));
-		return;
-	}
-	u.u_error = ENOTTY;
-}

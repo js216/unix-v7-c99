@@ -61,7 +61,7 @@ struct tty
 	} t_un;
 };
 
-#define	tun	tp->t_un
+#define	tun	tp->t_un.tc
 
 /*
  * structure of arg for ioctl

@@ -153,7 +153,7 @@ out:
  * intelligent to be done if an entry won't fit.
  */
 void
-timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
+timeout(int (*fun)(), caddr_t arg, int tim)
 {
 	register struct callo *p1, *p2;
 	register int t;
@@ -193,10 +193,14 @@ timeout(int (*fun)(caddr_t), caddr_t arg, int tim)
 #define GICC_IAR	(*(volatile unsigned int *)(GICC_BASE + 0x00c))
 #define GICC_EOIR	(*(volatile unsigned int *)(GICC_BASE + 0x010))
 #define TIMER_IRQ	27
+#define UART_IRQ	33		/* PL011 console: SPI 1 -> GIC INTID 33 */
 #define TIMER_HZ	HZ
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
+extern int pl011intr(void);
+extern int virtio_intr(void);
+extern int virtio_irq;
 static unsigned int timer_reload;
 int irq_ready;
 caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
@@ -220,7 +224,10 @@ clock_irq_handler(int *tf)
 		if(u.u_procp != NULL)
 			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
 			    usermode ? 0xf000 : 0);
-	}
+	} else if(intid == UART_IRQ)
+		pl011intr();
+	else if(virtio_irq && intid == (unsigned int)virtio_irq)
+		virtio_intr();
 	GICC_EOIR = iar;
 }
 void
@@ -237,6 +244,22 @@ clkstart(void)
 	prio_val |=  (0x80U << prio_off);
 	GICD_IPRIORITYR(prio_reg) = prio_val;
 	GICD_ISENABLER(TIMER_IRQ / 32) = 1U << (TIMER_IRQ % 32);
+	prio_reg = UART_IRQ / 4;
+	prio_off = (UART_IRQ % 4) * 8;
+	prio_val = GICD_IPRIORITYR(prio_reg);
+	prio_val &= ~(0xffU << prio_off);
+	prio_val |=  (0x80U << prio_off);
+	GICD_IPRIORITYR(prio_reg) = prio_val;
+	GICD_ISENABLER(UART_IRQ / 32) = 1U << (UART_IRQ % 32);
+	if(virtio_irq) {
+		prio_reg = virtio_irq / 4;
+		prio_off = (virtio_irq % 4) * 8;
+		prio_val = GICD_IPRIORITYR(prio_reg);
+		prio_val &= ~(0xffU << prio_off);
+		prio_val |=  (0x80U << prio_off);
+		GICD_IPRIORITYR(prio_reg) = prio_val;
+		GICD_ISENABLER(virtio_irq / 32) = 1U << (virtio_irq % 32);
+	}
 	GICD_CTLR = 1;
 	GICC_PMR  = 0xff;
 	GICC_CTLR = 1;
