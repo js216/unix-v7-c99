@@ -10,6 +10,7 @@
 #include "../h/seg.h"
 #include "../h/conf.h"
 #include "../h/buf.h"
+
 void startup(void);
 void brelse(struct buf *bp);
 void binit(void);
@@ -23,14 +24,6 @@ void expand(int newsize);
 int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
 void sched(void);
 void arm_sync_icache(void);
-void cinit(void)
-{
-	register struct cdevsw *cdp;
-	nchrdev = 0;
-	for(cdp = cdevsw; cdp->d_open; cdp++)
-		nchrdev++;
-}
-
 /*
  * Initialization code.
  * Called from cold start routine as

@@ -93,7 +93,7 @@
 #define	NICINOD	100		/* number of superblock inodes */
 #define	NICFREE	50		/* number of superblock free blocks */
 #define	INFSIZE	138		/* size of per-proc info for users */
-#define	CBSIZE	14		/* number of chars in a clist block */
+#define	CBSIZE	12		/* number of chars in a clist block */
 #define	CROUND	017		/* clist rounding: sizeof(int *) + CBSIZE - 1*/
 
 /*

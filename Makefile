@@ -49,12 +49,13 @@ KV7OBJS = usr/sys/sys/alloc.o usr/sys/sys/subr.o usr/sys/sys/fio.o \
 	usr/sys/sys/clock.o usr/sys/sys/acct.o usr/sys/sys/ureg.o \
 	usr/sys/sys/text.o usr/sys/sys/rdwri.o usr/sys/sys/sig.o \
 	usr/sys/sys/slp.o usr/sys/sys/sys1.o usr/sys/sys/pipe.o \
-	usr/sys/sys/sysent.o
+	usr/sys/sys/sysent.o usr/sys/sys/prim.o
 KOBJS = usr/sys/conf/l.o usr/sys/conf/mch.o usr/sys/sys/main.o \
 	usr/sys/sys/malloc.o \
 	usr/sys/sys/prf.o usr/sys/sys/iget.o usr/sys/sys/nami.o \
 	usr/sys/sys/machdep.o $(KV7OBJS) usr/sys/dev/bio.o \
 	usr/sys/conf/c.o usr/sys/dev/pl011.o usr/sys/dev/mem.o \
+	usr/sys/dev/tty.o usr/sys/dev/partab.o usr/sys/dev/sys.o \
 	usr/sys/dev/virtio_blk.o
 
 boot:

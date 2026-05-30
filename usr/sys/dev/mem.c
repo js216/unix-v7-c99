@@ -1,15 +1,21 @@
+#
+/*
+ */
+
+/*
+ *	Memory special file
+ *	minor device 0 is physical memory
+ *	minor device 1 is kernel memory
+ *	minor device 2 is EOF/RATHOLE
+ */
+
 #include "../h/param.h"
 #include "../h/dir.h"
 #include "../h/user.h"
-
 int passc(int c);
 int cpass(void);
 int arm_mem_read(unsigned int off, char *buf, unsigned int n);
 
-/*
- * Memory special file.
- * minor device 2 is EOF/rathole, as in v7.
- */
 int
 mmread(dev_t dev)
 {
