@@ -41,30 +41,57 @@ all:	boot/unix boot/rootfs.img
 
 KCC = arm-none-eabi-gcc
 KAS = arm-none-eabi-as
+
+# Target board: qemu (QEMU virt, default) or mp135 (custom STM32MP135 PCB).
+# The V7 kernel and the shared low.s/conf.c are identical across boards (no
+# conditional compilation); only the linker script and the machine-layer
+# driver set differ.  conf.c references the board-independent console (cn*)
+# and block (bd*) symbols; each board links exactly one driver providing them.
+BOARD ?= qemu
+ifeq ($(BOARD),mp135)
+KLDSCRIPT = usr/sys/conf/sysram.ld
+KBOARDOBJS = usr/sys/conf/mp135.o usr/sys/dev/stm32usart.o usr/sys/dev/stm32sd.o
+else
+KLDSCRIPT = usr/sys/conf/arm_qemu.ld
+KBOARDOBJS = usr/sys/conf/qemu.o usr/sys/dev/pl011.o usr/sys/dev/virtio_blk.o
+endif
+
 KCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fno-builtin \
-	-fcommon -mcpu=cortex-a7 -marm -ffreestanding -Wno-clobbered -DKERNEL
-KLDFLAGS = -nostdlib -T usr/sys/conf/arm_qemu.ld -Wl,-z,max-page-size=0x200
+	-fcommon -mcpu=cortex-a7 -marm -ffreestanding -Wno-clobbered -DKERNEL \
+	-Iusr/sys/conf/$(BOARD)
+KLDFLAGS = -nostdlib -T $(KLDSCRIPT) -Wl,-z,max-page-size=0x200
 KV7OBJS = usr/sys/sys/alloc.o usr/sys/sys/subr.o usr/sys/sys/fio.o \
 	usr/sys/sys/sys2.o usr/sys/sys/sys3.o usr/sys/sys/sys4.o \
 	usr/sys/sys/clock.o usr/sys/sys/acct.o usr/sys/sys/ureg.o \
 	usr/sys/sys/text.o usr/sys/sys/rdwri.o usr/sys/sys/sig.o \
 	usr/sys/sys/slp.o usr/sys/sys/sys1.o usr/sys/sys/pipe.o \
 	usr/sys/sys/sysent.o usr/sys/sys/prim.o
-KOBJS = usr/sys/conf/l.o usr/sys/conf/mch.o usr/sys/sys/main.o \
+KOBJS = usr/sys/conf/low.o usr/sys/conf/mch.o usr/sys/sys/main.o \
 	usr/sys/sys/malloc.o \
 	usr/sys/sys/prf.o usr/sys/sys/iget.o usr/sys/sys/nami.o \
 	usr/sys/sys/machdep.o $(KV7OBJS) usr/sys/dev/bio.o \
-	usr/sys/conf/c.o usr/sys/dev/pl011.o usr/sys/dev/mem.o \
+	usr/sys/conf/conf.o usr/sys/dev/mem.o \
 	usr/sys/dev/tty.o usr/sys/dev/partab.o usr/sys/dev/sys.o \
-	usr/sys/dev/virtio_blk.o
+	$(KBOARDOBJS)
 
 boot:
 	mkdir -p boot
 
+# Every kernel object bakes in board-specific addresses from conf/<board>/
+# memmap.h (chosen by the -I path), so the same .c yields different code per
+# board.  This stamp's name carries $(BOARD); switching boards selects a name
+# that doesn't exist yet, so its recipe runs, becomes newer than every object,
+# and forces a rebuild -- no manual `make clean` needed between boards.
+KBOARDSTAMP = boot/.board-$(BOARD)
+$(KBOARDSTAMP): | boot
+	rm -f boot/.board-*
+	touch $@
+$(KOBJS): $(KBOARDSTAMP) usr/sys/conf/$(BOARD)/memmap.h
+
 boot/unix: $(KOBJS) | boot
 	$(KCC) $(KCFLAGS) $(KLDFLAGS) -o $@ $^
 
-usr/sys/conf/l.o: usr/sys/conf/l.s
+usr/sys/conf/low.o: usr/sys/conf/low.s
 	$(KAS) -mcpu=cortex-a7 -o $@ $<
 
 usr/sys/conf/mch.o: usr/sys/conf/mch.s

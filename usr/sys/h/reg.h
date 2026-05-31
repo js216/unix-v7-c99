@@ -2,7 +2,7 @@
  * Location of the users' stored registers relative to R0.
  * Usage is u.u_ar0[XX].
  *
- * Armv7: the trap frame built by svc_entry (conf/l.s) is 17 ints --
+ * Armv7: the trap frame built by svc_entry (conf/low.s) is 17 ints --
  * r0..r12, then sp=r[13], lr=r[14], pc=r[15], cpsr=r[16].  u.u_ar0
  * points at r[0].  PDP-11 register numbering does not apply, so these
  * indices are the Armv7 frame slots (required for Armv7).

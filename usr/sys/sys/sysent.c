@@ -108,7 +108,7 @@ struct sysent sysent[64] =
 };
 char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
 /*
- * Called from svc_entry (conf/l.s) on a system call.  r is the 17-int
+ * Called from svc_entry (conf/low.s) on a system call.  r is the 17-int
  * trap frame; the syscall number is in r7 (Armv7 ABI), arguments in
  * r0..r5.  Adapted from v7 trap.c case 6+USER plus the out: tail.
  */
@@ -154,7 +154,7 @@ trap(int *r)
 		qswtch();
 }
 /*
- * Called from the undef/abort entry stubs (conf/l.s) for a hardware
+ * Called from the undef/abort entry stubs (conf/low.s) for a hardware
  * fault.  signo is the signal it maps to; r is the trap frame.  A fault
  * taken in kernel mode is fatal.
  */

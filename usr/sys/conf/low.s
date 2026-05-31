@@ -9,6 +9,26 @@
 .globl main
 USTACK = 0x000f0000
 _start:
+	cpsid if			@ mask IRQ/FIQ at reset
+
+	@ The ROM may hand off with the MMU + caches enabled; disable them so the
+	@ early MMIO/console setup runs against physical addresses, then
+	@ machine_init builds the page tables and re-enables them via mmu_on.  On
+	@ qemu the MMU is already off so these clears are a no-op -- same code.
+	mrc p15, 0, r0, c1, c0, 0	@ SCTLR
+	bic r0, r0, #(1 << 12)		@ I: instruction cache off
+	bic r0, r0, #(1 << 2)		@ C: data cache off
+	bic r0, r0, #(1 << 11)		@ Z: branch prediction off
+	bic r0, r0, #(1 << 13)		@ V: low exception vectors
+	bic r0, r0, #1			@ M: MMU off
+	mcr p15, 0, r0, c1, c0, 0
+	isb
+	mov r0, #0
+	mcr p15, 0, r0, c8, c7, 0	@ TLBIALL
+	mcr p15, 0, r0, c7, c5, 0	@ ICIALLU: invalidate I-cache
+	mcr p15, 0, r0, c7, c5, 6	@ BPIALL: invalidate branch predictor
+	dsb
+	isb
 
 	ldr sp, =stack_top
 

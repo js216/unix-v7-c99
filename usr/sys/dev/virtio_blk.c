@@ -11,7 +11,7 @@ extern int	dk_busy;
 extern long	dk_numb[3];
 extern long	dk_wds[3];
 
-int	virtio_irq;		/* GIC INTID of the block device (0 if none) */
+int	bd_irq;		/* GIC INTID of the block device (0 if none) */
 
 #define	VRING_DESC_F_NEXT	1
 #define	VRING_DESC_F_WRITE	2
@@ -55,7 +55,7 @@ struct virtio_blk_req {
 	unsigned long long sector;
 };
 
-struct buf virtio_tab;
+struct buf bdtab;
 
 #ifndef EVB
 static volatile unsigned char virtio_vq[512] __attribute__((aligned(4096)));
@@ -87,7 +87,7 @@ vmmios(unsigned int off, unsigned int val)
 #endif
 
 void
-virtio_init(void)
+bdinit(void)
 {
 #ifndef EVB
 	unsigned int n;
@@ -116,10 +116,10 @@ virtio_init(void)
 	vmmios(0x40, ((unsigned int)virtio_vq) >> 12);
 	vmmios(0x70, 15);
 	virtio_lastused = 0;
-	virtio_irq = VIRTIO_IRQ_BASE +
+	bd_irq = VIRTIO_IRQ_BASE +
 	    (virtio_vbase - VIRTIO_FIRST) / VIRTIO_STEP;
-	virtio_tab.b_actf = NULL;
-	virtio_tab.b_active = 0;
+	bdtab.b_actf = NULL;
+	bdtab.b_active = 0;
 #endif
 }
 
@@ -136,9 +136,9 @@ virtio_start(void)
 	unsigned short aidx;
 	unsigned int type;
 
-	if((bp = virtio_tab.b_actf) == NULL)
+	if((bp = bdtab.b_actf) == NULL)
 		return;
-	virtio_tab.b_active++;
+	bdtab.b_active++;
 	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
 	virtio_vreq.type = type;
 	virtio_vreq.reserved = 0;
@@ -178,50 +178,50 @@ virtio_start(void)
  * the completion interrupt runs iodone().  (cf. v7 rk.c rkstrategy.)
  */
 int
-virtio_strategy(struct buf *bp)
+bdstrategy(struct buf *bp)
 {
 	int s;
 
 	bp->av_forw = NULL;
 	s = intr_disable();
-	if(virtio_tab.b_actf == NULL)
-		virtio_tab.b_actf = bp;
+	if(bdtab.b_actf == NULL)
+		bdtab.b_actf = bp;
 	else
-		virtio_tab.b_actl->av_forw = bp;
-	virtio_tab.b_actl = bp;
-	if(virtio_tab.b_active == 0)
+		bdtab.b_actl->av_forw = bp;
+	bdtab.b_actl = bp;
+	if(bdtab.b_active == 0)
 		virtio_start();
 	intr_restore(s);
 	return(0);
 }
 
 /*
- * Completion interrupt (GIC INTID virtio_irq).  Acknowledge the device,
+ * Completion interrupt (GIC INTID bd_irq).  Acknowledge the device,
  * finish the active buffer, and start the next queued one.
  * (cf. v7 rk.c rkintr.)
  */
 int
-virtio_intr(void)
+bdintr(void)
 {
 	register struct buf *bp;
 	unsigned int is;
 
 	is = vmmio(0x60);		/* InterruptStatus */
 	vmmios(0x64, is);		/* InterruptACK */
-	if(virtio_tab.b_active == 0)
+	if(bdtab.b_active == 0)
 		return(0);
 	if(qused.idx == virtio_lastused)
 		return(0);
 	dmbsy();
 	virtio_lastused++;
 	dk_busy &= ~1;
-	bp = virtio_tab.b_actf;
-	virtio_tab.b_active = 0;
+	bp = bdtab.b_actf;
+	bdtab.b_active = 0;
 	if(virtio_vstatus != 0) {
 		deverror(bp, virtio_vstatus, 0);
 		bp->b_flags |= B_ERROR;
 	}
-	virtio_tab.b_actf = bp->av_forw;
+	bdtab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);
 	virtio_start();
@@ -229,13 +229,13 @@ virtio_intr(void)
 }
 #else
 int
-virtio_strategy(struct buf *bp)
+bdstrategy(struct buf *bp)
 {
 	(void)bp;
 	return(0);
 }
 int
-virtio_intr(void)
+bdintr(void)
 {
 	return(0);
 }
