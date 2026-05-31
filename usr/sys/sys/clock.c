@@ -4,6 +4,7 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
+#include "../h/seg.h"		/* GIC_DIST_BASE/GIC_CPU_BASE (board memmap.h) */
 extern void addupc(caddr_t pc, void *prof, int inc);
 int intr_disable(void);
 void intr_restore(int s);
@@ -183,8 +184,8 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 	p1->c_arg = arg;
 	intr_restore(s);
 }
-#define GICD_BASE	0x08000000U
-#define GICC_BASE	0x08010000U
+#define GICD_BASE	GIC_DIST_BASE	/* board-specific (conf/<board>/memmap.h) */
+#define GICC_BASE	GIC_CPU_BASE
 #define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
 #define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))
 #define GICD_IPRIORITYR(n) (*(volatile unsigned int *)(GICD_BASE + 0x400 + 4*(n)))
@@ -193,14 +194,14 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 #define GICC_IAR	(*(volatile unsigned int *)(GICC_BASE + 0x00c))
 #define GICC_EOIR	(*(volatile unsigned int *)(GICC_BASE + 0x010))
 #define TIMER_IRQ	27
-#define UART_IRQ	33		/* PL011 console: SPI 1 -> GIC INTID 33 */
 #define TIMER_HZ	HZ
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
-extern int pl011intr(void);
-extern int virtio_intr(void);
-extern int virtio_irq;
+extern int cnintr(void);	/* console interrupt (board console driver) */
+extern int cn_irq;		/* console GIC INTID, set by the console driver */
+extern int bdintr(void);	/* block-device interrupt (board block driver) */
+extern int bd_irq;		/* block-device GIC INTID, set by the driver */
 static unsigned int timer_reload;
 int irq_ready;
 caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
@@ -224,10 +225,10 @@ clock_irq_handler(int *tf)
 		if(u.u_procp != NULL)
 			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
 			    usermode ? 0xf000 : 0);
-	} else if(intid == UART_IRQ)
-		pl011intr();
-	else if(virtio_irq && intid == (unsigned int)virtio_irq)
-		virtio_intr();
+	} else if(cn_irq && intid == (unsigned int)cn_irq)
+		cnintr();
+	else if(bd_irq && intid == (unsigned int)bd_irq)
+		bdintr();
 	GICC_EOIR = iar;
 }
 void
@@ -244,21 +245,23 @@ clkstart(void)
 	prio_val |=  (0x80U << prio_off);
 	GICD_IPRIORITYR(prio_reg) = prio_val;
 	GICD_ISENABLER(TIMER_IRQ / 32) = 1U << (TIMER_IRQ % 32);
-	prio_reg = UART_IRQ / 4;
-	prio_off = (UART_IRQ % 4) * 8;
-	prio_val = GICD_IPRIORITYR(prio_reg);
-	prio_val &= ~(0xffU << prio_off);
-	prio_val |=  (0x80U << prio_off);
-	GICD_IPRIORITYR(prio_reg) = prio_val;
-	GICD_ISENABLER(UART_IRQ / 32) = 1U << (UART_IRQ % 32);
-	if(virtio_irq) {
-		prio_reg = virtio_irq / 4;
-		prio_off = (virtio_irq % 4) * 8;
+	if(cn_irq) {
+		prio_reg = cn_irq / 4;
+		prio_off = (cn_irq % 4) * 8;
 		prio_val = GICD_IPRIORITYR(prio_reg);
 		prio_val &= ~(0xffU << prio_off);
 		prio_val |=  (0x80U << prio_off);
 		GICD_IPRIORITYR(prio_reg) = prio_val;
-		GICD_ISENABLER(virtio_irq / 32) = 1U << (virtio_irq % 32);
+		GICD_ISENABLER(cn_irq / 32) = 1U << (cn_irq % 32);
+	}
+	if(bd_irq) {
+		prio_reg = bd_irq / 4;
+		prio_off = (bd_irq % 4) * 8;
+		prio_val = GICD_IPRIORITYR(prio_reg);
+		prio_val &= ~(0xffU << prio_off);
+		prio_val |=  (0x80U << prio_off);
+		GICD_IPRIORITYR(prio_reg) = prio_val;
+		GICD_ISENABLER(bd_irq / 32) = 1U << (bd_irq % 32);
 	}
 	GICD_CTLR = 1;
 	GICC_PMR  = 0xff;

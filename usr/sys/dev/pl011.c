@@ -18,7 +18,7 @@
 #include "../h/systm.h"
 
 #define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
-#define	NPL011	1			/* one console line */
+#define	NCONS	1			/* one console line */
 #define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
 
 #define	UARTDR		(*(volatile unsigned int *)(PL011_BASE+0x000))
@@ -34,8 +34,9 @@
 #define	TXI	0x20		/* interrupt: transmitter */
 #define	RTI	0x40		/* interrupt: receive timeout */
 
-struct	tty pl011[NPL011];
+struct	tty cons[NCONS];
 char	*msgbufp = msgbuf;	/* next saved printf character */
+int	cn_irq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
 
 extern char partab[];
 void ttyopen(dev_t dev, struct tty *tp);
@@ -50,23 +51,34 @@ int ttrstrt(struct tty *tp);
 void timeout(int (*fun)(), caddr_t arg, int tim);
 void wakeup(caddr_t chan);
 int getc(struct clist *p);
-int pl011start(struct tty *tp);
-int pl011rint(dev_t dev);
-int pl011xint(dev_t dev);
+int cnstart(struct tty *tp);
+int cnrint(dev_t dev);
+int cnxint(dev_t dev);
+
+/*
+ * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
+ * the console needs no hardware setup; cninit() exists only to satisfy the
+ * machine layer's board-agnostic early console-init hook (machine_init), which
+ * the MP135 build uses to bring UART4 up from HSI.
+ */
+void
+cninit(void)
+{
+}
 
 int
-pl011open(dev_t dev, int flag)
+cnopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
 	(void)flag;
-	if(minor(dev) >= NPL011) {
+	if(minor(dev) >= NCONS) {
 		u.u_error = ENXIO;
 		return(0);
 	}
-	tp = &pl011[minor(dev)];
+	tp = &cons[minor(dev)];
 	tp->t_addr = (caddr_t)PL011_BASE;
-	tp->t_oproc = pl011start;
+	tp->t_oproc = cnstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
 		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
@@ -79,24 +91,24 @@ pl011open(dev_t dev, int flag)
 }
 
 int
-pl011close(dev_t dev, int flag)
+cnclose(dev_t dev, int flag)
 {
 	(void)flag;
-	ttyclose(&pl011[minor(dev)]);
+	ttyclose(&cons[minor(dev)]);
 	return(0);
 }
 
 int
-pl011read(dev_t dev)
+cnread(dev_t dev)
 {
-	ttread(&pl011[minor(dev)]);
+	ttread(&cons[minor(dev)]);
 	return(0);
 }
 
 int
-pl011write(dev_t dev)
+cnwrite(dev_t dev)
 {
-	ttwrite(&pl011[minor(dev)]);
+	ttwrite(&cons[minor(dev)]);
 	return(0);
 }
 
@@ -107,7 +119,7 @@ pl011write(dev_t dev)
  * level-sensitive, so it is masked whenever the output queue drains.
  */
 int
-pl011start(struct tty *tp)
+cnstart(struct tty *tp)
 {
 	register int c;
 
@@ -131,11 +143,11 @@ pl011start(struct tty *tp)
 }
 
 int
-pl011xint(dev_t dev)
+cnxint(dev_t dev)
 {
 	register struct tty *tp;
 
-	tp = &pl011[minor(dev)];
+	tp = &cons[minor(dev)];
 	ttstart(tp);
 	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
 		wakeup((caddr_t)&tp->t_outq);
@@ -143,12 +155,12 @@ pl011xint(dev_t dev)
 }
 
 int
-pl011rint(dev_t dev)
+cnrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
 
-	tp = &pl011[minor(dev)];
+	tp = &cons[minor(dev)];
 	while ((UARTFR & RXFE) == 0) {
 		c = UARTDR;
 		ttyinput(c, tp);
@@ -157,10 +169,10 @@ pl011rint(dev_t dev)
 }
 
 int
-pl011ioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
-	if (ttioccomm(cmd, &pl011[minor(dev)], addr, dev)==0)
+	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
 		u.u_error = ENOTTY;
 	return(0);
 }
@@ -171,18 +183,18 @@ pl011ioctl(dev_t dev, int cmd, caddr_t addr, int flag)
  * service, demultiplexing into the receive/transmit halves above.
  */
 int
-pl011intr(void)
+cnintr(void)
 {
 	register unsigned int mis;
 
 	mis = UARTMIS;
 	if (mis & (RXI|RTI)) {
 		UARTICR = RXI|RTI;
-		pl011rint(0);
+		cnrint(0);
 	}
 	if (mis & TXI) {
 		UARTICR = TXI;
-		pl011xint(0);
+		cnxint(0);
 	}
 	return(0);
 }

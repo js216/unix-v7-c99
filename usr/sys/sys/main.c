@@ -132,7 +132,11 @@ iinit(void)
  * I/O to be done-- e.g. swbuf for
  * swapping.
  */
-char	buffers[NBUF][BSIZE+BSLOP];
+/* Each buffer must be word-aligned: the STM32 SDMMC internal DMA requires a
+ * 32-bit-aligned IDMABASER, so the per-buffer stride is rounded up to a
+ * multiple of 4 (BSIZE+BSLOP=514 would leave odd buffers 2-byte aligned and
+ * the DMA would corrupt those transfers). */
+char	buffers[NBUF][(BSIZE+BSLOP+3)&~3] __attribute__((aligned(4), section(KTABLES_SECTION)));
 
 /*
  * Initialize the buffer I/O system by freeing

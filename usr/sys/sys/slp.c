@@ -450,7 +450,6 @@ loop:
 	 */
 	n = p->p_flag&SSWAP;
 	p->p_flag &= ~SSWAP;
-	u.u_procp = p;
 	resume(p->p_addr, n? u.u_ssav: u.u_rsav);
 }
 

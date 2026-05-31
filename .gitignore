@@ -10,6 +10,10 @@ sys/unix
 unix
 root.img
 boot/unix
+boot/unix.bin
+boot/unix.stm32
+boot/unix.tsv
+boot/.board-*
 boot/rootfs.img
 boot/rootfs.img.tmp
 nullboot

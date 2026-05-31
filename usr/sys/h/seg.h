@@ -9,16 +9,15 @@
 #define	ABS	040		/* Software: absolute address */
 
 /*
+ * Physical memory layout (KERNBASE, COREBASE, CORETOP) is board-specific and
+ * comes from conf/<board>/memmap.h, selected by the Makefile -I path -- so the
+ * kernel sources are identical across boards (no conditional compilation).
+ */
+#include "memmap.h"
+
+/*
  * User virtual memory layout.
  */
-#define KERNBASE	0x40000000U	/* physical RAM base (QEMU virt) */
-/*
- * Configured machine memory size.  QEMU virt exposes no firmware memory
- * map to probe, so -- as v7 itself fixed MAXMEM/NSWAP at config time --
- * the kernel is built for a known machine: set MEMSIZE to match the qemu
- * '-m' value (default 128 MB).  CORETOP is derived from it.
- */
-#define MEMSIZE		0x08000000U	/* 128 MB */
 #define USERBASE	0x00000000U
 #define USERSIZE	0x00100000U	/* 1 MB user virtual window (VA 0..) */
 #define UENTRY		0x00010000U
@@ -33,21 +32,30 @@
  * "clicks" (64 bytes) within [COREBASE, CORETOP); click c is at CLKADDR(c).
  * Click 0 is reserved (malloc returns 0 to mean "no core").
  */
-#define COREBASE	0x44000000U
-#define CORETOP		(KERNBASE + MEMSIZE)
 #define NCLICK		((CORETOP-COREBASE)>>6)		/* clicks of user core */
 #define CLKADDR(c)	((char *)(COREBASE + ((unsigned)(c) << 6)))
-
 /*
- * Armv7 short-descriptor page-table bits.  User pages are mapped
- * strongly-ordered (uncached) to match the proven device-style user
- * mapping and sidestep I/D cache aliasing for now.
+ * Section/page attributes.  Normal memory (kernel, user, DDR) is Normal
+ * Write-Back/Write-Allocate, shareable -- CACHED (TEX=001,C=1,B=1,S=1) -- so
+ * the CPU runs at full speed instead of stalling on every uncached access.
+ * Device memory (MMIO) stays strongly ordered.  mmu_on() enables the L1
+ * I/D caches; resume() invalidates the I-cache on context switch because the
+ * per-process user region shares VA 0 (VIPT I-cache aliasing); DMA buffers
+ * are flushed by the block driver (dcflush) on cache-incoherent hardware.
  */
-#define SEC_KERN	0x00000402U	/* L1 1 MB section, kernel rw */
-#define SEC_DEV		0x00000c02U	/* L1 1 MB section, device */
+#define SEC_KERN	0x0001140eU	/* L1 1 MB section, kernel rw, cached */
+#define SEC_DEV		0x00000c02U	/* L1 1 MB section, device (uncached) */
 #define PTE_PT		0x00000001U	/* L1 entry -> L2 coarse table */
-#define PG_RW		0x00000032U	/* L2 small page, PL0 read/write */
-#define PG_RO		0x00000022U	/* L2 small page, PL0 read-only */
-#define PG_KRW		0x00000012U	/* L2 small page, kernel-only rw */
+#define PG_RW		0x0000047eU	/* L2 small page, PL0 read/write, cached */
+#define PG_RO		0x0000046eU	/* L2 small page, PL0 read-only, cached */
+#define PG_KRW		0x0000045eU	/* L2 small page, kernel-only rw, cached */
 #define PGSHIFT		12
 #define PGSIZE		0x1000U
+/*
+ * Physical memory map, one entry per [start,end) 1 MB-section range with its
+ * L1 attribute (SEC_KERN cached, SEC_DEV device).  The board file supplies a
+ * board_map[] terminated by a zero entry; machine_init() (machdep.c) walks it
+ * to build the section table -- identical code on every board, so QEMU
+ * exercises the same machine_init() the MP135 runs.
+ */
+struct memregion { unsigned int start, end, attr; };
