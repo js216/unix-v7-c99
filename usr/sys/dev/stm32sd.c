@@ -12,6 +12,9 @@
 #include "../h/param.h"
 #include "../h/buf.h"
 #include "../h/seg.h"
+
+#ifdef STM32SD
+
 void panic(char *s);
 void dmbsy(void);
 void iodone(struct buf *bp);
@@ -284,3 +287,5 @@ bdintr(void)
 	bdstart();
 	return(0);
 }
+
+#endif

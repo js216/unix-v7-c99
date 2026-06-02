@@ -9,6 +9,8 @@
 #include "../h/param.h"
 #include "../h/seg.h"
 
+#ifdef QEMU
+
 /*
  * QEMU virt sections: kernel + physical core window cached (PA==VA), the
  * GIC/virtio/PL011 device space uncached.  Terminated by a zero entry.
@@ -24,3 +26,5 @@ clock_ddr_init(void)
 {
 	/* RAM is already up under qemu -kernel; nothing to bring up. */
 }
+
+#endif

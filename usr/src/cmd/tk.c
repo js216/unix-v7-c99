@@ -46,7 +46,7 @@ main(int argc, char **argv)
 			case 'p':
 				if ((i = atoi(&argv[0][2])))
 					pl = i;
-					yyll = MAXY + 1 - pl;
+				yyll = MAXY + 1 - pl;
 				break;
 			default:
 				if ((i = atoi(&argv[0][1]))) {

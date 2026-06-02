@@ -14,6 +14,7 @@ struct tty;
 #include <sys/dir.h>
 #include <sys/stat.h>
 #include "../../sys/h/user.h"
+#undef u
 
 struct nlist nl[] = {
 	{ "_proc",    0, 0 },

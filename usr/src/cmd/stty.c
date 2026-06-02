@@ -10,24 +10,24 @@ struct
 	char	*string;
 	int	speed;
 } speeds[] = {
-	"0",	B0,
-	"50",	B50,
-	"75",	B75,
-	"110",	B110,
-	"134",	B134,
-	"134.5",B134,
-	"150",	B150,
-	"200",	B200,
-	"300",	B300,
-	"600",	B600,
-	"1200",	B1200,
-	"1800",	B1800,
-	"2400",	B2400,
-	"4800",	B4800,
-	"9600",	B9600,
-	"exta",	EXTA,
-	"extb",	EXTB,
-	0,
+	{ "0",	B0 },
+	{ "50",	B50 },
+	{ "75",	B75 },
+	{ "110",	B110 },
+	{ "134",	B134 },
+	{ "134.5",B134 },
+	{ "150",	B150 },
+	{ "200",	B200 },
+	{ "300",	B300 },
+	{ "600",	B600 },
+	{ "1200",	B1200 },
+	{ "1800",	B1800 },
+	{ "2400",	B2400 },
+	{ "4800",	B4800 },
+	{ "9600",	B9600 },
+	{ "exta",	EXTA },
+	{ "extb",	EXTB },
+	{ 0,	0 },
 };
 struct
 {
@@ -35,144 +35,99 @@ struct
 	int	set;
 	int	reset;
 } modes[] = {
-	"even",
-	EVENP, 0,
+	{ "even",	EVENP, 0 },
 
-	"-even",
-	0, EVENP,
+	{ "-even",	0, EVENP },
 
-	"odd",
-	ODDP, 0,
+	{ "odd",	ODDP, 0 },
 
-	"-odd",
-	0, ODDP,
+	{ "-odd",	0, ODDP },
 
-	"raw",
-	RAW, 0,
+	{ "raw",	RAW, 0 },
 
-	"-raw",
-	0, RAW,
+	{ "-raw",	0, RAW },
 
-	"cooked",
-	0, RAW,
+	{ "cooked",	0, RAW },
 
-	"-nl",
-	CRMOD, 0,
+	{ "-nl",	CRMOD, 0 },
 
-	"nl",
-	0, CRMOD,
+	{ "nl",		0, CRMOD },
 
-	"echo",
-	ECHO, 0,
+	{ "echo",	ECHO, 0 },
 
-	"-echo",
-	0, ECHO,
+	{ "-echo",	0, ECHO },
 
-	"LCASE",
-	LCASE, 0,
+	{ "LCASE",	LCASE, 0 },
 
-	"lcase",
-	LCASE, 0,
+	{ "lcase",	LCASE, 0 },
 
-	"-LCASE",
-	0, LCASE,
+	{ "-LCASE",	0, LCASE },
 
-	"-lcase",
-	0, LCASE,
+	{ "-lcase",	0, LCASE },
 
-	"-tabs",
-	XTABS, 0,
+	{ "-tabs",	XTABS, 0 },
 
-	"tabs",
-	0, XTABS,
+	{ "tabs",	0, XTABS },
 
 
-	"cbreak",
-	CBREAK, 0,
+	{ "cbreak",	CBREAK, 0 },
 
-	"-cbreak",
-	0, CBREAK,
+	{ "-cbreak",	0, CBREAK },
 
-	"cr0",
-	CR0, CR3,
+	{ "cr0",	CR0, CR3 },
 
-	"cr1",
-	CR1, CR3,
+	{ "cr1",	CR1, CR3 },
 
-	"cr2",
-	CR2, CR3,
+	{ "cr2",	CR2, CR3 },
 
-	"cr3",
-	CR3, CR3,
+	{ "cr3",	CR3, CR3 },
 
-	"tab0",
-	TAB0, XTABS,
+	{ "tab0",	TAB0, XTABS },
 
-	"tab1",
-	TAB1, XTABS,
+	{ "tab1",	TAB1, XTABS },
 
-	"tab2",
-	TAB2, XTABS,
+	{ "tab2",	TAB2, XTABS },
 
-	"nl0",
-	NL0, NL3,
+	{ "nl0",	NL0, NL3 },
 
-	"nl1",
-	NL1, NL3,
+	{ "nl1",	NL1, NL3 },
 
-	"nl2",
-	NL2, NL3,
+	{ "nl2",	NL2, NL3 },
 
-	"nl3",
-	NL3, NL3,
+	{ "nl3",	NL3, NL3 },
 
-	"ff0",
-	FF0, FF1,
+	{ "ff0",	FF0, FF1 },
 
-	"ff1",
-	FF1, FF1,
+	{ "ff1",	FF1, FF1 },
 
-	"bs0",
-	BS0, BS1,
+	{ "bs0",	BS0, BS1 },
 
-	"bs1",
-	BS1, BS1,
+	{ "bs1",	BS1, BS1 },
 
-	"33",
-	CR1, ALLDELAY,
+	{ "33",		CR1, ALLDELAY },
 
-	"tty33",
-	CR1, ALLDELAY,
+	{ "tty33",	CR1, ALLDELAY },
 
-	"37",
-	FF1+CR2+TAB1+NL1, ALLDELAY,
+	{ "37",		FF1+CR2+TAB1+NL1, ALLDELAY },
 
-	"tty37",
-	FF1+CR2+TAB1+NL1, ALLDELAY,
+	{ "tty37",	FF1+CR2+TAB1+NL1, ALLDELAY },
 
-	"05",
-	NL2, ALLDELAY,
+	{ "05",		NL2, ALLDELAY },
 
-	"vt05",
-	NL2, ALLDELAY,
+	{ "vt05",	NL2, ALLDELAY },
 
-	"tn",
-	CR1, ALLDELAY,
+	{ "tn",		CR1, ALLDELAY },
 
-	"tn300",
-	CR1, ALLDELAY,
+	{ "tn300",	CR1, ALLDELAY },
 
-	"ti",
-	CR2, ALLDELAY,
+	{ "ti",		CR2, ALLDELAY },
 
-	"ti700",
-	CR2, ALLDELAY,
+	{ "ti700",	CR2, ALLDELAY },
 
-	"tek",
-	FF1, ALLDELAY,
+	{ "tek",	FF1, ALLDELAY },
 
-	0,
-	};
+	{ 0,		0, 0 },
+};
 
 char	*arg;
 struct sgttyb mode;

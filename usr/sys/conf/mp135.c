@@ -15,6 +15,8 @@
 #include "../h/param.h"
 #include "../h/seg.h"
 
+#ifdef MP135
+
 void clock_init(void);
 void ddr_init(void);
 void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
@@ -398,3 +400,5 @@ ddr_init(void)
 	DDRC(0x490) |= 0x1U;			/* PCTRL_0.port_en */
 	RCC_DDRITFCR |= DDR_AXIDCGEN;
 }
+
+#endif

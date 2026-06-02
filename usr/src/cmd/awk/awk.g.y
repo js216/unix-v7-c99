@@ -1,3 +1,4 @@
+%define api.value.type {long}
 %token	FIRSTTOKEN	/*must be first*/
 %token	FINAL FATAL
 %token	LT LE GT GE EQ NE
@@ -31,6 +32,23 @@
 
 %{
 #include "awk.def"
+int	yylex(void);
+void	yyerror(char *s);
+int	startreg(void);
+long	stat3();
+long	stat2();
+long	stat4();
+long	op1();
+long	op2();
+long	op3();
+long	valtonode();
+long	makedfa();
+long	genprint(void);
+long	pa2stat();
+long	linkum();
+long	exptostat();
+long	genjump(int a);
+char	*cclenter();
 #ifndef	DEBUG	
 #	define	PUTS(x)
 #endif
@@ -38,20 +56,20 @@
 %%
 
 program:
-	  begin pa_stats end	{ if (errorflag==0) winner = stat3(PROGRAM, $1, $2, $3); }
+	  begin pa_stats end	{ if (errorflag==0) winner = (node *)stat3(PROGRAM, $1, $2, $3); }
 	| error			{ yyclearin; yyerror("bailing out"); }
 	;
 
 begin:
 	  XBEGIN '{' stat_list '}'	{ PUTS("XBEGIN list"); $$ = $3; }
 	| begin NL
-	| 	{ PUTS("empty XBEGIN"); $$ = nullstat; }
+	| 	{ PUTS("empty XBEGIN"); $$ = (long)nullstat; }
 	;
 
 end:
 	  XEND '{' stat_list '}'	{ PUTS("XEND list"); $$ = $3; }
 	| end NL
-	|	{ PUTS("empty END"); $$ = nullstat; }
+	|	{ PUTS("empty END"); $$ = (long)nullstat; }
 	;
 
 compound_conditional:
@@ -113,11 +131,11 @@ term:
 	| SUBSTR '(' expr ',' expr ',' expr ')'
 			{ PUTS("substr(e,e,e)"); $$ = op3(SUBSTR, $3, $5, $7); }
 	| SUBSTR '(' expr ',' expr ')'
-			{ PUTS("substr(e,e,e)"); $$ = op3(SUBSTR, $3, $5, nullstat); }
+			{ PUTS("substr(e,e,e)"); $$ = op3(SUBSTR, $3, $5, (long)nullstat); }
 	| SPLIT '(' expr ',' VAR ',' expr ')'
 			{ PUTS("split(e,e,e)"); $$ = op3(SPLIT, $3, $5, $7); }
 	| SPLIT '(' expr ',' VAR ')'
-			{ PUTS("split(e,e,e)"); $$ = op3(SPLIT, $3, $5, nullstat); }
+			{ PUTS("split(e,e,e)"); $$ = op3(SPLIT, $3, $5, (long)nullstat); }
 	| INDEX '(' expr ',' expr ')'
 			{ PUTS("index(e,e)"); $$ = op2(INDEX, $3, $5); }
 	| '(' expr ')'			{PUTS("(expr)");  $$ = $2; }
@@ -151,12 +169,12 @@ pa_stat:
 	| pattern ',' pattern		{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
 	| pattern ',' pattern '{' stat_list '}'	
 					{ PUTS("srch, srch {...}"); $$ = pa2stat($1, $3, $5); }
-	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, nullstat, $2); }
+	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, (long)nullstat, $2); }
 	;
 
 pa_stats:
 	  pa_stats pa_stat st	{ PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
-	|	{ PUTS("null pa_stat"); $$ = nullstat; }
+	|	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
 	| pa_stats pa_stat	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
 	;
 
@@ -226,19 +244,19 @@ simple_stat:
 	  PRINT print_list redir expr
 		{ PUTS("print>stat"); $$ = stat3($1, $2, $3, $4); }
 	| PRINT print_list	
-		{ PUTS("print list"); $$ = stat3($1, $2, nullstat, nullstat); }
+		{ PUTS("print list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
 	| PRINTF print_list redir expr
 		{ PUTS("printf>stat"); $$ = stat3($1, $2, $3, $4); }
 	| PRINTF print_list	
-		{ PUTS("printf list"); $$ = stat3($1, $2, nullstat, nullstat); }
+		{ PUTS("printf list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
 	| expr	{ PUTS("expr"); $$ = exptostat($1); }
-	|		{ PUTS("null simple statement"); $$ = nullstat; }
+	|		{ PUTS("null simple statement"); $$ = (long)nullstat; }
 	| error		{ yyclearin; yyerror("illegal statement"); }
 	;
 
 statement:
 	  simple_stat st	{ PUTS("simple stat"); }
-	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, nullstat); }
+	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
 	| if statement else statement
 		{ PUTS("if-else stat"); $$ = stat3(IF, $1, $2, $4); }
 	| while statement	{ PUTS("while stat"); $$ = stat2(WHILE, $1, $2); }
@@ -252,7 +270,7 @@ statement:
 
 stat_list:
 	  stat_list statement	{ PUTS("stat_list stat"); $$ = linkum($1, $2); }
-	|			{ PUTS("null stat list"); $$ = nullstat; }
+	|			{ PUTS("null stat list"); $$ = (long)nullstat; }
 	;
 
 while:
@@ -263,7 +281,7 @@ for:
 	  FOR '(' simple_stat ';' conditional ';' simple_stat ')' optNL statement
 		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, $5, $7, $10); }
 	| FOR '(' simple_stat ';'  ';' simple_stat ')' optNL statement
-		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, nullstat, $6, $9); }
+		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, (long)nullstat, $6, $9); }
 	| FOR '(' VAR IN VAR ')' optNL statement
 		{ PUTS("for(v in v)"); $$ = stat3(IN, $3, $5, $8); }
 	;

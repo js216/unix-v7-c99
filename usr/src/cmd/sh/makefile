@@ -1,4 +1,7 @@
 CFLAGS = -n -s -O
+LDFLAGS =
+CRT =
+LDLIBS =
 
 all:	sh
 
@@ -22,13 +25,13 @@ fault.o:	brkincr.h
 main.o:		brkincr.h
 stak.o:		brkincr.h
 
-sh:;		cc -o sh -n -s *.o
+sh:;		$(CC) $(CFLAGS) $(LDFLAGS) -o sh $(CRT) *.o $(LDLIBS)
 
 newsys:;	:newsys file=msg; make sh
 install:;	:install
 diff:;		:diff
 list:;		list Makefile *.h *.s *.c
 
-.c.o:;	cc -O -c $<
+.c.o:;	$(CC) $(CFLAGS) -c $<
 .c.s:;	cc -O -S -o $*.s $<
 .s.o:;	as - -o $*.o /usr/include/sys.s $<

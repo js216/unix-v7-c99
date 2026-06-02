@@ -56,6 +56,23 @@ int	nsucc;
 
 int	f;
 char	*fname;
+int	yylex(void);
+int	yyerror(char *s);
+int	nextch(void);
+void	synerror(void);
+int	enter(int x);
+int	cclenter(int x);
+int	node(int x, int l, int r);
+int	unary(int x, int d);
+void	overflo(void);
+void	cfoll(int v);
+void	cgotofn(void);
+int	cstate(int v);
+int	member(int symb, int set, int torf);
+int	notin(int n);
+void	add(int *array, int n);
+void	follow(int v);
+void	execute(char *file);
 %}
 
 %%
@@ -103,15 +120,18 @@ r:	r OR r
 	;
 
 %%
-yyerror(s) {
+int
+yyerror(char *s) {
 	fprintf(stderr, "egrep: %s\n", s);
 	exit(2);
+	return(0);
 }
 
-yylex() {
+int
+yylex(void) {
 	extern int yylval;
 	int cclcnt, x;
-	register char c, d;
+	register int c, d;
 	switch(c = nextch()) {
 		case '$':
 		case '^': c = '\n';
@@ -154,12 +174,15 @@ yylex() {
 			return (x);
 		case '\\':
 			if ((c = nextch()) == '\0') synerror();
+			yylval = c;
+			return (CHAR);
 		defchar:
 		default: yylval = c; return (CHAR);
 	}
 }
-nextch() {
-	register char c;
+int
+nextch(void) {
+	register int c;
 	if (fflag) {
 		if ((c = getc(stdin)) == EOF) return(0);
 	}
@@ -167,12 +190,14 @@ nextch() {
 	return(c);
 }
 
-synerror() {
+void
+synerror(void) {
 	fprintf(stderr, "egrep: syntax error\n");
 	exit(2);
 }
 
-enter(x) int x; {
+int
+enter(int x) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = 0;
@@ -180,14 +205,16 @@ enter(x) int x; {
 	return(line++);
 }
 
-cclenter(x) int x; {
-	register linno;
+int
+cclenter(int x) {
+	register int linno;
 	linno = enter(x);
 	right[linno] = count;
 	return (linno);
 }
 
-node(x, l, r) {
+int
+node(int x, int l, int r) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = l;
@@ -197,7 +224,8 @@ node(x, l, r) {
 	return(line++);
 }
 
-unary(x, d) {
+int
+unary(int x, int d) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = d;
@@ -205,13 +233,15 @@ unary(x, d) {
 	parent[d] = line;
 	return(line++);
 }
-overflo() {
+void
+overflo(void) {
 	fprintf(stderr, "egrep: regular expression too long\n");
 	exit(2);
 }
 
-cfoll(v) {
-	register i;
+void
+cfoll(int v) {
+	register int i;
 	if (left[v] == 0) {
 		count = 0;
 		for (i=1; i<=line; i++) tmpstat[i] = 0;
@@ -224,8 +254,9 @@ cfoll(v) {
 		cfoll(right[v]);
 	}
 }
-cgotofn() {
-	register c, i, k;
+void
+cgotofn(void) {
+	register int c, i, k;
 	int n, s;
 	char symbol[NCHARS];
 	int j, nc, pc, pos;
@@ -262,7 +293,7 @@ cgotofn() {
 				else if (c == CCL) {
 					nc = chars[right[curpos]];
 					pc = right[curpos] + 1;
-					for (k=0; k<nc; k++) symbol[chars[pc++]] = 1;
+					for (k=0; k<nc; k++) symbol[(unsigned char)chars[pc++]] = 1;
 				}
 				else if (c == NCCL) {
 					nc = chars[right[curpos]];
@@ -318,8 +349,9 @@ cgotofn() {
 	}
 }
 
-cstate(v) {
-	register b;
+int
+cstate(int v) {
+	register int b;
 	if (left[v] == 0) {
 		if (tmpstat[v] != 1) {
 			tmpstat[v] = 1;
@@ -344,8 +376,9 @@ cstate(v) {
 }
 
 
-member(symb, set, torf) {
-	register i, num, pos;
+int
+member(int symb, int set, int torf) {
+	register int i, num, pos;
 	num = chars[set];
 	pos = set + 1;
 	for (i=0; i<num; i++)
@@ -353,8 +386,9 @@ member(symb, set, torf) {
 	return (!torf);
 }
 
-notin(n) {
-	register i, j, pos;
+int
+notin(int n) {
+	register int i, j, pos;
 	for (i=0; i<=n; i++) {
 		if (positions[state[i]] == count) {
 			pos = state[i] + 1;
@@ -368,8 +402,9 @@ notin(n) {
 	return (1);
 }
 
-add(array, n) int *array; {
-	register i;
+void
+add(int *array, int n) {
+	register int i;
 	if (nxtpos + count > MAXPOS) overflo();
 	array[n] = nxtpos;
 	positions[nxtpos++] = count;
@@ -380,7 +415,8 @@ add(array, n) int *array; {
 	}
 }
 
-follow(v) int v; {
+void
+follow(int v) {
 	int p;
 	if (v == line) return;
 	p = parent[v];
@@ -411,8 +447,8 @@ follow(v) int v; {
 }
 
 
-main(argc, argv)
-char **argv;
+int
+main(int argc, char **argv)
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -487,12 +523,12 @@ out:
 	exit(nsucc == 0);
 }
 
-execute(file)
-char *file;
+void
+execute(char *file)
 {
 	register char *p;
-	register cstat;
-	register ccount;
+	register int cstat;
+	register int ccount;
 	char buf[1024];
 	char *nlp;
 	int istat;

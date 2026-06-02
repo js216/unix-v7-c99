@@ -465,8 +465,8 @@ newproc(void)
 {
 	int a1, a2;
 	struct proc *p, *up;
-	register struct proc *rpp, *rip;
-	register int n;
+	struct proc *rpp, *rip;
+	int n;
 
 	p = NULL;
 	/*
