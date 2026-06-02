@@ -10,6 +10,7 @@ char	msgbuf[MSGBUFS];
 char	*msgbufp;
 int	sflg;
 int	of	= -1;
+#define KMSGBASE	0x7fff0000U
 
 struct {
 	char	*omsgflg;
@@ -23,12 +24,14 @@ struct nlist nl[3] = {
 
 int done(char *);
 int pdate(void);
+int readlive(int);
 int
 main(int argc, char **argv)
 {
 	int mem;
 	register char *mp, *omp, *mstart;
 	int samef;
+	int live;
 
 	if (argc>1 && argv[1][0] == '-') {
 		sflg++;
@@ -45,13 +48,29 @@ main(int argc, char **argv)
 		done("No namelist\n");
 	if ((mem = open((argc>1? argv[1]: "/dev/mem"), 0)) < 0)
 		done("No mem\n");
+	live = 0;
 	lseek(mem, (long)nl[0].n_value, 0);
-	read(mem, msgbuf, MSGBUFS);
-	lseek(mem, (long)nl[1].n_value, 0);
-	read(mem, (char *)&msgbufp, sizeof(msgbufp));
-	if (msgbufp < (char *)nl[0].n_value || msgbufp >= (char *)nl[0].n_value+MSGBUFS)
-		done("Namelist mismatch\n");
-	msgbufp += msgbuf - (char *)nl[0].n_value;
+	if (read(mem, msgbuf, MSGBUFS) != MSGBUFS) {
+		if (readlive(mem) < 0)
+			done("Namelist mismatch\n");
+		live = 1;
+	}
+	if (!live) {
+		lseek(mem, (long)nl[1].n_value, 0);
+		if (read(mem, (char *)&msgbufp, sizeof(msgbufp)) != sizeof(msgbufp)) {
+			if (readlive(mem) < 0)
+				done("Namelist mismatch\n");
+			live = 1;
+		}
+	}
+	if (!live &&
+	    (msgbufp < (char *)nl[0].n_value || msgbufp >= (char *)nl[0].n_value+MSGBUFS)) {
+		if (readlive(mem) < 0)
+			done("Namelist mismatch\n");
+		live = 1;
+	}
+	if (!live)
+		msgbufp += msgbuf - (char *)nl[0].n_value;
 	mstart = &msgbuf[omesg.omindex];
 	omp = &omesg.omsgbuf[msgbufp-msgbuf];
 	mp = msgbufp;
@@ -83,6 +102,20 @@ main(int argc, char **argv)
 	done((char *)NULL);
 }
 
+int
+readlive(int mem)
+{
+	unsigned int idx;
+	lseek(mem, (long)KMSGBASE, 0);
+	if (read(mem, (char *)&idx, sizeof(idx)) != sizeof(idx))
+		return(-1);
+	if (idx >= MSGBUFS)
+		return(-1);
+	if (read(mem, msgbuf, MSGBUFS) != MSGBUFS)
+		return(-1);
+	msgbufp = &msgbuf[idx];
+	return(0);
+}
 int
 done(char *s)
 {

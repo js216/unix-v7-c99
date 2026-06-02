@@ -20,7 +20,7 @@
  */
 #define USERBASE	0x00000000U
 #define USERSIZE	0x00100000U	/* 1 MB user virtual window (VA 0..) */
-#define UENTRY		0x00010000U
+#define UENTRY		0x00000010U
 #define USTACK		0x000f0000U
 #define UARGV		0x0000f000U
 #define UARGLEN		3072

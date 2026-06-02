@@ -118,12 +118,13 @@ boot/rootfs.img: force-root-image boot/unix Makefile usr/src/tools/mkfs boot/roo
 	set -e; for i in $(ROOT); do \
 		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
 	done
-	# v7 mkfs only writes the blocks it touches.  Pad rootfs.img to its
-	# declared filesystem size (FSIZE * BSIZE = 32768 * 512) so qemu's
-	# virtio block backend can serve any sector the kernel asks for.
+	# v7 mkfs only writes the blocks it touches.  Pad rootfs.img to the
+	# filesystem size declared in boot/rootfs.proto so qemu's virtio block
+	# backend can serve any sector the kernel asks for.
 	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
-	    usr/src/tools/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
-	    truncate -s 16777216 boot/rootfs.img.tmp; \
+	    V7_MKFS_TIME=0 usr/src/tools/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
+	    fsize=$$(awk 'NR==2 {print $$1}' boot/rootfs.proto); \
+	    truncate -s "$$((fsize * 512))" boot/rootfs.img.tmp; \
 	    mv boot/rootfs.img.tmp boot/rootfs.img
 	$(MAKE) userland-clean
 
@@ -133,7 +134,7 @@ USEROBJCOPY = arm-none-eabi-objcopy
 USERCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Iusr/include -Iusr/src
 USERAWKCFLAGS = $(USERCFLAGS) -Os -fno-asynchronous-unwind-tables -fno-unwind-tables -Dmalloc=malloc -Dfree=free -Iusr/src/cmd/awk -Wno-int-conversion -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-implicit-function-declaration -Wno-builtin-declaration-mismatch -Wno-implicit-int -Wno-return-type -Wno-unused-function -Wno-discarded-qualifiers
 USERYACCCFLAGS = $(USERCFLAGS) -DYYSTACK_USE_ALLOCA=1 -Wno-implicit-function-declaration -Wno-implicit-int -Wno-return-type -Wno-return-mismatch -Wno-int-conversion -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-char-subscripts -Wno-implicit-fallthrough -Wno-type-limits -Wno-unused-parameter
-USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld
+USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld -Wl,-z,max-page-size=0x10
 USERLDLIBS = -Lusr/src/libc -lc -lgcc
 USERCRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 LIBC_CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon \

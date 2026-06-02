@@ -39,6 +39,7 @@ int	updlock;		/* lock for sync */
 daddr_t	rablock;		/* block to be read ahead */
 extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
 char	msgbuf[MSGBUFS];	/* saved "printf" characters */
+extern	char	*msgbufp;	/* next saved printf character */
 dev_t	rootdev;		/* device of the root */
 dev_t	swapdev;		/* swapping device */
 dev_t	pipedev;		/* pipe device */

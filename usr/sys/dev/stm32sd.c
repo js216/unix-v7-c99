@@ -94,6 +94,10 @@ int	bd_irq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
 struct buf bdtab;
 static unsigned int sd_rca;	/* card relative address (<<16 for commands) */
 static int sd_hc;		/* 1 = high-capacity (block addressing) */
+static struct buf *bd_cur;
+static int bd_retry;
+
+#define	SD_RETRIES	3
 
 /*
  * Issue one command.  resp is 0 (none), CMD_WAITRESP_SHORT, or
@@ -196,6 +200,12 @@ bdstart(void)
 
 	if ((bp = bdtab.b_actf) == NULL)
 		return;
+	if (bdtab.b_active)
+		return;
+	if (bp != bd_cur) {
+		bd_cur = bp;
+		bd_retry = 0;
+	}
 	bdtab.b_active++;
 	blk = sd_hc ? (unsigned int)bp->b_blkno : (unsigned int)bp->b_blkno*512;
 	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
@@ -222,7 +232,7 @@ bdstart(void)
 int
 bdstrategy(struct buf *bp)
 {
-	int s;
+	int s, idle;
 
 	bp->av_forw = NULL;
 	s = intr_disable();
@@ -231,9 +241,10 @@ bdstrategy(struct buf *bp)
 	else
 		bdtab.b_actl->av_forw = bp;
 	bdtab.b_actl = bp;
-	if (bdtab.b_active == 0)
-		bdstart();
+	idle = (bdtab.b_active == 0);
 	intr_restore(s);
+	if (idle)
+		bdstart();
 	return(0);
 }
 
@@ -257,10 +268,16 @@ bdintr(void)
 	bp = bdtab.b_actf;
 	bdtab.b_active = 0;
 	if (sta & STA_DATERR) {
+		if (bd_retry++ < SD_RETRIES) {
+			bdstart();
+			return(0);
+		}
 		deverror(bp, (int)sta, 0);
 		bp->b_flags |= B_ERROR;
 	} else if (bp->b_flags & B_READ)
 		dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
+	bd_cur = NULL;
+	bd_retry = 0;
 	bdtab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);

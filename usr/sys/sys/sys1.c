@@ -267,8 +267,8 @@ readbytes(struct inode *ip, caddr_t kbuf, unsigned int off, unsigned int n)
 /*
  * Read in and set up memory for an ELF executable.
  * The Armv7 user image is a flat 1 MB window; arm_sureg maps it, so we
- * allocate the full image, zero it, then read each PT_LOAD segment to
- * its virtual address.  Entry goes through u_exdata.ux_entloc (used by
+ * allocate the image, zero it, then read each PT_LOAD segment to its
+ * virtual address.  Entry goes through u_exdata.ux_entloc (used by
  * setregs).  Zero return is normal.
  */
 int
@@ -277,7 +277,8 @@ getxfile(register struct inode *ip, int nargc)
 	struct elf32_ehdr eh;
 	struct elf32_phdr ph;
 	register int i;
-	int n;
+	int n, low, stack;
+	unsigned int end, maxend;
 	(void)nargc;
 	readbytes(ip, (caddr_t)&eh, 0, sizeof(eh));
 	if(u.u_error)
@@ -287,19 +288,39 @@ getxfile(register struct inode *ip, int nargc)
 		u.u_error = ENOEXEC;
 		goto bad;
 	}
-
 	/*
-	 * Commit to the new image: release old text, allocate and clear
-	 * the full user image, and map it.
+	 * Find text and data sizes, and try them out for possible overflow.
 	 */
+	maxend = 0;
+	for(i = 0; i < (int)eh.e_phnum; i++) {
+		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
+		    sizeof(ph));
+		if(u.u_error)
+			goto bad;
+		if(ph.p_type != PT_LOAD)
+			continue;
+		if(ph.p_vaddr >= USERSIZE || ph.p_memsz > USERSIZE - ph.p_vaddr ||
+		   ph.p_filesz > ph.p_memsz) {
+			u.u_error = ENOMEM;
+			goto bad;
+		}
+		end = ph.p_vaddr + ph.p_memsz;
+		if(end > maxend)
+			maxend = end;
+	}
+
 	u.u_prof.pr_scale = 0;
 	xfree();
 	n = USIZE + (int)(USERSIZE >> 6);
 	expand(n);
-	for(i = USIZE; i < n; i++)
-		clearseg(u.u_procp->p_addr + i);
+	low = (int)btoc(maxend);
+	for(i = 0; i < low; i++)
+		clearseg(u.u_procp->p_addr + USIZE + i);
+	stack = (int)(USERSIZE >> 6) - SSIZE;
+	for(i = stack; i < (int)(USERSIZE >> 6); i++)
+		clearseg(u.u_procp->p_addr + USIZE + i);
 	u.u_tsize = 0;
-	u.u_dsize = (USERSIZE >> 6) - SSIZE;
+	u.u_dsize = (unsigned)low;
 	u.u_ssize = SSIZE;
 	u.u_sep = 0;
 	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
@@ -314,10 +335,6 @@ getxfile(register struct inode *ip, int nargc)
 			goto bad;
 		if(ph.p_type != PT_LOAD || ph.p_filesz == 0)
 			continue;
-		if(ph.p_vaddr >= USERSIZE || ph.p_filesz > USERSIZE - ph.p_vaddr) {
-			u.u_error = ENOMEM;
-			goto bad;
-		}
 		u.u_base = (caddr_t)ph.p_vaddr;
 		u.u_count = ph.p_filesz;
 		u.u_offset = ph.p_offset;
@@ -561,30 +578,18 @@ sbreak(void)
 	if(n < 0)
 		n = 0;
 	d = n - u.u_dsize;
-	n += USIZE+u.u_ssize;
 	if(estabur(u.u_tsize, u.u_dsize+d, u.u_ssize, u.u_sep, RO))
 		return;
-	u.u_dsize += d;
-	if(d > 0)
-		goto bigger;
-	a = u.u_procp->p_addr + n - u.u_ssize;
-	i = n;
-	n = u.u_ssize;
-	while(n--) {
-		copyseg(a-d, a);
-		a++;
+	if((unsigned)n > (USERSIZE >> 6) - u.u_ssize) {
+		u.u_error = ENOMEM;
+		return;
 	}
-	expand(i);
-	return;
 
-bigger:
-	expand(n);
-	a = u.u_procp->p_addr + n;
-	n = u.u_ssize;
-	while(n--) {
-		a--;
-		copyseg(a-d, a);
+	if(d > 0) {
+		a = u.u_procp->p_addr + USIZE + (int)u.u_dsize;
+		for(i = 0; i < d; i++)
+			clearseg(a + i);
 	}
-	while(d--)
-		clearseg(--a);
+	u.u_dsize += d;
+	return;
 }
