@@ -122,9 +122,9 @@ out:
 			} else if (*p == '[') {
 				while (*p != '\0' && *p != ']')
 					*s++ = *p++;
-			} else if (islower(*p)) {
+			} else if (islower((unsigned char)*p)) {
 				*s++ = '[';
-				*s++ = toupper(*p);
+				*s++ = toupper((unsigned char)*p);
 				*s++ = *p++;
 				*s++ = ']';
 			} else

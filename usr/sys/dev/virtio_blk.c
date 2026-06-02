@@ -1,5 +1,8 @@
 #include "../h/param.h"
 #include "../h/buf.h"
+
+#ifdef VIRTIO
+
 void panic(char *s);
 void dmbsy(void);
 void iodone(struct buf *bp);
@@ -239,4 +242,6 @@ bdintr(void)
 {
 	return(0);
 }
+#endif
+
 #endif

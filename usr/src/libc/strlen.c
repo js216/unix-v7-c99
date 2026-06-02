@@ -4,7 +4,7 @@
  */
 
 int
-strlen(register char *s)
+strlen(register const char *s)
 {
 	register int n;
 

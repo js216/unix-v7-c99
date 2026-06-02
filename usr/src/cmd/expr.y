@@ -1,5 +1,6 @@
 /* Yacc productions for "expr" command: */
 
+%define api.value.type {char *}
 %token OR AND ADD SUBT MULT DIV REM EQ GT GEQ LT LEQ NEQ
 %token A_STRING SUBSTR LENGTH INDEX NOARG MATCH
 
@@ -16,7 +17,22 @@
 %{
 #include <stdio.h>
 #define index expr_index
-char *rel(), *arith(), *conj(), *substr(), *length(), *index(), *match();
+long	atol();
+int	yylex(void);
+int	yyerror(char *s);
+char	*rel(int op, char *r1, char *r2);
+char	*arith(int op, char *r1, char *r2);
+char	*conj(int op, char *r1, char *r2);
+char	*substr(char *v, char *s, char *w);
+char	*length(char *s);
+char	*index(char *s, char *t);
+char	*match(char *s, char *p);
+int	ematch(char *s, char *p);
+void	errxx(int c);
+char	*compile(char *instring, char *ep, char *endbuf, int seof);
+int	advance(char *lp, char *ep);
+int	getrnge(char *str);
+int	ecmp(char *a, char *b, int count);
 %}
 %%
 
@@ -55,7 +71,6 @@ expr:	'(' expr ')' { $$ = $2; }
 #define ESIZE	256
 #define error(c)	errxx(c)
 #define EQL(x,y) !strcmp(x,y)
-long atol();
 char	**Av;
 int	Ac;
 int	Argi;
@@ -64,11 +79,13 @@ char Mstring[1][128];
 char *malloc();
 extern int nbra;
 
-main(argc, argv) char **argv; {
+int
+main(int argc, char **argv) {
 	Ac = argc;
 	Argi = 1;
 	Av = argv;
 	yyparse();
+	return(0);
 }
 
 char *operators[] = { "|", "&", "+", "-", "*", "/", "%", ":",
@@ -77,9 +94,10 @@ char *operators[] = { "|", "&", "+", "-", "*", "/", "%", ":",
 int op[] = { OR, AND, ADD,  SUBT, MULT, DIV, REM, MCH,
 	EQ, EQ, LT, LEQ, GT, GEQ, NEQ,
 	MATCH, SUBSTR, LENGTH, INDEX };
-yylex() {
+int
+yylex(void) {
 	register char *p;
-	register i;
+	register int i;
 
 	if(Argi >= Ac) return NOARG;
 
@@ -95,8 +113,9 @@ yylex() {
 	return A_STRING;
 }
 
-char *rel(op, r1, r2) register char *r1, *r2; {
-	register i;
+char *
+rel(int op, register char *r1, register char *r2) {
+	register int i;
 
 	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "[0-9]*$"))
 		i = atol(r1) - atol(r2);
@@ -113,7 +132,8 @@ char *rel(op, r1, r2) register char *r1, *r2; {
 	return i? "1": "0";
 }
 
-char *arith(op, r1, r2) char *r1, *r2; {
+char *
+arith(int op, char *r1, char *r2) {
 	long i1, i2;
 	register char *rv;
 
@@ -133,7 +153,8 @@ char *arith(op, r1, r2) char *r1, *r2; {
 	sprintf(rv, "%ld", i1);
 	return rv;
 }
-char *conj(op, r1, r2) char *r1, *r2; {
+char *
+conj(int op, char *r1, char *r2) {
 	register char *rv;
 
 	switch(op) {
@@ -163,8 +184,9 @@ char *conj(op, r1, r2) char *r1, *r2; {
 	return rv;
 }
 
-char *substr(v, s, w) char *v, *s, *w; {
-register si, wi;
+char *
+substr(char *v, char *s, char *w) {
+register int si, wi;
 register char *res;
 
 	si = atol(s);
@@ -179,8 +201,9 @@ register char *res;
 	return res;
 }
 
-char *length(s) register char *s; {
-	register i = 0;
+char *
+length(register char *s) {
+	register int i = 0;
 	register char *rv;
 
 	while(*s++) ++i;
@@ -190,8 +213,9 @@ char *length(s) register char *s; {
 	return rv;
 }
 
-char *index(s, t) char *s, *t; {
-	register i, j;
+char *
+index(char *s, char *t) {
+	register int i, j;
 	register char *rv;
 
 	for(i = 0; s[i] ; ++i)
@@ -203,7 +227,8 @@ char *index(s, t) char *s, *t; {
 	return "0";
 }
 
-char *match(s, p)
+char *
+match(char *s, char *p)
 {
 	register char *rv;
 
@@ -219,17 +244,15 @@ char *match(s, p)
 #define GETC()		(*sp++)
 #define PEEKC()		(*sp)
 #define UNGETC(c)	(--sp)
-#define RETURN(c)	return
-#define ERROR(c)	errxx(c)
+#define RETURN(c)	return(c)
+#define ERROR(c)	do { errxx(c); return(0); } while (0)
 
 
-ematch(s, p)
-char *s;
-register char *p;
+int
+ematch(char *s, register char *p)
 {
 	static char expbuf[ESIZE];
-	char *compile();
-	register num;
+	register int num;
 	extern char *braslist[], *braelist[], *loc2;
 
 	compile(p, expbuf, &expbuf[512], 0);
@@ -247,8 +270,10 @@ register char *p;
 	return(0);
 }
 
-errxx(c)
+void
+errxx(int c)
 {
+	(void)c;
 	yyerror("RE error");
 }
 
@@ -291,13 +316,11 @@ char	bittab[] = {
 };
 
 char *
-compile(instring, ep, endbuf, seof)
-register char *ep;
-char *instring, *endbuf;
+compile(char *instring, register char *ep, char *endbuf, int seof)
 {
 	INIT	/* Dependent declarations and initializations */
-	register c;
-	register eof = seof;
+	register int c;
+	register int eof = seof;
 	char *lastep = instring;
 	int cclcnt;
 	char bracket[NBRA], *bracketp;
@@ -458,7 +481,7 @@ char *instring, *endbuf;
 					continue;
 				}
 			}
-			/* Drop through to default to use \ to turn off special chars */
+			/* fallthrough */
 
 		defchar:
 		default:
@@ -469,10 +492,10 @@ char *instring, *endbuf;
 	}
 }
 
-step(p1, p2)
-register char *p1, *p2;
+int
+step(register char *p1, register char *p2)
 {
-	register c;
+	register int c;
 
 	if (circf) {
 		loc1 = p1;
@@ -501,11 +524,11 @@ register char *p1, *p2;
 	return(0);
 }
 
-advance(lp, ep)
-register char *lp, *ep;
+int
+advance(register char *lp, register char *ep)
 {
 	register char *curlp;
-	char c;
+	int c;
 	char *bbeg;
 	int ct;
 
@@ -538,11 +561,11 @@ register char *lp, *ep;
 		}
 		return(0);
 	case CBRA:
-		braslist[*ep++] = lp;
+		braslist[(unsigned char)*ep++] = lp;
 		continue;
 
 	case CKET:
-		braelist[*ep++] = lp;
+		braelist[(unsigned char)*ep++] = lp;
 		continue;
 
 	case CCHR|RNGE:
@@ -593,8 +616,8 @@ register char *lp, *ep;
 		goto star;
 
 	case CBACK:
-		bbeg = braslist[*ep];
-		ct = braelist[*ep++] - bbeg;
+		bbeg = braslist[(unsigned char)*ep];
+		ct = braelist[(unsigned char)*ep++] - bbeg;
 
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
@@ -603,8 +626,8 @@ register char *lp, *ep;
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[*ep];
-		ct = braelist[*ep++] - bbeg;
+		bbeg = braslist[(unsigned char)*ep];
+		ct = braelist[(unsigned char)*ep++] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -647,16 +670,16 @@ register char *lp, *ep;
 	}
 }
 
-getrnge(str)
-register char *str;
+int
+getrnge(register char *str)
 {
 	low = *str++ & 0377;
 	size = *str == 255 ? 20000 : (*str &0377) - low;
+	return(0);
 }
 
-ecmp(a, b, count)
-register char	*a, *b;
-register	count;
+int
+ecmp(register char *a, register char *b, register int count)
 {
 	if(a == b) /* should have been caught in compile() */
 		error(51);
@@ -665,9 +688,11 @@ register	count;
 	return(1);
 }
 
-yyerror(s)
+int
+yyerror(char *s)
 
 {
 	fprintf(stderr, "%s\n", s);
 	exit(2);
+	return(0);
 }

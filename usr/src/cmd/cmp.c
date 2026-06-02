@@ -115,7 +115,7 @@ otoi(char *s)
 	base = 10;
 	if (*s == '0')
 		base = 8;
-	while(isdigit(*s))
+	while(isdigit((unsigned char)*s))
 		v = v*base + *s++ - '0';
 	return(v);
 }

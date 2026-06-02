@@ -18,6 +18,8 @@
 #include "../h/tty.h"
 #include "../h/systm.h"
 
+#ifdef STM32USART
+
 #define	UART4	0x40010000U		/* APB1 UART4 */
 #define	RCC	0x50000000U		/* reset/clock controller */
 #define	NCONS	1			/* one console line */
@@ -261,3 +263,5 @@ putchar(char c)
 		putchar('\r');
 	CR1 = s;
 }
+
+#endif

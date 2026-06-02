@@ -135,7 +135,7 @@ char *ttyname(int fd);
 char *crypt(char *key, char *salt);
 char *strncat(char *s1, char *s2, int n);
 int ttyslot(void);
-int strlen(char *s);
+int strlen(const char *s);
 int strcmp(char *a, char *b);
 char *strcpy(char *a, char *b);
 char *strcat(char *a, char *b);

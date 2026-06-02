@@ -17,6 +17,8 @@
 #include "../h/tty.h"
 #include "../h/systm.h"
 
+#ifdef PL011
+
 #define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
 #define	NCONS	1			/* one console line */
 #define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
@@ -232,3 +234,5 @@ putchar(char c)
 		putchar('\r');
 	UARTIMSC = s;
 }
+
+#endif

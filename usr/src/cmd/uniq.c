@@ -21,7 +21,7 @@ main(int argc, char *argv[])
 
 	while(argc > 1) {
 		if(*argv[1] == '-') {
-			if (isdigit(argv[1][1]))
+			if (isdigit((unsigned char)argv[1][1]))
 				fields = atoi(&argv[1][1]);
 			else mode = argv[1][1];
 			argc--;

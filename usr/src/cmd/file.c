@@ -187,7 +187,7 @@ notfort:
 			printf("assembler program text"); 
 			goto outa;
 		}
-		else if(buf[j] == '\n' && isalpha(buf[j+2])){
+		else if(buf[j] == '\n' && isalpha((unsigned char)buf[j+2])){
 			printf("roff, nroff, or eqn input text");
 			goto outa;
 		}
@@ -204,7 +204,7 @@ notfort:
 				printf("assembler program text"); 
 				goto outa; 
 			}
-			else if(buf[j] == '\n' && isalpha(buf[j+2])){
+			else if(buf[j] == '\n' && isalpha((unsigned char)buf[j+2])){
 				printf("roff, nroff, or eqn input text");
 				goto outa;
 			}

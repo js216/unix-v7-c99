@@ -143,7 +143,7 @@ pu(int u, int i, int f)
 			printf("*%c*", i+'a');
 		if(u > 1)
 			putchar(u+'0');
-			return(2);
+		return(2);
 	}
 	if(u < 0)
 		return(1);

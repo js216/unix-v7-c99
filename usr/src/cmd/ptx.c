@@ -296,7 +296,7 @@ char *getline(void)
 					*linep++ = ' ';
 				break;
 			case '\n':
-				while(isspace(*--linep));
+				while(isspace((unsigned char)*--linep));
 				*++linep = '\n';
 				return(linep);
 			default:
@@ -317,7 +317,7 @@ cmpline(char *pend)
 
 	pchar = line;
 	if(rflag)
-		while(pchar<pend&&!isspace(*pchar))
+		while(pchar<pend&&!isspace((unsigned char)*pchar))
 			pchar++;
 	while(pchar<pend){
 	/* eliminate white space */
@@ -362,7 +362,7 @@ cmpword(char *cpp, char *pend, char *hpp)
 
 	while(*hpp != '\0'){
 		c = *cpp++;
-		if((isupper(c)?tolower(c):c) != *hpp++)
+		if((isupper((unsigned char)c)?tolower(c):c) != *hpp++)
 			return(0);
 	}
 	if(--cpp == pend) return(1);
@@ -408,11 +408,11 @@ getsort(void)
 			break;
 
 		case '\n':
-			while(isspace(linep[-1]))
+			while(isspace((unsigned char)linep[-1]))
 				linep--;
 			ref = tilde;
 			if(rflag) {
-				while(ref<linep&&!isspace(*ref))
+				while(ref<linep&&!isspace((unsigned char)*ref))
 					ref++;
 				*ref++ = 0;
 			}
@@ -424,11 +424,11 @@ getsort(void)
 			p2a = ltrim(ref,p2b=linep,halflen-1);
 			if(p2b-p2a>halflen-1)
 				p2a = p2b-halflen-1;
-			p1b = rtrim(p1a=p3b+(isspace(p3b[0])!=0),tilde,
+			p1b = rtrim(p1a=p3b+(isspace((unsigned char)p3b[0])!=0),tilde,
 				w=halflen-(p2b-p2a)-gap);
 			if(p1b-p1a>w)
 				p1b = p1a;
-			p4a = ltrim(ref,p4b=p2a-(isspace(p2a[-1])!=0),
+			p4a = ltrim(ref,p4b=p2a-(isspace((unsigned char)p2a[-1])!=0),
 				w=halflen-(p3b-p3a)-gap);
 			if(p4b-p4a>w)
 				p4a = p4b;
@@ -474,9 +474,9 @@ char *rtrim(char *a, char *c, int d)
 	char *b,*x;
 	b = c;
 	for(x=a+1; x<=c&&x-a<=d; x++)
-		if((x==c||isspace(x[0]))&&!isspace(x[-1]))
+		if((x==c||isspace((unsigned char)x[0]))&&!isspace((unsigned char)x[-1]))
 			b = x;
-	if(b<c&&!isspace(b[0]))
+	if(b<c&&!isspace((unsigned char)b[0]))
 		b++;
 	return(b);
 }
@@ -486,9 +486,9 @@ char *ltrim(char *c, char *b, int d)
 	char *a,*x;
 	a = c;
 	for(x=b-1; x>=c&&b-x<=d; x--)
-		if(!isspace(x[0])&&(x==c||isspace(x[-1])))
+		if(!isspace((unsigned char)x[0])&&(x==c||isspace((unsigned char)x[-1])))
 			a = x;
-	if(a>c&&!isspace(a[-1]))
+	if(a>c&&!isspace((unsigned char)a[-1]))
 		a--;
 	return(a);
 }
@@ -529,15 +529,15 @@ hash(char *strtp, char *endp)
 
 	cp = strtp;
 	c = *cp++;
-	i = (isupper(c)?tolower(c):c);
+	i = (isupper((unsigned char)c)?tolower(c):c);
 	c = *cp;
-	j = (isupper(c)?tolower(c):c);
+	j = (isupper((unsigned char)c)?tolower(c):c);
 	i = i*j;
 	cp = --endp;
 	c = *cp--;
-	k = (isupper(c)?tolower(c):c);
+	k = (isupper((unsigned char)c)?tolower(c):c);
 	c = *cp;
-	j = (isupper(c)?tolower(c):c);
+	j = (isupper((unsigned char)c)?tolower(c):c);
 	j = k*j;
 
 	k = (i ^ (j>>2)) & MASK;
