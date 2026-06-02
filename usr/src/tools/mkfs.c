@@ -80,7 +80,10 @@ main(int argc, char *argv[])
 	long n;
 
 #ifndef STANDALONE
-	time(&utime);
+	if ((fsys = getenv("V7_MKFS_TIME")) != NULL)
+		utime = atol(fsys);
+	else
+		time(&utime);
 	if(argc < 3) {
 		printf("usage: mkfs filsys proto/size [ m n ]\n");
 		exit(1);

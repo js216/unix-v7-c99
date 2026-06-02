@@ -42,6 +42,7 @@
 #define	CR1_TE	0x00000008U		/* transmitter enable */
 #define	CR1_RXNEIE 0x00000020U		/* receive-not-empty interrupt enable */
 #define	CR1_TXEIE  0x00000080U		/* transmit-empty interrupt enable */
+#define	CR1_FIFOEN 0x20000000U		/* enable RX/TX FIFOs */
 #define	ISR_RXNE 0x00000020U		/* read data register not empty */
 #define	ISR_TXE	0x00000080U		/* transmit data register empty */
 #define	ICR_ERR	0x0000000fU		/* clear PE/FE/NE/ORE error flags */
@@ -97,7 +98,7 @@ cninit(void)
 	UART4CKSELR = (UART4CKSELR & ~7U) | UART4SRC_HSI;
 	CR1 = 0;				/* disable before reconfigure */
 	BRR = 556;				/* 64 MHz / 115200 */
-	CR1 = CR1_UE | CR1_TE | CR1_RE;		/* 8N1, TX + RX enabled */
+	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE; /* 8N1, FIFOs, TX + RX */
 }
 
 int

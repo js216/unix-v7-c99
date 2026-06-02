@@ -79,8 +79,11 @@ main(void)
 	 */
 
 	if(newproc()) {
-		expand(USIZE + (int)btoc(szicode));
-		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
+		int dclicks = ((int)btoc(szicode) + 63) & ~63;
+		expand(USIZE + dclicks);
+		u.u_dsize = dclicks;
+		u.u_ssize = 0;
+		estabur((unsigned)0, (unsigned)dclicks, (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
 		arm_sync_icache();
 		/*

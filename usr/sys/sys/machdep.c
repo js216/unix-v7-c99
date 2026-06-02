@@ -14,6 +14,7 @@ void bdinit(void);
 void mfree(struct map *mp, int size, int a);
 extern struct memregion board_map[];	/* per-board section map (conf/<board>.c) */
 extern void clock_ddr_init(void);	/* per-board clocks + DRAM bring-up */
+extern char __bss_start[], __bss_end[];
 
 /*
  * Page tables.  One global L1 (TTBR0) maps the kernel and the physical
@@ -216,13 +217,49 @@ void restfp(void *p)
  * at or above KERNBASE is read directly; a smaller value is a core-relative
  * click offset and is biased by COREBASE to reach the real backing page.
  */
+#define KMSGBASE	0x7fff0000U
+
+static int mem_range_ok(unsigned int off, unsigned int n)
+{
+	unsigned int end;
+
+	if(n == 0)
+		return(1);
+	end = off + n;
+	if(end < off)
+		return(0);
+	if(off >= KERNBASE && end <= (unsigned int)__bss_end)
+		return(1);
+	if(off >= (unsigned int)__ddrbss_start && end <= (unsigned int)__ddrbss_end)
+		return(1);
+	if(off >= COREBASE && end <= CORETOP)
+		return(1);
+	return(0);
+}
+
 int arm_mem_read(unsigned int off, char *buf, unsigned int n)
 {
 	char *s;
 	unsigned int i;
+	unsigned int msgoff, msgidx;
 
+	if(off >= KMSGBASE && off < KMSGBASE + sizeof(unsigned int) + MSGBUFS) {
+		msgoff = off - KMSGBASE;
+		msgidx = (unsigned int)(msgbufp - msgbuf);
+		for(i = 0; i < n; i++, msgoff++) {
+			if(msgoff < sizeof(unsigned int))
+				buf[i] = ((char *)&msgidx)[msgoff];
+			else if(msgoff < sizeof(unsigned int) + MSGBUFS)
+				buf[i] = msgbuf[msgoff - sizeof(unsigned int)];
+			else
+				buf[i] = 0;
+		}
+		return((int)n);
+	}
 	if(off < KERNBASE)
 		off += COREBASE;
+	if(!mem_range_ok(off, n))
+		return(-1);
 	s = (char *)off;
 	for(i = 0; i < n; i++)
 		buf[i] = s[i];

@@ -92,7 +92,9 @@ svc_entry:
 	mrs r0, spsr
 	str r0, [sp, #64]
 	mov r0, sp
+	cpsie i
 	bl trap
+	cpsid i
 	ldr r0, [sp, #64]
 	bic r0, r0, #0x1f
 	orr r0, r0, #0x10
