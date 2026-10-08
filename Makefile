@@ -168,8 +168,7 @@ $(SUBDIR_BINS): bin/%: force-subdir usr/src/cmd/%/makefile libc | bin
 
 # Rootfs
 
-boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto \
-	nullboot .profile $(ROOT)
+boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 	rm -f bin/bc
 	set -e; for i in $(ROOT); do \
 		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
@@ -204,9 +203,6 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | bin usr/lib usr/d
 
 $(filter etc/%,$(ROOTFS_STATIC)): ;
 
-nullboot:
-	: > $@
-
 usr/sys/conf/%.o: usr/sys/conf/%.s
 	$(KAS) -mcpu=cortex-a7 -o $@ $<
 
@@ -234,7 +230,7 @@ bin/egrep bin/expr: bin/%: usr/src/cmd/%.y libc | bin
 
 clean:
 	rm -f $(KOBJS) boot/unix boot/rootfs.img boot/rootfs.img.tmp
-	rm -f nullboot etc/mkfs
+	rm -f etc/mkfs
 	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf
 	rm -f usr/src/cmd/sed/sed usr/src/cmd/sed/*.o
 	rm -f usr/src/cmd/sh/sh usr/src/cmd/sh/*.o

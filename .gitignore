@@ -17,7 +17,6 @@ boot/unix.tsv
 boot/.board-*
 boot/rootfs.img
 boot/rootfs.img.tmp
-nullboot
 bin/
 usr/adm/
 usr/spool/

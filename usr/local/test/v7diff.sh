@@ -12,8 +12,8 @@ usr/local
 : <<\EOF
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,180 @@
-+nullboot
+@@ -0,0 +1,179 @@
++/dev/null
 +11520 2048
 +d--755 0 0
 +	bin	d--755 0 0
@@ -191,7 +191,6 @@ usr/local
 +			$
 +		$
 +	unix	---644 0 0 boot/unix
-+	.profile	---644 0 0 .profile
 +$
 
 % etc/group
@@ -211,7 +210,7 @@ usr/local
 % etc/ttys
 
 % Makefile /dev/null
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,240 @@
 +# SPDX-License-Identifier: MIT
 +# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 +# Copyright (c) 2026 Jakob Kastelic
@@ -382,8 +381,7 @@ usr/local
 +
 +# Rootfs
 +
-+boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto \
-+	nullboot .profile $(ROOT)
++boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 +	rm -f bin/bc
 +	set -e; for i in $(ROOT); do \
 +		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
@@ -418,9 +416,6 @@ usr/local
 +
 +$(filter etc/%,$(ROOTFS_STATIC)): ;
 +
-+nullboot:
-+	: > $@
-+
 +usr/sys/conf/%.o: usr/sys/conf/%.s
 +	$(KAS) -mcpu=cortex-a7 -o $@ $<
 +
@@ -448,7 +443,7 @@ usr/local
 +
 +clean:
 +	rm -f $(KOBJS) boot/unix boot/rootfs.img boot/rootfs.img.tmp
-+	rm -f nullboot etc/mkfs
++	rm -f etc/mkfs
 +	rm -f usr/src/libc/*.o usr/src/libc/*.a usr/src/libc/*.elf
 +	rm -f usr/src/cmd/sed/sed usr/src/cmd/sed/*.o
 +	rm -f usr/src/cmd/sh/sh usr/src/cmd/sh/*.o
@@ -456,11 +451,6 @@ usr/local
 +	rm -f usr/src/cmd/tar/tar usr/src/cmd/tar/*.o
 +	rm -f usr/src/cmd/tp/tp usr/src/cmd/tp/*.o
 +	$(MAKE) -C usr/src/cmd/awk clean
-
-% .profile /dev/null
-@@ -0,0 +1,2 @@
-+PATH=/bin:/usr/bin
-+export PATH
 
 % usr/include/a.out.h
 @@ -33,0 +34 @@
