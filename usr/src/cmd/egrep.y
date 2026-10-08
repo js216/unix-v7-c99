@@ -17,7 +17,7 @@
 
 #define MAXLIN 350
 #define MAXPOS 4000
-#define NCHARS 128
+#define NCHARS 256
 #define NSTATES 128
 #define FINAL -1
 char gotofn[NSTATES][NCHARS];
@@ -30,7 +30,7 @@ int right[MAXLIN];
 int parent[MAXLIN];
 int foll[MAXLIN];
 int positions[MAXPOS];
-char chars[MAXLIN];
+int chars[MAXLIN];
 int nxtpos;
 int nxtchar = 0;
 int tmpstat[MAXLIN];
@@ -186,7 +186,7 @@ nextch(void) {
 	if (fflag) {
 		if ((c = getc(stdin)) == EOF) return(0);
 	}
-	else c = *input++;
+	else c = *input++ & 0377;
 	return(c);
 }
 
@@ -293,7 +293,7 @@ cgotofn(void) {
 				else if (c == CCL) {
 					nc = chars[right[curpos]];
 					pc = right[curpos] + 1;
-					for (k=0; k<nc; k++) symbol[(unsigned char)chars[pc++]] = 1;
+					for (k=0; k<nc; k++) symbol[chars[pc++]] = 1;
 				}
 				else if (c == NCCL) {
 					nc = chars[right[curpos]];
