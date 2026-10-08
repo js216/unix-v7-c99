@@ -80,8 +80,8 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	128		/* size of user block (*64) */
-#define	UBASE	0140000		/* abs. addr of user block */
+#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
+#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
 #ifndef NULL
 #define	NULL	0
 #endif
@@ -93,7 +93,7 @@
 #define	NICINOD	100		/* number of superblock inodes */
 #define	NICFREE	50		/* number of superblock free blocks */
 #define	INFSIZE	138		/* size of per-proc info for users */
-#define	CBSIZE	14		/* number of chars in a clist block */
+#define	CBSIZE	12		/* number of chars in a clist block */
 #define	CROUND	017		/* clist rounding: sizeof(int *) + CBSIZE - 1*/
 
 /*

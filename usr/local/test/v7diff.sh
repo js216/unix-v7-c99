@@ -699,13 +699,17 @@ usr/local
 +#define	i_group	u_dev.i_group
 
 % usr/include/sys/param.h
-@@ -83 +83 @@
+@@ -83,2 +83,3 @@
 -#define	USIZE	16		/* size of user block (*64) */
-+#define	USIZE	128		/* size of user block (*64) */
-@@ -84,0 +85 @@
+-#define	UBASE	0140000		/* abs. addr of user block */
++#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
++#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
 +#ifndef NULL
 @@ -85,0 +87 @@
 +#endif
+@@ -94 +96 @@
+-#define	CBSIZE	14		/* number of chars in a clist block */
++#define	CBSIZE	12		/* number of chars in a clist block */
 @@ -120 +122 @@
 -#define	major(x)	(int)(((unsigned)x>>8))
 +#define	major(x)	(int)(((unsigned)x>>8)&0377)
