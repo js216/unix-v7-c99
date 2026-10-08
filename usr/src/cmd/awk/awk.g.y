@@ -193,6 +193,7 @@ pattern:
 print_list:
 	  expr	{ PUTS("expr"); }
 	| pe_list	{ PUTS("pe_list"); }
+	|		{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
 	;
 
 pe_list:
