@@ -6,15 +6,17 @@
  * controller via sdstart(); sdstart() programs one SD block transfer through
  * the SDMMC internal DMA and returns; the transfer-complete interrupt
  * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
- * sleeps on the buffer until then.  This file is built only for the MP135
- * board (the QEMU build links virtio_blk.c instead).
+ * sleeps on the buffer until then.
+ *
+ * Like v7's drivers it assumes working hardware: the boot ROM has just read
+ * the kernel from this card, so clocks, pins and the card (selected, in
+ * transfer state, SDHC block addressing) are used as the ROM left them.
  */
 #include "../h/param.h"
 #include "../h/buf.h"
 #include "../h/seg.h"
 
 
-void panic(char *s);
 void dmbsy(void);
 void iodone(struct buf *bp);
 void deverror(struct buf *bp, int o1, int o2);
@@ -43,20 +45,8 @@ extern long	dk_wds[3];
 #define	IDMACTRL 0x50
 #define	IDMABSIZE 0x54
 #define	IDMABASER 0x58
-/* RCC + GPIO for SDMMC1 clock gating and pin mux */
-#define	RCC	0x50000000U
-#define	GPIOC	0x50004000U
-#define	GPIOD	0x50005000U
-#define	R32(a)	(*(volatile unsigned int *)(a))
-#define	AHB4ENSETR R32(RCC + 0x770)	/* non-secure: GPIO bus clocks */
-#define	AHB6ENSETR R32(RCC + 0x780)	/* SDMMC1 bus clock */
-#define	GPIOCEN	0x00000004U
-#define	GPIODEN	0x00000008U
-#define	SDMMC1EN 0x00010000U
-
 /* CMD register fields */
 #define	CMD_WAITRESP_SHORT 0x0100U	/* short response */
-#define	CMD_WAITRESP_LONG  0x0300U	/* long response */
 #define	CMD_CMDTRANS	0x0040U		/* command transfers data */
 #define	CMD_CPSMEN	0x1000U		/* command path state machine enable */
 /* STA bits */
@@ -79,33 +69,20 @@ extern long	dk_wds[3];
 /* IDMA */
 #define	IDMA_IDMAEN	0x0001U
 /* card commands */
-#define	GO_IDLE		0
-#define	ALL_SEND_CID	2
-#define	SEND_RCA	3
-#define	SEL_CARD	7
-#define	IF_COND		8
-#define	SEND_CSD	9
-#define	SET_BLOCKLEN	16
 #define	READ_BLOCK	17
 #define	WRITE_BLOCK	24
-#define	APP_CMD		55
-#define	APP_OP_COND	41
-#define	OCR_HCS		0x40000000U	/* host supports high capacity */
-#define	OCR_VOLT	0x00ff8000U	/* 2.7-3.6 V window */
 
 int	sdirq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
 struct buf sdtab;
-static unsigned int sd_rca;	/* card relative address (<<16 for commands) */
-static int sd_hc;		/* 1 = high-capacity (block addressing) */
 static struct buf *sd_cur;
 static int sd_retry;
 
-#define	SD_RETRIES	3
+#define	SD_RETRIES	10
 
 /*
- * Issue one command.  resp is 0 (none), CMD_WAITRESP_SHORT, or
- * CMD_WAITRESP_LONG; data!=0 marks a data-transfer command.  Returns RESP1,
- * or -1 on command timeout/CRC error.
+ * Issue one command.  resp is 0 (none) or CMD_WAITRESP_SHORT; data!=0
+ * marks a data-transfer command.  Returns RESP1, or -1 on command
+ * timeout/CRC error.
  */
 static int
 sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
@@ -122,73 +99,24 @@ sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
 		if (resp == 0) {
 			if (s & STA_CMDSENT)
 				return(0);
-		} else if (s & (STA_CMDREND | STA_CCRCFAIL)) {
-			/* CCRCFAIL is expected for R3 (OCR) which carries no CRC;
-			 * the response is still latched in RESP1, so accept it. */
+		} else if (s & STA_CCRCFAIL)
+			return(-1);
+		else if (s & STA_CMDREND)
 			return((int)SD(RESP1));
-		}
 	}
 	return(-1);
 }
 
 /*
- * Bring up SDMMC1 and initialize the card: CMD0 (idle), CMD8 (voltage/HC
- * probe), CMD55+ACMD41 loop (OCR + HCS, wait power-up), CMD2 (CID), CMD3
- * (RCA), CMD9 (CSD), CMD7 (select), CMD16 (512-byte blocks; SDHC ignores).
- * The bus stays 1-bit: the controller's WIDBUS must match the card's, and a
- * 4-bit transfer would need ACMD6 (SET_BUS_WIDTH) sent to the card first -- a
- * speed optimization deferred past bring-up (cf. the bootloader's
- * SD_WideBus_Enable).  1-bit is correct and sufficient to read the rootfs.
- * Sets sd_rca, sd_hc.  Panics if no card responds.
- *
- * The SDMMC1 bus clock, GPIO clocks, and pin mux (AF12: D0-D3+CK on PC8-12,
- * CMD on PD2) are configured below; the card kernel clock is PLL4, routed by
- * clock_init() (so this runs after the PLLs are up).  All imported from the
- * reference bootloader's sd.c.
- * TODO(bench, #33): validate the card-init response/timeout values, the IDMA
- * data path, and dcflush coherency against a real card on the PCB.
+ * The card is as the boot ROM left it; just make sure the controller is
+ * powered and allow the longest data timeout.
  */
 void
 sdinit(void)
 {
-	register int timo;
-	unsigned int ocr;
-
-	/* SDMMC1 bus clock + GPIO clocks, then pin mux to alternate function 12:
-	 * data/clock D0-D3+CK on PC8..PC12, command CMD on PD2. */
-	AHB4ENSETR = GPIOCEN | GPIODEN;
-	AHB6ENSETR = SDMMC1EN;
-	(void)AHB6ENSETR;		/* read-back: clock live before access */
-	R32(GPIOC+0x00) = (R32(GPIOC+0x00) & ~0x03FF0000U) | 0x02AA0000U; /* MODER PC8-12 AF */
-	R32(GPIOC+0x24) = (R32(GPIOC+0x24) & ~0x000FFFFFU) | 0x000CCCCCU; /* AFRH PC8-12 AF12 */
-	R32(GPIOD+0x00) = (R32(GPIOD+0x00) & ~0x00000030U) | 0x00000020U; /* MODER PD2 AF */
-	R32(GPIOD+0x20) = (R32(GPIOD+0x20) & ~0x00000F00U) | 0x00000C00U; /* AFRL PD2 AF12 */
-
-	SD(POWER) = 0x03;		/* power on */
-	SD(CLKCR) = 0x02;		/* clkdiv=2, 1-bit bus (WIDBUS=00) */
+	SD(POWER) = 0x03;
 	SD(DTIMER) = 0xffffffffU;
 	dmbsy();
-
-	sd_cmd(GO_IDLE, 0, 0, 0);
-	sd_cmd(IF_COND, 0x1aa, CMD_WAITRESP_SHORT, 0);	/* CMD8: 2.7-3.6V, check 0xaa */
-	for (timo = 100000; timo > 0; timo--) {
-		sd_cmd(APP_CMD, 0, CMD_WAITRESP_SHORT, 0);
-		ocr = (unsigned int)sd_cmd(APP_OP_COND, OCR_VOLT|OCR_HCS,
-		    CMD_WAITRESP_SHORT, 0);
-		if (ocr & 0x80000000U)		/* card powered up */
-			break;
-	}
-	if (timo == 0)
-		panic("sd");
-	sd_hc = (ocr & OCR_HCS) ? 1 : 0;
-	sd_cmd(ALL_SEND_CID, 0, CMD_WAITRESP_LONG, 0);
-	sd_rca = (unsigned int)sd_cmd(SEND_RCA, 0, CMD_WAITRESP_SHORT, 0)
-	    & 0xffff0000U;
-	sd_cmd(SEND_CSD, sd_rca, CMD_WAITRESP_LONG, 0);
-	sd_cmd(SEL_CARD, sd_rca, CMD_WAITRESP_SHORT, 0);
-	sd_cmd(SET_BLOCKLEN, 512, CMD_WAITRESP_SHORT, 0);	/* SDSC needs this; SDHC ignores */
-	sdtab.b_actf = NULL;
-	sdtab.b_active = 0;
 }
 
 /*
@@ -210,7 +138,7 @@ sdstart(void)
 		sd_retry = 0;
 	}
 	sdtab.b_active++;
-	blk = sd_hc ? (unsigned int)bp->b_blkno : (unsigned int)bp->b_blkno*512;
+	blk = (unsigned int)bp->b_blkno;
 	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 	SD(ICR) = STA_STATIC;
 	/* Match the HAL IDMA single-buffer read/write order: program the data

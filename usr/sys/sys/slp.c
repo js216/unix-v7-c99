@@ -464,7 +464,7 @@ int
 newproc(void)
 {
 	int a1, a2;
-	struct proc *p, *up;
+	struct proc *volatile p, *up;
 	struct proc *rpp, *rip;
 	int n;
 

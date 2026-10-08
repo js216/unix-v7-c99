@@ -80,7 +80,7 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	256		/* size of user block (*64): 16KB u-area+kstack */
+#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
 #define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
 #define	NULL	0
 #define	CMASK	0		/* default mask for file creation */

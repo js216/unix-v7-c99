@@ -22168,7 +22168,7 @@ usr/local
 +	msr cpsr_c, r0
 +
 +	bl machine_init			@ enable MMU, map u-area window -> proc0
-+	ldr sp, =0x4F004000		@ UBASE + USIZE*64: proc0 u-area stack top
++	ldr sp, =0x4F002000		@ UBASE + USIZE*64: proc0 u-area stack top
 +	bl main
 +	dsb ish
 +	isb
@@ -23076,7 +23076,7 @@ usr/local
 -	waitloc
 +	.syntax unified
 +	.arch armv7-a
-@@ -679,380 +10,181 @@
+@@ -679,380 +10,174 @@
 -.globl	_save
 -_save:
 -	mov	(sp)+,r1
@@ -23464,7 +23464,6 @@ usr/local
 +	.globl intr_disable
 +	.globl intr_restore
 +	.globl cntfrq_get
-+	.globl cntfrq_set
 +	.globl cntv_tval_set
 +	.globl cntv_ctl_set
 +	.globl save
@@ -23555,12 +23554,6 @@ usr/local
 +
 +cntfrq_get:
 +	mrc p15, 0, r0, c14, c0, 0
-+	bx lr
-+
-+cntfrq_set:				@ CNTFRQ = r0 (system counter Hz)
-+	mcr p15, 0, r0, c14, c0, 0
-+	dsb
-+	isb
 +	bx lr
 +
 +cntv_tval_set:
@@ -24797,7 +24790,7 @@ usr/local
 +
 
 % usr/sys/dev/stm32ddr.c /dev/null
-@@ -0,0 +1,383 @@
+@@ -0,0 +1,321 @@
 +/*
 + *   STM32MP135 clock and DDR bring-up
 + *
@@ -24812,14 +24805,12 @@ usr/local
 +#include "../h/param.h"
 +#include "../h/seg.h"
 +
-+void clock_init(void);
++void ddrclk(void);
 +void ddr_init(void);
-+void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
 +
 +/* RCC + DDR controller/PHY + security blocks (board reference firmware) */
 +#define RCC		0x50000000U
 +#define PWR		0x50001000U
-+#define STGENC		0x5C008000U	/* system timer generator (counter) */
 +#define DDRCTRL		0x5A003000U
 +#define DDRPHYC		0x5A004000U
 +#define BSEC		0x5C005000U
@@ -24829,13 +24820,8 @@ usr/local
 +/* RCC registers used here (offsets verified against the board headers) */
 +#define RCC_OCENSETR	R32(RCC + 0x420)	/* oscillator enable (set-reg) */
 +#define RCC_OCRDYR	R32(RCC + 0x428)	/* oscillator ready */
-+#define RCC_STGENCKSELR	R32(RCC + 0x660)	/* STGEN kernel clock select */
-+#define RCC_APB5ENSETR	R32(RCC + 0x740)	/* APB5 clock enable (set-reg) */
 +#define HSEON		0x00000100U		/* OCENSETR/OCRDYR bit 8 */
 +#define HSERDY		0x00000100U
-+#define STGENCEN	0x00100000U		/* APB5ENSETR bit 20 */
-+#define STGENSRC_HSE	0x00000001U		/* STGENCKSELR field = HSE */
-+#define HSE_HZ		24000000U		/* board crystal */
 +/* PLL2 (DDR PHY clock); fields are value-1 per the RCC encoding */
 +#define RCC_RCK12SELR	R32(RCC + 0x480)	/* PLL1/2 reference clock select */
 +#define RCC_PLL2CR	R32(RCC + 0x4D0)
@@ -24847,43 +24833,23 @@ usr/local
 +#define PLL2_RDY	0x00000002U
 +#define PLL2_DIVEN	0x00000070U		/* DIVP/Q/R output enables */
 +#define PLL2_FRACLE	0x00010000U
-+/* PLL4 (SDMMC1 kernel clock); same field encoding as PLL2 */
-+#define RCC_RCK4SELR	R32(RCC + 0x488)
-+#define RCC_PLL4CR	R32(RCC + 0x520)
-+#define RCC_PLL4CFGR1	R32(RCC + 0x524)
-+#define RCC_PLL4CFGR2	R32(RCC + 0x528)
-+#define RCC_SDMMC12CKSELR R32(RCC + 0x648)
-+#define PLL4SRC_HSE	0x00000001U		/* RCK4SELR PLL4SRC = HSE */
-+#define SDMMC1SRC_PLL4	0x00000002U		/* SDMMC12CKSELR SDMMC1SRC = PLL4 */
 +
-+/* Bring up clocks + DRAM before machine_init() enables the MMU. */
++/* Bring up DRAM and its clock before machine_init() enables the MMU. */
 +void
 +ddrinit(void)
 +{
-+	clock_init();
++	ddrclk();
 +	ddr_init();
 +}
 +
 +/*
-+ * Clock tree: HSE 24 MHz feeds PLL1 (MPU), PLL2 (AXI + DDR @ 533 MHz), PLL4
-+ * (SDMMC); UART4 falls back on HSI, so the console can print at the ROM's
-+ * default clocks before this runs -- the first bench milestone.
-+ *
-+ * TODO(bench, #28): port the RCC PLL bring-up from the reference bootloader.
-+ * Source: stm32mp135_test_board/bootloader/drivers/stm32mp13xx_hal_rcc{,_ex}.c
-+ * (HAL_RCC_OscConfig + HAL_RCC_ClockConfig); the PLL coefficients live in that
-+ * board's RCC config.  PLL2_R must reach 533 MHz before ddr_init().  Cannot be
-+ * exercised in QEMU; iterate on the PCB watching UART4.
-+ *
-+ * Also program the system counter so the generic timer (clock.c) ticks: the
-+ * ROM leaves it dead because UNIX is the FSBL.  Per the bootloader's
-+ * handoff.S: select STGEN clock = HSE (RCC), enable + start STGEN, then set
-+ * CNTFRQ (CP15 c14,c0,0) = 24000000 so cntfrq_get() returns the true 24 MHz
-+ * and timer_reload (cntfrq/HZ) is correct -- otherwise there is no preemption.
-+ * On QEMU CNTFRQ is preset, which is why this is board-specific, not shared.
++ * DDR clock: HSE (the 24 MHz crystal) feeds PLL2, whose R output clocks the
++ * DDR PHY.  All other clocks are left as the boot ROM set them: the CPU and
++ * buses, the console UART (HSI), the SD card, and the system counter, whose
++ * frequency the ROM leaves in CNTFRQ for clkstart().
 + */
 +void
-+clock_init(void)
++ddrclk(void)
 +{
 +	int timo;
 +
@@ -24891,23 +24857,6 @@ usr/local
 +	RCC_OCENSETR = HSEON;
 +	for (timo = 100000; timo > 0 && !(RCC_OCRDYR & HSERDY); timo--)
 +		;
-+
-+	/*
-+	 * System counter (STGEN): clock it from HSE, program 24 MHz, and start
-+	 * it so the Cortex-A7 generic timer (clock.c) advances -- the ROM leaves
-+	 * it stopped because UNIX is the FSBL.  Then tell the CPU the frequency
-+	 * via CNTFRQ so timer_reload (cntfrq/HZ) is right.  Without this there
-+	 * is no clock tick and hence no preemption or timeouts.
-+	 */
-+	RCC_APB5ENSETR = STGENCEN;		/* STGEN bus clock */
-+	(void)RCC_APB5ENSETR;			/* read-back before access */
-+	RCC_STGENCKSELR = (RCC_STGENCKSELR & ~3U) | STGENSRC_HSE;
-+	R32(STGENC + 0x00) = 0;			/* CNTCR: stop counter */
-+	R32(STGENC + 0x20) = HSE_HZ;		/* CNTFID0: frequency */
-+	R32(STGENC + 0x08) = 0;			/* CNTCVL: counter low = 0 */
-+	R32(STGENC + 0x0c) = 0;			/* CNTCVU: counter high = 0 */
-+	R32(STGENC + 0x00) = 1;			/* CNTCR.EN: start counter */
-+	cntfrq_set(HSE_HZ);
 +
 +	/*
 +	 * PLL2 -> 533 MHz on its R output, which clocks the DDR PHY (DDR3-1066);
@@ -24919,7 +24868,7 @@ usr/local
 +	 * value just fails ddr_init() with the console still alive.
 +	 * TODO(bench, #28): the AXI-on-PLL2 speedup (a live switch -- park AXI,
 +	 * reconfigure, switch back, as HAL_RCC_ClockConfig does) and PLL1 (MPU)
-+	 * remain; validate PLL2/PLL4 lock on the PCB.
++	 * remain; validate PLL2 lock on the PCB.
 +	 */
 +	RCC_PLL2CR &= ~PLL2_PLLON;		/* disable before reconfigure */
 +	for (timo = 10000; timo > 0 && (RCC_PLL2CR & PLL2_RDY); timo--)
@@ -24933,24 +24882,6 @@ usr/local
 +	RCC_PLL2CR |= PLL2_PLLON;		/* enable PLL2 */
 +	for (timo = 100000; timo > 0 && !(RCC_PLL2CR & PLL2_RDY); timo--)
 +		;
-+
-+	/*
-+	 * PLL4 -> P output 50 MHz (VCO = 24/2 x 50 = 600 MHz, /12), routed as the
-+	 * SDMMC1 card kernel clock so the SD block driver can read the rootfs.
-+	 * Integer mode (no FRACV).  Board coefficients (setup.c): DIVM4=2, DIVN=50,
-+	 * DIVP=12, DIVQ=25, DIVR=6.  Peripheral clock only -- no live bus switch.
-+	 */
-+	RCC_PLL4CR &= ~PLL2_PLLON;
-+	for (timo = 10000; timo > 0 && (RCC_PLL4CR & PLL2_RDY); timo--)
-+		;
-+	RCC_RCK4SELR = (RCC_RCK4SELR & ~7U) | PLL4SRC_HSE;
-+	RCC_PLL4CFGR1 = 0x00010031u;		/* DIVM4=1 (/2), DIVN=49 (x50) */
-+	RCC_PLL4CFGR2 = 0x00051811u;		/* DIVP=11 (/12), DIVQ=24 (/25), DIVR=5 (/6) */
-+	RCC_PLL4CR |= PLL2_DIVEN;		/* enable P/Q/R outputs */
-+	RCC_PLL4CR |= PLL2_PLLON;
-+	for (timo = 100000; timo > 0 && !(RCC_PLL4CR & PLL2_RDY); timo--)
-+		;
-+	RCC_SDMMC12CKSELR = (RCC_SDMMC12CKSELR & ~7U) | SDMMC1SRC_PLL4;
 +}
 +
 +/*
@@ -25072,7 +25003,7 @@ usr/local
 + * so it is a bench candidate -- the register values/offsets above are exact,
 + * but the analog parts (PHY DLL lock, ZQ calibration, DQS training triggered
 + * by PIR and polled on PGSR.IDONE) only converge against real silicon.
-+ * TODO(bench, #28): requires PLL2_R = 533 MHz from clock_init first.  Tune on
++ * TODO(bench, #28): requires PLL2_R = 533 MHz from ddrclk first.  Tune on
 + * the PCB: if PGSR.IDONE or STAT.operating_mode never settles, add the SWCTL/
 + * SWSTAT sw_done handshakes the HAL wraps around quasi-dynamic writes.
 + */
@@ -25183,7 +25114,7 @@ usr/local
 +}
 
 % usr/sys/dev/stm32sd.c usr/sys/dev/rk.c
-@@ -2 +2,9 @@
+@@ -2 +2,12 @@
 - * RK disk driver
 + *   STM32 SDMMC block driver (SDMMC1 on the MP135 board)
 + *
@@ -25192,13 +25123,16 @@ usr/local
 + * controller via sdstart(); sdstart() programs one SD block transfer through
 + * the SDMMC internal DMA and returns; the transfer-complete interrupt
 + * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
-+ * sleeps on the buffer until then.  This file is built only for the MP135
-+ * board (the QEMU build links virtio_blk.c instead).
-@@ -4 +11,0 @@
++ * sleeps on the buffer until then.
++ *
++ * Like v7's drivers it assumes working hardware: the boot ROM has just read
++ * the kernel from this card, so clocks, pins and the card (selected, in
++ * transfer state, SDHC block addressing) are used as the ROM left them.
+@@ -4 +14,0 @@
 -
-@@ -6 +12,0 @@
+@@ -6 +15,0 @@
 -#include "../h/systm.h"
-@@ -8,18 +14,90 @@
+@@ -8,18 +17,64 @@
 -#include "../h/conf.h"
 -#include	"../h/dir.h"
 -#include "../h/user.h"
@@ -25220,7 +25154,6 @@ usr/local
 +#include "../h/seg.h"
 +
 +
-+void panic(char *s);
 +void dmbsy(void);
 +void iodone(struct buf *bp);
 +void deverror(struct buf *bp, int o1, int o2);
@@ -25249,20 +25182,8 @@ usr/local
 +#define	IDMACTRL 0x50
 +#define	IDMABSIZE 0x54
 +#define	IDMABASER 0x58
-+/* RCC + GPIO for SDMMC1 clock gating and pin mux */
-+#define	RCC	0x50000000U
-+#define	GPIOC	0x50004000U
-+#define	GPIOD	0x50005000U
-+#define	R32(a)	(*(volatile unsigned int *)(a))
-+#define	AHB4ENSETR R32(RCC + 0x770)	/* non-secure: GPIO bus clocks */
-+#define	AHB6ENSETR R32(RCC + 0x780)	/* SDMMC1 bus clock */
-+#define	GPIOCEN	0x00000004U
-+#define	GPIODEN	0x00000008U
-+#define	SDMMC1EN 0x00010000U
-+
 +/* CMD register fields */
 +#define	CMD_WAITRESP_SHORT 0x0100U	/* short response */
-+#define	CMD_WAITRESP_LONG  0x0300U	/* long response */
 +#define	CMD_CMDTRANS	0x0040U		/* command transfers data */
 +#define	CMD_CPSMEN	0x1000U		/* command path state machine enable */
 +/* STA bits */
@@ -25285,40 +25206,27 @@ usr/local
 +/* IDMA */
 +#define	IDMA_IDMAEN	0x0001U
 +/* card commands */
-+#define	GO_IDLE		0
-+#define	ALL_SEND_CID	2
-+#define	SEND_RCA	3
-+#define	SEL_CARD	7
-+#define	IF_COND		8
-+#define	SEND_CSD	9
-+#define	SET_BLOCKLEN	16
 +#define	READ_BLOCK	17
 +#define	WRITE_BLOCK	24
-+#define	APP_CMD		55
-+#define	APP_OP_COND	41
-+#define	OCR_HCS		0x40000000U	/* host supports high capacity */
-+#define	OCR_VOLT	0x00ff8000U	/* 2.7-3.6 V window */
 +
 +int	sdirq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
 +struct buf sdtab;
-+static unsigned int sd_rca;	/* card relative address (<<16 for commands) */
-+static int sd_hc;		/* 1 = high-capacity (block addressing) */
 +static struct buf *sd_cur;
 +static int sd_retry;
 +
-+#define	SD_RETRIES	3
-@@ -28 +106,3 @@
++#define	SD_RETRIES	10
+@@ -28 +83,3 @@
 - * Monitoring device bit
-+ * Issue one command.  resp is 0 (none), CMD_WAITRESP_SHORT, or
-+ * CMD_WAITRESP_LONG; data!=0 marks a data-transfer command.  Returns RESP1,
-+ * or -1 on command timeout/CRC error.
-@@ -30,3 +110,2 @@
++ * Issue one command.  resp is 0 (none) or CMD_WAITRESP_SHORT; data!=0
++ * marks a data-transfer command.  Returns RESP1, or -1 on command
++ * timeout/CRC error.
+@@ -30,3 +87,2 @@
 -#define	DK_N	1
 -
 -struct	device
 +static int
 +sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
-@@ -34,7 +113 @@
+@@ -34,7 +90 @@
 -	int	rkds;
 -	int	rker;
 -	int	rkcs;
@@ -25327,7 +25235,7 @@ usr/local
 -	int	rkda;
 -};
 +	register int timo;
-@@ -42,2 +115,18 @@
+@@ -42,2 +92,17 @@
 -struct	buf	rktab;
 -struct	buf	rrkbuf;
 +	SD(ICR) = STA_STATIC;
@@ -25340,70 +25248,51 @@ usr/local
 +		if (resp == 0) {
 +			if (s & STA_CMDSENT)
 +				return(0);
-+		} else if (s & (STA_CMDREND | STA_CCRCFAIL)) {
-+			/* CCRCFAIL is expected for R3 (OCR) which carries no CRC;
-+			 * the response is still latched in RESP1, so accept it. */
++		} else if (s & STA_CCRCFAIL)
++			return(-1);
++		else if (s & STA_CMDREND)
 +			return((int)SD(RESP1));
-+		}
 +	}
 +	return(-1);
 +}
-@@ -45,2 +134,19 @@
+@@ -45,2 +110,6 @@
 -rkstrategy(bp)
 -register struct buf *bp;
 +/*
-+ * Bring up SDMMC1 and initialize the card: CMD0 (idle), CMD8 (voltage/HC
-+ * probe), CMD55+ACMD41 loop (OCR + HCS, wait power-up), CMD2 (CID), CMD3
-+ * (RCA), CMD9 (CSD), CMD7 (select), CMD16 (512-byte blocks; SDHC ignores).
-+ * The bus stays 1-bit: the controller's WIDBUS must match the card's, and a
-+ * 4-bit transfer would need ACMD6 (SET_BUS_WIDTH) sent to the card first -- a
-+ * speed optimization deferred past bring-up (cf. the bootloader's
-+ * SD_WideBus_Enable).  1-bit is correct and sufficient to read the rootfs.
-+ * Sets sd_rca, sd_hc.  Panics if no card responds.
-+ *
-+ * The SDMMC1 bus clock, GPIO clocks, and pin mux (AF12: D0-D3+CK on PC8-12,
-+ * CMD on PD2) are configured below; the card kernel clock is PLL4, routed by
-+ * clock_init() (so this runs after the PLLs are up).  All imported from the
-+ * reference bootloader's sd.c.
-+ * TODO(bench, #33): validate the card-init response/timeout values, the IDMA
-+ * data path, and dcflush coherency against a real card on the PCB.
++ * The card is as the boot ROM left it; just make sure the controller is
++ * powered and allow the longest data timeout.
 + */
 +void
 +sdinit(void)
-@@ -47,0 +154,2 @@
-+	register int timo;
-+	unsigned int ocr;
-@@ -49,6 +157,23 @@
+@@ -47,0 +117,4 @@
++	SD(POWER) = 0x03;
++	SD(DTIMER) = 0xffffffffU;
++	dmbsy();
++}
+@@ -49,5 +122,13 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
 -		bp->b_flags |= B_ERROR;
 -		iodone(bp);
--		return;
-+	/* SDMMC1 bus clock + GPIO clocks, then pin mux to alternate function 12:
-+	 * data/clock D0-D3+CK on PC8..PC12, command CMD on PD2. */
-+	AHB4ENSETR = GPIOCEN | GPIODEN;
-+	AHB6ENSETR = SDMMC1EN;
-+	(void)AHB6ENSETR;		/* read-back: clock live before access */
-+	R32(GPIOC+0x00) = (R32(GPIOC+0x00) & ~0x03FF0000U) | 0x02AA0000U; /* MODER PC8-12 AF */
-+	R32(GPIOC+0x24) = (R32(GPIOC+0x24) & ~0x000FFFFFU) | 0x000CCCCCU; /* AFRH PC8-12 AF12 */
-+	R32(GPIOD+0x00) = (R32(GPIOD+0x00) & ~0x00000030U) | 0x00000020U; /* MODER PD2 AF */
-+	R32(GPIOD+0x20) = (R32(GPIOD+0x20) & ~0x00000F00U) | 0x00000C00U; /* AFRL PD2 AF12 */
++/*
++ * Program one block transfer for the buffer at the head of the queue through
++ * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
++ */
++static void
++sdstart(void)
++{
++	register struct buf *bp;
++	unsigned int blk;
 +
-+	SD(POWER) = 0x03;		/* power on */
-+	SD(CLKCR) = 0x02;		/* clkdiv=2, 1-bit bus (WIDBUS=00) */
-+	SD(DTIMER) = 0xffffffffU;
-+	dmbsy();
-+
-+	sd_cmd(GO_IDLE, 0, 0, 0);
-+	sd_cmd(IF_COND, 0x1aa, CMD_WAITRESP_SHORT, 0);	/* CMD8: 2.7-3.6V, check 0xaa */
-+	for (timo = 100000; timo > 0; timo--) {
-+		sd_cmd(APP_CMD, 0, CMD_WAITRESP_SHORT, 0);
-+		ocr = (unsigned int)sd_cmd(APP_OP_COND, OCR_VOLT|OCR_HCS,
-+		    CMD_WAITRESP_SHORT, 0);
-+		if (ocr & 0x80000000U)		/* card powered up */
-+			break;
-@@ -56,10 +181,11 @@
++	if ((bp = sdtab.b_actf) == NULL)
++		return;
++	if (sdtab.b_active)
+@@ -54,0 +136,3 @@
++	if (bp != sd_cur) {
++		sd_cur = bp;
++		sd_retry = 0;
+@@ -56,10 +140,21 @@
 -	bp->av_forw = (struct buf *)NULL;
 -	spl5();
 -	if(rktab.b_actf == NULL)
@@ -25414,59 +25303,8 @@ usr/local
 -	if(rktab.b_active == NULL)
 -		rkstart();
 -	spl0();
-+	if (timo == 0)
-+		panic("sd");
-+	sd_hc = (ocr & OCR_HCS) ? 1 : 0;
-+	sd_cmd(ALL_SEND_CID, 0, CMD_WAITRESP_LONG, 0);
-+	sd_rca = (unsigned int)sd_cmd(SEND_RCA, 0, CMD_WAITRESP_SHORT, 0)
-+	    & 0xffff0000U;
-+	sd_cmd(SEND_CSD, sd_rca, CMD_WAITRESP_LONG, 0);
-+	sd_cmd(SEL_CARD, sd_rca, CMD_WAITRESP_SHORT, 0);
-+	sd_cmd(SET_BLOCKLEN, 512, CMD_WAITRESP_SHORT, 0);	/* SDSC needs this; SDHC ignores */
-+	sdtab.b_actf = NULL;
-+	sdtab.b_active = 0;
-@@ -68 +194,6 @@
--rkstart()
-+/*
-+ * Program one block transfer for the buffer at the head of the queue through
-+ * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
-+ */
-+static void
-+sdstart(void)
-@@ -71,3 +202 @@
--	register com;
--	daddr_t bn;
--	int dn, cn, sn;
-+	unsigned int blk;
-@@ -75 +204,3 @@
--	if ((bp = rktab.b_actf) == NULL)
-+	if ((bp = sdtab.b_actf) == NULL)
-+		return;
-+	if (sdtab.b_active)
-@@ -77,17 +208,25 @@
--	rktab.b_active++;
--	bn = bp->b_blkno;
--	dn = minor(bp->b_dev);
--	cn = bn/12;
--	sn = bn%12;
--	RKADDR->rkda = (dn<<13) | (cn<<4) | sn;
--	RKADDR->rkba = bp->b_un.b_addr;
--	RKADDR->rkwc = -(bp->b_bcount>>1);
--	com = ((bp->b_xmem&3) << 4) | IENABLE | GO;
--	if(bp->b_flags & B_READ)
--		com |= RCOM; else
--		com |= WCOM;
--	RKADDR->rkcs = com;
--	dk_busy |= 1<<DK_N;
--	dk_numb[DK_N] += 1;
--	com = bp->b_bcount>>6;
--	dk_wds[DK_N] += com;
-+	if (bp != sd_cur) {
-+		sd_cur = bp;
-+		sd_retry = 0;
-+	}
 +	sdtab.b_active++;
-+	blk = sd_hc ? (unsigned int)bp->b_blkno : (unsigned int)bp->b_blkno*512;
++	blk = (unsigned int)bp->b_blkno;
 +	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 +	SD(ICR) = STA_STATIC;
 +	/* Match the HAL IDMA single-buffer read/write order: program the data
@@ -25486,13 +25324,36 @@ usr/local
 +	dk_busy |= 1;
 +	dk_numb[0]++;
 +	dk_wds[0] += bp->b_bcount / 2;
-@@ -96 +235,25 @@
--rkintr()
+@@ -68 +163,2 @@
+-rkstart()
 +int
 +sdstrategy(struct buf *bp)
-+{
+@@ -70,4 +166 @@
+-	register struct buf *bp;
+-	register com;
+-	daddr_t bn;
+-	int dn, cn, sn;
 +	int s, idle;
-+
+@@ -75,19 +168,12 @@
+-	if ((bp = rktab.b_actf) == NULL)
+-		return;
+-	rktab.b_active++;
+-	bn = bp->b_blkno;
+-	dn = minor(bp->b_dev);
+-	cn = bn/12;
+-	sn = bn%12;
+-	RKADDR->rkda = (dn<<13) | (cn<<4) | sn;
+-	RKADDR->rkba = bp->b_un.b_addr;
+-	RKADDR->rkwc = -(bp->b_bcount>>1);
+-	com = ((bp->b_xmem&3) << 4) | IENABLE | GO;
+-	if(bp->b_flags & B_READ)
+-		com |= RCOM; else
+-		com |= WCOM;
+-	RKADDR->rkcs = com;
+-	dk_busy |= 1<<DK_N;
+-	dk_numb[DK_N] += 1;
+-	com = bp->b_bcount>>6;
+-	dk_wds[DK_N] += com;
 +	bp->av_forw = NULL;
 +	s = intr_disable();
 +	if (sdtab.b_actf == NULL)
@@ -25505,17 +25366,17 @@ usr/local
 +	if (idle)
 +		sdstart();
 +	return(0);
-+}
-+
+@@ -96 +182,6 @@
+-rkintr()
 +/*
 + * Transfer-complete interrupt: finish the active buffer and start the next.
 + * (cf. rkintr.)
 + */
 +int
 +sdintr(void)
-@@ -98,0 +262 @@
+@@ -98,0 +190 @@
 +	unsigned int sta;
-@@ -100,13 +264,13 @@
+@@ -100,13 +192,13 @@
 -	if (rktab.b_active == NULL)
 -		return;
 -	dk_busy &= ~(1<<DK_N);
@@ -25542,9 +25403,9 @@ usr/local
 +		if (sd_retry++ < SD_RETRIES) {
 +			sdstart();
 +			return(0);
-@@ -113,0 +278 @@
+@@ -113,0 +206 @@
 +		deverror(bp, (int)sta, 0);
-@@ -115,3 +280,5 @@
+@@ -115,3 +208,5 @@
 -	}
 -	rktab.b_errcnt = 0;
 -	rktab.b_actf = bp->av_forw;
@@ -25553,25 +25414,25 @@ usr/local
 +	sd_cur = NULL;
 +	sd_retry = 0;
 +	sdtab.b_actf = bp->av_forw;
-@@ -120 +287,2 @@
+@@ -120 +215,2 @@
 -	rkstart();
 +	sdstart();
 +	return(0);
-@@ -123 +291,4 @@
+@@ -123 +219,4 @@
 -rkread(dev)
 +struct	buf	rsdbuf;
 +
 +int
 +sdread(dev)
-@@ -127 +298,2 @@
+@@ -127 +226,2 @@
 -	physio(rkstrategy, &rrkbuf, dev, B_READ);
 +	physio(sdstrategy, &rsdbuf, dev, B_READ);
 +	return(0);
-@@ -130 +302,2 @@
+@@ -130 +230,2 @@
 -rkwrite(dev)
 +int
 +sdwrite(dev)
-@@ -134 +307,2 @@
+@@ -134 +235,2 @@
 -	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
 +	physio(sdstrategy, &rsdbuf, dev, B_WRITE);
 +	return(0);
@@ -26591,7 +26452,7 @@ usr/local
 @@ -83,2 +83,2 @@
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
-+#define	USIZE	256		/* size of user block (*64): 16KB u-area+kstack */
++#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
 +#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
 @@ -94 +94 @@
 -#define	CBSIZE	14		/* number of chars in a clist block */
@@ -26945,7 +26806,7 @@ usr/local
 @@ -164 +166 @@
 -	s = spl7();
 +	s = intr_disable();
-@@ -184 +186,74 @@
+@@ -184 +186,72 @@
 -	splx(s);
 +	intr_restore(s);
 +}
@@ -27006,10 +26867,8 @@ usr/local
 +clkstart(void)
 +{
 +	register struct intr *ip;
-+	unsigned int freq;
-+	freq = cntfrq_get();
-+	if(freq == 0) freq = 62500000U;
-+	timer_reload = freq / TIMER_HZ;
++	if((timer_reload = cntfrq_get() / TIMER_HZ) == 0)
++		panic("no clock");
 +	gicen(TIMER_IRQ);
 +	for(ip = intrtab; ip->i_irq; ip++)
 +		if(*ip->i_irq)
@@ -28407,9 +28266,11 @@ usr/local
 -newproc()
 +int
 +newproc(void)
-@@ -430,2 +468,2 @@
+@@ -429,3 +467,3 @@
+-	struct proc *p, *up;
 -	register struct proc *rpp, *rip;
 -	register n;
++	struct proc *volatile p, *up;
 +	struct proc *rpp, *rip;
 +	int n;
 @@ -447 +485 @@

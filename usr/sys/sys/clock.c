@@ -242,10 +242,8 @@ void
 clkstart(void)
 {
 	register struct intr *ip;
-	unsigned int freq;
-	freq = cntfrq_get();
-	if(freq == 0) freq = 62500000U;
-	timer_reload = freq / TIMER_HZ;
+	if((timer_reload = cntfrq_get() / TIMER_HZ) == 0)
+		panic("no clock");
 	gicen(TIMER_IRQ);
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)

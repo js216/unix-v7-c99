@@ -51,7 +51,7 @@ _start:
 	msr cpsr_c, r0
 
 	bl machine_init			@ enable MMU, map u-area window -> proc0
-	ldr sp, =0x4F004000		@ UBASE + USIZE*64: proc0 u-area stack top
+	ldr sp, =0x4F002000		@ UBASE + USIZE*64: proc0 u-area stack top
 	bl main
 	dsb ish
 	isb

@@ -12,14 +12,12 @@
 #include "../h/param.h"
 #include "../h/seg.h"
 
-void clock_init(void);
+void ddrclk(void);
 void ddr_init(void);
-void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
 
 /* RCC + DDR controller/PHY + security blocks (board reference firmware) */
 #define RCC		0x50000000U
 #define PWR		0x50001000U
-#define STGENC		0x5C008000U	/* system timer generator (counter) */
 #define DDRCTRL		0x5A003000U
 #define DDRPHYC		0x5A004000U
 #define BSEC		0x5C005000U
@@ -29,13 +27,8 @@ void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
 /* RCC registers used here (offsets verified against the board headers) */
 #define RCC_OCENSETR	R32(RCC + 0x420)	/* oscillator enable (set-reg) */
 #define RCC_OCRDYR	R32(RCC + 0x428)	/* oscillator ready */
-#define RCC_STGENCKSELR	R32(RCC + 0x660)	/* STGEN kernel clock select */
-#define RCC_APB5ENSETR	R32(RCC + 0x740)	/* APB5 clock enable (set-reg) */
 #define HSEON		0x00000100U		/* OCENSETR/OCRDYR bit 8 */
 #define HSERDY		0x00000100U
-#define STGENCEN	0x00100000U		/* APB5ENSETR bit 20 */
-#define STGENSRC_HSE	0x00000001U		/* STGENCKSELR field = HSE */
-#define HSE_HZ		24000000U		/* board crystal */
 /* PLL2 (DDR PHY clock); fields are value-1 per the RCC encoding */
 #define RCC_RCK12SELR	R32(RCC + 0x480)	/* PLL1/2 reference clock select */
 #define RCC_PLL2CR	R32(RCC + 0x4D0)
@@ -47,43 +40,23 @@ void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
 #define PLL2_RDY	0x00000002U
 #define PLL2_DIVEN	0x00000070U		/* DIVP/Q/R output enables */
 #define PLL2_FRACLE	0x00010000U
-/* PLL4 (SDMMC1 kernel clock); same field encoding as PLL2 */
-#define RCC_RCK4SELR	R32(RCC + 0x488)
-#define RCC_PLL4CR	R32(RCC + 0x520)
-#define RCC_PLL4CFGR1	R32(RCC + 0x524)
-#define RCC_PLL4CFGR2	R32(RCC + 0x528)
-#define RCC_SDMMC12CKSELR R32(RCC + 0x648)
-#define PLL4SRC_HSE	0x00000001U		/* RCK4SELR PLL4SRC = HSE */
-#define SDMMC1SRC_PLL4	0x00000002U		/* SDMMC12CKSELR SDMMC1SRC = PLL4 */
 
-/* Bring up clocks + DRAM before machine_init() enables the MMU. */
+/* Bring up DRAM and its clock before machine_init() enables the MMU. */
 void
 ddrinit(void)
 {
-	clock_init();
+	ddrclk();
 	ddr_init();
 }
 
 /*
- * Clock tree: HSE 24 MHz feeds PLL1 (MPU), PLL2 (AXI + DDR @ 533 MHz), PLL4
- * (SDMMC); UART4 falls back on HSI, so the console can print at the ROM's
- * default clocks before this runs -- the first bench milestone.
- *
- * TODO(bench, #28): port the RCC PLL bring-up from the reference bootloader.
- * Source: stm32mp135_test_board/bootloader/drivers/stm32mp13xx_hal_rcc{,_ex}.c
- * (HAL_RCC_OscConfig + HAL_RCC_ClockConfig); the PLL coefficients live in that
- * board's RCC config.  PLL2_R must reach 533 MHz before ddr_init().  Cannot be
- * exercised in QEMU; iterate on the PCB watching UART4.
- *
- * Also program the system counter so the generic timer (clock.c) ticks: the
- * ROM leaves it dead because UNIX is the FSBL.  Per the bootloader's
- * handoff.S: select STGEN clock = HSE (RCC), enable + start STGEN, then set
- * CNTFRQ (CP15 c14,c0,0) = 24000000 so cntfrq_get() returns the true 24 MHz
- * and timer_reload (cntfrq/HZ) is correct -- otherwise there is no preemption.
- * On QEMU CNTFRQ is preset, which is why this is board-specific, not shared.
+ * DDR clock: HSE (the 24 MHz crystal) feeds PLL2, whose R output clocks the
+ * DDR PHY.  All other clocks are left as the boot ROM set them: the CPU and
+ * buses, the console UART (HSI), the SD card, and the system counter, whose
+ * frequency the ROM leaves in CNTFRQ for clkstart().
  */
 void
-clock_init(void)
+ddrclk(void)
 {
 	int timo;
 
@@ -91,23 +64,6 @@ clock_init(void)
 	RCC_OCENSETR = HSEON;
 	for (timo = 100000; timo > 0 && !(RCC_OCRDYR & HSERDY); timo--)
 		;
-
-	/*
-	 * System counter (STGEN): clock it from HSE, program 24 MHz, and start
-	 * it so the Cortex-A7 generic timer (clock.c) advances -- the ROM leaves
-	 * it stopped because UNIX is the FSBL.  Then tell the CPU the frequency
-	 * via CNTFRQ so timer_reload (cntfrq/HZ) is right.  Without this there
-	 * is no clock tick and hence no preemption or timeouts.
-	 */
-	RCC_APB5ENSETR = STGENCEN;		/* STGEN bus clock */
-	(void)RCC_APB5ENSETR;			/* read-back before access */
-	RCC_STGENCKSELR = (RCC_STGENCKSELR & ~3U) | STGENSRC_HSE;
-	R32(STGENC + 0x00) = 0;			/* CNTCR: stop counter */
-	R32(STGENC + 0x20) = HSE_HZ;		/* CNTFID0: frequency */
-	R32(STGENC + 0x08) = 0;			/* CNTCVL: counter low = 0 */
-	R32(STGENC + 0x0c) = 0;			/* CNTCVU: counter high = 0 */
-	R32(STGENC + 0x00) = 1;			/* CNTCR.EN: start counter */
-	cntfrq_set(HSE_HZ);
 
 	/*
 	 * PLL2 -> 533 MHz on its R output, which clocks the DDR PHY (DDR3-1066);
@@ -119,7 +75,7 @@ clock_init(void)
 	 * value just fails ddr_init() with the console still alive.
 	 * TODO(bench, #28): the AXI-on-PLL2 speedup (a live switch -- park AXI,
 	 * reconfigure, switch back, as HAL_RCC_ClockConfig does) and PLL1 (MPU)
-	 * remain; validate PLL2/PLL4 lock on the PCB.
+	 * remain; validate PLL2 lock on the PCB.
 	 */
 	RCC_PLL2CR &= ~PLL2_PLLON;		/* disable before reconfigure */
 	for (timo = 10000; timo > 0 && (RCC_PLL2CR & PLL2_RDY); timo--)
@@ -133,24 +89,6 @@ clock_init(void)
 	RCC_PLL2CR |= PLL2_PLLON;		/* enable PLL2 */
 	for (timo = 100000; timo > 0 && !(RCC_PLL2CR & PLL2_RDY); timo--)
 		;
-
-	/*
-	 * PLL4 -> P output 50 MHz (VCO = 24/2 x 50 = 600 MHz, /12), routed as the
-	 * SDMMC1 card kernel clock so the SD block driver can read the rootfs.
-	 * Integer mode (no FRACV).  Board coefficients (setup.c): DIVM4=2, DIVN=50,
-	 * DIVP=12, DIVQ=25, DIVR=6.  Peripheral clock only -- no live bus switch.
-	 */
-	RCC_PLL4CR &= ~PLL2_PLLON;
-	for (timo = 10000; timo > 0 && (RCC_PLL4CR & PLL2_RDY); timo--)
-		;
-	RCC_RCK4SELR = (RCC_RCK4SELR & ~7U) | PLL4SRC_HSE;
-	RCC_PLL4CFGR1 = 0x00010031u;		/* DIVM4=1 (/2), DIVN=49 (x50) */
-	RCC_PLL4CFGR2 = 0x00051811u;		/* DIVP=11 (/12), DIVQ=24 (/25), DIVR=5 (/6) */
-	RCC_PLL4CR |= PLL2_DIVEN;		/* enable P/Q/R outputs */
-	RCC_PLL4CR |= PLL2_PLLON;
-	for (timo = 100000; timo > 0 && !(RCC_PLL4CR & PLL2_RDY); timo--)
-		;
-	RCC_SDMMC12CKSELR = (RCC_SDMMC12CKSELR & ~7U) | SDMMC1SRC_PLL4;
 }
 
 /*
@@ -272,7 +210,7 @@ static const struct ddrreg ddrphy_regs[] = {
  * so it is a bench candidate -- the register values/offsets above are exact,
  * but the analog parts (PHY DLL lock, ZQ calibration, DQS training triggered
  * by PIR and polled on PGSR.IDONE) only converge against real silicon.
- * TODO(bench, #28): requires PLL2_R = 533 MHz from clock_init first.  Tune on
+ * TODO(bench, #28): requires PLL2_R = 533 MHz from ddrclk first.  Tune on
  * the PCB: if PGSR.IDONE or STAT.operating_mode never settles, add the SWCTL/
  * SWSTAT sw_done handshakes the HAL wraps around quasi-dynamic writes.
  */

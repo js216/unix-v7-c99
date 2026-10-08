@@ -14,7 +14,6 @@
 	.globl intr_disable
 	.globl intr_restore
 	.globl cntfrq_get
-	.globl cntfrq_set
 	.globl cntv_tval_set
 	.globl cntv_ctl_set
 	.globl save
@@ -105,12 +104,6 @@ intr_restore:
 
 cntfrq_get:
 	mrc p15, 0, r0, c14, c0, 0
-	bx lr
-
-cntfrq_set:				@ CNTFRQ = r0 (system counter Hz)
-	mcr p15, 0, r0, c14, c0, 0
-	dsb
-	isb
 	bx lr
 
 cntv_tval_set:
