@@ -41,7 +41,7 @@ extern char __ddrbss_start[], __ddrbss_end[];	/* zeroed in machine_init */
 /*
  * Board-resolved constant that resume() (mch.s) needs but cannot reach: the
  * assembler is not run through cpp, so it loads COREBASE from memory instead
- * of the seg.h/memmap.h macro.  It resolves here to the current board's value.
+ * of the param.h macro.  It resolves here to the current board's value.
  */
 unsigned int corebase = COREBASE;	/* physical base of the user core window */
 

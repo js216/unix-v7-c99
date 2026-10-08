@@ -15,12 +15,12 @@ KLDSCRIPT ?= usr/sys/conf/arm_qemu.ld
 
 CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon \
 	-fno-builtin -ffreestanding -nostdlib -mcpu=cortex-a7 -marm
-KCPPFLAGS = -Iusr/sys/conf/$(BOARD) $(KFEATURES)
+KCPPFLAGS = $(KFEATURES)
 KLDFLAGS = -nostdlib -T $(KLDSCRIPT) -Wl,-z,max-page-size=0x200
 
 USERCPPFLAGS = -Iusr/include -Iusr/src
 YACCCPPFLAGS = $(USERCPPFLAGS) -DYYSTACK_USE_ALLOCA=1
-USERLDFLAGS = -nostdlib -T usr/src/libc/u.ld -Wl,-z,max-page-size=0x10
+USERLDFLAGS = -nostdlib -Wl,-N -Wl,-Ttext=0x10
 USERLDLIBS = -Lusr/src/libc -lc -lgcc
 USERCRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 
@@ -32,7 +32,7 @@ MKFS_CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
 CMDOBJ = usr/src/libc/cmd-$(@F).o
 CMDELF = usr/src/libc/$(@F).elf
 SUBDIR_CPPFLAGS = -I../../../include -I../..
-SUBDIR_LDFLAGS = -nostdlib -T ../../libc/u.ld -Wl,-z,max-page-size=0x10
+SUBDIR_LDFLAGS = -nostdlib -Wl,-N -Wl,-Ttext=0x10
 SUBDIR_CRT = ../../libc/crt0.o ../../libc/crt0c.o
 SUBDIR_LDLIBS = -L../../libc -lc -lgcc
 SUBDIR_CFLAGS_EXTRA =
@@ -59,7 +59,7 @@ $(KBOARDSTAMP): | boot
 	rm -f boot/.board-*
 	touch $@
 
-$(KOBJS): $(KBOARDSTAMP) usr/sys/conf/$(BOARD)/memmap.h
+$(KOBJS): $(KBOARDSTAMP)
 
 boot/unix: $(KOBJS) | boot
 	$(KCC) $(CFLAGS) $(KCPPFLAGS) $(KLDFLAGS) -o $@ $^
@@ -77,22 +77,23 @@ LIBC_SYS_ASM = access acct chdir chmod chown chroot close creat fork fstat \
 	unlink utime wait write
 LIBC_SYS_C = alarm brk dup execv execl execve ftime gtty open pause stime \
 	stty
-LIBC_GEN_C = abort exit sleep
+LIBC_GEN_C = abort exit sleep frexp ldexp modf
 LIBC_STDIO_C = popen
 LIBC_C = l3 getpwent getpwnam getpwuid strncat ttyslot execvp getenv atoi \
 	atol atof index rindex isatty perror strcat strcmp strcpy strlen \
-	strncmp strncpy swab rand mktemp errlst ttyname mkdir qsort calloc \
+	strncmp strncpy swab rand mktemp errlst ttyname qsort calloc \
 	tell timezone getlogin data ctype_ fopen freopen findiop endopen \
 	filbuf flsbuf fgetc fputc fgets fputs gets puts rdwr fseek ftell \
 	rew setbuf ungetc clrerr getchar putchar strout doprnt printf \
 	fprintf sprintf doscan scanf malloc getpass ctime system memcpy nlist \
-	math_helpers ecvt fdopen gcvt getgrent getgrgid getgrnam getw putw
+	ecvt fdopen gcvt getgrent getgrgid getgrnam getw putw
 
 libc:
 	cd usr/src/libc && rm -f *.o *.a *.elf && \
 	    $(USERCC) $(CFLAGS) $(LIBC_CPPFLAGS) -c crt0.s && \
 	    $(USERCC) $(CFLAGS) $(LIBC_CPPFLAGS) -c crt0.c -o crt0c.o && \
 	    $(USERCC) $(CFLAGS) $(LIBC_CPPFLAGS) -c syscall.s && \
+	    $(USERCC) $(CFLAGS) $(LIBC_CPPFLAGS) -c gen/setjmp.s && \
 	    for i in $(LIBC_SYS_ASM); do \
 	        $(USERCC) $(CFLAGS) $(LIBC_CPPFLAGS) -c sys/$$i.s || exit 1; \
 	    done && \

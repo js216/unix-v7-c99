@@ -144,3 +144,27 @@ typedef	long		off_t;
 
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
+
+/*
+ * Board memory map: physical RAM base, user core window,
+ * section for the big tables, user page attributes, GIC.
+ */
+#ifdef QEMU
+#define	KERNBASE	0x40000000U	/* RAM base */
+#define	MEMSIZE		0x08000000U	/* 128 MB, match qemu -m */
+#define	COREBASE	0x44000000U
+#define	CORETOP		(KERNBASE + MEMSIZE)
+#define	KTABLES_SECTION	".bss"
+#define	PG_USER		0x0000047eU	/* cached, as is the core window */
+#define	GIC_DIST_BASE	0x08000000U
+#define	GIC_CPU_BASE	0x08010000U
+#endif
+#ifdef MP135
+#define	KERNBASE	0x2FFE0000U	/* 128 KB SYSRAM */
+#define	COREBASE	0xC0100000U	/* DDR, above .ddrbss */
+#define	CORETOP		0xE0000000U
+#define	KTABLES_SECTION	".ddrbss"	/* too big for SYSRAM */
+#define	PG_USER		0x00000472U	/* uncached: SDMMC IDMA is not coherent */
+#define	GIC_DIST_BASE	0xA0021000U
+#define	GIC_CPU_BASE	0xA0022000U
+#endif

@@ -9,13 +9,6 @@
 #define	ABS	040		/* Software: absolute address */
 
 /*
- * Physical memory layout (KERNBASE, COREBASE, CORETOP) is board-specific and
- * comes from conf/<board>/memmap.h, selected by the Makefile -I path -- so the
- * kernel sources are identical across boards (no conditional compilation).
- */
-#include "memmap.h"
-
-/*
  * User virtual memory layout.
  */
 #define USERBASE	0x00000000U

@@ -12,7 +12,6 @@
 #include "../h/text.h"
 #include "../h/tty.h"
 #include "../h/user.h"
-#include "../h/seg.h"		/* KTABLES_SECTION (board-selected via memmap.h) */
 
 /*
  * Device switch.  The console (cn*) and block device (bd*) entry points are
@@ -68,7 +67,7 @@ dev_t	swapdev = makedev(0, 0);
 dev_t	pipedev = makedev(0, 0);
 
 /*
- * The large system tables go in KTABLES_SECTION (conf/<board>/memmap.h): on
+ * The large system tables go in KTABLES_SECTION (param.h): on
  * the MP135, whose 128 KB SYSRAM cannot hold them, that is ".ddrbss", which
  * the linker places in DDR and machine_init() zeroes once DRAM is up; on QEMU,
  * where RAM is one block, it is the ordinary ".bss" zeroed by low.s.

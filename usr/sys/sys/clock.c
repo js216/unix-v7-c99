@@ -4,7 +4,7 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-#include "../h/seg.h"		/* GIC_DIST_BASE/GIC_CPU_BASE (board memmap.h) */
+#include "../h/seg.h"
 extern void addupc(caddr_t pc, void *prof, int inc);
 int intr_disable(void);
 void intr_restore(int s);
@@ -184,7 +184,7 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 	p1->c_arg = arg;
 	intr_restore(s);
 }
-#define GICD_BASE	GIC_DIST_BASE	/* board-specific (conf/<board>/memmap.h) */
+#define GICD_BASE	GIC_DIST_BASE	/* board-specific (param.h) */
 #define GICC_BASE	GIC_CPU_BASE
 #define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
 #define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))

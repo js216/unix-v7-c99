@@ -11,7 +11,6 @@ int	usage(), done(), dorep(), doxtract(), dotable(), getdir(),
 	pmode(), select(), checkdir(), onintr(), onquit(), onhup(),
 	onterm(), tomodes(), checksum(), checkw(), response(),
 	checkupdate(), prefix(), cmp(), copy();
-int	mkdir(char *path, int mode);
 #define TBLOCK	512
 #define NBLOCK	20
 #define NAMSIZ	100
@@ -636,15 +635,13 @@ checkdir(register char *name)
 		if (*cp == '/') {
 			*cp = '\0';
 			if (access(name, 01) < 0) {
-				if (mkdir(name, 0777) < 0) {
-					if (fork() == 0) {
-						execl("/bin/mkdir", "mkdir", name, 0);
-						execl("/usr/bin/mkdir", "mkdir", name, 0);
-						fprintf(stderr, "tar: cannot find mkdir!\n");
-						done(0);
-					}
-					while (wait(&i) >= 0);
+				if (fork() == 0) {
+					execl("/bin/mkdir", "mkdir", name, 0);
+					execl("/usr/bin/mkdir", "mkdir", name, 0);
+					fprintf(stderr, "tar: cannot find mkdir!\n");
+					done(0);
 				}
+				while (wait(&i) >= 0);
 				chown(name, stbuf.st_uid, stbuf.st_gid);
 			}
 			*cp = '/';
