@@ -211,11 +211,11 @@ compile(char *astr)
 				if (c=='\0')
 					goto cerror;
 				if (c=='-' && sp>cstart && *sp!=']') {
-					for (c = sp[-2]; c<*sp; c++)
+					for (c = sp[-2]&0177; c<(*sp&0177); c++)
 						ep[c>>3] |= bittab[c&07];
 					sp++;
 				}
-				ep[c>>3] |= bittab[c&07];
+				ep[(c&0177)>>3] |= bittab[c&07];
 			} while((c = *sp++) != ']');
 			if(neg) {
 				for(cclcnt = 0; cclcnt < 16; cclcnt++)

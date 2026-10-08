@@ -721,7 +721,7 @@ compile(char *expbuf)
 					exit(2);
 				}
 				if (c=='-' && sp>cstart && *sp!=']') {
-					for (c = sp[-2]; c<*sp; c++)
+					for (c = sp[-2]&0177; c<(*sp&0177); c++)
 						ep[c>>3] |= bittab[c&07];
 				}
 				if(c == '\\') {
@@ -732,7 +732,7 @@ compile(char *expbuf)
 					}
 				}
 
-				ep[c >> 3] |= bittab[c & 07];
+				ep[(c&0177) >> 3] |= bittab[c & 07];
 			} while((c = *sp++) != ']');
 
 			if(neg)
