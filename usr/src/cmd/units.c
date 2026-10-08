@@ -7,13 +7,13 @@ char	*unames[NDIM];
 struct unit
 {
 	double	factor;
-	char	dim[NDIM];
+	signed char	dim[NDIM];
 };
 
 struct table
 {
 	double	factor;
-	char	dim[NDIM];
+	signed char	dim[NDIM];
 	char	*name;
 } table[NTAB];
 double	getflt(void);
