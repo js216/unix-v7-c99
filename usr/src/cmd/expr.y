@@ -674,7 +674,7 @@ int
 getrnge(register char *str)
 {
 	low = *str++ & 0377;
-	size = *str == 255 ? 20000 : (*str &0377) - low;
+	size = (*str & 0377) == 255 ? 20000 : (*str &0377) - low;
 	return(0);
 }
 
