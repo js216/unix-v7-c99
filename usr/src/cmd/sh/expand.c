@@ -134,7 +134,7 @@ gmatch(REG STRING s, REG STRING p)
 		DO	IF c==']'
 			THEN	return(ok?gmatch(s,p):0);
 			ELIF c==MINUS
-			THEN	IF lc<=scc ANDF scc<=(*p++) THEN ok++ FI
+			THEN	IF lc<=scc ANDF scc<=((*p++)&STRIP) THEN ok++ FI
 			ELSE	IF scc==(lc=(c&STRIP)) THEN ok++ FI
 			FI
 		OD
