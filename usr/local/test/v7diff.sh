@@ -11,44 +11,169 @@ usr/local
 '
 : <<\EOF
 
-% Makefile /dev/null
-@@ -0,0 +1,174 @@
-+# SPDX-License-Identifier: MIT
-+# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
-+# Copyright (c) 2026 Jakob Kastelic
+% usr/src/cmd/cmd.mk /dev/null
+@@ -0,0 +1,49 @@
++C = usr/src/cmd
++CMD_ETC = accton cron dmesg getty init mknod mount umount update wall
++CMD_USRLIB = atrun calendar diff3 diffh makekey
++CMD_DIRS = awk dc sed sh tar tp
 +
++CMD_ONE := $(sort $(filter-out mkfs,$(basename $(notdir $(wildcard $C/*.[cy])))))
++CMD_BIN = $(filter-out $(CMD_ETC) $(CMD_USRLIB),$(CMD_ONE))
++CMD = $(CMD_BIN:%=bin/%) $(CMD_ETC:%=etc/%) $(CMD_USRLIB:%=usr/lib/%) \
++	$(CMD_DIRS:%=bin/%)
++
++AWK_OBJ = $(addprefix $C/awk/,awk.g.o awk.lx.o b.o main.o token.o tran.o \
++	lib.o run.o parse.o proctab.o)
++dirobj = $(patsubst %.c,%.o,$(wildcard $C/$1/*.c))
++CMD_OBJ = $(CMD_ONE:%=$C/%.o) $(AWK_OBJ) $(foreach d,dc sed sh tar tp,$(call dirobj,$d))
++GEN += $(patsubst %.y,%.c,$(wildcard $C/*.y)) $C/awk/awk.g.c $C/awk/awk.h \
++	$C/awk/awk.lx.c $C/awk/proc $C/awk/proctab.c
++
++$(CMD_OBJ): CPPFLAGS = -Iusr/include -Iusr/src
++$(CMD_OBJ): $C/cmd.mk
++$C/bc.o $C/egrep.o $C/expr.o $(AWK_OBJ): CPPFLAGS += -DYYSTACK_USE_ALLOCA=1
++$(AWK_OBJ): CPPFLAGS += -Dmalloc=malloc -Dfree=free
++
++$(CMD_BIN:%=bin/%): bin/%: $(CRT) $C/%.o $(LIBC) | bin
++	$(LINK)
++$(CMD_ETC:%=etc/%): etc/%: $(CRT) $C/%.o $(LIBC) | etc
++	$(LINK)
++$(CMD_USRLIB:%=usr/lib/%): usr/lib/%: $(CRT) $C/%.o $(LIBC) | usr/lib
++	$(LINK)
++
++bin/awk: $(CRT) $(AWK_OBJ) $(LIBM) $(LIBC) | bin
++	$(LINK)
++bin/dc: $(CRT) $(call dirobj,dc) $(LIBC) | bin
++	$(LINK)
++bin/sed: $(CRT) $(call dirobj,sed) $(LIBC) | bin
++	$(LINK)
++bin/sh: $(CRT) $(call dirobj,sh) $(LIBC) | bin
++	$(LINK)
++bin/tar: $(CRT) $(call dirobj,tar) $(LIBC) | bin
++	$(LINK)
++bin/tp: $(CRT) $(call dirobj,tp) $(LIBC) | bin
++	$(LINK)
++
++$(AWK_OBJ): $C/awk/awk.h $C/awk/awk.def
++$C/awk/awk.g.c $C/awk/awk.h &: $C/awk/awk.g.y
++	bison -y --defines=$C/awk/awk.h -o $C/awk/awk.g.c $<
++$C/awk/proc: $C/awk/proc.c $C/awk/token.c $C/awk/awk.h
++	$(HOSTCC) $(HOSTCFLAGS) -o $@ $C/awk/proc.c $C/awk/token.c
++$C/awk/proctab.c: $C/awk/proc
++	$< >$@
+
+% usr/src/games/games.mk /dev/null
+@@ -0,0 +1,8 @@
++GAMES_OBJ := $(patsubst %.c,%.o,$(wildcard usr/src/games/*.c))
++GAMES = $(patsubst usr/src/games/%.o,usr/games/%,$(GAMES_OBJ))
++
++$(GAMES_OBJ): CPPFLAGS = -Iusr/include -Iusr/src
++$(GAMES_OBJ): usr/src/games/games.mk
++
++$(GAMES): usr/games/%: $(CRT) usr/src/games/%.o $(LIBC) | usr/games
++	$(LINK)
+
+% usr/src/libc/lib.mk /dev/null
+@@ -0,0 +1,17 @@
++L = usr/src/libc
++LIBC = $L/libc.a
++CRT = $L/csu/crt0.o $L/csu/crt0c.o
++LIBC_OBJ := $(addsuffix .o,$(basename $(wildcard $L/*.[cs] $L/gen/*.[cs] \
++	$L/stdio/*.[cs] $L/sys/*.[cs])))
++
++$(LIBC_OBJ) $(CRT): CPPFLAGS = -Iusr/include -Iusr
++$(LIBC_OBJ) $(CRT): $L/lib.mk
++
++$(LIBC): $(LIBC_OBJ)
++	rm -f $@
++	$(AR) rc $@ $^
++
++$L/csu/crt0.o: $L/csu/crt0.s
++	$(COMPILE.s) -o $@ $<
++$L/csu/crt0c.o: $L/csu/crt0.c
++	$(COMPILE.c) -o $@ $<
+
+% usr/src/libm/lib.mk /dev/null
+@@ -0,0 +1,9 @@
++LIBM = usr/src/libm/libm.a
++LIBM_OBJ := $(patsubst %.c,%.o,$(wildcard usr/src/libm/*.c))
++
++$(LIBM_OBJ): CPPFLAGS = -Iusr/include
++$(LIBM_OBJ): usr/src/libm/lib.mk
++
++$(LIBM): $(LIBM_OBJ)
++	rm -f $@
++	$(AR) rc $@ $^
+
+% usr/sys/sys.mk /dev/null
+@@ -0,0 +1,28 @@
++S = usr/sys
++LIB1 = $S/sys/LIB1
++LIB2 = $S/dev/LIB2
++LIB1_OBJ := $(patsubst %.c,%.o,$(wildcard $S/sys/*.c))
++LIB2_OBJ := $(patsubst %.c,%.o,$(wildcard $S/dev/*.c))
++BOARDS = qemu mp135
++KERNELS = $(BOARDS:%=$S/conf/%/unix)
++SYS_OBJ = $(LIB1_OBJ) $(LIB2_OBJ) $S/conf/low.o $S/conf/mch.o $(BOARDS:%=$S/conf/%/c.o)
++GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf
++
++$(SYS_OBJ): $S/sys.mk
++$(LIB1): $(LIB1_OBJ)
++$(LIB2): $(LIB2_OBJ)
++$(LIB1) $(LIB2):
++	rm -f $@
++	$(AR) rc $@ $^
++
++$S/conf/mkconf: $S/conf/mkconf.c
++	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
++
++$S/conf/%/c.c $S/conf/%/unix.ld: $S/conf/%conf $S/conf/mkconf
++	mkdir -p $(@D)
++	cd $(@D) && ../mkconf <../$*conf
++
++$S/conf/%/c.o: CPPFLAGS = -I$S/conf
++
++$S/conf/%/unix: $S/conf/low.o $S/conf/mch.o $S/conf/%/c.o $(LIB1) $(LIB2) $S/conf/%/unix.ld
++	$(CC) -nostdlib -T $(@D)/unix.ld -o $@ $(filter-out %.ld,$^)
+
+% Makefile /dev/null
+@@ -0,0 +1,79 @@
 +CROSS_COMPILE ?= arm-none-eabi-
 +CC = $(CROSS_COMPILE)gcc
 +AS = $(CROSS_COMPILE)as
++AR = $(CROSS_COMPILE)ar
 +HOSTCC = arm-linux-gnueabihf-gcc
++LEX = flex
 +
 +CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
-+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10
-+
-+LIBC = usr/src/libc/libc.a
-+LIBM = usr/src/libm/libm.a
-+CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
-+
++	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 \
++	-MMD -MP
++ASFLAGS = -mcpu=cortex-a7
 +HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
 +	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
 +
++LINK = $(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
++
 +all: boot/unix boot/rootfs.img
 +
-+# Kernels: like v7, conf/makefile recompiles all of sys and dev (about 2 s)
-+# and builds one kernel per configuration file, mkconf making each c.c.
++include usr/sys/sys.mk
++include usr/src/libc/lib.mk
++include usr/src/libm/lib.mk
++include usr/src/cmd/cmd.mk
++include usr/src/games/games.mk
 +
-+KERNELS = usr/sys/conf/qemuunix usr/sys/conf/mp135unix
++all: $(KERNELS)
 +
-+$(KERNELS) &: usr/sys/conf/mkconf usr/sys/conf/qemuconf usr/sys/conf/mp135conf \
-+	    $(filter-out usr/sys/conf/c.c,$(wildcard usr/sys/*/*.[chs])) \
-+	    usr/sys/sys/mklib usr/sys/dev/mklib usr/sys/conf/makefile Makefile
-+	$(MAKE) -C usr/sys/conf all allsystems CC="$(CC)" AS="$(AS)" \
-+	    CFLAGS="$(CFLAGS)" ASFLAGS=-mcpu=cortex-a7
++.SECONDARY: $(GEN)
 +
-+usr/sys/conf/mkconf: usr/sys/conf/mkconf.c
-+	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
++OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ)
++$(OBJ): Makefile
 +
-+boot/unix: usr/sys/conf/qemuunix | boot
++%.c: %.y
++	bison -y -o $@ $<
++
++boot/unix: usr/sys/conf/qemu/unix | boot
 +	cp $< $@
 +
 +qemu: boot/unix boot/rootfs.img
@@ -56,102 +181,14 @@ usr/local
 +	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
 +	    -device virtio-blk-device,drive=hd0
 +
-+# Libc
-+
-+$(LIBC) $(CRT): Makefile $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
-+	    usr/include/*.h usr/include/sys/*.h) usr/src/libc/compall usr/src/libc/mklib
-+	cd usr/src/libc && rm -f *.o libc.a && \
-+	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include -I../.." sh -e compall && \
-+	    sh -e mklib && rm *.o && \
-+	    $(CC) $(CFLAGS) -c csu/crt0.s && \
-+	    $(CC) $(CFLAGS) -I../../include -c csu/crt0.c -o crt0c.o
-+
-+$(LIBM): Makefile $(wildcard usr/src/libm/*.c usr/include/*.h) \
-+	    usr/src/libm/compall usr/src/libm/mklib
-+	cd usr/src/libm && rm -f *.o libm.a && \
-+	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include" sh -e compall && \
-+	    sh -e mklib && rm *.o
-+
-+# Commands: cmake builds one and installs it where v7 did.
-+
-+CMAKE = cd usr/src/cmd && ROOT=../../.. YACC="bison -y" LIBS="-L../libc -lc -lgcc" \
-+	CC="$(CC) $(CFLAGS) -I../../include -I.. ../libc/crt0.o ../libc/crt0c.o" \
-+	sh cmake -cp
-+
 +ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 +	etc/passwd etc/group etc/ttys \
 +	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
 +	usr/lib/lib.b
 +
-+ROOT_BUILT = etc/init etc/getty bin/login bin/sh bin/cat bin/echo bin/ls \
-+	bin/pwd bin/sync bin/arcv bin/rev bin/yes bin/wc bin/basename \
-+	bin/sum bin/tty bin/cmp bin/comm bin/cal bin/od bin/tail \
-+	bin/grep bin/test bin/look bin/cp bin/rm bin/ln bin/mkdir \
-+	bin/rmdir bin/mv bin/chmod bin/chown bin/chgrp bin/sleep bin/tee \
-+	bin/touch bin/tr bin/uniq bin/du bin/date bin/kill bin/nice \
-+	etc/mknod bin/who bin/mesg bin/time bin/split bin/checkeq \
-+	usr/lib/calendar bin/tsort bin/file bin/join bin/col bin/fgrep \
-+	bin/egrep bin/su bin/newgrp bin/random bin/crypt bin/pr bin/dd \
-+	bin/stty bin/tabs bin/diff etc/wall bin/write bin/df bin/clri \
-+	bin/dcheck bin/icheck bin/ncheck bin/cb bin/sp bin/find bin/sort \
-+	bin/ed bin/deroff bin/1 bin/sed bin/awk bin/true bin/false \
-+	bin/nohup etc/mount etc/umount usr/lib/makekey usr/lib/diffh \
-+	etc/accton etc/update usr/lib/atrun bin/ac etc/cron bin/passwd \
-+	usr/lib/diff3 bin/at bin/units bin/ptx bin/spline bin/vpr \
-+	bin/quot bin/dump bin/dumpdir bin/restor bin/tk bin/dc bin/tar \
-+	bin/tp bin/prof bin/tc bin/graph bin/factor bin/primes bin/expr \
-+	bin/iostat bin/pstat bin/ps etc/dmesg bin/osh bin/sa bin/bc \
-+	usr/games/fortune usr/games/arithmetic usr/games/hangman \
-+	usr/games/backgammon usr/games/fish usr/games/quiz \
-+	usr/games/wump
-+
-+ROOT = $(ROOT_BUILT) \
-+	$(ROOTFS_STATIC)
++ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC)
 +
 +DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
-+
-+bin/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
-+	rm -f $@
-+	$(CMAKE) $(<F)
-+	test -f $@
-+
-+etc/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
-+	rm -f $@
-+	$(CMAKE) $(<F)
-+	test -f $@
-+
-+usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
-+	rm -f $@
-+	$(CMAKE) $(<F)
-+	test -f $@
-+
-+bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) Makefile | $(DIRS)
-+	rm -f $@
-+	$(CMAKE) $(<F)
-+	test -f $@
-+
-+usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
-+	$(CC) $(CFLAGS) -Iusr/include -Iusr/src -s -o $@ \
-+	    $(CRT) $< -Lusr/src/libc -lc -lgcc
-+
-+SUBDIR_BINS = bin/sed bin/sh bin/dc bin/tar bin/tp bin/awk
-+SUBDIR_CFLAGS_EXTRA =
-+SUBDIR_LDLIBS = -L../../libc -lc -lgcc
-+
-+bin/awk: SUBDIR_CFLAGS_EXTRA = -DYYSTACK_USE_ALLOCA=1 -Dmalloc=malloc -Dfree=free -I.
-+bin/awk: SUBDIR_LDLIBS = -L../../libm -lm -L../../libc -lc -lgcc
-+bin/awk: $(LIBM)
-+
-+$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) Makefile | bin
-+	cd usr/src/cmd/$* && { test $* -nt ../../../Makefile || rm -f *.o; } && \
-+	    { test $* -nt ../../libc/libc.a || rm -f $*; }
-+	$(MAKE) -C usr/src/cmd/$* CC="$(CC)" \
-+	    CFLAGS="$(CFLAGS) -I../../../include -I../.. $(SUBDIR_CFLAGS_EXTRA)" \
-+	    LDFLAGS=-s CRT="../../libc/crt0.o ../../libc/crt0c.o" \
-+	    LDLIBS="$(SUBDIR_LDLIBS)"
-+	cmp -s usr/src/cmd/$*/$* $@ || cp usr/src/cmd/$*/$* $@
-+
-+# Rootfs
 +
 +boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 +	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
@@ -167,26 +204,20 @@ usr/local
 +	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
 +	    $(HOSTCC) $(HOSTCFLAGS) -I"$$tmpinc" -o $@ $<
 +
-+.PHONY: all clean force qemu
-+.PRECIOUS: $(ROOT)
-+
-+force:
-+
 +$(DIRS):
 +	mkdir -p $@
 +
 +$(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 +	cp $< $@
 +
-+$(filter etc/%,$(ROOTFS_STATIC)): ;
-+
 +clean:
-+	rm -f usr/sys/conf/*.o usr/sys/conf/c.c usr/sys/conf/unix.ld usr/sys/conf/mkconf
-+	rm -f $(KERNELS) usr/sys/sys/LIB1 usr/sys/dev/LIB2
-+	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp
-+	rm -f etc/mkfs usr/src/libc/*.o $(LIBC) usr/src/libm/*.o $(LIBM)
-+	for d in sed sh dc tar tp; do rm -f usr/src/cmd/$$d/$$d usr/src/cmd/$$d/*.o; done
-+	$(MAKE) -C usr/src/cmd/awk clean
++	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES)
++	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
++	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs.img.tmp
++
++.PHONY: all clean qemu
++
++-include $(OBJ:.o=.d)
 
 % boot/rootfs.proto /dev/null
 @@ -0,0 +1,181 @@
@@ -1509,51 +1540,6 @@ usr/local
 @@ -139,0 +146 @@
 +	return(0);
 
-% usr/src/cmd/awk/makefile
-@@ -2,0 +3,7 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS = -lm
-+YACC = bison -y
-+LEX = flex
-+HOSTCC = cc
-+HOSTCFLAGS = -std=gnu89 -w
-@@ -17,0 +25 @@
-+GEN=awk.g.c awk.h awk.lx.c proc proc-token.o proctab.c
-@@ -20 +28 @@
--	cc -i -s $(CFLAGS) awk.g.o $(FILES) -lm -o awk
-+	$(CC) $(CFLAGS) $(LDFLAGS) -o awk $(CRT) awk.g.o $(FILES) $(LDLIBS)
-@@ -22 +30,4 @@
--y.tab.h:	awk.g.o
-+awk.g.c awk.h:	awk.g.y
-+	$(YACC) $(YFLAGS) awk.g.y
-+	mv y.tab.c awk.g.c
-+	mv y.tab.h awk.h
-@@ -24,2 +35,2 @@
--awk.h:	y.tab.h
--	-cmp -s y.tab.h awk.h || cp y.tab.h awk.h
-+awk.g.o:	awk.g.c awk.h awk.def
-+	$(CC) $(CFLAGS) -c awk.g.c
-@@ -29,3 +40,2 @@
--token.c:	awk.h
--	ed - <tokenscript
--	rm temp
-+awk.lx.c:	awk.lx.l
-+	$(LEX) -o awk.lx.c awk.lx.l
-@@ -38 +48 @@
--	cc -p -i awk.g.o $(FILES) -lm
-+	$(CC) -p $(CFLAGS) awk.g.o $(FILES) $(LDLIBS)
-@@ -51,3 +61,6 @@
--	proc > proctab.c
--proc:	awk.h proc.o token.o
--	cc -o proc proc.c token.o
-+	./proc > proctab.c
-+proc:	awk.h proc.c token.c
-+	$(HOSTCC) $(HOSTCFLAGS) -c token.c -o proc-token.o
-+	$(HOSTCC) $(HOSTCFLAGS) -o proc proc.c proc-token.o
-+clean:
-+	rm -f awk *.o $(GEN) y.tab.c y.tab.h
-
 % usr/src/cmd/awk/parse.c
 @@ -4 +4,2 @@
 -node *ALLOC(n)
@@ -1618,9 +1604,11 @@ usr/local
 +node *genprint(void)
 
 % usr/src/cmd/awk/proc.c
-@@ -0,0 +1 @@
+@@ -0,0 +1,2 @@
 +#include "stdio.h"
-@@ -2,0 +4 @@
++#include <string.h>
+@@ -2 +4 @@
+-#define NULL 0
 +char *tokname();
 @@ -7 +9 @@
 -} proc[] {
@@ -2823,247 +2811,6 @@ usr/local
 -	while(c = *s++)
 +	while((c = *s++))
 
-% usr/src/cmd/cmake
-@@ -9 +9 @@
--	b=`basename $a $s`
-+	b=`basename -- $a $s`
-@@ -17,2 +17,2 @@
--	ac)	cc -n -s -O ac.c -o ac ;;
--	accton)	cc -n -s -O accton.c -o accton; D=/etc ;;
-+	ac)	$CC -s ac.c -o ac $LIBS ;;
-+	accton)	$CC -s accton.c -o accton $LIBS; D=/etc ;;
-@@ -20,9 +20,9 @@
--	arcv)	cc -n -s -O arcv.c -o arcv ;;
--	at)	cc -n -s -O at.c -o at ;;
--	atrun)	cc -n -s -O atrun.c -o atrun; D=/usr/lib ;;
--	basename)	cc -n -s -O basename.c -o basename ;;
--	bc)	yacc bc.y && mv y.tab.c bc.c && cc -n -s -O bc.c -o bc && rm bc.c ;;
--	cal)	cc -n -s -O cal.c -o cal ;;
--	calendar)	cc -n -s -O calendar.c -o calendar; D=/usr/lib ;;
--	cat)	cc -n -s -O cat.c -o cat ;;
--	cb)	cc -n -s -O cb.c -o cb ;;
-+	arcv)	$CC -s arcv.c -o arcv $LIBS ;;
-+	at)	$CC -s at.c -o at $LIBS ;;
-+	atrun)	$CC -s atrun.c -o atrun $LIBS; D=/usr/lib ;;
-+	basename)	$CC -s basename.c -o basename $LIBS ;;
-+	bc)	$YACC bc.y && mv y.tab.c bc.c && $CC -DYYSTACK_USE_ALLOCA=1 -s bc.c -o bc $LIBS && rm bc.c ;;
-+	cal)	$CC -s cal.c -o cal $LIBS ;;
-+	calendar)	$CC -s calendar.c -o calendar $LIBS; D=/usr/lib ;;
-+	cat)	$CC -s cat.c -o cat $LIBS ;;
-+	cb)	$CC -s cb.c -o cb $LIBS ;;
-@@ -30,11 +30,11 @@
--	checkeq)	cc -n -s -O checkeq.c -o checkeq ;;
--	chgrp)	cc -n -s -O chgrp.c -o chgrp ;;
--	chmod)	cc -n -s -O chmod.c -o chmod ;;
--	chown)	cc -n -s -O chown.c -o chown ;;
--	clri)	cc -n -s -O clri.c -o clri ;;
--	cmp)	cc -n -s -O cmp.c -o cmp ;;
--	col)	cc -n -s -O col.c -o col ;;
--	comm)	cc -n -s -O comm.c -o comm ;;
--	cp)	cc -n -s -O cp.c -o cp ;;
--	cron)	cc -n -s -O cron.c -o cron; D=/etc ;;
--	crypt)	cc -n -s -O crypt.c -o crypt ;;
-+	checkeq)	$CC -s checkeq.c -o checkeq $LIBS ;;
-+	chgrp)	$CC -s chgrp.c -o chgrp $LIBS ;;
-+	chmod)	$CC -s chmod.c -o chmod $LIBS ;;
-+	chown)	$CC -s chown.c -o chown $LIBS ;;
-+	clri)	$CC -s clri.c -o clri $LIBS ;;
-+	cmp)	$CC -s cmp.c -o cmp $LIBS ;;
-+	col)	$CC -s col.c -o col $LIBS ;;
-+	comm)	$CC -s comm.c -o comm $LIBS ;;
-+	cp)	$CC -s cp.c -o cp $LIBS ;;
-+	cron)	$CC -s cron.c -o cron $LIBS; D=/etc ;;
-+	crypt)	$CC -s crypt.c -o crypt $LIBS ;;
-@@ -42,28 +42,28 @@
--	date)	cc -n -s -O date.c -o date ;;
--	dcheck)	cc -i -s -O dcheck.c -o dcheck ;;
--	dd)	cc -i -s -O dd.c -o dd ;;
--	deroff)	cc -n -s -O deroff.c -o deroff ;;
--	df)	cc -n -s -O df.c -o df ;;
--	diff)	cc -n -s -O diff.c -o diff ;;
--	diff3)	cc -n -s -O diff3.c -o diff3; D=/usr/lib ;;
--	diffh)	cc -n -s -O diffh.c -o diffh; D=/usr/lib ;;
--	dmesg)	cc -n -s -O dmesg.c -o dmesg; D=/etc ;;
--	du)	cc -n -s -O du.c -o du ;;
--	dump)	cc -n -s -O dump.c -o dump ;;
--	dumpdir)	cc -n -s -O dumpdir.c -o dumpdir ;;
--	echo)	cc -n -s -O echo.c -o echo ;;
--	ed)	cc -n -s -O ed.c -o ed ;;
--	egrep)	yacc egrep.y && mv y.tab.c egrep.c && cc -n -s -O egrep.c -o egrep && rm egrep.c ;;
--	expr)	yacc expr.y && mv y.tab.c expr.c && cc -n -s -O expr.c -o expr && rm expr.c ;;
--	factor)	as -o factor factor.s && strip factor;;
--	fgrep)	cc -i -s -O fgrep.c -o fgrep ;;
--	file)	cc -n -s -O file.c -o file ;;
--	find)	cc -n -s -O find.c -o find ;;
--	getty)	cc -n -s -O getty.c -o getty; D=/etc ;;
--	graph)	cc -n -s -O graph.c -o graph -lplot -lm ;;
--	grep)	cc -n -s -O grep.c -o grep ;;
--	icheck)	cc -i -s -O icheck.c -o icheck ;;
--	init)	cc -n -s -O init.c -o init; D=/etc ;;
--	iostat)	cc -n -s -O iostat.c -o iostat ;;
--	join)	cc -n -s -O join.c -o join ;;
--	kill)	cc -n -s -O kill.c -o kill ;;
-+	date)	$CC -s date.c -o date $LIBS ;;
-+	dcheck)	$CC -s dcheck.c -o dcheck $LIBS ;;
-+	dd)	$CC -s dd.c -o dd $LIBS ;;
-+	deroff)	$CC -s deroff.c -o deroff $LIBS ;;
-+	df)	$CC -s df.c -o df $LIBS ;;
-+	diff)	$CC -s diff.c -o diff $LIBS ;;
-+	diff3)	$CC -s diff3.c -o diff3 $LIBS; D=/usr/lib ;;
-+	diffh)	$CC -s diffh.c -o diffh $LIBS; D=/usr/lib ;;
-+	dmesg)	$CC -s dmesg.c -o dmesg $LIBS; D=/etc ;;
-+	du)	$CC -s du.c -o du $LIBS ;;
-+	dump)	$CC -s dump.c -o dump $LIBS ;;
-+	dumpdir)	$CC -s dumpdir.c -o dumpdir $LIBS ;;
-+	echo)	$CC -s echo.c -o echo $LIBS ;;
-+	ed)	$CC -s ed.c -o ed $LIBS ;;
-+	egrep)	$YACC egrep.y && mv y.tab.c egrep.c && $CC -DYYSTACK_USE_ALLOCA=1 -s egrep.c -o egrep $LIBS && rm egrep.c ;;
-+	expr)	$YACC expr.y && mv y.tab.c expr.c && $CC -DYYSTACK_USE_ALLOCA=1 -s expr.c -o expr $LIBS && rm expr.c ;;
-+	factor)	$CC -s factor.c -o factor $LIBS ;;
-+	fgrep)	$CC -s fgrep.c -o fgrep $LIBS ;;
-+	file)	$CC -s file.c -o file $LIBS ;;
-+	find)	$CC -s find.c -o find $LIBS ;;
-+	getty)	$CC -s getty.c -o getty $LIBS; D=/etc ;;
-+	graph)	$CC -s graph.c -o graph $LIBS ;;
-+	grep)	$CC -s grep.c -o grep $LIBS ;;
-+	icheck)	$CC -s icheck.c -o icheck $LIBS ;;
-+	init)	$CC -s init.c -o init $LIBS; D=/etc ;;
-+	iostat)	$CC -s iostat.c -o iostat $LIBS ;;
-+	join)	$CC -s join.c -o join $LIBS ;;
-+	kill)	$CC -s kill.c -o kill $LIBS ;;
-@@ -71,4 +71,4 @@
--	ln)	cc -n -s -O ln.c -o ln ;;
--	login)	cc -n -s -O login.c -o login ;;
--	look)	cc -n -s -O look.c -o look ;;
--	ls)	cc -n -s -O ls.c -o ls ;;
-+	ln)	$CC -s ln.c -o ln $LIBS ;;
-+	login)	$CC -s login.c -o login $LIBS ;;
-+	look)	$CC -s look.c -o look $LIBS ;;
-+	ls)	$CC -s ls.c -o ls $LIBS ;;
-@@ -76,3 +76,3 @@
--	makekey)	cc -n -s -O makekey.c -o makekey; D=/usr/lib ;;
--	mesg)	cc -n -s -O mesg.c -o mesg ;;
--	mkdir)	cc -n -s -O mkdir.c -o mkdir ;;
-+	makekey)	$CC -s makekey.c -o makekey $LIBS; D=/usr/lib ;;
-+	mesg)	$CC -s mesg.c -o mesg $LIBS ;;
-+	mkdir)	$CC -s mkdir.c -o mkdir $LIBS ;;
-@@ -80,6 +80,6 @@
--	mknod)	cc -n -s -O mknod.c -o mknod; D=/etc ;;
--	mount)	cc -n -s -O mount.c -o mount; D=/etc ;;
--	mv)	cc -n -s -O mv.c -o mv ;;
--	ncheck)	cc -i -s -O ncheck.c -o ncheck ;;
--	newgrp)	cc -n -s -O newgrp.c -o newgrp ;;
--	nice)	cc -n -s -O nice.c -o nice ;;
-+	mknod)	$CC -s mknod.c -o mknod $LIBS; D=/etc ;;
-+	mount)	$CC -s mount.c -o mount $LIBS; D=/etc ;;
-+	mv)	$CC -s mv.c -o mv $LIBS ;;
-+	ncheck)	$CC -s ncheck.c -o ncheck $LIBS ;;
-+	newgrp)	$CC -s newgrp.c -o newgrp $LIBS ;;
-+	nice)	$CC -s nice.c -o nice $LIBS ;;
-@@ -87,12 +87,12 @@
--	od)	cc -n -s -O od.c -o od ;;
--	osh)	cc -n -s -O osh.c -o osh ;;
--	passwd)	cc -n -s -O passwd.c -o passwd ;;
--	pr)	cc -n -s -O pr.c -o pr ;;
--	primes)	as -o primes /usr/include/sys.s primes.s && strip primes ;;
--	prof)	cc -n -s -O -Dplot prof.c -lplot -o prof ;;
--	ps)	cc -n -s -O ps.c -o ps ;;
--	pstat)	cc -n -s -O pstat.c -o pstat ;;
--	ptx)	cc -n -s -O ptx.c -o ptx ;;
--	pwd)	cc -n -s -O pwd.c -o pwd ;;
--	quot)	cc -n -s -O quot.c -o quot ;;
--	random)	cc -n -s -O random.c -o random ;;
-+	od)	$CC -s od.c -o od $LIBS ;;
-+	osh)	$CC -s osh.c -o osh $LIBS ;;
-+	passwd)	$CC -s passwd.c -o passwd $LIBS ;;
-+	pr)	$CC -s pr.c -o pr $LIBS ;;
-+	primes)	$CC -s primes.c -o primes $LIBS ;;
-+	prof)	$CC -s prof.c -o prof $LIBS ;;
-+	ps)	$CC -s ps.c -o ps $LIBS ;;
-+	pstat)	$CC -s pstat.c -o pstat $LIBS ;;
-+	ptx)	$CC -s ptx.c -o ptx $LIBS ;;
-+	pwd)	$CC -s pwd.c -o pwd $LIBS ;;
-+	quot)	$CC -s quot.c -o quot $LIBS ;;
-+	random)	$CC -s random.c -o random $LIBS ;;
-@@ -100,5 +100,5 @@
--	restor)	cc -i -s -O restor.c -o restor ;;
--	rev)	cc -n -s -O rev.c -o rev ;;
--	rm)	cc -n -s -O rm.c -o rm ;;
--	rmdir)	cc -n -s -O rmdir.c -o rmdir ;;
--	sa)	cc -n -s -O sa.c -o sa ;;
-+	restor)	$CC -s restor.c -o restor $LIBS ;;
-+	rev)	$CC -s rev.c -o rev $LIBS ;;
-+	rm)	$CC -s rm.c -o rm $LIBS ;;
-+	rmdir)	$CC -s rmdir.c -o rmdir $LIBS ;;
-+	sa)	$CC -s sa.c -o sa $LIBS ;;
-@@ -106,5 +106,5 @@
--	sleep)	cc -n -s -O sleep.c -o sleep ;;
--	sort)	cc -i -s -O sort.c -o sort ;;
--	sp)	cc -n -s -O sp.c -o sp ;;
--	spline)	cc -n -s -O spline.c -o spline ;;
--	split)	cc -n -s -O split.c -o split ;;
-+	sleep)	$CC -s sleep.c -o sleep $LIBS ;;
-+	sort)	$CC -s sort.c -o sort $LIBS ;;
-+	sp)	$CC -s sp.c -o sp $LIBS ;;
-+	spline)	$CC -s spline.c -o spline $LIBS ;;
-+	split)	$CC -s split.c -o split $LIBS ;;
-@@ -112,25 +112,25 @@
--	stty)	cc -n -s -O stty.c -o stty ;;
--	su)	cc -n -s -O su.c -o su ;;
--	sum)	cc -n -s -O sum.c -o sum ;;
--	sync)	cc -n -s -O sync.c -o sync ;;
--	tabs)	cc -n -s -O tabs.c -o tabs ;;
--	tail)	cc -n -s -O tail.c -o tail ;;
--	tc)	cc -n -s -O tc.c -o tc ;;
--	tee)	cc -n -s -O tee.c -o tee ;;
--	test)	cc -n -s -O test.c -o test ;;
--	time)	cc -n -s -O time.c -o time ;;
--	tk)	cc -n -s -O tk.c -o tk ;;
--	touch)	cc -n -s -O touch.c -o touch ;;
--	tr)	cc -n -s -O tr.c -o tr ;;
--	tsort)	cc -n -s -O tsort.c -o tsort ;;
--	tty)	cc -n -s -O tty.c -o tty ;;
--	umount)	cc -n -s -O umount.c -o umount; D=/etc ;;
--	uniq)	cc -n -s -O uniq.c -o uniq ;;
--	units)	cc -n -s -O units.c -o units ;;
--	update)	cc -n -s -O update.c -o update; D=/etc ;;
--	vpr)	cc -n -s -O vpr.c -o vpr ;;
--	wall)	cc -n -s -O wall.c -o wall; D=/etc ;;
--	wc)	cc -n -s -O wc.c -o wc ;;
--	who)	cc -n -s -O who.c -o who ;;
--	write)	cc -n -s -O write.c -o write ;;
--	yes)	cc -n -s -O yes.c -o yes ;;
-+	stty)	$CC -s stty.c -o stty $LIBS ;;
-+	su)	$CC -s su.c -o su $LIBS ;;
-+	sum)	$CC -s sum.c -o sum $LIBS ;;
-+	sync)	$CC -s sync.c -o sync $LIBS ;;
-+	tabs)	$CC -s tabs.c -o tabs $LIBS ;;
-+	tail)	$CC -s tail.c -o tail $LIBS ;;
-+	tc)	$CC -s tc.c -o tc $LIBS ;;
-+	tee)	$CC -s tee.c -o tee $LIBS ;;
-+	test)	$CC -s test.c -o test $LIBS ;;
-+	time)	$CC -s time.c -o time $LIBS ;;
-+	tk)	$CC -s tk.c -o tk $LIBS ;;
-+	touch)	$CC -s touch.c -o touch $LIBS ;;
-+	tr)	$CC -s tr.c -o tr $LIBS ;;
-+	tsort)	$CC -s tsort.c -o tsort $LIBS ;;
-+	tty)	$CC -s tty.c -o tty $LIBS ;;
-+	umount)	$CC -s umount.c -o umount $LIBS; D=/etc ;;
-+	uniq)	$CC -s uniq.c -o uniq $LIBS ;;
-+	units)	$CC -s units.c -o units $LIBS ;;
-+	update)	$CC -s update.c -o update $LIBS; D=/etc ;;
-+	vpr)	$CC -s vpr.c -o vpr $LIBS ;;
-+	wall)	$CC -s wall.c -o wall $LIBS; D=/etc ;;
-+	wc)	$CC -s wc.c -o wc $LIBS ;;
-+	who)	$CC -s who.c -o who $LIBS ;;
-+	write)	$CC -s write.c -o write $LIBS ;;
-+	yes)	$CC -s yes.c -o yes $LIBS ;;
-@@ -141,2 +141,2 @@
--	cmp)	cmp $b $D/$b && rm $b ;;
--	cp)	cp $b $D/$b && rm $b ;;
-+	cmp)	cmp $b $ROOT$D/$b && rm $b ;;
-+	cp)	cp $b $ROOT$D/$b && rm $b ;;
-
 % usr/src/cmd/cmp.c
 @@ -12 +12 @@
 -long	otoi();
@@ -3654,15 +3401,6 @@ usr/local
 -char	*malloc();
 @@ -116 +114,0 @@
 -char	*realloc();
-
-% usr/src/cmd/dc/makefile
-@@ -0,0 +1,3 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS =
-@@ -12 +15 @@
--	cc -n -s -O dc.c -o dc
-+	$(CC) $(CFLAGS) $(LDFLAGS) dc.c -o dc $(CRT) $(LDLIBS)
 
 % usr/src/cmd/dcheck.c
 @@ -29,0 +30,4 @@
@@ -11367,15 +11105,6 @@ usr/local
 -	register time_t nt;
 +	time_t nt;
 
-% usr/src/cmd/sed/makefile
-@@ -1,0 +2,3 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS =
-@@ -14 +17 @@
--sed:	sed0.o sed1.o; cc -s -o sed -n *.o
-+sed:	sed0.o sed1.o; $(CC) $(CFLAGS) $(LDFLAGS) -o sed $(CRT) *.o $(LDLIBS)
-
 % usr/src/cmd/sed/sed.h
 @@ -35,2 +35,2 @@
 -union reptr	*abuf[ABUFSIZE];
@@ -12743,18 +12472,6 @@ usr/local
 +INT Ldup(REG INT fa, REG INT fb)
 @@ -173,0 +182 @@
 +	return(0);
-
-% usr/src/cmd/sh/makefile
-@@ -1,0 +2,3 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS =
-@@ -25 +28 @@
--sh:;		cc -o sh -n -s *.o
-+sh:;		$(CC) $(CFLAGS) $(LDFLAGS) -o sh $(CRT) *.o $(LDLIBS)
-@@ -32 +35 @@
--.c.o:;	cc -O -c $<
-+.c.o:;	$(CC) $(CFLAGS) -c $<
 
 % usr/src/cmd/sh/mode.h
 @@ -46 +45,0 @@
@@ -14273,45 +13990,6 @@ usr/local
 +int
 +digit(int c)
 
-% usr/src/cmd/tar/makefile
-@@ -2,0 +3,3 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS =
-@@ -15 +18 @@
--	cc -i -s -O tar.c -o tar
-+	$(CC) $(CFLAGS) $(LDFLAGS) tar.c -o tar $(CRT) $(LDLIBS)
-@@ -18 +21 @@
--	cc -i -s -O *.o -o v6tar
-+	$(CC) $(CFLAGS) $(LDFLAGS) *.o -o v6tar $(LDLIBS)
-@@ -21 +24 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -24 +27 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -27 +30 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -30 +33 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -33 +36 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -36 +39 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -39 +42 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -42 +45 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-@@ -45 +48 @@
--	cc -c -O $?
-+	$(CC) $(CFLAGS) -c $?
-
 % usr/src/cmd/tar/tar.c
 @@ -7,2 +6,0 @@
 -char	*sprintf();
@@ -14984,15 +14662,6 @@ usr/local
 +if( stat(name,&stbuff) < 0) {
 @@ -40,0 +40 @@
 +	}
-
-% usr/src/cmd/tp/makefile
-@@ -1,0 +2,3 @@
-+LDFLAGS =
-+CRT =
-+LDLIBS =
-@@ -15 +18 @@
--	cc $(CFLAGS) tp0.o tp1.o tp2.o tp3.o -o tp
-+	$(CC) $(CFLAGS) $(LDFLAGS) tp0.o tp1.o tp2.o tp3.o -o tp $(CRT) $(LDLIBS)
 
 % usr/src/cmd/tp/tp.h
 
@@ -16867,298 +16536,6 @@ usr/local
 -	return(*p1 - *p2);
 +	return(*(const int *)p1 - *(const int *)p2);
 
-% usr/src/libc/compall
-@@ -1,153 +1,136 @@
--cc -c -O /usr/src/libc/stdio/getgrgid.c
--cc -c -O /usr/src/libc/stdio/getgrnam.c
--cc -c -O /usr/src/libc/stdio/getgrent.c
--cc -c -O /usr/src/libc/stdio/getpass.c
--cc -c -O /usr/src/libc/stdio/getpwnam.c
--cc -c -O /usr/src/libc/stdio/getpwuid.c
--cc -c -O /usr/src/libc/stdio/getpwent.c
--cc -c -O /usr/src/libc/stdio/fgetc.c
--cc -c -O /usr/src/libc/stdio/fputc.c
--cc -c -O /usr/src/libc/stdio/getchar.c
--cc -c -O /usr/src/libc/stdio/putchar.c
--cc -c -O /usr/src/libc/stdio/popen.c
--cc -c -O /usr/src/libc/stdio/freopen.c
--cc -c -O /usr/src/libc/stdio/fgets.c
--cc -c -O /usr/src/libc/stdio/fputs.c
--cc -c -O /usr/src/libc/stdio/getpw.c
--cc -c -O /usr/src/libc/stdio/fseek.c
--cc -c -O /usr/src/libc/stdio/ftell.c
--cc -c -O /usr/src/libc/stdio/rew.c
--cc -c -O /usr/src/libc/stdio/rdwr.c
--cc -c -O /usr/src/libc/stdio/system.c
--cc -c -O /usr/src/libc/stdio/fopen.c
--cc -c -O /usr/src/libc/stdio/fdopen.c
--cc -c -O /usr/src/libc/stdio/scanf.c
--cc -c -O /usr/src/libc/stdio/doscan.c
--cc -c -O /usr/src/libc/stdio/fprintf.c
--cc -c -O /usr/src/libc/stdio/gets.c
--cc -c -O /usr/src/libc/stdio/getw.c
--cc -c -O /usr/src/libc/stdio/printf.c
--cc -c -O /usr/src/libc/stdio/puts.c
--cc -c -O /usr/src/libc/stdio/putw.c
--cc -c -O /usr/src/libc/stdio/sprintf.c
--cc -c -O /usr/src/libc/stdio/ungetc.c
--cc -c -O /usr/src/libc/stdio/filbuf.c
--cc -c -O /usr/src/libc/stdio/setbuf.c
--cc -c /usr/src/libc/stdio/fltpr.s
--cc -c /usr/src/libc/stdio/doprnt.s
--cc -c -O /usr/src/libc/stdio/gcvt.c
--cc -c /usr/src/libc/stdio/ffltpr.s
--cc -c -O /usr/src/libc/stdio/strout.c
--cc -c -O /usr/src/libc/stdio/flsbuf.c
--cc -c -O /usr/src/libc/stdio/endopen.c
--cc -c -O /usr/src/libc/stdio/findiop.c
--cc -c -O /usr/src/libc/stdio/clrerr.c
--cc -c -O /usr/src/libc/stdio/data.c
--cc -c /usr/src/libc/gen/cuexit.s
--cc -c -O /usr/src/libc/gen/execvp.c
--cc -c -O /usr/src/libc/gen/getenv.c
--cc -c -O /usr/src/libc/gen/getlogin.c
--cc -c -O /usr/src/libc/gen/perror.c
--cc -c -O /usr/src/libc/gen/sleep.c
--cc -c -O /usr/src/libc/gen/timezone.c
--cc -c -O /usr/src/libc/gen/ttyslot.c
--cc -c -O /usr/src/libc/gen/ttyname.c
--cc -c /usr/src/libc/gen/abort.s
--cc -c -O /usr/src/libc/gen/abs.c
--cc -c -O /usr/src/libc/gen/atof.c
--cc -c -O /usr/src/libc/gen/atoi.c
--cc -c -O /usr/src/libc/gen/atol.c
--cc -c -O /usr/src/libc/gen/crypt.c
--cc -c -O /usr/src/libc/gen/ctime.c
--cc -c -O /usr/src/libc/gen/calloc.c
--cc -c -O /usr/src/libc/gen/malloc.c
--cc -c -O /usr/src/libc/gen/ecvt.c
--cc -c -O /usr/src/libc/gen/errlst.c
--cc -c /usr/src/libc/gen/fakcu.s
--cc -c /usr/src/libc/gen/fakfp.s
--cc -c /usr/src/libc/gen/frexp11.s
--cc -c -O /usr/src/libc/gen/isatty.c
--cc -c -O /usr/src/libc/gen/l3.c
--cc -c /usr/src/libc/gen/ldexp11.s
--cc -c /usr/src/libc/gen/ldfps.s
--cc -c -O /usr/src/libc/gen/mktemp.c
--cc -c /usr/src/libc/gen/modf11.s
--cc -c -O /usr/src/libc/gen/mpx.c
--cc -c -O /usr/src/libc/gen/mon.c
--cc -c -O /usr/src/libc/gen/nlist.c
--cc -c -O /usr/src/libc/gen/qsort.c
--cc -c -O /usr/src/libc/gen/rand.c
--cc -c /usr/src/libc/gen/setjmp.s
--cc -c -O /usr/src/libc/gen/stty.c
--cc -c -O /usr/src/libc/gen/swab.c
--cc -c -O /usr/src/libc/gen/tell.c
--cc -c -O /usr/src/libc/gen/ctype_.c
--cc -c -O /usr/src/libc/gen/index.c
--cc -c -O /usr/src/libc/gen/rindex.c
--cc -c -O /usr/src/libc/gen/strcat.c
--cc -c -O /usr/src/libc/gen/strncat.c
--cc -c -O /usr/src/libc/gen/strcmp.c
--cc -c -O /usr/src/libc/gen/strncmp.c
--cc -c -O /usr/src/libc/gen/strcpy.c
--cc -c -O /usr/src/libc/gen/strncpy.c
--cc -c -O /usr/src/libc/gen/strlen.c
--cc -c /usr/src/libc/sys/access.s
--cc -c /usr/src/libc/sys/acct.s
--cc -c /usr/src/libc/sys/alarm.s
--cc -c /usr/src/libc/sys/chdir.s
--cc -c /usr/src/libc/sys/chroot.s
--cc -c /usr/src/libc/sys/chmod.s
--cc -c /usr/src/libc/sys/chown.s
--cc -c /usr/src/libc/sys/close.s
--cc -c /usr/src/libc/sys/creat.s
--cc -c /usr/src/libc/sys/dup.s
--cc -c /usr/src/libc/sys/execl.s
--cc -c /usr/src/libc/sys/execle.s
--cc -c /usr/src/libc/sys/execv.s
--cc -c /usr/src/libc/sys/execve.s
--cc -c /usr/src/libc/sys/exit.s
--cc -c /usr/src/libc/sys/fork.s
--cc -c /usr/src/libc/sys/fstat.s
--cc -c /usr/src/libc/sys/getgid.s
--cc -c /usr/src/libc/sys/getpid.s
--cc -c /usr/src/libc/sys/getuid.s
--cc -c /usr/src/libc/sys/ioctl.s
--cc -c /usr/src/libc/sys/kill.s
--cc -c /usr/src/libc/sys/link.s
--cc -c /usr/src/libc/sys/lock.s
--cc -c /usr/src/libc/sys/lseek.s
--cc -c /usr/src/libc/sys/mknod.s
--cc -c /usr/src/libc/sys/mount.s
--cc -c /usr/src/libc/sys/mpxcall.s
--cc -c /usr/src/libc/sys/nice.s
--cc -c /usr/src/libc/sys/open.s
--cc -c /usr/src/libc/sys/pause.s
--cc -c /usr/src/libc/sys/phys.s
--cc -c /usr/src/libc/sys/pipe.s
--cc -c /usr/src/libc/sys/profil.s
--cc -c /usr/src/libc/sys/ptrace.s
--cc -c /usr/src/libc/sys/read.s
--cc -c /usr/src/libc/sys/sbrk.s
--cc -c /usr/src/libc/sys/setgid.s
--cc -c /usr/src/libc/sys/setuid.s
--cc -c /usr/src/libc/sys/signal.s
--cc -c /usr/src/libc/sys/stat.s
--cc -c /usr/src/libc/sys/stime.s
--cc -c /usr/src/libc/sys/sync.s
--cc -c /usr/src/libc/sys/time.s
--cc -c /usr/src/libc/sys/times.s
--cc -c /usr/src/libc/sys/umask.s
--cc -c /usr/src/libc/sys/umount.s
--cc -c /usr/src/libc/sys/unlink.s
--cc -c /usr/src/libc/sys/utime.s
--cc -c /usr/src/libc/sys/wait.s
--cc -c /usr/src/libc/sys/write.s
--cc -c /usr/src/libc/crt/aldiv.s
--cc -c /usr/src/libc/crt/almul.s
--cc -c /usr/src/libc/crt/alrem.s
--cc -c /usr/src/libc/crt/cerror.s
--cc -c /usr/src/libc/crt/ldiv.s
--cc -c /usr/src/libc/crt/lmul.s
--cc -c /usr/src/libc/crt/lrem.s
--cc -c /usr/src/libc/crt/mcount.s
--cc -c /usr/src/libc/crt/csv.s
-+$CC -c $CFLAGS stdio/getgrgid.c
-+$CC -c $CFLAGS stdio/getgrnam.c
-+$CC -c $CFLAGS stdio/getgrent.c
-+$CC -c $CFLAGS stdio/getpass.c
-+$CC -c $CFLAGS stdio/getpwnam.c
-+$CC -c $CFLAGS stdio/getpwuid.c
-+$CC -c $CFLAGS stdio/getpwent.c
-+$CC -c $CFLAGS stdio/fgetc.c
-+$CC -c $CFLAGS stdio/fputc.c
-+$CC -c $CFLAGS stdio/getchar.c
-+$CC -c $CFLAGS stdio/putchar.c
-+$CC -c $CFLAGS stdio/popen.c
-+$CC -c $CFLAGS stdio/freopen.c
-+$CC -c $CFLAGS stdio/fgets.c
-+$CC -c $CFLAGS stdio/fputs.c
-+$CC -c $CFLAGS stdio/fseek.c
-+$CC -c $CFLAGS stdio/ftell.c
-+$CC -c $CFLAGS stdio/rew.c
-+$CC -c $CFLAGS stdio/rdwr.c
-+$CC -c $CFLAGS stdio/system.c
-+$CC -c $CFLAGS stdio/fopen.c
-+$CC -c $CFLAGS stdio/fdopen.c
-+$CC -c $CFLAGS stdio/scanf.c
-+$CC -c $CFLAGS stdio/doscan.c
-+$CC -c $CFLAGS stdio/fprintf.c
-+$CC -c $CFLAGS stdio/gets.c
-+$CC -c $CFLAGS stdio/getw.c
-+$CC -c $CFLAGS stdio/printf.c
-+$CC -c $CFLAGS stdio/puts.c
-+$CC -c $CFLAGS stdio/putw.c
-+$CC -c $CFLAGS stdio/sprintf.c
-+$CC -c $CFLAGS stdio/ungetc.c
-+$CC -c $CFLAGS stdio/filbuf.c
-+$CC -c $CFLAGS stdio/setbuf.c
-+$CC -c $CFLAGS stdio/doprnt.c
-+$CC -c $CFLAGS stdio/gcvt.c
-+$CC -c $CFLAGS stdio/strout.c
-+$CC -c $CFLAGS stdio/flsbuf.c
-+$CC -c $CFLAGS stdio/endopen.c
-+$CC -c $CFLAGS stdio/findiop.c
-+$CC -c $CFLAGS stdio/clrerr.c
-+$CC -c $CFLAGS stdio/data.c
-+$CC -c $CFLAGS gen/cuexit.c
-+$CC -c $CFLAGS gen/execvp.c
-+$CC -c $CFLAGS gen/getenv.c
-+$CC -c $CFLAGS gen/getlogin.c
-+$CC -c $CFLAGS gen/perror.c
-+$CC -c $CFLAGS gen/sleep.c
-+$CC -c $CFLAGS gen/timezone.c
-+$CC -c $CFLAGS gen/ttyslot.c
-+$CC -c $CFLAGS gen/ttyname.c
-+$CC -c $CFLAGS gen/abort.c
-+$CC -c $CFLAGS gen/atof.c
-+$CC -c $CFLAGS gen/atoi.c
-+$CC -c $CFLAGS gen/atol.c
-+$CC -c $CFLAGS gen/crypt.c
-+$CC -c $CFLAGS gen/ctime.c
-+$CC -c $CFLAGS gen/calloc.c
-+$CC -c $CFLAGS gen/malloc.c
-+$CC -c $CFLAGS gen/ecvt.c
-+$CC -c $CFLAGS gen/errlst.c
-+$CC -c $CFLAGS gen/frexp.c
-+$CC -c $CFLAGS gen/isatty.c
-+$CC -c $CFLAGS gen/l3.c
-+$CC -c $CFLAGS gen/ldexp.c
-+$CC -c $CFLAGS gen/mktemp.c
-+$CC -c $CFLAGS gen/modf.c
-+$CC -c $CFLAGS gen/nlist.c
-+$CC -c $CFLAGS gen/qsort.c
-+$CC -c $CFLAGS gen/rand.c
-+$CC -c $CFLAGS gen/setjmp.s
-+$CC -c $CFLAGS sys/gtty.c
-+$CC -c $CFLAGS gen/stty.c
-+$CC -c $CFLAGS gen/swab.c
-+$CC -c $CFLAGS gen/tell.c
-+$CC -c $CFLAGS gen/ctype_.c
-+$CC -c $CFLAGS gen/index.c
-+$CC -c $CFLAGS gen/rindex.c
-+$CC -c $CFLAGS gen/strcat.c
-+$CC -c $CFLAGS gen/strncat.c
-+$CC -c $CFLAGS gen/strcmp.c
-+$CC -c $CFLAGS gen/strncmp.c
-+$CC -c $CFLAGS gen/strcpy.c
-+$CC -c $CFLAGS gen/strncpy.c
-+$CC -c $CFLAGS gen/strlen.c
-+$CC -c $CFLAGS sys/access.s
-+$CC -c $CFLAGS sys/acct.s
-+$CC -c $CFLAGS sys/alarm.c
-+$CC -c $CFLAGS sys/chdir.s
-+$CC -c $CFLAGS sys/chroot.s
-+$CC -c $CFLAGS sys/chmod.s
-+$CC -c $CFLAGS sys/chown.s
-+$CC -c $CFLAGS sys/close.s
-+$CC -c $CFLAGS sys/creat.s
-+$CC -c $CFLAGS sys/dup.c
-+$CC -c $CFLAGS sys/execl.c
-+$CC -c $CFLAGS sys/execv.c
-+$CC -c $CFLAGS sys/execve.c
-+$CC -c $CFLAGS sys/exit.s
-+$CC -c $CFLAGS sys/fork.s
-+$CC -c $CFLAGS sys/fstat.s
-+$CC -c $CFLAGS sys/getgid.s
-+$CC -c $CFLAGS sys/getpid.s
-+$CC -c $CFLAGS sys/getuid.s
-+$CC -c $CFLAGS sys/ioctl.s
-+$CC -c $CFLAGS sys/kill.s
-+$CC -c $CFLAGS sys/link.s
-+$CC -c $CFLAGS sys/lock.s
-+$CC -c $CFLAGS sys/lseek.s
-+$CC -c $CFLAGS sys/mknod.s
-+$CC -c $CFLAGS sys/mount.s
-+$CC -c $CFLAGS sys/nice.s
-+$CC -c $CFLAGS sys/open.c
-+$CC -c $CFLAGS sys/pause.c
-+$CC -c $CFLAGS sys/pipe.s
-+$CC -c $CFLAGS sys/profil.s
-+$CC -c $CFLAGS sys/ptrace.s
-+$CC -c $CFLAGS sys/read.s
-+$CC -c $CFLAGS sys/brk.c
-+$CC -c $CFLAGS sys/setgid.s
-+$CC -c $CFLAGS sys/setuid.s
-+$CC -c $CFLAGS sys/signal.s
-+$CC -c $CFLAGS sys/stat.s
-+$CC -c $CFLAGS sys/stime.c
-+$CC -c $CFLAGS sys/sync.s
-+$CC -c $CFLAGS sys/ftime.c
-+$CC -c $CFLAGS sys/time.c
-+$CC -c $CFLAGS sys/times.s
-+$CC -c $CFLAGS sys/umask.s
-+$CC -c $CFLAGS sys/umount.s
-+$CC -c $CFLAGS sys/unlink.s
-+$CC -c $CFLAGS sys/utime.s
-+$CC -c $CFLAGS sys/wait.s
-+$CC -c $CFLAGS sys/write.s
-+$CC -c $CFLAGS memcpy.c
-+$CC -c $CFLAGS syscall.s
-
 % usr/src/libc/csu/crt0.c usr/src/libc/csu/crt0.s
 @@ -1 +1,4 @@
 -/ C runtime startoff
@@ -18337,92 +17714,6 @@ usr/local
 +		*p++ = (char)c;
 +	return(d);
 +}
-
-% usr/src/libc/mklib
-@@ -18 +17,0 @@
--getpw.o \
-@@ -38 +36,0 @@
--fltpr.o \
-@@ -41 +38,0 @@
--ffltpr.o \
-@@ -57 +53,0 @@
--abs.o \
-@@ -67,3 +63 @@
--fakcu.o \
--fakfp.o \
--frexp11.o \
-+frexp.o \
-@@ -72,2 +66 @@
--ldexp11.o \
--ldfps.o \
-+ldexp.o \
-@@ -75,3 +68 @@
--modf11.o \
--mon.o \
--mpx.o \
-+modf.o \
-@@ -81,0 +73 @@
-+gtty.o \
-@@ -106 +97,0 @@
--execle.o \
-@@ -122 +112,0 @@
--mpxcall.o \
-@@ -126 +115,0 @@
--phys.o \
-@@ -131 +120 @@
--sbrk.o \
-+brk.o \
-@@ -137,0 +127 @@
-+ftime.o \
-@@ -146,9 +136,2 @@
--aldiv.o \
--almul.o \
--alrem.o \
--cerror.o \
--ldiv.o \
--lmul.o \
--lrem.o \
--mcount.o \
--csv.o
-+memcpy.o \
-+syscall.o
-
-% usr/src/libm/compall
-@@ -1,16 +1,16 @@
--cc -c -O asin.c
--cc -c -O atan.c
--cc -c -O exp.c
--cc -c -O fabs.c
--cc -c -O floor.c
--cc -c -O hypot.c
--cc -c -O j0.c
--cc -c -O j1.c
--cc -c -O jn.c
--cc -c -O log.c
--cc -c -O pow.c
--cc -c -O sin.c
--cc -c -O sinh.c
--cc -c -O sqrt.c
--cc -c -O tan.c
--cc -c -O tanh.c
-+$CC -c $CFLAGS asin.c
-+$CC -c $CFLAGS atan.c
-+$CC -c $CFLAGS exp.c
-+$CC -c $CFLAGS fabs.c
-+$CC -c $CFLAGS floor.c
-+$CC -c $CFLAGS hypot.c
-+$CC -c $CFLAGS j0.c
-+$CC -c $CFLAGS j1.c
-+$CC -c $CFLAGS jn.c
-+$CC -c $CFLAGS log.c
-+$CC -c $CFLAGS pow.c
-+$CC -c $CFLAGS sin.c
-+$CC -c $CFLAGS sinh.c
-+$CC -c $CFLAGS sqrt.c
-+$CC -c $CFLAGS tan.c
-+$CC -c $CFLAGS tanh.c
-
-% usr/src/libm/mklib
 
 % usr/src/libc/stdio/clrerr.c
 @@ -3,2 +3,2 @@
@@ -22320,46 +21611,6 @@ usr/local
 +	.space 4096
 +irq_stack_top:
 
-% usr/sys/conf/makefile
-@@ -1,2 +1,2 @@
--unix:	l.o mch.o c.o ../sys/LIB1 ../dev/LIB2
--	ld -o unix -X -i l.o mch.o c.o ../sys/LIB1 ../dev/LIB2
-+unix:	low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
-+	$(CC) -nostdlib -T unix.ld -o unix low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
-@@ -5,2 +5,2 @@
--	cd ../sys; cc -c -O *.c; mklib; rm *.o
--	cd ../dev; cc -c -O *.c; mklib; rm *.o
-+	cd ../sys && $(CC) -c $(CFLAGS) *.c && sh mklib && rm *.o
-+	cd ../dev && $(CC) -c $(CFLAGS) *.c && sh mklib && rm *.o
-@@ -8,2 +8,2 @@
--mch.o:	mch0.s mch.s
--	as -o mch.o mch0.s mch.s
-+mch.o:	mch.s
-+	$(AS) $(ASFLAGS) -o mch.o mch.s
-@@ -12 +12 @@
--	mkconf <hphtconf
-+	./mkconf <qemuconf
-@@ -14,2 +14,2 @@
--	mv unix hphtunix
--	mkconf <hptmconf
-+	mv unix qemuunix
-+	./mkconf <mp135conf
-@@ -17,13 +17 @@
--	mv unix hptmunix
--	mkconf <rptmconf
--	make unix
--	mv unix rptmunix
--	mkconf <rphtconf
--	make unix
--	mv unix rphtunix
--	mkconf <rktmconf
--	make unix
--	mv unix rktmunix
--	mkconf <rkhtconf
--	make unix
--	mv unix rkhtunix
-+	mv unix mp135unix
-
 % usr/sys/conf/mch.s
 @@ -1,2 +1,4 @@
 -/ machine language assist
@@ -24390,46 +23641,6 @@ usr/local
 -		spl0();
 @@ -69,0 +53 @@
 +	return(0);
-
-% usr/sys/dev/mklib
-@@ -3,9 +3,2 @@
--cat.o \
--dhdm.o \
--dh.o \
--dhfdm.o \
--dn.o \
--du.o \
--hp.o \
--ht.o \
--kl.o \
-+pl011.o \
-+stm32usart.o \
-@@ -13,2 +5,0 @@
--mx1.o \
--mx2.o \
-@@ -16,2 +7,3 @@
--rf.o \
--rk.o \
-+stm32sd.o \
-+stm32ddr.o \
-+virtio_blk.o \
-@@ -19,15 +11 @@
--tc.o \
--tm.o \
--tty.o \
--vp.o \
--vs.o \
--dsort.o \
--dkleave.o \
--pk0.o \
--pk1.o \
--pk2.o \
--pk3.o \
--dc.o \
--dz.o \
--rl.o \
--rp.o
-+tty.o
 
 % usr/sys/dev/partab.c
 
@@ -27618,12 +26829,6 @@ usr/local
 @@ -77 +77 @@
 -			} while (size = t);
 +			} while ((size = t));
-
-% usr/sys/sys/mklib
-@@ -3 +2,0 @@
--trap.o \
-@@ -18 +16,0 @@
--fakemx.o \
 
 % usr/sys/sys/nami.c
 @@ -7,0 +8 @@

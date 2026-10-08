@@ -1,6 +1,6 @@
 #include "stdio.h"
+#include <string.h>
 #include "awk.h"
-#define NULL 0
 char *tokname();
 struct xx
 {	int token;
