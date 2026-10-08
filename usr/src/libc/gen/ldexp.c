@@ -14,7 +14,9 @@ ldexp(double value, int n)
 	if (exp >= 0x7ff)
 		return (value < 0 ? -1e308 * 10.0 : 1e308 * 10.0);
 	if (exp <= 0) {
-		double v = value;
+		double v;
+		u.u[1] = (u.u[1] & 0x800fffffU) | (1U << 20);
+		v = u.d;
 		while (exp <= 0) { v *= 0.5; exp++; }
 		return (v);
 	}
