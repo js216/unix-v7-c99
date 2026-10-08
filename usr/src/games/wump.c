@@ -331,11 +331,11 @@ rline(void)
 int
 rnum(int n)
 {
-	static int first[2];
+	static long first;
 
-	if(first[1] == 0) {
-		time((long *)first);
-		srand((first[1]*first[0])^first[1]);
+	if(first == 0) {
+		time(&first);
+		srand(first);
 	}
 	return((rand()/32768.0) * n);
 }
