@@ -437,17 +437,10 @@ putfile(char *longname, char *shortname)
 	sprintf(dblock.dbuf.chksum, "%6o", checksum());
 	writetape( (char *) &dblock);
 
-	while (blocks > 0) {
-		for (cp = buf; cp < &buf[TBLOCK]; )
-			*cp++ = 0;
-		i = read(infile, buf, TBLOCK);
-		if (i <= 0)
-			break;
+	while ((i = read(infile, buf, TBLOCK)) > 0 && blocks > 0) {
 		writetape(buf);
 		blocks--;
 	}
-	if (blocks == 0)
-		i = 0;
 	close(infile);
 	if (blocks != 0 || i != 0)
 		fprintf(stderr, "%s: file changed size\n", longname);
