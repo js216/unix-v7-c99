@@ -337,7 +337,7 @@ done:
 #ifndef STANDALONE
 		if (command == 'R') {
 			printf("Enter starting volume number: ");
-			if ((int)gets(tbf) == EOF) {
+			if (gets(tbf) == NULL) {
 				volno = 1;
 				printf("\n");
 			}
