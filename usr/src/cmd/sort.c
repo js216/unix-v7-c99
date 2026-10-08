@@ -675,9 +675,9 @@ cmp(char *i, char *j)
 		code = fp->code;
 		ignore = fp->ignore;
 loop: 
-		while(ignore[(unsigned char)*pa])
+		while(ignore[(signed char)*pa])
 			pa++;
-		while(ignore[(unsigned char)*pb])
+		while(ignore[(signed char)*pb])
 			pb++;
 		if(pa>=la || *pa=='\n') {
 			if(pb<lb && *pb!='\n')
@@ -686,7 +686,7 @@ loop:
 		}
 		if(pb>=lb || *pb=='\n')
 			return(-fp->rflg);
-		if((sa = code[(unsigned char)*pb++]-code[(unsigned char)*pa++]) == 0)
+		if((sa = code[(signed char)*pb++]-code[(signed char)*pa++]) == 0)
 			goto loop;
 		return(sa*fp->rflg);
 	}
