@@ -1,11 +1,8 @@
 /*
- *   STM32MP135 board description + bring-up
+ *   STM32MP135 clock and DDR bring-up
  *
- * The machine-dependent data + hook the shared machine_init() (machdep.c)
- * needs for the custom STM32MP135 PCB: the physical memory map (board_map[])
- * and clock_ddr_init(), which brings up the clocks and DDR before the MMU is
- * enabled.  machine_init() itself -- the page-table builder -- is shared with
- * QEMU, so a QEMU run exercises the same code that runs here.
+ * ddrinit(), configured as "ddr" in mp135conf, brings up the clocks and DDR
+ * before machine_init() (machdep.c) enables the MMU.
  *
  * The ROM loads this kernel (FSBL) from SD into SYSRAM and jumps to _start
  * (conf/low.s).  Kernel runs in cached SYSRAM; user core + buffer cache live
@@ -14,8 +11,6 @@
  */
 #include "../h/param.h"
 #include "../h/seg.h"
-
-#ifdef MP135
 
 void clock_init(void);
 void ddr_init(void);
@@ -61,23 +56,9 @@ void cntfrq_set(unsigned int hz);	/* CP15 generic-timer frequency (mch.s) */
 #define PLL4SRC_HSE	0x00000001U		/* RCK4SELR PLL4SRC = HSE */
 #define SDMMC1SRC_PLL4	0x00000002U		/* SDMMC12CKSELR SDMMC1SRC = PLL4 */
 
-/*
- * Physical memory map: kernel SYSRAM and the DDR user-core/buffer window are
- * cached; the peripheral block and the GIC are Device.  Terminated by a zero
- * entry.  (SYSRAM 0x2FFE0000/128K sits in the 0x2FF00000 section; DDR is
- * 0xC0000000/512M.)
- */
-struct memregion board_map[] = {
-	{ 0x2FF00000U,	0x30000000U,	SEC_KERN },	/* SYSRAM: kernel */
-	{ 0xC0000000U,	0xE0000000U,	0x00011402U },	/* DDR: Normal Non-cacheable Shareable (TEX=001,C=0,B=0) -- the SDMMC IDMA is non-coherent, so leaving the buffer cache + kernel tables uncached keeps CPU and DMA views consistent without per-line maintenance */
-	{ 0x40000000U,	0x60000000U,	SEC_DEV },	/* APB/AHB peripherals */
-	{ 0xA0000000U,	0xA0100000U,	SEC_DEV },	/* GIC */
-	{ 0, 0, 0 }
-};
-
 /* Bring up clocks + DRAM before machine_init() enables the MMU. */
 void
-clock_ddr_init(void)
+ddrinit(void)
 {
 	clock_init();
 	ddr_init();
@@ -400,5 +381,3 @@ ddr_init(void)
 	DDRC(0x490) |= 0x1U;			/* PCTRL_0.port_en */
 	RCC_DDRITFCR |= DDR_AXIDCGEN;
 }
-
-#endif

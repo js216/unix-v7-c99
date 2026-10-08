@@ -1,7 +1,6 @@
 #include "../h/param.h"
 #include "../h/buf.h"
 
-#ifdef VIRTIO
 
 void panic(char *s);
 void dmbsy(void);
@@ -9,12 +8,13 @@ void iodone(struct buf *bp);
 void deverror(struct buf *bp, int o1, int o2);
 int intr_disable(void);
 void intr_restore(int s);
+void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 
 extern int	dk_busy;
 extern long	dk_numb[3];
 extern long	dk_wds[3];
 
-int	bd_irq;		/* GIC INTID of the block device (0 if none) */
+int	rkirq;		/* GIC INTID of the block device (0 if none) */
 
 #define	VRING_DESC_F_NEXT	1
 #define	VRING_DESC_F_WRITE	2
@@ -58,9 +58,8 @@ struct virtio_blk_req {
 	unsigned long long sector;
 };
 
-struct buf bdtab;
+struct buf rktab;
 
-#ifndef EVB
 static volatile unsigned char virtio_vq[512] __attribute__((aligned(4096)));
 static struct virtio_blk_req virtio_vreq __attribute__((aligned(16)));
 static volatile unsigned char virtio_vstatus __attribute__((aligned(4)));
@@ -87,12 +86,10 @@ vmmios(unsigned int off, unsigned int val)
 
 	*(volatile unsigned int *)(virtio_vbase + off) = val;
 }
-#endif
 
 void
-bdinit(void)
+rkinit(void)
 {
-#ifndef EVB
 	unsigned int n;
 
 	for(virtio_vbase=VIRTIO_FIRST; virtio_vbase<VIRTIO_LAST;
@@ -119,14 +116,12 @@ bdinit(void)
 	vmmios(0x40, ((unsigned int)virtio_vq) >> 12);
 	vmmios(0x70, 15);
 	virtio_lastused = 0;
-	bd_irq = VIRTIO_IRQ_BASE +
+	rkirq = VIRTIO_IRQ_BASE +
 	    (virtio_vbase - VIRTIO_FIRST) / VIRTIO_STEP;
-	bdtab.b_actf = NULL;
-	bdtab.b_active = 0;
-#endif
+	rktab.b_actf = NULL;
+	rktab.b_active = 0;
 }
 
-#ifndef EVB
 /*
  * Program the virtqueue for the buffer at the head of the queue and notify
  * the device.  Returns at once; completion arrives as an interrupt.
@@ -139,9 +134,9 @@ virtio_start(void)
 	unsigned short aidx;
 	unsigned int type;
 
-	if((bp = bdtab.b_actf) == NULL)
+	if((bp = rktab.b_actf) == NULL)
 		return;
-	bdtab.b_active++;
+	rktab.b_active++;
 	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
 	virtio_vreq.type = type;
 	virtio_vreq.reserved = 0;
@@ -181,67 +176,72 @@ virtio_start(void)
  * the completion interrupt runs iodone().  (cf. v7 rk.c rkstrategy.)
  */
 int
-bdstrategy(struct buf *bp)
+rkstrategy(struct buf *bp)
 {
 	int s;
 
 	bp->av_forw = NULL;
 	s = intr_disable();
-	if(bdtab.b_actf == NULL)
-		bdtab.b_actf = bp;
+	if(rktab.b_actf == NULL)
+		rktab.b_actf = bp;
 	else
-		bdtab.b_actl->av_forw = bp;
-	bdtab.b_actl = bp;
-	if(bdtab.b_active == 0)
+		rktab.b_actl->av_forw = bp;
+	rktab.b_actl = bp;
+	if(rktab.b_active == 0)
 		virtio_start();
 	intr_restore(s);
 	return(0);
 }
 
 /*
- * Completion interrupt (GIC INTID bd_irq).  Acknowledge the device,
+ * Completion interrupt (GIC INTID rkirq).  Acknowledge the device,
  * finish the active buffer, and start the next queued one.
  * (cf. v7 rk.c rkintr.)
  */
 int
-bdintr(void)
+rkintr(void)
 {
 	register struct buf *bp;
 	unsigned int is;
 
 	is = vmmio(0x60);		/* InterruptStatus */
 	vmmios(0x64, is);		/* InterruptACK */
-	if(bdtab.b_active == 0)
+	if(rktab.b_active == 0)
 		return(0);
 	if(qused.idx == virtio_lastused)
 		return(0);
 	dmbsy();
 	virtio_lastused++;
 	dk_busy &= ~1;
-	bp = bdtab.b_actf;
-	bdtab.b_active = 0;
+	bp = rktab.b_actf;
+	rktab.b_active = 0;
 	if(virtio_vstatus != 0) {
 		deverror(bp, virtio_vstatus, 0);
 		bp->b_flags |= B_ERROR;
 	}
-	bdtab.b_actf = bp->av_forw;
+	rktab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);
 	virtio_start();
 	return(0);
 }
-#else
-int
-bdstrategy(struct buf *bp)
-{
-	(void)bp;
-	return(0);
-}
-int
-bdintr(void)
-{
-	return(0);
-}
-#endif
 
-#endif
+struct	buf	rrkbuf;
+
+int
+rkread(dev)
+dev_t dev;
+{
+
+	physio(rkstrategy, &rrkbuf, dev, B_READ);
+	return(0);
+}
+
+int
+rkwrite(dev)
+dev_t dev;
+{
+
+	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
+	return(0);
+}

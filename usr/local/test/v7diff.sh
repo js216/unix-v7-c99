@@ -12,7 +12,7 @@ usr/local
 : <<\EOF
 
 % Makefile /dev/null
-@@ -0,0 +1,161 @@
+@@ -0,0 +1,162 @@
 +# SPDX-License-Identifier: MIT
 +# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 +# Copyright (c) 2026 Jakob Kastelic
@@ -22,41 +22,33 @@ usr/local
 +AS = $(CROSS_COMPILE)as
 +HOSTCC = arm-linux-gnueabihf-gcc
 +
-+KFEATURES ?= -DQEMU -DPL011 -DVIRTIO
-+KLDSCRIPT ?= arm_qemu.ld
-+
 +CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
 +	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Wl,-N,-Ttext=0x10
 +
 +LIBC = usr/src/libc/libc.a
 +CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 +
-+MKFS_CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
++HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
 +	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
-+
-+# The flags each half is built with, rewritten only when they change, so
-+# that switching boards or flags rebuilds exactly what they affect.
-+KSTAMP = boot/.kflags
-+USTAMP = boot/.uflags
-+STAMP = echo '$(1)' | cmp -s - $@ || echo '$(1)' > $@
 +
 +all: boot/unix boot/rootfs.img
 +
-+$(KSTAMP): force | boot
-+	@$(call STAMP,$(CC) $(CFLAGS) $(KFEATURES) $(KLDSCRIPT))
++# Kernels: like v7, conf/makefile recompiles all of sys and dev (about 2 s)
++# and builds one kernel per configuration file, mkconf making each c.c.
 +
-+$(USTAMP): force | boot
-+	@$(call STAMP,$(CC) $(CFLAGS))
++KERNELS = usr/sys/conf/qemuunix usr/sys/conf/mp135unix
 +
-+# Kernel: like v7, conf/makefile recompiles all of sys and dev (about 2 s).
++$(KERNELS) &: usr/sys/conf/mkconf usr/sys/conf/qemuconf usr/sys/conf/mp135conf \
++	    $(filter-out usr/sys/conf/c.c,$(wildcard usr/sys/*/*.[chs])) \
++	    usr/sys/sys/mklib usr/sys/dev/mklib usr/sys/conf/makefile Makefile
++	$(MAKE) -C usr/sys/conf all allsystems CC="$(CC)" AS="$(AS)" \
++	    CFLAGS="$(CFLAGS)" ASFLAGS=-mcpu=cortex-a7
 +
-+boot/unix: $(KSTAMP) $(wildcard usr/sys/*/*.[chs] usr/sys/*/mklib) \
-+	    usr/sys/conf/makefile usr/sys/conf/$(KLDSCRIPT) | boot
-+	rm -f usr/sys/conf/*.o
-+	$(MAKE) -C usr/sys/conf all unix CC="$(CC)" AS="$(AS)" \
-+	    CFLAGS="$(CFLAGS) $(KFEATURES)" ASFLAGS=-mcpu=cortex-a7 \
-+	    LDSCRIPT=$(KLDSCRIPT)
-+	cp usr/sys/conf/unix $@
++usr/sys/conf/mkconf: usr/sys/conf/mkconf.c
++	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
++
++boot/unix: usr/sys/conf/qemuunix | boot
++	cp $< $@
 +
 +qemu: boot/unix boot/rootfs.img
 +	qemu-system-arm -machine virt -cpu cortex-a7 -nographic \
@@ -65,7 +57,7 @@ usr/local
 +
 +# Libc
 +
-+$(LIBC) $(CRT): $(USTAMP) $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
++$(LIBC) $(CRT): Makefile $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
 +	    usr/include/*.h usr/include/sys/*.h) usr/src/libc/compall usr/src/libc/mklib
 +	cd usr/src/libc && rm -f *.o libc.a && \
 +	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include -I../.." sh -e compall && \
@@ -111,15 +103,23 @@ usr/local
 +
 +DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 +
-+bin/% etc/% usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
++bin/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 +	$(CMAKE) $(<F)
 +	test $@ -nt $<
 +
-+bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
++etc/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 +	$(CMAKE) $(<F)
 +	test $@ -nt $<
 +
-+usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
++usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
++	$(CMAKE) $(<F)
++	test $@ -nt $<
++
++bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) Makefile | $(DIRS)
++	$(CMAKE) $(<F)
++	test $@ -nt $<
++
++usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 +	$(CC) $(CFLAGS) -Iusr/include -Iusr/src -s -o $@ \
 +	    $(CRT) $< -Lusr/src/libc -lc -lgcc
 +
@@ -130,8 +130,8 @@ usr/local
 +bin/awk: SUBDIR_CFLAGS_EXTRA = -DYYSTACK_USE_ALLOCA=1 -Dmalloc=malloc -Dfree=free -I.
 +bin/awk: SUBDIR_LDLIBS = -L../../libc -lm -lc -lgcc
 +
-+$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) $(USTAMP) | bin
-+	cd usr/src/cmd/$* && { test $* -nt ../../../$(USTAMP) || rm -f *.o; } && \
++$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) Makefile | bin
++	cd usr/src/cmd/$* && { test $* -nt ../../../Makefile || rm -f *.o; } && \
 +	    { test $* -nt ../../libc/libc.a || rm -f $*; }
 +	$(MAKE) -C usr/src/cmd/$* CC="$(CC)" \
 +	    CFLAGS="$(CFLAGS) -I../../../include -I../.. $(SUBDIR_CFLAGS_EXTRA)" \
@@ -144,8 +144,8 @@ usr/local
 +boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 +	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
 +	    V7_MKFS_TIME=0 etc/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
-+	    { read _; read fsize _; } < boot/rootfs.proto; \
-+	    truncate -s "$$((fsize * 512))" boot/rootfs.img.tmp; \
++	    size=$$(awk '/^(swplo|nswap) /{n+=$$2} END{print n}' usr/sys/conf/qemuconf); \
++	    truncate -s "$$((size * 512))" boot/rootfs.img.tmp; \
 +	    mv boot/rootfs.img.tmp boot/rootfs.img
 +
 +etc/mkfs: usr/src/cmd/mkfs.c | etc
@@ -153,7 +153,7 @@ usr/local
 +	    trap 'rm -rf "$$tmpinc"' EXIT; \
 +	    mkdir -p "$$tmpinc"; \
 +	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
-+	    $(HOSTCC) $(MKFS_CFLAGS) -I"$$tmpinc" -o $@ $<
++	    $(HOSTCC) $(HOSTCFLAGS) -I"$$tmpinc" -o $@ $<
 +
 +.PHONY: all clean force qemu
 +.PRECIOUS: $(ROOT)
@@ -169,8 +169,9 @@ usr/local
 +$(filter etc/%,$(ROOTFS_STATIC)): ;
 +
 +clean:
-+	rm -f usr/sys/conf/*.o usr/sys/conf/unix usr/sys/sys/LIB1 usr/sys/dev/LIB2
-+	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp $(KSTAMP) $(USTAMP)
++	rm -f usr/sys/conf/*.o usr/sys/conf/c.c usr/sys/conf/unix.ld usr/sys/conf/mkconf
++	rm -f $(KERNELS) usr/sys/sys/LIB1 usr/sys/dev/LIB2
++	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp
 +	rm -f etc/mkfs usr/src/libc/*.o $(LIBC)
 +	for d in sed sh dc tar tp; do rm -f usr/src/cmd/$$d/$$d usr/src/cmd/$$d/*.o; done
 +	$(MAKE) -C usr/src/cmd/awk clean
@@ -178,7 +179,7 @@ usr/local
 % boot/rootfs.proto /dev/null
 @@ -0,0 +1,181 @@
 +/dev/null
-+11520 2048
++10648 2048
 +d--755 0 0
 +	bin	d--755 0 0
 +		1	---755 0 0 bin/1
@@ -290,11 +291,11 @@ usr/local
 +		$
 +	dev	d--755 0 0
 +		console	c--644 0 0 0 0
-+		mem	c--640 0 0 1 0
-+		kmem	c--640 0 0 1 1
-+		null	c--666 0 0 1 2
++		mem	c--640 0 0 8 0
++		kmem	c--640 0 0 8 1
++		null	c--666 0 0 8 2
 +		root	b--640 0 0 0 0
-+		tty	c--666 0 0 2 0
++		tty	c--666 0 0 17 0
 +		$
 +	etc	d--755 0 0
 +		accton	---755 0 0 etc/accton
@@ -22040,192 +22041,6 @@ usr/local
 -double arg;
 +tanh(double arg)
 
-% usr/sys/conf/arm_qemu.ld /dev/null
-@@ -0,0 +1,27 @@
-+ENTRY(_start)
-+SECTIONS
-+{
-+   . = 0x40000000;
-+
-+   .text : {
-+      *(.text)
-+ }
-+
-+ .data : { *(.data) }
-+
-+ __bss_start = .;
-+ .bss  : { *(.bss)  }
-+ __bss_end = .;
-+
-+ /* QEMU has no separate DRAM; .ddrbss is just placed in RAM here, but it is
-+  * zeroed by the same machine_init() path the MP135 uses (qemu verifies it). */
-+ .ddrbss : ALIGN(16384) {
-+    __ddrbss_start = .;
-+    *(.ddrbss) *(.ddrbss*)
-+    __ddrbss_end = .;
-+ }
-+
-+ .stack : {
-+    *(.stack)
-+ }
-+}
-
-% usr/sys/conf/conf.c usr/sys/conf/c.c
-@@ -2 +2 @@
--#include "../h/systm.h"
-+#include "../h/acct.h"
-@@ -4 +3,0 @@
--#include "../h/tty.h"
-@@ -6,2 +4,0 @@
--#include "../h/proc.h"
--#include "../h/text.h"
-@@ -9 +5,0 @@
--#include "../h/user.h"
-@@ -10,0 +7 @@
-+#include "../h/filsys.h"
-@@ -12 +9,29 @@
--#include "../h/acct.h"
-+#include "../h/mount.h"
-+#include "../h/proc.h"
-+#include "../h/systm.h"
-+#include "../h/text.h"
-+#include "../h/tty.h"
-+#include "../h/user.h"
-+
-+/*
-+ * Device switch.  The console (cn*) and block device (bd*) entry points are
-+ * a board-independent interface: the QEMU build links pl011.c + virtio_blk.c,
-+ * the MP135 build links stm32usart.c + stm32sd.c, and each board's Makefile
-+ * pulls in exactly one driver implementing these symbols.  This file is the
-+ * same on both boards; the devices differ only by which driver is linked.
-+ */
-+extern struct buf bdtab;
-+extern int bdstrategy(struct buf *bp);
-+extern int nodev(void);
-+extern int nulldev(void);
-+extern int mmread(dev_t dev);
-+extern int mmwrite(dev_t dev);
-+extern int cnopen(dev_t dev, int flag);
-+extern int cnclose(dev_t dev, int flag);
-+extern int cnread(dev_t dev);
-+extern int cnwrite(dev_t dev);
-+extern int cnioctl(dev_t dev, int cmd, caddr_t addr, int flag);
-+extern int syopen(dev_t dev, int flag);
-+extern int syread(dev_t dev);
-+extern int sywrite(dev_t dev);
-+extern int sysioctl(dev_t dev, int cmd, caddr_t addr, int flag);
-@@ -14,7 +39,2 @@
--int	nulldev();
--int	nodev();
--int	rkstrategy();
--struct	buf	rktab;
--int	htopen(), htclose(), htstrategy();
--struct	buf	httab;
--struct	bdevsw	bdevsw[] =
-+static int
-+nulldev_dev(dev_t dev, int flag)
-@@ -22,11 +42,4 @@
--	nulldev, nulldev, rkstrategy, &rktab,	/* rk = 0 */
--	nodev, nodev, nodev, 0, /* rp = 1 */
--	nodev, nodev, nodev, 0, /* rf = 2 */
--	nodev, nodev, nodev, 0, /* tm = 3 */
--	nodev, nodev, nodev, 0, /* tc = 4 */
--	nodev, nodev, nodev, 0, /* hs = 5 */
--	nodev, nodev, nodev, 0, /* hp = 6 */
--	htopen, htclose, htstrategy, &httab,	/* ht = 7 */
--	nodev, nodev, nodev, 0, /* rl = 8 */
--	0
--};
-+	(void)dev;
-+	(void)flag;
-+	return(0);
-+}
-@@ -34,5 +47,4 @@
--int	klopen(), klclose(), klread(), klwrite(), klioctl();
--int	mmread(), mmwrite();
--int	rkread(), rkwrite();
--int	htread(), htwrite();
--int	syopen(), syread(), sywrite(), sysioctl();
-+struct bdevsw bdevsw[] = {
-+	{ nulldev_dev, nulldev_dev, bdstrategy, &bdtab },
-+	{ 0, 0, 0, 0 }
-+};
-@@ -40,22 +52,5 @@
--struct	cdevsw	cdevsw[] =
--{
--	klopen, klclose, klread, klwrite, klioctl, nulldev, 0,	/* console = 0 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* pc = 1 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* lp = 2 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* dc = 3 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* dh = 4 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* dp = 5 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* dj = 6 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* dn = 7 */
--	nulldev, nulldev, mmread, mmwrite, nodev, nulldev, 0, 	/* mem = 8 */
--	nulldev, nulldev, rkread, rkwrite, nodev, nulldev, 0,	/* rk = 9 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* rf = 10 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* rp = 11 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* tm = 12 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* hs = 13 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* hp = 14 */
--	htopen, htclose, htread, htwrite, nodev, nulldev, 0,	/* ht = 15 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* du = 16 */
--	syopen, nulldev, syread, sywrite, sysioctl, nulldev, 0,	/* tty = 17 */
--	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* rl = 18 */
--	0
-+struct cdevsw cdevsw[] = {
-+	{ cnopen, cnclose, cnread, cnwrite, cnioctl, nulldev, 0 },
-+	{ nulldev_dev, nulldev_dev, mmread, mmwrite, nodev, nodev, 0 },
-+	{ syopen, nulldev, syread, sywrite, sysioctl, nulldev, 0 },
-+	{ 0, 0, 0, 0, 0, 0, 0 }
-@@ -64,5 +59,2 @@
--int	ttyopen(), ttyclose(), ttread(), ttwrite(), ttyinput(), ttstart();
--struct	linesw	linesw[] =
--{
--	ttyopen, nulldev, ttread, ttwrite, nodev, ttyinput, ttstart, /* 0 */
--	0
-+struct linesw linesw[] = {
-+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-@@ -70,3 +62 @@
--int	rootdev	= makedev(0, 0);
--int	swapdev	= makedev(0, 0);
--int	pipedev = makedev(0, 0);
-+
-@@ -74,13 +64,20 @@
--daddr_t	swplo	= 4000;
--int	nswap	= 872;
--	
--struct	buf	buf[NBUF];
--struct	file	file[NFILE];
--struct	inode	inode[NINODE];
--int	mpxchan();
--int	(*ldmpx)() = mpxchan;
--struct	proc	proc[NPROC];
--struct	text	text[NTEXT];
--struct	buf	bfreelist;
--struct	acct	acctbuf;
--struct	inode	*acctp;
-+
-+dev_t	rootdev = makedev(0, 0);
-+dev_t	swapdev = makedev(0, 0);
-+dev_t	pipedev = makedev(0, 0);
-+
-+/*
-+ * The large system tables go in KTABLES_SECTION (param.h): on
-+ * the MP135, whose 128 KB SYSRAM cannot hold them, that is ".ddrbss", which
-+ * the linker places in DDR and machine_init() zeroes once DRAM is up; on QEMU,
-+ * where RAM is one block, it is the ordinary ".bss" zeroed by low.s.
-+ */
-+#define	DDRBSS	__attribute__((section(KTABLES_SECTION)))
-+struct buf buf[NBUF]		DDRBSS;
-+struct file file[NFILE]		DDRBSS;
-+struct inode inode[NINODE]	DDRBSS;
-+struct proc proc[NPROC]		DDRBSS;
-+struct text text[NTEXT]		DDRBSS;
-+struct buf bfreelist;
-+struct acct acctbuf;
-+struct inode *acctp;
-
 % usr/sys/conf/low.s usr/sys/conf/l.s
 @@ -1,72 +1,236 @@
 -/ low core
@@ -22541,8 +22356,8 @@ usr/local
 @@ -1,2 +1,2 @@
 -unix:	l.o mch.o c.o ../sys/LIB1 ../dev/LIB2
 -	ld -o unix -X -i l.o mch.o c.o ../sys/LIB1 ../dev/LIB2
-+unix:	low.o mch.o conf.o qemu.o mp135.o ../sys/LIB1 ../dev/LIB2
-+	$(CC) -nostdlib -T $(LDSCRIPT) -o unix low.o mch.o conf.o qemu.o mp135.o ../sys/LIB1 ../dev/LIB2
++unix:	low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
++	$(CC) -nostdlib -T unix.ld -o unix low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
 @@ -5,2 +5,2 @@
 -	cd ../sys; cc -c -O *.c; mklib; rm *.o
 -	cd ../dev; cc -c -O *.c; mklib; rm *.o
@@ -22553,6 +22368,29 @@ usr/local
 -	as -o mch.o mch0.s mch.s
 +mch.o:	mch.s
 +	$(AS) $(ASFLAGS) -o mch.o mch.s
+@@ -12 +12 @@
+-	mkconf <hphtconf
++	./mkconf <qemuconf
+@@ -14,2 +14,2 @@
+-	mv unix hphtunix
+-	mkconf <hptmconf
++	mv unix qemuunix
++	./mkconf <mp135conf
+@@ -17,13 +17 @@
+-	mv unix hptmunix
+-	mkconf <rptmconf
+-	make unix
+-	mv unix rptmunix
+-	mkconf <rphtconf
+-	make unix
+-	mv unix rphtunix
+-	mkconf <rktmconf
+-	make unix
+-	mv unix rktmunix
+-	mkconf <rkhtconf
+-	make unix
+-	mv unix rkhtunix
++	mv unix mp135unix
 
 % usr/sys/conf/mch.s
 @@ -1,2 +1,4 @@
@@ -23801,16 +23639,1170 @@ usr/local
 +	.size	dcflush, .-dcflush
 +	.ltorg
 
-% usr/sys/conf/mp135.c /dev/null
-@@ -0,0 +1,404 @@
+% usr/sys/conf/mkconf.c
+@@ -1,0 +2,6 @@
++#include <stdlib.h>
++#include <string.h>
++
++void	puke(), subst();
++int	input(), equal(), badline();
++char	*repl();
+@@ -62,0 +69 @@
++	{
+@@ -71,0 +79 @@
++	},
+@@ -72,0 +81 @@
++	{
+@@ -81,0 +91 @@
++	},
+@@ -82,0 +93 @@
++	{
+@@ -91,0 +103 @@
++	},
+@@ -92,0 +105 @@
++	{
+@@ -101,0 +115 @@
++	},
+@@ -102,0 +117 @@
++	{
+@@ -111,0 +127 @@
++	},
+@@ -120,0 +137 @@
++	{
+@@ -129,0 +147 @@
++	},
+@@ -137,0 +156 @@
++	{
+@@ -146,0 +166 @@
++	},
+@@ -147,0 +168 @@
++	{
+@@ -156,0 +178 @@
++	},
+@@ -157,0 +180 @@
++	{
+@@ -166,0 +190 @@
++	},
+@@ -171,0 +196 @@
++	{
+@@ -180,0 +206 @@
++	},
+@@ -181,0 +208 @@
++	{
+@@ -190,0 +218 @@
++	},
+@@ -191,0 +220 @@
++	{
+@@ -200,0 +230 @@
++	},
+@@ -201,0 +232 @@
++	{
+@@ -210,0 +242 @@
++	},
+@@ -211,0 +244 @@
++	{
+@@ -220,0 +254 @@
++	},
+@@ -225,0 +260 @@
++	{
+@@ -234,0 +270 @@
++	},
+@@ -235,0 +272 @@
++	{
+@@ -244,0 +282 @@
++	},
+@@ -250,0 +289 @@
++	{
+@@ -259,0 +299 @@
++	},
+@@ -260,0 +301 @@
++	{
+@@ -269,0 +311 @@
++	},
+@@ -270,0 +313 @@
++	{
+@@ -279,0 +323 @@
++	},
+@@ -284,0 +329 @@
++	{
+@@ -293,0 +339 @@
++	},
+@@ -294,0 +341 @@
++	{
+@@ -303,0 +351 @@
++	},
+@@ -313,0 +362 @@
++	{
+@@ -322,0 +372 @@
++	},
+@@ -327,0 +378 @@
++	{
+@@ -336,0 +388 @@
++	},
+@@ -344,0 +397 @@
++	{
+@@ -353,0 +407 @@
++	},
+@@ -354,0 +409 @@
++	{
+@@ -363,0 +419 @@
++	},
+@@ -365,64 +421 @@
+-	0
+-};
+-
+-char	*stra[] =
+-{
+-	"/ low core",
+-	"",
+-	".data",
+-	"ZERO:",
+-	"",
+-	"br4 = 200",
+-	"br5 = 240",
+-	"br6 = 300",
+-	"br7 = 340",
+-	"",
+-	". = ZERO+0",
+-	"	br	1f",
+-	"	4",
+-	"",
+-	"/ trap vectors",
+-	"	trap; br7+0.		/ bus error",
+-	"	trap; br7+1.		/ illegal instruction",
+-	"	trap; br7+2.		/ bpt-trace trap",
+-	"	trap; br7+3.		/ iot trap",
+-	"	trap; br7+4.		/ power fail",
+-	"	trap; br7+5.		/ emulator trap",
+-	"	start;br7+6.		/ system  (overlaid by 'trap')",
+-	"",
+-	". = ZERO+40",
+-	".globl	start, dump",
+-	"1:	jmp	start",
+-	"	jmp	dump",
+-	"",
+-	0,
+-};
+-
+-char	*strb[] =
+-{
+-	"",
+-	". = ZERO+240",
+-	"	trap; br7+7.		/ programmed interrupt",
+-	"	trap; br7+8.		/ floating point",
+-	"	trap; br7+9.		/ segmentation violation",
+-	0
+-};
+-
+-char	*strc[] =
+-{
+-	"",
+-	"/ floating vectors",
+-	". = ZERO+300",
+-	0,
+-};
+-
+-char	*strd[] =
+-{
+-	"",
+-	"//////////////////////////////////////////////////////",
+-	"/		interface code to C",
+-	"//////////////////////////////////////////////////////",
+-	"",
+-	".text",
+-	".globl	call, trap",
+-	0
++	{0}
+@@ -447,0 +441,2 @@
++	"#include \"../h/seg.h\"",
++	"#define	DDRBSS	__attribute__((section(KTABLES_SECTION)))",
+@@ -460 +455 @@
+-	"	0",
++	"	{0}",
+@@ -476 +471 @@
+-"	0\n\
++"	{0}\n\
+@@ -483 +478 @@
+-int	nswap	= %l;\n\
++int	nswap	= %d;\n\
+@@ -489,10 +484,3 @@
+-struct	buf	buf[NBUF];\n\
+-struct	file	file[NFILE];\n\
+-struct	inode	inode[NINODE];\n"
+-};
+-
+-char	*strg1a[] =
+-{
+-	"int	mpxchan();",
+-	"int	(*ldmpx)() = mpxchan;",
+-	0
++struct	buf	buf[NBUF] DDRBSS;\n\
++struct	file	file[NFILE] DDRBSS;\n\
++struct	inode	inode[NINODE] DDRBSS;\n"
+@@ -503,2 +491,2 @@
+-"struct	proc	proc[NPROC];\n\
+-struct	text	text[NTEXT];\n\
++"struct	proc	proc[NPROC] DDRBSS;\n\
++struct	text	text[NTEXT] DDRBSS;\n\
+@@ -512 +500 @@
+-	"	0",
++	"	{0}",
+@@ -515 +503,2 @@
+-	"int	ttyopen(), ttyclose(), ttread(), ttwrite(), ttyinput(), ttstart();",
++	"int	ttyopen(), ttyclose(), ttread(), ttyinput(), ttstart();",
++	"char	*ttwrite();",
+@@ -529 +518 @@
+-	"	ttyopen, nulldev, ttread, ttwrite, nodev, ttyinput, ttstart, /* 0 */",
++	"	{ttyopen, nulldev, ttread, ttwrite, nodev, ttyinput, ttstart, 0, 0, 0}, /* 0 */",
+@@ -535 +524 @@
+-	"	pkopen, pkclose, pkread, pkwrite, pkioctl, pkrint, pkxint, /* 1 */",
++	"	{pkopen, pkclose, pkread, pkwrite, pkioctl, pkrint, pkxint, 0, 0, 0}, /* 1 */",
+@@ -550,0 +540,8 @@
++char	*con = "kl";
++char	*dsk = "rk";
++int	ddr;
++unsigned long	ramb, ramn, tabb, tabn, coreb, coret, pguser, gicd, gicc;
++#define	NMAP	8
++unsigned long	mapb[NMAP], mape[NMAP];
++char	mapa[NMAP][32];
++int	nmap;
+@@ -551,0 +549 @@
++int
+@@ -556,2 +554 @@
+-	int i, n, ev, nkl;
+-	int flagf, flagb, dumpht;
++	int i;
+@@ -562 +559 @@
+- * pass1 -- create interrupt vectors
++ * pass1 -- create the linker script
+@@ -564,46 +561,14 @@
+-	nkl = 0;
+-	flagf = flagb = 1;
+-	freopen("l.s", "w", stdout);
+-	puke(stra);
+-	ev = 0;
+-	for(p=table; p->name; p++)
+-	if(p->count != 0 && p->key & INTR) {
+-		if(p->address>240 && flagb) {
+-			flagb = 0;
+-			puke(strb);
+-		}
+-		if(p->address >= 300) {
+-			if(flagf) {
+-				ev = 0;
+-				flagf = 0;
+-				puke(strc);
+-			}
+-			if(p->key & EVEN && ev & 07) {
+-				printf("	.=.+4\n");
+-				ev += 4;
+-			}
+-			printf("/%s %o\n", p->name, 0300+ev);
+-		} else
+-			printf("\n. = ZERO+%d\n", p->address);
+-		n = p->count;
+-		if(n < 0)
+-			n = -n;
+-		for(i=0; i<n; i++) {
+-			if(p->key & KL) {
+-				printf(p->codea, nkl, nkl);
+-				nkl++;
+-			} else
+-				printf(p->codea, i, i);
+-			if (p->address<300)
+-				fprintf(stderr, "%s at %d\n", p->name, p->address+4*i);
+-			else
+-				fprintf(stderr, "%s at %o\n", p->name, 0300+ev);
+-			ev += p->address - 300;
+-		}
+-	}
+-	if(flagb)
+-		puke(strb);
+-	puke(strd);
+-	for(p=table; p->name; p++)
+-	if(p->count != 0 && p->key & INTR)
+-		printf("\n%s%s", p->codeb, p->codec);
++	freopen("unix.ld", "w", stdout);
++	printf("ENTRY(_start)\nMEMORY\n{\n");
++	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramb, ramn);
++	if (tabn)
++		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabb, tabn);
++	printf("}\nSECTIONS\n{\n");
++	printf("\t.text : { *(.text*) } > RAM\n");
++	printf("\t.rodata : { *(.rodata*) } > RAM\n");
++	printf("\t.data : { *(.data*) } > RAM\n");
++	printf("\t__bss_start = .;\n\t.bss : { *(.bss*) *(COMMON) } > RAM\n");
++	printf("\t__bss_end = .;\n\t.stack : { *(.stack) } > RAM\n");
++	printf("\t.ddrbss (NOLOAD) : ALIGN(16384) {\n");
++	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
++	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n", tabn ? "TAB" : "RAM");
+@@ -620 +585 @@
+-	for (i=0; q=btab[i]; i++) {
++	for (i=0; (q=btab[i]); i++) {
+@@ -627 +592 @@
+-	for(i=0; q=btab[i]; i++) {
++	for(i=0; (q=btab[i]); i++) {
+@@ -631 +596 @@
+-			printf("%s	/* %s = %d */\n", p->coded, q, i);
++			printf("	{%s},	/* %s = %d */\n", p->coded, q, i);
+@@ -640 +605 @@
+-		printf("	nodev, nodev, nodev, 0, /* %s = %d */\n", q, i);
++		printf("	{nodev, nodev, nodev, 0}, /* %s = %d */\n", q, i);
+@@ -652 +617 @@
+-	for (i=0; q=ctab[i]; i++) {
++	for (i=0; (q=ctab[i]); i++) {
+@@ -659 +624 @@
+-	for(i=0; q=ctab[i]; i++) {
++	for(i=0; (q=ctab[i]); i++) {
+@@ -663 +628 @@
+-			printf("%s	/* %s = %d */\n", p->codee, q, i);
++			printf("	{%s},	/* %s = %d */\n", p->codee, q, i);
+@@ -666 +631 @@
+-		printf("	nodev, nodev, nodev, nodev, nodev, nulldev, 0, /* %s = %d */\n", q, i);
++		printf("	{nodev, nodev, nodev, nodev, nodev, nulldev, 0}, /* %s = %d */\n", q, i);
+@@ -683,2 +647,0 @@
+-	if (!mpx)
+-		puke(strg1a);
+@@ -688,13 +651,19 @@
+-	freopen("mch0.s", "w", stdout);
+-	dumpht = 0;
+-	for (i=0; table[i].name; i++) {
+-		if (equal(table[i].name, "ht") && table[i].count)
+-			dumpht = 1;
+-	}
+-	if (dumpht) {
+-		printf("HTDUMP = 1\n");
+-		printf("TUDUMP = 0\n");
+-	} else {
+-		printf("HTDUMP = 0\n");
+-		printf("TUDUMP = 1\n");
+-	}
++	printf("\nunsigned int\tkernbase = 0x%lx;\n", ramb);
++	printf("unsigned int\tcorebase = 0x%lx, coretop = 0x%lx;\n", coreb, coret);
++	printf("unsigned int\tpguser = 0x%lx;\n", pguser);
++	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n", gicd, gicc);
++	printf("\nstruct\tmemregion\tboard_map[] =\n{\n");
++	for (i=0; i<nmap; i++)
++		printf("\t{0x%lx, 0x%lx, %s},\n", mapb[i], mape[i], mapa[i]);
++	printf("\t{0, 0, 0}\n};\n");
++	printf("\nint\t%sintr(), %sintr();\n", con, dsk);
++	printf("extern int\t%sirq, %sirq;\n", con, dsk);
++	printf("struct\tintr\tintrtab[] =\n{\n");
++	printf("\t{&%sirq, %sintr},\n\t{&%sirq, %sintr},\n", con, con, dsk, dsk);
++	printf("\t{0, 0}\n};\n");
++	printf("\nvoid\t%sinit(void), %sinit(void), %sputchar(char);\n", con, dsk, con);
++	printf("void\tcninit(void) { %sinit(); }\n", con);
++	printf("void\tbdinit(void) { %sinit(); }\n", dsk);
++	printf("void\tputchar(char c) { %sputchar(c); }\n", con);
++	printf("\nvoid\tddrinit(void);\n");
++	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
+@@ -702,0 +672 @@
++void
+@@ -704,0 +675 @@
++int a;
+@@ -708 +679 @@
+-	while(c = *s++) {
++	while((c = *s++)) {
+@@ -713,0 +685 @@
++int
+@@ -726 +698 @@
+-	if (count == -1 && n>0) {
++	if (count == -1) {
+@@ -728 +700 @@
+-		n++;
++		n = sscanf(line, "%31s%31s%ld", keyw, dev, &num) + 1;
+@@ -731,0 +704,24 @@
++	if (equal(keyw, "map") && nmap < NMAP) {
++		if (sscanf(line, "%*s%lx%lx%31s", &mapb[nmap], &mape[nmap], mapa[nmap]) != 3)
++			goto badl;
++		if (equal(mapa[nmap], "kern") || equal(mapa[nmap], "dev"))
++			sprintf(mapa[nmap], "SEC_%s", equal(mapa[nmap], "kern") ? "KERN" : "DEV");
++		else
++			sprintf(mapa[nmap], "0x%lx", strtoul(mapa[nmap], 0, 16));
++		nmap++;
++		return(1);
++	}
++	if (equal(keyw, "ram"))
++		return(sscanf(line, "%*s%lx%lx", &ramb, &ramn) == 2 || badline(line));
++	if (equal(keyw, "tables"))
++		return(sscanf(line, "%*s%lx%lx", &tabb, &tabn) == 2 || badline(line));
++	if (equal(keyw, "core"))
++		return(sscanf(line, "%*s%lx%lx", &coreb, &coret) == 2 || badline(line));
++	if (equal(keyw, "gic"))
++		return(sscanf(line, "%*s%lx%lx", &gicd, &gicc) == 2 || badline(line));
++	if (equal(keyw, "pguser"))
++		return(sscanf(line, "%*s%lx", &pguser) == 1 || badline(line));
++	if (equal(keyw, "ddr")) {
++		ddr++;
++		return(1);
++	}
+@@ -733,0 +730,2 @@
++		if (n > 2)
++			subst(q, dev);
+@@ -734,0 +733,2 @@
++			if (n > 2)
++				return(1);
+@@ -812,0 +813,7 @@
++	return(badline(line));
++}
++
++int
++badline(line)
++char *line;
++{
+@@ -816,0 +824,42 @@
 +/*
-+ *   STM32MP135 board description + bring-up
++ * Configure the driver with the given prefix for entry q
++ * (e.g. "console us", "rk sd"): rename its code strings.
++ */
++char *
++repl(s, o, n)
++char *s, *o, *n;
++{
++	char *t, *d;
++	size_t lo = strlen(o), ln = strlen(n);
++
++	t = d = malloc(strlen(s) * (ln + 1) + 1);
++	while (*s)
++		if (strncmp(s, o, lo) == 0) {
++			strcpy(d, n);
++			d += ln;
++			s += lo;
++		} else
++			*d++ = *s++;
++	*d = 0;
++	return(t);
++}
++
++void
++subst(q, n)
++struct tab *q;
++char *n;
++{
++	char *o = equal(q->name, "console") ? con : q->name;
++
++	n = strcpy(malloc(strlen(n) + 1), n);
++	q->coded = repl(q->coded, o, n);
++	q->codee = repl(q->codee, o, n);
++	q->codef = repl(q->codef, o, n);
++	q->codeg = repl(q->codeg, o, n);
++	if (equal(q->name, "console"))
++		con = n;
++	if (equal(q->name, "rk"))
++		dsk = n;
++}
++
++int
+
+% usr/sys/conf/mp135conf usr/sys/conf/rktmconf
+@@ -1 +1,2 @@
+-rk
++console us
++rk sd
+@@ -4 +5 @@
+-swplo 4000
++swplo 10648
+@@ -6 +7,10 @@
+-tm
++ram 2ffe0000 20000
++tables c0000000 20000000
++core c0100000 e0000000
++gic a0021000 a0022000
++pguser 472
++map 2ff00000 30000000 kern
++map c0000000 e0000000 11402
++map 40000000 60000000 dev
++map a0000000 a0100000 dev
++ddr
+
+% usr/sys/conf/qemuconf usr/sys/conf/rktmconf
+@@ -4 +4 @@
+-swplo 4000
++swplo 10648
+@@ -6 +6,6 @@
+-tm
++ram 40000000 4000000
++core 44000000 48000000
++gic 08000000 08010000
++pguser 47e
++map 40000000 48000000 kern
++map 08000000 0c000000 dev
+
+% usr/sys/dev/bio.c
+@@ -8,0 +9,13 @@
++void brelse(struct buf *bp);
++void bawrite(register struct buf *bp);
++void iowait(struct buf *bp);
++void notavail(struct buf *bp);
++void geterror(struct buf *bp);
++int incore(dev_t dev, daddr_t blkno);
++void wakeup(caddr_t chan);
++void sleep(caddr_t chan, int pri);
++int intr_enable(void);
++int intr_disable(void);
++void intr_restore(int s);
++void panic(char *s);
++void mapfree(struct buf *bp);
+@@ -56,3 +69 @@
+-bread(dev, blkno)
+-dev_t dev;
+-daddr_t blkno;
++bread(dev_t dev, daddr_t blkno)
+@@ -84,3 +95 @@
+-breada(dev, blkno, rablkno)
+-dev_t dev;
+-daddr_t blkno, rablkno;
++breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
+@@ -125,2 +134,2 @@
+-bwrite(bp)
+-register struct buf *bp;
++void
++bwrite(struct buf *bp)
+@@ -128 +137 @@
+-	register flag;
++	register int flag;
+@@ -154,2 +163,2 @@
+-bdwrite(bp)
+-register struct buf *bp;
++void
++bdwrite(struct buf *bp)
+@@ -171,2 +180,2 @@
+-bawrite(bp)
+-register struct buf *bp;
++void
++bawrite(register struct buf *bp)
+@@ -182,2 +191,2 @@
+-brelse(bp)
+-register struct buf *bp;
++void
++brelse(struct buf *bp)
+@@ -186 +195 @@
+-	register s;
++	register int s;
+@@ -196 +205 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -211 +220 @@
+-	splx(s);
++	intr_restore(s);
+@@ -218,3 +227,2 @@
+-incore(dev, blkno)
+-dev_t dev;
+-daddr_t blkno;
++int
++incore(dev_t dev, daddr_t blkno)
+@@ -238,3 +246 @@
+-getblk(dev, blkno)
+-dev_t dev;
+-daddr_t blkno;
++getblk(dev_t dev, daddr_t blkno)
+@@ -245 +251 @@
+-	register i;
++	register int i;
+@@ -252 +258 @@
+-	spl0();
++	intr_enable();
+@@ -259 +265 @@
+-		spl6();
++		intr_disable();
+@@ -265 +271,2 @@
+-		spl0();
++		notavail(bp);
++		intr_enable();
+@@ -276 +282,0 @@
+-		notavail(bp);
+@@ -279 +285 @@
+-	spl6();
++	intr_disable();
+@@ -285,2 +291,3 @@
+-	spl0();
+-	notavail(bp = bfreelist.av_forw);
++	bp = bfreelist.av_forw;
++	notavail(bp);
++	intr_enable();
+@@ -309 +316 @@
+-geteblk()
++geteblk(void)
+@@ -315 +322 @@
+-	spl6();
++	intr_disable();
+@@ -320 +326,0 @@
+-	spl0();
+@@ -322 +328,3 @@
+-	notavail(bp = bfreelist.av_forw);
++	bp = bfreelist.av_forw;
++	notavail(bp);
++	intr_enable();
+@@ -343,2 +351,2 @@
+-iowait(bp)
+-register struct buf *bp;
++void
++iowait(struct buf *bp)
+@@ -347 +355 @@
+-	spl6();
++	intr_disable();
+@@ -350 +358 @@
+-	spl0();
++	intr_enable();
+@@ -358,2 +366,2 @@
+-notavail(bp)
+-register struct buf *bp;
++void
++notavail(struct buf *bp)
+@@ -361 +369 @@
+-	register s;
++	register int s;
+@@ -363 +371 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -367 +375 @@
+-	splx(s);
++	intr_restore(s);
+@@ -374,2 +382,2 @@
+-iodone(bp)
+-register struct buf *bp;
++void
++iodone(struct buf *bp)
+@@ -392,2 +400,2 @@
+-clrbuf(bp)
+-struct buf *bp;
++void
++clrbuf(struct buf *bp)
+@@ -395,2 +403,2 @@
+-	register *p;
+-	register c;
++	register int *p;
++	register int c;
+@@ -409,2 +417,2 @@
+-swap(blkno, coreaddr, count, rdflg)
+-register count;
++void
++swap(daddr_t blkno, int coreaddr, int count, int rdflg)
+@@ -413 +421 @@
+-	register tcount;
++	register int tcount;
+@@ -419 +427 @@
+-	spl6();
++	intr_disable();
+@@ -435 +443 @@
+-		spl6();
++		intr_disable();
+@@ -444 +452 @@
+-	spl0();
++	intr_enable();
+@@ -456,2 +464,2 @@
+-bflush(dev)
+-dev_t dev;
++void
++bflush(dev_t dev)
+@@ -462 +470 @@
+-	spl6();
++	intr_disable();
+@@ -471 +479 @@
+-	spl0();
++	intr_enable();
+@@ -484,3 +492,2 @@
+-physio(strat, bp, dev, rw)
+-register struct buf *bp;
+-int (*strat)();
++void
++physio(int (*strat)(), register struct buf *bp, dev_t dev, int rw)
+@@ -515 +522 @@
+-	    && nb < 1024-u.u_ssize)
++	    && (unsigned)nb < 1024-u.u_ssize)
+@@ -517 +524 @@
+-	spl6();
++	intr_disable();
+@@ -528 +535 @@
+-	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
++	ts = (u.u_sep? &u.u_uisa[8]: &u.u_uisa[0])[nb>>7] + (nb&0177);
+@@ -536 +543 @@
+-	spl6();
++	intr_disable();
+@@ -542,2 +549,2 @@
+-	spl0();
+-	bp->b_flags &= ~(B_BUSY|B_WANTED);
++	intr_enable();
++	bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
+@@ -557,2 +564,2 @@
+-geterror(bp)
+-register struct buf *bp;
++void
++geterror(struct buf *bp)
+
+% usr/sys/dev/mem.c
+@@ -15,2 +15,3 @@
+-#include "../h/conf.h"
+-#include "../h/seg.h"
++int passc(int c);
++int cpass(void);
++int arm_mem_read(unsigned int off, char *buf, unsigned int n);
+@@ -18 +19,2 @@
+-mmread(dev)
++int
++mmread(dev_t dev)
+@@ -20,2 +22,3 @@
+-	register c, bn, on;
+-	int a, d;
++	register int c;
++	char buf[64];
++	unsigned int n, off;
+@@ -24 +27 @@
+-		return;
++		return(0);
+@@ -26,15 +29,13 @@
+-		bn = u.u_offset >> 6;
+-		on = u.u_offset & 077;
+-		a = UISA->r[0];
+-		d = UISD->r[0];
+-		spl7();
+-		UISA->r[0] = bn;
+-		UISD->r[0] = 077406;
+-		if(minor(dev) == 1)
+-			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
+-		if ((c = fuibyte((caddr_t)on)) < 0)
+-			u.u_error = ENXIO;
+-		UISA->r[0] = a;
+-		UISD->r[0] = d;
+-		spl0();
+-	} while(u.u_error==0 && passc(c)>=0);
++		off = (unsigned int)u.u_offset;
++		n = u.u_count;
++		if(n > sizeof(buf))
++			n = sizeof(buf);
++		if(arm_mem_read(off, buf, n) <= 0)
++			break;
++		for(unsigned int i = 0; i < n; i++) {
++			c = buf[i];
++			if(passc(c) < 0 || u.u_error != 0)
++				return(0);
++		}
++	} while(u.u_count != 0 && u.u_error == 0);
++	return(0);
+@@ -43 +44,2 @@
+-mmwrite(dev)
++int
++mmwrite(dev_t dev)
+@@ -45,2 +47 @@
+-	register c, bn, on;
+-	int a, d;
++	register int c;
+@@ -50 +51 @@
+-		return;
++		return(0);
+@@ -53,3 +54 @@
+-		bn = u.u_offset >> 6;
+-		on = u.u_offset & 077;
+-		if ((c=cpass())<0 || u.u_error!=0)
++		if((c = cpass()) < 0 || u.u_error != 0)
+@@ -57,12 +56 @@
+-		a = UISA->r[0];
+-		d = UISD->r[0];
+-		spl7();
+-		UISA->r[0] = bn;
+-		UISD->r[0] = 077406;
+-		if(minor(dev) == 1)
+-			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
+-		if (suibyte((caddr_t)on, c) < 0)
+-			u.u_error = ENXIO;
+-		UISA->r[0] = a;
+-		UISD->r[0] = d;
+-		spl0();
++		*(char *)(unsigned int)(u.u_offset-1) = c;
+@@ -69,0 +58 @@
++	return(0);
+
+% usr/sys/dev/mklib
+@@ -3,9 +3,2 @@
+-cat.o \
+-dhdm.o \
+-dh.o \
+-dhfdm.o \
+-dn.o \
+-du.o \
+-hp.o \
+-ht.o \
+-kl.o \
++pl011.o \
++stm32usart.o \
+@@ -13,2 +5,0 @@
+-mx1.o \
+-mx2.o \
+@@ -16,2 +7,3 @@
+-rf.o \
+-rk.o \
++stm32sd.o \
++stm32ddr.o \
++virtio_blk.o \
+@@ -19,15 +11 @@
+-tc.o \
+-tm.o \
+-tty.o \
+-vp.o \
+-vs.o \
+-dsort.o \
+-dkleave.o \
+-pk0.o \
+-pk1.o \
+-pk2.o \
+-pk3.o \
+-dc.o \
+-dz.o \
+-rl.o \
+-rp.o
++tty.o
+
+% usr/sys/dev/partab.c
+
+% usr/sys/dev/pl011.c usr/sys/dev/kl.c
+@@ -2 +2,10 @@
+- *   KL/DL-11 driver
++ *   PL011 UART console driver
 + *
-+ * The machine-dependent data + hook the shared machine_init() (machdep.c)
-+ * needs for the custom STM32MP135 PCB: the physical memory map (board_map[])
-+ * and clock_ddr_init(), which brings up the clocks and DDR before the MMU is
-+ * enabled.  machine_init() itself -- the page-table builder -- is shared with
-+ * QEMU, so a QEMU run exercises the same code that runs here.
++ * The console is the QEMU virt PL011.  It is a normal Unix character
++ * device: the cdevsw open/close/read/write/ioctl entries hang the line
++ * discipline (tty.c) off it, output is paced by the transmit interrupt,
++ * and input arrives on the receive interrupt -- the same model the v7
++ * kl.c console driver follows, but for PL011 hardware.  The PL011 raises
++ * a single GIC line (INTID 33); its receive and transmit causes are told
++ * apart by the masked-interrupt-status register rather than by separate
++ * PDP-11 vectors.
+@@ -6 +15 @@
+-#include	"../h/dir.h"
++#include "../h/dir.h"
+@@ -11,27 +19,0 @@
+-/* base address */
+-#define	KLADDR	((struct device *)0177560)	/* console */
+-#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
+-#define	DLBASE	((struct device *)0175610)	/* dl-e */
+-#define	NKL11	1
+-#define	NDL11	0
+-#define DSRDY	02
+-#define	RDRENB	01
+-#define	DLDELAY	4	/* Extra delay for DL's (double buff) */
+-
+-#define	NL1	000400
+-#define	NL2	001000
+-#define	CR2	020000
+-#define	FF1	040000
+-#define	TAB1	002000
+-
+-struct	tty kl11[NKL11+NDL11];
+-int	klstart();
+-int	ttrstrt();
+-char	partab[];
+-
+-struct device {
+-	int	rcsr;
+-	int	rbuf;
+-	int	tcsr;
+-	int	tbuf;
+-};
+@@ -39,2 +21,50 @@
+-klopen(dev, flag)
+-dev_t dev;
++#define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
++#define	NCONS	1			/* one console line */
++#define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
++
++#define	UARTDR		(*(volatile unsigned int *)(PL011_BASE+0x000))
++#define	UARTFR		(*(volatile unsigned int *)(PL011_BASE+0x018))
++#define	UARTLCRH	(*(volatile unsigned int *)(PL011_BASE+0x02c))
++#define	UARTIMSC	(*(volatile unsigned int *)(PL011_BASE+0x038))
++#define	UARTMIS		(*(volatile unsigned int *)(PL011_BASE+0x040))
++#define	UARTICR		(*(volatile unsigned int *)(PL011_BASE+0x044))
++#define	TXFF	0x20		/* FR: transmit holding register full */
++#define	RXFE	0x10		/* FR: receive holding register empty */
++#define	FEN	0x10		/* LCRH: FIFO enable */
++#define	RXI	0x10		/* interrupt: receiver */
++#define	TXI	0x20		/* interrupt: transmitter */
++#define	RTI	0x40		/* interrupt: receive timeout */
++
++struct	tty kl11[NCONS];
++int	klirq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
++
++extern char partab[];
++void ttyopen(dev_t dev, struct tty *tp);
++void ttyclose(struct tty *tp);
++void ttychars(struct tty *tp);
++int ttread(struct tty *tp);
++caddr_t ttwrite(struct tty *tp);
++int ttioccomm(int com, struct tty *tp, caddr_t addr, dev_t dev);
++void ttyinput(int c, struct tty *tp);
++void ttstart(struct tty *tp);
++int ttrstrt(struct tty *tp);
++void timeout(int (*fun)(), caddr_t arg, int tim);
++void wakeup(caddr_t chan);
++int getc(struct clist *p);
++int klstart(struct tty *tp);
++int klrint(dev_t dev);
++int klxint(dev_t dev);
++
++/*
++ * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
++ * the console needs no hardware setup; klinit() exists only to satisfy the
++ * machine layer's board-agnostic early console-init hook (machine_init), which
++ * the MP135 build uses to bring UART4 up from HSI.
++ */
++void
++klinit(void)
++{
++}
++
++int
++klopen(dev_t dev, int flag)
+@@ -42 +71,0 @@
+-	register struct device *addr;
+@@ -44 +72,0 @@
+-	register d;
+@@ -46,2 +74,2 @@
+-	d = minor(dev);
+-	if(d >= NKL11+NDL11) {
++	(void)flag;
++	if(minor(dev) >= NCONS) {
+@@ -49 +77 @@
+-		return;
++		return(0);
+@@ -51,13 +79,2 @@
+-	tp = &kl11[d];
+-	/*
+-	 * set up minor 0 to address KLADDR
+-	 * set up minor 1 thru NKL11-1 to address from KLBASE
+-	 * set up minor NKL11 on to address from DLBASE
+-	 */
+-	if(d == 0)
+-		addr = KLADDR;
+-	else if(d < NKL11)
+-		addr = KLBASE + (d-1);
+-	else
+-		addr = DLBASE + (d-NKL11);
+-	tp->t_addr = (caddr_t)addr;
++	tp = &kl11[minor(dev)];
++	tp->t_addr = (caddr_t)PL011_BASE;
+@@ -67 +84 @@
+-		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
++		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
+@@ -70,2 +87,2 @@
+-	addr->rcsr |= IENABLE|DSRDY|RDRENB;
+-	addr->tcsr |= IENABLE;
++	UARTLCRH &= ~FEN;		/* one transmit interrupt per character */
++	UARTIMSC |= RXI|RTI;		/* enable receive interrupts */
+@@ -72,0 +90 @@
++	return(0);
+@@ -75,3 +93,2 @@
+-klclose(dev, flag)
+-dev_t dev;
+-int flag;
++int
++klclose(dev_t dev, int flag)
+@@ -79,4 +96,3 @@
+-	register struct tty *tp;
+-
+-	tp = &kl11[minor(dev)];
+-	ttyclose(tp);
++	(void)flag;
++	ttyclose(&kl11[minor(dev)]);
++	return(0);
+@@ -85,2 +101,2 @@
+-klread(dev)
+-dev_t dev;
++int
++klread(dev_t dev)
+@@ -88,0 +105 @@
++	return(0);
+@@ -91,2 +108,2 @@
+-klwrite(dev)
+-dev_t dev;
++int
++klwrite(dev_t dev)
+@@ -94,0 +112,31 @@
++	return(0);
++}
++
++/*
++ * Transmitter ready: hand the next queued character to the PL011.  Output
++ * delays (characters above 0177, produced by ttyoutput for slow terminals)
++ * are honored as in the v7 console driver.  The transmit interrupt is
++ * level-sensitive, so it is masked whenever the output queue drains.
++ */
++int
++klstart(struct tty *tp)
++{
++	register int c;
++
++	if (UARTFR & TXFF)
++		return(0);
++	if ((c=getc(&tp->t_outq)) >= 0) {
++		if (tp->t_flags&RAW)
++			UARTDR = c & 0177;	/* 8N1 glass tty: no parity bit */
++		else if (c<=0177)
++			UARTDR = c;
++		else {
++			timeout(ttrstrt, (caddr_t)tp, (c&0177) + OUTDELAY);
++			tp->t_state |= TIMEOUT;
++			UARTIMSC &= ~TXI;
++			return(0);
++		}
++		UARTIMSC |= TXI;
++	} else
++		UARTIMSC &= ~TXI;
++	return(0);
+@@ -97,2 +145,2 @@
+-klxint(dev)
+-dev_t dev;
++int
++klxint(dev_t dev)
+@@ -104,5 +152,3 @@
+-	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
+-		if (tp->t_chan)
+-			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
+-		else
+-			wakeup((caddr_t)&tp->t_outq);
++	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
++		wakeup((caddr_t)&tp->t_outq);
++	return(0);
+@@ -111,2 +157,2 @@
+-klrint(dev)
+-dev_t dev;
++int
++klrint(dev_t dev)
+@@ -115 +160,0 @@
+-	register struct device *addr;
+@@ -119,4 +164,5 @@
+-	addr = (struct device *)tp->t_addr;
+-	c = addr->rbuf;
+-	addr->rcsr |= RDRENB;
+-	ttyinput(c, tp);
++	while ((UARTFR & RXFE) == 0) {
++		c = UARTDR;
++		ttyinput(c, tp);
++	}
++	return(0);
+@@ -125,3 +171,2 @@
+-klioctl(dev, cmd, addr, flag)
+-caddr_t addr;
+-dev_t dev;
++int
++klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+@@ -129 +174,2 @@
+-	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
++	(void)flag;
++	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
+@@ -130,0 +177 @@
++	return(0);
+@@ -133,2 +180,7 @@
+-klstart(tp)
+-register struct tty *tp;
++/*
++ * Console interrupt.  One GIC line serves the PL011; the masked-interrupt-
++ * status register says whether the receiver, transmitter, or both need
++ * service, demultiplexing into the receive/transmit halves above.
++ */
++int
++klintr(void)
+@@ -136,2 +188 @@
+-	register c;
+-	register struct device *addr;
++	register unsigned int mis;
+@@ -139,12 +190,4 @@
+-	addr = (struct device *)tp->t_addr;
+-	if((addr->tcsr&DONE) == 0)
+-		return;
+-	if ((c=getc(&tp->t_outq)) >= 0) {
+-		if (tp->t_flags&RAW)
+-			addr->tbuf = c;
+-		else if (c<=0177)
+-			addr->tbuf = c | (partab[c]&0200);
+-		else {
+-			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
+-			tp->t_state |= TIMEOUT;
+-		}
++	mis = UARTMIS;
++	if (mis & (RXI|RTI)) {
++		UARTICR = RXI|RTI;
++		klrint(0);
+@@ -151,0 +195,5 @@
++	if (mis & TXI) {
++		UARTICR = TXI;
++		klxint(0);
++	}
++	return(0);
+@@ -154 +201,0 @@
+-char	*msgbufp = msgbuf;	/* Next saved printf character */
+@@ -156,9 +203,7 @@
+- * Print a character on console.
+- * Attempts to save and restore device
+- * status.
+- * If the switches are 0, all
+- * printing is inhibited.
+- *
+- * Whether or not printing is inhibited,
+- * the last MSGBUFS characters
+- * are saved in msgbuf for inspection later.
++ * Print a character on the console (cf. kl.c).  The last MSGBUFS characters
++ * are saved in msgbuf for inspection.  Polled with a bounded spin, and the
++ * transmit interrupt is masked around the write -- the PL011 analog of kl.c
++ * saving and clearing the DL11 control register -- so kernel printf does not
++ * collide with interrupt-driven tty output and still works before the console
++ * is open and from panic context.  The DL11's console-switch check and
++ * inter-character rubout padding have no PL011 equivalent and are dropped.
+@@ -166,2 +211,2 @@
+-putchar(c)
+-register c;
++void
++klputchar(char c)
+@@ -169 +214,2 @@
+-	register s, timo;
++	register int timo;
++	unsigned int s;
+@@ -173 +219 @@
+-		if(msgbufp >= &msgbuf[MSGBUFS])
++		if (msgbufp >= &msgbuf[MSGBUFS])
+@@ -176,5 +221,0 @@
+-	/*
+-	 *  If last char was a break or null, don't print
+-	*/
+-	if ((KLADDR->rbuf&0177) == 0)
+-		return;
+@@ -182,6 +223,2 @@
+-	/*
+-	 * Try waiting for the console tty to come ready,
+-	 * otherwise give up after a reasonable time.
+-	 */
+-	while((KLADDR->tcsr&0200) == 0)
+-		if(--timo == 0)
++	while (UARTFR & TXFF)
++		if (--timo == 0)
+@@ -189 +226 @@
+-	if(c == 0)
++	if (c == 0)
+@@ -191,10 +228,6 @@
+-	s = KLADDR->tcsr;
+-	KLADDR->tcsr = 0;
+-	KLADDR->tbuf = c;
+-	if(c == '\n') {
+-		putchar('\r');
+-		putchar(0177);
+-		putchar(0177);
+-	}
+-	putchar(0);
+-	KLADDR->tcsr = s;
++	s = UARTIMSC;
++	UARTIMSC &= ~TXI;
++	UARTDR = c;
++	if (c == '\n')
++		klputchar('\r');
++	UARTIMSC = s;
+@@ -201,0 +235 @@
++
+
+% usr/sys/dev/stm32ddr.c /dev/null
+@@ -0,0 +1,383 @@
++/*
++ *   STM32MP135 clock and DDR bring-up
++ *
++ * ddrinit(), configured as "ddr" in mp135conf, brings up the clocks and DDR
++ * before machine_init() (machdep.c) enables the MMU.
 + *
 + * The ROM loads this kernel (FSBL) from SD into SYSRAM and jumps to _start
 + * (conf/low.s).  Kernel runs in cached SYSRAM; user core + buffer cache live
@@ -23819,8 +24811,6 @@ usr/local
 + */
 +#include "../h/param.h"
 +#include "../h/seg.h"
-+
-+#ifdef MP135
 +
 +void clock_init(void);
 +void ddr_init(void);
@@ -23866,23 +24856,9 @@ usr/local
 +#define PLL4SRC_HSE	0x00000001U		/* RCK4SELR PLL4SRC = HSE */
 +#define SDMMC1SRC_PLL4	0x00000002U		/* SDMMC12CKSELR SDMMC1SRC = PLL4 */
 +
-+/*
-+ * Physical memory map: kernel SYSRAM and the DDR user-core/buffer window are
-+ * cached; the peripheral block and the GIC are Device.  Terminated by a zero
-+ * entry.  (SYSRAM 0x2FFE0000/128K sits in the 0x2FF00000 section; DDR is
-+ * 0xC0000000/512M.)
-+ */
-+struct memregion board_map[] = {
-+	{ 0x2FF00000U,	0x30000000U,	SEC_KERN },	/* SYSRAM: kernel */
-+	{ 0xC0000000U,	0xE0000000U,	0x00011402U },	/* DDR: Normal Non-cacheable Shareable (TEX=001,C=0,B=0) -- the SDMMC IDMA is non-coherent, so leaving the buffer cache + kernel tables uncached keeps CPU and DMA views consistent without per-line maintenance */
-+	{ 0x40000000U,	0x60000000U,	SEC_DEV },	/* APB/AHB peripherals */
-+	{ 0xA0000000U,	0xA0100000U,	SEC_DEV },	/* GIC */
-+	{ 0, 0, 0 }
-+};
-+
 +/* Bring up clocks + DRAM before machine_init() enables the MMU. */
 +void
-+clock_ddr_init(void)
++ddrinit(void)
 +{
 +	clock_init();
 +	ddr_init();
@@ -24205,758 +25181,6 @@ usr/local
 +	DDRC(0x490) |= 0x1U;			/* PCTRL_0.port_en */
 +	RCC_DDRITFCR |= DDR_AXIDCGEN;
 +}
-+
-+#endif
-
-% usr/sys/conf/qemu.c /dev/null
-@@ -0,0 +1,30 @@
-+/*
-+ *   QEMU virt board description
-+ *
-+ * The machine-dependent data the shared machine_init() (machdep.c) needs for
-+ * the QEMU virt machine: the physical memory map and the clock/DRAM hook.
-+ * RAM is already up when qemu loads the kernel, so clock_ddr_init() is empty.
-+ * The MP135 build links conf/mp135.c instead.
-+ */
-+#include "../h/param.h"
-+#include "../h/seg.h"
-+
-+#ifdef QEMU
-+
-+/*
-+ * QEMU virt sections: kernel + physical core window cached (PA==VA), the
-+ * GIC/virtio/PL011 device space uncached.  Terminated by a zero entry.
-+ */
-+struct memregion board_map[] = {
-+	{ KERNBASE,	CORETOP,	SEC_KERN },
-+	{ 0x08000000U,	0x0c000000U,	SEC_DEV },
-+	{ 0, 0, 0 }
-+};
-+
-+void
-+clock_ddr_init(void)
-+{
-+	/* RAM is already up under qemu -kernel; nothing to bring up. */
-+}
-+
-+#endif
-
-% usr/sys/conf/sysram.ld /dev/null
-@@ -0,0 +1,35 @@
-+/*
-+ * MP135 kernel link map.  The STM32MP13 ROM loads this image into SYSRAM
-+ * (0x2FFE0000, 128 KB) from the SD card and jumps to _start; clocks and DDR
-+ * are dead until machine_init() brings them up, so the kernel code, data, and
-+ * SYSRAM bss + stacks live in SYSRAM.  DDR (0xC0000000, 512 MB) holds the
-+ * large system tables and the L1 page table (.ddrbss, too big for SYSRAM,
-+ * zeroed by machine_init once DRAM is up) plus the buffer cache and user core.
-+ */
-+ENTRY(_start)
-+MEMORY {
-+	SYSRAM (rwx) : ORIGIN = 0x2FFE0000, LENGTH = 128K
-+	DDR    (rwx) : ORIGIN = 0xC0000000, LENGTH = 512M
-+}
-+SECTIONS
-+{
-+	. = 0x2FFE0000;
-+
-+	.text : { *(.text) *(.text*) } > SYSRAM
-+
-+	.rodata : { *(.rodata) *(.rodata*) } > SYSRAM
-+
-+	.data : { *(.data) *(.data*) } > SYSRAM
-+
-+	__bss_start = .;
-+	.bss : { *(.bss) *(.bss*) *(COMMON) } > SYSRAM
-+	__bss_end = .;
-+
-+	.stack : { *(.stack) } > SYSRAM
-+
-+	.ddrbss (NOLOAD) : ALIGN(16384) {
-+		__ddrbss_start = .;
-+		*(.ddrbss) *(.ddrbss*)
-+		__ddrbss_end = .;
-+	} > DDR
-+}
-
-% usr/sys/dev/bio.c
-@@ -8,0 +9,13 @@
-+void brelse(struct buf *bp);
-+void bawrite(register struct buf *bp);
-+void iowait(struct buf *bp);
-+void notavail(struct buf *bp);
-+void geterror(struct buf *bp);
-+int incore(dev_t dev, daddr_t blkno);
-+void wakeup(caddr_t chan);
-+void sleep(caddr_t chan, int pri);
-+int intr_enable(void);
-+int intr_disable(void);
-+void intr_restore(int s);
-+void panic(char *s);
-+void mapfree(struct buf *bp);
-@@ -56,3 +69 @@
--bread(dev, blkno)
--dev_t dev;
--daddr_t blkno;
-+bread(dev_t dev, daddr_t blkno)
-@@ -84,3 +95 @@
--breada(dev, blkno, rablkno)
--dev_t dev;
--daddr_t blkno, rablkno;
-+breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
-@@ -125,2 +134,2 @@
--bwrite(bp)
--register struct buf *bp;
-+void
-+bwrite(struct buf *bp)
-@@ -128 +137 @@
--	register flag;
-+	register int flag;
-@@ -154,2 +163,2 @@
--bdwrite(bp)
--register struct buf *bp;
-+void
-+bdwrite(struct buf *bp)
-@@ -171,2 +180,2 @@
--bawrite(bp)
--register struct buf *bp;
-+void
-+bawrite(register struct buf *bp)
-@@ -182,2 +191,2 @@
--brelse(bp)
--register struct buf *bp;
-+void
-+brelse(struct buf *bp)
-@@ -186 +195 @@
--	register s;
-+	register int s;
-@@ -196 +205 @@
--	s = spl6();
-+	s = intr_disable();
-@@ -211 +220 @@
--	splx(s);
-+	intr_restore(s);
-@@ -218,3 +227,2 @@
--incore(dev, blkno)
--dev_t dev;
--daddr_t blkno;
-+int
-+incore(dev_t dev, daddr_t blkno)
-@@ -238,3 +246 @@
--getblk(dev, blkno)
--dev_t dev;
--daddr_t blkno;
-+getblk(dev_t dev, daddr_t blkno)
-@@ -245 +251 @@
--	register i;
-+	register int i;
-@@ -252 +258 @@
--	spl0();
-+	intr_enable();
-@@ -259 +265 @@
--		spl6();
-+		intr_disable();
-@@ -265 +271,2 @@
--		spl0();
-+		notavail(bp);
-+		intr_enable();
-@@ -276 +282,0 @@
--		notavail(bp);
-@@ -279 +285 @@
--	spl6();
-+	intr_disable();
-@@ -285,2 +291,3 @@
--	spl0();
--	notavail(bp = bfreelist.av_forw);
-+	bp = bfreelist.av_forw;
-+	notavail(bp);
-+	intr_enable();
-@@ -309 +316 @@
--geteblk()
-+geteblk(void)
-@@ -315 +322 @@
--	spl6();
-+	intr_disable();
-@@ -320 +326,0 @@
--	spl0();
-@@ -322 +328,3 @@
--	notavail(bp = bfreelist.av_forw);
-+	bp = bfreelist.av_forw;
-+	notavail(bp);
-+	intr_enable();
-@@ -343,2 +351,2 @@
--iowait(bp)
--register struct buf *bp;
-+void
-+iowait(struct buf *bp)
-@@ -347 +355 @@
--	spl6();
-+	intr_disable();
-@@ -350 +358 @@
--	spl0();
-+	intr_enable();
-@@ -358,2 +366,2 @@
--notavail(bp)
--register struct buf *bp;
-+void
-+notavail(struct buf *bp)
-@@ -361 +369 @@
--	register s;
-+	register int s;
-@@ -363 +371 @@
--	s = spl6();
-+	s = intr_disable();
-@@ -367 +375 @@
--	splx(s);
-+	intr_restore(s);
-@@ -374,2 +382,2 @@
--iodone(bp)
--register struct buf *bp;
-+void
-+iodone(struct buf *bp)
-@@ -392,2 +400,2 @@
--clrbuf(bp)
--struct buf *bp;
-+void
-+clrbuf(struct buf *bp)
-@@ -395,2 +403,2 @@
--	register *p;
--	register c;
-+	register int *p;
-+	register int c;
-@@ -409,2 +417,2 @@
--swap(blkno, coreaddr, count, rdflg)
--register count;
-+void
-+swap(daddr_t blkno, int coreaddr, int count, int rdflg)
-@@ -413 +421 @@
--	register tcount;
-+	register int tcount;
-@@ -419 +427 @@
--	spl6();
-+	intr_disable();
-@@ -435 +443 @@
--		spl6();
-+		intr_disable();
-@@ -444 +452 @@
--	spl0();
-+	intr_enable();
-@@ -456,2 +464,2 @@
--bflush(dev)
--dev_t dev;
-+void
-+bflush(dev_t dev)
-@@ -462 +470 @@
--	spl6();
-+	intr_disable();
-@@ -471 +479 @@
--	spl0();
-+	intr_enable();
-@@ -484,3 +492,2 @@
--physio(strat, bp, dev, rw)
--register struct buf *bp;
--int (*strat)();
-+void
-+physio(void (*strat)(struct buf *), register struct buf *bp, dev_t dev, int rw)
-@@ -515 +522 @@
--	    && nb < 1024-u.u_ssize)
-+	    && (unsigned)nb < 1024-u.u_ssize)
-@@ -517 +524 @@
--	spl6();
-+	intr_disable();
-@@ -528 +535 @@
--	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
-+	ts = (u.u_sep? &u.u_uisa[8]: &u.u_uisa[0])[nb>>7] + (nb&0177);
-@@ -536 +543 @@
--	spl6();
-+	intr_disable();
-@@ -542,2 +549,2 @@
--	spl0();
--	bp->b_flags &= ~(B_BUSY|B_WANTED);
-+	intr_enable();
-+	bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
-@@ -557,2 +564,2 @@
--geterror(bp)
--register struct buf *bp;
-+void
-+geterror(struct buf *bp)
-
-% usr/sys/dev/mem.c
-@@ -15,2 +15,3 @@
--#include "../h/conf.h"
--#include "../h/seg.h"
-+int passc(int c);
-+int cpass(void);
-+int arm_mem_read(unsigned int off, char *buf, unsigned int n);
-@@ -18 +19,2 @@
--mmread(dev)
-+int
-+mmread(dev_t dev)
-@@ -20,2 +22,3 @@
--	register c, bn, on;
--	int a, d;
-+	register int c;
-+	char buf[64];
-+	unsigned int n, off;
-@@ -24 +27 @@
--		return;
-+		return(0);
-@@ -26,15 +29,13 @@
--		bn = u.u_offset >> 6;
--		on = u.u_offset & 077;
--		a = UISA->r[0];
--		d = UISD->r[0];
--		spl7();
--		UISA->r[0] = bn;
--		UISD->r[0] = 077406;
--		if(minor(dev) == 1)
--			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
--		if ((c = fuibyte((caddr_t)on)) < 0)
--			u.u_error = ENXIO;
--		UISA->r[0] = a;
--		UISD->r[0] = d;
--		spl0();
--	} while(u.u_error==0 && passc(c)>=0);
-+		off = (unsigned int)u.u_offset;
-+		n = u.u_count;
-+		if(n > sizeof(buf))
-+			n = sizeof(buf);
-+		if(arm_mem_read(off, buf, n) <= 0)
-+			break;
-+		for(unsigned int i = 0; i < n; i++) {
-+			c = buf[i];
-+			if(passc(c) < 0 || u.u_error != 0)
-+				return(0);
-+		}
-+	} while(u.u_count != 0 && u.u_error == 0);
-+	return(0);
-@@ -43 +44,2 @@
--mmwrite(dev)
-+int
-+mmwrite(dev_t dev)
-@@ -45,2 +47 @@
--	register c, bn, on;
--	int a, d;
-+	register int c;
-@@ -50 +51 @@
--		return;
-+		return(0);
-@@ -53,3 +54 @@
--		bn = u.u_offset >> 6;
--		on = u.u_offset & 077;
--		if ((c=cpass())<0 || u.u_error!=0)
-+		if((c = cpass()) < 0 || u.u_error != 0)
-@@ -57,12 +56 @@
--		a = UISA->r[0];
--		d = UISD->r[0];
--		spl7();
--		UISA->r[0] = bn;
--		UISD->r[0] = 077406;
--		if(minor(dev) == 1)
--			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
--		if (suibyte((caddr_t)on, c) < 0)
--			u.u_error = ENXIO;
--		UISA->r[0] = a;
--		UISD->r[0] = d;
--		spl0();
-+		*(char *)(unsigned int)(u.u_offset-1) = c;
-@@ -69,0 +58 @@
-+	return(0);
-
-% usr/sys/dev/mklib
-@@ -3,9 +3,2 @@
--cat.o \
--dhdm.o \
--dh.o \
--dhfdm.o \
--dn.o \
--du.o \
--hp.o \
--ht.o \
--kl.o \
-+pl011.o \
-+stm32usart.o \
-@@ -13,2 +5,0 @@
--mx1.o \
--mx2.o \
-@@ -16,2 +7,2 @@
--rf.o \
--rk.o \
-+stm32sd.o \
-+virtio_blk.o \
-@@ -19,15 +10 @@
--tc.o \
--tm.o \
--tty.o \
--vp.o \
--vs.o \
--dsort.o \
--dkleave.o \
--pk0.o \
--pk1.o \
--pk2.o \
--pk3.o \
--dc.o \
--dz.o \
--rl.o \
--rp.o
-+tty.o
-
-% usr/sys/dev/partab.c
-
-% usr/sys/dev/pl011.c usr/sys/dev/kl.c
-@@ -2 +2,10 @@
-- *   KL/DL-11 driver
-+ *   PL011 UART console driver
-+ *
-+ * The console is the QEMU virt PL011.  It is a normal Unix character
-+ * device: the cdevsw open/close/read/write/ioctl entries hang the line
-+ * discipline (tty.c) off it, output is paced by the transmit interrupt,
-+ * and input arrives on the receive interrupt -- the same model the v7
-+ * kl.c console driver follows, but for PL011 hardware.  The PL011 raises
-+ * a single GIC line (INTID 33); its receive and transmit causes are told
-+ * apart by the masked-interrupt-status register rather than by separate
-+ * PDP-11 vectors.
-@@ -6 +15 @@
--#include	"../h/dir.h"
-+#include "../h/dir.h"
-@@ -11,27 +20,39 @@
--/* base address */
--#define	KLADDR	((struct device *)0177560)	/* console */
--#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
--#define	DLBASE	((struct device *)0175610)	/* dl-e */
--#define	NKL11	1
--#define	NDL11	0
--#define DSRDY	02
--#define	RDRENB	01
--#define	DLDELAY	4	/* Extra delay for DL's (double buff) */
--
--#define	NL1	000400
--#define	NL2	001000
--#define	CR2	020000
--#define	FF1	040000
--#define	TAB1	002000
--
--struct	tty kl11[NKL11+NDL11];
--int	klstart();
--int	ttrstrt();
--char	partab[];
--
--struct device {
--	int	rcsr;
--	int	rbuf;
--	int	tcsr;
--	int	tbuf;
--};
-+#ifdef PL011
-+
-+#define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
-+#define	NCONS	1			/* one console line */
-+#define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
-+
-+#define	UARTDR		(*(volatile unsigned int *)(PL011_BASE+0x000))
-+#define	UARTFR		(*(volatile unsigned int *)(PL011_BASE+0x018))
-+#define	UARTLCRH	(*(volatile unsigned int *)(PL011_BASE+0x02c))
-+#define	UARTIMSC	(*(volatile unsigned int *)(PL011_BASE+0x038))
-+#define	UARTMIS		(*(volatile unsigned int *)(PL011_BASE+0x040))
-+#define	UARTICR		(*(volatile unsigned int *)(PL011_BASE+0x044))
-+#define	TXFF	0x20		/* FR: transmit holding register full */
-+#define	RXFE	0x10		/* FR: receive holding register empty */
-+#define	FEN	0x10		/* LCRH: FIFO enable */
-+#define	RXI	0x10		/* interrupt: receiver */
-+#define	TXI	0x20		/* interrupt: transmitter */
-+#define	RTI	0x40		/* interrupt: receive timeout */
-+
-+struct	tty cons[NCONS];
-+char	*msgbufp = msgbuf;	/* next saved printf character */
-+int	cn_irq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
-+
-+extern char partab[];
-+void ttyopen(dev_t dev, struct tty *tp);
-+void ttyclose(struct tty *tp);
-+void ttychars(struct tty *tp);
-+int ttread(struct tty *tp);
-+caddr_t ttwrite(struct tty *tp);
-+int ttioccomm(int com, struct tty *tp, caddr_t addr, dev_t dev);
-+void ttyinput(int c, struct tty *tp);
-+void ttstart(struct tty *tp);
-+int ttrstrt(struct tty *tp);
-+void timeout(int (*fun)(), caddr_t arg, int tim);
-+void wakeup(caddr_t chan);
-+int getc(struct clist *p);
-+int cnstart(struct tty *tp);
-+int cnrint(dev_t dev);
-+int cnxint(dev_t dev);
-@@ -39,2 +60,13 @@
--klopen(dev, flag)
--dev_t dev;
-+/*
-+ * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
-+ * the console needs no hardware setup; cninit() exists only to satisfy the
-+ * machine layer's board-agnostic early console-init hook (machine_init), which
-+ * the MP135 build uses to bring UART4 up from HSI.
-+ */
-+void
-+cninit(void)
-+{
-+}
-+
-+int
-+cnopen(dev_t dev, int flag)
-@@ -42 +73,0 @@
--	register struct device *addr;
-@@ -44 +74,0 @@
--	register d;
-@@ -46,2 +76,2 @@
--	d = minor(dev);
--	if(d >= NKL11+NDL11) {
-+	(void)flag;
-+	if(minor(dev) >= NCONS) {
-@@ -49 +79 @@
--		return;
-+		return(0);
-@@ -51,14 +81,3 @@
--	tp = &kl11[d];
--	/*
--	 * set up minor 0 to address KLADDR
--	 * set up minor 1 thru NKL11-1 to address from KLBASE
--	 * set up minor NKL11 on to address from DLBASE
--	 */
--	if(d == 0)
--		addr = KLADDR;
--	else if(d < NKL11)
--		addr = KLBASE + (d-1);
--	else
--		addr = DLBASE + (d-NKL11);
--	tp->t_addr = (caddr_t)addr;
--	tp->t_oproc = klstart;
-+	tp = &cons[minor(dev)];
-+	tp->t_addr = (caddr_t)PL011_BASE;
-+	tp->t_oproc = cnstart;
-@@ -67 +86 @@
--		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
-+		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
-@@ -70,2 +89,2 @@
--	addr->rcsr |= IENABLE|DSRDY|RDRENB;
--	addr->tcsr |= IENABLE;
-+	UARTLCRH &= ~FEN;		/* one transmit interrupt per character */
-+	UARTIMSC |= RXI|RTI;		/* enable receive interrupts */
-@@ -72,0 +92 @@
-+	return(0);
-@@ -75,3 +95,2 @@
--klclose(dev, flag)
--dev_t dev;
--int flag;
-+int
-+cnclose(dev_t dev, int flag)
-@@ -79 +98,4 @@
--	register struct tty *tp;
-+	(void)flag;
-+	ttyclose(&cons[minor(dev)]);
-+	return(0);
-+}
-@@ -81,2 +103,5 @@
--	tp = &kl11[minor(dev)];
--	ttyclose(tp);
-+int
-+cnread(dev_t dev)
-+{
-+	ttread(&cons[minor(dev)]);
-+	return(0);
-@@ -85,2 +110,2 @@
--klread(dev)
--dev_t dev;
-+int
-+cnwrite(dev_t dev)
-@@ -88 +113,2 @@
--	ttread(&kl11[minor(dev)]);
-+	ttwrite(&cons[minor(dev)]);
-+	return(0);
-@@ -91,2 +117,8 @@
--klwrite(dev)
--dev_t dev;
-+/*
-+ * Transmitter ready: hand the next queued character to the PL011.  Output
-+ * delays (characters above 0177, produced by ttyoutput for slow terminals)
-+ * are honored as in the v7 console driver.  The transmit interrupt is
-+ * level-sensitive, so it is masked whenever the output queue drains.
-+ */
-+int
-+cnstart(struct tty *tp)
-@@ -94 +126,19 @@
--	ttwrite(&kl11[minor(dev)]);
-+	register int c;
-+
-+	if (UARTFR & TXFF)
-+		return(0);
-+	if ((c=getc(&tp->t_outq)) >= 0) {
-+		if (tp->t_flags&RAW)
-+			UARTDR = c & 0177;	/* 8N1 glass tty: no parity bit */
-+		else if (c<=0177)
-+			UARTDR = c;
-+		else {
-+			timeout(ttrstrt, (caddr_t)tp, (c&0177) + OUTDELAY);
-+			tp->t_state |= TIMEOUT;
-+			UARTIMSC &= ~TXI;
-+			return(0);
-+		}
-+		UARTIMSC |= TXI;
-+	} else
-+		UARTIMSC &= ~TXI;
-+	return(0);
-@@ -97,2 +147,2 @@
--klxint(dev)
--dev_t dev;
-+int
-+cnxint(dev_t dev)
-@@ -102 +152 @@
--	tp = &kl11[minor(dev)];
-+	tp = &cons[minor(dev)];
-@@ -104,5 +154,3 @@
--	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
--		if (tp->t_chan)
--			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
--		else
--			wakeup((caddr_t)&tp->t_outq);
-+	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
-+		wakeup((caddr_t)&tp->t_outq);
-+	return(0);
-@@ -111,2 +159,2 @@
--klrint(dev)
--dev_t dev;
-+int
-+cnrint(dev_t dev)
-@@ -115 +162,0 @@
--	register struct device *addr;
-@@ -118,5 +165,6 @@
--	tp = &kl11[minor(dev)];
--	addr = (struct device *)tp->t_addr;
--	c = addr->rbuf;
--	addr->rcsr |= RDRENB;
--	ttyinput(c, tp);
-+	tp = &cons[minor(dev)];
-+	while ((UARTFR & RXFE) == 0) {
-+		c = UARTDR;
-+		ttyinput(c, tp);
-+	}
-+	return(0);
-@@ -125,3 +173,2 @@
--klioctl(dev, cmd, addr, flag)
--caddr_t addr;
--dev_t dev;
-+int
-+cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +176,2 @@
--	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
-+	(void)flag;
-+	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
-@@ -130,0 +179 @@
-+	return(0);
-@@ -133,2 +182,7 @@
--klstart(tp)
--register struct tty *tp;
-+/*
-+ * Console interrupt.  One GIC line serves the PL011; the masked-interrupt-
-+ * status register says whether the receiver, transmitter, or both need
-+ * service, demultiplexing into the receive/transmit halves above.
-+ */
-+int
-+cnintr(void)
-@@ -136,2 +190 @@
--	register c;
--	register struct device *addr;
-+	register unsigned int mis;
-@@ -139,12 +192,8 @@
--	addr = (struct device *)tp->t_addr;
--	if((addr->tcsr&DONE) == 0)
--		return;
--	if ((c=getc(&tp->t_outq)) >= 0) {
--		if (tp->t_flags&RAW)
--			addr->tbuf = c;
--		else if (c<=0177)
--			addr->tbuf = c | (partab[c]&0200);
--		else {
--			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
--			tp->t_state |= TIMEOUT;
--		}
-+	mis = UARTMIS;
-+	if (mis & (RXI|RTI)) {
-+		UARTICR = RXI|RTI;
-+		cnrint(0);
-+	}
-+	if (mis & TXI) {
-+		UARTICR = TXI;
-+		cnxint(0);
-@@ -151,0 +201 @@
-+	return(0);
-@@ -154 +203,0 @@
--char	*msgbufp = msgbuf;	/* Next saved printf character */
-@@ -156,9 +205,7 @@
-- * Print a character on console.
-- * Attempts to save and restore device
-- * status.
-- * If the switches are 0, all
-- * printing is inhibited.
-- *
-- * Whether or not printing is inhibited,
-- * the last MSGBUFS characters
-- * are saved in msgbuf for inspection later.
-+ * Print a character on the console (cf. kl.c).  The last MSGBUFS characters
-+ * are saved in msgbuf for inspection.  Polled with a bounded spin, and the
-+ * transmit interrupt is masked around the write -- the PL011 analog of kl.c
-+ * saving and clearing the DL11 control register -- so kernel printf does not
-+ * collide with interrupt-driven tty output and still works before the console
-+ * is open and from panic context.  The DL11's console-switch check and
-+ * inter-character rubout padding have no PL011 equivalent and are dropped.
-@@ -166,2 +213,2 @@
--putchar(c)
--register c;
-+void
-+putchar(char c)
-@@ -169 +216,2 @@
--	register s, timo;
-+	register int timo;
-+	unsigned int s;
-@@ -173 +221 @@
--		if(msgbufp >= &msgbuf[MSGBUFS])
-+		if (msgbufp >= &msgbuf[MSGBUFS])
-@@ -176,5 +223,0 @@
--	/*
--	 *  If last char was a break or null, don't print
--	*/
--	if ((KLADDR->rbuf&0177) == 0)
--		return;
-@@ -182,6 +225,2 @@
--	/*
--	 * Try waiting for the console tty to come ready,
--	 * otherwise give up after a reasonable time.
--	 */
--	while((KLADDR->tcsr&0200) == 0)
--		if(--timo == 0)
-+	while (UARTFR & TXFF)
-+		if (--timo == 0)
-@@ -189 +228 @@
--	if(c == 0)
-+	if (c == 0)
-@@ -191,4 +230,4 @@
--	s = KLADDR->tcsr;
--	KLADDR->tcsr = 0;
--	KLADDR->tbuf = c;
--	if(c == '\n') {
-+	s = UARTIMSC;
-+	UARTIMSC &= ~TXI;
-+	UARTDR = c;
-+	if (c == '\n')
-@@ -196,5 +235 @@
--		putchar(0177);
--		putchar(0177);
--	}
--	putchar(0);
--	KLADDR->tcsr = s;
-+	UARTIMSC = s;
-@@ -201,0 +237,2 @@
-+
-+#endif
 
 % usr/sys/dev/stm32sd.c usr/sys/dev/rk.c
 @@ -2 +2,9 @@
@@ -24964,17 +25188,17 @@ usr/local
 + *   STM32 SDMMC block driver (SDMMC1 on the MP135 board)
 + *
 + * The bulk-storage block device.  Same async, interrupt-driven, queued model
-+ * as rk.c / virtio_blk.c: bdstrategy() puts the buffer on bdtab and kicks the
-+ * controller via bdstart(); bdstart() programs one SD block transfer through
++ * as rk.c / virtio_blk.c: sdstrategy() puts the buffer on sdtab and kicks the
++ * controller via sdstart(); sdstart() programs one SD block transfer through
 + * the SDMMC internal DMA and returns; the transfer-complete interrupt
-+ * (bdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
++ * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
 + * sleeps on the buffer until then.  This file is built only for the MP135
 + * board (the QEMU build links virtio_blk.c instead).
 @@ -4 +11,0 @@
 -
 @@ -6 +12,0 @@
 -#include "../h/systm.h"
-@@ -8,18 +14 @@
+@@ -8,18 +14,90 @@
 -#include "../h/conf.h"
 -#include	"../h/dir.h"
 -#include "../h/user.h"
@@ -24994,22 +25218,8 @@ usr/local
 -#define	WLO	020000
 -#define	CTLRDY	0200
 +#include "../h/seg.h"
-@@ -27,4 +16 @@
--/*
-- * Monitoring device bit
-- */
--#define	DK_N	1
-+#ifdef STM32SD
-@@ -32,9 +18,84 @@
--struct	device
--{
--	int	rkds;
--	int	rker;
--	int	rkcs;
--	int	rkwc;
--	caddr_t	rkba;
--	int	rkda;
--};
++
++
 +void panic(char *s);
 +void dmbsy(void);
 +void iodone(struct buf *bp);
@@ -25017,6 +25227,7 @@ usr/local
 +void dcflush(unsigned int addr, unsigned int n);	/* clean+invalidate D-cache (mch.s) */
 +int intr_disable(void);
 +void intr_restore(int s);
++void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 +
 +extern int	dk_busy;
 +extern long	dk_numb[3];
@@ -25088,35 +25299,37 @@ usr/local
 +#define	OCR_HCS		0x40000000U	/* host supports high capacity */
 +#define	OCR_VOLT	0x00ff8000U	/* 2.7-3.6 V window */
 +
-+int	bd_irq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
-+struct buf bdtab;
++int	sdirq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
++struct buf sdtab;
 +static unsigned int sd_rca;	/* card relative address (<<16 for commands) */
 +static int sd_hc;		/* 1 = high-capacity (block addressing) */
-+static struct buf *bd_cur;
-+static int bd_retry;
-@@ -42,2 +103 @@
--struct	buf	rktab;
--struct	buf	rrkbuf;
++static struct buf *sd_cur;
++static int sd_retry;
++
 +#define	SD_RETRIES	3
-@@ -45,2 +105,7 @@
--rkstrategy(bp)
--register struct buf *bp;
-+/*
+@@ -28 +106,3 @@
+- * Monitoring device bit
 + * Issue one command.  resp is 0 (none), CMD_WAITRESP_SHORT, or
 + * CMD_WAITRESP_LONG; data!=0 marks a data-transfer command.  Returns RESP1,
 + * or -1 on command timeout/CRC error.
-+ */
+@@ -30,3 +110,2 @@
+-#define	DK_N	1
+-
+-struct	device
 +static int
 +sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
-@@ -47,0 +113 @@
+@@ -34,7 +113 @@
+-	int	rkds;
+-	int	rker;
+-	int	rkcs;
+-	int	rkwc;
+-	caddr_t	rkba;
+-	int	rkda;
+-};
 +	register int timo;
-@@ -49,6 +115,15 @@
--	if(bp->b_flags&B_PHYS)
--		mapalloc(bp);
--	if (bp->b_blkno >= NRKBLK) {
--		bp->b_flags |= B_ERROR;
--		iodone(bp);
--		return;
+@@ -42,2 +115,18 @@
+-struct	buf	rktab;
+-struct	buf	rrkbuf;
 +	SD(ICR) = STA_STATIC;
 +	SD(ARG) = arg;
 +	SD(CMD) = idx | resp | CMD_CPSMEN | (data ? CMD_CMDTRANS : 0);
@@ -25132,20 +25345,12 @@ usr/local
 +			 * the response is still latched in RESP1, so accept it. */
 +			return((int)SD(RESP1));
 +		}
-@@ -56,10 +131 @@
--	bp->av_forw = (struct buf *)NULL;
--	spl5();
--	if(rktab.b_actf == NULL)
--		rktab.b_actf = bp;
--	else
--		rktab.b_actl->av_forw = bp;
--	rktab.b_actl = bp;
--	if(rktab.b_active == NULL)
--		rkstart();
--	spl0();
++	}
 +	return(-1);
-@@ -68 +134,19 @@
--rkstart()
++}
+@@ -45,2 +134,19 @@
+-rkstrategy(bp)
+-register struct buf *bp;
 +/*
 + * Bring up SDMMC1 and initialize the card: CMD0 (idle), CMD8 (voltage/HC
 + * probe), CMD55+ACMD41 loop (OCR + HCS, wait power-up), CMD2 (CID), CMD3
@@ -25164,34 +25369,17 @@ usr/local
 + * data path, and dcflush coherency against a real card on the PCB.
 + */
 +void
-+bdinit(void)
-@@ -70,4 +154,2 @@
--	register struct buf *bp;
--	register com;
--	daddr_t bn;
--	int dn, cn, sn;
++sdinit(void)
+@@ -47,0 +154,2 @@
 +	register int timo;
 +	unsigned int ocr;
-@@ -75,19 +157,35 @@
--	if ((bp = rktab.b_actf) == NULL)
+@@ -49,6 +157,23 @@
+-	if(bp->b_flags&B_PHYS)
+-		mapalloc(bp);
+-	if (bp->b_blkno >= NRKBLK) {
+-		bp->b_flags |= B_ERROR;
+-		iodone(bp);
 -		return;
--	rktab.b_active++;
--	bn = bp->b_blkno;
--	dn = minor(bp->b_dev);
--	cn = bn/12;
--	sn = bn%12;
--	RKADDR->rkda = (dn<<13) | (cn<<4) | sn;
--	RKADDR->rkba = bp->b_un.b_addr;
--	RKADDR->rkwc = -(bp->b_bcount>>1);
--	com = ((bp->b_xmem&3) << 4) | IENABLE | GO;
--	if(bp->b_flags & B_READ)
--		com |= RCOM; else
--		com |= WCOM;
--	RKADDR->rkcs = com;
--	dk_busy |= 1<<DK_N;
--	dk_numb[DK_N] += 1;
--	com = bp->b_bcount>>6;
--	dk_wds[DK_N] += com;
 +	/* SDMMC1 bus clock + GPIO clocks, then pin mux to alternate function 12:
 +	 * data/clock D0-D3+CK on PC8..PC12, command CMD on PD2. */
 +	AHB4ENSETR = GPIOCEN | GPIODEN;
@@ -25215,7 +25403,17 @@ usr/local
 +		    CMD_WAITRESP_SHORT, 0);
 +		if (ocr & 0x80000000U)		/* card powered up */
 +			break;
-+	}
+@@ -56,10 +181,11 @@
+-	bp->av_forw = (struct buf *)NULL;
+-	spl5();
+-	if(rktab.b_actf == NULL)
+-		rktab.b_actf = bp;
+-	else
+-		rktab.b_actl->av_forw = bp;
+-	rktab.b_actl = bp;
+-	if(rktab.b_active == NULL)
+-		rkstart();
+-	spl0();
 +	if (timo == 0)
 +		panic("sd");
 +	sd_hc = (ocr & OCR_HCS) ? 1 : 0;
@@ -25225,47 +25423,49 @@ usr/local
 +	sd_cmd(SEND_CSD, sd_rca, CMD_WAITRESP_LONG, 0);
 +	sd_cmd(SEL_CARD, sd_rca, CMD_WAITRESP_SHORT, 0);
 +	sd_cmd(SET_BLOCKLEN, 512, CMD_WAITRESP_SHORT, 0);	/* SDSC needs this; SDHC ignores */
-+	bdtab.b_actf = NULL;
-+	bdtab.b_active = 0;
-@@ -96 +194,6 @@
--rkintr()
++	sdtab.b_actf = NULL;
++	sdtab.b_active = 0;
+@@ -68 +194,6 @@
+-rkstart()
 +/*
 + * Program one block transfer for the buffer at the head of the queue through
 + * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
 + */
 +static void
-+bdstart(void)
-@@ -98,0 +202 @@
++sdstart(void)
+@@ -71,3 +202 @@
+-	register com;
+-	daddr_t bn;
+-	int dn, cn, sn;
 +	unsigned int blk;
-@@ -100 +204 @@
--	if (rktab.b_active == NULL)
-+	if ((bp = bdtab.b_actf) == NULL)
-@@ -102,13 +206,5 @@
--	dk_busy &= ~(1<<DK_N);
--	bp = rktab.b_actf;
--	rktab.b_active = NULL;
--	if (RKADDR->rkcs < 0) {		/* error bit */
--		deverror(bp, RKADDR->rker, RKADDR->rkds);
--		RKADDR->rkcs = RESET|GO;
--		while((RKADDR->rkcs&CTLRDY) == 0)
--			;
--		if (++rktab.b_errcnt <= 10) {
--			rkstart();
--			return;
--		}
--		bp->b_flags |= B_ERROR;
-+	if (bdtab.b_active)
+@@ -75 +204,3 @@
+-	if ((bp = rktab.b_actf) == NULL)
++	if ((bp = sdtab.b_actf) == NULL)
 +		return;
-+	if (bp != bd_cur) {
-+		bd_cur = bp;
-+		bd_retry = 0;
-@@ -116,5 +212,21 @@
--	rktab.b_errcnt = 0;
--	rktab.b_actf = bp->av_forw;
--	bp->b_resid = 0;
--	iodone(bp);
--	rkstart();
-+	bdtab.b_active++;
++	if (sdtab.b_active)
+@@ -77,17 +208,25 @@
+-	rktab.b_active++;
+-	bn = bp->b_blkno;
+-	dn = minor(bp->b_dev);
+-	cn = bn/12;
+-	sn = bn%12;
+-	RKADDR->rkda = (dn<<13) | (cn<<4) | sn;
+-	RKADDR->rkba = bp->b_un.b_addr;
+-	RKADDR->rkwc = -(bp->b_bcount>>1);
+-	com = ((bp->b_xmem&3) << 4) | IENABLE | GO;
+-	if(bp->b_flags & B_READ)
+-		com |= RCOM; else
+-		com |= WCOM;
+-	RKADDR->rkcs = com;
+-	dk_busy |= 1<<DK_N;
+-	dk_numb[DK_N] += 1;
+-	com = bp->b_bcount>>6;
+-	dk_wds[DK_N] += com;
++	if (bp != sd_cur) {
++		sd_cur = bp;
++		sd_retry = 0;
++	}
++	sdtab.b_active++;
 +	blk = sd_hc ? (unsigned int)bp->b_blkno : (unsigned int)bp->b_blkno*512;
 +	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 +	SD(ICR) = STA_STATIC;
@@ -25286,69 +25486,95 @@ usr/local
 +	dk_busy |= 1;
 +	dk_numb[0]++;
 +	dk_wds[0] += bp->b_bcount / 2;
-@@ -123,2 +235,2 @@
--rkread(dev)
--dev_t dev;
+@@ -96 +235,25 @@
+-rkintr()
 +int
-+bdstrategy(struct buf *bp)
-@@ -125,0 +238 @@
++sdstrategy(struct buf *bp)
++{
 +	int s, idle;
-@@ -127 +240,12 @@
--	physio(rkstrategy, &rrkbuf, dev, B_READ);
++
 +	bp->av_forw = NULL;
 +	s = intr_disable();
-+	if (bdtab.b_actf == NULL)
-+		bdtab.b_actf = bp;
++	if (sdtab.b_actf == NULL)
++		sdtab.b_actf = bp;
 +	else
-+		bdtab.b_actl->av_forw = bp;
-+	bdtab.b_actl = bp;
-+	idle = (bdtab.b_active == 0);
++		sdtab.b_actl->av_forw = bp;
++	sdtab.b_actl = bp;
++	idle = (sdtab.b_active == 0);
 +	intr_restore(s);
 +	if (idle)
-+		bdstart();
++		sdstart();
 +	return(0);
-@@ -130,2 +254,6 @@
--rkwrite(dev)
--dev_t dev;
++}
++
 +/*
 + * Transfer-complete interrupt: finish the active buffer and start the next.
 + * (cf. rkintr.)
 + */
 +int
-+bdintr(void)
-@@ -132,0 +261,2 @@
-+	register struct buf *bp;
++sdintr(void)
+@@ -98,0 +262 @@
 +	unsigned int sta;
-@@ -134 +264,25 @@
--	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
+@@ -100,13 +264,13 @@
+-	if (rktab.b_active == NULL)
+-		return;
+-	dk_busy &= ~(1<<DK_N);
+-	bp = rktab.b_actf;
+-	rktab.b_active = NULL;
+-	if (RKADDR->rkcs < 0) {		/* error bit */
+-		deverror(bp, RKADDR->rker, RKADDR->rkds);
+-		RKADDR->rkcs = RESET|GO;
+-		while((RKADDR->rkcs&CTLRDY) == 0)
+-			;
+-		if (++rktab.b_errcnt <= 10) {
+-			rkstart();
+-			return;
 +	sta = SD(STA);
 +	SD(ICR) = STA_STATIC;
 +	SD(MASK) = 0;
 +	SD(IDMACTRL) = 0;
-+	if (bdtab.b_active == 0)
++	if (sdtab.b_active == 0)
 +		return(0);
 +	dk_busy &= ~1;
-+	bp = bdtab.b_actf;
-+	bdtab.b_active = 0;
++	bp = sdtab.b_actf;
++	sdtab.b_active = 0;
 +	if (sta & STA_DATERR) {
-+		if (bd_retry++ < SD_RETRIES) {
-+			bdstart();
++		if (sd_retry++ < SD_RETRIES) {
++			sdstart();
 +			return(0);
-+		}
+@@ -113,0 +278 @@
 +		deverror(bp, (int)sta, 0);
-+		bp->b_flags |= B_ERROR;
+@@ -115,3 +280,5 @@
+-	}
+-	rktab.b_errcnt = 0;
+-	rktab.b_actf = bp->av_forw;
 +	} else if (bp->b_flags & B_READ)
 +		dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
-+	bd_cur = NULL;
-+	bd_retry = 0;
-+	bdtab.b_actf = bp->av_forw;
-+	bp->b_resid = 0;
-+	iodone(bp);
-+	bdstart();
++	sd_cur = NULL;
++	sd_retry = 0;
++	sdtab.b_actf = bp->av_forw;
+@@ -120 +287,2 @@
+-	rkstart();
++	sdstart();
 +	return(0);
-@@ -135,0 +290,2 @@
+@@ -123 +291,4 @@
+-rkread(dev)
++struct	buf	rsdbuf;
 +
-+#endif
++int
++sdread(dev)
+@@ -127 +298,2 @@
+-	physio(rkstrategy, &rrkbuf, dev, B_READ);
++	physio(sdstrategy, &rsdbuf, dev, B_READ);
++	return(0);
+@@ -130 +302,2 @@
+-rkwrite(dev)
++int
++sdwrite(dev)
+@@ -134 +307,2 @@
+-	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
++	physio(sdstrategy, &rsdbuf, dev, B_WRITE);
++	return(0);
 
 % usr/sys/dev/stm32usart.c usr/sys/dev/kl.c
 @@ -2 +2,11 @@
@@ -25367,7 +25593,7 @@ usr/local
 @@ -6 +16 @@
 -#include	"../h/dir.h"
 +#include "../h/dir.h"
-@@ -11,27 +21,84 @@
+@@ -11,27 +20,0 @@
 -/* base address */
 -#define	KLADDR	((struct device *)0177560)	/* console */
 -#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
@@ -25395,8 +25621,9 @@ usr/local
 -	int	tcsr;
 -	int	tbuf;
 -};
-+#ifdef STM32USART
-+
+@@ -39,2 +22,85 @@
+-klopen(dev, flag)
+-dev_t dev;
 +#define	UART4	0x40010000U		/* APB1 UART4 */
 +#define	RCC	0x50000000U		/* reset/clock controller */
 +#define	NCONS	1			/* one console line */
@@ -25429,7 +25656,7 @@ usr/local
 +#define	UART4SRC_HSI 0x00000002U	/* UART4CKSELR: kernel clock = HSI (64 MHz) */
 +
 +struct	tty cons[NCONS];
-+int	cn_irq = 85;		/* GIC INTID of the UART4 console (SPI 53) */
++int	usirq = 85;		/* GIC INTID of the UART4 console (SPI 53) */
 +extern char partab[];
 +void ttyopen(dev_t dev, struct tty *tp);
 +void ttyclose(struct tty *tp);
@@ -25443,10 +25670,10 @@ usr/local
 +void timeout(int (*fun)(), caddr_t arg, int tim);
 +void wakeup(caddr_t chan);
 +int getc(struct clist *p);
-+int cnstart(struct tty *tp);
-+int cnrint(dev_t dev);
-+int cnxint(dev_t dev);
-+void putchar(char c);			/* defined below */
++int usstart(struct tty *tp);
++int usrint(dev_t dev);
++int usxint(dev_t dev);
++void usputchar(char c);			/* defined below */
 +
 +/*
 + * Bring UART4 up for the console before the first kernel printf: enable its
@@ -25462,7 +25689,7 @@ usr/local
 + * register (0x768) leaves the port unclocked so the pin mux silently no-ops.
 + */
 +void
-+cninit(void)
++usinit(void)
 +{
 +	/* Route UART4 to its pads: PD6 (TX) and PD8 (RX) -> alternate function 8.
 +	 * Without this the UART would transmit into a disconnected pin. */
@@ -25479,24 +25706,22 @@ usr/local
 +	BRR = 556;				/* 64 MHz / 115200 */
 +	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE; /* 8N1, FIFOs, TX + RX */
 +}
-@@ -39,2 +106,2 @@
--klopen(dev, flag)
--dev_t dev;
++
 +int
-+cnopen(dev_t dev, int flag)
-@@ -42 +108,0 @@
++usopen(dev_t dev, int flag)
+@@ -42 +107,0 @@
 -	register struct device *addr;
-@@ -44 +109,0 @@
+@@ -44 +108,0 @@
 -	register d;
-@@ -46,2 +111,2 @@
+@@ -46,2 +110,2 @@
 -	d = minor(dev);
 -	if(d >= NKL11+NDL11) {
 +	(void)flag;
 +	if(minor(dev) >= NCONS) {
-@@ -49 +114 @@
+@@ -49 +113 @@
 -		return;
 +		return(0);
-@@ -51,14 +116,3 @@
+@@ -51,14 +115,3 @@
 -	tp = &kl11[d];
 -	/*
 -	 * set up minor 0 to address KLADDR
@@ -25513,46 +25738,46 @@ usr/local
 -	tp->t_oproc = klstart;
 +	tp = &cons[minor(dev)];
 +	tp->t_addr = (caddr_t)UART4;
-+	tp->t_oproc = cnstart;
-@@ -67 +121 @@
++	tp->t_oproc = usstart;
+@@ -67 +120 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
-@@ -70,2 +124 @@
+@@ -70,2 +123 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
 +	CR1 |= CR1_RXNEIE;		/* enable receive interrupts */
-@@ -72,0 +126 @@
+@@ -72,0 +125 @@
 +	return(0);
-@@ -75,3 +129,2 @@
+@@ -75,3 +128,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +int
-+cnclose(dev_t dev, int flag)
-@@ -79 +132,4 @@
++usclose(dev_t dev, int flag)
+@@ -79 +131,4 @@
 -	register struct tty *tp;
 +	(void)flag;
 +	ttyclose(&cons[minor(dev)]);
 +	return(0);
 +}
-@@ -81,2 +137,5 @@
+@@ -81,2 +136,5 @@
 -	tp = &kl11[minor(dev)];
 -	ttyclose(tp);
 +int
-+cnread(dev_t dev)
++usread(dev_t dev)
 +{
 +	ttread(&cons[minor(dev)]);
 +	return(0);
-@@ -85,2 +144,2 @@
+@@ -85,2 +143,2 @@
 -klread(dev)
 -dev_t dev;
 +int
-+cnwrite(dev_t dev)
-@@ -88 +147,2 @@
++uswrite(dev_t dev)
+@@ -88 +146,2 @@
 -	ttread(&kl11[minor(dev)]);
 +	ttwrite(&cons[minor(dev)]);
 +	return(0);
-@@ -91,2 +151,8 @@
+@@ -91,2 +150,8 @@
 -klwrite(dev)
 -dev_t dev;
 +/*
@@ -25562,8 +25787,8 @@ usr/local
 + * the output queue drains.
 + */
 +int
-+cnstart(struct tty *tp)
-@@ -94 +160,19 @@
++usstart(struct tty *tp)
+@@ -94 +159,19 @@
 -	ttwrite(&kl11[minor(dev)]);
 +	register int c;
 +
@@ -25584,15 +25809,15 @@ usr/local
 +	} else
 +		CR1 &= ~CR1_TXEIE;
 +	return(0);
-@@ -97,2 +181,2 @@
+@@ -97,2 +180,2 @@
 -klxint(dev)
 -dev_t dev;
 +int
-+cnxint(dev_t dev)
-@@ -102 +186 @@
++usxint(dev_t dev)
+@@ -102 +185 @@
 -	tp = &kl11[minor(dev)];
 +	tp = &cons[minor(dev)];
-@@ -104,5 +188,3 @@
+@@ -104,5 +187,3 @@
 -	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
@@ -25601,14 +25826,14 @@ usr/local
 +	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
 +		wakeup((caddr_t)&tp->t_outq);
 +	return(0);
-@@ -111,2 +193,2 @@
+@@ -111,2 +192,2 @@
 -klrint(dev)
 -dev_t dev;
 +int
-+cnrint(dev_t dev)
-@@ -115 +196,0 @@
++usrint(dev_t dev)
+@@ -115 +195,0 @@
 -	register struct device *addr;
-@@ -118,5 +199,7 @@
+@@ -118,5 +198,7 @@
 -	tp = &kl11[minor(dev)];
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
@@ -25621,19 +25846,19 @@ usr/local
 +	}
 +	ICR = ICR_ERR;			/* clear overrun/framing errors */
 +	return(0);
-@@ -125,3 +208,2 @@
+@@ -125,3 +207,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +int
-+cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +211,2 @@
++usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+@@ -129 +210,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
-@@ -130,0 +214 @@
+@@ -130,0 +213 @@
 +	return(0);
-@@ -133,2 +217,7 @@
+@@ -133,2 +216,7 @@
 -klstart(tp)
 -register struct tty *tp;
 +/*
@@ -25642,12 +25867,12 @@ usr/local
 + * demultiplexing into the receive/transmit halves above.
 + */
 +int
-+cnintr(void)
-@@ -136,2 +225 @@
++usintr(void)
+@@ -136,2 +224 @@
 -	register c;
 -	register struct device *addr;
 +	unsigned int isr = ISR;
-@@ -139,13 +227,5 @@
+@@ -139,13 +226,5 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 -		return;
@@ -25662,15 +25887,14 @@ usr/local
 -		}
 -	}
 +	if (isr & ISR_RXNE)
-+		cnrint(0);
++		usrint(0);
 +	if ((isr & ISR_TXE) && (CR1 & CR1_TXEIE))
-+		cnxint(0);
++		usxint(0);
 +	return(0);
-@@ -154 +234,2 @@
+@@ -154 +233 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
-+char	*msgbufp = msgbuf;	/* next saved printf character */
 +
-@@ -156,9 +237,4 @@
+@@ -156,9 +235,4 @@
 - * Print a character on console.
 - * Attempts to save and restore device
 - * status.
@@ -25684,25 +25908,25 @@ usr/local
 + * the transmit interrupt masked around the write so kernel printf does not
 + * collide with interrupt-driven tty output; works before the console is open
 + * and from panic context.  The last MSGBUFS characters are saved in msgbuf.
-@@ -166,2 +242,2 @@
+@@ -166,2 +240,2 @@
 -putchar(c)
 -register c;
 +void
-+putchar(char c)
-@@ -169 +245,2 @@
++usputchar(char c)
+@@ -169 +243,2 @@
 -	register s, timo;
 +	register int timo;
 +	unsigned int s;
-@@ -173 +250 @@
+@@ -173 +248 @@
 -		if(msgbufp >= &msgbuf[MSGBUFS])
 +		if (msgbufp >= &msgbuf[MSGBUFS])
-@@ -176,5 +252,0 @@
+@@ -176,5 +250,0 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
 -	if ((KLADDR->rbuf&0177) == 0)
 -		return;
-@@ -182,6 +254,2 @@
+@@ -182,6 +252,2 @@
 -	/*
 -	 * Try waiting for the console tty to come ready,
 -	 * otherwise give up after a reasonable time.
@@ -25711,28 +25935,28 @@ usr/local
 -		if(--timo == 0)
 +	while ((ISR & ISR_TXE) == 0)
 +		if (--timo == 0)
-@@ -189 +257 @@
+@@ -189 +255 @@
 -	if(c == 0)
 +	if (c == 0)
-@@ -191,4 +259,4 @@
+@@ -191,10 +257,6 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 -	if(c == '\n') {
-+	s = CR1;
-+	CR1 &= ~CR1_TXEIE;
-+	TDR = c;
-+	if (c == '\n')
-@@ -196,5 +264 @@
+-		putchar('\r');
 -		putchar(0177);
 -		putchar(0177);
 -	}
 -	putchar(0);
 -	KLADDR->tcsr = s;
++	s = CR1;
++	CR1 &= ~CR1_TXEIE;
++	TDR = c;
++	if (c == '\n')
++		usputchar('\r');
 +	CR1 = s;
-@@ -201,0 +266,2 @@
+@@ -201,0 +264 @@
 +
-+#endif
 
 % usr/sys/dev/sys.c
 @@ -11 +11,2 @@
@@ -26018,13 +26242,12 @@ usr/local
 -#define	ARDY	0100
 -#define	WLO	020000
 -#define	CTLRDY	0200
-@@ -27,4 +4 @@
+@@ -27,4 +3,0 @@
 -/*
 - * Monitoring device bit
 - */
 -#define	DK_N	1
-+#ifdef VIRTIO
-@@ -32,8 +6,53 @@
+@@ -32,8 +5,31 @@
 -struct	device
 -{
 -	int	rkds;
@@ -26039,12 +26262,13 @@ usr/local
 +void deverror(struct buf *bp, int o1, int o2);
 +int intr_disable(void);
 +void intr_restore(int s);
++void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 +
 +extern int	dk_busy;
 +extern long	dk_numb[3];
 +extern long	dk_wds[3];
 +
-+int	bd_irq;		/* GIC INTID of the block device (0 if none) */
++int	rkirq;		/* GIC INTID of the block device (0 if none) */
 +
 +#define	VRING_DESC_F_NEXT	1
 +#define	VRING_DESC_F_WRITE	2
@@ -26063,8 +26287,9 @@ usr/local
 +	unsigned int	len;
 +	unsigned short	flags;
 +	unsigned short	next;
-+};
-+
+@@ -42,2 +38,10 @@
+-struct	buf	rktab;
+-struct	buf	rrkbuf;
 +struct vqavail {
 +	unsigned short	flags;
 +	unsigned short	idx;
@@ -26075,7 +26300,9 @@ usr/local
 +	unsigned int	id;
 +	unsigned int	len;
 +};
-+
+@@ -45,2 +49,29 @@
+-rkstrategy(bp)
+-register struct buf *bp;
 +struct vqused {
 +	unsigned short	flags;
 +	unsigned short	idx;
@@ -26086,14 +26313,10 @@ usr/local
 +	unsigned int	type;
 +	unsigned int	reserved;
 +	unsigned long long sector;
-@@ -42,2 +61 @@
--struct	buf	rktab;
--struct	buf	rrkbuf;
-+struct buf bdtab;
-@@ -45,2 +63,16 @@
--rkstrategy(bp)
--register struct buf *bp;
-+#ifndef EVB
++};
++
++struct buf rktab;
++
 +static volatile unsigned char virtio_vq[512] __attribute__((aligned(4096)));
 +static struct virtio_blk_req virtio_vreq __attribute__((aligned(16)));
 +static volatile unsigned char virtio_vstatus __attribute__((aligned(4)));
@@ -26109,7 +26332,7 @@ usr/local
 +
 +static unsigned int
 +vmmio(unsigned int off)
-@@ -49,17 +81,8 @@
+@@ -49,17 +80,8 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
@@ -26135,14 +26358,11 @@ usr/local
 +{
 +
 +	*(volatile unsigned int *)(virtio_vbase + off) = val;
-@@ -66,0 +90 @@
-+#endif
-@@ -68 +92,45 @@
+@@ -68 +90,42 @@
 -rkstart()
 +void
-+bdinit(void)
++rkinit(void)
 +{
-+#ifndef EVB
 +	unsigned int n;
 +
 +	for(virtio_vbase=VIRTIO_FIRST; virtio_vbase<VIRTIO_LAST;
@@ -26169,14 +26389,12 @@ usr/local
 +	vmmios(0x40, ((unsigned int)virtio_vq) >> 12);
 +	vmmios(0x70, 15);
 +	virtio_lastused = 0;
-+	bd_irq = VIRTIO_IRQ_BASE +
++	rkirq = VIRTIO_IRQ_BASE +
 +	    (virtio_vbase - VIRTIO_FIRST) / VIRTIO_STEP;
-+	bdtab.b_actf = NULL;
-+	bdtab.b_active = 0;
-+#endif
++	rktab.b_actf = NULL;
++	rktab.b_active = 0;
 +}
 +
-+#ifndef EVB
 +/*
 + * Program the virtqueue for the buffer at the head of the queue and notify
 + * the device.  Returns at once; completion arrives as an interrupt.
@@ -26184,17 +26402,16 @@ usr/local
 + */
 +static void
 +virtio_start(void)
-@@ -71,3 +139,2 @@
+@@ -71,3 +134,2 @@
 -	register com;
 -	daddr_t bn;
 -	int dn, cn, sn;
 +	unsigned short aidx;
 +	unsigned int type;
-@@ -75 +142 @@
+@@ -75 +137 @@
 -	if ((bp = rktab.b_actf) == NULL)
-+	if((bp = bdtab.b_actf) == NULL)
-@@ -77,17 +144,55 @@
--	rktab.b_active++;
++	if((bp = rktab.b_actf) == NULL)
+@@ -78,16 +140,31 @@
 -	bn = bp->b_blkno;
 -	dn = minor(bp->b_dev);
 -	cn = bn/12;
@@ -26211,7 +26428,6 @@ usr/local
 -	dk_numb[DK_N] += 1;
 -	com = bp->b_bcount>>6;
 -	dk_wds[DK_N] += com;
-+	bdtab.b_active++;
 +	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
 +	virtio_vreq.type = type;
 +	virtio_vreq.reserved = 0;
@@ -26243,45 +26459,54 @@ usr/local
 +	dk_busy |= 1;
 +	dk_numb[0]++;
 +	dk_wds[0] += bp->b_bcount / 2;
-+}
-+
+@@ -96 +173,30 @@
+-rkintr()
 +/*
 + * Block-device strategy: queue the buffer and, if the controller is idle,
 + * start it.  Returns at once; bio.c's iowait() sleeps on the buffer until
 + * the completion interrupt runs iodone().  (cf. v7 rk.c rkstrategy.)
 + */
 +int
-+bdstrategy(struct buf *bp)
++rkstrategy(struct buf *bp)
 +{
 +	int s;
 +
 +	bp->av_forw = NULL;
 +	s = intr_disable();
-+	if(bdtab.b_actf == NULL)
-+		bdtab.b_actf = bp;
++	if(rktab.b_actf == NULL)
++		rktab.b_actf = bp;
 +	else
-+		bdtab.b_actl->av_forw = bp;
-+	bdtab.b_actl = bp;
-+	if(bdtab.b_active == 0)
++		rktab.b_actl->av_forw = bp;
++	rktab.b_actl = bp;
++	if(rktab.b_active == 0)
 +		virtio_start();
 +	intr_restore(s);
 +	return(0);
-@@ -96 +201,7 @@
--rkintr()
++}
++
 +/*
-+ * Completion interrupt (GIC INTID bd_irq).  Acknowledge the device,
++ * Completion interrupt (GIC INTID rkirq).  Acknowledge the device,
 + * finish the active buffer, and start the next queued one.
 + * (cf. v7 rk.c rkintr.)
 + */
 +int
-+bdintr(void)
-@@ -98,0 +210 @@
++rkintr(void)
+@@ -98,0 +205 @@
 +	unsigned int is;
-@@ -100,14 +212,13 @@
+@@ -100,3 +207,9 @@
 -	if (rktab.b_active == NULL)
 -		return;
 -	dk_busy &= ~(1<<DK_N);
--	bp = rktab.b_actf;
++	is = vmmio(0x60);		/* InterruptStatus */
++	vmmios(0x64, is);		/* InterruptACK */
++	if(rktab.b_active == 0)
++		return(0);
++	if(qused.idx == virtio_lastused)
++		return(0);
++	dmbsy();
++	virtio_lastused++;
++	dk_busy &= ~1;
+@@ -104,10 +217,3 @@
 -	rktab.b_active = NULL;
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
@@ -26292,53 +26517,25 @@ usr/local
 -			rkstart();
 -			return;
 -		}
-+	is = vmmio(0x60);		/* InterruptStatus */
-+	vmmios(0x64, is);		/* InterruptACK */
-+	if(bdtab.b_active == 0)
-+		return(0);
-+	if(qused.idx == virtio_lastused)
-+		return(0);
-+	dmbsy();
-+	virtio_lastused++;
-+	dk_busy &= ~1;
-+	bp = bdtab.b_actf;
-+	bdtab.b_active = 0;
++	rktab.b_active = 0;
 +	if(virtio_vstatus != 0) {
 +		deverror(bp, virtio_vstatus, 0);
-@@ -116,2 +227 @@
+@@ -116 +221,0 @@
 -	rktab.b_errcnt = 0;
--	rktab.b_actf = bp->av_forw;
-+	bdtab.b_actf = bp->av_forw;
-@@ -120 +230,2 @@
+@@ -120 +225,2 @@
 -	rkstart();
 +	virtio_start();
 +	return(0);
-@@ -122,3 +233,3 @@
--
--rkread(dev)
--dev_t dev;
-+#else
-+int
-+bdstrategy(struct buf *bp)
-@@ -126,2 +237,2 @@
--
--	physio(rkstrategy, &rrkbuf, dev, B_READ);
-+	(void)bp;
-+	return(0);
-@@ -129,3 +240,2 @@
--
--rkwrite(dev)
--dev_t dev;
-+int
-+bdintr(void)
-@@ -133,2 +243 @@
--
--	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
-+	return(0);
-@@ -135,0 +245,3 @@
-+#endif
+@@ -122,0 +229,3 @@
++struct	buf	rrkbuf;
 +
-+#endif
++int
+@@ -127,0 +237 @@
++	return(0);
+@@ -129,0 +240 @@
++int
+@@ -134,0 +246 @@
++	return(0);
 
 % usr/sys/h/acct.h
 
@@ -26347,6 +26544,16 @@ usr/local
 % usr/sys/h/callo.h
 
 % usr/sys/h/conf.h
+@@ -47,0 +48,9 @@
++
++/*
++ * Device interrupts: GIC interrupt number (set by the driver) and handler.
++ */
++struct intr
++{
++	int	*i_irq;
++	int	(*i_fn)();
++};
 
 % usr/sys/h/dir.h
 
@@ -26381,51 +26588,38 @@ usr/local
 % usr/sys/h/mount.h
 
 % usr/sys/h/param.h
-@@ -83,2 +83,3 @@
+@@ -83,2 +83,2 @@
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
 +#define	USIZE	256		/* size of user block (*64): 16KB u-area+kstack */
 +#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
-+#ifndef NULL
-@@ -85,0 +87 @@
-+#endif
-@@ -94 +96 @@
+@@ -94 +94 @@
 -#define	CBSIZE	14		/* number of chars in a clist block */
 +#define	CBSIZE	12		/* number of chars in a clist block */
-@@ -120 +122 @@
+@@ -120 +120 @@
 -#define	major(x)	(int)(((unsigned)x>>8))
 +#define	major(x)	(int)(((unsigned)x>>8)&0377)
-@@ -131 +133 @@
+@@ -131 +131 @@
 -typedef	unsigned int	ino_t;
 +typedef	unsigned short	ino_t;
-@@ -133 +135 @@
+@@ -133 +133 @@
 -typedef	int		label_t[6];	/* regs 2-7 */
 +typedef	int		label_t[10];	/* regs 2-7 */
-@@ -144,0 +147,24 @@
+@@ -144,0 +145,14 @@
 +
 +/*
-+ * Board memory map: physical RAM base, user core window,
-+ * section for the big tables, user page attributes, GIC.
++ * Board memory map, set in c.c from the configuration file:
++ * kernel RAM base, user core window, user page attributes, GIC.
++ * The big tables go in .ddrbss, which the linker script places.
 + */
-+#ifdef QEMU
-+#define	KERNBASE	0x40000000U	/* RAM base */
-+#define	MEMSIZE		0x08000000U	/* 128 MB, match qemu -m */
-+#define	COREBASE	0x44000000U
-+#define	CORETOP		(KERNBASE + MEMSIZE)
-+#define	KTABLES_SECTION	".bss"
-+#define	PG_USER		0x0000047eU	/* cached, as is the core window */
-+#define	GIC_DIST_BASE	0x08000000U
-+#define	GIC_CPU_BASE	0x08010000U
-+#endif
-+#ifdef MP135
-+#define	KERNBASE	0x2FFE0000U	/* 128 KB SYSRAM */
-+#define	COREBASE	0xC0100000U	/* DDR, above .ddrbss */
-+#define	CORETOP		0xE0000000U
-+#define	KTABLES_SECTION	".ddrbss"	/* too big for SYSRAM */
-+#define	PG_USER		0x00000472U	/* uncached: SDMMC IDMA is not coherent */
-+#define	GIC_DIST_BASE	0xA0021000U
-+#define	GIC_CPU_BASE	0xA0022000U
-+#endif
++extern unsigned int kernbase, corebase, coretop, pguser, gicdbase, giccbase;
++#define	KERNBASE	kernbase
++#define	COREBASE	corebase
++#define	CORETOP		coretop
++#define	PG_USER		pguser
++#define	GIC_DIST_BASE	gicdbase
++#define	GIC_CPU_BASE	giccbase
++#define	KTABLES_SECTION	".ddrbss"
 
 % usr/sys/h/proc.h
 @@ -21,2 +21,2 @@
@@ -26712,45 +26906,46 @@ usr/local
 % usr/sys/sys/clock.c
 @@ -4 +3,0 @@
 -#include "../h/seg.h"
-@@ -8 +7,6 @@
+@@ -8 +7,7 @@
 -#include "../h/reg.h"
 +#include "../h/seg.h"
++#include "../h/conf.h"
 +extern void addupc(caddr_t pc, void *prof, int inc);
 +int intr_disable(void);
 +void intr_restore(int s);
 +void wakeup(caddr_t chan);
 +void panic(char *s);
-@@ -28,3 +32,2 @@
+@@ -28,3 +33,2 @@
 -clock(dev, sp, r1, nps, r0, pc, ps)
 -dev_t dev;
 -caddr_t pc;
 +void
 +clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
-@@ -35,0 +39 @@
+@@ -35,0 +40 @@
 +	(void)dev; (void)sp; (void)r1; (void)nps; (void)r0;
-@@ -41 +44,0 @@
+@@ -41 +45,0 @@
 -	lks->r[0] = 0115;
-@@ -47 +49,0 @@
+@@ -47 +50,0 @@
 -	display();
-@@ -71 +73 @@
+@@ -71 +74 @@
 -	spl5();
 +	intr_disable();
-@@ -79 +81 @@
+@@ -79 +82 @@
 -		while(p2->c_func = p1->c_func) {
 +		while((p2->c_func = p1->c_func) != 0) {
-@@ -114 +116 @@
+@@ -114 +117 @@
 -		spl1();
 +		intr_disable();
-@@ -154,3 +156,2 @@
+@@ -154,3 +157,2 @@
 -timeout(fun, arg, tim)
 -int (*fun)();
 -caddr_t arg;
 +void
 +timeout(int (*fun)(), caddr_t arg, int tim)
-@@ -164 +165 @@
+@@ -164 +166 @@
 -	s = spl7();
 +	s = intr_disable();
-@@ -184 +185,88 @@
+@@ -184 +186,74 @@
 -	splx(s);
 +	intr_restore(s);
 +}
@@ -26768,10 +26963,7 @@ usr/local
 +extern unsigned int cntfrq_get(void);
 +extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 +extern void irq_enable(void);
-+extern int cnintr(void);	/* console interrupt (board console driver) */
-+extern int cn_irq;		/* console GIC INTID, set by the console driver */
-+extern int bdintr(void);	/* block-device interrupt (board block driver) */
-+extern int bd_irq;		/* block-device GIC INTID, set by the driver */
++extern struct intr intrtab[];	/* configured device interrupts (c.c) */
 +static unsigned int timer_reload;
 +int irq_ready;
 +caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
@@ -26795,44 +26987,33 @@ usr/local
 +		if(u.u_procp != NULL)
 +			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
 +			    usermode ? 0xf000 : 0);
-+	} else if(cn_irq && intid == (unsigned int)cn_irq)
-+		cnintr();
-+	else if(bd_irq && intid == (unsigned int)bd_irq)
-+		bdintr();
++	} else {
++		register struct intr *ip;
++		for(ip = intrtab; ip->i_irq; ip++)
++			if(*ip->i_irq && intid == (unsigned int)*ip->i_irq)
++				(*ip->i_fn)();
++	}
 +	GICC_EOIR = iar;
++}
++static void
++gicen(int irq)
++{
++	unsigned int r = irq / 4, o = (irq % 4) * 8;
++	GICD_IPRIORITYR(r) = (GICD_IPRIORITYR(r) & ~(0xffU << o)) | (0x80U << o);
++	GICD_ISENABLER(irq / 32) = 1U << (irq % 32);
 +}
 +void
 +clkstart(void)
 +{
-+	unsigned int freq, prio_reg, prio_off, prio_val;
++	register struct intr *ip;
++	unsigned int freq;
 +	freq = cntfrq_get();
 +	if(freq == 0) freq = 62500000U;
 +	timer_reload = freq / TIMER_HZ;
-+	prio_reg = TIMER_IRQ / 4;
-+	prio_off = (TIMER_IRQ % 4) * 8;
-+	prio_val = GICD_IPRIORITYR(prio_reg);
-+	prio_val &= ~(0xffU << prio_off);
-+	prio_val |=  (0x80U << prio_off);
-+	GICD_IPRIORITYR(prio_reg) = prio_val;
-+	GICD_ISENABLER(TIMER_IRQ / 32) = 1U << (TIMER_IRQ % 32);
-+	if(cn_irq) {
-+		prio_reg = cn_irq / 4;
-+		prio_off = (cn_irq % 4) * 8;
-+		prio_val = GICD_IPRIORITYR(prio_reg);
-+		prio_val &= ~(0xffU << prio_off);
-+		prio_val |=  (0x80U << prio_off);
-+		GICD_IPRIORITYR(prio_reg) = prio_val;
-+		GICD_ISENABLER(cn_irq / 32) = 1U << (cn_irq % 32);
-+	}
-+	if(bd_irq) {
-+		prio_reg = bd_irq / 4;
-+		prio_off = (bd_irq % 4) * 8;
-+		prio_val = GICD_IPRIORITYR(prio_reg);
-+		prio_val &= ~(0xffU << prio_off);
-+		prio_val |=  (0x80U << prio_off);
-+		GICD_IPRIORITYR(prio_reg) = prio_val;
-+		GICD_ISENABLER(bd_irq / 32) = 1U << (bd_irq % 32);
-+	}
++	gicen(TIMER_IRQ);
++	for(ip = intrtab; ip->i_irq; ip++)
++		if(*ip->i_irq)
++			gicen(*ip->i_irq);
 +	GICD_CTLR = 1;
 +	GICC_PMR  = 0xff;
 +	GICC_CTLR = 1;
@@ -27011,7 +27192,7 @@ usr/local
 + *   user_l2  -- user VA 0..1MB, (re)loaded by arm_sureg() per process
 + *   uarea_l2 -- the UBASE u-area window, remapped by resume() per process
 + * Only these two follow the current process; everything else is fixed.
-@@ -18,15 +26,14 @@
+@@ -18,15 +26,15 @@
 -int	icode[] =
 -{
 -	0104413,	/* sys exec; init; initp */
@@ -27039,37 +27220,31 @@ usr/local
 +unsigned int user_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
 +unsigned int uarea_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
 +extern char __ddrbss_start[], __ddrbss_end[];	/* zeroed in machine_init */
++char	*msgbufp = msgbuf;	/* next saved printf character */
 +
 +#define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
-@@ -35 +42,3 @@
+@@ -35 +43,6 @@
 - * Machine-dependent startup code
-+ * Board-resolved constant that resume() (mch.s) needs but cannot reach: the
-+ * assembler is not run through cpp, so it loads COREBASE from memory instead
-+ * of the param.h macro.  It resolves here to the current board's value.
-@@ -37 +46,11 @@
--startup()
-+unsigned int corebase = COREBASE;	/* physical base of the user core window */
-+
-+/*
 + * Called from _start (conf/low.s) before switching to the u-area stack.
 + * Board-independent: bring up the board's clocks + DRAM, then build the L1
 + * section table from the board's memory map (board_map[], conf/<board>.c) and
 + * the two per-process L2 windows, and enable the MMU + caches.  The same code
 + * runs on every board -- only board_map[] and clock_ddr_init() differ -- so a
 + * QEMU run exercises the identical machine_init() the MP135 uses.
-+ */
+@@ -37 +50 @@
+-startup()
 +void machine_init(void)
-@@ -39 +58,2 @@
+@@ -39 +52,2 @@
 -	register i;
 +	struct memregion *m;
 +	unsigned int pa, i;
-@@ -41,3 +61,2 @@
+@@ -41,3 +55,2 @@
 -	/*
 -	 * zero and free all of core
 -	 */
 +	cninit();			/* bring up the console (UART4 from HSI) early */
 +	clock_ddr_init();		/* clocks + DRAM (no-op where RAM is already up) */
-@@ -45,15 +64,5 @@
+@@ -45,10 +58,5 @@
 -	i = ka6->r[0] + USIZE;
 -	UISD->r[0] = 077406;
 -	for(;;) {
@@ -27080,24 +27255,24 @@ usr/local
 -		maxmem++;
 -		mfree(coremap, 1, i);
 -		i++;
--	}
--	if(cputype == 70)
--	for(i=0; i<62; i+=2) {
--		UBMAP->r[i] = i<<12;
--		UBMAP->r[i+1] = 0;
 +	/* DRAM is up now, so zero the DDR-resident table section (holds l1 and
 +	 * the big system tables); low.s already zeroed the SYSRAM .bss. */
 +	{
 +		char *p;
 +		for(p = __ddrbss_start; p < __ddrbss_end; p++) *p = 0;
-@@ -61,5 +70 @@
+@@ -56,10 +64 @@
+-	if(cputype == 70)
+-	for(i=0; i<62; i+=2) {
+-		UBMAP->r[i] = i<<12;
+-		UBMAP->r[i+1] = 0;
+-	}
 -	printf("mem = %D\n", ctob((long)maxmem));
 -	if(MAXMEM < maxmem)
 -		maxmem = MAXMEM;
 -	mfree(swapmap, nswap, 1);
 -	swplo--;
 +	for(i = 0; i < 256; i++) { user_l2[i] = 0; uarea_l2[i] = 0; }
-@@ -67,3 +72,24 @@
+@@ -67,3 +66,24 @@
 -	/*
 -	 * determine clock
 -	 */
@@ -27125,21 +27300,21 @@ usr/local
 +		char *p, *e = (char *)CLKADDR(64 + USIZE);
 +		for(p = (char *)CLKADDR(64); p < e; p++) *p = 0;
 +	}
-@@ -71,2 +97 @@
+@@ -71,2 +91 @@
 -	UISA->r[7] = ka6->r[1]; /* io segment */
 -	UISD->r[7] = 077406;
 +	mmu_on((unsigned int)l1);
-@@ -76,2 +101,4 @@
+@@ -76,2 +95,4 @@
 - * set up a physical address
 - * into users virtual address space.
 + * Load the user-region page table (user_l2) for the current process.
 + * The Armv7 user layout is flat (1 MB at VA 0; binaries link at UENTRY,
 + * stack near USTACK), so the whole user window maps contiguously to the
 + * image clicks just above the u-area.  Called from sureg() (ureg.c).
-@@ -79 +106 @@
+@@ -79 +100 @@
 -sysphys()
 +void arm_sureg(int *uisa, int *uisd, int nseg)
-@@ -81,6 +108,2 @@
+@@ -81,6 +102,2 @@
 -	register i, s, d;
 -	register struct a {
 -		int	segno;
@@ -27148,11 +27323,11 @@ usr/local
 -	} *uap;
 +	unsigned int base;
 +	int i;
-@@ -88 +111,2 @@
+@@ -88 +105,2 @@
 -	if(!suser())
 +	(void)uisa; (void)uisd; (void)nseg;
 +	if(u.u_procp == NULL)
-@@ -90,29 +114,8 @@
+@@ -90,29 +108,8 @@
 -	uap = (struct a *)u.u_ap;
 -	i = uap->segno;
 -	if(i < 0 || i >= 8)
@@ -27190,18 +27365,18 @@ usr/local
 +	    "mcr p15, 0, %0, c8, c7, 0\n\t"	/* TLBIALL */
 +	    "dsb ish\n\t"
 +	    "isb" :: "r"(0) : "memory");
-@@ -122,2 +125,3 @@
+@@ -122,2 +119,3 @@
 - * Determine which clock is attached, and start it.
 - * panic: no clock found
 + * Copy / clear one 64-byte click of physical core.  Core is directly
 + * addressable through the PA==VA kernel window, so these are plain
 + * memory operations (the v7 m40.s copyseg/clearseg role).
-@@ -125,3 +129 @@
+@@ -125,3 +123 @@
 -#define	CLOCK1	((physadr)0177546)
 -#define	CLOCK2	((physadr)0172540)
 -clkstart()
 +void copyseg(int from, int to)
-@@ -129,7 +131,9 @@
+@@ -129,7 +125,9 @@
 -	lks = CLOCK1;
 -	if(fuiword((caddr_t)lks) == -1) {
 -		lks = CLOCK2;
@@ -27218,12 +27393,12 @@ usr/local
 +	int *d = (int *)CLKADDR(a), i;
 +	for(i = 0; i < 16; i++)
 +		d[i] = 0;
-@@ -139 +143,3 @@
+@@ -139 +137,3 @@
 - * Let a process handle a signal by simulating an interrupt
 + * User-space access primitives (the v7 fubyte/subyte/... role).  User VAs
 + * live in [0, USERSIZE); a bounds check keeps a bad user pointer from
 + * faulting the kernel (Armv7 has no fault-recovery path here).
-@@ -141,2 +147,6 @@
+@@ -141,2 +141,25 @@
 -sendsig(p, signo)
 -caddr_t p;
 +static int user_range(caddr_t a, unsigned int n)
@@ -27232,8 +27407,7 @@ usr/local
 +	return x < USERSIZE && n <= USERSIZE - x;
 +}
 +int fubyte(caddr_t addr)
-@@ -144 +154,40 @@
--	register unsigned n;
++{
 +	if(!user_range(addr, 1))
 +		return(-1);
 +	return *(unsigned char *)addr;
@@ -27252,7 +27426,8 @@ usr/local
 +	return *(int *)addr;
 +}
 +int suword(caddr_t addr, int v)
-+{
+@@ -144 +167,21 @@
+-	register unsigned n;
 +	if(!user_range(addr, sizeof(int)))
 +		return(-1);
 +	*(int *)addr = v;
@@ -27274,7 +27449,7 @@ usr/local
 +		*t++ = *f++;
 +	return(0);
 +}
-@@ -146,7 +195,14 @@
+@@ -146,7 +189,14 @@
 -	n = u.u_ar0[R6] - 4;
 -	grow(n);
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
@@ -27296,7 +27471,7 @@ usr/local
 +void restfp(void *p)
 +{
 +	(void)p;
-@@ -156,6 +212,7 @@
+@@ -156,6 +206,7 @@
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
 - * a unibus device.
@@ -27310,17 +27485,17 @@ usr/local
 + * The kernel image and physical core window are identity-mapped, so a VA
 + * at or above KERNBASE is read directly; a smaller value is a core-relative
 + * click offset and is biased by COREBASE to reach the real backing page.
-@@ -163 +220 @@
+@@ -163 +214 @@
 -int	maplock;
 +#define KMSGBASE	0x7fff0000U
-@@ -165,2 +222 @@
+@@ -165,2 +216 @@
 -mapalloc(bp)
 -register struct buf *bp;
 +static int mem_range_ok(unsigned int off, unsigned int n)
-@@ -168 +224 @@
+@@ -168 +218 @@
 -	register i, a;
 +	unsigned int end;
-@@ -170,6 +226,32 @@
+@@ -170,6 +220,32 @@
 -	if(cputype != 70)
 -		return;
 -	spl6();
@@ -27359,7 +27534,7 @@ usr/local
 +				buf[i] = 0;
 +		}
 +		return((int)n);
-@@ -177,19 +259,95 @@
+@@ -177,19 +253,96 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -27466,7 +27641,8 @@ usr/local
 +
 +	n = (int)(NCLICK - (64 + USIZE));
 +	mfree(coremap, n, 64 + USIZE);
-+	mfree(swapmap, 8192, 1);
++	mfree(swapmap, nswap, 1);
++	swplo--;
 +	printf("mem = %D\n", ctob((long)n));
 +	/*
 +	 * A process image is bounded by the 1 MB user MMU window, not by

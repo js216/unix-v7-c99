@@ -18,7 +18,6 @@
 #include "../h/tty.h"
 #include "../h/systm.h"
 
-#ifdef STM32USART
 
 #define	UART4	0x40010000U		/* APB1 UART4 */
 #define	RCC	0x50000000U		/* reset/clock controller */
@@ -52,7 +51,7 @@
 #define	UART4SRC_HSI 0x00000002U	/* UART4CKSELR: kernel clock = HSI (64 MHz) */
 
 struct	tty cons[NCONS];
-int	cn_irq = 85;		/* GIC INTID of the UART4 console (SPI 53) */
+int	usirq = 85;		/* GIC INTID of the UART4 console (SPI 53) */
 extern char partab[];
 void ttyopen(dev_t dev, struct tty *tp);
 void ttyclose(struct tty *tp);
@@ -66,10 +65,10 @@ int ttrstrt(struct tty *tp);
 void timeout(int (*fun)(), caddr_t arg, int tim);
 void wakeup(caddr_t chan);
 int getc(struct clist *p);
-int cnstart(struct tty *tp);
-int cnrint(dev_t dev);
-int cnxint(dev_t dev);
-void putchar(char c);			/* defined below */
+int usstart(struct tty *tp);
+int usrint(dev_t dev);
+int usxint(dev_t dev);
+void usputchar(char c);			/* defined below */
 
 /*
  * Bring UART4 up for the console before the first kernel printf: enable its
@@ -85,7 +84,7 @@ void putchar(char c);			/* defined below */
  * register (0x768) leaves the port unclocked so the pin mux silently no-ops.
  */
 void
-cninit(void)
+usinit(void)
 {
 	/* Route UART4 to its pads: PD6 (TX) and PD8 (RX) -> alternate function 8.
 	 * Without this the UART would transmit into a disconnected pin. */
@@ -104,7 +103,7 @@ cninit(void)
 }
 
 int
-cnopen(dev_t dev, int flag)
+usopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
@@ -115,7 +114,7 @@ cnopen(dev_t dev, int flag)
 	}
 	tp = &cons[minor(dev)];
 	tp->t_addr = (caddr_t)UART4;
-	tp->t_oproc = cnstart;
+	tp->t_oproc = usstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
 		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
@@ -127,7 +126,7 @@ cnopen(dev_t dev, int flag)
 }
 
 int
-cnclose(dev_t dev, int flag)
+usclose(dev_t dev, int flag)
 {
 	(void)flag;
 	ttyclose(&cons[minor(dev)]);
@@ -135,14 +134,14 @@ cnclose(dev_t dev, int flag)
 }
 
 int
-cnread(dev_t dev)
+usread(dev_t dev)
 {
 	ttread(&cons[minor(dev)]);
 	return(0);
 }
 
 int
-cnwrite(dev_t dev)
+uswrite(dev_t dev)
 {
 	ttwrite(&cons[minor(dev)]);
 	return(0);
@@ -155,7 +154,7 @@ cnwrite(dev_t dev)
  * the output queue drains.
  */
 int
-cnstart(struct tty *tp)
+usstart(struct tty *tp)
 {
 	register int c;
 
@@ -179,7 +178,7 @@ cnstart(struct tty *tp)
 }
 
 int
-cnxint(dev_t dev)
+usxint(dev_t dev)
 {
 	register struct tty *tp;
 
@@ -191,7 +190,7 @@ cnxint(dev_t dev)
 }
 
 int
-cnrint(dev_t dev)
+usrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
@@ -206,7 +205,7 @@ cnrint(dev_t dev)
 }
 
 int
-cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
 	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
@@ -220,18 +219,17 @@ cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
  * demultiplexing into the receive/transmit halves above.
  */
 int
-cnintr(void)
+usintr(void)
 {
 	unsigned int isr = ISR;
 
 	if (isr & ISR_RXNE)
-		cnrint(0);
+		usrint(0);
 	if ((isr & ISR_TXE) && (CR1 & CR1_TXEIE))
-		cnxint(0);
+		usxint(0);
 	return(0);
 }
 
-char	*msgbufp = msgbuf;	/* next saved printf character */
 
 /*
  * Print a character on the console (cf. kl.c).  Polled with a bounded spin,
@@ -240,7 +238,7 @@ char	*msgbufp = msgbuf;	/* next saved printf character */
  * and from panic context.  The last MSGBUFS characters are saved in msgbuf.
  */
 void
-putchar(char c)
+usputchar(char c)
 {
 	register int timo;
 	unsigned int s;
@@ -260,8 +258,7 @@ putchar(char c)
 	CR1 &= ~CR1_TXEIE;
 	TDR = c;
 	if (c == '\n')
-		putchar('\r');
+		usputchar('\r');
 	CR1 = s;
 }
 
-#endif

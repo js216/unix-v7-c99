@@ -1,0 +1,16 @@
+console us
+rk sd
+root rk 0
+swap rk 0
+swplo 10648
+nswap 872
+ram 2ffe0000 20000
+tables c0000000 20000000
+core c0100000 e0000000
+gic a0021000 a0022000
+pguser 472
+map 2ff00000 30000000 kern
+map c0000000 e0000000 11402
+map 40000000 60000000 dev
+map a0000000 a0100000 dev
+ddr

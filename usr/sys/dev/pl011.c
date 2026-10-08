@@ -17,7 +17,6 @@
 #include "../h/tty.h"
 #include "../h/systm.h"
 
-#ifdef PL011
 
 #define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
 #define	NCONS	1			/* one console line */
@@ -36,9 +35,8 @@
 #define	TXI	0x20		/* interrupt: transmitter */
 #define	RTI	0x40		/* interrupt: receive timeout */
 
-struct	tty cons[NCONS];
-char	*msgbufp = msgbuf;	/* next saved printf character */
-int	cn_irq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
+struct	tty kl11[NCONS];
+int	klirq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
 
 extern char partab[];
 void ttyopen(dev_t dev, struct tty *tp);
@@ -53,23 +51,23 @@ int ttrstrt(struct tty *tp);
 void timeout(int (*fun)(), caddr_t arg, int tim);
 void wakeup(caddr_t chan);
 int getc(struct clist *p);
-int cnstart(struct tty *tp);
-int cnrint(dev_t dev);
-int cnxint(dev_t dev);
+int klstart(struct tty *tp);
+int klrint(dev_t dev);
+int klxint(dev_t dev);
 
 /*
  * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
- * the console needs no hardware setup; cninit() exists only to satisfy the
+ * the console needs no hardware setup; klinit() exists only to satisfy the
  * machine layer's board-agnostic early console-init hook (machine_init), which
  * the MP135 build uses to bring UART4 up from HSI.
  */
 void
-cninit(void)
+klinit(void)
 {
 }
 
 int
-cnopen(dev_t dev, int flag)
+klopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
@@ -78,9 +76,9 @@ cnopen(dev_t dev, int flag)
 		u.u_error = ENXIO;
 		return(0);
 	}
-	tp = &cons[minor(dev)];
+	tp = &kl11[minor(dev)];
 	tp->t_addr = (caddr_t)PL011_BASE;
-	tp->t_oproc = cnstart;
+	tp->t_oproc = klstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
 		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
@@ -93,24 +91,24 @@ cnopen(dev_t dev, int flag)
 }
 
 int
-cnclose(dev_t dev, int flag)
+klclose(dev_t dev, int flag)
 {
 	(void)flag;
-	ttyclose(&cons[minor(dev)]);
+	ttyclose(&kl11[minor(dev)]);
 	return(0);
 }
 
 int
-cnread(dev_t dev)
+klread(dev_t dev)
 {
-	ttread(&cons[minor(dev)]);
+	ttread(&kl11[minor(dev)]);
 	return(0);
 }
 
 int
-cnwrite(dev_t dev)
+klwrite(dev_t dev)
 {
-	ttwrite(&cons[minor(dev)]);
+	ttwrite(&kl11[minor(dev)]);
 	return(0);
 }
 
@@ -121,7 +119,7 @@ cnwrite(dev_t dev)
  * level-sensitive, so it is masked whenever the output queue drains.
  */
 int
-cnstart(struct tty *tp)
+klstart(struct tty *tp)
 {
 	register int c;
 
@@ -145,11 +143,11 @@ cnstart(struct tty *tp)
 }
 
 int
-cnxint(dev_t dev)
+klxint(dev_t dev)
 {
 	register struct tty *tp;
 
-	tp = &cons[minor(dev)];
+	tp = &kl11[minor(dev)];
 	ttstart(tp);
 	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
 		wakeup((caddr_t)&tp->t_outq);
@@ -157,12 +155,12 @@ cnxint(dev_t dev)
 }
 
 int
-cnrint(dev_t dev)
+klrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
 
-	tp = &cons[minor(dev)];
+	tp = &kl11[minor(dev)];
 	while ((UARTFR & RXFE) == 0) {
 		c = UARTDR;
 		ttyinput(c, tp);
@@ -171,10 +169,10 @@ cnrint(dev_t dev)
 }
 
 int
-cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
-	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
+	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
 		u.u_error = ENOTTY;
 	return(0);
 }
@@ -185,18 +183,18 @@ cnioctl(dev_t dev, int cmd, caddr_t addr, int flag)
  * service, demultiplexing into the receive/transmit halves above.
  */
 int
-cnintr(void)
+klintr(void)
 {
 	register unsigned int mis;
 
 	mis = UARTMIS;
 	if (mis & (RXI|RTI)) {
 		UARTICR = RXI|RTI;
-		cnrint(0);
+		klrint(0);
 	}
 	if (mis & TXI) {
 		UARTICR = TXI;
-		cnxint(0);
+		klxint(0);
 	}
 	return(0);
 }
@@ -211,7 +209,7 @@ cnintr(void)
  * inter-character rubout padding have no PL011 equivalent and are dropped.
  */
 void
-putchar(char c)
+klputchar(char c)
 {
 	register int timo;
 	unsigned int s;
@@ -231,8 +229,7 @@ putchar(char c)
 	UARTIMSC &= ~TXI;
 	UARTDR = c;
 	if (c == '\n')
-		putchar('\r');
+		klputchar('\r');
 	UARTIMSC = s;
 }
 
-#endif

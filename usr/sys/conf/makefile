@@ -1,5 +1,5 @@
-unix:	low.o mch.o conf.o qemu.o mp135.o ../sys/LIB1 ../dev/LIB2
-	$(CC) -nostdlib -T $(LDSCRIPT) -o unix low.o mch.o conf.o qemu.o mp135.o ../sys/LIB1 ../dev/LIB2
+unix:	low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
+	$(CC) -nostdlib -T unix.ld -o unix low.o mch.o c.o ../sys/LIB1 ../dev/LIB2
 
 all:
 	cd ../sys && $(CC) -c $(CFLAGS) *.c && sh mklib && rm *.o
@@ -9,21 +9,9 @@ mch.o:	mch.s
 	$(AS) $(ASFLAGS) -o mch.o mch.s
 
 allsystems:
-	mkconf <hphtconf
+	./mkconf <qemuconf
 	make unix
-	mv unix hphtunix
-	mkconf <hptmconf
+	mv unix qemuunix
+	./mkconf <mp135conf
 	make unix
-	mv unix hptmunix
-	mkconf <rptmconf
-	make unix
-	mv unix rptmunix
-	mkconf <rphtconf
-	make unix
-	mv unix rphtunix
-	mkconf <rktmconf
-	make unix
-	mv unix rktmunix
-	mkconf <rkhtconf
-	make unix
-	mv unix rkhtunix
+	mv unix mp135unix

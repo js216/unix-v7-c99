@@ -16,8 +16,6 @@ boot/unix
 boot/unix.bin
 boot/unix.stm32
 boot/unix.tsv
-boot/.kflags
-boot/.uflags
 boot/rootfs.img
 boot/rootfs.img.tmp
 bin/
@@ -78,3 +76,8 @@ usr/src/cmd/tar/tar
 usr/src/cmd/tp/tp
 LIB1
 LIB2
+usr/sys/conf/c.c
+usr/sys/conf/unix.ld
+usr/sys/conf/qemuunix
+usr/sys/conf/mp135unix
+usr/sys/conf/mkconf

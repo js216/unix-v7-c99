@@ -35,15 +35,9 @@ unsigned int l1[4096] __attribute__((aligned(16384), section(KTABLES_SECTION)));
 unsigned int user_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
 unsigned int uarea_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
 extern char __ddrbss_start[], __ddrbss_end[];	/* zeroed in machine_init */
+char	*msgbufp = msgbuf;	/* next saved printf character */
 
 #define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
-
-/*
- * Board-resolved constant that resume() (mch.s) needs but cannot reach: the
- * assembler is not run through cpp, so it loads COREBASE from memory instead
- * of the param.h macro.  It resolves here to the current board's value.
- */
-unsigned int corebase = COREBASE;	/* physical base of the user core window */
 
 /*
  * Called from _start (conf/low.s) before switching to the u-area stack.
@@ -343,7 +337,8 @@ void startup(void)
 
 	n = (int)(NCLICK - (64 + USIZE));
 	mfree(coremap, n, 64 + USIZE);
-	mfree(swapmap, 8192, 1);
+	mfree(swapmap, nswap, 1);
+	swplo--;
 	printf("mem = %D\n", ctob((long)n));
 	/*
 	 * A process image is bounded by the 1 MB user MMU window, not by

@@ -5,6 +5,7 @@ stm32usart.o \
 mem.o \
 partab.o \
 stm32sd.o \
+stm32ddr.o \
 virtio_blk.o \
 sys.o \
 tty.o

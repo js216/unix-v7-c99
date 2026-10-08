@@ -45,3 +45,12 @@ extern struct linesw
 	int	(*l_start)();
 	int	(*l_modem)();
 } linesw[];
+
+/*
+ * Device interrupts: GIC interrupt number (set by the driver) and handler.
+ */
+struct intr
+{
+	int	*i_irq;
+	int	(*i_fn)();
+};

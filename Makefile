@@ -7,41 +7,33 @@ CC = $(CROSS_COMPILE)gcc
 AS = $(CROSS_COMPILE)as
 HOSTCC = arm-linux-gnueabihf-gcc
 
-KFEATURES ?= -DQEMU -DPL011 -DVIRTIO
-KLDSCRIPT ?= arm_qemu.ld
-
 CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Wl,-N,-Ttext=0x10
 
 LIBC = usr/src/libc/libc.a
 CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 
-MKFS_CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
+HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
 	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
-
-# The flags each half is built with, rewritten only when they change, so
-# that switching boards or flags rebuilds exactly what they affect.
-KSTAMP = boot/.kflags
-USTAMP = boot/.uflags
-STAMP = echo '$(1)' | cmp -s - $@ || echo '$(1)' > $@
 
 all: boot/unix boot/rootfs.img
 
-$(KSTAMP): force | boot
-	@$(call STAMP,$(CC) $(CFLAGS) $(KFEATURES) $(KLDSCRIPT))
+# Kernels: like v7, conf/makefile recompiles all of sys and dev (about 2 s)
+# and builds one kernel per configuration file, mkconf making each c.c.
 
-$(USTAMP): force | boot
-	@$(call STAMP,$(CC) $(CFLAGS))
+KERNELS = usr/sys/conf/qemuunix usr/sys/conf/mp135unix
 
-# Kernel: like v7, conf/makefile recompiles all of sys and dev (about 2 s).
+$(KERNELS) &: usr/sys/conf/mkconf usr/sys/conf/qemuconf usr/sys/conf/mp135conf \
+	    $(filter-out usr/sys/conf/c.c,$(wildcard usr/sys/*/*.[chs])) \
+	    usr/sys/sys/mklib usr/sys/dev/mklib usr/sys/conf/makefile Makefile
+	$(MAKE) -C usr/sys/conf all allsystems CC="$(CC)" AS="$(AS)" \
+	    CFLAGS="$(CFLAGS)" ASFLAGS=-mcpu=cortex-a7
 
-boot/unix: $(KSTAMP) $(wildcard usr/sys/*/*.[chs] usr/sys/*/mklib) \
-	    usr/sys/conf/makefile usr/sys/conf/$(KLDSCRIPT) | boot
-	rm -f usr/sys/conf/*.o
-	$(MAKE) -C usr/sys/conf all unix CC="$(CC)" AS="$(AS)" \
-	    CFLAGS="$(CFLAGS) $(KFEATURES)" ASFLAGS=-mcpu=cortex-a7 \
-	    LDSCRIPT=$(KLDSCRIPT)
-	cp usr/sys/conf/unix $@
+usr/sys/conf/mkconf: usr/sys/conf/mkconf.c
+	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
+
+boot/unix: usr/sys/conf/qemuunix | boot
+	cp $< $@
 
 qemu: boot/unix boot/rootfs.img
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic \
@@ -50,7 +42,7 @@ qemu: boot/unix boot/rootfs.img
 
 # Libc
 
-$(LIBC) $(CRT): $(USTAMP) $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
+$(LIBC) $(CRT): Makefile $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
 	    usr/include/*.h usr/include/sys/*.h) usr/src/libc/compall usr/src/libc/mklib
 	cd usr/src/libc && rm -f *.o libc.a && \
 	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include -I../.." sh -e compall && \
@@ -96,15 +88,23 @@ ROOT = $(ROOT_BUILT) \
 
 DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 
-bin/% etc/% usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
+bin/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 	$(CMAKE) $(<F)
 	test $@ -nt $<
 
-bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
+etc/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 	$(CMAKE) $(<F)
 	test $@ -nt $<
 
-usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) $(USTAMP) | $(DIRS)
+usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
+	$(CMAKE) $(<F)
+	test $@ -nt $<
+
+bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) Makefile | $(DIRS)
+	$(CMAKE) $(<F)
+	test $@ -nt $<
+
+usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 	$(CC) $(CFLAGS) -Iusr/include -Iusr/src -s -o $@ \
 	    $(CRT) $< -Lusr/src/libc -lc -lgcc
 
@@ -115,8 +115,8 @@ SUBDIR_LDLIBS = -L../../libc -lc -lgcc
 bin/awk: SUBDIR_CFLAGS_EXTRA = -DYYSTACK_USE_ALLOCA=1 -Dmalloc=malloc -Dfree=free -I.
 bin/awk: SUBDIR_LDLIBS = -L../../libc -lm -lc -lgcc
 
-$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) $(USTAMP) | bin
-	cd usr/src/cmd/$* && { test $* -nt ../../../$(USTAMP) || rm -f *.o; } && \
+$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) Makefile | bin
+	cd usr/src/cmd/$* && { test $* -nt ../../../Makefile || rm -f *.o; } && \
 	    { test $* -nt ../../libc/libc.a || rm -f $*; }
 	$(MAKE) -C usr/src/cmd/$* CC="$(CC)" \
 	    CFLAGS="$(CFLAGS) -I../../../include -I../.. $(SUBDIR_CFLAGS_EXTRA)" \
@@ -129,8 +129,8 @@ $(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) $(USTAMP) | bin
 boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
 	    V7_MKFS_TIME=0 etc/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
-	    { read _; read fsize _; } < boot/rootfs.proto; \
-	    truncate -s "$$((fsize * 512))" boot/rootfs.img.tmp; \
+	    size=$$(awk '/^(swplo|nswap) /{n+=$$2} END{print n}' usr/sys/conf/qemuconf); \
+	    truncate -s "$$((size * 512))" boot/rootfs.img.tmp; \
 	    mv boot/rootfs.img.tmp boot/rootfs.img
 
 etc/mkfs: usr/src/cmd/mkfs.c | etc
@@ -138,7 +138,7 @@ etc/mkfs: usr/src/cmd/mkfs.c | etc
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
 	    mkdir -p "$$tmpinc"; \
 	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
-	    $(HOSTCC) $(MKFS_CFLAGS) -I"$$tmpinc" -o $@ $<
+	    $(HOSTCC) $(HOSTCFLAGS) -I"$$tmpinc" -o $@ $<
 
 .PHONY: all clean force qemu
 .PRECIOUS: $(ROOT)
@@ -154,8 +154,9 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 $(filter etc/%,$(ROOTFS_STATIC)): ;
 
 clean:
-	rm -f usr/sys/conf/*.o usr/sys/conf/unix usr/sys/sys/LIB1 usr/sys/dev/LIB2
-	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp $(KSTAMP) $(USTAMP)
+	rm -f usr/sys/conf/*.o usr/sys/conf/c.c usr/sys/conf/unix.ld usr/sys/conf/mkconf
+	rm -f $(KERNELS) usr/sys/sys/LIB1 usr/sys/dev/LIB2
+	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp
 	rm -f etc/mkfs usr/src/libc/*.o $(LIBC)
 	for d in sed sh dc tar tp; do rm -f usr/src/cmd/$$d/$$d usr/src/cmd/$$d/*.o; done
 	$(MAKE) -C usr/src/cmd/awk clean

@@ -2,10 +2,10 @@
  *   STM32 SDMMC block driver (SDMMC1 on the MP135 board)
  *
  * The bulk-storage block device.  Same async, interrupt-driven, queued model
- * as rk.c / virtio_blk.c: bdstrategy() puts the buffer on bdtab and kicks the
- * controller via bdstart(); bdstart() programs one SD block transfer through
+ * as rk.c / virtio_blk.c: sdstrategy() puts the buffer on sdtab and kicks the
+ * controller via sdstart(); sdstart() programs one SD block transfer through
  * the SDMMC internal DMA and returns; the transfer-complete interrupt
- * (bdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
+ * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
  * sleeps on the buffer until then.  This file is built only for the MP135
  * board (the QEMU build links virtio_blk.c instead).
  */
@@ -13,7 +13,6 @@
 #include "../h/buf.h"
 #include "../h/seg.h"
 
-#ifdef STM32SD
 
 void panic(char *s);
 void dmbsy(void);
@@ -22,6 +21,7 @@ void deverror(struct buf *bp, int o1, int o2);
 void dcflush(unsigned int addr, unsigned int n);	/* clean+invalidate D-cache (mch.s) */
 int intr_disable(void);
 void intr_restore(int s);
+void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 
 extern int	dk_busy;
 extern long	dk_numb[3];
@@ -93,12 +93,12 @@ extern long	dk_wds[3];
 #define	OCR_HCS		0x40000000U	/* host supports high capacity */
 #define	OCR_VOLT	0x00ff8000U	/* 2.7-3.6 V window */
 
-int	bd_irq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
-struct buf bdtab;
+int	sdirq = 82;		/* GIC INTID of SDMMC1 (SPI 50) */
+struct buf sdtab;
 static unsigned int sd_rca;	/* card relative address (<<16 for commands) */
 static int sd_hc;		/* 1 = high-capacity (block addressing) */
-static struct buf *bd_cur;
-static int bd_retry;
+static struct buf *sd_cur;
+static int sd_retry;
 
 #define	SD_RETRIES	3
 
@@ -149,7 +149,7 @@ sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
  * data path, and dcflush coherency against a real card on the PCB.
  */
 void
-bdinit(void)
+sdinit(void)
 {
 	register int timo;
 	unsigned int ocr;
@@ -187,8 +187,8 @@ bdinit(void)
 	sd_cmd(SEND_CSD, sd_rca, CMD_WAITRESP_LONG, 0);
 	sd_cmd(SEL_CARD, sd_rca, CMD_WAITRESP_SHORT, 0);
 	sd_cmd(SET_BLOCKLEN, 512, CMD_WAITRESP_SHORT, 0);	/* SDSC needs this; SDHC ignores */
-	bdtab.b_actf = NULL;
-	bdtab.b_active = 0;
+	sdtab.b_actf = NULL;
+	sdtab.b_active = 0;
 }
 
 /*
@@ -196,20 +196,20 @@ bdinit(void)
  * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
  */
 static void
-bdstart(void)
+sdstart(void)
 {
 	register struct buf *bp;
 	unsigned int blk;
 
-	if ((bp = bdtab.b_actf) == NULL)
+	if ((bp = sdtab.b_actf) == NULL)
 		return;
-	if (bdtab.b_active)
+	if (sdtab.b_active)
 		return;
-	if (bp != bd_cur) {
-		bd_cur = bp;
-		bd_retry = 0;
+	if (bp != sd_cur) {
+		sd_cur = bp;
+		sd_retry = 0;
 	}
-	bdtab.b_active++;
+	sdtab.b_active++;
 	blk = sd_hc ? (unsigned int)bp->b_blkno : (unsigned int)bp->b_blkno*512;
 	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 	SD(ICR) = STA_STATIC;
@@ -233,21 +233,21 @@ bdstart(void)
 }
 
 int
-bdstrategy(struct buf *bp)
+sdstrategy(struct buf *bp)
 {
 	int s, idle;
 
 	bp->av_forw = NULL;
 	s = intr_disable();
-	if (bdtab.b_actf == NULL)
-		bdtab.b_actf = bp;
+	if (sdtab.b_actf == NULL)
+		sdtab.b_actf = bp;
 	else
-		bdtab.b_actl->av_forw = bp;
-	bdtab.b_actl = bp;
-	idle = (bdtab.b_active == 0);
+		sdtab.b_actl->av_forw = bp;
+	sdtab.b_actl = bp;
+	idle = (sdtab.b_active == 0);
 	intr_restore(s);
 	if (idle)
-		bdstart();
+		sdstart();
 	return(0);
 }
 
@@ -256,7 +256,7 @@ bdstrategy(struct buf *bp)
  * (cf. rkintr.)
  */
 int
-bdintr(void)
+sdintr(void)
 {
 	register struct buf *bp;
 	unsigned int sta;
@@ -265,27 +265,45 @@ bdintr(void)
 	SD(ICR) = STA_STATIC;
 	SD(MASK) = 0;
 	SD(IDMACTRL) = 0;
-	if (bdtab.b_active == 0)
+	if (sdtab.b_active == 0)
 		return(0);
 	dk_busy &= ~1;
-	bp = bdtab.b_actf;
-	bdtab.b_active = 0;
+	bp = sdtab.b_actf;
+	sdtab.b_active = 0;
 	if (sta & STA_DATERR) {
-		if (bd_retry++ < SD_RETRIES) {
-			bdstart();
+		if (sd_retry++ < SD_RETRIES) {
+			sdstart();
 			return(0);
 		}
 		deverror(bp, (int)sta, 0);
 		bp->b_flags |= B_ERROR;
 	} else if (bp->b_flags & B_READ)
 		dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
-	bd_cur = NULL;
-	bd_retry = 0;
-	bdtab.b_actf = bp->av_forw;
+	sd_cur = NULL;
+	sd_retry = 0;
+	sdtab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);
-	bdstart();
+	sdstart();
 	return(0);
 }
 
-#endif
+struct	buf	rsdbuf;
+
+int
+sdread(dev)
+dev_t dev;
+{
+
+	physio(sdstrategy, &rsdbuf, dev, B_READ);
+	return(0);
+}
+
+int
+sdwrite(dev)
+dev_t dev;
+{
+
+	physio(sdstrategy, &rsdbuf, dev, B_WRITE);
+	return(0);
+}

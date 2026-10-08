@@ -82,9 +82,7 @@
 #define	NSHIFT	7		/* LOG2(NINDIR) */
 #define	USIZE	256		/* size of user block (*64): 16KB u-area+kstack */
 #define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
-#ifndef NULL
 #define	NULL	0
-#endif
 #define	CMASK	0		/* default mask for file creation */
 #define	NODEV	(dev_t)(-1)
 #define	ROOTINO	((ino_t)2)	/* i number of all roots */
@@ -146,25 +144,15 @@ typedef	long		off_t;
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
 
 /*
- * Board memory map: physical RAM base, user core window,
- * section for the big tables, user page attributes, GIC.
+ * Board memory map, set in c.c from the configuration file:
+ * kernel RAM base, user core window, user page attributes, GIC.
+ * The big tables go in .ddrbss, which the linker script places.
  */
-#ifdef QEMU
-#define	KERNBASE	0x40000000U	/* RAM base */
-#define	MEMSIZE		0x08000000U	/* 128 MB, match qemu -m */
-#define	COREBASE	0x44000000U
-#define	CORETOP		(KERNBASE + MEMSIZE)
-#define	KTABLES_SECTION	".bss"
-#define	PG_USER		0x0000047eU	/* cached, as is the core window */
-#define	GIC_DIST_BASE	0x08000000U
-#define	GIC_CPU_BASE	0x08010000U
-#endif
-#ifdef MP135
-#define	KERNBASE	0x2FFE0000U	/* 128 KB SYSRAM */
-#define	COREBASE	0xC0100000U	/* DDR, above .ddrbss */
-#define	CORETOP		0xE0000000U
-#define	KTABLES_SECTION	".ddrbss"	/* too big for SYSRAM */
-#define	PG_USER		0x00000472U	/* uncached: SDMMC IDMA is not coherent */
-#define	GIC_DIST_BASE	0xA0021000U
-#define	GIC_CPU_BASE	0xA0022000U
-#endif
+extern unsigned int kernbase, corebase, coretop, pguser, gicdbase, giccbase;
+#define	KERNBASE	kernbase
+#define	COREBASE	corebase
+#define	CORETOP		coretop
+#define	PG_USER		pguser
+#define	GIC_DIST_BASE	gicdbase
+#define	GIC_CPU_BASE	giccbase
+#define	KTABLES_SECTION	".ddrbss"

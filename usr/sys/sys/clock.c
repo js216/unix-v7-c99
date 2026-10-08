@@ -5,6 +5,7 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
+#include "../h/conf.h"
 extern void addupc(caddr_t pc, void *prof, int inc);
 int intr_disable(void);
 void intr_restore(int s);
@@ -198,10 +199,7 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
-extern int cnintr(void);	/* console interrupt (board console driver) */
-extern int cn_irq;		/* console GIC INTID, set by the console driver */
-extern int bdintr(void);	/* block-device interrupt (board block driver) */
-extern int bd_irq;		/* block-device GIC INTID, set by the driver */
+extern struct intr intrtab[];	/* configured device interrupts (c.c) */
 static unsigned int timer_reload;
 int irq_ready;
 caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
@@ -225,44 +223,33 @@ clock_irq_handler(int *tf)
 		if(u.u_procp != NULL)
 			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
 			    usermode ? 0xf000 : 0);
-	} else if(cn_irq && intid == (unsigned int)cn_irq)
-		cnintr();
-	else if(bd_irq && intid == (unsigned int)bd_irq)
-		bdintr();
+	} else {
+		register struct intr *ip;
+		for(ip = intrtab; ip->i_irq; ip++)
+			if(*ip->i_irq && intid == (unsigned int)*ip->i_irq)
+				(*ip->i_fn)();
+	}
 	GICC_EOIR = iar;
+}
+static void
+gicen(int irq)
+{
+	unsigned int r = irq / 4, o = (irq % 4) * 8;
+	GICD_IPRIORITYR(r) = (GICD_IPRIORITYR(r) & ~(0xffU << o)) | (0x80U << o);
+	GICD_ISENABLER(irq / 32) = 1U << (irq % 32);
 }
 void
 clkstart(void)
 {
-	unsigned int freq, prio_reg, prio_off, prio_val;
+	register struct intr *ip;
+	unsigned int freq;
 	freq = cntfrq_get();
 	if(freq == 0) freq = 62500000U;
 	timer_reload = freq / TIMER_HZ;
-	prio_reg = TIMER_IRQ / 4;
-	prio_off = (TIMER_IRQ % 4) * 8;
-	prio_val = GICD_IPRIORITYR(prio_reg);
-	prio_val &= ~(0xffU << prio_off);
-	prio_val |=  (0x80U << prio_off);
-	GICD_IPRIORITYR(prio_reg) = prio_val;
-	GICD_ISENABLER(TIMER_IRQ / 32) = 1U << (TIMER_IRQ % 32);
-	if(cn_irq) {
-		prio_reg = cn_irq / 4;
-		prio_off = (cn_irq % 4) * 8;
-		prio_val = GICD_IPRIORITYR(prio_reg);
-		prio_val &= ~(0xffU << prio_off);
-		prio_val |=  (0x80U << prio_off);
-		GICD_IPRIORITYR(prio_reg) = prio_val;
-		GICD_ISENABLER(cn_irq / 32) = 1U << (cn_irq % 32);
-	}
-	if(bd_irq) {
-		prio_reg = bd_irq / 4;
-		prio_off = (bd_irq % 4) * 8;
-		prio_val = GICD_IPRIORITYR(prio_reg);
-		prio_val &= ~(0xffU << prio_off);
-		prio_val |=  (0x80U << prio_off);
-		GICD_IPRIORITYR(prio_reg) = prio_val;
-		GICD_ISENABLER(bd_irq / 32) = 1U << (bd_irq % 32);
-	}
+	gicen(TIMER_IRQ);
+	for(ip = intrtab; ip->i_irq; ip++)
+		if(*ip->i_irq)
+			gicen(*ip->i_irq);
 	GICD_CTLR = 1;
 	GICC_PMR  = 0xff;
 	GICC_CTLR = 1;
