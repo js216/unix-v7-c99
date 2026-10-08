@@ -704,7 +704,7 @@ checksum(void)
 		*cp = ' ';
 	i = 0;
 	for (cp = dblock.dummy; cp < &dblock.dummy[TBLOCK]; cp++)
-		i += *cp;
+		i += (signed char)*cp;
 	return(i);
 }
 
