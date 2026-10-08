@@ -7,8 +7,9 @@ long	lseek(int, long, int);
 #define	ELF_NIDENT	16
 #define	ELFMAG0		0177
 #define	SHT_SYMTAB	2
-#define	SHF_WRITE	1
+#define	SHT_NOBITS	8
 #define	SHF_EXECINSTR	4
+#define	SHN_ABS		0xfff1
 struct elfhdr {
 	unsigned char	e_ident[ELF_NIDENT];
 	unsigned short	e_type;
@@ -58,38 +59,21 @@ readn(int fd, char *buf, int n)
 	}
 	return(total);
 }
-static int
-readstr(int fd, char *buf, int n)
-{
-	int nr, total;
-	char c;
-	total = 0;
-	while(total < n - 1) {
-		nr = read(fd, &c, 1);
-		if(nr <= 0)
-			break;
-		buf[total++] = c;
-		if(c == '\0')
-			return(total);
-	}
-	buf[total] = '\0';
-	return(total);
-}
 int
 nlist(char *name, struct nlist *list)
 {
 	struct nlist *p;
 	struct elfhdr eh;
 	struct elfshdr sh;
-	struct elfsym sym;
-	char strbuf[64];
+	struct elfsym syms[64], *sym;
+	char strbuf[10];
 	char nb[9];
 	char *sn;
-	int f, i, j, k, nsyms;
+	int f, i, j, k, n, nsyms;
 	int matched;
-	unsigned int symoff, symsz, symesz;
+	unsigned int symoff, symsz;
 	unsigned int stroff;
-	unsigned int secflags[64];
+	int sectype[64];
 
 	for(p = list; p->n_name[0]; p++) {
 		p->n_type = 0;
@@ -106,7 +90,6 @@ nlist(char *name, struct nlist *list)
 	}
 	symoff = 0;
 	symsz = 0;
-	symesz = sizeof(sym);
 	stroff = 0;
 
 	for(i = 0; i < eh.e_shnum && i < 64; i++) {
@@ -115,12 +98,15 @@ nlist(char *name, struct nlist *list)
 			close(f);
 			return(-1);
 		}
-		secflags[i] = sh.sh_flags;
+		if(sh.sh_flags & SHF_EXECINSTR)
+			sectype[i] = N_TEXT;
+		else if(sh.sh_type == SHT_NOBITS)
+			sectype[i] = N_BSS;
+		else
+			sectype[i] = N_DATA;
 		if(sh.sh_type == SHT_SYMTAB) {
 			symoff = sh.sh_offset;
 			symsz = sh.sh_size;
-			if(sh.sh_entsize)
-				symesz = sh.sh_entsize;
 			lseek(f, (long)(eh.e_shoff + sh.sh_link * eh.e_shentsize), 0);
 			if(readn(f, (char *)&sh, sizeof(sh)) != sizeof(sh)) {
 				close(f);
@@ -133,21 +119,27 @@ nlist(char *name, struct nlist *list)
 		close(f);
 		return(-1);
 	}
-	nsyms = (int)(symsz / symesz);
+	nsyms = (int)(symsz / sizeof(syms[0]));
 	for(i = 0; i < nsyms; i++) {
-		lseek(f, (long)(symoff + i * symesz), 0);
-		if(readn(f, (char *)&sym, sizeof(sym)) != sizeof(sym)) {
-			close(f);
-			return(-1);
+		if(i % 64 == 0) {
+			n = nsyms - i < 64 ? nsyms - i : 64;
+			n *= sizeof(syms[0]);
+			lseek(f, (long)(symoff + i * sizeof(syms[0])), 0);
+			if(readn(f, (char *)syms, n) != n) {
+				close(f);
+				return(-1);
+			}
 		}
-		if(sym.st_name == 0)
+		sym = &syms[i % 64];
+		if(sym->st_name == 0)
 			continue;
-		lseek(f, (long)(stroff + sym.st_name), 0);
-		k = readstr(f, strbuf, sizeof(strbuf));
+		lseek(f, (long)(stroff + sym->st_name), 0);
+		k = readn(f, strbuf, 9);
 		if(k <= 0) {
 			close(f);
 			return(-1);
 		}
+		strbuf[k] = '\0';
 		for(p = list; p->n_name[0]; p++) {
 			for(j = 0; j < 8; j++)
 				nb[j] = p->n_name[j];
@@ -163,15 +155,15 @@ nlist(char *name, struct nlist *list)
 				}
 			if(!matched || strbuf[j] != '\0')
 				continue;
-			p->n_value = sym.st_value;
-			if(sym.st_shndx == 0 || sym.st_shndx >= 64)
+			p->n_value = sym->st_value;
+			if(sym->st_shndx == SHN_ABS)
+				p->n_type = N_ABS;
+			else if(sym->st_shndx == 0 || sym->st_shndx >= 64)
 				p->n_type = N_UNDF;
-			else if(secflags[sym.st_shndx] & SHF_EXECINSTR)
-				p->n_type = N_TEXT | N_EXT;
-			else if(secflags[sym.st_shndx] & SHF_WRITE)
-				p->n_type = N_DATA | N_EXT;
 			else
-				p->n_type = N_BSS | N_EXT;
+				p->n_type = sectype[sym->st_shndx];
+			if(sym->st_info >> 4)
+				p->n_type |= N_EXT;
 		}
 	}
 	close(f);
