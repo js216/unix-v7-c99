@@ -45,6 +45,7 @@ void psignal(struct proc *p, int sig);
 int newproc(void);
 void copyseg(int from, int to);
 void arm_sync_icache(void);
+void install_sigtramp(void);
 void readi(struct inode *ip);
 void iput(struct inode *ip);
 int access(struct inode *ip, int mode);
@@ -344,6 +345,7 @@ getxfile(register struct inode *ip, int nargc)
 			goto bad;
 	}
 	u.u_exdata.ux_entloc = eh.e_entry;
+	install_sigtramp();
 	arm_sync_icache();
 bad:
 	return(0);

@@ -294,13 +294,16 @@ int	icode[] =
 };
 int	szicode = sizeof(icode);
 
+/*
+ * Put the signal trampoline (UENTRY_SIGTRAMP, below the
+ * program) in a newly exec'd image.  sendsig points the
+ * handler's lr at it; it makes the sigreturn call.
+ */
 void
-install_sigtramp(char *base)
+install_sigtramp(void)
 {
-	volatile unsigned int *t = (volatile unsigned int *)(base + UENTRY_SIGTRAMP);
-
-	t[0] = 0xe3a0703fU;	/* mov r7, #63 (sigreturn) */
-	t[1] = 0xef000000U;	/* svc #0 */
+	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
+	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
 }
 
 void

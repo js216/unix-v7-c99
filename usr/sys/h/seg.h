@@ -17,7 +17,7 @@
 #define USTACK		0x000f0000U
 #define UARGV		0x0000f000U
 #define UARGLEN		3072
-#define UENTRY_SIGTRAMP	0x0000fe00U
+#define UENTRY_SIGTRAMP	0x00000008U	/* below UENTRY, never loaded */
 /*
  * Physical core window.  The kernel maps KERNBASE..CORETOP as 1 MB
  * sections (PA==VA), so all of physical core below CORETOP is directly
