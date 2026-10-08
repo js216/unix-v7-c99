@@ -30,7 +30,7 @@ int wordflag = NO;
 int inmacro = NO;
 int intable = NO;
 
-char chars[128];  /* SPECIAL, APOS, DIGIT, or LETTER */
+char chars[256];  /* SPECIAL, APOS, DIGIT, or LETTER */
 
 char line[512];
 char *lp;
