@@ -167,7 +167,7 @@ virtio_start(void)
 	vmmios(0x50, 0);		/* QueueNotify */
 	dk_busy |= 1;
 	dk_numb[0]++;
-	dk_wds[0] += bp->b_bcount / 2;
+	dk_wds[0] += bp->b_bcount>>6;
 }
 
 /*

@@ -157,7 +157,7 @@ sdstart(void)
 	    CMD_WAITRESP_SHORT, 1);
 	dk_busy |= 1;
 	dk_numb[0]++;
-	dk_wds[0] += bp->b_bcount / 2;
+	dk_wds[0] += bp->b_bcount>>6;
 }
 
 int

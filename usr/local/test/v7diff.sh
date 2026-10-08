@@ -24524,7 +24524,7 @@ usr/local
 +	    CMD_WAITRESP_SHORT, 1);
 +	dk_busy |= 1;
 +	dk_numb[0]++;
-+	dk_wds[0] += bp->b_bcount / 2;
++	dk_wds[0] += bp->b_bcount>>6;
 @@ -68 +163,2 @@
 -rkstart()
 +int
@@ -25520,7 +25520,7 @@ usr/local
 +	vmmios(0x50, 0);		/* QueueNotify */
 +	dk_busy |= 1;
 +	dk_numb[0]++;
-+	dk_wds[0] += bp->b_bcount / 2;
++	dk_wds[0] += bp->b_bcount>>6;
 @@ -96 +173,30 @@
 -rkintr()
 +/*
