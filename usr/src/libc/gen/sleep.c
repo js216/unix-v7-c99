@@ -10,8 +10,8 @@ extern int pause(void);
 unsigned
 sleep(volatile unsigned n)
 {
-	unsigned altime;
-	int alsig = SIG_DFL;
+	volatile unsigned altime;
+	volatile int alsig = SIG_DFL;
 
 	if (n==0)
 		return(0);
