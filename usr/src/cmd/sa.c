@@ -1,20 +1,10 @@
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/acct.h>
 #include <signal.h>
 #include <pwd.h>
 
-struct	acct {
-	char	ac_comm[10];
-	char	ac_pad[2];
-	long	ac_utime;
-	long	ac_stime;
-	long	ac_etime;
-	time_t	ac_btime;
-	short	ac_uid;
-	short	ac_gid;
-	short	ac_mem;
-	short	ac_io;
-};
+/* interpret command time accounting */
 
 #define	size 	1000
 #define	NC	sizeof(acctbuf.ac_comm)
@@ -56,7 +46,6 @@ int	junkp = -1;
 char	*sname;
 float	ncom;
 
-extern int acct(char *);
 time_t expand(unsigned t);
 int tcmp(struct tab *p1, struct tab *p2);
 int ncmp(struct tab *p1, struct tab *p2);
@@ -154,8 +143,6 @@ main(int argc, char **argv)
 			break;
 		}
 	}
-	(void)acct((char *)0);
-	(void)acct("/usr/adm/acct");
 	if (iflg==0)
 		init();
 	if (argc<2)
@@ -319,7 +306,7 @@ doacct(char *f)
 				*cp = '?';
 			}
 		}
-		if (0) {
+		if (fbuf.ac_flag&AFORK) {
 			for (cp=fbuf.ac_comm; cp < &fbuf.ac_comm[NC]; cp++)
 				if (*cp==0) {
 					*cp = '*';
