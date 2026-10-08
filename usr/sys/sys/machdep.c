@@ -250,61 +250,52 @@ void restfp(void *p)
 }
 
 /*
- * /dev/mem,/dev/kmem core read.  ps(1) and friends address two kinds of
+ * /dev/mem,/dev/kmem core access.  ps(1) and friends address two kinds of
  * thing through /dev/mem: kernel symbols resolved from the namelist (true
  * kernel virtual addresses, KERNBASE and up) and per-process u-areas as a
  * bare click offset `p_addr<<6` (V7 assumed core began at physical 0).
  * The kernel image and physical core window are identity-mapped, so a VA
- * at or above KERNBASE is read directly; a smaller value is a core-relative
+ * at or above KERNBASE is used directly; a smaller value is a core-relative
  * click offset and is biased by COREBASE to reach the real backing page.
  */
 #define KMSGBASE	0x7fff0000U
 
-static int mem_range_ok(unsigned int off, unsigned int n)
+static char *
+memaddr(unsigned int off)
 {
-	unsigned int end;
+	static unsigned int msgidx;
 
-	if(n == 0)
-		return(1);
-	end = off + n;
-	if(end < off)
-		return(0);
-	if(off >= KERNBASE && end <= (unsigned int)__bss_end)
-		return(1);
-	if(off >= (unsigned int)__ddrbss_start && end <= (unsigned int)__ddrbss_end)
-		return(1);
-	if(off >= COREBASE && end <= CORETOP)
-		return(1);
-	return(0);
-}
-
-int arm_mem_read(unsigned int off, char *buf, unsigned int n)
-{
-	char *s;
-	unsigned int i;
-	unsigned int msgoff, msgidx;
-
-	if(off >= KMSGBASE && off < KMSGBASE + sizeof(unsigned int) + MSGBUFS) {
-		msgoff = off - KMSGBASE;
+	if(off >= KMSGBASE && off < KMSGBASE + sizeof(msgidx) + MSGBUFS) {
+		off -= KMSGBASE;
 		msgidx = (unsigned int)(msgbufp - msgbuf);
-		for(i = 0; i < n; i++, msgoff++) {
-			if(msgoff < sizeof(unsigned int))
-				buf[i] = ((char *)&msgidx)[msgoff];
-			else if(msgoff < sizeof(unsigned int) + MSGBUFS)
-				buf[i] = msgbuf[msgoff - sizeof(unsigned int)];
-			else
-				buf[i] = 0;
-		}
-		return((int)n);
+		if(off < sizeof(msgidx))
+			return((char *)&msgidx + off);
+		return(&msgbuf[off - sizeof(msgidx)]);
 	}
 	if(off < KERNBASE)
 		off += COREBASE;
-	if(!mem_range_ok(off, n))
+	if((off >= KERNBASE && off < (unsigned int)__bss_end) ||
+	   (off >= (unsigned int)__ddrbss_start && off < (unsigned int)__ddrbss_end) ||
+	   (off >= COREBASE && off < CORETOP))
+		return((char *)off);
+	return(NULL);
+}
+
+/* The v7 fuibyte/suibyte role for /dev/mem: -1 for a bad offset. */
+int fumem(unsigned int off)
+{
+	char *a = memaddr(off);
+
+	return(a == NULL ? -1 : *a & 0377);
+}
+int sumem(unsigned int off, int c)
+{
+	char *a = memaddr(off);
+
+	if(a == NULL)
 		return(-1);
-	s = (char *)off;
-	for(i = 0; i < n; i++)
-		buf[i] = s[i];
-	return((int)n);
+	*a = c;
+	return(0);
 }
 
 /* No UNIBUS/buffer map on Armv7. */
