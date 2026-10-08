@@ -19,6 +19,7 @@
 	.globl save
 	.globl resume
 	.globl dcflush
+	.globl dcclean
 
 mmu_on:
 	push {r4, r5, r6, r7, r8, r9}
@@ -180,4 +181,35 @@ dcflush:
 	dsb
 	bx	lr
 	.size	dcflush, .-dcflush
+
+@ dcclean(): clean the whole L1 D-cache by set/way, which on the Cortex-A7
+@ (LoUU = 1) is the point of unification: code the kernel wrote through the
+@ D-cache becomes visible to instruction fetch (arm_sync_icache).
+	.type	dcclean, %function
+dcclean:
+	push	{r4, r5, r6, r7}
+	mov	r0, #0
+	mcr	p15, 2, r0, c0, c0, 0	@ CSSELR = 0 (L1 data)
+	isb
+	mrc	p15, 1, r0, c0, c0, 0	@ CCSIDR
+	and	r1, r0, #7
+	add	r1, r1, #4		@ r1 = log2(line bytes)
+	movw	r2, #0x3ff
+	and	r2, r2, r0, lsr #3	@ r2 = ways - 1
+	clz	r3, r2			@ r3 = way bit shift
+	movw	r4, #0x7fff
+	and	r4, r4, r0, lsr #13	@ r4 = sets - 1
+1:	mov	r5, r2			@ r5 = way counter
+2:	lsl	r6, r5, r3
+	lsl	r7, r4, r1
+	orr	r6, r6, r7		@ (way<<shift) | (set<<lineorder)
+	mcr	p15, 0, r6, c7, c10, 2	@ DCCSW: clean D-cache line
+	subs	r5, r5, #1
+	bge	2b
+	subs	r4, r4, #1
+	bge	1b
+	dsb
+	pop	{r4, r5, r6, r7}
+	bx	lr
+	.size	dcclean, .-dcclean
 	.ltorg

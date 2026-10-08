@@ -10,6 +10,8 @@
 void printf(char *fmt, ...);
 void panic(char *s);
 void mmu_on(unsigned int ttb);
+void dcclean(void);
+void arm_sync_icache(void);
 void cninit(void);			/* board console early init (cn driver) */
 void bdinit(void);
 void mfree(struct map *mp, int size, int a);
@@ -116,6 +118,7 @@ void arm_sureg(int *uisa, int *uisd, int nseg)
 	    "mcr p15, 0, %0, c8, c7, 0\n\t"	/* TLBIALL */
 	    "dsb ish\n\t"
 	    "isb" :: "r"(0) : "memory");
+	arm_sync_icache();	/* fork, expand or swap-in wrote its code */
 }
 
 /*
@@ -351,6 +354,7 @@ arm_sync_icache(void)
 {
 	unsigned int zero = 0;
 
+	dcclean();
 	__asm__ volatile(
 	    "dsb ish\n\t"
 	    "mcr p15, 0, %0, c7, c5, 0\n\t"	/* ICIALLU */

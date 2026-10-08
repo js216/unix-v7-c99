@@ -32,9 +32,11 @@
  * Write-Back/Write-Allocate, shareable -- CACHED (TEX=001,C=1,B=1,S=1) -- so
  * the CPU runs at full speed instead of stalling on every uncached access.
  * Device memory (MMIO) stays strongly ordered.  mmu_on() enables the L1
- * I/D caches; resume() invalidates the I-cache on context switch because the
- * per-process user region shares VA 0 (VIPT I-cache aliasing); DMA buffers
- * are flushed by the block driver (dcflush) on cache-incoherent hardware.
+ * I/D caches.  Code the kernel writes through the D-cache (exec, icode, and
+ * the image copies of fork, expand and swap-in) is made visible to
+ * instruction fetch by arm_sync_icache(), from exec and from sureg() on
+ * every switch; DMA buffers are flushed by the block driver (dcflush) on
+ * cache-incoherent hardware.
  */
 #define SEC_KERN	0x0001140eU	/* L1 1 MB section, kernel rw, cached */
 #define SEC_DEV		0x00000c02U	/* L1 1 MB section, device (uncached) */
