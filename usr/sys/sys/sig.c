@@ -143,7 +143,7 @@ loop:
 				return;
 			goto loop;
 		}
-	exit(0x100 | fsig(u.u_procp));
+	exit(fsig(u.u_procp));
 }
 /*
  * Perform the action specified by
@@ -186,7 +186,7 @@ psig(void)
 		if(core())
 			n += 0200;
 	}
-	exit(0x100 | n);
+	exit(n);
 }
 
 /*
@@ -431,7 +431,7 @@ procxmt(void)
 
 	/* force exit */
 	case 8:
-		exit(0x100 | fsig(u.u_procp));
+		exit(fsig(u.u_procp));
 		return(1);
 
 	default:
