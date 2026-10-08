@@ -95,20 +95,22 @@ void machine_init(void)
 /*
  * Load the user-region page table (user_l2) for the current process.
  * The Armv7 user layout is flat (1 MB at VA 0; binaries link at UENTRY,
- * stack near USTACK), so the whole user window maps contiguously to the
- * image clicks just above the u-area.  Called from sureg() (ureg.c).
+ * stack near USTACK), so the user window maps contiguously to the image
+ * clicks just above the u-area: all of it for an exec'd program, only the
+ * first page for icode.  Pages beyond the image stay unmapped.  Called
+ * from sureg() (ureg.c).
  */
 void arm_sureg(int *uisa, int *uisd, int nseg)
 {
-	unsigned int base;
-	int i;
+	unsigned int base, i, n;
 
 	(void)uisa; (void)uisd; (void)nseg;
 	if(u.u_procp == NULL)
 		return;
 	base = (unsigned int)CLKADDR(u.u_procp->p_addr + USIZE);
+	n = (unsigned int)(u.u_procp->p_size - USIZE) >> (PGSHIFT-6);
 	for(i = 0; i < 256; i++)
-		user_l2[i] = ((base + i*PGSIZE) & 0xfffff000U) | PG_USER;
+		user_l2[i] = i < n ? ((base + i*PGSIZE) & 0xfffff000U) | PG_USER : 0;
 	__asm__ volatile(
 	    "dsb ish\n\t"
 	    "mcr p15, 0, %0, c8, c7, 0\n\t"	/* TLBIALL */
