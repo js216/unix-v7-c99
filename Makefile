@@ -51,7 +51,7 @@ DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 
 boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
-	    V7_MKFS_TIME=0 etc/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
+	    V7_MKFS_TIME=284774400 etc/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
 	    size=$$(awk '/^(swplo|nswap) /{n+=$$2} END{print n}' usr/sys/conf/qemuconf); \
 	    truncate -s "$$((size * 512))" boot/rootfs.img.tmp; \
 	    mv boot/rootfs.img.tmp boot/rootfs.img
