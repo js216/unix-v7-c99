@@ -155,8 +155,9 @@ trap(int *r)
 }
 /*
  * Called from the undef/abort entry stubs (conf/low.s) for a hardware
- * fault.  signo is the signal it maps to; r is the trap frame.  A fault
- * taken in kernel mode is fatal.
+ * fault.  signo is the signal it maps to (0 from irq_entry, to give up
+ * the cpu as v7's trap 12 did); r is the trap frame.  A fault taken
+ * in kernel mode is fatal.
  */
 void
 user_trap_handler(int signo, int *r)

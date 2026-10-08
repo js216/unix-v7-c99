@@ -132,6 +132,19 @@ irq_entry:
 	str r4, [sp, #56]
 	mov r0, sp
 	bl clock_irq_handler
+	ldr r0, [sp, #64]		@ back to user mode with runrun set:
+	and r0, r0, #0x1f		@ give up the cpu (v7's trap 12)
+	cmp r0, #0x10
+	bne 1f
+	ldr r0, =runrun
+	ldrb r0, [r0]
+	cmp r0, #0
+	beq 1f
+	mov r0, #0
+	mov r1, sp
+	bl user_trap_handler
+	cpsid i
+1:
 	ldr r3, [sp, #52]
 	ldr r4, [sp, #56]
 	mrs r1, cpsr
