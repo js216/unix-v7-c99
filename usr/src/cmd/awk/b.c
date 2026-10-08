@@ -306,7 +306,7 @@ struct fa *cgotofn(void)
 	int curpos, num, prev;
 	struct fa *where[NSTATES];
 
-	int fatab[257];
+	int fatab[2*256+1];
 	struct fa *pfa;
 
 	char index[MAXLIN];
@@ -314,13 +314,13 @@ struct fa *cgotofn(void)
 	int sposns[MAXLIN];
 	int spmax, spinit;
 
-	char symbol[NCHARS];
-	char isyms[NCHARS];
-	char ssyms[NCHARS];
+	char symbol[256];
+	char isyms[256];
+	char ssyms[256];
 	int ssmax, ssinit;
 
 	for (i=0; i<=line; i++) index[i] = iposns[i] = setvec[i] = 0;
-	for (i=0; i<NCHARS; i++)  isyms[i] = symbol[i] = 0;
+	for (i=0; i<256; i++)  isyms[i] = symbol[i] = 0;
 	setcnt = 0;
 	/* compute initial positions and symbols of state 0 */
 	ssmax = 0;
@@ -334,7 +334,7 @@ struct fa *cgotofn(void)
 		dprintf("i = %d, spinit = %d, curpos = %d\n", i, spinit, curpos);
 		switch (type(cp)) {
 			case CHAR:
-				k = (int) right(cp);
+				k = (int) right(cp) & 0377;
 				if (isyms[k] != 1) {
 					isyms[k] = 1;
 					ssyms[ssmax++] = k;
@@ -395,7 +395,7 @@ struct fa *cgotofn(void)
 			cp = point[curpos];
 			switch (type(cp)) {
 				case CHAR:
-					k = (int) right(cp);
+					k = (int) right(cp) & 0377;
 					if (isyms[k] == 0 && symbol[k] == 0) {
 						symbol[k] = 1;
 						ssyms[ssmax++] = k;
