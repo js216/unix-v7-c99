@@ -182,9 +182,6 @@ pattern:
 	  regular_expr	{ PUTS("regex");
 		$$ = op2(MATCH, valtonode(lookup("$record", symtab), CFLD), makedfa($1));
 		}
-	| expr	{ PUTS("expr");
-		$$ = op2(NE, $1, valtonode(lookup("0", symtab), CCON));
-		}
 	| rel_expr	{ PUTS("relexpr"); }
 	| lex_expr	{ PUTS("lexexpr"); }
 	| compound_pattern	{ PUTS("comp pat"); }

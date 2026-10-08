@@ -77,8 +77,6 @@ int n;
 			error(FATAL, "unexpected break, continue or next");
 		tempfree(x);
 	}
-	if (a[1] == nullstat && a[2] == nullstat)
-		return(true);
 	while (getrec()) {
 		recloc->tval &= ~NUM;
 		recloc->tval |= STR;
@@ -826,8 +824,6 @@ int n;
 	s[0] = '\0';
 	for (x=a[0]; x!=NULL; x=x->nnext) {
 		y = execute(x);
-		if (isfld(y))
-			fldbld();
 		strcat(s, getsval(y.optr));
 		tempfree(y);
 		if (x->nnext==NULL)
