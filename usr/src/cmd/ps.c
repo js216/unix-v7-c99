@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <a.out.h>
 #define TXTRNDSIZ 8192L
-#define stacktop(siz) (0x10000L)
-#define stackbas(siz) (0x10000L-siz)
+#define stacktop(siz) (0x100000L)
+#define stackbas(siz) (0x100000L-siz)
 #include <sys/param.h>
 #include "../../sys/h/proc.h"
 struct tty;
@@ -244,7 +244,7 @@ prcom(int puid)
 	datmap.f1 = ctob(USIZE)+addr;
 	datmap.b2 = stackbas(stksiz);
 	datmap.e2 = stacktop(stksiz);
-	datmap.f2 = ctob(USIZE)+(datmap.e1-datmap.b1)+addr;
+	datmap.f2 = ctob(USIZE)+datmap.b2+addr;
 
 	tp = gettty();
 	if (tptr && strncmp(tptr, tp, 2))

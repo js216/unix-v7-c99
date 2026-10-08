@@ -80,7 +80,7 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	16		/* size of user block (*64) */
+#define	USIZE	128		/* size of user block (*64) */
 #define	UBASE	0140000		/* abs. addr of user block */
 #ifndef NULL
 #define	NULL	0
