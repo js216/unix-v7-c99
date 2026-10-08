@@ -3,7 +3,7 @@
 
 static jmp_buf jmp;
 static void sleepx(int signo);
-extern void (*signal(int sig, void (*fun)(int)))(int);
+int	signal();
 extern int alarm(int n);
 extern int pause(void);
 
@@ -11,7 +11,7 @@ unsigned
 sleep(volatile unsigned n)
 {
 	unsigned altime;
-	void (*alsig)(int) = SIG_DFL;
+	int alsig = SIG_DFL;
 
 	if (n==0)
 		return(0);
@@ -29,7 +29,7 @@ sleep(volatile unsigned n)
 			altime = 1;
 		}
 	}
-	alsig = signal(SIGALRM, sleepx);
+	alsig = signal(SIGALRM, (int)sleepx);
 	alarm(n);
 	for(;;)
 		pause();
