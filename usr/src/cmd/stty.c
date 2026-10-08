@@ -215,11 +215,11 @@ prmodes(void)
 		prspeed("output speed ", mode.sg_ospeed);
 	} else
 		prspeed("speed ", mode.sg_ispeed);
-	if (mode.sg_erase < ' ')
+	if ((mode.sg_erase&0377) < ' ')
 		fprintf(stderr, "erase = '^%c'; ", '@' + mode.sg_erase);
 	else
 		fprintf(stderr, "erase = '%c'; ", mode.sg_erase);
-	if (mode.sg_kill < ' ')
+	if ((mode.sg_kill&0377) < ' ')
 		fprintf(stderr, "kill = '^%c'\n", '@' + mode.sg_kill);
 	else
 		fprintf(stderr, "kill = '%c'\n", mode.sg_kill);
