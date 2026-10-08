@@ -176,8 +176,7 @@ LOCAL STRING	execs(STRING ap, REG STRING t[])
 
 		/* set up new args */
 		setargs(t);
-		execexp(0,input);
-		done();
+		longjmp(subshell,1);
 		/* fallthrough */
 
 	    case ENOMEM:
