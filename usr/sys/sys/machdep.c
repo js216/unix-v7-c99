@@ -5,6 +5,7 @@
 #include "../h/proc.h"
 #include "../h/seg.h"
 #include "../h/map.h"
+#include "../h/reg.h"
 
 void printf(char *fmt, ...);
 void panic(char *s);
@@ -184,6 +185,52 @@ int copyout(caddr_t f, caddr_t t, unsigned int n)
 	while(n--)
 		*t++ = *f++;
 	return(0);
+}
+
+/*
+ * Let a process handle a signal by simulating an interrupt:
+ * push the whole trap frame on the user stack (8-byte aligned,
+ * as the ABI wants), and enter the handler with the signal
+ * number in r0 and lr pointing at the sigreturn trampoline.
+ */
+void
+sendsig(caddr_t p, int signo)
+{
+	register unsigned n;
+
+	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
+	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
+		u.u_signal[SIGSEG] = 0;
+		psignal(u.u_procp, SIGSEG);
+		return;
+	}
+	u.u_ar0[R6] = n;
+	u.u_ar0[14] = UENTRY_SIGTRAMP;	/* lr */
+	u.u_ar0[R7] = (int)p;
+	u.u_ar0[R0] = signo;
+}
+
+/*
+ * The sigreturn call made by the trampoline: reload the frame
+ * sendsig pushed.  Only the condition flags of the saved cpsr
+ * are taken; trap() returns r0 and r1 from u_r.
+ */
+void
+sigreturn(void)
+{
+	int f[RPS+1];
+	register int i;
+
+	if(copyin((caddr_t)u.u_ar0[R6], (caddr_t)f, sizeof(f)) < 0) {
+		u.u_signal[SIGSEG] = 0;
+		psignal(u.u_procp, SIGSEG);
+		return;
+	}
+	for(i = 0; i < RPS; i++)
+		u.u_ar0[i] = f[i];
+	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);
+	u.u_r.r_val1 = f[R0];
+	u.u_r.r_val2 = f[R1];
 }
 
 /* Idle: allow interrupts, wait, then re-mask (the v7 idle() in swtch). */

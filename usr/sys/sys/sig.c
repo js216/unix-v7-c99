@@ -4,6 +4,7 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/inode.h"
+#include "../h/reg.h"
 #include "../h/text.h"
 #include "../h/seg.h"
 void sleep(caddr_t chan, int pri);
@@ -31,10 +32,8 @@ void writei(struct inode *ip);
 void iput(struct inode *ip);
 int save(int *lp);
 void bcopy(char *from, char *to, unsigned int n);
+void sendsig(caddr_t p, int signo);
 #define	SINCR	20
-#define	ARM_SP	13
-#define	ARM_LR	14
-#define	ARM_PC	15
 
 /*
  * Priority for tracing
@@ -122,23 +121,6 @@ issig(void)
 }
 
 /*
- * sigreturn: invoked by the signal trampoline (UENTRY_SIGTRAMP) to
- * restore the pre-signal pc/r0/lr/sp that sendsig() pushed on the user
- * stack.  trap()'s tail writes r0 from u.u_r.r_val1, so the restored r0
- * is returned through there.
- */
-void
-sigreturn(void)
-{
-	register int *r = u.u_ar0;
-	register unsigned int sp = (unsigned int)r[ARM_SP];
-	r[ARM_PC] = *(int *)sp;
-	u.u_r.r_val1 = *(int *)(sp + 4);
-	r[ARM_LR] = *(int *)(sp + 8);
-	r[ARM_SP] = (int)(sp + 12);
-	u.u_error = 0;
-}
-/*
  * Enter the tracing STOP state.
  * In this state, the parent is
  * informed and the process is able to
@@ -163,24 +145,6 @@ loop:
 		}
 	exit(0x100 | fsig(u.u_procp));
 }
-static void
-sendsig(int handler, int sig)
-{
-	register int *r;
-	register unsigned int sp;
-	r = u.u_ar0;
-	if(r == NULL)
-		return;
-	sp = (unsigned int)r[ARM_SP] - 12U;
-	*(volatile unsigned int *)sp = (unsigned int)r[ARM_PC];
-	*(volatile unsigned int *)(sp + 4) = (unsigned int)r[0];
-	*(volatile unsigned int *)(sp + 8) = (unsigned int)r[ARM_LR];
-	r[ARM_SP] = (int)sp;
-	r[ARM_LR] = (int)UENTRY_SIGTRAMP;
-	r[ARM_PC] = (int)handler;
-	r[0] = sig;
-}
-
 /*
  * Perform the action specified by
  * the current signal.
@@ -205,7 +169,7 @@ psig(void)
 		u.u_error = 0;
 		if(n != SIGINS && n != SIGTRC)
 			u.u_signal[n] = 0;
-		sendsig(p, n);
+		sendsig((caddr_t)p, n);
 		return;
 	}
 	switch(n) {
@@ -458,7 +422,7 @@ procxmt(void)
 		if ((int)ipc.ip_addr != 1) {
 			p = u.u_ar0;
 			if (p != NULL)
-				p[ARM_PC] = (int)ipc.ip_addr;
+				p[PC] = (int)ipc.ip_addr;
 		}
 		u.u_procp->p_sig = 0;
 		if (ipc.ip_data)
