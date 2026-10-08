@@ -664,7 +664,7 @@ gline(char *addr)
 			ebp = ibuf+c;
 		}
 		if ((c = *p2++) == '\n') {
-			if(f != 0 && p2 >=  ebp) {
+			if(p2 >=  ebp) {
 				if((c = read(f, ibuf, 512)) <= 0) {
 					close(f);
 					if(eargc == 0)
