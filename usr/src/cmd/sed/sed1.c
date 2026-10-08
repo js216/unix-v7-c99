@@ -642,7 +642,7 @@ command(struct reptr *ipc)
 		case YCOM:
 			p1 = linebuf;
 			p2 = ipc->u.re1;
-			while((*p1 = p2[(unsigned char)*p1]))	p1++;
+			while((*p1 = *p1 & 0200 ? *p1 : p2[(unsigned char)*p1]))	p1++;
 			break;
 	}
 
