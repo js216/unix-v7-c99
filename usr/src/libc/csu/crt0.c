@@ -2,7 +2,6 @@ extern int main(int argc, char **argv);
 extern void exit(int n);
 char **environ;
 int errno;
-int *__errno(void) { return &errno; }
 
 /*
  * Entry from crt0.s with r0 = sp, which points at the argument frame the

@@ -11,6 +11,7 @@ CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10
 
 LIBC = usr/src/libc/libc.a
+LIBM = usr/src/libm/libm.a
 CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 
 HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
@@ -49,6 +50,12 @@ $(LIBC) $(CRT): Makefile $(wildcard usr/src/libc/*.[cs] usr/src/libc/*/*.[cs] \
 	    sh -e mklib && rm *.o && \
 	    $(CC) $(CFLAGS) -c csu/crt0.s && \
 	    $(CC) $(CFLAGS) -I../../include -c csu/crt0.c -o crt0c.o
+
+$(LIBM): Makefile $(wildcard usr/src/libm/*.c usr/include/*.h) \
+	    usr/src/libm/compall usr/src/libm/mklib
+	cd usr/src/libm && rm -f *.o libm.a && \
+	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include" sh -e compall && \
+	    sh -e mklib && rm *.o
 
 # Commands: cmake builds one and installs it where v7 did.
 
@@ -117,7 +124,8 @@ SUBDIR_CFLAGS_EXTRA =
 SUBDIR_LDLIBS = -L../../libc -lc -lgcc
 
 bin/awk: SUBDIR_CFLAGS_EXTRA = -DYYSTACK_USE_ALLOCA=1 -Dmalloc=malloc -Dfree=free -I.
-bin/awk: SUBDIR_LDLIBS = -L../../libc -lm -lc -lgcc
+bin/awk: SUBDIR_LDLIBS = -L../../libm -lm -L../../libc -lc -lgcc
+bin/awk: $(LIBM)
 
 $(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) Makefile | bin
 	cd usr/src/cmd/$* && { test $* -nt ../../../Makefile || rm -f *.o; } && \
@@ -161,6 +169,6 @@ clean:
 	rm -f usr/sys/conf/*.o usr/sys/conf/c.c usr/sys/conf/unix.ld usr/sys/conf/mkconf
 	rm -f $(KERNELS) usr/sys/sys/LIB1 usr/sys/dev/LIB2
 	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp
-	rm -f etc/mkfs usr/src/libc/*.o $(LIBC)
+	rm -f etc/mkfs usr/src/libc/*.o $(LIBC) usr/src/libm/*.o $(LIBM)
 	for d in sed sh dc tar tp; do rm -f usr/src/cmd/$$d/$$d usr/src/cmd/$$d/*.o; done
 	$(MAKE) -C usr/src/cmd/awk clean
