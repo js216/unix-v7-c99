@@ -69,7 +69,7 @@ static struct {
 };
 
 struct tm	*gmtime();
-char		*ct_numb();
+static char	*ct_numb();
 struct tm	*localtime();
 char	*ctime();
 char	*ct_num();
@@ -230,7 +230,7 @@ dysize(int y)
 	return(365);
 }
 
-char *
+static char *
 ct_numb(register char *cp, int n)
 {
 	cp++;

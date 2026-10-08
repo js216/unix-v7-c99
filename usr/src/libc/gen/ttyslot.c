@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 char	*ttyname(int f);
-char	*getttys(int f);
+static char	*getttys(int f);
 char	*rindex(char *sp, int c);
 static	char	ttys[]	= "/etc/ttys";
 
@@ -39,7 +39,7 @@ ttyslot(void)
 	return(0);
 }
 
-char *
+static char *
 getttys(int f)
 {
 	static char line[32];

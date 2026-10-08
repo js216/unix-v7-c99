@@ -5,7 +5,7 @@
  *	sign is set to 0 for positive, 1 for negative
  */
 
-char	*cvt(double, int, int *, int *, int);
+static char	*cvt(double, int, int *, int *, int);
 
 #define	NDIG	80
 char*
@@ -20,7 +20,7 @@ fcvt(double arg, int ndigits, int *decpt, int *sign)
 	return(cvt(arg, ndigits, decpt, sign, 0));
 }
 
-char*
+static char*
 cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 {
 	register int r2;
