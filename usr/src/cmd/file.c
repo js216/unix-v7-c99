@@ -146,7 +146,7 @@ check:
 	}
 	nl = 0;
 	while(buf[i] != '('){
-		if(buf[i] <= 0)
+		if(buf[i] == 0 || buf[i] & 0200)
 			goto notas;
 		if(buf[i] == ';'){
 			i++; 
@@ -300,7 +300,7 @@ english (char *bp, int n)
 		ct[j]=0;
 	for(j=0; j<n; j++)
 	{
-		if (bp[j]<NASC)
+		if ((bp[j]&0377)<NASC)
 			ct[bp[j]|040]++;
 		switch (bp[j])
 		{
