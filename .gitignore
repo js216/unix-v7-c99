@@ -59,3 +59,9 @@ usr/src/cmd/awk/proc
 usr/src/cmd/awk/proc-token.o
 usr/src/cmd/awk/proctab.c
 *.elf
+usr/src/cmd/awk/awk
+usr/src/cmd/dc/dc
+usr/src/cmd/sed/sed
+usr/src/cmd/sh/sh
+usr/src/cmd/tar/tar
+usr/src/cmd/tp/tp
