@@ -637,21 +637,25 @@ readhash(FILE *f)
 		sum += (long)t << (shift%=HALFLONG);
 	}
 	else for(shift=0;;) {
-		t = getc(f);
-		if(t == -1)
+		switch(t=getc(f)) {
+		case -1:
 			return(0);
-		if(t == '\n')
-			break;
-		if(isspace(t)) {
+		case '\t':
+		case ' ':
 			space++;
 			continue;
-		}
-		if(space) {
+		default:
+			if(space) {
+				shift += 7;
+				space = 0;
+			}
+			sum += (long)t << (shift%=HALFLONG);
 			shift += 7;
-			space = 0;
+			continue;
+		case '\n':
+			break;
 		}
-		sum += (long)t << (shift%=HALFLONG);
-		shift += 7;
+		break;
 	}
 	sum = low(sum) + high(sum);
 	return((short)low(sum) + (short)high(sum));
