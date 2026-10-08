@@ -120,12 +120,25 @@ loop:
 		lseek(mf, (long)nl[6].value, 0);
 		read(mf, (char *)&s.tout, sizeof(s.tout));
 	}
-	for(i=0; i<40; i++) {
-		if (i >= 32) break;
+	for(i=0; i<32; i++) {
 		t = s.etime[i];
 		s.etime[i] -= s1.etime[i];
 		s1.etime[i] = t;
 	}
+	for(i=0; i<3; i++) {
+		t = s.numb[i];
+		s.numb[i] -= s1.numb[i];
+		s1.numb[i] = t;
+		t = s.wds[i];
+		s.wds[i] -= s1.wds[i];
+		s1.wds[i] = t;
+	}
+	t = s.tin;
+	s.tin -= s1.tin;
+	s1.tin = t;
+	t = s.tout;
+	s.tout -= s1.tout;
+	s1.tout = t;
 	t = 0;
 	for(i=0; i<32; i++)
 		t += s.etime[i];
