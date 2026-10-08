@@ -12,7 +12,7 @@ usr/local
 : <<\EOF
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,179 @@
+@@ -0,0 +1,181 @@
 +/dev/null
 +11520 2048
 +d--755 0 0
@@ -24,6 +24,7 @@ usr/local
 +		arcv	---755 0 0 bin/arcv
 +		awk	---755 0 0 bin/awk
 +		basename	---755 0 0 bin/basename
++		bc	---755 0 0 bin/bc
 +		cal	---755 0 0 bin/cal
 +		calendar	---755 0 0 bin/calendar
 +		cat	---755 0 0 bin/cat
@@ -178,6 +179,7 @@ usr/local
 +		lib	d--755 0 0
 +			crontab	---644 0 0 usr/lib/crontab
 +			diffh	---755 0 0 usr/lib/diffh
++			lib.b	---644 0 0 usr/lib/lib.b
 +			makekey	---755 0 0 usr/lib/makekey
 +			units	---644 0 0 usr/lib/units
 +			$
@@ -331,7 +333,8 @@ usr/local
 +
 +ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 +	etc/passwd etc/group etc/ttys \
-+	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab
++	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
++	usr/lib/lib.b
 +
 +ROOT_BUILT = etc/init etc/getty bin/login bin/sh \
 +	bin/cat bin/echo bin/ls bin/pwd bin/sync \
@@ -360,7 +363,7 @@ usr/local
 +	bin/quot bin/dump bin/dumpdir \
 +	bin/restor bin/tk bin/dc bin/tar bin/tp \
 +	bin/prof bin/tc bin/graph bin/factor bin/primes \
-+	bin/expr bin/iostat bin/pstat bin/ps bin/dmesg bin/osh bin/sa \
++	bin/expr bin/iostat bin/pstat bin/ps bin/dmesg bin/osh bin/sa bin/bc \
 +	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 +	usr/games/backgammon usr/games/fish usr/games/quiz \
 +	usr/games/wump
@@ -382,7 +385,6 @@ usr/local
 +# Rootfs
 +
 +boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
-+	rm -f bin/bc
 +	set -e; for i in $(ROOT); do \
 +		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
 +	done
@@ -434,7 +436,7 @@ usr/local
 +usr/games/%: usr/src/cmd/%.c libc | usr/games
 +	$(BUILD_USER_C)
 +
-+bin/egrep bin/expr: bin/%: usr/src/cmd/%.y libc | bin
++bin/bc bin/egrep bin/expr: bin/%: usr/src/cmd/%.y libc | bin
 +	set -e; gen="usr/src/libc/$*.c"; trap 'rm -f "$$gen"' EXIT; \
 +	    (cd usr/src/cmd && bison -y $*.y && mv y.tab.c ../libc/$*.c); \
 +	    $(USERCC) $(CFLAGS) $(YACCCPPFLAGS) -c "$$gen" -o $(CMDOBJ); \
@@ -2384,6 +2386,487 @@ usr/local
 -	puts(p2, stdout);
 +	puts(p2);
 
+% usr/src/cmd/bc.y
+@@ -2 +2 @@
+-	int *getout();
++	void getout(void);
+@@ -3,0 +4 @@
++%define api.value.type {char *}
+@@ -19 +20,24 @@
+-int in;
++#include <stdarg.h>
++#include <stdint.h>
++#define bundle(...) (yyval = (bundle)(__VA_ARGS__))
++char *yyval;
++char *(bundle)(int i, ...);
++void routput(char *p);
++void output(char *p);
++void conout(char *p, char *s);
++void yyerror(char *s);
++void pp(char *s);
++void tp(char *s);
++void yyinit(int argc, char *argv[]);
++char *getf(char *p);
++char *geta(char *p);
++int yylex(void);
++int cpeek(int c, int yes, int no);
++int getch(void);
++int signal(int sig, int func);
++int pipe(int *fd);
++int fork(void);
++int close(int fd);
++int dup(int fd);
++int execl(char *path, char *arg0, ...);
++FILE *in;
+@@ -33 +57 @@
+-int *pre, *post;
++char *pre, *post;
+@@ -38 +62 @@
+-		= output( $2 );
++		{ output( $2 ); }
+@@ -40 +64 @@
+-		={	bundle( 6,pre, $7, post ,"0",numb[lev],"Q");
++		{	bundle( 6,pre, $7, post ,"0",numb[lev],"Q");
+@@ -53 +77 @@
+-		={ bundle(2, $1, "ps." ); }
++		{ bundle(2, $1, "ps." ); }
+@@ -55 +79 @@
+-		={ bundle(1, "" ); }
++		{ bundle(1, "" ); }
+@@ -57 +81 @@
+-		={ bundle(3,"[",$1,"]P");}
++		{ bundle(3,"[",$1,"]P");}
+@@ -59 +83 @@
+-		={ bundle(3, $3, "s", $1 ); }
++		{ bundle(3, $3, "s", $1 ); }
+@@ -61 +85 @@
+-		={ bundle(4, $6, $3, ":", geta($1)); }
++		{ bundle(4, $6, $3, ":", geta($1)); }
+@@ -63 +87 @@
+-		={ bundle(6, "l", $1, $3, $2, "s", $1 ); }
++		{ bundle(6, "l", $1, $3, $2, "s", $1 ); }
+@@ -65 +89 @@
+-		={ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
++		{ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
+@@ -67 +91 @@
+-		={ bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
++		{ bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
+@@ -69 +93 @@
+-		= bundle(4, $3, post, numb[lev], "Q" );
++		{ bundle(4, $3, post, numb[lev], "Q" ); }
+@@ -71 +95 @@
+-		= bundle(4, "0", post, numb[lev], "Q" );
++		{ bundle(4, "0", post, numb[lev], "Q" ); }
+@@ -73 +97 @@
+-		= bundle(4,"0",post,numb[lev],"Q");
++		{ bundle(4,"0",post,numb[lev],"Q"); }
+@@ -75 +99 @@
+-		= bundle(2, $3, "k");
++		{ bundle(2, $3, "k"); }
+@@ -77 +101 @@
+-		= bundle(4,"K",$3,$2,"k");
++		{ bundle(4,"K",$3,$2,"k"); }
+@@ -79 +103 @@
+-		= bundle(2,$3, "i");
++		{ bundle(2,$3, "i"); }
+@@ -81 +105 @@
+-		= bundle(4,"I",$3,$2,"i");
++		{ bundle(4,"I",$3,$2,"i"); }
+@@ -83 +107 @@
+-		= bundle(2,$3,"o");
++		{ bundle(2,$3,"o"); }
+@@ -85 +109 @@
+-		= bundle(4,"O",$3,$2,"o");
++		{ bundle(4,"O",$3,$2,"o"); }
+@@ -87 +111 @@
+-		={ $$ = $2; }
++		{ $$ = $2; }
+@@ -89 +113 @@
+-		={ bundle(1,"fY"); }
++		{ bundle(1,"fY"); }
+@@ -91 +115 @@
+-		={ bundle(1,"c"); }
++		{ bundle(1,"c"); }
+@@ -93 +117 @@
+-		={	conout( $7, $2 );
++		{	conout( $7, $2 );
+@@ -97 +121 @@
+-		={	bundle(3, $6, $4, $2 );
++		{	bundle(3, $6, $4, $2 );
+@@ -102 +126 @@
+-		={	bundle(5, $7, $5, "s.", $3, $2 );
++		{	bundle(5, $7, $5, "s.", $3, $2 );
+@@ -107 +131 @@
+-		={	bundle(3,$4,"S",$2); }
++		{	bundle(3,$4,"S",$2); }
+@@ -111 +135 @@
+-		={ $$ = "+"; }
++		{ $$ = "+"; }
+@@ -113 +137 @@
+-		={ $$ = "-"; }
++		{ $$ = "-"; }
+@@ -115 +139 @@
+-		={ $$ = "*"; }
++		{ $$ = "*"; }
+@@ -117 +141 @@
+-		={ $$ = "/"; }
++		{ $$ = "/"; }
+@@ -119 +143 @@
+-		={ $$ = "%%"; }
++		{ $$ = "%%"; }
+@@ -121 +145 @@
+-		={ $$ = "^"; }
++		{ $$ = "^"; }
+@@ -125 +149 @@
+-		={ $$ = $3; }
++		{ $$ = $3; }
+@@ -129 +153 @@
+-		={ --bindx; }
++		{ --bindx; }
+@@ -134 +158 @@
+-		={ bundle(2, $1, $3 ); }
++		{ bundle(2, $1, $3 ); }
+@@ -138 +162 @@
+-		={ln++;}
++		{ln++;}
+@@ -143 +167 @@
+-		= bundle(3, $1, $3, "=" );
++		{ bundle(3, $1, $3, "=" ); }
+@@ -145 +169 @@
+-		= bundle(3, $1, $3, ">" );
++		{ bundle(3, $1, $3, ">" ); }
+@@ -147 +171 @@
+-		= bundle(3, $1, $3, "<" );
++		{ bundle(3, $1, $3, "<" ); }
+@@ -149 +173 @@
+-		= bundle(3, $1, $3, "!=" );
++		{ bundle(3, $1, $3, "!=" ); }
+@@ -151 +175 @@
+-		= bundle(3, $1, $3, "!>" );
++		{ bundle(3, $1, $3, "!>" ); }
+@@ -153 +177 @@
+-		= bundle(3, $1, $3, "!<" );
++		{ bundle(3, $1, $3, "!<" ); }
+@@ -155 +179 @@
+-		= bundle(2, $1, " 0!=" );
++		{ bundle(2, $1, " 0!=" ); }
+@@ -159 +183 @@
+-		= bundle(3, $1, $3, "+" );
++		{ bundle(3, $1, $3, "+" ); }
+@@ -161 +185 @@
+-		= bundle(3, $1, $3, "-" );
++		{ bundle(3, $1, $3, "-" ); }
+@@ -163 +187 @@
+-		= bundle(3, " 0", $2, "-" );
++		{ bundle(3, " 0", $2, "-" ); }
+@@ -165 +189 @@
+-		= bundle(3, $1, $3, "*" );
++		{ bundle(3, $1, $3, "*" ); }
+@@ -167 +191 @@
+-		= bundle(3, $1, $3, "/" );
++		{ bundle(3, $1, $3, "/" ); }
+@@ -169 +193 @@
+-		= bundle(3, $1, $3, "%%" );
++		{ bundle(3, $1, $3, "%%" ); }
+@@ -171 +195 @@
+-		= bundle(3, $1, $3, "^" );
++		{ bundle(3, $1, $3, "^" ); }
+@@ -173 +197 @@
+-		={ bundle(3,$3, ";", geta($1)); }
++		{ bundle(3,$3, ";", geta($1)); }
+@@ -175 +199 @@
+-		= bundle(4, "l", $1, "d1+s", $1 );
++		{ bundle(4, "l", $1, "d1+s", $1 ); }
+@@ -177 +201 @@
+-		= bundle(4, "l", $2, "1+ds", $2 );
++		{ bundle(4, "l", $2, "1+ds", $2 ); }
+@@ -179 +203 @@
+-		= bundle(4, "l", $2, "1-ds", $2 );
++		{ bundle(4, "l", $2, "1-ds", $2 ); }
+@@ -181 +205 @@
+-		= bundle(4, "l", $1, "d1-s", $1 );
++		{ bundle(4, "l", $1, "d1-s", $1 ); }
+@@ -183 +207 @@
+-		= bundle(7,$3,";",geta($1),"d1+",$3,":",geta($1));
++		{ bundle(7,$3,";",geta($1),"d1+",$3,":",geta($1)); }
+@@ -185 +209 @@
+-		= bundle(7,$4,";",geta($2),"1+d",$4,":",geta($2));
++		{ bundle(7,$4,";",geta($2),"1+d",$4,":",geta($2)); }
+@@ -187 +211 @@
+-		= bundle(7,$3,";",geta($1),"d1-",$3,":",geta($1));
++		{ bundle(7,$3,";",geta($1),"d1-",$3,":",geta($1)); }
+@@ -189 +213 @@
+-		= bundle(7,$4,";",geta($2),"1-d",$4,":",geta($2));
++		{ bundle(7,$4,";",geta($2),"1-d",$4,":",geta($2)); }
+@@ -191 +215 @@
+-		= bundle(1,"Kd1+k");
++		{ bundle(1,"Kd1+k"); }
+@@ -193 +217 @@
+-		= bundle(1,"K1+dk");
++		{ bundle(1,"K1+dk"); }
+@@ -195 +219 @@
+-		= bundle(1,"Kd1-k");
++		{ bundle(1,"Kd1-k"); }
+@@ -197 +221 @@
+-		= bundle(1,"K1-dk");
++		{ bundle(1,"K1-dk"); }
+@@ -199 +223 @@
+-		= bundle(1,"Id1+i");
++		{ bundle(1,"Id1+i"); }
+@@ -201 +225 @@
+-		= bundle(1,"I1+di");
++		{ bundle(1,"I1+di"); }
+@@ -203 +227 @@
+-		= bundle(1,"Id1-i");
++		{ bundle(1,"Id1-i"); }
+@@ -205 +229 @@
+-		= bundle(1,"I1-di");
++		{ bundle(1,"I1-di"); }
+@@ -207 +231 @@
+-		= bundle(1,"Od1+o");
++		{ bundle(1,"Od1+o"); }
+@@ -209 +233 @@
+-		= bundle(1,"O1+do");
++		{ bundle(1,"O1+do"); }
+@@ -211 +235 @@
+-		= bundle(1,"Od1-o");
++		{ bundle(1,"Od1-o"); }
+@@ -213 +237 @@
+-		= bundle(1,"O1-do");
++		{ bundle(1,"O1-do"); }
+@@ -215 +239 @@
+-		= bundle(4, $3, "l", getf($1), "x" );
++		{ bundle(4, $3, "l", getf($1), "x" ); }
+@@ -217 +241 @@
+-		= bundle(3, "l", getf($1), "x" );
++		{ bundle(3, "l", getf($1), "x" ); }
+@@ -219 +243 @@
+-		={ bundle(2, " ", $1 ); }
++		{ bundle(2, " ", $1 ); }
+@@ -221 +245 @@
+-		={ bundle(2, " .", $2 ); }
++		{ bundle(2, " .", $2 ); }
+@@ -223 +247 @@
+-		={ bundle(4, " ", $1, ".", $3 ); }
++		{ bundle(4, " ", $1, ".", $3 ); }
+@@ -225 +249 @@
+-		={ bundle(3, " ", $1, "." ); }
++		{ bundle(3, " ", $1, "." ); }
+@@ -227 +251 @@
+-		={ $$ = "l."; }
++		{ $$ = "l."; }
+@@ -229 +253 @@
+-		= { bundle(2, "l", $1 ); }
++		{ bundle(2, "l", $1 ); }
+@@ -231 +255 @@
+-		={ bundle(3, $3, "ds", $1 ); }
++		{ bundle(3, $3, "ds", $1 ); }
+@@ -233 +257 @@
+-		={ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
++		{ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
+@@ -235 +259 @@
+-		= { bundle(5,$6,"d",$3,":",geta($1)); }
++		{ bundle(5,$6,"d",$3,":",geta($1)); }
+@@ -237 +261 @@
+-		= { bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
++		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
+@@ -239 +263 @@
+-		= bundle(2,$3,"Z");
++		{ bundle(2,$3,"Z"); }
+@@ -241 +265 @@
+-		= bundle(2,$3,"X");	/* must be before '(' e ')' */
++		{ bundle(2,$3,"X"); }	/* must be before '(' e ')' */
+@@ -243 +267 @@
+-		= { $$ = $2; }
++		{ $$ = $2; }
+@@ -245 +269 @@
+-		={ bundle(1, "?" ); }
++		{ bundle(1, "?" ); }
+@@ -247 +271 @@
+-		={ bundle(2, $3, "v" ); }
++		{ bundle(2, $3, "v" ); }
+@@ -249 +273 @@
+-		={ bundle(2,"L",$2); }
++		{ bundle(2,"L",$2); }
+@@ -251 +275 @@
+-		= bundle(2,$3,"dk");
++		{ bundle(2,$3,"dk"); }
+@@ -253 +277 @@
+-		= bundle(4,"K",$3,$2,"dk");
++		{ bundle(4,"K",$3,$2,"dk"); }
+@@ -255 +279 @@
+-		= bundle(2,$3,"di");
++		{ bundle(2,$3,"di"); }
+@@ -257 +281 @@
+-		= bundle(4,"I",$3,$2,"di");
++		{ bundle(4,"I",$3,$2,"di"); }
+@@ -259 +283 @@
+-		= bundle(2,$3,"do");
++		{ bundle(2,$3,"do"); }
+@@ -261 +285 @@
+-		= bundle(4,"O",$3,$2,"do");
++		{ bundle(4,"O",$3,$2,"do"); }
+@@ -263 +287 @@
+-		= bundle(1,"K");
++		{ bundle(1,"K"); }
+@@ -265 +289 @@
+-		= bundle(1,"I");
++		{ bundle(1,"I"); }
+@@ -267 +291 @@
+-		= bundle(1,"O");
++		{ bundle(1,"O"); }
+@@ -272 +296 @@
+-		= bundle(2, $1, $3 );
++		{ bundle(2, $1, $3 ); }
+@@ -276 +300 @@
+-		=bundle(2,"l",geta($1));
++		{ bundle(2,"l",geta($1)); }
+@@ -280 +304 @@
+-		={ *cp++ = '\0'; }
++		{ *cp++ = '\0'; }
+@@ -284 +308 @@
+-		={ $$ = cp; *cp++ = '_'; }
++		{ $$ = cp; *cp++ = '_'; }
+@@ -286 +310 @@
+-		={ $$ = cp; *cp++ = $1; }
++		{ $$ = cp; *cp++ = *$1; }
+@@ -288 +312 @@
+-		={ *cp++ = $2; }
++		{ *cp++ = *$2; }
+@@ -292,2 +316,2 @@
+-		={ $$ = cp; *cp++ = crs++; *cp++ = '\0';
+-			if(crs == '[')crs=+3;
++		{ $$ = cp; *cp++ = crs++; *cp++ = '\0';
++			if(crs == '[')crs+=3;
+@@ -302 +326 @@
+-		={	$$ = getf($2);
++		{	$$ = getf($2);
+@@ -312 +336 @@
+-		={ pp( $1 ); }
++		{ pp( $1 ); }
+@@ -314 +338 @@
+-		={ pp( $3 ); }
++		{ pp( $3 ); }
+@@ -318 +342 @@
+-		={ tp($1); }
++		{ tp($1); }
+@@ -320 +344 @@
+-		={ tp($3); }
++		{ tp($3); }
+@@ -324 +348 @@
+-		={ $$ = geta($1); }
++		{ $$ = geta($1); }
+@@ -347 +371 @@
+-yylex(){
++int yylex(void){
+@@ -390,2 +414,2 @@
+-	if( c>= '0' && c <= '9' || c>= 'A' && c<= 'F' ){
+-		yylval = c;
++	if( (c>= '0' && c <= '9') || (c>= 'A' && c<= 'F') ){
++		yylval = index("0123456789ABCDEF", c);
+@@ -434 +458 @@
+-cpeek( c, yes, no ){
++int cpeek( int c, int yes, int no ){
+@@ -442 +466 @@
+-getch(){
++int getch(void){
+@@ -460,0 +485 @@
++	goto loop;
+@@ -463,2 +488,2 @@
+-int b_space [ b_sp_max ];
+-int * b_sp_nxt = { b_space };
++char *b_space [ b_sp_max ];
++char ** b_sp_nxt = { b_space };
+@@ -467,2 +492,3 @@
+-bundle(a){
+-	int i, *p, *q;
++char *(bundle)(int i, ...){
++	va_list p;
++	char **q;
+@@ -470,2 +496 @@
+-	p = &a;
+-	i = *p++;
++	va_start(p, i);
+@@ -473 +498 @@
+-	if( bdebug ) printf("bundle %d elements at %o\n",i,  q );
++	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)(uintptr_t)q );
+@@ -476 +501 @@
+-		* b_sp_nxt++ = *p++;
++		* b_sp_nxt++ = va_arg(p, char *);
+@@ -477,0 +503 @@
++	va_end(p);
+@@ -479,2 +505,2 @@
+-	yyval = q;
+-	return( q );
++	yyval = (char *)q;
++	return( yyval );
+@@ -483,3 +509,3 @@
+-routput(p) int *p; {
+-	if( bdebug ) printf("routput(%o)\n", p );
+-	if( p >= &b_space[0] && p < &b_space[b_sp_max]){
++void routput(char *p) {
++	if( bdebug ) printf("routput(%o)\n", (unsigned)(uintptr_t)p );
++	if( (uintptr_t)p - (uintptr_t)b_space < sizeof b_space ){
+@@ -487 +513,2 @@
+-		while( *p != 0 ) routput( *p++ );
++		char **q = (char **)p;
++		while( *q != 0 ) routput( *q++ );
+@@ -492 +519 @@
+-output( p ) int *p; {
++void output( char *p ) {
+@@ -501 +528 @@
+-conout( p, s ) int *p; char *s; {
++void conout( char *p, char *s ) {
+@@ -509 +536 @@
+-yyerror( s ) char *s; {
++void yyerror( char *s ) {
+@@ -520 +547 @@
+-pp( s ) char *s; {
++void pp( char *s ) {
+@@ -529 +556 @@
+-tp( s ) char *s; { /* same as pp, but for temps */
++void tp( char *s ) { /* same as pp, but for temps */
+@@ -536,2 +563,2 @@
+-yyinit(argc,argv) int argc; char *argv[];{
+-	signal( 2, (int(*)())1 );	/* ignore all interrupts */
++void yyinit(int argc, char *argv[]){
++	signal( 2, 1 );	/* ignore all interrupts */
+@@ -547 +574 @@
+-int *getout(){
++void getout(void){
+@@ -550 +577 @@
+-	exit();
++	exit(0);
+@@ -553,2 +580,2 @@
+-int *
+-getf(p) char *p;{
++char *
++getf(char *p){
+@@ -557,2 +584,2 @@
+-int *
+-geta(p) char *p;{
++char *
++geta(char *p){
+@@ -562,2 +589,2 @@
+-main(argc, argv)
+-char **argv;
++int
++main(int argc, char **argv)
+@@ -572 +599 @@
+-			exit();
++			exit(0);
+@@ -577 +604 @@
+-			exit();
++			exit(0);
+@@ -589 +616 @@
+-		exit();
++		exit(0);
+@@ -595,2 +622,2 @@
+-	execl("/bin/dc", "dc", "-", 0);
+-	execl("/usr/bin/dc", "dc", "-", 0);
++	execl("/bin/dc", "dc", "-", (char *)0);
++	execl("/usr/bin/dc", "dc", "-", (char *)0);
+
 % usr/src/cmd/cal.c
 @@ -10,2 +10,8 @@
 -main(argc, argv)
@@ -3204,13 +3687,14 @@ usr/local
 -char c;
 +int
 +cond(int c)
+@@ -1585 +1586 @@
+-	register char cc;
++	register signed char cc;
 @@ -1589 +1590 @@
 -	sunputc(p);
 +	(void)sunputc(p);
-@@ -1614,2 +1615,2 @@
--	if((cc<0 && (c == '<' || c == NG)) ||
+@@ -1615 +1616 @@
 -		(cc >0) && (c == '>' || c == NL)){
-+	if(((signed char)cc<0 && (c == '<' || c == NG)) ||
 +		((cc >0) && (c == '>' || c == NL))){
 @@ -1622 +1623,2 @@
 -load(){

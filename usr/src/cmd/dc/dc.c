@@ -1583,7 +1583,7 @@ int
 cond(int c)
 {
 	register struct blk *p;
-	register char cc;
+	register signed char cc;
 
 	if(subt() != 0)return(1);
 	p = pop();
@@ -1612,7 +1612,7 @@ cond(int c)
 	fsfile(p);
 	cc = sbackc(p);
 	release(p);
-	if(((signed char)cc<0 && (c == '<' || c == NG)) ||
+	if((cc<0 && (c == '<' || c == NG)) ||
 		((cc >0) && (c == '>' || c == NL))){
 		readc();
 		return(0);
