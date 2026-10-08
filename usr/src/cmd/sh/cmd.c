@@ -21,15 +21,6 @@ LOCAL TREPTR	item(BOOL flag);
 LOCAL INT	skipnl(void);
 LOCAL VOID	prsym(INT sym);
 LOCAL VOID	synbad(void);
-INT	word(void);
-INT	nextc(INT quote);
-VOID	chkpr(CHAR c);
-VOID	prc(INT c);
-VOID	prs(STRING as);
-VOID	prn(INT n);
-VOID	prp(void);
-VOID	newline(void);
-VOID	exitsh(INT xno);
 
 
 /* ========	command line decoding	========*/

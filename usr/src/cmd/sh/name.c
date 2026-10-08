@@ -13,26 +13,8 @@ LOCAL BOOL	chkid(STRING nam);
 
 
 LOCAL VOID	namwalk(REG NAMPTR np);
-VOID	countnam(NAMPTR n);
-VOID	pushnam(NAMPTR n);
-INT	cf(STRING s1, STRING s2);
-INT	blank(void);
-INT	newline(void);
-INT	assign(NAMPTR n, STRING v);
-INT	failed(STRING s1, STRING s2);
-INT	itos(INT n);
-INT	any(REG CHAR c, STRING s);
-INT	push(FILE af);
-INT	initf(UFD fd);
-INT	pop(void);
-INT	nextc(INT quote);
-INT	sigchk(void);
-INT	length(STRING as);
-VOID	prc(INT c);
-VOID	prs(STRING as);
 extern int dup();
 extern long lseek(int fd, long off, int whence);
-extern void free(void *p);
 NAMNOD	ps2nod	= {	0,		0,		ps2name,	NIL, NIL, 0},
 	fngnod	= {	0,		0,		fngname,	NIL, NIL, 0},
 	pathnod = {	0,		0,		pathname,	NIL, NIL, 0},

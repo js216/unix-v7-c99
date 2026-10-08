@@ -12,11 +12,6 @@
 LOCAL DOLPTR	copyargs(STRING from[], INT n);
 LOCAL DOLPTR	dolh;
 
-INT	failed(STRING s1, STRING s2);
-DOLPTR	freeargs(DOLPTR blk);
-INT	assnum(STRING *p, INT n);
-INT	pop(void);
-extern void free(void *p);
 CHAR	flagadr[10];
 
 CHAR	flagchar[] = {

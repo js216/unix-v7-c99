@@ -16,17 +16,6 @@ extern int creat(char *p, int m);
 extern int pipe(int *pv);
 extern int dup(int f1, int f2);
 extern int write(int fd, char *buf, int n);
-INT	length(STRING as);
-INT	itos(INT n);
-INT	chkpr(CHAR c);
-INT	readc(void);
-INT	nextc(INT quote);
-INT	failed(STRING s1, STRING s2);
-INT	error(STRING s);
-INT	tmpfil(void);
-INT	create(STRING s);
-INT	cf(STRING s1, STRING s2);
-STRING	mactrim(STRING s);
 
 /* ========	input output and file copying ======== */
 

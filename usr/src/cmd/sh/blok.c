@@ -73,7 +73,7 @@ VOID	addblok(POS reqd)
 	return(0);
 }
 
-VOID	free(BLKPTR ap)
+VOID	free(void *ap)
 {
 	REG BLKPTR	p;
 

@@ -23,28 +23,6 @@ FILE		standin = &stdfile;
 #include	<execargs.h>
 
 LOCAL VOID	exfile(BOOL prof);
-INT	stdsigs(void);
-INT	addblok(POS reqd);
-INT	options(INT argc, STRING *argv);
-INT	assnum(STRING *p, INT n);
-INT	settmp(void);
-INT	dfault(NAMPTR n, STRING v);
-INT	estabf(REG STRING s);
-INT	chkopen(STRING idf);
-INT	pathopen(STRING path, STRING name);
-INT	done(void);
-INT	Ldup(REG INT fa, REG INT fb);
-INT	initf(UFD fd);
-INT	tdystak(REG STKPTR x);
-INT	stakchk(void);
-INT	exitset(void);
-INT	ignsig(INT n);
-INT	execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2);
-INT	itos(INT n);
-INT	getenv(void);
-extern INT setbrk(INT n);
-INT	readc(void);
-VOID	prs(STRING as);
 extern int getpid(void);
 extern int getuid(void);
 extern int gtty();

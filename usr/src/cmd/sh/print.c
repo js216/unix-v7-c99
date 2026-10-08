@@ -10,10 +10,6 @@
 #include	"defs.h"
 
 extern int write(int fd, char *buf, int n);
-INT	length(STRING as);
-INT	itos(INT n);
-INT	prn(INT n);
-INT	failed(STRING s1, STRING s2);
 CHAR		numbuf[6];
 
 

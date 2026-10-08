@@ -10,16 +10,6 @@
 #include	"defs.h"
 #include	"sym.h"
 
-INT	word(void);
-INT	nextc(INT quote);
-INT	readc(void);
-INT	syslook(STRING w, struct sysnod syswds[]);
-INT	estabf(STRING s);
-VOID	prc(INT c);
-VOID	newline(void);
-VOID	sigchk(void);
-VOID	chkpr(CHAR c);
-VOID	copy(struct ionod *ioparg);
 extern int read(int fd, char *buf, int n);
 extern int close(int fd);
 LOCAL	INT readb(void);

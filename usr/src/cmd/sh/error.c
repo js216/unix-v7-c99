@@ -11,14 +11,6 @@
 
 extern void exit(int n) __attribute__((__noreturn__));
 extern int unlink(char *p);
-void	exitsh(INT xno);
-void	rmtemp(IOPTR base);
-INT	assnum(STRING *p, INT n);
-void	prp(void);
-void	newline(void);
-void	done(void);
-void	clearup(void);
-void	execexp(STRING s, UFD f);
 
 /* ========	error handling	======== */
 

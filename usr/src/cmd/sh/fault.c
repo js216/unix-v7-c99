@@ -10,19 +10,6 @@
 #include	"defs.h"
 
 extern int signal(int sig, int fun);
-extern void execexp(STRING t, INT in);
-extern void error(STRING s);
-extern void done(void);
-extern INT setbrk(INT n);
-extern void exitset(void);
-extern void free(void *p);
-VOID	stdsigs(void);
-INT	ignsig(INT n);
-VOID	getsig(INT n);
-VOID	oldsigs(void);
-VOID	clrsig(INT i);
-VOID	chktrap(void);
-VOID	fault(INT sig);
 
 STRING		trapcom[MAXTRAP];
 BOOL		trapflg[MAXTRAP];
@@ -37,7 +24,7 @@ fault(INT sig)
 
 	signal(sig, (int)fault);
 	IF sig==MEMF
-	THEN	IF setbrk(brkincr) == -1
+	THEN	IF setbrk(brkincr) == (BYTPTR)-1
 		THEN	error(nospace);
 		FI
 	ELIF sig==ALARM
