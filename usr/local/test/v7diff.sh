@@ -12,7 +12,7 @@ usr/local
 : <<\EOF
 
 % Makefile /dev/null
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,174 @@
 +# SPDX-License-Identifier: MIT
 +# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 +# Copyright (c) 2026 Jakob Kastelic
@@ -26,6 +26,7 @@ usr/local
 +	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10
 +
 +LIBC = usr/src/libc/libc.a
++LIBM = usr/src/libm/libm.a
 +CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
 +
 +HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
@@ -64,6 +65,12 @@ usr/local
 +	    sh -e mklib && rm *.o && \
 +	    $(CC) $(CFLAGS) -c csu/crt0.s && \
 +	    $(CC) $(CFLAGS) -I../../include -c csu/crt0.c -o crt0c.o
++
++$(LIBM): Makefile $(wildcard usr/src/libm/*.c usr/include/*.h) \
++	    usr/src/libm/compall usr/src/libm/mklib
++	cd usr/src/libm && rm -f *.o libm.a && \
++	    CC="$(CC)" CFLAGS="$(CFLAGS) -I../../include" sh -e compall && \
++	    sh -e mklib && rm *.o
 +
 +# Commands: cmake builds one and installs it where v7 did.
 +
@@ -132,7 +139,8 @@ usr/local
 +SUBDIR_LDLIBS = -L../../libc -lc -lgcc
 +
 +bin/awk: SUBDIR_CFLAGS_EXTRA = -DYYSTACK_USE_ALLOCA=1 -Dmalloc=malloc -Dfree=free -I.
-+bin/awk: SUBDIR_LDLIBS = -L../../libc -lm -lc -lgcc
++bin/awk: SUBDIR_LDLIBS = -L../../libm -lm -L../../libc -lc -lgcc
++bin/awk: $(LIBM)
 +
 +$(SUBDIR_BINS): bin/%: force $(LIBC) $(CRT) Makefile | bin
 +	cd usr/src/cmd/$* && { test $* -nt ../../../Makefile || rm -f *.o; } && \
@@ -176,7 +184,7 @@ usr/local
 +	rm -f usr/sys/conf/*.o usr/sys/conf/c.c usr/sys/conf/unix.ld usr/sys/conf/mkconf
 +	rm -f $(KERNELS) usr/sys/sys/LIB1 usr/sys/dev/LIB2
 +	rm -f boot/unix boot/rootfs.img boot/rootfs.img.tmp
-+	rm -f etc/mkfs usr/src/libc/*.o $(LIBC)
++	rm -f etc/mkfs usr/src/libc/*.o $(LIBC) usr/src/libm/*.o $(LIBM)
 +	for d in sed sh dc tar tp; do rm -f usr/src/cmd/$$d/$$d usr/src/cmd/$$d/*.o; done
 +	$(MAKE) -C usr/src/cmd/awk clean
 
@@ -450,6 +458,11 @@ usr/local
 +extern double y0(double x);
 +extern double y1(double x);
 +extern double yn(int n, double x);
+@@ -9,2 +31,2 @@
+-#define HUGE	1.701411733192644270e38
+-#define LOGHUGE 39
++#define HUGE	1.797693134862315708e308
++#define LOGHUGE 308
 
 % usr/include/pwd.h
 @@ -0,0 +1,2 @@
@@ -1109,28 +1122,22 @@ usr/local
 @@ -159 +177 @@
 -	|	{ PUTS("null pa_stat"); $$ = nullstat; }
 +	|	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
-@@ -166,0 +185,3 @@
-+	| expr	{ PUTS("expr");
-+		$$ = op2(NE, $1, valtonode(lookup("0", symtab), CCON));
-+		}
-@@ -175 +195,0 @@
--	|		{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
-@@ -227 +247 @@
+@@ -227 +245 @@
 -		{ PUTS("print list"); $$ = stat3($1, $2, nullstat, nullstat); }
 +		{ PUTS("print list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
-@@ -231 +251 @@
+@@ -231 +249 @@
 -		{ PUTS("printf list"); $$ = stat3($1, $2, nullstat, nullstat); }
 +		{ PUTS("printf list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
-@@ -233 +253 @@
+@@ -233 +251 @@
 -	|		{ PUTS("null simple statement"); $$ = nullstat; }
 +	|		{ PUTS("null simple statement"); $$ = (long)nullstat; }
-@@ -239 +259 @@
+@@ -239 +257 @@
 -	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, nullstat); }
 +	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
-@@ -253 +273 @@
+@@ -253 +271 @@
 -	|			{ PUTS("null stat list"); $$ = nullstat; }
 +	|			{ PUTS("null stat list"); $$ = (long)nullstat; }
-@@ -264 +284 @@
+@@ -264 +282 @@
 -		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, nullstat, $6, $9); }
 +		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, (long)nullstat, $6, $9); }
 
@@ -1305,11 +1312,30 @@ usr/local
 @@ -290 +299 @@
 -	register i, k;
 +	register int i, k;
+@@ -300 +309 @@
+-	int fatab[257];
++	int fatab[2*256+1];
+@@ -308,3 +317,3 @@
+-	char symbol[NCHARS];
+-	char isyms[NCHARS];
+-	char ssyms[NCHARS];
++	char symbol[256];
++	char isyms[256];
++	char ssyms[256];
+@@ -314 +323 @@
+-	for (i=0; i<NCHARS; i++)  isyms[i] = symbol[i] = 0;
++	for (i=0; i<256; i++)  isyms[i] = symbol[i] = 0;
+@@ -328 +337 @@
+-				k = (int) right(cp);
++				k = (int) right(cp) & 0377;
 @@ -347,2 +356,2 @@
 -						if (isyms[*p] != 1) {
 -							isyms[*p] = 1;
 +						if (isyms[(unsigned char)*p] != 1) {
 +							isyms[(unsigned char)*p] = 1;
+@@ -389 +398 @@
+-					k = (int) right(cp);
++					k = (int) right(cp) & 0377;
 @@ -408,2 +417,2 @@
 -							if (isyms[*p] == 0 && symbol[*p] == 0) {
 -								symbol[*p] = 1;
@@ -1630,129 +1656,123 @@ usr/local
 +int n;
 @@ -64,0 +70 @@
 +	(void)n;
-@@ -73,0 +80,2 @@
-+	if (a[1] == nullstat && a[2] == nullstat)
-+		return(true);
-@@ -94,0 +103 @@
+@@ -94,0 +101 @@
 +int n;
-@@ -97,0 +107 @@
+@@ -97,0 +105 @@
 +	(void)n;
-@@ -110,0 +121 @@
+@@ -110,0 +119 @@
 +	(void)i;
-@@ -126,0 +138 @@
+@@ -126,0 +136 @@
 +int n;
-@@ -137 +149 @@
+@@ -137 +147 @@
 -	if (n==MATCH && i==1 || n==NOTMATCH && i==0)
 +	if ((n==MATCH && i==1) || (n==NOTMATCH && i==0))
-@@ -143,0 +156 @@
+@@ -143,0 +154 @@
 +int n;
-@@ -153,0 +167 @@
+@@ -153,0 +165 @@
 +		/* fallthrough */
-@@ -174,0 +189 @@
+@@ -174,0 +187 @@
 +int n;
-@@ -192,0 +208 @@
+@@ -192,0 +206 @@
 +		/* fallthrough */
-@@ -207,0 +224 @@
+@@ -207,0 +222 @@
 +int
-@@ -210 +227 @@
+@@ -210 +225 @@
 -	if (!istemp(a)) return;
 +	if (!istemp(a)) return(0);
-@@ -212,0 +230 @@
+@@ -212,0 +228 @@
 +	return(0);
-@@ -232,0 +251 @@
+@@ -232,0 +249 @@
 +int n;
-@@ -236,0 +256 @@
+@@ -236,0 +254 @@
 +	(void)n;
-@@ -247,0 +268 @@
+@@ -247,0 +266 @@
 +int nnn;
-@@ -251,0 +273 @@
+@@ -251,0 +271 @@
 +	(void)nnn;
-@@ -286,0 +309 @@
+@@ -286,0 +307 @@
 +int nnn;
-@@ -289,0 +313 @@
+@@ -289,0 +311 @@
 +	(void)nnn;
-@@ -381,0 +406 @@
+@@ -381,0 +404 @@
 +int n;
-@@ -385,0 +411 @@
+@@ -385,0 +409 @@
 +	(void)n;
-@@ -397,0 +424 @@
+@@ -397,0 +422 @@
 +int n;
-@@ -399 +426 @@
+@@ -399 +424 @@
 -	awkfloat i,j;
 +	awkfloat i,j=0;
-@@ -413,0 +441 @@
+@@ -413,0 +439 @@
 +		/* fallthrough */
-@@ -440,0 +469 @@
+@@ -440,0 +467 @@
 +int n;
-@@ -461,0 +491 @@
+@@ -461,0 +489 @@
 +int n;
-@@ -504,0 +535 @@
+@@ -504,0 +533 @@
 +int q;
-@@ -508,0 +540 @@
+@@ -508,0 +538 @@
 +	(void)q;
-@@ -526,0 +559 @@
+@@ -526,0 +557 @@
 +int n;
-@@ -528,0 +562 @@
+@@ -528,0 +560 @@
 +	(void)n;
-@@ -541,0 +576 @@
+@@ -541,0 +574 @@
 +int n;
-@@ -562,0 +598 @@
+@@ -562,0 +596 @@
 +int n;
-@@ -564,0 +601 @@
+@@ -564,0 +599 @@
 +	(void)n;
-@@ -576,0 +614 @@
+@@ -576,0 +612 @@
 +int nnn;
-@@ -583,0 +622 @@
+@@ -583,0 +620 @@
 +	(void)nnn;
-@@ -612,2 +651,2 @@
+@@ -612,2 +649,2 @@
 -			  || sep == ' ' && (*p == '\t' || *p == '\n')
 -			  || sep == '\t' && *p == '\n')
 +			  || (sep == ' ' && (*p == '\t' || *p == '\n'))
 +			  || (sep == '\t' && *p == '\n'))
-@@ -629,0 +669 @@
+@@ -629,0 +667 @@
 +int n;
-@@ -631,0 +672 @@
+@@ -631,0 +670 @@
 +	(void)n;
-@@ -645,0 +687 @@
+@@ -645,0 +685 @@
 +int n;
-@@ -647,0 +690 @@
+@@ -647,0 +688 @@
 +	(void)n;
-@@ -664,0 +708 @@
+@@ -664,0 +706 @@
 +int n;
-@@ -666,0 +711 @@
+@@ -666,0 +709 @@
 +	(void)n;
-@@ -687,0 +733 @@
+@@ -687,0 +731 @@
 +int n;
-@@ -691,0 +738 @@
+@@ -691,0 +736 @@
 +	(void)n;
-@@ -712,0 +760 @@
+@@ -712,0 +758 @@
 +	return(true);
-@@ -715,0 +764 @@
+@@ -715,0 +762 @@
 +int n;
-@@ -717,0 +767 @@
+@@ -717,0 +765 @@
 +	(void)a;
-@@ -740,0 +791 @@
+@@ -740,0 +789 @@
 +int n;
-@@ -743 +794 @@
+@@ -743 +792 @@
 -	awkfloat u;
 +	awkfloat u=0;
-@@ -744,0 +796 @@
+@@ -744,0 +794 @@
 +	(void)n;
-@@ -766,0 +819 @@
+@@ -766,0 +817 @@
 +int n;
-@@ -770,0 +824 @@
+@@ -770,0 +822 @@
 +	(void)n;
-@@ -774,0 +829,2 @@
-+		if (isfld(y))
-+			fldbld();
-@@ -792 +848 @@
+@@ -792 +844 @@
 -obj nullproc() {}
 +obj nullproc() { obj x = {0,0,0}; return(x); }
-@@ -805 +861,2 @@
+@@ -805 +857,2 @@
 -redirprint(s, a, b) char *s; node *b;
 +int
 +redirprint(s, a, b) char *s; int a; node *b;
-@@ -831,0 +889 @@
+@@ -831,0 +885 @@
 +	return(0);
 
 % usr/src/cmd/awk/token.c
@@ -3910,6 +3930,9 @@ usr/local
 +stats(void)
 
 % usr/src/cmd/deroff.c
+@@ -33 +33 @@
+-char chars[128];  /* SPECIAL, APOS, DIGIT, or LETTER */
++char chars[256];  /* SPECIAL, APOS, DIGIT, or LETTER */
 @@ -51 +51 @@
 -char *calloc();
 +char *calloc(unsigned num, unsigned size);
@@ -4267,36 +4290,7 @@ usr/local
 -	register t;
 +	register int space;
 +	register int t;
-@@ -617,2 +640,2 @@
--		switch(t=getc(f)) {
--		case -1:
-+		t = getc(f);
-+		if(t == -1)
-@@ -620,2 +643,3 @@
--		case '\t':
--		case ' ':
-+		if(t == '\n')
-+			break;
-+		if(isspace(t)) {
-@@ -624,6 +648,2 @@
--		default:
--			if(space) {
--				shift += 7;
--				space = 0;
--			}
--			sum += (long)t << (shift%=HALFLONG);
-+		}
-+		if(space) {
-@@ -631,3 +651 @@
--			continue;
--		case '\n':
--			break;
-+			space = 0;
-@@ -635 +653,2 @@
--		break;
-+		sum += (long)t << (shift%=HALFLONG);
-+		shift += 7;
-@@ -641,2 +660,2 @@
+@@ -641,2 +664,2 @@
 -mesg(s,t)
 -char *s, *t;
 +void
@@ -5764,9 +5758,15 @@ usr/local
 +	return(0);
 
 % usr/src/cmd/egrep.y
+@@ -20 +20 @@
+-#define NCHARS 128
++#define NCHARS 256
 @@ -26 +26 @@
 -int line 1;
 +int line = 1;
+@@ -33 +33 @@
+-char chars[MAXLIN];
++int chars[MAXLIN];
 @@ -35 +35 @@
 -int nxtchar 0;
 +int nxtchar = 0;
@@ -5860,6 +5860,9 @@ usr/local
 +int
 +nextch(void) {
 +	register int c;
+@@ -166 +189 @@
+-	else c = *input++;
++	else c = *input++ & 0377;
 @@ -170 +193,2 @@
 -synerror() {
 +void
@@ -5898,9 +5901,6 @@ usr/local
 +void
 +cgotofn(void) {
 +	register int c, i, k;
-@@ -265 +296 @@
--					for (k=0; k<nc; k++) symbol[chars[pc++]] = 1;
-+					for (k=0; k<nc; k++) symbol[(unsigned char)chars[pc++]] = 1;
 @@ -321,2 +352,3 @@
 -cstate(v) {
 -	register b;
@@ -6148,7 +6148,9 @@ usr/local
 -register char *str;
 +int
 +getrnge(register char *str)
-@@ -650,0 +678 @@
+@@ -650 +677,2 @@
+-	size = *str == 255 ? 20000 : (*str &0377) - low;
++	size = (*str & 0377) == 255 ? 20000 : (*str &0377) - low;
 +	return(0);
 @@ -653,3 +681,2 @@
 -ecmp(a, b, count)
@@ -6732,6 +6734,9 @@ usr/local
 +type(char *file)
 @@ -104,0 +110 @@
 +		/* fallthrough */
+@@ -143 +149 @@
+-		if(buf[i] <= 0)
++		if(buf[i] == 0 || buf[i] & 0200)
 @@ -184 +190 @@
 -		else if(buf[j] == '\n' && isalpha(buf[j+2])){
 +		else if(buf[j] == '\n' && isalpha((unsigned char)buf[j+2])){
@@ -6759,6 +6764,9 @@ usr/local
 -char *bp;
 +int
 +english (char *bp, int n)
+@@ -295 +303 @@
+-		if (bp[j]<NASC)
++		if ((bp[j]&0377)<NASC)
 
 % usr/src/cmd/find.c
 @@ -2,0 +3 @@
@@ -7661,6 +7669,12 @@ usr/local
 @@ -148 +154 @@
 -	register c;
 +	register int c;
+@@ -208 +214 @@
+-					for (c = sp[-2]; c<*sp; c++)
++					for (c = sp[-2]&0177; c<(*sp&0177); c++)
+@@ -212 +218 @@
+-				ep[c>>3] |= bittab[c&07];
++				ep[(c&0177)>>3] |= bittab[c&07];
 @@ -250,0 +257 @@
 +			goto defchar;
 @@ -262,2 +269,2 @@
@@ -11620,6 +11634,12 @@ usr/local
 @@ -591 +596 @@
 -	register c;
 +	register int c;
+@@ -719 +724 @@
+-					for (c = sp[-2]; c<*sp; c++)
++					for (c = sp[-2]&0177; c<(*sp&0177); c++)
+@@ -730 +735 @@
+-				ep[c >> 3] |= bittab[c & 07];
++				ep[(c&0177) >> 3] |= bittab[c & 07];
 @@ -749,2 +754,2 @@
 -rline(lbuf)
 -char	*lbuf;
@@ -11818,7 +11838,7 @@ usr/local
 -			p2 = ipc->re1;
 -			while(*p1 = p2[*p1])	p1++;
 +			p2 = ipc->u.re1;
-+			while((*p1 = p2[(unsigned char)*p1]))	p1++;
++			while((*p1 = *p1 & 0200 ? *p1 : p2[(unsigned char)*p1]))	p1++;
 @@ -645,2 +652 @@
 -gline(addr)
 -char	*addr;
@@ -11826,9 +11846,6 @@ usr/local
 @@ -649 +655 @@
 -	register	c;
 +	register int	c;
-@@ -661 +667 @@
--			if(p2 >=  ebp) {
-+			if(f != 0 && p2 >=  ebp) {
 @@ -683,2 +689,2 @@
 -ecmp(a, b, count)
 -char	*a, *b;
@@ -13870,10 +13887,10 @@ usr/local
 +			while(pb<lb && digit(*pb))
 @@ -642 +678 @@
 -		while(ignore[*pa])
-+		while(ignore[(unsigned char)*pa])
++		while(ignore[(signed char)*pa])
 @@ -644 +680 @@
 -		while(ignore[*pb])
-+		while(ignore[(unsigned char)*pb])
++		while(ignore[(signed char)*pb])
 @@ -646 +682 @@
 -		if(pa>=la || *pa=='\n')
 +		if(pa>=la || *pa=='\n') {
@@ -13881,7 +13898,7 @@ usr/local
 +		}
 @@ -652 +689 @@
 -		if((sa = code[*pb++]-code[*pa++]) == 0)
-+		if((sa = code[(unsigned char)*pb++]-code[(unsigned char)*pa++]) == 0)
++		if((sa = code[(signed char)*pb++]-code[(signed char)*pa++]) == 0)
 @@ -661,2 +698,2 @@
 -cmpa(pa, pb)
 -register char *pa, *pb;
@@ -17332,14 +17349,13 @@ usr/local
 +$CC -c $CFLAGS syscall.s
 
 % usr/src/libc/csu/crt0.c usr/src/libc/csu/crt0.s
-@@ -1 +1,5 @@
+@@ -1 +1,4 @@
 -/ C runtime startoff
 +extern int main(int argc, char **argv);
 +extern void exit(int n);
 +char **environ;
 +int errno;
-+int *__errno(void) { return &errno; }
-@@ -3,4 +7,9 @@
+@@ -3,4 +6,9 @@
 -.globl	_exit, _environ
 -.globl	start
 -.globl	_main
@@ -17353,7 +17369,7 @@ usr/local
 +{
 +	int argc = frame[0];
 +	char **argv = (char **)&frame[1];
-@@ -8,29 +17,3 @@
+@@ -8,29 +16,3 @@
 -start:
 -	setd
 -	mov	2(sp),r0
@@ -17564,6 +17580,9 @@ usr/local
 -	58,	303,	/* 1975: Last Sun. in Feb - last Sun in Oct */
 +	{ 5,  333 },	/* 1974: Jan 6 - last Sun. in Nov */
 +	{ 58, 303 },	/* 1975: Last Sun. in Feb - last Sun in Oct */
+@@ -72 +72 @@
+-char		*ct_numb();
++static char	*ct_numb();
 @@ -76,0 +77,3 @@
 +static int	sunday(register struct tm *t, register int d);
 +int	dysize(int y);
@@ -17602,14 +17621,15 @@ usr/local
 -dysize(y)
 +int
 +dysize(int y)
-@@ -234,3 +233,2 @@
--static char *
+@@ -235,2 +234 @@
 -ct_numb(cp, n)
 -register char *cp;
-+char *
 +ct_numb(register char *cp, int n)
 
 % usr/src/libc/gen/ctype_.c
+@@ -3 +3 @@
+-char _ctype_[] = {
++char _ctype_[1+256] = {
 
 % usr/src/libc/gen/cuexit.c usr/src/libc/gen/cuexit.s
 @@ -1,16 +1,8 @@
@@ -17641,7 +17661,7 @@ usr/local
 % usr/src/libc/gen/ecvt.c
 @@ -8 +8 @@
 -char	*cvt();
-+char	*cvt(double, int, int *, int *, int);
++static char	*cvt(double, int, int *, int *, int);
 @@ -12,3 +12 @@
 -ecvt(arg, ndigits, decpt, sign)
 -double arg;
@@ -17652,12 +17672,10 @@ usr/local
 -double arg;
 -int ndigits, *decpt, *sign;
 +fcvt(double arg, int ndigits, int *decpt, int *sign)
-@@ -27,4 +23,2 @@
--static char*
+@@ -28,3 +24 @@
 -cvt(arg, ndigits, decpt, sign, eflag)
 -double arg;
 -int ndigits, *decpt, *sign;
-+char*
 +cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 @@ -36 +30 @@
 -	double modf();
@@ -17668,36 +17686,56 @@ usr/local
 % usr/src/libc/gen/execvp.c
 @@ -4,0 +5 @@
 +#include <stdio.h>
-@@ -9,2 +10,2 @@
+@@ -5,0 +7 @@
++#include <stdarg.h>
+@@ -9,2 +11,2 @@
 -char	*execat(), *getenv();
 -extern	errno;
-+char	*execat(register char *s1, register char *s2, char *si);
++static char	*execat(register char *s1, register char *s2, char *si);
 +extern	int errno;
-@@ -12,2 +13,2 @@
+@@ -12,2 +14,2 @@
 -execlp(name, argv)
 -char *name, *argv;
 +int
 +execlp(char *name, char *arg0, ...)
-@@ -15 +16 @@
+@@ -15 +17,21 @@
 -	return(execvp(name, &argv));
-+	return(execvp(name, &arg0));
-@@ -18,2 +19,2 @@
++	va_list ap;
++	char **argv;
++	int i, n, r;
++
++	n = 1;
++	va_start(ap, arg0);
++	while(va_arg(ap, char *) != 0)
++		n++;
++	va_end(ap);
++
++	argv = (char **)malloc((unsigned)((n+1) * sizeof(char *)));
++	if(argv == 0)
++		return(-1);
++	argv[0] = arg0;
++	va_start(ap, arg0);
++	for(i=1; i<=n; i++)
++		argv[i] = va_arg(ap, char *);
++	va_end(ap);
++	r = execvp(name, argv);
++	free((char *)argv);
++	return(r);
+@@ -18,2 +40,2 @@
 -execvp(name, argv)
 -char *name, **argv;
 +int
 +execvp(char *name, char **argv)
-@@ -27 +28 @@
+@@ -27 +49 @@
 -	register eacces = 0;
 +	register int eacces = 0;
-@@ -41 +42 @@
+@@ -41 +63 @@
 -			for (i=1; newargs[i+1]=argv[i]; i++) {
 +			for (i=1; (newargs[i+1]=argv[i]); i++) {
-@@ -67,4 +68,2 @@
--static char *
+@@ -68,3 +90 @@
 -execat(s1, s2, si)
 -register char *s1, *s2;
 -char *si;
-+char *
 +execat(register char *s1, register char *s2, char *si)
 
 % usr/src/libc/gen/frexp.c usr/src/libc/gen/frexp11.s
@@ -17741,16 +17779,14 @@ usr/local
 % usr/src/libc/gen/getenv.c
 @@ -7 +7 @@
 -char	*nvmatch();
-+char	*nvmatch(register char *s1, register char *s2);
++static char	*nvmatch(register char *s1, register char *s2);
 @@ -10,2 +10 @@
 -getenv(name)
 -register char *name;
 +getenv(register char *name)
-@@ -29,3 +28,2 @@
--static char *
+@@ -30,2 +29 @@
 -nvmatch(s1, s2)
 -register char *s1, *s2;
-+char *
 +nvmatch(register char *s1, register char *s2)
 
 % usr/src/libc/gen/getlogin.c
@@ -17840,7 +17876,7 @@ usr/local
 +{
 +	union { double d; unsigned int u[2]; } u;
 +	int exp;
-@@ -5,27 +7,17 @@
+@@ -5,27 +7,19 @@
 -.globl	_ldexp
 -.globl	csv, cret
 -
@@ -17878,7 +17914,9 @@ usr/local
 +	if (exp >= 0x7ff)
 +		return (value < 0 ? -1e308 * 10.0 : 1e308 * 10.0);
 +	if (exp <= 0) {
-+		double v = value;
++		double v;
++		u.u[1] = (u.u[1] & 0x800fffffU) | (1U << 20);
++		v = u.d;
 +		while (exp <= 0) { v *= 0.5; exp++; }
 +		return (v);
 +	}
@@ -17947,7 +17985,7 @@ usr/local
 @@ -2,2 +1,0 @@
 -int a_magic[] = {A_MAGIC1, A_MAGIC2, A_MAGIC3, A_MAGIC4, 0};
 -#define SPACE 100		/* number of symbols read at a time */
-@@ -5,3 +3,47 @@
+@@ -5,3 +3,48 @@
 -nlist(name, list)
 -char *name;
 -struct nlist *list;
@@ -17958,8 +17996,9 @@ usr/local
 +#define	ELF_NIDENT	16
 +#define	ELFMAG0		0177
 +#define	SHT_SYMTAB	2
-+#define	SHF_WRITE	1
++#define	SHT_NOBITS	8
 +#define	SHF_EXECINSTR	4
++#define	SHN_ABS		0xfff1
 +struct elfhdr {
 +	unsigned char	e_ident[ELF_NIDENT];
 +	unsigned short	e_type;
@@ -17998,7 +18037,7 @@ usr/local
 +};
 +static int
 +readn(int fd, char *buf, int n)
-@@ -9,5 +51,42 @@
+@@ -9,5 +52,25 @@
 -	register struct nlist *p, *q;
 -	int f, n, m, i;
 -	long sa;
@@ -18014,39 +18053,22 @@ usr/local
 +	}
 +	return(total);
 +}
-+static int
-+readstr(int fd, char *buf, int n)
-+{
-+	int nr, total;
-+	char c;
-+	total = 0;
-+	while(total < n - 1) {
-+		nr = read(fd, &c, 1);
-+		if(nr <= 0)
-+			break;
-+		buf[total++] = c;
-+		if(c == '\0')
-+			return(total);
-+	}
-+	buf[total] = '\0';
-+	return(total);
-+}
 +int
 +nlist(char *name, struct nlist *list)
 +{
 +	struct nlist *p;
 +	struct elfhdr eh;
 +	struct elfshdr sh;
-+	struct elfsym sym;
-+	char strbuf[64];
++	struct elfsym syms[64], *sym;
++	char strbuf[10];
 +	char nb[9];
 +	char *sn;
-+	int f, i, j, k, nsyms;
++	int f, i, j, k, n, nsyms;
 +	int matched;
-+	unsigned int symoff, symsz, symesz;
++	unsigned int symoff, symsz;
 +	unsigned int stroff;
-+	unsigned int secflags[64];
-@@ -22,4 +101,3 @@
++	int sectype[64];
+@@ -22,4 +85,3 @@
 -	read(f, (char *)&buf, sizeof buf);
 -	for(i=0; a_magic[i]; i++)
 -		if(a_magic[i] == buf.a_magic) break;
@@ -18054,7 +18076,7 @@ usr/local
 +	if(readn(f, (char *)&eh, sizeof(eh)) != sizeof(eh)
 +	    || eh.e_ident[0] != ELFMAG0 || eh.e_ident[1] != 'E'
 +	    || eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F') {
-@@ -29,5 +107,4 @@
+@@ -29,5 +91,3 @@
 -	sa = buf.a_text + (long)buf.a_data;
 -	if(buf.a_flag != 1) sa *= 2;
 -	sa += sizeof buf;
@@ -18062,9 +18084,8 @@ usr/local
 -	n = buf.a_syms;
 +	symoff = 0;
 +	symsz = 0;
-+	symesz = sizeof(sym);
 +	stroff = 0;
-@@ -35,14 +112,16 @@
+@@ -35,14 +95,36 @@
 -	while(n){
 -		m = sizeof space;
 -		if(n < sizeof space)
@@ -18085,17 +18106,20 @@ usr/local
 +			close(f);
 +			return(-1);
 +		}
-+		secflags[i] = sh.sh_flags;
++		if(sh.sh_flags & SHF_EXECINSTR)
++			sectype[i] = N_TEXT;
++		else if(sh.sh_type == SHT_NOBITS)
++			sectype[i] = N_BSS;
++		else
++			sectype[i] = N_DATA;
 +		if(sh.sh_type == SHT_SYMTAB) {
 +			symoff = sh.sh_offset;
 +			symsz = sh.sh_size;
-+			if(sh.sh_entsize)
-+				symesz = sh.sh_entsize;
 +			lseek(f, (long)(eh.e_shoff + sh.sh_link * eh.e_shentsize), 0);
 +			if(readn(f, (char *)&sh, sizeof(sh)) != sizeof(sh)) {
 +				close(f);
 +				return(-1);
-@@ -49,0 +129,46 @@
++			}
 +			stroff = sh.sh_offset;
 +		}
 +	}
@@ -18103,21 +18127,27 @@ usr/local
 +		close(f);
 +		return(-1);
 +	}
-+	nsyms = (int)(symsz / symesz);
++	nsyms = (int)(symsz / sizeof(syms[0]));
 +	for(i = 0; i < nsyms; i++) {
-+		lseek(f, (long)(symoff + i * symesz), 0);
-+		if(readn(f, (char *)&sym, sizeof(sym)) != sizeof(sym)) {
-+			close(f);
-+			return(-1);
++		if(i % 64 == 0) {
++			n = nsyms - i < 64 ? nsyms - i : 64;
++			n *= sizeof(syms[0]);
++			lseek(f, (long)(symoff + i * sizeof(syms[0])), 0);
++			if(readn(f, (char *)syms, n) != n) {
++				close(f);
++				return(-1);
+@@ -49,0 +132,35 @@
 +		}
-+		if(sym.st_name == 0)
++		sym = &syms[i % 64];
++		if(sym->st_name == 0)
 +			continue;
-+		lseek(f, (long)(stroff + sym.st_name), 0);
-+		k = readstr(f, strbuf, sizeof(strbuf));
++		lseek(f, (long)(stroff + sym->st_name), 0);
++		k = readn(f, strbuf, 9);
 +		if(k <= 0) {
 +			close(f);
 +			return(-1);
 +		}
++		strbuf[k] = '\0';
 +		for(p = list; p->n_name[0]; p++) {
 +			for(j = 0; j < 8; j++)
 +				nb[j] = p->n_name[j];
@@ -18133,15 +18163,15 @@ usr/local
 +				}
 +			if(!matched || strbuf[j] != '\0')
 +				continue;
-+			p->n_value = sym.st_value;
-+			if(sym.st_shndx == 0 || sym.st_shndx >= 64)
++			p->n_value = sym->st_value;
++			if(sym->st_shndx == SHN_ABS)
++				p->n_type = N_ABS;
++			else if(sym->st_shndx == 0 || sym->st_shndx >= 64)
 +				p->n_type = N_UNDF;
-+			else if(secflags[sym.st_shndx] & SHF_EXECINSTR)
-+				p->n_type = N_TEXT | N_EXT;
-+			else if(secflags[sym.st_shndx] & SHF_WRITE)
-+				p->n_type = N_DATA | N_EXT;
 +			else
-+				p->n_type = N_BSS | N_EXT;
++				p->n_type = sectype[sym->st_shndx];
++			if(sym->st_info >> 4)
++				p->n_type |= N_EXT;
 
 % usr/src/libc/gen/perror.c
 @@ -4,0 +5 @@
@@ -18280,7 +18310,7 @@ usr/local
 % usr/src/libc/gen/sleep.c
 @@ -4,0 +5,4 @@
 +static void sleepx(int signo);
-+extern void (*signal(int sig, void (*fun)(int)))(int);
++int	signal();
 +extern int alarm(int n);
 +extern int pause(void);
 @@ -6,2 +10,2 @@
@@ -18288,17 +18318,21 @@ usr/local
 -unsigned n;
 +unsigned
 +sleep(volatile unsigned n)
-@@ -9 +12,0 @@
+@@ -9,3 +13,2 @@
 -	int sleepx();
-@@ -11 +14 @@
+-	unsigned altime;
 -	int (*alsig)() = SIG_DFL;
-+	void (*alsig)(int) = SIG_DFL;
++	volatile unsigned altime;
++	volatile int alsig = SIG_DFL;
 @@ -14 +17 @@
 -		return;
 +		return(0);
 @@ -19 +22 @@
 -		return;
 +		return(0);
+@@ -29 +32 @@
+-	alsig = signal(SIGALRM, sleepx);
++	alsig = signal(SIGALRM, (int)sleepx);
 @@ -36,2 +39,2 @@
 -static
 -sleepx()
@@ -18451,7 +18485,7 @@ usr/local
 -char	*getttys();
 -char	*rindex();
 +char	*ttyname(int f);
-+char	*getttys(int f);
++static char	*getttys(int f);
 +char	*rindex(char *sp, int c);
 @@ -15 +16,2 @@
 -ttyslot()
@@ -18463,10 +18497,8 @@ usr/local
 @@ -29 +31 @@
 -	while (tp = getttys(tf)) {
 +	while ((tp = getttys(tf))) {
-@@ -40,2 +42,2 @@
--static char *
+@@ -41 +43 @@
 -getttys(f)
-+char *
 +getttys(int f)
 
 % usr/src/libc/memcpy.c /dev/null
@@ -18543,6 +18575,43 @@ usr/local
 -csv.o
 +memcpy.o \
 +syscall.o
+
+% usr/src/libm/compall
+@@ -1,16 +1,16 @@
+-cc -c -O asin.c
+-cc -c -O atan.c
+-cc -c -O exp.c
+-cc -c -O fabs.c
+-cc -c -O floor.c
+-cc -c -O hypot.c
+-cc -c -O j0.c
+-cc -c -O j1.c
+-cc -c -O jn.c
+-cc -c -O log.c
+-cc -c -O pow.c
+-cc -c -O sin.c
+-cc -c -O sinh.c
+-cc -c -O sqrt.c
+-cc -c -O tan.c
+-cc -c -O tanh.c
++$CC -c $CFLAGS asin.c
++$CC -c $CFLAGS atan.c
++$CC -c $CFLAGS exp.c
++$CC -c $CFLAGS fabs.c
++$CC -c $CFLAGS floor.c
++$CC -c $CFLAGS hypot.c
++$CC -c $CFLAGS j0.c
++$CC -c $CFLAGS j1.c
++$CC -c $CFLAGS jn.c
++$CC -c $CFLAGS log.c
++$CC -c $CFLAGS pow.c
++$CC -c $CFLAGS sin.c
++$CC -c $CFLAGS sinh.c
++$CC -c $CFLAGS sqrt.c
++$CC -c $CFLAGS tan.c
++$CC -c $CFLAGS tanh.c
+
+% usr/src/libm/mklib
 
 % usr/src/libc/stdio/clrerr.c
 @@ -3,2 +3,2 @@
@@ -19293,18 +19362,16 @@ usr/local
 
 % usr/src/libc/stdio/endopen.c
 @@ -2,0 +3 @@
-+int create(register char *file, int rw);
++static int create(register char *file, int rw);
 @@ -5,3 +6 @@
 -_endopen(file, mode, iop)
 -	char *file, *mode;
 -	register FILE *iop;
 +_endopen(char *file, char *mode, register FILE *iop)
-@@ -55,4 +54,2 @@
--static int
+@@ -56,3 +55 @@
 -create(file, rw)
 -	register char *file;
 -	int rw;
-+int
 +create(register char *file, int rw)
 
 % usr/src/libc/stdio/fdopen.c
@@ -19604,7 +19671,12 @@ usr/local
 +getw(register struct _iobuf *iop)
 @@ -6 +6 @@
 -	register i;
-+	register int i;
++	register unsigned i;
+@@ -11 +11,3 @@
+-	return(i | (getc(iop)<<8));
++	i |= (unsigned)getc(iop)<<8;
++	i |= (unsigned)getc(iop)<<16;
++	return(i | (unsigned)getc(iop)<<24);
 
 % usr/src/libc/stdio/popen.c
 @@ -14 +14,2 @@
@@ -19682,7 +19754,9 @@ usr/local
 -register struct _iobuf *iop;
 +int
 +putw(register int i, register struct _iobuf *iop)
-@@ -8,0 +8 @@
+@@ -8,0 +8,3 @@
++	putc(i>>16, iop);
++	putc(i>>24, iop);
 +	return(i);
 
 % usr/src/libc/stdio/rdwr.c
@@ -22112,7 +22186,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,236 @@
+@@ -1,72 +1,249 @@
 -/ low core
 -
 -.data
@@ -22319,6 +22393,19 @@ usr/local
 +	str r4, [sp, #56]
 +	mov r0, sp
 +	bl clock_irq_handler
++	ldr r0, [sp, #64]		@ back to user mode with runrun set:
++	and r0, r0, #0x1f		@ give up the cpu (v7's trap 12)
++	cmp r0, #0x10
++	bne 1f
++	ldr r0, =runrun
++	ldrb r0, [r0]
++	cmp r0, #0
++	beq 1f
++	mov r0, #0
++	mov r1, sp
++	bl user_trap_handler
++	cpsid i
++1:
 +	ldr r3, [sp, #52]
 +	ldr r4, [sp, #56]
 +	mrs r1, cpsr
@@ -22470,8 +22557,11 @@ usr/local
 +@ Low-core vectors and trap/interrupt entry live in low.s; this file holds
 +@ the assembly primitives the portable kernel invokes: the context switch
 +@ (save/resume), MMU enable, interrupt control, and timer accessors.
-@@ -4,673 +6,2 @@
--
+@@ -3,0 +6,3 @@
++	.syntax unified
++	.arch armv7-a
++	.text
+@@ -5,83 +10,198 @@
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
 -stst	= 170300^tst
@@ -22555,9 +22645,208 @@ usr/local
 -	inc	-(r0)
 -2:
 -	tstb	(r0)
--	bge	2b
++	.globl mmu_on
++	.globl dmbsy
++	.globl irq_enable
++	.globl intr_enable
++	.globl intr_disable
++	.globl intr_restore
++	.globl cntfrq_get
++	.globl cntv_tval_set
++	.globl cntv_ctl_set
++	.globl save
++	.globl resume
++	.globl dcflush
++	.globl dcclean
++
++mmu_on:
++	push {r4, r5, r6, r7, r8, r9}
++	@ Cortex-A7: set ACTLR.SMP (bit 6) before enabling the caches.  Without it
++	@ the core treats Shareable Normal memory (our cached DDR sections) as
++	@ non-coherent, so cached writes to DDR are silently dropped on eviction.
++	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
++	orr r1, r1, #(1 << 6)		@ SMP: join the inner-shareable coherency domain
++	mcr p15, 0, r1, c1, c0, 1
++	isb
++	mcr p15, 0, r0, c2, c0, 0	@ TTBR0 = page table
++	mov r1, #1
++	mcr p15, 0, r1, c3, c0, 0	@ DACR: domain 0 = manager
++	mov r1, #0
++	mcr p15, 0, r1, c8, c7, 0	@ TLBIALL
++	mcr p15, 0, r1, c7, c5, 0	@ ICIALLU: invalidate I-cache
++	mcr p15, 0, r1, c7, c5, 6	@ BPIALL: invalidate branch predictor
++	@ invalidate the whole L1 data cache by set/way before enabling it
++	mov r1, #0
++	mcr p15, 2, r1, c0, c0, 0	@ CSSELR = 0 (L1 data)
++	isb
++	mrc p15, 1, r2, c0, c0, 0	@ CCSIDR
++	and r3, r2, #7
++	add r3, r3, #4			@ r3 = log2(line bytes)
++	movw r4, #0x3ff
++	and r4, r4, r2, lsr #3		@ r4 = ways - 1
++	clz r5, r4			@ r5 = way bit shift
++	movw r6, #0x7fff
++	and r6, r6, r2, lsr #13		@ r6 = sets - 1
++1:	mov r7, r4			@ r7 = way counter
++2:	lsl r8, r7, r5
++	lsl r9, r6, r3
++	orr r8, r8, r9			@ (way<<shift) | (set<<lineorder)
++	mcr p15, 0, r8, c7, c6, 2	@ DCISW: invalidate D-cache line
++	subs r7, r7, #1
++	bge 2b
++	subs r6, r6, #1
++	bge 1b
++	dsb
++	mrc p15, 0, r1, c1, c0, 0	@ SCTLR
++	orr r1, r1, #1			@ M:  MMU enable
++	orr r1, r1, #(1 << 2)		@ C:  data cache enable
++	orr r1, r1, #(1 << 12)		@ I:  instruction cache enable
++	mcr p15, 0, r1, c1, c0, 0
++	isb
++	pop {r4, r5, r6, r7, r8, r9}
++	bx lr
++
++dmbsy:
++	dmb sy
++	bx lr
++
++irq_enable:
++	cpsie i
++	bx lr
++
++intr_enable:
++	mrs r0, cpsr
++	ldr r1, =irq_ready
++	ldr r1, [r1]
++	cmp r1, #0
++	bxeq lr
++	cpsie i
++	bx lr
++
++intr_disable:
++	mrs r0, cpsr
++	cpsid i
++	bx lr
++
++intr_restore:
++	tst r0, #0x80
++	bne 1f
++	ldr r1, =irq_ready
++	ldr r1, [r1]
++	cmp r1, #0
++	bxeq lr
++	cpsie i
++	bx lr
++1:
++	cpsid i
++	bx lr
++
++cntfrq_get:
++	mrc p15, 0, r0, c14, c0, 0
++	bx lr
++
++cntv_tval_set:
++	mcr p15, 0, r0, c14, c3, 0
++	isb
++	bx lr
++
++cntv_ctl_set:
++	mcr p15, 0, r0, c14, c3, 1
++	isb
++	bx lr
++
++	.type	save, %function
++save:
++	stmia	r0, {r4-r11}
++	str	sp, [r0, #32]
++	str	lr, [r0, #36]
++	mov	r0, #0
++	bx	lr
++	.size	save, .-save
++
++@ resume(int p_addr, int *label): switch the UBASE u-area window to the
++@ new process's image (the KISA6 trick), then restore callee regs+sp+pc
++@ from label.  label is a UBASE-window VA, so after the window switch it
++@ reads the NEW process's saved context.  IRQs masked across the switch;
++@ no stack use between the remap and the sp reload.
++	.type	resume, %function
++resume:
++	cpsid	i
++	ldr	r2, =uarea_l2		@ kernel VA of the u-area L2 (PA==VA)
++	ldr	r3, =corebase		@ board COREBASE (resolved in machdep.c)
++	ldr	r3, [r3]
++	add	r3, r3, r0, lsl #6	@ CLKADDR(p_addr) = phys u-area base
++	orr	r3, r3, #0x12		@ kernel rw, UNCACHED: the window is remapped
++					@ to a new PA each switch; uncached avoids
++					@ stale cache lines aliasing the old VA
++	str	r3, [r2, #0]
++	add	r3, r3, #0x1000
++	str	r3, [r2, #4]
++	add	r3, r3, #0x1000
++	str	r3, [r2, #8]
++	add	r3, r3, #0x1000
++	str	r3, [r2, #12]
++	dsb	ish
++	mov	r3, #0
++	mcr	p15, 0, r3, c8, c7, 0	@ TLBIALL
++	dsb	ish
++	isb
++	ldmia	r1, {r4-r11}
++	ldr	sp, [r1, #32]
++	ldr	lr, [r1, #36]
++	mov	r0, #1
++	bx	lr
++	.size	resume, .-resume
++
++@ dcflush(addr, n): clean+invalidate the D-cache over [addr, addr+n) to the
++@ point of coherency, so a DMA buffer is consistent with main memory before a
++@ device reads it and after a device writes it.  Only the cache-incoherent
++@ board (SDMMC IDMA) calls this; QEMU's virtio path is coherent and never does.
++	.type	dcflush, %function
++dcflush:
++	mrc	p15, 0, r2, c0, c0, 1	@ CTR
++	lsr	r2, r2, #16
++	and	r2, r2, #0xf		@ DminLine = log2(words/line)
++	mov	r3, #4
++	lsl	r2, r3, r2		@ r2 = cache line size in bytes
++	add	r1, r0, r1		@ r1 = end address
++	sub	r3, r2, #1
++	bic	r0, r0, r3		@ align start down to a line
++1:	mcr	p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean+invalidate by MVA
++	add	r0, r0, r2
++	cmp	r0, r1
++	blo	1b
++	dsb
++	bx	lr
++	.size	dcflush, .-dcflush
++
++@ dcclean(): clean the whole L1 D-cache by set/way, which on the Cortex-A7
++@ (LoUU = 1) is the point of unification: code the kernel wrote through the
++@ D-cache becomes visible to instruction fetch (arm_sync_icache).
++	.type	dcclean, %function
++dcclean:
++	push	{r4, r5, r6, r7}
++	mov	r0, #0
++	mcr	p15, 2, r0, c0, c0, 0	@ CSSELR = 0 (L1 data)
++	isb
++	mrc	p15, 1, r0, c0, c0, 0	@ CCSIDR
++	and	r1, r0, #7
++	add	r1, r1, #4		@ r1 = log2(line bytes)
++	movw	r2, #0x3ff
++	and	r2, r2, r0, lsr #3	@ r2 = ways - 1
++	clz	r3, r2			@ r3 = way bit shift
++	movw	r4, #0x7fff
++	and	r4, r4, r0, lsr #13	@ r4 = sets - 1
++1:	mov	r5, r2			@ r5 = way counter
++2:	lsl	r6, r5, r3
++	lsl	r7, r4, r1
++	orr	r6, r6, r7		@ (way<<shift) | (set<<lineorder)
++	mcr	p15, 0, r6, c7, c10, 2	@ DCCSW: clean D-cache line
++	subs	r5, r5, #1
+@@ -89 +209 @@
 -	tst	(r0)+
--	bge	1b
++	subs	r4, r4, #1
+@@ -91,968 +211,5 @@
 -	reset
 -
 -/ end of file and loop
@@ -23144,9 +23433,8 @@ usr/local
 -	.data
 -_waitloc:
 -	waitloc
-+	.syntax unified
-+	.arch armv7-a
-@@ -679,380 +10,174 @@
+-	.text
+-
 -.globl	_save
 -_save:
 -	mov	(sp)+,r1
@@ -23527,179 +23815,10 @@ usr/local
 -_outside: .=.+2
 -
 -	.endif
-+	.globl mmu_on
-+	.globl dmbsy
-+	.globl irq_enable
-+	.globl intr_enable
-+	.globl intr_disable
-+	.globl intr_restore
-+	.globl cntfrq_get
-+	.globl cntv_tval_set
-+	.globl cntv_ctl_set
-+	.globl save
-+	.globl resume
-+	.globl dcflush
-+
-+mmu_on:
-+	push {r4, r5, r6, r7, r8, r9}
-+	@ Cortex-A7: set ACTLR.SMP (bit 6) before enabling the caches.  Without it
-+	@ the core treats Shareable Normal memory (our cached DDR sections) as
-+	@ non-coherent, so cached writes to DDR are silently dropped on eviction.
-+	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
-+	orr r1, r1, #(1 << 6)		@ SMP: join the inner-shareable coherency domain
-+	mcr p15, 0, r1, c1, c0, 1
-+	isb
-+	mcr p15, 0, r0, c2, c0, 0	@ TTBR0 = page table
-+	mov r1, #1
-+	mcr p15, 0, r1, c3, c0, 0	@ DACR: domain 0 = manager
-+	mov r1, #0
-+	mcr p15, 0, r1, c8, c7, 0	@ TLBIALL
-+	mcr p15, 0, r1, c7, c5, 0	@ ICIALLU: invalidate I-cache
-+	mcr p15, 0, r1, c7, c5, 6	@ BPIALL: invalidate branch predictor
-+	@ invalidate the whole L1 data cache by set/way before enabling it
-+	mov r1, #0
-+	mcr p15, 2, r1, c0, c0, 0	@ CSSELR = 0 (L1 data)
-+	isb
-+	mrc p15, 1, r2, c0, c0, 0	@ CCSIDR
-+	and r3, r2, #7
-+	add r3, r3, #4			@ r3 = log2(line bytes)
-+	movw r4, #0x3ff
-+	and r4, r4, r2, lsr #3		@ r4 = ways - 1
-+	clz r5, r4			@ r5 = way bit shift
-+	movw r6, #0x7fff
-+	and r6, r6, r2, lsr #13		@ r6 = sets - 1
-+1:	mov r7, r4			@ r7 = way counter
-+2:	lsl r8, r7, r5
-+	lsl r9, r6, r3
-+	orr r8, r8, r9			@ (way<<shift) | (set<<lineorder)
-+	mcr p15, 0, r8, c7, c6, 2	@ DCISW: invalidate D-cache line
-+	subs r7, r7, #1
-+	bge 2b
-+	subs r6, r6, #1
-+	bge 1b
 +	dsb
-+	mrc p15, 0, r1, c1, c0, 0	@ SCTLR
-+	orr r1, r1, #1			@ M:  MMU enable
-+	orr r1, r1, #(1 << 2)		@ C:  data cache enable
-+	orr r1, r1, #(1 << 12)		@ I:  instruction cache enable
-+	mcr p15, 0, r1, c1, c0, 0
-+	isb
-+	pop {r4, r5, r6, r7, r8, r9}
-+	bx lr
-+
-+dmbsy:
-+	dmb sy
-+	bx lr
-+
-+irq_enable:
-+	cpsie i
-+	bx lr
-+
-+intr_enable:
-+	mrs r0, cpsr
-+	ldr r1, =irq_ready
-+	ldr r1, [r1]
-+	cmp r1, #0
-+	bxeq lr
-+	cpsie i
-+	bx lr
-+
-+intr_disable:
-+	mrs r0, cpsr
-+	cpsid i
-+	bx lr
-+
-+intr_restore:
-+	tst r0, #0x80
-+	bne 1f
-+	ldr r1, =irq_ready
-+	ldr r1, [r1]
-+	cmp r1, #0
-+	bxeq lr
-+	cpsie i
-+	bx lr
-+1:
-+	cpsid i
-+	bx lr
-+
-+cntfrq_get:
-+	mrc p15, 0, r0, c14, c0, 0
-+	bx lr
-+
-+cntv_tval_set:
-+	mcr p15, 0, r0, c14, c3, 0
-+	isb
-+	bx lr
-+
-+cntv_ctl_set:
-+	mcr p15, 0, r0, c14, c3, 1
-+	isb
-+	bx lr
-+
-+	.type	save, %function
-+save:
-+	stmia	r0, {r4-r11}
-+	str	sp, [r0, #32]
-+	str	lr, [r0, #36]
-+	mov	r0, #0
++	pop	{r4, r5, r6, r7}
 +	bx	lr
-+	.size	save, .-save
-+
-+@ resume(int p_addr, int *label): switch the UBASE u-area window to the
-+@ new process's image (the KISA6 trick), then restore callee regs+sp+pc
-+@ from label.  label is a UBASE-window VA, so after the window switch it
-+@ reads the NEW process's saved context.  IRQs masked across the switch;
-+@ no stack use between the remap and the sp reload.
-+	.type	resume, %function
-+resume:
-+	cpsid	i
-+	ldr	r2, =uarea_l2		@ kernel VA of the u-area L2 (PA==VA)
-+	ldr	r3, =corebase		@ board COREBASE (resolved in machdep.c)
-+	ldr	r3, [r3]
-+	add	r3, r3, r0, lsl #6	@ CLKADDR(p_addr) = phys u-area base
-+	orr	r3, r3, #0x12		@ kernel rw, UNCACHED: the window is remapped
-+					@ to a new PA each switch; uncached avoids
-+					@ stale cache lines aliasing the old VA
-+	str	r3, [r2, #0]
-+	add	r3, r3, #0x1000
-+	str	r3, [r2, #4]
-+	add	r3, r3, #0x1000
-+	str	r3, [r2, #8]
-+	add	r3, r3, #0x1000
-+	str	r3, [r2, #12]
-+	dsb	ish
-+	mov	r3, #0
-+	mcr	p15, 0, r3, c8, c7, 0	@ TLBIALL
-+	dsb	ish
-+	isb
-+	ldmia	r1, {r4-r11}
-+	ldr	sp, [r1, #32]
-+	ldr	lr, [r1, #36]
-+	mov	r0, #1
-+	bx	lr
-+	.size	resume, .-resume
-+
-+@ dcflush(addr, n): clean+invalidate the D-cache over [addr, addr+n) to the
-+@ point of coherency, so a DMA buffer is consistent with main memory before a
-+@ device reads it and after a device writes it.  Only the cache-incoherent
-+@ board (SDMMC IDMA) calls this; QEMU's virtio path is coherent and never does.
-+	.type	dcflush, %function
-+dcflush:
-+	mrc	p15, 0, r2, c0, c0, 1	@ CTR
-+	lsr	r2, r2, #16
-+	and	r2, r2, #0xf		@ DminLine = log2(words/line)
-+	mov	r3, #4
-+	lsl	r2, r3, r2		@ r2 = cache line size in bytes
-+	add	r1, r0, r1		@ r1 = end address
-+	sub	r3, r2, #1
-+	bic	r0, r0, r3		@ align start down to a line
-+1:	mcr	p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean+invalidate by MVA
-+	add	r0, r0, r2
-+	cmp	r0, r1
-+	blo	1b
-+	dsb
-+	bx	lr
-+	.size	dcflush, .-dcflush
++	.size	dcclean, .-dcclean
 +	.ltorg
 
 % usr/sys/conf/mkconf.c
@@ -24394,26 +24513,23 @@ usr/local
 +geterror(struct buf *bp)
 
 % usr/sys/dev/mem.c
-@@ -15,2 +15,3 @@
--#include "../h/conf.h"
--#include "../h/seg.h"
+@@ -16,0 +17,4 @@
 +int passc(int c);
 +int cpass(void);
-+int arm_mem_read(unsigned int off, char *buf, unsigned int n);
-@@ -18 +19,2 @@
++int fumem(unsigned int off);
++int sumem(unsigned int off, int c);
+@@ -18 +22,2 @@
 -mmread(dev)
 +int
 +mmread(dev_t dev)
-@@ -20,2 +22,3 @@
+@@ -20,2 +25 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-+	char buf[64];
-+	unsigned int n, off;
-@@ -24 +27 @@
+@@ -24 +28 @@
 -		return;
 +		return(0);
-@@ -26,15 +29,13 @@
+@@ -26,10 +30 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
 -		a = UISA->r[0];
@@ -24424,41 +24540,30 @@ usr/local
 -		if(minor(dev) == 1)
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if ((c = fuibyte((caddr_t)on)) < 0)
--			u.u_error = ENXIO;
++		if ((c = fumem((unsigned int)u.u_offset)) < 0)
+@@ -37,3 +31,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
--	} while(u.u_error==0 && passc(c)>=0);
-+		off = (unsigned int)u.u_offset;
-+		n = u.u_count;
-+		if(n > sizeof(buf))
-+			n = sizeof(buf);
-+		if(arm_mem_read(off, buf, n) <= 0)
-+			break;
-+		for(unsigned int i = 0; i < n; i++) {
-+			c = buf[i];
-+			if(passc(c) < 0 || u.u_error != 0)
-+				return(0);
-+		}
-+	} while(u.u_count != 0 && u.u_error == 0);
+@@ -40,0 +33 @@
 +	return(0);
-@@ -43 +44,2 @@
+@@ -43 +36,2 @@
 -mmwrite(dev)
 +int
 +mmwrite(dev_t dev)
-@@ -45,2 +47 @@
+@@ -45,2 +39,2 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-@@ -50 +51 @@
++	unsigned int off;
+@@ -50 +44 @@
 -		return;
 +		return(0);
-@@ -53,3 +54 @@
+@@ -53,2 +47 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
--		if ((c=cpass())<0 || u.u_error!=0)
-+		if((c = cpass()) < 0 || u.u_error != 0)
-@@ -57,12 +56 @@
++		off = (unsigned int)u.u_offset;
+@@ -57,8 +50 @@
 -		a = UISA->r[0];
 -		d = UISD->r[0];
 -		spl7();
@@ -24467,12 +24572,12 @@ usr/local
 -		if(minor(dev) == 1)
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if (suibyte((caddr_t)on, c) < 0)
--			u.u_error = ENXIO;
++		if (sumem(off, c) < 0)
+@@ -66,3 +51,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
-+		*(char *)(unsigned int)(u.u_offset-1) = c;
-@@ -69,0 +58 @@
+@@ -69,0 +53 @@
 +	return(0);
 
 % usr/sys/dev/mklib
@@ -26605,7 +26710,7 @@ usr/local
 - * structure used to address
 - * a sequence of integers.
 + * User virtual memory layout.
-@@ -18,2 +14,33 @@
+@@ -18,2 +14,35 @@
 -physadr	ka6;		/* 11/40 KISA6; 11/45 KDSA6 */
 -
 +#define USERBASE	0x00000000U
@@ -26614,7 +26719,7 @@ usr/local
 +#define USTACK		0x000f0000U
 +#define UARGV		0x0000f000U
 +#define UARGLEN		3072
-+#define UENTRY_SIGTRAMP	0x0000fe00U
++#define UENTRY_SIGTRAMP	0x00000008U	/* below UENTRY, never loaded */
 +/*
 + * Physical core window.  The kernel maps KERNBASE..CORETOP as 1 MB
 + * sections (PA==VA), so all of physical core below CORETOP is directly
@@ -26629,9 +26734,11 @@ usr/local
 + * Write-Back/Write-Allocate, shareable -- CACHED (TEX=001,C=1,B=1,S=1) -- so
 + * the CPU runs at full speed instead of stalling on every uncached access.
 + * Device memory (MMIO) stays strongly ordered.  mmu_on() enables the L1
-+ * I/D caches; resume() invalidates the I-cache on context switch because the
-+ * per-process user region shares VA 0 (VIPT I-cache aliasing); DMA buffers
-+ * are flushed by the block driver (dcflush) on cache-incoherent hardware.
++ * I/D caches.  Code the kernel writes through the D-cache (exec, icode, and
++ * the image copies of fork, expand and swap-in) is made visible to
++ * instruction fetch by arm_sync_icache(), from exec and from sureg() on
++ * every switch; DMA buffers are flushed by the block driver (dcflush) on
++ * cache-incoherent hardware.
 + */
 +#define SEC_KERN	0x0001140eU	/* L1 1 MB section, kernel rw, cached */
 +#define SEC_DEV		0x00000c02U	/* L1 1 MB section, device (uncached) */
@@ -26641,14 +26748,14 @@ usr/local
 +#define PG_KRW		0x0000045eU	/* L2 small page, kernel-only rw, cached */
 +#define PGSHIFT		12
 +#define PGSIZE		0x1000U
-@@ -21 +48,5 @@
+@@ -21 +50,5 @@
 - * address to access 11/70 UNIBUS map
 + * Physical memory map, one entry per [start,end) 1 MB-section range with its
 + * L1 attribute (SEC_KERN cached, SEC_DEV device).  The board file supplies a
 + * board_map[] terminated by a zero entry; machine_init() (machdep.c) walks it
 + * to build the section table -- identical code on every board, so QEMU
 + * exercises the same machine_init() the MP135 runs.
-@@ -23 +54 @@
+@@ -23 +56 @@
 -#define	UBMAP	((physadr)0170200)
 +struct memregion { unsigned int start, end, attr; };
 
@@ -27099,20 +27206,21 @@ usr/local
 -#include "../h/acct.h"
 @@ -6 +4,0 @@
 -#include "../h/inode.h"
-@@ -10,2 +8,10 @@
--#include "../h/reg.h"
+@@ -11 +9,12 @@
 -#include "../h/buf.h"
 +
 +void printf(char *fmt, ...);
 +void panic(char *s);
 +void mmu_on(unsigned int ttb);
++void dcclean(void);
++void arm_sync_icache(void);
 +void cninit(void);			/* board console early init (cn driver) */
 +void bdinit(void);
 +void mfree(struct map *mp, int size, int a);
 +extern struct memregion board_map[];	/* per-board section map (conf/<board>.c) */
 +extern void clock_ddr_init(void);	/* per-board clocks + DRAM bring-up */
 +extern char __bss_start[], __bss_end[];
-@@ -14,3 +20,5 @@
+@@ -14,3 +23,5 @@
 - * Icode is the octal bootstrap
 - * program executed in user mode
 - * to bring up the system.
@@ -27121,7 +27229,7 @@ usr/local
 + *   user_l2  -- user VA 0..1MB, (re)loaded by arm_sureg() per process
 + *   uarea_l2 -- the UBASE u-area window, remapped by resume() per process
 + * Only these two follow the current process; everything else is fixed.
-@@ -18,15 +26,15 @@
+@@ -18,15 +29,15 @@
 -int	icode[] =
 -{
 -	0104413,	/* sys exec; init; initp */
@@ -27152,7 +27260,7 @@ usr/local
 +char	*msgbufp = msgbuf;	/* next saved printf character */
 +
 +#define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
-@@ -35 +43,6 @@
+@@ -35 +46,6 @@
 - * Machine-dependent startup code
 + * Called from _start (conf/low.s) before switching to the u-area stack.
 + * Board-independent: bring up the board's clocks + DRAM, then build the L1
@@ -27160,20 +27268,20 @@ usr/local
 + * the two per-process L2 windows, and enable the MMU + caches.  The same code
 + * runs on every board -- only board_map[] and clock_ddr_init() differ -- so a
 + * QEMU run exercises the identical machine_init() the MP135 uses.
-@@ -37 +50 @@
+@@ -37 +53 @@
 -startup()
 +void machine_init(void)
-@@ -39 +52,2 @@
+@@ -39 +55,2 @@
 -	register i;
 +	struct memregion *m;
 +	unsigned int pa, i;
-@@ -41,3 +55,2 @@
+@@ -41,3 +58,2 @@
 -	/*
 -	 * zero and free all of core
 -	 */
 +	cninit();			/* bring up the console (UART4 from HSI) early */
 +	clock_ddr_init();		/* clocks + DRAM (no-op where RAM is already up) */
-@@ -45,10 +58,5 @@
+@@ -45,15 +61,5 @@
 -	i = ka6->r[0] + USIZE;
 -	UISD->r[0] = 077406;
 -	for(;;) {
@@ -27184,24 +27292,24 @@ usr/local
 -		maxmem++;
 -		mfree(coremap, 1, i);
 -		i++;
+-	}
+-	if(cputype == 70)
+-	for(i=0; i<62; i+=2) {
+-		UBMAP->r[i] = i<<12;
+-		UBMAP->r[i+1] = 0;
 +	/* DRAM is up now, so zero the DDR-resident table section (holds l1 and
 +	 * the big system tables); low.s already zeroed the SYSRAM .bss. */
 +	{
 +		char *p;
 +		for(p = __ddrbss_start; p < __ddrbss_end; p++) *p = 0;
-@@ -56,10 +64 @@
--	if(cputype == 70)
--	for(i=0; i<62; i+=2) {
--		UBMAP->r[i] = i<<12;
--		UBMAP->r[i+1] = 0;
--	}
+@@ -61,5 +67 @@
 -	printf("mem = %D\n", ctob((long)maxmem));
 -	if(MAXMEM < maxmem)
 -		maxmem = MAXMEM;
 -	mfree(swapmap, nswap, 1);
 -	swplo--;
 +	for(i = 0; i < 256; i++) { user_l2[i] = 0; uarea_l2[i] = 0; }
-@@ -67,3 +66,24 @@
+@@ -67,3 +69,24 @@
 -	/*
 -	 * determine clock
 -	 */
@@ -27229,34 +27337,35 @@ usr/local
 +		char *p, *e = (char *)CLKADDR(64 + USIZE);
 +		for(p = (char *)CLKADDR(64); p < e; p++) *p = 0;
 +	}
-@@ -71,2 +91 @@
+@@ -71,2 +94 @@
 -	UISA->r[7] = ka6->r[1]; /* io segment */
 -	UISD->r[7] = 077406;
 +	mmu_on((unsigned int)l1);
-@@ -76,2 +95,4 @@
+@@ -76,2 +98,6 @@
 - * set up a physical address
 - * into users virtual address space.
 + * Load the user-region page table (user_l2) for the current process.
 + * The Armv7 user layout is flat (1 MB at VA 0; binaries link at UENTRY,
-+ * stack near USTACK), so the whole user window maps contiguously to the
-+ * image clicks just above the u-area.  Called from sureg() (ureg.c).
-@@ -79 +100 @@
++ * stack near USTACK), so the user window maps contiguously to the image
++ * clicks just above the u-area: all of it for an exec'd program, only the
++ * first page for icode.  Pages beyond the image stay unmapped.  Called
++ * from sureg() (ureg.c).
+@@ -79 +105 @@
 -sysphys()
 +void arm_sureg(int *uisa, int *uisd, int nseg)
-@@ -81,6 +102,2 @@
+@@ -81,6 +107 @@
 -	register i, s, d;
 -	register struct a {
 -		int	segno;
 -		int	size;
 -		int	phys;
 -	} *uap;
-+	unsigned int base;
-+	int i;
-@@ -88 +105,2 @@
++	unsigned int base, i, n;
+@@ -88 +109,2 @@
 -	if(!suser())
 +	(void)uisa; (void)uisd; (void)nseg;
 +	if(u.u_procp == NULL)
-@@ -90,29 +108,8 @@
+@@ -90,26 +112,11 @@
 -	uap = (struct a *)u.u_ap;
 -	i = uap->segno;
 -	if(i < 0 || i >= 8)
@@ -27283,36 +27392,27 @@ usr/local
 -	}
 -	sureg();
 -	return;
--
--bad:
--	u.u_error = EINVAL;
 +	base = (unsigned int)CLKADDR(u.u_procp->p_addr + USIZE);
++	n = (unsigned int)(u.u_procp->p_size - USIZE) >> (PGSHIFT-6);
 +	for(i = 0; i < 256; i++)
-+		user_l2[i] = ((base + i*PGSIZE) & 0xfffff000U) | PG_USER;
++		user_l2[i] = i < n ? ((base + i*PGSIZE) & 0xfffff000U) | PG_USER : 0;
 +	__asm__ volatile(
 +	    "dsb ish\n\t"
 +	    "mcr p15, 0, %0, c8, c7, 0\n\t"	/* TLBIALL */
 +	    "dsb ish\n\t"
 +	    "isb" :: "r"(0) : "memory");
-@@ -122,2 +119,3 @@
-- * Determine which clock is attached, and start it.
-- * panic: no clock found
++	arm_sync_icache();	/* fork, expand or swap-in wrote its code */
++}
+@@ -117,2 +124,16 @@
+-bad:
+-	u.u_error = EINVAL;
++/*
 + * Copy / clear one 64-byte click of physical core.  Core is directly
 + * addressable through the PA==VA kernel window, so these are plain
 + * memory operations (the v7 m40.s copyseg/clearseg role).
-@@ -125,3 +123 @@
--#define	CLOCK1	((physadr)0177546)
--#define	CLOCK2	((physadr)0172540)
--clkstart()
++ */
 +void copyseg(int from, int to)
-@@ -129,7 +125,9 @@
--	lks = CLOCK1;
--	if(fuiword((caddr_t)lks) == -1) {
--		lks = CLOCK2;
--		if(fuiword((caddr_t)lks) == -1)
--			panic("no clock");
--	}
--	lks->r[0] = 0115;
++{
 +	int *s = (int *)CLKADDR(from), *d = (int *)CLKADDR(to), i;
 +	for(i = 0; i < 16; i++)
 +		d[i] = s[i];
@@ -27322,16 +27422,25 @@ usr/local
 +	int *d = (int *)CLKADDR(a), i;
 +	for(i = 0; i < 16; i++)
 +		d[i] = 0;
-@@ -139 +137,3 @@
-- * Let a process handle a signal by simulating an interrupt
+@@ -122,2 +143,3 @@
+- * Determine which clock is attached, and start it.
+- * panic: no clock found
 + * User-space access primitives (the v7 fubyte/subyte/... role).  User VAs
 + * live in [0, USERSIZE); a bounds check keeps a bad user pointer from
 + * faulting the kernel (Armv7 has no fault-recovery path here).
-@@ -141,2 +141,25 @@
--sendsig(p, signo)
--caddr_t p;
+@@ -125,3 +147 @@
+-#define	CLOCK1	((physadr)0177546)
+-#define	CLOCK2	((physadr)0172540)
+-clkstart()
 +static int user_range(caddr_t a, unsigned int n)
-+{
+@@ -129,7 +149,44 @@
+-	lks = CLOCK1;
+-	if(fuiword((caddr_t)lks) == -1) {
+-		lks = CLOCK2;
+-		if(fuiword((caddr_t)lks) == -1)
+-			panic("no clock");
+-	}
+-	lks->r[0] = 0115;
 +	unsigned int x = (unsigned int)a;
 +	return x < USERSIZE && n <= USERSIZE - x;
 +}
@@ -27355,8 +27464,7 @@ usr/local
 +	return *(int *)addr;
 +}
 +int suword(caddr_t addr, int v)
-@@ -144 +167,21 @@
--	register unsigned n;
++{
 +	if(!user_range(addr, sizeof(int)))
 +		return(-1);
 +	*(int *)addr = v;
@@ -27377,93 +27485,65 @@ usr/local
 +	while(n--)
 +		*t++ = *f++;
 +	return(0);
-+}
-@@ -146,7 +189,14 @@
+@@ -139 +196,4 @@
+- * Let a process handle a signal by simulating an interrupt
++ * Let a process handle a signal by simulating an interrupt:
++ * push the whole trap frame on the user stack (8-byte aligned,
++ * as the ABI wants), and enter the handler with the signal
++ * number in r0 and lr pointing at the sigreturn trampoline.
+@@ -141,2 +201,2 @@
+-sendsig(p, signo)
+-caddr_t p;
++void
++sendsig(caddr_t p, int signo)
+@@ -146,4 +206,6 @@
 -	n = u.u_ar0[R6] - 4;
 -	grow(n);
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
--	u.u_ar0[R6] = n;
++	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
++	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
++		u.u_signal[SIGSEG] = 0;
++		psignal(u.u_procp, SIGSEG);
++		return;
++	}
+@@ -151 +213 @@
 -	u.u_ar0[RPS] &= ~TBIT;
--	u.u_ar0[R7] = (int)p;
-+/* Idle: allow interrupts, wait, then re-mask (the v7 idle() in swtch). */
-+void idle(void)
-+{
-+	__asm__ volatile("cpsie i\n\twfi\n\tcpsid i" ::: "memory");
-+}
-+
-+/* No VFP context is carried for user programs (soft-float ABI). */
-+void savfp(void *p)
-+{
-+	(void)p;
-+}
-+void restfp(void *p)
-+{
-+	(void)p;
-@@ -156,6 +206,7 @@
++	u.u_ar0[14] = UENTRY_SIGTRAMP;	/* lr */
+@@ -152,0 +215 @@
++	u.u_ar0[R0] = signo;
+@@ -156,6 +219,3 @@
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
 - * a unibus device.
 - * The code here and in
 - * rhstart assumes that an rh on an 11/70
 - * is an rh70 and contains 22 bit addressing.
-+ * /dev/mem,/dev/kmem core read.  ps(1) and friends address two kinds of
-+ * thing through /dev/mem: kernel symbols resolved from the namelist (true
-+ * kernel virtual addresses, KERNBASE and up) and per-process u-areas as a
-+ * bare click offset `p_addr<<6` (V7 assumed core began at physical 0).
-+ * The kernel image and physical core window are identity-mapped, so a VA
-+ * at or above KERNBASE is read directly; a smaller value is a core-relative
-+ * click offset and is biased by COREBASE to reach the real backing page.
-@@ -163 +214 @@
++ * The sigreturn call made by the trampoline: reload the frame
++ * sendsig pushed.  Only the condition flags of the saved cpsr
++ * are taken; trap() returns r0 and r1 from u_r.
+@@ -163,4 +223,2 @@
 -int	maplock;
-+#define KMSGBASE	0x7fff0000U
-@@ -165,2 +216 @@
+-
 -mapalloc(bp)
 -register struct buf *bp;
-+static int mem_range_ok(unsigned int off, unsigned int n)
-@@ -168 +218 @@
++void
++sigreturn(void)
+@@ -168 +226,2 @@
 -	register i, a;
-+	unsigned int end;
-@@ -170,6 +220,32 @@
++	int f[RPS+1];
++	register int i;
+@@ -170 +229,3 @@
 -	if(cputype != 70)
--		return;
++	if(copyin((caddr_t)u.u_ar0[R6], (caddr_t)f, sizeof(f)) < 0) {
++		u.u_signal[SIGSEG] = 0;
++		psignal(u.u_procp, SIGSEG);
+@@ -172,4 +232,0 @@
 -	spl6();
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-+	if(n == 0)
-+		return(1);
-+	end = off + n;
-+	if(end < off)
-+		return(0);
-+	if(off >= KERNBASE && end <= (unsigned int)__bss_end)
-+		return(1);
-+	if(off >= (unsigned int)__ddrbss_start && end <= (unsigned int)__ddrbss_end)
-+		return(1);
-+	if(off >= COREBASE && end <= CORETOP)
-+		return(1);
-+	return(0);
-+}
-+
-+int arm_mem_read(unsigned int off, char *buf, unsigned int n)
-+{
-+	char *s;
-+	unsigned int i;
-+	unsigned int msgoff, msgidx;
-+
-+	if(off >= KMSGBASE && off < KMSGBASE + sizeof(unsigned int) + MSGBUFS) {
-+		msgoff = off - KMSGBASE;
-+		msgidx = (unsigned int)(msgbufp - msgbuf);
-+		for(i = 0; i < n; i++, msgoff++) {
-+			if(msgoff < sizeof(unsigned int))
-+				buf[i] = ((char *)&msgidx)[msgoff];
-+			else if(msgoff < sizeof(unsigned int) + MSGBUFS)
-+				buf[i] = msgbuf[msgoff - sizeof(unsigned int)];
-+			else
-+				buf[i] = 0;
-+		}
-+		return((int)n);
-@@ -177,19 +253,96 @@
+@@ -177,19 +234,162 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -27483,14 +27563,76 @@ usr/local
 -	if(maplock&B_WANTED)
 -		wakeup((caddr_t)&maplock);
 -	maplock = 0;
++	for(i = 0; i < RPS; i++)
++		u.u_ar0[i] = f[i];
++	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);
++	u.u_r.r_val1 = f[R0];
++	u.u_r.r_val2 = f[R1];
++}
++
++/* Idle: allow interrupts, wait, then re-mask (the v7 idle() in swtch). */
++void idle(void)
++{
++	__asm__ volatile("cpsie i\n\twfi\n\tcpsid i" ::: "memory");
++}
++
++/* No VFP context is carried for user programs (soft-float ABI). */
++void savfp(void *p)
++{
++	(void)p;
++}
++void restfp(void *p)
++{
++	(void)p;
++}
++
++/*
++ * /dev/mem,/dev/kmem core access.  ps(1) and friends address two kinds of
++ * thing through /dev/mem: kernel symbols resolved from the namelist (true
++ * kernel virtual addresses, KERNBASE and up) and per-process u-areas as a
++ * bare click offset `p_addr<<6` (V7 assumed core began at physical 0).
++ * The kernel image and physical core window are identity-mapped, so a VA
++ * at or above KERNBASE is used directly; a smaller value is a core-relative
++ * click offset and is biased by COREBASE to reach the real backing page.
++ */
++#define KMSGBASE	0x7fff0000U
++
++static char *
++memaddr(unsigned int off)
++{
++	static unsigned int msgidx;
++
++	if(off >= KMSGBASE && off < KMSGBASE + sizeof(msgidx) + MSGBUFS) {
++		off -= KMSGBASE;
++		msgidx = (unsigned int)(msgbufp - msgbuf);
++		if(off < sizeof(msgidx))
++			return((char *)&msgidx + off);
++		return(&msgbuf[off - sizeof(msgidx)]);
++	}
 +	if(off < KERNBASE)
 +		off += COREBASE;
-+	if(!mem_range_ok(off, n))
++	if((off >= KERNBASE && off < (unsigned int)__bss_end) ||
++	   (off >= (unsigned int)__ddrbss_start && off < (unsigned int)__ddrbss_end) ||
++	   (off >= COREBASE && off < CORETOP))
++		return((char *)off);
++	return(NULL);
++}
++
++/* The v7 fuibyte/suibyte role for /dev/mem: -1 for a bad offset. */
++int fumem(unsigned int off)
++{
++	char *a = memaddr(off);
++
++	return(a == NULL ? -1 : *a & 0377);
++}
++int sumem(unsigned int off, int c)
++{
++	char *a = memaddr(off);
++
++	if(a == NULL)
 +		return(-1);
-+	s = (char *)off;
-+	for(i = 0; i < n; i++)
-+		buf[i] = s[i];
-+	return((int)n);
++	*a = c;
++	return(0);
 +}
 +
 +/* No UNIBUS/buffer map on Armv7. */
@@ -27527,13 +27669,16 @@ usr/local
 +};
 +int	szicode = sizeof(icode);
 +
++/*
++ * Put the signal trampoline (UENTRY_SIGTRAMP, below the
++ * program) in a newly exec'd image.  sendsig points the
++ * handler's lr at it; it makes the sigreturn call.
++ */
 +void
-+install_sigtramp(char *base)
++install_sigtramp(void)
 +{
-+	volatile unsigned int *t = (volatile unsigned int *)(base + UENTRY_SIGTRAMP);
-+
-+	t[0] = 0xe3a0703fU;	/* mov r7, #63 (sigreturn) */
-+	t[1] = 0xef000000U;	/* svc #0 */
++	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
++	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
 +}
 +
 +void
@@ -27541,6 +27686,7 @@ usr/local
 +{
 +	unsigned int zero = 0;
 +
++	dcclean();
 +	__asm__ volatile(
 +	    "dsb ish\n\t"
 +	    "mcr p15, 0, %0, c7, c5, 0\n\t"	/* ICIALLU */
@@ -27980,9 +28126,7 @@ usr/local
 +			t = copyout((caddr_t)cp, u.u_base, n);
 
 % usr/sys/sys/sig.c
-@@ -7 +6,0 @@
--#include "../h/reg.h"
-@@ -9,0 +9,29 @@
+@@ -9,0 +10,27 @@
 +void sleep(caddr_t chan, int pri);
 +void wakeup(caddr_t chan);
 +void setrun(struct proc *p);
@@ -28008,151 +28152,107 @@ usr/local
 +void iput(struct inode *ip);
 +int save(int *lp);
 +void bcopy(char *from, char *to, unsigned int n);
++void sendsig(caddr_t p, int signo);
 +#define	SINCR	20
-+#define	ARM_SP	13
-+#define	ARM_LR	14
-+#define	ARM_PC	15
-@@ -39,2 +67,2 @@
+@@ -39,2 +66,2 @@
 -signal(pgrp, sig)
 -register pgrp;
 +void
 +signal(register int pgrp, int sig)
-@@ -55,3 +83,2 @@
+@@ -55,3 +82,2 @@
 -psignal(p, sig)
 -register struct proc *p;
 -register sig;
 +void
 +psignal(register struct proc *p, register int sig)
-@@ -81 +108,2 @@
+@@ -81 +107,2 @@
 -issig()
 +int
 +issig(void)
-@@ -83 +111 @@
+@@ -83 +110 @@
 -	register n;
 +	register int n;
-@@ -96,0 +125,17 @@
-+ * sigreturn: invoked by the signal trampoline (UENTRY_SIGTRAMP) to
-+ * restore the pre-signal pc/r0/lr/sp that sendsig() pushed on the user
-+ * stack.  trap()'s tail writes r0 from u.u_r.r_val1, so the restored r0
-+ * is returned through there.
-+ */
-+void
-+sigreturn(void)
-+{
-+	register int *r = u.u_ar0;
-+	register unsigned int sp = (unsigned int)r[ARM_SP];
-+	r[ARM_PC] = *(int *)sp;
-+	u.u_r.r_val1 = *(int *)(sp + 4);
-+	r[ARM_LR] = *(int *)(sp + 8);
-+	r[ARM_SP] = (int)(sp + 12);
-+	u.u_error = 0;
-+}
-+/*
-@@ -102 +147,2 @@
+@@ -102 +129,2 @@
 -stop()
 +void
 +stop(void)
-@@ -118 +164,18 @@
--	exit(fsig(u.u_procp));
-+	exit(0x100 | fsig(u.u_procp));
-+}
-+static void
-+sendsig(int handler, int sig)
-+{
-+	register int *r;
-+	register unsigned int sp;
-+	r = u.u_ar0;
-+	if(r == NULL)
-+		return;
-+	sp = (unsigned int)r[ARM_SP] - 12U;
-+	*(volatile unsigned int *)sp = (unsigned int)r[ARM_PC];
-+	*(volatile unsigned int *)(sp + 4) = (unsigned int)r[0];
-+	*(volatile unsigned int *)(sp + 8) = (unsigned int)r[ARM_LR];
-+	r[ARM_SP] = (int)sp;
-+	r[ARM_LR] = (int)UENTRY_SIGTRAMP;
-+	r[ARM_PC] = (int)handler;
-+	r[0] = sig;
-@@ -128 +191,2 @@
+@@ -120 +147,0 @@
+-
+@@ -128 +155,2 @@
 -psig()
 +void
 +psig(void)
-@@ -130 +194 @@
+@@ -130 +158 @@
 -	register n, p;
 +	register int n, p;
-@@ -134,4 +197,0 @@
+@@ -134,4 +161,0 @@
 -	if (u.u_fpsaved==0) {
 -		savfp(&u.u_fps);
 -		u.u_fpsaved = 1;
 -	}
-@@ -148 +208 @@
--		sendsig((caddr_t)p, n);
-+		sendsig(p, n);
-@@ -165 +225 @@
--	exit(n);
-+	exit(0x100 | n);
-@@ -172,2 +232,2 @@
+@@ -172,2 +196,2 @@
 -fsig(p)
 -struct proc *p;
 +int
 +fsig(struct proc *p)
-@@ -175 +235 @@
+@@ -175 +199 @@
 -	register n, i;
 +	register int n, i;
-@@ -196 +256,2 @@
+@@ -196 +220,2 @@
 -core()
 +int
 +core(void)
-@@ -200 +261 @@
+@@ -200 +225 @@
 -	extern schar();
 +	extern int schar(void);
-@@ -237,2 +298,2 @@
+@@ -237,2 +262,2 @@
 -grow(sp)
 -unsigned sp;
 +int
 +grow(unsigned sp)
-@@ -240 +301 @@
+@@ -240 +265 @@
 -	register si, i;
 +	register int si, i;
-@@ -242 +303 @@
+@@ -242 +267 @@
 -	register a;
 +	register int a;
-@@ -267 +328,2 @@
+@@ -267 +292,2 @@
 -ptrace()
 +void
 +ptrace(void)
-@@ -313 +375,2 @@
+@@ -313 +339,2 @@
 -procxmt()
 +int
 +procxmt(void)
-@@ -316 +379 @@
+@@ -316 +343 @@
 -	register *p;
 +	register int *p;
-@@ -328 +391 @@
+@@ -328 +355 @@
 -		if (fuibyte((caddr_t)ipc.ip_addr) == -1)
 +		if (fubyte((caddr_t)ipc.ip_addr) == -1)
-@@ -330 +393 @@
+@@ -330 +357 @@
 -		ipc.ip_data = fuiword((caddr_t)ipc.ip_addr);
 +		ipc.ip_data = fuword((caddr_t)ipc.ip_addr);
-@@ -345 +408 @@
+@@ -345 +372 @@
 -		ipc.ip_data = ((physadr)&u)->r[i>>1];
 +		ipc.ip_data = *(int *)((char *)&u + i);
-@@ -354,2 +417,3 @@
+@@ -354,2 +381,3 @@
 -		if (xp = u.u_procp->p_textp) {
 -			if (xp->x_count!=1 || xp->x_iptr->i_mode&ISVTX)
 +		xp = u.u_procp->p_textp;
 +		if (xp != NULL) {
 +			if (xp->x_count!=1 || (xp->x_iptr->i_mode&ISVTX))
-@@ -360,2 +424,2 @@
+@@ -360,2 +388,2 @@
 -		i = suiword((caddr_t)ipc.ip_addr, 0);
 -		suiword((caddr_t)ipc.ip_addr, ipc.ip_data);
 +		i = suword((caddr_t)ipc.ip_addr, 0);
 +		suword((caddr_t)ipc.ip_addr, ipc.ip_data);
-@@ -379 +443,3 @@
+@@ -379 +407,3 @@
 -		p = (int *)&((physadr)&u)->r[i>>1];
 +		if (i<0 || i+(int)sizeof(int) > ctob(USIZE))
 +			goto error;
 +		p = (int *)((char *)&u + i);
-@@ -382,8 +447,0 @@
+@@ -382,8 +411,0 @@
 -		for (i=0; i<8; i++)
 -			if (p == &u.u_ar0[regloc[i]])
 -				goto ok;
@@ -28161,19 +28261,17 @@ usr/local
 -			ipc.ip_data &= ~0340;	/* priority 0 */
 -			goto ok;
 -		}
-@@ -399 +456,0 @@
+@@ -399 +420,0 @@
 -		u.u_ar0[RPS] |= TBIT;
-@@ -401,2 +458,5 @@
+@@ -401,2 +422,5 @@
 -		if ((int)ipc.ip_addr != 1)
 -			u.u_ar0[PC] = (int)ipc.ip_addr;
 +		if ((int)ipc.ip_addr != 1) {
 +			p = u.u_ar0;
 +			if (p != NULL)
-+				p[ARM_PC] = (int)ipc.ip_addr;
++				p[PC] = (int)ipc.ip_addr;
 +		}
-@@ -410 +470,2 @@
--		exit(fsig(u.u_procp));
-+		exit(0x100 | fsig(u.u_procp));
+@@ -410,0 +435 @@
 +		return(1);
 
 % usr/sys/sys/slp.c
@@ -28472,7 +28570,7 @@ usr/local
 +bcopy(caddr_t from, caddr_t to, register unsigned int count)
 
 % usr/sys/sys/sys1.c
-@@ -12,0 +13,41 @@
+@@ -12,0 +13,42 @@
 +void exec(void);
 +void exece(void);
 +int getxfile(struct inode *ip, int nargc);
@@ -28508,17 +28606,18 @@ usr/local
 +int newproc(void);
 +void copyseg(int from, int to);
 +void arm_sync_icache(void);
++void install_sigtramp(void);
 +void readi(struct inode *ip);
 +void iput(struct inode *ip);
 +int access(struct inode *ip, int mode);
 +void plock(struct inode *ip);
 +struct inode *namei(int (*func)(void), int flag);
 +int uchar(void);
-@@ -22 +63,2 @@
+@@ -22 +64,2 @@
 -exec()
 +void
 +exec(void)
-@@ -28 +70,13 @@
+@@ -28 +71,13 @@
 -exece()
 +/*
 + * exece: load and run a new program image.
@@ -28533,31 +28632,31 @@ usr/local
 + */
 +void
 +exece(void)
-@@ -30,3 +83,0 @@
+@@ -30,3 +84,0 @@
 -	register nc;
 -	register char *cp;
 -	register struct buf *bp;
-@@ -34 +85 @@
+@@ -34 +86 @@
 -	int na, ne, bno, ucp, ap, c;
 +	register int nc, c, ap;
-@@ -35,0 +87,2 @@
+@@ -35,0 +88,2 @@
 +	int i;
 +	char e_argbuf[UARGLEN];
-@@ -39,2 +91,0 @@
+@@ -39,2 +92,0 @@
 -	bno = 0;
 -	bp = 0;
-@@ -48,6 +98,0 @@
+@@ -48,6 +99,0 @@
 -	/*
 -	 * Collect arguments on "file" in swap space.
 -	 */
 -	na = 0;
 -	ne = 0;
 -	nc = 0;
-@@ -55,2 +100 @@
+@@ -55,2 +101 @@
 -	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
 -		panic("Out of swap");
 +	nc = 0;
-@@ -58,13 +102,3 @@
+@@ -58,13 +103,3 @@
 -		ap = NULL;
 -		if (uap->argp) {
 -			ap = fuword((caddr_t)uap->argp);
@@ -28574,21 +28673,21 @@ usr/local
 +		ap = fuword((caddr_t)uap->argp);
 +		uap->argp++;
 +		if (ap == 0)
-@@ -72,2 +106 @@
+@@ -72,2 +107 @@
 -		na++;
 -		if(ap == -1)
 +		if (ap == -1) {
-@@ -74,0 +108,2 @@
+@@ -74,0 +109,2 @@
 +			goto bad;
 +		}
-@@ -76 +111,5 @@
+@@ -76 +112,5 @@
 -			if (nc >= NCARGS-1)
 +			if ((c = fubyte((caddr_t)ap++)) < 0) {
 +				u.u_error = EFAULT;
 +				goto bad;
 +			}
 +			if (nc >= UARGLEN-2) {
-@@ -78 +117,17 @@
+@@ -78 +118,17 @@
 -			if ((c = fubyte((caddr_t)ap++)) < 0)
 +				goto bad;
 +			}
@@ -28607,15 +28706,15 @@ usr/local
 +		}
 +		do {
 +			if ((c = fubyte((caddr_t)ap++)) < 0) {
-@@ -80 +134,0 @@
+@@ -80 +135,0 @@
 -			if (u.u_error)
-@@ -82,5 +135,0 @@
+@@ -82,5 +136,0 @@
 -			if ((nc&BMASK) == 0) {
 -				if (bp)
 -					bawrite(bp);
 -				bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));
 -				cp = bp->b_un.b_addr;
-@@ -88,8 +137,8 @@
+@@ -88,8 +138,8 @@
 -			nc++;
 -			*cp++ = c;
 -		} while (c>0);
@@ -28632,10 +28731,10 @@ usr/local
 +		} while (c);
 +	}
 +	e_argbuf[nc++] = 0;		/* empty string terminates env list */
-@@ -100 +149 @@
+@@ -100 +150 @@
 -	 * copy back arglist
 +	 * set SUID/SGID protections, if no tracing
-@@ -103,20 +152,5 @@
+@@ -103,20 +153,5 @@
 -	ucp = -nc - NBPW;
 -	ap = ucp - na*NBPW - 3*NBPW;
 -	u.u_ar0[R6] = ap;
@@ -28661,7 +28760,7 @@ usr/local
 +			if(u.u_uid != 0) {
 +				u.u_uid = ip->i_uid;
 +				u.u_procp->p_uid = ip->i_uid;
-@@ -124,7 +158,62 @@
+@@ -124,7 +159,62 @@
 -			subyte((caddr_t)ucp++, (c = *cp++));
 -			nc++;
 -		} while(c&0377);
@@ -28731,18 +28830,18 @@ usr/local
 +		setregs();
 +		u.u_ar0[R6] = (int)sp;	/* user stack pointer */
 +	}
-@@ -132,4 +220,0 @@
+@@ -132,4 +221,0 @@
 -	if (bp)
 -		brelse(bp);
 -	if(bno)
 -		mfree(swapmap, (NCARGS+BSIZE-1)/BSIZE, bno);
-@@ -140,3 +225,2 @@
+@@ -140,3 +226,2 @@
 - * Read in and set up memory for executed file.
 - * Zero return is normal;
 - * non-zero means only the text is being replaced
 + * ELF32 header / program-header subset (the Armv7 toolchain emits ELF;
 + * this replaces the PDP-11 a.out reader).
-@@ -144,8 +228,16 @@
+@@ -144,8 +229,16 @@
 -getxfile(ip, nargc)
 -register struct inode *ip;
 -{
@@ -28767,7 +28866,7 @@ usr/local
 +	unsigned short e_shnum;
 +	unsigned short e_shstrndx;
 +};
-@@ -153,10 +245,11 @@
+@@ -153,10 +246,11 @@
 -	/*
 -	 * read in first few bytes
 -	 * of file for segment
@@ -28789,7 +28888,7 @@ usr/local
 +	unsigned int p_align;
 +};
 +#define	PT_LOAD	1
-@@ -164,3 +257,6 @@
+@@ -164,3 +258,6 @@
 -	u.u_base = (caddr_t)&u.u_exdata;
 -	u.u_count = sizeof(u.u_exdata);
 -	u.u_offset = 0;
@@ -28799,7 +28898,7 @@ usr/local
 +	u.u_base = kbuf;
 +	u.u_count = n;
 +	u.u_offset = off;
-@@ -169,0 +266,18 @@
+@@ -169,0 +267,18 @@
 +}
 +/*
 + * Read in and set up memory for an ELF executable.
@@ -28818,11 +28917,11 @@ usr/local
 +	unsigned int end, maxend;
 +	(void)nargc;
 +	readbytes(ip, (caddr_t)&eh, 0, sizeof(eh));
-@@ -172 +286,2 @@
+@@ -172 +287,2 @@
 -	if (u.u_count!=0) {
 +	if(eh.e_ident[0] != 0x7f || eh.e_ident[1] != 'E' ||
 +	   eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F' || eh.e_type != 2) {
-@@ -176,6 +291,13 @@
+@@ -176,6 +292,13 @@
 -	sep = 0;
 -	overlay = 0;
 -	if(u.u_exdata.ux_mag == 0407) {
@@ -28842,7 +28941,7 @@ usr/local
 +			continue;
 +		if(ph.p_vaddr >= USERSIZE || ph.p_memsz > USERSIZE - ph.p_vaddr ||
 +		   ph.p_filesz > ph.p_memsz) {
-@@ -185,12 +307,3 @@
+@@ -185,12 +308,3 @@
 -		u.u_exdata.ux_tsize = 0;
 -	} else if (u.u_exdata.ux_mag == 0411)
 -		sep++;
@@ -28858,7 +28957,7 @@ usr/local
 +		end = ph.p_vaddr + ph.p_memsz;
 +		if(end > maxend)
 +			maxend = end;
-@@ -198,0 +312,16 @@
+@@ -198,0 +313,16 @@
 +	u.u_prof.pr_scale = 0;
 +	xfree();
 +	n = USIZE + (int)(USERSIZE >> 6);
@@ -28875,12 +28974,12 @@ usr/local
 +	u.u_sep = 0;
 +	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
 +		goto bad;
-@@ -200,3 +329 @@
+@@ -200,3 +330 @@
 -	 * find text and data sizes
 -	 * try them out for possible
 -	 * overflow of max sizes
 +	 * Load each PT_LOAD segment to its virtual address.
-@@ -204,21 +331,4 @@
+@@ -204,21 +332,4 @@
 -	ts = btoc(u.u_exdata.ux_tsize);
 -	lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_bsize;
 -	if (lsize != (unsigned)lsize) {
@@ -28906,7 +29005,7 @@ usr/local
 +		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
 +		    sizeof(ph));
 +		if(u.u_error)
-@@ -226,23 +336,6 @@
+@@ -226,23 +337,6 @@
 -	
 -		/*
 -		 * allocate and clear core
@@ -28936,7 +29035,7 @@ usr/local
 +		u.u_count = ph.p_filesz;
 +		u.u_offset = ph.p_offset;
 +		u.u_segflg = 0;
-@@ -250,19 +343,5 @@
+@@ -250,19 +344,6 @@
 -		/*
 -		 * set SUID/SGID protections, if no tracing
 -		 */
@@ -28960,66 +29059,67 @@ usr/local
 +			goto bad;
 +	}
 +	u.u_exdata.ux_entloc = eh.e_entry;
++	install_sigtramp();
 +	arm_sync_icache();
-@@ -270 +349 @@
+@@ -270 +351 @@
 -	return(overlay);
 +	return(0);
-@@ -276 +355,2 @@
+@@ -276 +357,2 @@
 -setregs()
 +void
 +setregs(void)
-@@ -280 +360 @@
+@@ -280 +362 @@
 -	register i;
 +	register int i;
-@@ -286 +366 @@
+@@ -286 +368 @@
 -		u.u_ar0[*cp++] = 0;
 +		u.u_ar0[(int)*cp++] = 0;
-@@ -296,0 +377 @@
+@@ -296,0 +379 @@
 +	u.u_acflag &= ~AFORK;
-@@ -300 +380,0 @@
+@@ -300 +382,0 @@
 -	u.u_acflag &= ~AFORK;
-@@ -308 +388,2 @@
+@@ -308 +390,2 @@
 -rexit()
 +void
 +rexit(void)
-@@ -325 +406,2 @@
+@@ -325 +408,2 @@
 -exit(rv)
 +void
 +exit(int rv)
-@@ -377 +459,2 @@
+@@ -377 +461,2 @@
 -wait()
 +void
 +wait(void)
-@@ -379 +462 @@
+@@ -379 +464 @@
 -	register f;
 +	register int f;
-@@ -422 +505,2 @@
+@@ -422 +507,2 @@
 -fork()
 +void
 +fork(void)
-@@ -425 +509 @@
+@@ -425 +511 @@
 -	register a;
 +	register int a;
-@@ -456 +539,0 @@
+@@ -456 +541,0 @@
 -	p1 = u.u_procp;
-@@ -458 +541,2 @@
+@@ -458 +543,2 @@
 -		u.u_r.r_val1 = p1->p_pid;
 +		/* child: fork() returns 0 */
 +		u.u_r.r_val1 = 0;
-@@ -469,2 +553 @@
+@@ -469,2 +555 @@
 -out:
 -	u.u_ar0[R7] += NBPW;
 +out:	;
-@@ -477 +560,2 @@
+@@ -477 +562,2 @@
 -sbreak()
 +void
 +sbreak(void)
-@@ -482 +566 @@
+@@ -482 +568 @@
 -	register a, n, d;
 +	register int a, n, d;
-@@ -497 +580,0 @@
+@@ -497 +582,0 @@
 -	n += USIZE+u.u_ssize;
-@@ -500,9 +583,3 @@
+@@ -500,9 +585,3 @@
 -	u.u_dsize += d;
 -	if(d > 0)
 -		goto bigger;
@@ -29032,10 +29132,10 @@ usr/local
 +	if((unsigned)n > (USERSIZE >> 6) - u.u_ssize) {
 +		u.u_error = ENOMEM;
 +		return;
-@@ -510,2 +586,0 @@
+@@ -510,2 +588,0 @@
 -	expand(i);
 -	return;
-@@ -513,7 +588,4 @@
+@@ -513,7 +590,4 @@
 -bigger:
 -	expand(n);
 -	a = u.u_procp->p_addr + n;
@@ -29047,7 +29147,7 @@ usr/local
 +		a = u.u_procp->p_addr + USIZE + (int)u.u_dsize;
 +		for(i = 0; i < d; i++)
 +			clearseg(a + i);
-@@ -521,2 +593,2 @@
+@@ -521,2 +595,2 @@
 -	while(d--)
 -		clearseg(--a);
 +	u.u_dsize += d;
@@ -29540,7 +29640,7 @@ usr/local
 +	{1, 1, chroot},			/* 61 = chroot */
 +	{0, 0, nosys},			/* 62 = x */
 +	{0, 0, sigreturn}		/* 63 = sigreturn (Armv7 signal trampoline) */
-@@ -131,0 +109,75 @@
+@@ -131,0 +109,76 @@
 +char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
 +/*
 + * Called from svc_entry (conf/low.s) on a system call.  r is the 17-int
@@ -29590,8 +29690,9 @@ usr/local
 +}
 +/*
 + * Called from the undef/abort entry stubs (conf/low.s) for a hardware
-+ * fault.  signo is the signal it maps to; r is the trap frame.  A fault
-+ * taken in kernel mode is fatal.
++ * fault.  signo is the signal it maps to (0 from irq_entry, to give up
++ * the cpu as v7's trap 12 did); r is the trap frame.  A fault taken
++ * in kernel mode is fatal.
 + */
 +void
 +user_trap_handler(int signo, int *r)
