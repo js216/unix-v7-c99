@@ -68,7 +68,7 @@ extern STRING	sysmsg[];
 VOID	initio(IOPTR iop)
 {
 	REG STRING	ion;
-	REG INT		iof, fd;
+	REG INT		iof, fd = -1;
 
 	IF iop
 	THEN	iof=iop->iofile;
@@ -423,6 +423,6 @@ LOCAL INT	split(REG STRING s)
 		ELSE	/* assign(&fngnod, argp->argval); */
 			makearg(arg); count++;
 		FI
-		Lcheat(gchain) |= ARGMK;
+		gchain=(ARGPTR)(long)(Rcheat(gchain)|ARGMK);
 	POOL
 }

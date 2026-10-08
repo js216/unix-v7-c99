@@ -83,7 +83,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 	IF (t=argt) ANDF execbrk==0
 	THEN	REG INT		treeflgs;
 		INT		oldexit, type;
-		REG STRING	*com;
+		REG STRING	*com = 0;
 
 		treeflgs = t->tretyp; type = treeflgs&COMMSK;
 		oldexit=exitval; exitval=0;

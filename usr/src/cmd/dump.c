@@ -184,7 +184,7 @@ int
 pass(int (*fn)(), short *map)
 {
 	register int i, j;
-	int bits;
+	int bits = 0;
 	ino_t mino;
 	daddr_t d;
 

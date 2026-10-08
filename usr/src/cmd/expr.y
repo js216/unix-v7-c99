@@ -155,7 +155,7 @@ arith(int op, char *r1, char *r2) {
 }
 char *
 conj(int op, char *r1, char *r2) {
-	register char *rv;
+	register char *rv = 0;
 
 	switch(op) {
 
@@ -255,7 +255,7 @@ ematch(char *s, register char *p)
 	register int num;
 	extern char *braslist[], *braelist[], *loc2;
 
-	compile(p, expbuf, &expbuf[512], 0);
+	compile(p, expbuf, &expbuf[ESIZE], 0);
 	if(nbra > 1)
 		yyerror("Too many '\\('s");
 	if(advance(s, expbuf)) {

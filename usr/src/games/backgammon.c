@@ -41,7 +41,7 @@ struct {int pos[4],mov[4];} moves[MAXIMOVES] ;
 int
 main(void)
 {
-	int t,k,n,go[5];
+	int t,k,n,go[6];
 	char s[100];
 	go[5]=NIL;
 	bg_srand();

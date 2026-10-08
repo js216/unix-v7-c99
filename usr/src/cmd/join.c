@@ -31,7 +31,7 @@ main(int argc, char *argv[])
 {
 	int i;
 	int n1, n2;
-	long top2, bot2;
+	long top2 = 0, bot2;
 	long ftell(FILE *iop);
 
 	while (argc > 1 && argv[1][0] == '-') {

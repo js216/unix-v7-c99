@@ -12,7 +12,7 @@ usr/local
 : <<\EOF
 
 % Makefile /dev/null
-@@ -0,0 +1,162 @@
+@@ -0,0 +1,166 @@
 +# SPDX-License-Identifier: MIT
 +# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 +# Copyright (c) 2026 Jakob Kastelic
@@ -23,7 +23,7 @@ usr/local
 +HOSTCC = arm-linux-gnueabihf-gcc
 +
 +CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
-+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Wl,-N,-Ttext=0x10
++	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10
 +
 +LIBC = usr/src/libc/libc.a
 +CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
@@ -104,20 +104,24 @@ usr/local
 +DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 +
 +bin/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
++	rm -f $@
 +	$(CMAKE) $(<F)
-+	test $@ -nt $<
++	test -f $@
 +
 +etc/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
++	rm -f $@
 +	$(CMAKE) $(<F)
-+	test $@ -nt $<
++	test -f $@
 +
 +usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
++	rm -f $@
 +	$(CMAKE) $(<F)
-+	test $@ -nt $<
++	test -f $@
 +
 +bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) Makefile | $(DIRS)
++	rm -f $@
 +	$(CMAKE) $(<F)
-+	test $@ -nt $<
++	test -f $@
 +
 +usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 +	$(CC) $(CFLAGS) -Iusr/include -Iusr/src -s -o $@ \
@@ -1599,6 +1603,9 @@ usr/local
 @@ -7 +9 @@
 -} proc[] {
 +} proc[] = {
+@@ -56 +58 @@
+-	{ 0, ""},
++	{ 0, "", ""},
 @@ -60,0 +63 @@
 +int
 @@ -71 +74 @@
@@ -2577,9 +2584,11 @@ usr/local
 -char **argv;
 +int
 +main(int argc, char *argv[])
-@@ -16 +16 @@
+@@ -16,2 +16,2 @@
 -	register c;
+-	int dev, ino = -1;
 +	register int c;
++	int dev = -1, ino = -1;
 @@ -42 +42 @@
 -		if (fflg || (*++argv)[0]=='-' && (*argv)[1]=='\0')
 +		if (fflg || ((*++argv)[0]=='-' && (*argv)[1]=='\0'))
@@ -3439,6 +3448,9 @@ usr/local
 -char c;
 +int
 +binop(int c)
+@@ -1147 +1150 @@
+-	register struct blk *r;
++	register struct blk *r = 0;
 @@ -1164 +1167 @@
 -	return;
 +	return(0);
@@ -3820,18 +3832,20 @@ usr/local
 +void	ibm(int cc);
 +void	term(void);
 +void	stats(void);
-@@ -143,3 +153,2 @@
+@@ -143,8 +153,6 @@
 -main(argc, argv)
 -int	argc;
 -char	**argv;
-+int
-+main(int argc, char **argv)
-@@ -147 +156 @@
+-{
 -	int (*conv)();
-+	void (*conv)();
-@@ -149,2 +158 @@
+-	register char *ip;
 -	register c;
 -	int ebcdic(), ibm(), ascii(), null(), cnull(), term();
++int
++main(int argc, char **argv)
++{
++	void (*conv)();
++	register char *ip = 0;
 +	register int c;
 @@ -281 +289 @@
 -		signal(SIGINT, term);
@@ -4123,6 +4137,9 @@ usr/local
 -struct line *a;
 +void
 +sort(struct line *a, int n)	/*shellsort CACM #201*/
+@@ -149 +172 @@
+-	register int j,m;
++	register int j,m = 0;
 @@ -163,2 +186,2 @@
 -				   aim->value == ai[0].value &&
 -				   aim->serial > ai[0].serial)
@@ -4726,9 +4743,11 @@ usr/local
 -short *map;
 +int
 +pass(int (*fn)(), short *map)
-@@ -179 +186 @@
+@@ -179,2 +186,2 @@
 -	register i, j;
+-	int bits;
 +	register int i, j;
++	int bits = 0;
 @@ -210,0 +218 @@
 +	return(0);
 @@ -213,3 +221,2 @@
@@ -6027,10 +6046,12 @@ usr/local
 @@ -129 +153 @@
 -	sprintf(rv, "%D", i1);
 +	sprintf(rv, "%ld", i1);
-@@ -132 +156,2 @@
+@@ -132,2 +156,3 @@
 -char *conj(op, r1, r2) char *r1, *r2; {
+-	register char *rv;
 +char *
 +conj(int op, char *r1, char *r2) {
++	register char *rv = 0;
 @@ -162,2 +187,3 @@
 -char *substr(v, s, w) char *v, *s, *w; {
 -register si, wi;
@@ -6068,6 +6089,9 @@ usr/local
 -	char *compile();
 -	register num;
 +	register int num;
+@@ -231 +258 @@
+-	compile(p, expbuf, &expbuf[512], 0);
++	compile(p, expbuf, &expbuf[ESIZE], 0);
 @@ -246 +273,2 @@
 -errxx(c)
 +void
@@ -8118,8 +8142,10 @@ usr/local
 +int cmp(char *s1, char *s2);
 +int
 +main(int argc, char *argv[])
-@@ -31 +35 @@
+@@ -30,2 +34,2 @@
+-	long top2, bot2;
 -	long ftell();
++	long top2 = 0, bot2;
 +	long ftell(FILE *iop);
 @@ -88 +92 @@
 -		error("usage: join [-j1 x -j2 y] [-o list] file1 file2");
@@ -10755,8 +10781,10 @@ usr/local
 +ino_t	search(ino_t inum, char *cp);
 +int
 +main(int argc, char *argv[])
-@@ -89 +131 @@
+@@ -88,2 +130,2 @@
+-	char command;
 -	int done();
++	char command = 0;
 +	int done(void);
 @@ -120,4 +162,4 @@
 -		if (signal(SIGINT, done) == SIG_IGN)
@@ -11810,10 +11838,14 @@ usr/local
 -arout()
 +void
 +arout(void)
-@@ -701 +708 @@
+@@ -698,2 +705 @@
+-	aptr = abuf - 1;
+-	while(*++aptr) {
++	for(aptr = abuf; *aptr; aptr++) {
+@@ -701 +707 @@
 -			for(p1 = (*aptr)->re1; *p1; )
 +			for(p1 = (*aptr)->u.re1; *p1; )
-@@ -705 +712 @@
+@@ -705 +711 @@
 -			if((fi = fopen((*aptr)->re1, "r")) == NULL)
 +			if((fi = fopen((*aptr)->u.re1, "r")) == NULL)
 
@@ -11903,6 +11935,9 @@ usr/local
 -VOID	free(ap)
 -	BLKPTR		ap;
 +VOID	free(BLKPTR ap)
+@@ -83 +81 @@
+-	THEN	Lcheat((--p)->word) &= ~BUSY;
++	THEN	p--; p->word=BLK(Rcheat(p->word)&~BUSY);
 @@ -84,0 +83 @@
 +	return(0);
 
@@ -12664,6 +12699,9 @@ usr/local
 @@ -62 +80 @@
 -		THEN	NAMPTR		n=NIL;
 +		THEN	NAMPTR		n=(NAMPTR)NIL;
+@@ -65 +83 @@
+-			REG STRING	argp, v;
++			REG STRING	argp, v=0;
 @@ -69 +87 @@
 -			IF bra=(c==BRACE) THEN c=readc() FI
 +			IF (bra=(c==BRACE)) THEN c=readc() FI
@@ -13137,6 +13175,9 @@ usr/local
 -VOID	initio(iop)
 -	IOPTR		iop;
 +VOID	initio(IOPTR iop)
+@@ -35 +71 @@
+-	REG INT		iof, fd;
++	REG INT		iof, fd = -1;
 @@ -65,0 +102 @@
 +	return(0);
 @@ -68,2 +105,26 @@
@@ -13288,6 +13329,9 @@ usr/local
 @@ -361 +424 @@
 -			makearg(argp); count++;
 +			makearg(arg); count++;
+@@ -363 +426 @@
+-		Lcheat(gchain) |= ARGMK;
++		gchain=(ARGPTR)(long)(Rcheat(gchain)|ARGMK);
 
 % usr/src/cmd/sh/setbrk.c
 @@ -12 +12,2 @@
@@ -13477,6 +13521,9 @@ usr/local
 -	TREPTR		argt;
 -	INT		*pf1, *pf2;
 +INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
+@@ -35 +86 @@
+-		REG STRING	*com;
++		REG STRING	*com = 0;
 @@ -43,0 +95 @@
 +			COMPTR		c=(COMPTR)t;
 @@ -47 +99 @@
@@ -14401,9 +14448,11 @@ usr/local
 +int digit(int c);
 +int
 +main(int argc, char *argv[])
-@@ -24 +26 @@
+@@ -24,2 +26,2 @@
 -	register i,j,k;
+-	char *p;
 +	register int i,j,k;
++	char *p = 0;
 @@ -31 +33 @@
 -	if(argc<=1 || *arg!='-'&&*arg!='+') {
 +	if(argc<=1 || (*arg!='-' && *arg!='+')) {
@@ -15278,6 +15327,9 @@ usr/local
 -rddir()
 +int
 +rddir(void)
+@@ -43 +50 @@
+-	struct tent  *tptr;
++	struct tent  *tptr = &tpentry[0];
 @@ -68 +75 @@
 -		for(i=0;i<sizeof(struct tent)/sizeof(short);i++)
 +		for(i=0;i<(int)(sizeof(struct tent)/sizeof(short));i++)
@@ -15637,6 +15689,9 @@ usr/local
 -char **argv;
 +int
 +main(int argc, char **argv)
+@@ -43 +44 @@
+-				for (p1 = mp->file; p1 < &mp->file[NAMSIZ*2];)
++				for (p1 = (char *)mp; p1 < (char *)(mp+1);)
 
 % usr/src/cmd/uniq.c
 @@ -11 +11,5 @@
@@ -16141,6 +16196,9 @@ usr/local
 +void putline(void);
 +int
 +main(int argc, char **argv)
+@@ -16 +17 @@
+-	register char *tp, *s;
++	register char *tp = 0, *s;
 @@ -55 +56,2 @@
 -putline()
 +void
@@ -16301,6 +16359,9 @@ usr/local
 -main()
 +int
 +main(void)
+@@ -30 +44 @@
+-	int t,k,n,go[5];
++	int t,k,n,go[6];
 @@ -33 +47 @@
 -	srand();
 +	bg_srand();
@@ -16678,9 +16739,11 @@ usr/local
 -setup()
 +int
 +setup(void)
-@@ -34 +39 @@
+@@ -34,2 +39,2 @@
 -	time(tvec);
+-	srand(tvec[1]+tvec[2]);
 +	time((long *)tvec);
++	srand(tvec[0]);
 @@ -38,0 +44 @@
 +	return(0);
 @@ -40 +46 @@
@@ -17468,23 +17531,27 @@ usr/local
 @@ -208 +208 @@
 -static	char	P[] {
 +static	char	P[] = {
-@@ -235,2 +235,2 @@
+@@ -222 +222,2 @@
+-static	char	L[32], R[32];
++static	char	L[64];
++#define	R	(L+32)
+@@ -235,2 +236,2 @@
 -encrypt(block, edflag)
 -char *block;
 +void
 +encrypt(char *block, int edflag)
-@@ -239 +239 @@
+@@ -239 +240 @@
 -	register t, j, k;
 +	register int t, j, k;
-@@ -282 +282 @@
+@@ -282 +283 @@
 -			k = S[j][(preS[t+0]<<5)+
 +			k = S[j*64 + (preS[t+0]<<5)+
-@@ -324,3 +324 @@
+@@ -324,3 +325 @@
 -crypt(pw,salt)
 -char *pw;
 -char *salt;
 +crypt(char *pw, char *salt)
-@@ -328 +326 @@
+@@ -328 +327 @@
 -	register i, j, c;
 +	register int i, j, c;
 
@@ -18220,7 +18287,7 @@ usr/local
 -sleep(n)
 -unsigned n;
 +unsigned
-+sleep(unsigned n)
++sleep(volatile unsigned n)
 @@ -9 +12,0 @@
 -	int sleepx();
 @@ -11 +14 @@
@@ -19267,7 +19334,7 @@ usr/local
 +fgets(char *s, int n, register FILE *iop)
 @@ -8 +6 @@
 -	register c;
-+	register int c;
++	register int c = 0;
 
 % usr/src/libc/stdio/filbuf.c
 @@ -3 +3 @@
@@ -19392,6 +19459,9 @@ usr/local
 -	long offset;
 +int
 +fseek(register FILE *iop, long offset, int ptrname)
+@@ -14 +13 @@
+-	long p;
++	long p = -1;
 
 % usr/src/libc/stdio/ftell.c
 @@ -7 +7 @@

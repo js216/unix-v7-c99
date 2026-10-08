@@ -80,7 +80,7 @@ retry:
 		THEN	NAMPTR		n=(NAMPTR)NIL;
 			INT		dolg=0;
 			BOOL		bra;
-			REG STRING	argp, v;
+			REG STRING	argp, v=0;
 			CHAR		idb[2];
 			STRING		id=idb;
 

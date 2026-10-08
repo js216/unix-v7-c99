@@ -3,7 +3,7 @@
 char *
 fgets(char *s, int n, register FILE *iop)
 {
-	register int c;
+	register int c = 0;
 	register char *cs;
 
 	cs = s;

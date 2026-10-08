@@ -14,7 +14,7 @@ void putline(void);
 int
 main(int argc, char **argv)
 {
-	register char *tp, *s;
+	register char *tp = 0, *s;
 	register FILE *fi;
 
 	s = "/etc/utmp";

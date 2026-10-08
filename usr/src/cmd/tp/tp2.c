@@ -47,7 +47,7 @@ rddir(void)
 	register struct tent *tp;
 	register struct dent *p1;
 	struct dent  *dptr;
-	struct tent  *tptr;
+	struct tent  *tptr = &tpentry[0];
 	int	count, i, sum;
 	short	reg, *sp;
 

@@ -78,7 +78,7 @@ VOID	free(BLKPTR ap)
 	REG BLKPTR	p;
 
 	IF (p=ap) ANDF p<bloktop
-	THEN	Lcheat((--p)->word) &= ~BUSY;
+	THEN	p--; p->word=BLK(Rcheat(p->word)&~BUSY);
 	FI
 	return(0);
 }

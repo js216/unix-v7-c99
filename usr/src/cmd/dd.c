@@ -154,7 +154,7 @@ int
 main(int argc, char **argv)
 {
 	void (*conv)();
-	register char *ip;
+	register char *ip = 0;
 	register int c;
 	int a;
 

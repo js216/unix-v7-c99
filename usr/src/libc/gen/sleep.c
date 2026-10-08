@@ -8,7 +8,7 @@ extern int alarm(int n);
 extern int pause(void);
 
 unsigned
-sleep(unsigned n)
+sleep(volatile unsigned n)
 {
 	unsigned altime;
 	void (*alsig)(int) = SIG_DFL;

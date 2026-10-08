@@ -8,7 +8,7 @@ AS = $(CROSS_COMPILE)as
 HOSTCC = arm-linux-gnueabihf-gcc
 
 CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
-	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Wl,-N,-Ttext=0x10
+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10
 
 LIBC = usr/src/libc/libc.a
 CRT = usr/src/libc/crt0.o usr/src/libc/crt0c.o
@@ -89,20 +89,24 @@ ROOT = $(ROOT_BUILT) \
 DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 
 bin/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
+	rm -f $@
 	$(CMAKE) $(<F)
-	test $@ -nt $<
+	test -f $@
 
 etc/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
+	rm -f $@
 	$(CMAKE) $(<F)
-	test $@ -nt $<
+	test -f $@
 
 usr/lib/%: usr/src/cmd/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
+	rm -f $@
 	$(CMAKE) $(<F)
-	test $@ -nt $<
+	test -f $@
 
 bin/%: usr/src/cmd/%.y $(LIBC) $(CRT) Makefile | $(DIRS)
+	rm -f $@
 	$(CMAKE) $(<F)
-	test $@ -nt $<
+	test -f $@
 
 usr/games/%: usr/src/games/%.c $(LIBC) $(CRT) Makefile | $(DIRS)
 	$(CC) $(CFLAGS) -Iusr/include -Iusr/src -s -o $@ \

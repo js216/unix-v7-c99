@@ -10,7 +10,7 @@ int
 fseek(register FILE *iop, long offset, int ptrname)
 {
 	register int c;
-	long p;
+	long p = -1;
 
 	iop->_flag &= ~_IOEOF;
 	if (iop->_flag & _IOREAD) {

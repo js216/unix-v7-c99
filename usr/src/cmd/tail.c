@@ -24,7 +24,7 @@ main(int argc, char *argv[])
 {
 	long n,di;
 	register int i,j,k;
-	char *p;
+	char *p = 0;
 	int partial,piped,bylines,bkwds,fromend,lastnl;
 	char *arg;
 	lseek(0,(long)0,1);

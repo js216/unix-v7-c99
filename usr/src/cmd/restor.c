@@ -127,7 +127,7 @@ int
 main(int argc, char *argv[])
 {
 	register char *cp;
-	char command;
+	char command = 0;
 	int done(void);
 
 #ifndef STANDALONE

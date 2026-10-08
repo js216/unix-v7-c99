@@ -14,7 +14,7 @@ main(int argc, char *argv[])
 	int fflg = 0;
 	register FILE *fi;
 	register int c;
-	int dev, ino = -1;
+	int dev = -1, ino = -1;
 	struct stat statb;
 
 	setbuf(stdout, stdbuf);

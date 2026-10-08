@@ -702,8 +702,7 @@ arout(void)
 	char	c;
 	int	t;
 
-	aptr = abuf - 1;
-	while(*++aptr) {
+	for(aptr = abuf; *aptr; aptr++) {
 		if((*aptr)->command == ACOM) {
 			for(p1 = (*aptr)->u.re1; *p1; )
 				putc(*p1++, stdout);

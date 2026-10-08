@@ -1147,7 +1147,7 @@ unreadc(int c)
 int
 binop(int c)
 {
-	register struct blk *r;
+	register struct blk *r = 0;
 
 	switch(c){
 	case '+':

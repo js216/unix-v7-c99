@@ -55,7 +55,7 @@ struct xx
 	{ BREAK, "jump", "break"},
 	{ CONTINUE, "jump", "continue"},
 	{ FNCN, "fncn", "fncn"},
-	{ 0, ""},
+	{ 0, "", ""},
 };
 #define SIZE	LASTTOKEN - FIRSTTOKEN
 char *table[SIZE];

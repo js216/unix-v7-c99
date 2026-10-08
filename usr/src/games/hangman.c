@@ -37,7 +37,7 @@ setup(void)
 {	int tvec[2];
 	struct stat statb;
 	time((long *)tvec);
-	srand(tvec[1]+tvec[2]);
+	srand(tvec[0]);
 	if((dict=fopen(dictfile,"r"))==NULL) fatal("no dictionary");
 	if(stat(dictfile,&statb)<0) fatal("can't stat");
 	dictlen=statb.st_size;
