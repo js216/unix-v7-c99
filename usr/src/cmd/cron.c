@@ -15,60 +15,39 @@
 char	crontab[]	= "/usr/lib/crontab";
 time_t	itime;
 struct	tm *loct;
-struct	tm *localtime(long *tim);
-char	*malloc(unsigned n);
-char	*realloc(char *p, unsigned n);
+struct	tm *localtime();
+char	*malloc();
+char	*realloc();
 int	flag;
 char	*list;
 unsigned listsize;
+void	slp(), ex(), init();
+int	number();
 
-int	slp(void), ex(char *s), init(void), number(register int c);
-int	open(char *path, int mode), close(int fd);
 int
-main(void)
+main()
 {
 	register char *cp;
-	char *cmp(char *p, int v);
+	char *cmp();
 	time_t filetime = 0;
-	struct stat cstat;
 
 	setuid(1);
 	if (fork())
 		exit(0);
 	chdir("/");
 	freopen(crontab, "r", stdin);
-	close(1);
-	open("/", 0);
-	close(2);
-	open("/", 0);
-	signal(SIGHUP, (int)SIG_IGN);
-	signal(SIGINT, (int)SIG_IGN);
-	signal(SIGQUIT, (int)SIG_IGN);
+	freopen("/", "r", stdout);
+	freopen("/", "r", stderr);
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
 	time(&itime);
 	itime -= localtime(&itime)->tm_sec;
 	fclose(stdin);
 
-	if (stat(crontab, &cstat) != -1) {
-		filetime = cstat.st_mtime;
-		init();
-		loct = localtime(&itime);
-		loct->tm_mon++;
-		for(cp = list; *cp != EOS;) {
-			flag = 0;
-			cp = cmp(cp, loct->tm_min);
-			cp = cmp(cp, loct->tm_hour);
-			cp = cmp(cp, loct->tm_mday);
-			cp = cmp(cp, loct->tm_mon);
-			cp = cmp(cp, loct->tm_wday);
-			if(flag == 0)
-				ex(cp);
-			while(*cp++ != 0)
-				;
-		}
-	}
-	pause();
+	for (;; itime+=60, slp()) {
+		struct stat cstat;
 
-	for (itime+=60;; itime+=60, slp()) {
 		if (stat(crontab, &cstat) == -1)
 			continue;
 		if (cstat.st_mtime > filetime) {
@@ -92,11 +71,12 @@ main(void)
 				;
 		}
 	}
-	return(0);
 }
 
 char *
-cmp(char *p, int v)
+cmp(p, v)
+char *p;
+int v;
 {
 	register char *cp;
 
@@ -131,8 +111,8 @@ cmp(char *p, int v)
 	return(cp);
 }
 
-int
-slp(void)
+void
+slp()
 {
 	register int i;
 	time_t t;
@@ -141,27 +121,27 @@ slp(void)
 	i = itime - t;
 	if(i > 0)
 		sleep(i);
-	else
-		sleep(1);
-	return(0);
 }
 
-int
-ex(char *s)
-
+void
+ex(s)
+char *s;
 {
+	int st;
+
 	if(fork()) {
-		wait((int *)0);
-		return(0);
+		wait(&st);
+		return;
 	}
+	if(fork())
+		exit(0);
 	freopen("/", "r", stdin);
 	execl("/bin/sh", "sh", "-c", s, 0);
 	exit(0);
-	return(0);
 }
 
-int
-init(void)
+void
+init()
 {
 	register int i, c;
 	register char *cp;
@@ -256,7 +236,7 @@ ignore:
 			*cp++ = EOS;
 			*cp++ = EOS;
 			fclose(stdin);
-			return(0);
+			return;
 		}
 		c = getchar();
 	}
@@ -264,7 +244,8 @@ ignore:
 }
 
 int
-number(register int c)
+number(c)
+register int c;
 {
 	register int n = 0;
 
