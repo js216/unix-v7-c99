@@ -11,7 +11,6 @@ d--755 0 0
 		basename	---755 0 0 bin/basename
 		bc	---755 0 0 bin/bc
 		cal	---755 0 0 bin/cal
-		calendar	---755 0 0 bin/calendar
 		cat	---755 0 0 bin/cat
 		cb	---755 0 0 bin/cb
 		checkeq	---755 0 0 bin/checkeq
@@ -30,9 +29,7 @@ d--755 0 0
 		dd	---755 0 0 bin/dd
 		df	---755 0 0 bin/df
 		diff	---755 0 0 bin/diff
-		diff3	---755 0 0 bin/diff3
 		deroff	---755 0 0 bin/deroff
-		dmesg	---755 0 0 bin/dmesg
 		du	---755 0 0 bin/du
 		dump	---755 0 0 bin/dump
 		dumpdir	---755 0 0 bin/dumpdir
@@ -57,8 +54,6 @@ d--755 0 0
 		ls	---755 0 0 bin/ls
 		mesg	---755 0 0 bin/mesg
 		mkdir	---755 0 0 bin/mkdir
-		mknod	---755 0 0 bin/mknod
-		mount	---755 0 0 bin/mount
 		mv	---755 0 0 bin/mv
 		ncheck	---755 0 0 bin/ncheck
 		newgrp	---755 0 0 bin/newgrp
@@ -106,11 +101,9 @@ d--755 0 0
 		true	---755 0 0 bin/true
 		tsort	---755 0 0 bin/tsort
 		tty	---755 0 0 bin/tty
-		umount	---755 0 0 bin/umount
 		uniq	---755 0 0 bin/uniq
 		units	---755 0 0 bin/units
 		vpr	---755 0 0 bin/vpr
-		wall	---755 0 0 bin/wall
 		wc	---755 0 0 bin/wc
 		who	---755 0 0 bin/who
 		write	---755 0 0 bin/write
@@ -126,7 +119,6 @@ d--755 0 0
 		$
 	etc	d--755 0 0
 		accton	---755 0 0 etc/accton
-		atrun	---755 0 0 etc/atrun
 		cron	---755 0 0 etc/cron
 		ddate	---644 0 0 /dev/null
 		getty	---755 0 0 etc/getty
@@ -137,6 +129,11 @@ d--755 0 0
 		ttys	---644 0 0 etc/ttys
 		update	---755 0 0 etc/update
 		utmp	---644 0 0 /dev/null
+		dmesg	---755 0 0 etc/dmesg
+		mknod	---755 0 0 etc/mknod
+		mount	---755 0 0 etc/mount
+		umount	---755 0 0 etc/umount
+		wall	---755 0 0 etc/wall
 		$
 	tmp	d--777 0 0
 		.keep	---644 0 0 /dev/null
@@ -167,6 +164,9 @@ d--755 0 0
 			lib.b	---644 0 0 usr/lib/lib.b
 			makekey	---755 0 0 usr/lib/makekey
 			units	---644 0 0 usr/lib/units
+			calendar	---755 0 0 usr/lib/calendar
+			diff3	---755 0 0 usr/lib/diff3
+			atrun	---755 0 0 usr/lib/atrun
 			$
 		spool	d--755 0 0
 			at	d--777 0 0

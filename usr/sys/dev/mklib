@@ -1,0 +1,10 @@
+ar rc LIB2 \
+bio.o \
+pl011.o \
+stm32usart.o \
+mem.o \
+partab.o \
+stm32sd.o \
+virtio_blk.o \
+sys.o \
+tty.o
