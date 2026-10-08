@@ -16,7 +16,7 @@ int	query(char *r), next(void), done(void);
 int	instruct(char *info), badinfo(void), dunno(void);
 int tflag;
 int xx[NL];
-char score[NL];
+signed char score[NL];
 int rights;
 int wrongs;
 int guesses;
@@ -53,10 +53,10 @@ loop:
 		if(t-line>=NC) {
 			printf("Too hard for me\n");
 			do {
-				*line = getc(input);
-				if(*line==0377)
+				c = getc(input);
+				if(c==EOF)
 					return(0);
-			} while(*line!='\n');
+			} while(c!='\n');
 			goto loop;
 		}
 	}
