@@ -28,5 +28,5 @@ extern double y0(double x);
 extern double y1(double x);
 extern double yn(int n, double x);
 
-#define HUGE	1.701411733192644270e38
-#define LOGHUGE 39
+#define HUGE	1.797693134862315708e308
+#define LOGHUGE 308
