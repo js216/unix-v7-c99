@@ -3,7 +3,8 @@
 *.a
 *.out
 
-v7
+# http://www.tuhs.org/Archive/Distributions/Research/Henry_Spencer_v7/v7.tar.gz
+usr/local/test/v7
 
 conf/test_malloc
 sys/unix

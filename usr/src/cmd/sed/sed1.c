@@ -608,9 +608,9 @@ command(struct reptr *ipc)
 						putc(*p1, stdout);
 					putc('\n', stdout);
 				}
-			}
 				else
 					goto cpcom;
+			}
 			if(i && ipc->fcode)
 				goto wcom;
 			break;

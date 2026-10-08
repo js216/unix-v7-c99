@@ -1,14 +1,16 @@
 #!/bin/sh
-# Every git-tracked file is either excluded in X or has a "% file [v7file]"
-# entry below whose diff turns v7file (default: file; /dev/null if new)
-# into it.  Score: wc -c v7diff.sh.  Usage: sh v7diff.sh [-u]  (V7=v7)
+# Each repo file (tracked, or untracked and not ignored) is under an X
+# entry, or has a "% file [v7file]" entry whose diff -U0 hunks turn
+# v7file (default file; /dev/null if new) into it.
+# Score: wc -c.  Usage: sh v7diff.sh [-u], from any directory of the repo.
 X='
 .gitignore
 LICENSE
 README
-v7diff.sh
+usr/local
 '
-: <<'.'
+: <<\EOF
+
 % boot/rootfs.proto /dev/null
 @@ -0,0 +1,180 @@
 +nullboot
@@ -191,8 +193,11 @@ v7diff.sh
 +	unix	---644 0 0 boot/unix
 +	.profile	---644 0 0 .profile
 +$
+
 % etc/group
+
 % etc/passwd
+
 % etc/rc
 @@ -5 +5 @@
 -rm /etc/mtab
@@ -202,9 +207,11 @@ v7diff.sh
 -rm -f /usr/spool/lpd/lock
 -: /etc/accton /usr/adm/acct
 -rm -f /usr/tmp/*
+
 % etc/ttys
+
 % Makefile /dev/null
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,244 @@
 +# SPDX-License-Identifier: MIT
 +# Makefile --- unix-v7-c99 build: cross-compiled kernel + V7 userland
 +# Copyright (c) 2026 Jakob Kastelic
@@ -354,7 +361,7 @@ v7diff.sh
 +	bin/quot bin/dump bin/dumpdir \
 +	bin/restor bin/tk bin/dc bin/tar bin/tp \
 +	bin/prof bin/tc bin/graph bin/factor bin/primes \
-+	bin/expr bin/iostat bin/pstat \
++	bin/expr bin/iostat bin/pstat bin/ps bin/dmesg bin/osh bin/sa \
 +	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 +	usr/games/backgammon usr/games/fish usr/games/quiz \
 +	usr/games/wump
@@ -376,7 +383,7 @@ v7diff.sh
 +# Rootfs
 +
 +boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto \
-+	nullboot .profile $(ROOT_BUILT)
++	nullboot .profile $(ROOT)
 +	rm -f bin/bc
 +	set -e; for i in $(ROOT); do \
 +		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
@@ -405,6 +412,11 @@ v7diff.sh
 +
 +boot bin etc usr/lib usr/dict usr/games usr/games/lib:
 +	mkdir -p $@
++
++$(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | bin usr/lib usr/dict usr/games/lib
++	cp $< $@
++
++$(filter etc/%,$(ROOTFS_STATIC)): ;
 +
 +nullboot:
 +	: > $@
@@ -444,16 +456,22 @@ v7diff.sh
 +	rm -f usr/src/cmd/tar/tar usr/src/cmd/tar/*.o
 +	rm -f usr/src/cmd/tp/tp usr/src/cmd/tp/*.o
 +	$(MAKE) -C usr/src/cmd/awk clean
+
 % .profile /dev/null
 @@ -0,0 +1,2 @@
 +PATH=/bin:/usr/bin
 +export PATH
+
 % usr/include/a.out.h
 @@ -33,0 +34 @@
 +int	nlist(char *, struct nlist *);
+
 % usr/include/ar.h
+
 % usr/include/ctype.h
+
 % usr/include/dumprestor.h
+
 % usr/include/errno.h
 @@ -3,0 +4,2 @@
 +#ifndef ERRNO_H
@@ -461,7 +479,9 @@ v7diff.sh
 @@ -40,0 +43,2 @@
 +extern int errno;
 +#endif
+
 % usr/include/execargs.h
+
 % usr/include/grp.h
 @@ -0,0 +1,2 @@
 +#ifndef GRP_H
@@ -473,6 +493,7 @@ v7diff.sh
 +extern void setgrent(void);
 +extern void endgrent(void);
 +#endif
+
 % usr/include/math.h
 @@ -1,7 +1,29 @@
 -extern double fabs(), floor(), ceil(), fmod(), ldexp();
@@ -511,6 +532,7 @@ v7diff.sh
 +extern double y0(double x);
 +extern double y1(double x);
 +extern double yn(int n, double x);
+
 % usr/include/pwd.h
 @@ -0,0 +1,2 @@
 +#ifndef PWD_H
@@ -522,13 +544,16 @@ v7diff.sh
 +extern void setpwent(void);
 +extern void endpwent(void);
 +#endif
+
 % usr/include/setjmp.h
 @@ -1 +1,3 @@
 -typedef int jmp_buf[3];
 +typedef int jmp_buf[10];
 +int	setjmp(jmp_buf);
 +void	longjmp(jmp_buf, int);
+
 % usr/include/sgtty.h
+
 % usr/include/signal.h
 @@ -19,3 +19,2 @@
 -int	(*signal())();
@@ -536,6 +561,7 @@ v7diff.sh
 -#define	SIG_IGN	(int (*)())1
 +#define	SIG_DFL	0
 +#define	SIG_IGN	1
+
 % usr/include/stdio.h
 @@ -0,0 +1,3 @@
 +#ifndef STDIO_H
@@ -670,14 +696,18 @@ v7diff.sh
 +long tell(int f);
 +char *timezone(int zone, int dst);
 +#endif
+
 % usr/include/sys/dir.h
 @@ -0,0 +1,2 @@
 +#ifndef SYS_DIR_H
 +#define SYS_DIR_H
 @@ -8,0 +11 @@
 +#endif
+
 % usr/include/sys/fblk.h
+
 % usr/include/sys/filsys.h
+
 % usr/include/sys/inode.h
 @@ -15 +15 @@
 -struct group {
@@ -698,7 +728,9 @@ v7diff.sh
 +#define	i_lastr	u_reg.i_lastr
 +#define	i_rdev	u_dev.i_rdev
 +#define	i_group	u_dev.i_group
+
 % usr/include/sys/ino.h
+
 % usr/include/sys/param.h
 @@ -84,0 +85 @@
 +#ifndef NULL
@@ -718,6 +750,7 @@ v7diff.sh
 @@ -135,0 +139,2 @@
 +#define	SYS_TYPES_H
 +#endif
+
 % usr/include/sys/stat.h
 @@ -0,0 +1,3 @@
 +#ifndef SYS_STAT_H
@@ -725,6 +758,7 @@ v7diff.sh
 +#include <sys/types.h>
 @@ -28,0 +32 @@
 +#endif
+
 % usr/include/sys/timeb.h
 @@ -0,0 +1,3 @@
 +#ifndef SYS_TIMEB_H
@@ -732,12 +766,14 @@ v7diff.sh
 +#include <sys/types.h>
 @@ -9,0 +13 @@
 +#endif
+
 % usr/include/sys/times.h
 @@ -0,0 +1,2 @@
 +#ifndef SYS_TIMES_H
 +#define SYS_TIMES_H
 @@ -9,0 +12 @@
 +#endif
+
 % usr/include/sys/types.h
 @@ -1,7 +1,9 @@
 -typedef	long       	daddr_t;  	/* disk address */
@@ -761,14 +797,18 @@ v7diff.sh
 +#define	major(x)  	(int)(((unsigned)x>>8)&0377)
 @@ -11,0 +14 @@
 +#endif
+
 % usr/include/time.h
 @@ -0,0 +1,2 @@
 +#ifndef TIME_H
 +#define TIME_H
 @@ -11,0 +14 @@
 +#endif
+
 % usr/include/tp_defs.h
+
 % usr/include/utmp.h
+
 % usr/src/cmd/ac.c
 @@ -35,2 +35,4 @@
 -main(argc, argv) 
@@ -854,6 +894,7 @@ v7diff.sh
 +		return(0);
 @@ -248,0 +262 @@
 +	return(0);
+
 % usr/src/cmd/accton.c
 @@ -1,2 +1,3 @@
 -main(argc, argv)
@@ -865,6 +906,7 @@ v7diff.sh
 -	extern errno;
 +	extern int errno;
 +	int acct(char *file);
+
 % usr/src/cmd/arcv.c
 @@ -5,0 +6 @@
 +#include <stdio.h>
@@ -973,6 +1015,7 @@ v7diff.sh
 +	putarhdr(nh, &oh);
 +	n = (getshort(oh.osize)+1) & ~01;
 +	write(tf, nh, sizeof(nh));
+
 % usr/src/cmd/arithmetic.c usr/src/games/arithmetic.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -1029,6 +1072,7 @@ v7diff.sh
 +delete(void)
 @@ -192,0 +203 @@
 +	return(0);
+
 % usr/src/cmd/at.c
 @@ -10,0 +11 @@
 +#define	utime	at_utime
@@ -1115,6 +1159,7 @@ v7diff.sh
 +	(void)sig;
 @@ -304,0 +308 @@
 +	return(0);
+
 % usr/src/cmd/atrun.c
 @@ -13,0 +14 @@
 +int	makenowtime(void), updatetime(int t), run(char *file);
@@ -1155,10 +1200,12 @@ v7diff.sh
 +	if ((pid = fork())) {
 @@ -107,0 +113 @@
 +	return(0);
+
 % usr/src/cmd/awk/awk.def
 @@ -2 +2 @@
 -#define yfree free
 +#define yfree(p) free((char *)(p))
+
 % usr/src/cmd/awk/awk.g.y
 @@ -0,0 +1 @@
 +%define api.value.type {long}
@@ -1225,6 +1272,7 @@ v7diff.sh
 @@ -264 +284 @@
 -		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, nullstat, $6, $9); }
 +		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, (long)nullstat, $6, $9); }
+
 % usr/src/cmd/awk/awk.lx.l
 @@ -0,0 +1 @@
 +%option noyywrap noinput nounistd
@@ -1298,6 +1346,7 @@ v7diff.sh
 +startreg(void)
 @@ -168,0 +187 @@
 +	return(0);
+
 % usr/src/cmd/awk/b.c
 @@ -3,0 +4 @@
 +int error(), overflo(), penter(), follow(), first(), notin(), cfoll(), freetr();
@@ -1425,6 +1474,7 @@ v7diff.sh
 @@ -511 +519 @@
 -	register count;
 +	register int count;
+
 % usr/src/cmd/awk/lib.c
 @@ -4,0 +5 @@
 +int error(), fldbld(), setclvar(), member(), isnumber(), awkdigit();
@@ -1529,6 +1579,7 @@ v7diff.sh
 +	if(c >= '0' && c <= '9')
 +		return(1);
 +	return(0);
+
 % usr/src/cmd/awk/main.c
 @@ -3,0 +4 @@
 +int logit(), syminit(), run(), msgfiles(), error(), yyparse();
@@ -1574,6 +1625,7 @@ v7diff.sh
 +	xargv=s=svargv=(char **)malloc(n*sizeof(char *));
 @@ -139,0 +146 @@
 +	return(0);
+
 % usr/src/cmd/awk/makefile
 @@ -2,0 +3,7 @@
 +LDFLAGS =
@@ -1618,6 +1670,7 @@ v7diff.sh
 +	$(HOSTCC) $(HOSTCFLAGS) -o proc proc.c proc-token.o
 +clean:
 +	rm -f awk *.o $(GEN) y.tab.c y.tab.h
+
 % usr/src/cmd/awk/parse.c
 @@ -4 +4,2 @@
 -node *ALLOC(n)
@@ -1680,6 +1733,7 @@ v7diff.sh
 @@ -131 +132 @@
 -node *genprint()
 +node *genprint(void)
+
 % usr/src/cmd/awk/proc.c
 @@ -0,0 +1 @@
 +#include "stdio.h"
@@ -1698,6 +1752,7 @@ v7diff.sh
 +	printf("char *printname[%d] = {\n", SIZE);
 @@ -81,0 +85 @@
 +	return(0);
+
 % usr/src/cmd/awk/run.c
 @@ -4,0 +5 @@
 +#undef NULL
@@ -1835,6 +1890,7 @@ v7diff.sh
 +redirprint(s, a, b) char *s; int a; node *b;
 @@ -831,0 +889 @@
 +	return(0);
+
 % usr/src/cmd/awk/token.c
 @@ -0,0 +1 @@
 +#include "stdio.h"
@@ -2007,6 +2063,7 @@ v7diff.sh
 @@ -96 +98 @@
 -	return(tok[n-257].tnm);
 +	return(tok[n-FIRSTTOKEN].tnm);
+
 % usr/src/cmd/awk/tran.c
 @@ -18,0 +19 @@
 +int error(), recbld(), checkval(), hash(), isnumber();
@@ -2097,6 +2154,7 @@ v7diff.sh
 @@ -235 +228 @@
 -char *ymalloc(u) unsigned u;
 +char *ymalloc(unsigned u)
+
 % usr/src/cmd/backgammon.c usr/src/games/backgammon.c
 @@ -15 +15,14 @@
 -int red[]     {0,2,0,0,0,0,0,0,0,0,0,0,5,
@@ -2325,6 +2383,7 @@ v7diff.sh
 +_store(int *p, int numb) {
 @@ -583,0 +607 @@
 +	return(0);
+
 % usr/src/cmd/basename.c
 @@ -3,2 +3,2 @@
 -main(argc, argv)
@@ -2334,6 +2393,7 @@ v7diff.sh
 @@ -27 +27 @@
 -	puts(p2, stdout);
 +	puts(p2);
+
 % usr/src/cmd/cal.c
 @@ -10,2 +10,8 @@
 -main(argc, argv)
@@ -2383,6 +2443,7 @@ v7diff.sh
 @@ -175 +182 @@
 -	register y, d;
 +	register int y, d;
+
 % usr/src/cmd/calendar.c
 @@ -7,0 +8 @@
 +#include <stdio.h>
@@ -2400,6 +2461,7 @@ v7diff.sh
 +		/* FALLTHROUGH */
 @@ -47,0 +52 @@
 +		/* FALLTHROUGH */
+
 % usr/src/cmd/cat.c
 @@ -11,2 +11,2 @@
 -main(argc, argv)
@@ -2412,6 +2474,7 @@ v7diff.sh
 @@ -42 +42 @@
 -		if (fflg || (*++argv)[0]=='-' && (*argv)[1]=='\0')
 +		if (fflg || ((*++argv)[0]=='-' && (*argv)[1]=='\0'))
+
 % usr/src/cmd/cb.c
 @@ -1,0 +2,10 @@
 +#define	puts	cb_puts
@@ -2480,6 +2543,7 @@ v7diff.sh
 +comment(void){
 @@ -363,0 +388 @@
 +	return(0);
+
 % usr/src/cmd/checkeq.c
 @@ -8 +8,4 @@
 -main(argc, argv) char **argv; {
@@ -2492,6 +2556,7 @@ v7diff.sh
 -FILE	*f;
 +void
 +check(FILE *f)
+
 % usr/src/cmd/chgrp.c
 @@ -14,0 +15 @@
 +int	isnumber(char *s);
@@ -2516,6 +2581,7 @@ v7diff.sh
 -		if(!isdigit(c))
 +	while ((c = *s++))
 +		if (!isdigit(c))
+
 % usr/src/cmd/chmod.c
 @@ -22,0 +23,5 @@
 +unsigned newmode(unsigned nm);
@@ -2568,6 +2634,7 @@ v7diff.sh
 @@ -139 +147 @@
 -	register m;
 +	register int m;
+
 % usr/src/cmd/chown.c
 @@ -14,0 +15 @@
 +int	isnumber(char *s);
@@ -2592,6 +2659,7 @@ v7diff.sh
 -		if(!isdigit(c))
 +	while ((c = *s++))
 +		if (!isdigit(c))
+
 % usr/src/cmd/clri.c
 @@ -6,0 +7 @@
 +#include <stdio.h>
@@ -2620,6 +2688,7 @@ v7diff.sh
 @@ -75 +78 @@
 -	while(c = *s++)
 +	while((c = *s++))
+
 % usr/src/cmd/cmp.c
 @@ -12 +12 @@
 -long	otoi();
@@ -2640,6 +2709,7 @@ v7diff.sh
 @@ -118 +118 @@
 -	while(isdigit(*s))
 +	while(isdigit((unsigned char)*s))
+
 % usr/src/cmd/col.c
 @@ -19,0 +20,6 @@
 +void outc(int c);
@@ -2684,6 +2754,7 @@ v7diff.sh
 -decr()
 +void
 +decr(void)
+
 % usr/src/cmd/comm.c
 @@ -11,3 +11,7 @@
 -FILE *openfil();
@@ -2723,6 +2794,7 @@ v7diff.sh
 -char *s;
 +FILE *
 +openfil(char *s)
+
 % usr/src/cmd/cp.c
 @@ -12,2 +12,3 @@
 -main(argc, argv)
@@ -2747,6 +2819,7 @@ v7diff.sh
 @@ -73 +74 @@
 -	while(n = read(fold,  iobuf,  BSIZE)) {
 +	while((n = read(fold,  iobuf,  BSIZE))) {
+
 % usr/src/cmd/cron.c
 @@ -18,3 +18,3 @@
 -struct	tm *localtime();
@@ -2857,6 +2930,7 @@ v7diff.sh
 @@ -242 +269 @@
 -	register n = 0;
 +	register int n = 0;
+
 % usr/src/cmd/crypt.c
 @@ -13 +12,0 @@
 -char	*getpass();
@@ -2873,6 +2947,7 @@ v7diff.sh
 @@ -71 +70 @@
 -	register i, n1, n2;
 +	register int i, n1, n2;
+
 % usr/src/cmd/date.c
 @@ -9,0 +10 @@
 +#include <stdio.h>
@@ -2892,6 +2967,7 @@ v7diff.sh
 -gp(dfault)
 +int
 +gp(int dfault)
+
 % usr/src/cmd/dc/dc.c
 @@ -4,3 +4,7 @@
 -main(argc,argv)
@@ -3261,6 +3337,7 @@ v7diff.sh
 +nalloc(register char *p, unsigned nbytes)
 @@ -1933 +1932,0 @@
 -	char *malloc();
+
 % usr/src/cmd/dc/dc.h
 @@ -21,0 +22 @@
 +#define DCSCHAR(c)	((signed char)(c))
@@ -3280,6 +3357,7 @@ v7diff.sh
 -char	*malloc();
 @@ -116 +114,0 @@
 -char	*realloc();
+
 % usr/src/cmd/dcheck.c
 @@ -29,0 +30,4 @@
 +int	check(char *file);
@@ -3366,6 +3444,7 @@ v7diff.sh
 @@ -210 +218 @@
 -	if(i > NINDIR) {
 +	if(i > (int)NINDIR) {
+
 % usr/src/cmd/dc/makefile
 @@ -0,0 +1,3 @@
 +LDFLAGS =
@@ -3374,6 +3453,7 @@ v7diff.sh
 @@ -12 +15 @@
 -	cc -n -s -O dc.c -o dc
 +	$(CC) $(CFLAGS) $(LDFLAGS) dc.c -o dc $(CRT) $(LDLIBS)
+
 % usr/src/cmd/dd.c
 @@ -21 +21 @@
 -char	*sbrk();
@@ -3463,6 +3543,7 @@ v7diff.sh
 -stats()
 +void
 +stats(void)
+
 % usr/src/cmd/deroff.c
 @@ -51 +51 @@
 -char *calloc();
@@ -3600,6 +3681,7 @@ v7diff.sh
 @@ -491 +518 @@
 -while( *t++ = *s++ )
 +while( (*t++ = *s++) )
+
 % usr/src/cmd/df.c
 @@ -9,2 +9 @@
 -	"/dev/rp0",
@@ -3632,6 +3714,7 @@ v7diff.sh
 +bread(daddr_t bno, char *buf, int cnt)
 @@ -88 +88,0 @@
 -	extern errno;
+
 % usr/src/cmd/diff3.c
 @@ -45,2 +45,11 @@
 -main(argc,argv)
@@ -3789,6 +3872,7 @@ v7diff.sh
 +	register int j,k;
 @@ -420,0 +443 @@
 +	return(0);
+
 % usr/src/cmd/diff.c
 @@ -76 +75,0 @@
 -FILE *fopen();
@@ -4007,6 +4091,7 @@ v7diff.sh
 -char *s, *t;
 +void
 +mesg(char *s, char *t)
+
 % usr/src/cmd/diffh.c
 @@ -17,0 +18,13 @@
 +char	*getl(int f, long n);
@@ -4138,6 +4223,7 @@ v7diff.sh
 -hardsynch()
 +int
 +hardsynch(void)
+
 % usr/src/cmd/dmesg.c
 @@ -12,0 +13 @@
 +#define KMSGBASE	0x7fff0000U
@@ -4218,6 +4304,7 @@ v7diff.sh
 +	static int firstime;
 @@ -112,0 +150 @@
 +	return(0);
+
 % usr/src/cmd/du.c
 @@ -17,3 +17 @@
 -long	descend();
@@ -4242,6 +4329,7 @@ v7diff.sh
 @@ -81 +78 @@
 -		static linked = 0;
 +		static int linked = 0;
+
 % usr/src/cmd/dump.c
 @@ -39,3 +39,3 @@
 -char	*ctime();
@@ -4521,6 +4609,7 @@ v7diff.sh
 +		return(0);
 @@ -638,0 +667 @@
 +	return(0);
+
 % usr/src/cmd/dumpdir.c
 @@ -51,2 +51,26 @@
 -main(argc, argv)
@@ -4769,6 +4858,7 @@ v7diff.sh
 @@ -473 +507 @@
 -null() { ; }
 +int null(void) { return(0); }
+
 % usr/src/cmd/echo.c
 @@ -3,3 +3,2 @@
 -main(argc, argv)
@@ -4776,6 +4866,7 @@ v7diff.sh
 -char *argv[];
 +int
 +main(int argc, char *argv[])
+
 % usr/src/cmd/ed.c
 @@ -7,0 +8,3 @@
 +#define	puts	u_puts
@@ -5301,6 +5392,7 @@ v7diff.sh
 +makekey(char *a, char *b)
 @@ -1761,0 +1879 @@
 +	return(0);
+
 % usr/src/cmd/egrep.y
 @@ -26 +26 @@
 -int line 1;
@@ -5482,6 +5574,7 @@ v7diff.sh
 -	register ccount;
 +	register int cstat;
 +	register int ccount;
+
 % usr/src/cmd/expr.y
 @@ -2,0 +3 @@
 +%define api.value.type {char *}
@@ -5694,6 +5787,7 @@ v7diff.sh
 +yyerror(char *s)
 @@ -668,0 +697 @@
 +	return(0);
+
 % usr/src/cmd/factor.c /dev/null
 @@ -0,0 +1,151 @@
 +#include <stdio.h>
@@ -5847,6 +5941,7 @@ v7diff.sh
 +		factor(n);
 +	}
 +}
+
 % usr/src/cmd/fgrep.c
 @@ -33,2 +33,7 @@
 -main(argc, argv)
@@ -5892,6 +5987,7 @@ v7diff.sh
 -cfail() {
 +void
 +cfail(void) {
+
 % usr/src/cmd/file.c
 @@ -23,2 +23,7 @@
 -main(argc, argv)
@@ -5937,6 +6033,7 @@ v7diff.sh
 -char *bp;
 +int
 +english (char *bp, int n)
+
 % usr/src/cmd/find.c
 @@ -2,0 +3 @@
 +#define	ctime	find_ctime
@@ -6276,6 +6373,7 @@ v7diff.sh
 +pr(char *s)
 @@ -722,0 +753 @@
 +	return(0);
+
 % usr/src/cmd/fish.c usr/src/games/fish.c
 @@ -14,0 +15,3 @@
 +int	shuffle(), choose(), draw(), error(), empty(), mark(), deal(),
@@ -6431,11 +6529,13 @@ v7diff.sh
 @@ -480 +516 @@
 -		if( haveguessed[try[i]] == lg ) try[t++] = try[i];
 +		if( haveguessed[(unsigned char)try[i]] == lg ) try[t++] = try[i];
+
 % usr/src/cmd/fortune.c usr/src/games/fortune.c
 @@ -6 +6,2 @@
 -main()
 +int
 +main(void)
+
 % usr/src/cmd/getty.c
 @@ -13,0 +14,9 @@
 +int read(int fd, char *buf, int n);
@@ -6546,6 +6646,7 @@ v7diff.sh
 -putchr(cc)
 +void
 +putchr(int cc)
+
 % usr/src/cmd/graph.c
 @@ -43 +43,34 @@
 -double	atof();
@@ -6969,6 +7070,7 @@ v7diff.sh
 +{
 +	fflush(stdout);
 +	return(0);
+
 % usr/src/cmd/grep.c
 @@ -59,2 +59,8 @@
 -main(argc, argv)
@@ -7053,6 +7155,7 @@ v7diff.sh
 -char *s, *f;
 +void
 +errexit(char *s, char *f)
+
 % usr/src/cmd/hangman.c usr/src/games/hangman.c
 @@ -8,0 +9,3 @@
 +int	setup(void), startnew(void), stateout(void), getguess(void), wordout(void),
@@ -7134,6 +7237,7 @@ v7diff.sh
 +pscore(void)
 @@ -145,0 +166 @@
 +	return(0);
+
 % usr/src/cmd/icheck.c
 @@ -41,2 +41,11 @@
 -long	atol();
@@ -7284,6 +7388,7 @@ v7diff.sh
 @@ -474 +486 @@
 -	return;
 +	return(0);
+
 % usr/src/cmd/init.c
 @@ -4,0 +5 @@
 +#include <stdio.h>
@@ -7417,6 +7522,7 @@ v7diff.sh
 -reset()
 +void
 +reset(void)
+
 % usr/src/cmd/iostat.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -7543,6 +7649,7 @@ v7diff.sh
 +		return(0);
 @@ -270,0 +314 @@
 +	return(0);
+
 % usr/src/cmd/join.c
 @@ -25,2 +25,6 @@
 -main(argc, argv)
@@ -7597,6 +7704,7 @@ v7diff.sh
 -char *s1, *s2;
 +int
 +cmp(char *s1, char *s2)
+
 % usr/src/cmd/kill.c
 @@ -5,0 +6 @@
 +#include <stdio.h>
@@ -7613,6 +7721,7 @@ v7diff.sh
 -	extern char *sys_errlist[];
 -	extern errno;
 +	extern int errno;
+
 % usr/src/cmd/ln.c
 @@ -8 +8 @@
 -char	*rindex();
@@ -7622,6 +7731,7 @@ v7diff.sh
 -char **argv;
 +int
 +main(int argc, char **argv)
+
 % usr/src/cmd/login.c
 @@ -15 +15 @@
 -struct	passwd nouser = {"", "nope"};
@@ -7657,6 +7767,7 @@ v7diff.sh
 @@ -142 +139 @@
 -	signal(SIGINT, catch);
 +	signal(SIGINT, (int)catch);
+
 % usr/src/cmd/look.c
 @@ -14,2 +14,5 @@
 -main(argc,argv)
@@ -7701,6 +7812,7 @@ v7diff.sh
 @@ -145 +149 @@
 -	register c;
 +	register int c;
+
 % usr/src/cmd/ls.c
 @@ -42,4 +42,10 @@
 -char	*makename();
@@ -7781,6 +7893,7 @@ v7diff.sh
 -struct lbuf **pp1, **pp2;
 +int
 +compar(struct lbuf **pp1, struct lbuf **pp2)
+
 % usr/src/cmd/makekey.c
 @@ -8 +8,3 @@
 -char	*crypt();
@@ -7791,6 +7904,7 @@ v7diff.sh
 -main()
 +int
 +main(void)
+
 % usr/src/cmd/mesg.c
 @@ -19,2 +19,4 @@
 -main(argc, argv)
@@ -7808,6 +7922,7 @@ v7diff.sh
 -newmode(m)
 +void
 +newmode(int m)
+
 % usr/src/cmd/mkdir.c
 @@ -9,2 +9 @@
 -char	*strcat();
@@ -7826,6 +7941,7 @@ v7diff.sh
 @@ -35 +34 @@
 -	register i, slash = 0;
 +	register int i, slash = 0;
+
 % usr/src/cmd/mkfs.c
 @@ -8,0 +9 @@
 +#define	MAXFILEBLK	(LADDR+NINDIR+(NINDIR*NINDIR))
@@ -8098,6 +8214,7 @@ v7diff.sh
 +badblk(daddr_t bno)
 @@ -613,0 +644 @@
 +	(void)bno;
+
 % usr/src/cmd/mknod.c
 @@ -1,3 +1,4 @@
 -main(argc, argv)
@@ -8115,12 +8232,14 @@ v7diff.sh
 @@ -36 +37 @@
 -	while(c = *s++) {
 +	while((c = *s++)) {
+
 % usr/src/cmd/mount.c
 @@ -11,2 +11,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(int argc, char **argv)
+
 % usr/src/cmd/mv.c
 @@ -19,3 +19,7 @@
 -char	*pname();
@@ -8185,6 +8304,7 @@ v7diff.sh
 -register char *s;
 +int
 +chkdot(register char *s)
+
 % usr/src/cmd/ncheck.c
 @@ -37,3 +37,11 @@
 -daddr_t	bmap();
@@ -8314,6 +8434,7 @@ v7diff.sh
 @@ -316 +330 @@
 -	if(i > NINDIR) {
 +	if(i > (int)NINDIR) {
+
 % usr/src/cmd/newgrp.c
 @@ -5,3 +5,2 @@
 -struct	group	*getgrnam(), *grp;
@@ -8338,6 +8459,7 @@ v7diff.sh
 @@ -47 +47 @@
 -	register i;
 +	register int i;
+
 % usr/src/cmd/nice.c
 @@ -5,3 +5,3 @@
 -main(argc, argv)
@@ -8350,6 +8472,7 @@ v7diff.sh
 -	extern errno;
 -	extern char *sys_errlist[];
 +	extern int errno;
+
 % usr/src/cmd/od.c
 @@ -14,2 +14,8 @@
 -main(argc, argv)
@@ -8400,6 +8523,7 @@ v7diff.sh
 -register char *s;
 +void
 +offset(register char *s)
+
 % usr/src/cmd/osh.c
 @@ -55 +55 @@
 -char	*mesg[NSIG] {
@@ -8824,6 +8948,7 @@ v7diff.sh
 +		errval |= (s>>8);
 @@ -843,0 +891 @@
 +	return(0);
+
 % usr/src/cmd/passwd.c
 @@ -13,6 +12,0 @@
 -struct	passwd *getpwent();
@@ -8847,6 +8972,7 @@ v7diff.sh
 +	signal(SIGHUP, (int)SIG_IGN);
 +	signal(SIGINT, (int)SIG_IGN);
 +	signal(SIGQUIT, (int)SIG_IGN);
+
 % usr/src/cmd/pr.c
 @@ -41,2 +41,2 @@
 -char	*ttyname();
@@ -8932,6 +9058,7 @@ v7diff.sh
 -putcp(c)
 +void
 +putcp(int c)
+
 % usr/src/cmd/primes.c /dev/null
 @@ -0,0 +1,149 @@
 +#include <stdio.h>
@@ -9083,6 +9210,7 @@ v7diff.sh
 +		n += 2ULL;
 +	}
 +}
+
 % usr/src/cmd/prof.c
 @@ -11,0 +12,4 @@
 +int min(unsigned a, unsigned b);
@@ -9173,6 +9301,7 @@ v7diff.sh
 +int done(void)
 @@ -308,0 +314 @@
 +	return(0);
+
 % usr/src/cmd/ps.c
 @@ -8 +8,3 @@
 -#include <core.h>
@@ -9291,6 +9420,7 @@ v7diff.sh
 @@ -399 +410 @@
 -	return((unsigned)adr>=lbd && (unsigned)adr<ubd);
 +	return((unsigned long)adr>=(unsigned long)lbd && (unsigned long)adr<(unsigned long)ubd);
+
 % usr/src/cmd/pstat.c
 @@ -5,0 +6 @@
 +#include <stdio.h>
@@ -9430,6 +9560,7 @@ v7diff.sh
 +	register int nf;
 @@ -392,0 +418 @@
 +	return(0);
+
 % usr/src/cmd/ptx.c
 @@ -34,2 +34,3 @@
 -extern char *calloc(), *mktemp();
@@ -9619,6 +9750,7 @@ v7diff.sh
 -char *strtp;
 +int
 +storeh(int num, char *strtp)
+
 % usr/src/cmd/pwd.c
 @@ -17 +17,4 @@
 -main()
@@ -9643,6 +9775,7 @@ v7diff.sh
 @@ -68 +73 @@
 -	register i, j;
 +	register int i, j;
+
 % usr/src/cmd/quiz.c usr/src/games/quiz.c
 @@ -9,0 +10,7 @@
 +int	readline(void), cmp(char *u, char *v), disj(int s), string(int s);
@@ -9785,6 +9918,7 @@ v7diff.sh
 +dunno(void)
 @@ -472,0 +497 @@
 +	return(0);
+
 % usr/src/cmd/quot.c
 @@ -42,3 +42,6 @@
 -struct	passwd	*getpwent();
@@ -9894,6 +10028,7 @@ v7diff.sh
 @@ -232 +239 @@
 -	for(n=0; p[n] = s[n]; n++)
 +	for(n=0; (p[n] = s[n]); n++)
+
 % usr/src/cmd/random.c
 @@ -4 +3,0 @@
 -double	atof();
@@ -9901,6 +10036,7 @@ v7diff.sh
 -main(argc,argv) char **argv;
 +int
 +main(int argc, char **argv)
+
 % usr/src/cmd/restor.c
 @@ -84,2 +84,44 @@
 -main(argc, argv)
@@ -10351,6 +10487,7 @@ v7diff.sh
 +done(void)
 @@ -1146,0 +1201 @@
 +	return(0);
+
 % usr/src/cmd/rev.c
 @@ -9,2 +9,2 @@
 -main(argc,argv)
@@ -10360,6 +10497,7 @@ v7diff.sh
 @@ -12 +12 @@
 -	register i,c;
 +	register int i,c;
+
 % usr/src/cmd/rm.c
 @@ -8 +8,5 @@
 -char	*sprintf();
@@ -10404,6 +10542,7 @@ v7diff.sh
 -yes()
 +int
 +yes(void)
+
 % usr/src/cmd/rmdir.c
 @@ -11,3 +11 @@
 -char	*rindex();
@@ -10421,6 +10560,7 @@ v7diff.sh
 -char *d;
 +void
 +rmdir(char *d)
+
 % usr/src/cmd/sa.c
 @@ -3 +2,0 @@
 -#include <sys/acct.h>
@@ -10605,6 +10745,7 @@ v7diff.sh
 @@ -478 +497 @@
 -	register time_t nt;
 +	time_t nt;
+
 % usr/src/cmd/sed/makefile
 @@ -1,0 +2,3 @@
 +LDFLAGS =
@@ -10613,6 +10754,7 @@ v7diff.sh
 @@ -14 +17 @@
 -sed:	sed0.o sed1.o; cc -s -o sed -n *.o
 +sed:	sed0.o sed1.o; $(CC) $(CFLAGS) $(LDFLAGS) -o sed $(CRT) *.o $(LDLIBS)
+
 % usr/src/cmd/sed/sed0.c
 @@ -3,0 +4,5 @@
 +void	fcomp(void);
@@ -10780,6 +10922,7 @@ v7diff.sh
 -			ep[c] = c;
 +		if(ep[(unsigned char)c] == 0)
 +			ep[(unsigned char)c] = c;
+
 % usr/src/cmd/sed/sed1.c
 @@ -3,0 +4,6 @@
 +void	dosub(char *rhsbuf);
@@ -10902,7 +11045,7 @@ v7diff.sh
 @@ -599 +605 @@
 -			if(ipc->pfl && i)
 +			if(ipc->pfl && i) {
-@@ -604,0 +611 @@
+@@ -606,0 +613 @@
 +			}
 @@ -624 +631 @@
 -			while(*p2++ = *p1++);
@@ -10943,6 +11086,7 @@ v7diff.sh
 @@ -705 +712 @@
 -			if((fi = fopen((*aptr)->re1, "r")) == NULL)
 +			if((fi = fopen((*aptr)->u.re1, "r")) == NULL)
+
 % usr/src/cmd/sed/sed.h
 @@ -35,2 +35,2 @@
 -union reptr	*abuf[ABUFSIZE];
@@ -11002,6 +11146,7 @@ v7diff.sh
 @@ -153 +142 @@
 -union reptr	*pending;
 +struct reptr	*pending;
+
 % usr/src/cmd/sh/args.c
 @@ -12 +12 @@
 -PROC STRING *copyargs();
@@ -11066,6 +11211,7 @@ v7diff.sh
 @@ -127 +129 @@
 -DOLPTR	useargs()
 +DOLPTR	useargs(void)
+
 % usr/src/cmd/sh/blok.c
 @@ -27,2 +27 @@
 -ADDRESS	alloc(nbytes)
@@ -11089,11 +11235,14 @@ v7diff.sh
 +VOID	free(BLKPTR ap)
 @@ -84,0 +83 @@
 +	return(0);
+
 % usr/src/cmd/sh/brkincr.h
+
 % usr/src/cmd/sh/builtin.c
 @@ -1 +1 @@
 -builtin()
 +int builtin(void)
+
 % usr/src/cmd/sh/cmd.c
 @@ -13,11 +13,20 @@
 -PROC IOPTR	inout();
@@ -11303,6 +11452,7 @@ v7diff.sh
 +LOCAL VOID	synbad(void)
 @@ -405,0 +427 @@
 +	return(0);
+
 % usr/src/cmd/sh/ctype.c
 @@ -12 +12 @@
 -char	_ctype1[] {
@@ -11310,6 +11460,7 @@ v7diff.sh
 @@ -61 +61 @@
 -char	_ctype2[] {
 +char	_ctype2[] = {
+
 % usr/src/cmd/sh/ctype.h
 @@ -69 +69 @@
 -char	_ctype1[];
@@ -11351,6 +11502,7 @@ v7diff.sh
 +#define	letter(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_IDC))
 +#define alphanum(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(_IDCH))
 +#define astchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_AST))
+
 % usr/src/cmd/sh/defs.h
 @@ -81,28 +81,24 @@
 -ADDRESS		alloc();
@@ -11530,7 +11682,9 @@ v7diff.sh
 @@ -284 +280 @@
 -address	end[];
 +extern address	end[];
+
 % usr/src/cmd/sh/dup.h
+
 % usr/src/cmd/sh/error.c
 @@ -11,0 +12,10 @@
 +extern void exit(int n) __attribute__((__noreturn__));
@@ -11581,6 +11735,7 @@ v7diff.sh
 -	IOPTR		base;
 +void
 +rmtemp(IOPTR base)
+
 % usr/src/cmd/sh/expand.c
 @@ -27 +27,7 @@
 -PROC VOID	addg();
@@ -11644,6 +11799,7 @@ v7diff.sh
 +INT makearg(REG ARGPTR args)
 @@ -188,0 +195 @@
 +	return(0);
+
 % usr/src/cmd/sh/fault.c
 @@ -11,0 +12,14 @@
 +extern int signal(int sig, int fun);
@@ -11714,6 +11870,7 @@ v7diff.sh
 +		IF (t=trapcom[i])
 @@ -108,0 +133 @@
 +	return(0);
+
 % usr/src/cmd/sh/io.c
 @@ -12,0 +13,17 @@
 +extern int close(int fd);
@@ -11794,7 +11951,9 @@ v7diff.sh
 +	IF (iop=ioparg)
 @@ -132,0 +151 @@
 +	return(0);
+
 % usr/src/cmd/sh/mac.h
+
 % usr/src/cmd/sh/macro.c
 @@ -12,0 +13,19 @@
 +LOCAL INT	getch(CHAR endch);
@@ -11879,6 +12038,7 @@ v7diff.sh
 +LOCAL INT flush(INT ot)
 @@ -232,0 +251 @@
 +	return(0);
+
 % usr/src/cmd/sh/main.c
 @@ -25 +25,31 @@
 -PROC VOID	exfile();
@@ -11958,6 +12118,7 @@ v7diff.sh
 +INT Ldup(REG INT fa, REG INT fb)
 @@ -173,0 +204 @@
 +	return(0);
+
 % usr/src/cmd/sh/makefile
 @@ -1,0 +2,3 @@
 +LDFLAGS =
@@ -11969,6 +12130,7 @@ v7diff.sh
 @@ -32 +35 @@
 -.c.o:;	cc -O -c $<
 +.c.o:;	$(CC) $(CFLAGS) -c $<
+
 % usr/src/cmd/sh/mode.h
 @@ -46 +45,0 @@
 -STRUCT sysnod	SYSTAB[];
@@ -11981,6 +12143,7 @@ v7diff.sh
 -struct void {INT vvvvvvvv;};
 @@ -113,0 +110 @@
 +STRUCT sysnod	SYSTAB[];
+
 % usr/src/cmd/sh/msg.c
 @@ -70 +70 @@
 -SYSTAB reserved {
@@ -11991,6 +12154,7 @@ v7diff.sh
 @@ -111 +111 @@
 -SYSTAB	commands {
 +SYSTAB	commands = {
+
 % usr/src/cmd/sh/name.c
 @@ -12 +12 @@
 -PROC BOOL	chkid();
@@ -12185,7 +12349,9 @@ v7diff.sh
 @@ -316 +333 @@
 -	argnam = er = getstak(namec*BYTESPERWORD+BYTESPERWORD);
 +	argnam = er = (STRING *)getstak(namec*BYTESPERWORD+BYTESPERWORD);
+
 % usr/src/cmd/sh/name.h
+
 % usr/src/cmd/sh/print.c
 @@ -11,0 +12,5 @@
 +extern int write(int fd, char *buf, int n);
@@ -12252,6 +12418,7 @@ v7diff.sh
 +stoi(STRING icp)
 @@ -95,0 +104 @@
 +	return(0);
+
 % usr/src/cmd/sh/service.c
 @@ -13 +13,38 @@
 -PROC VOID	gsort();
@@ -12451,11 +12618,13 @@ v7diff.sh
 @@ -361 +424 @@
 -			makearg(argp); count++;
 +			makearg(arg); count++;
+
 % usr/src/cmd/sh/setbrk.c
 @@ -12 +12,2 @@
 -setbrk(incr)
 +extern char *sbrk(int incr);
 +BYTPTR setbrk(INT incr)
+
 % usr/src/cmd/sh/stak.c
 @@ -11,0 +12,3 @@
 +extern INT setbrk(INT n);
@@ -12495,7 +12664,9 @@ v7diff.sh
 -STKPTR	cpystak(x)
 -	STKPTR		x;
 +STKPTR	cpystak(STKPTR x)
+
 % usr/src/cmd/sh/stak.h
+
 % usr/src/cmd/sh/string.c
 @@ -16,2 +16 @@
 -STRING	movstr(a,b)
@@ -12523,8 +12694,11 @@ v7diff.sh
 @@ -53 +48 @@
 -	IF s=as THEN WHILE *s++ DONE FI
 +	IF (s=as) THEN WHILE *s++ DONE FI
+
 % usr/src/cmd/sh/sym.h
+
 % usr/src/cmd/sh/timeout.h
+
 % usr/src/cmd/sh/word.c
 @@ -12,0 +13,13 @@
 +INT	word(void);
@@ -12569,6 +12743,7 @@ v7diff.sh
 @@ -116 +130 @@
 -LOCAL	readb()
 +LOCAL	INT readb(void)
+
 % usr/src/cmd/sh/xec.c
 @@ -12,0 +13,53 @@
 +void	execexp(STRING s, UFD f);
@@ -12768,6 +12943,7 @@ v7diff.sh
 @@ -419 +478 @@
 -	execute(cmd(NL, NLFLG|MTFLG),0);
 +	execute(cmd(NL, NLFLG|MTFLG),0,(INT *)0,(INT *)0);
+
 % usr/src/cmd/sleep.c
 @@ -1,2 +1,3 @@
 -main(argc, argv)
@@ -12778,6 +12954,7 @@ v7diff.sh
 @@ -13 +14 @@
 -	while(c = *s++) {
 +	while((c = *s++)) {
+
 % usr/src/cmd/sort.c
 @@ -5,0 +6 @@
 +#define	qsort	sort_qsort
@@ -13071,6 +13248,7 @@ v7diff.sh
 +		}
 @@ -901,0 +947 @@
 +	}
+
 % usr/src/cmd/sp.c
 @@ -11 +11,5 @@
 -getit()
@@ -13100,6 +13278,7 @@ v7diff.sh
 -main(argc,argv) char *argv[];
 +int
 +main(int argc, char *argv[])
+
 % usr/src/cmd/spline.c
 @@ -141 +141,2 @@
 -rhs(i){
@@ -13162,6 +13341,7 @@ v7diff.sh
 @@ -328 +334 @@
 -	if(!('0'<=c&&c<='9' || c=='-' || c== '.' )) return(0);
 +	if(!(('0'<=c&&c<='9') || c=='-' || c== '.' )) return(0);
+
 % usr/src/cmd/split.c
 @@ -11,2 +11,2 @@
 -main(argc, argv)
@@ -13174,6 +13354,7 @@ v7diff.sh
 @@ -56 +56 @@
 -	for(i=0; i<count; i++)
 +	for(i=0; (unsigned)i<count; i++)
+
 % usr/src/cmd/stty.c
 @@ -13,18 +13,18 @@
 -	"0",	B0,
@@ -13428,6 +13609,7 @@ v7diff.sh
 -char *c;
 +void
 +prspeed(char *c, int s)
+
 % usr/src/cmd/su.c
 @@ -4,3 +4 @@
 -struct	passwd *pwd,*getpwnam();
@@ -13440,6 +13622,7 @@ v7diff.sh
 -char	**argv;
 +int
 +main(int argc, char **argv)
+
 % usr/src/cmd/sum.c
 @@ -7,2 +7,2 @@
 -main(argc,argv)
@@ -13449,12 +13632,14 @@ v7diff.sh
 @@ -11 +11 @@
 -	register i, c;
 +	register int i, c;
+
 % usr/src/cmd/sync.c
 @@ -1 +1,3 @@
 -main()
 +void sync(void);
 +int
 +main(void)
+
 % usr/src/cmd/tabs.c
 @@ -44,0 +45,14 @@
 +int	syslook(char *w);
@@ -13533,6 +13718,7 @@ v7diff.sh
 -misc()
 +void
 +misc(void)
+
 % usr/src/cmd/tail.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -13555,6 +13741,7 @@ v7diff.sh
 -digit(c)
 +int
 +digit(int c)
+
 % usr/src/cmd/tar/makefile
 @@ -2,0 +3,3 @@
 +LDFLAGS =
@@ -13593,6 +13780,7 @@ v7diff.sh
 @@ -45 +48 @@
 -	cc -c -O $?
 +	$(CC) $(CFLAGS) -c $?
+
 % usr/src/cmd/tar/tar.c
 @@ -7,2 +6,0 @@
 -char	*sprintf();
@@ -13931,6 +14119,7 @@ v7diff.sh
 +	register int i;
 @@ -932,0 +982 @@
 +	return(0);
+
 % usr/src/cmd/tc.c
 @@ -8 +8 @@
 -#define	oput(c) if (pgskip==0) putchar(c); else;
@@ -14056,6 +14245,7 @@ v7diff.sh
 @@ -414 +423 @@
 -char *asctab[128] {
 +char *asctab[128] = {
+
 % usr/src/cmd/tee.c
 @@ -18,2 +18,11 @@
 -extern errno;
@@ -14091,6 +14281,7 @@ v7diff.sh
 -char *s;
 +void
 +puts(char *s)
+
 % usr/src/cmd/test.c
 @@ -18,2 +18,12 @@
 -main(argc, argv)
@@ -14159,6 +14350,7 @@ v7diff.sh
 -	char *s;
 +int
 +length(char *s)
+
 % usr/src/cmd/time.c
 @@ -11,2 +11,3 @@
 -main(argc, argv)
@@ -14178,6 +14370,7 @@ v7diff.sh
 @@ -58 +58 @@
 -	register i;
 +	register int i;
+
 % usr/src/cmd/tk.c
 @@ -37,3 +37,3 @@
 -main(argc, argv)
@@ -14264,6 +14457,7 @@ v7diff.sh
 +	xb = (((xx & 03) + ((zz<<2) & 014)) & 017);
 @@ -247,0 +259 @@
 +	return(0);
+
 % usr/src/cmd/touch.c
 @@ -2,0 +3 @@
 +void touch(int force, char *name);
@@ -14284,6 +14478,7 @@ v7diff.sh
 +if( stat(name,&stbuff) < 0) {
 @@ -40,0 +40 @@
 +	}
+
 % usr/src/cmd/tp/makefile
 @@ -1,0 +2,3 @@
 +LDFLAGS =
@@ -14292,7 +14487,9 @@ v7diff.sh
 @@ -15 +18 @@
 -	cc $(CFLAGS) tp0.o tp1.o tp2.o tp3.o -o tp
 +	$(CC) $(CFLAGS) $(LDFLAGS) tp0.o tp1.o tp2.o tp3.o -o tp $(CRT) $(LDLIBS)
+
 % usr/src/cmd/tp/tp0.c
+
 % usr/src/cmd/tp/tp1.c
 @@ -1,0 +2 @@
 +#include <stdio.h>
@@ -14394,6 +14591,7 @@ v7diff.sh
 +int
 @@ -194,0 +222 @@
 +	return(0);
+
 % usr/src/cmd/tp/tp2.c
 @@ -6,0 +7,3 @@
 +int	rseek(), wseek(), tread(), twrite(), seekerr(), swabdir(),
@@ -14534,6 +14732,7 @@ v7diff.sh
 +swabdir(register struct tent *tp)
 @@ -346,0 +375 @@
 +	return(0);
+
 % usr/src/cmd/tp/tp3.c
 @@ -1,0 +2 @@
 +#include <stdio.h>
@@ -14656,8 +14855,11 @@ v7diff.sh
 +			return(0);
 @@ -247,0 +266 @@
 +	return(0);
+
 % usr/src/cmd/tp/tp_defs.h usr/include/tp_defs.h
+
 % usr/src/cmd/tp/tp.h
+
 % usr/src/cmd/tr.c
 @@ -11,0 +12,2 @@
 +int	next(struct string *s);
@@ -14695,6 +14897,7 @@ v7diff.sh
 @@ -117 +119 @@
 -	register c, i, n;
 +	register int c, i, n;
+
 % usr/src/cmd/tsort.c
 @@ -8,0 +9 @@
 +#define index tindex
@@ -14759,6 +14962,7 @@ v7diff.sh
 @@ -185 +191 @@
 -				error("error 2");
 +				error("error 2",empty);
+
 % usr/src/cmd/tty.c
 @@ -5 +5,4 @@
 -char	*ttyname();
@@ -14771,6 +14975,7 @@ v7diff.sh
 -char **argv;
 +int
 +main(int argc, char *argv[])
+
 % usr/src/cmd/umount.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -14779,6 +14984,7 @@ v7diff.sh
 -char **argv;
 +int
 +main(int argc, char **argv)
+
 % usr/src/cmd/uniq.c
 @@ -11 +11,5 @@
 -char	*skip();
@@ -14826,6 +15032,7 @@ v7diff.sh
 -char *p,*s;
 +void
 +printe(char *p, char *s)
+
 % usr/src/cmd/units.c
 @@ -7,3 +6,0 @@
 -double	getflt();
@@ -14973,6 +15180,7 @@ v7diff.sh
 +	signal(8, (int)fperr);
 @@ -463,0 +472 @@
 +	return(0);
+
 % usr/src/cmd/update.c
 @@ -5,0 +6 @@
 +#include <stdio.h>
@@ -14991,6 +15199,7 @@ v7diff.sh
 +	signal(SIGALRM, (int)dosync);
 @@ -35,0 +40 @@
 +	return(0);
+
 % usr/src/cmd/vpr.c
 @@ -26 +26,2 @@
 -char	*ctime();
@@ -15235,6 +15444,7 @@ v7diff.sh
 +	{0000,0030,0010,0010,0010,0010,0004,0010,0010,0010,0010,0030,0000,0000,0000,0000}, /*, }, */
 +	{0020,0052,0004,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000}, /*, ~, */
 +	{0000,0176,0176,0176,0176,0176,0176,0176,0176,0176,0176,0000,0000,0000,0000,0000}, /*, del, */
+
 % usr/src/cmd/wall.c
 @@ -8,2 +8 @@
 -char	*strcpy();
@@ -15256,6 +15466,7 @@ v7diff.sh
 @@ -46 +45 @@
 -	register i;
 +	register int i;
+
 % usr/src/cmd/wc.c
 @@ -5,2 +5,3 @@
 -main(argc, argv)
@@ -15269,6 +15480,7 @@ v7diff.sh
 -long charct; long wordct; long linect;
 +void
 +wcp(register char *wd, long charct, long wordct, long linect)
+
 % usr/src/cmd/who.c
 @@ -13,2 +13,3 @@
 -main(argc, argv)
@@ -15280,6 +15492,7 @@ v7diff.sh
 -putline()
 +void
 +putline(void)
+
 % usr/src/cmd/write.c
 @@ -11,2 +10,0 @@
 -char	*strcat();
@@ -15342,6 +15555,7 @@ v7diff.sh
 @@ -180 +182 @@
 -	register i;
 +	register int i;
+
 % usr/src/cmd/wump.c usr/src/games/wump.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -15427,6 +15641,7 @@ v7diff.sh
 @@ -374 +383 @@
 -	return(*p1 - *p2);
 +	return(*(const int *)p1 - *(const int *)p2);
+
 % usr/src/cmd/yes.c
 @@ -1,2 +1,3 @@
 -main(argc, argv)
@@ -15434,6 +15649,7 @@ v7diff.sh
 +int printf(char *fmt, ...);
 +int
 +main(int argc, char *argv[])
+
 % usr/src/libc/atof.c usr/src/libc/gen/atof.c
 @@ -9,2 +9 @@
 -atof(p)
@@ -15449,6 +15665,7 @@ v7diff.sh
 @@ -17 +16 @@
 -	register eexp, exp, neg, negexp, bexp;
 +	register int eexp, exp, neg, negexp, bexp;
+
 % usr/src/libc/atoi.c usr/src/libc/gen/atoi.c
 @@ -1,2 +1,2 @@
 -atoi(p)
@@ -15457,6 +15674,7 @@ v7diff.sh
 +atoi(register char *p)
 @@ -15,0 +16 @@
 +			/* fallthrough */
+
 % usr/src/libc/atol.c usr/src/libc/gen/atol.c
 @@ -2,2 +2 @@
 -atol(p)
@@ -15464,6 +15682,7 @@ v7diff.sh
 +atol(register char *p)
 @@ -16,0 +16 @@
 +			/* fallthrough */
+
 % usr/src/libc/calloc.c usr/src/libc/gen/calloc.c
 @@ -2,0 +3 @@
 +#include <stdio.h>
@@ -15487,12 +15706,14 @@ v7diff.sh
 @@ -29,0 +27,2 @@
 +	(void)num;
 +	(void)size;
+
 % usr/src/libc/clrerr.c usr/src/libc/stdio/clrerr.c
 @@ -3,2 +3,2 @@
 -clearerr(iop)
 -register struct _iobuf *iop;
 +void
 +clearerr(register struct _iobuf *iop)
+
 % usr/src/libc/crt0.c /dev/null
 @@ -0,0 +1,19 @@
 +extern int main(int argc, char **argv);
@@ -15514,6 +15735,7 @@ v7diff.sh
 +	environ = (char **)&frame[argc + 2];
 +	exit(main(argc, argv));
 +}
+
 % usr/src/libc/crt0.s usr/src/libc/csu/crt0.s
 @@ -1,36 +1,7 @@
 -/ C runtime startoff
@@ -15559,6 +15781,7 @@ v7diff.sh
 +	mov r7, #1
 +	svc #0
 +	b .
+
 % usr/src/libc/crypt.c usr/src/libc/gen/crypt.c
 @@ -49 +49 @@
 -static	char	PC1_D[] {
@@ -15599,6 +15822,7 @@ v7diff.sh
 @@ -328 +326 @@
 -	register i, j, c;
 +	register int i, j, c;
+
 % usr/src/libc/ctime.c usr/src/libc/gen/ctime.c
 @@ -30 +30 @@
 - *	Thu Jan 01 00:00:00 1970n0\\
@@ -15652,8 +15876,11 @@ v7diff.sh
 -register char *cp;
 +char *
 +ct_numb(register char *cp, int n)
+
 % usr/src/libc/ctype_.c usr/src/libc/gen/ctype_.c
+
 % usr/src/libc/data.c usr/src/libc/stdio/data.c
+
 % usr/src/libc/doprnt.c /dev/null
 @@ -0,0 +1,353 @@
 +#include <stdio.h>
@@ -16009,6 +16236,7 @@ v7diff.sh
 +		}
 +	}
 +}
+
 % usr/src/libc/doscan.c usr/src/libc/stdio/doscan.c
 @@ -2,0 +3 @@
 +#include	<stdarg.h>
@@ -16068,6 +16296,7 @@ v7diff.sh
 @@ -254 +253 @@
 -	register c, t;
 +	register int c, t;
+
 % usr/src/libc/ecvt.c usr/src/libc/gen/ecvt.c
 @@ -8 +8 @@
 -char	*cvt();
@@ -16092,6 +16321,7 @@ v7diff.sh
 @@ -36 +30 @@
 -	double modf();
 +	double modf(double value, double *iptr);
+
 % usr/src/libc/endopen.c usr/src/libc/stdio/endopen.c
 @@ -2,0 +3 @@
 +int create(register char *file, int rw);
@@ -16107,7 +16337,9 @@ v7diff.sh
 -	int rw;
 +int
 +create(register char *file, int rw)
+
 % usr/src/libc/errlst.c usr/src/libc/gen/errlst.c
+
 % usr/src/libc/execvp.c usr/src/libc/gen/execvp.c
 @@ -4,0 +5 @@
 +#include <stdio.h>
@@ -16142,6 +16374,7 @@ v7diff.sh
 -char *si;
 +char *
 +execat(register char *s1, register char *s2, char *si)
+
 % usr/src/libc/fdopen.c usr/src/libc/stdio/fdopen.c
 @@ -11,2 +11 @@
 -fdopen(fd, mode)
@@ -16153,12 +16386,14 @@ v7diff.sh
 @@ -30 +29 @@
 -		/* No break */
 +		/* fallthrough */
+
 % usr/src/libc/fgetc.c usr/src/libc/stdio/fgetc.c
 @@ -3,2 +3,2 @@
 -fgetc(fp)
 -FILE *fp;
 +int
 +fgetc(FILE *fp)
+
 % usr/src/libc/fgets.c usr/src/libc/stdio/fgets.c
 @@ -4,3 +4 @@
 -fgets(s, n, iop)
@@ -16168,6 +16403,7 @@ v7diff.sh
 @@ -8 +6 @@
 -	register c;
 +	register int c;
+
 % usr/src/libc/filbuf.c usr/src/libc/stdio/filbuf.c
 @@ -3 +3 @@
 -char	*malloc();
@@ -16179,10 +16415,12 @@ v7diff.sh
 @@ -21 +20 @@
 -			iop->_base = &smallbuf[fileno(iop)];
 +			iop->_base = &smallbuf[(unsigned char)fileno(iop)];
+
 % usr/src/libc/findiop.c usr/src/libc/stdio/findiop.c
 @@ -4 +4 @@
 -_findiop()
 +_findiop(void)
+
 % usr/src/libc/flsbuf.c usr/src/libc/stdio/flsbuf.c
 @@ -3 +3 @@
 -char	*malloc();
@@ -16218,6 +16456,7 @@ v7diff.sh
 -		~(_IOREAD|_IOWRT|_IONBF|_IOMYBUF|_IOERR|_IOEOF|_IOSTRG|_IORW);
 +	iop->_flag = (char)(iop->_flag &
 +		~(_IOREAD|_IOWRT|_IONBF|_IOMYBUF|_IOERR|_IOEOF|_IOSTRG|_IORW));
+
 % usr/src/libc/fopen.c usr/src/libc/stdio/fopen.c
 @@ -4,2 +4 @@
 -fopen(file, mode)
@@ -16227,6 +16466,7 @@ v7diff.sh
 -	FILE *_findiop(), *_endopen();
 +	FILE *_findiop(void);
 +	FILE *_endopen(char *file, char *mode, register FILE *iop);
+
 % usr/src/libc/fprintf.c usr/src/libc/stdio/fprintf.c
 @@ -1,0 +2,2 @@
 +#include	<stdarg.h>
@@ -16243,12 +16483,14 @@ v7diff.sh
 +	va_start(ap, fmt);
 +	_doprnt(fmt, &ap, iop);
 +	va_end(ap);
+
 % usr/src/libc/fputc.c usr/src/libc/stdio/fputc.c
 @@ -3,2 +3,2 @@
 -fputc(c, fp)
 -FILE *fp;
 +int
 +fputc(int c, FILE *fp)
+
 % usr/src/libc/fputs.c usr/src/libc/stdio/fputs.c
 @@ -3,3 +3,2 @@
 -fputs(s, iop)
@@ -16264,6 +16506,7 @@ v7diff.sh
 @@ -10 +9 @@
 -	while (c = *s++)
 +	while ((c = *s++))
+
 % usr/src/libc/freopen.c usr/src/libc/stdio/freopen.c
 @@ -4,3 +4 @@
 -freopen(file, mode, iop)
@@ -16273,6 +16516,7 @@ v7diff.sh
 @@ -8 +6 @@
 -	FILE *_endopen();
 +	FILE *_endopen(char *file, char *mode, register FILE *iop);
+
 % usr/src/libc/fseek.c usr/src/libc/stdio/fseek.c
 @@ -7 +7 @@
 -long lseek();
@@ -16283,6 +16527,7 @@ v7diff.sh
 -	long offset;
 +int
 +fseek(register FILE *iop, long offset, int ptrname)
+
 % usr/src/libc/ftell.c usr/src/libc/stdio/ftell.c
 @@ -7 +7 @@
 -long	lseek();
@@ -16294,6 +16539,7 @@ v7diff.sh
 @@ -14 +13 @@
 -	register adjust;
 +	register int adjust;
+
 % usr/src/libc/gcvt.c usr/src/libc/stdio/gcvt.c
 @@ -6 +6 @@
 -char	*ecvt();
@@ -16311,6 +16557,7 @@ v7diff.sh
 -	 || decpt < 0 && decpt < -3) { /* use E-style */
 +	if ((decpt >= 0 && decpt-ndigit > 4)
 +	 || (decpt < 0 && decpt < -3)) { /* use E-style */
+
 % usr/src/libc/gen/abort.c /dev/null
 @@ -0,0 +1,6 @@
 +extern void _exit(int n);
@@ -16319,6 +16566,7 @@ v7diff.sh
 +{
 +	_exit(1);
 +}
+
 % usr/src/libc/gen/exit.c /dev/null
 @@ -0,0 +1,8 @@
 +extern void _exit(int n);
@@ -16329,6 +16577,7 @@ v7diff.sh
 +	_cleanup();
 +	_exit(n);
 +}
+
 % usr/src/libc/gen/sleep.c
 @@ -4,0 +5,4 @@
 +static void sleepx(int signo);
@@ -16358,11 +16607,13 @@ v7diff.sh
 +sleepx(int signo)
 @@ -38,0 +42 @@
 +	(void)signo;
+
 % usr/src/libc/getchar.c usr/src/libc/stdio/getchar.c
 @@ -8 +8,2 @@
 -getchar()
 +int
 +getchar(void)
+
 % usr/src/libc/getenv.c usr/src/libc/gen/getenv.c
 @@ -7 +7 @@
 -char	*nvmatch();
@@ -16377,6 +16628,7 @@ v7diff.sh
 -register char *s1, *s2;
 +char *
 +nvmatch(register char *s1, register char *s2)
+
 % usr/src/libc/getgrent.c usr/src/libc/stdio/getgrent.c
 @@ -15 +15,2 @@
 -setgrent()
@@ -16394,6 +16646,7 @@ v7diff.sh
 @@ -42 +42 @@
 -getgrent()
 +getgrent(void)
+
 % usr/src/libc/getgrgid.c usr/src/libc/stdio/getgrgid.c
 @@ -4,2 +4 @@
 -getgrgid(gid)
@@ -16401,6 +16654,7 @@ v7diff.sh
 +getgrgid(register int gid)
 @@ -8 +6,0 @@
 -	struct group *getgrent();
+
 % usr/src/libc/getgrnam.c usr/src/libc/stdio/getgrnam.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -16410,6 +16664,7 @@ v7diff.sh
 +getgrnam(register char *name)
 @@ -8 +7,0 @@
 -	struct group *getgrent();
+
 % usr/src/libc/getlogin.c usr/src/libc/gen/getlogin.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -16435,6 +16690,7 @@ v7diff.sh
 @@ -24 +28 @@
 -	return( ubuf.ut_name );
 +	return(name);
+
 % usr/src/libc/getpass.c usr/src/libc/stdio/getpass.c
 @@ -6,2 +6 @@
 -getpass(prompt)
@@ -16451,6 +16707,7 @@ v7diff.sh
 @@ -36 +34 @@
 -	signal(SIGINT, sig);
 +	signal(SIGINT, (int)sig);
+
 % usr/src/libc/getpwent.c usr/src/libc/stdio/getpwent.c
 @@ -10 +10,2 @@
 -setpwent()
@@ -16467,6 +16724,7 @@ v7diff.sh
 @@ -37 +38 @@
 -getpwent()
 +getpwent(void)
+
 % usr/src/libc/getpwnam.c usr/src/libc/stdio/getpwnam.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -16476,6 +16734,7 @@ v7diff.sh
 +getpwnam(char *name)
 @@ -8 +7,0 @@
 -	struct passwd *getpwent();
+
 % usr/src/libc/getpwuid.c usr/src/libc/stdio/getpwuid.c
 @@ -4,2 +4 @@
 -getpwuid(uid)
@@ -16483,6 +16742,7 @@ v7diff.sh
 +getpwuid(register int uid)
 @@ -8 +6,0 @@
 -	struct passwd *getpwent();
+
 % usr/src/libc/gets.c usr/src/libc/stdio/gets.c
 @@ -4,2 +4 @@
 -gets(s)
@@ -16491,6 +16751,7 @@ v7diff.sh
 @@ -7 +6 @@
 -	register c;
 +	register int c;
+
 % usr/src/libc/getw.c usr/src/libc/stdio/getw.c
 @@ -3,2 +3,2 @@
 -getw(iop)
@@ -16500,6 +16761,7 @@ v7diff.sh
 @@ -6 +6 @@
 -	register i;
 +	register int i;
+
 % usr/src/libc/index.c usr/src/libc/gen/index.c
 @@ -9,2 +9 @@
 -index(sp, c)
@@ -16508,6 +16770,7 @@ v7diff.sh
 @@ -13 +12 @@
 -		if (*sp == c)
 +		if (*sp == (char)c)
+
 % usr/src/libc/isatty.c usr/src/libc/gen/isatty.c
 @@ -4,0 +5 @@
 +#include <stdio.h>
@@ -16515,6 +16778,7 @@ v7diff.sh
 -isatty(f)
 +int
 +isatty(int f)
+
 % usr/src/libc/l3.c usr/src/libc/gen/l3.c
 @@ -4,4 +4,2 @@
 -ltol3(cp, lp, n)
@@ -16548,6 +16812,7 @@ v7diff.sh
 +		*a++ = 0;
 @@ -51,0 +49 @@
 +	return(0);
+
 % usr/src/libc/malloc.c usr/src/libc/gen/malloc.c
 @@ -64,2 +64,2 @@
 -	register nw;
@@ -16556,6 +16821,7 @@ v7diff.sh
 +	static int temp;	/*coroutines assume no auto*/
 @@ -124,0 +125 @@
 +void
+
 % usr/src/libc/math_helpers.c /dev/null
 @@ -0,0 +1,65 @@
 +double
@@ -16623,6 +16889,7 @@ v7diff.sh
 +	*iptr = ipart;
 +	return (value - ipart);
 +}
+
 % usr/src/libc/memcpy.c /dev/null
 @@ -0,0 +1,23 @@
 +char *
@@ -16648,6 +16915,7 @@ v7diff.sh
 +		*p++ = (char)c;
 +	return(d);
 +}
+
 % usr/src/libc/mkdir.c /dev/null
 @@ -0,0 +1,48 @@
 +#include <stdio.h>
@@ -16698,6 +16966,7 @@ v7diff.sh
 +	}
 +	return 0;
 +}
+
 % usr/src/libc/mktemp.c usr/src/libc/gen/mktemp.c
 @@ -0,0 +1 @@
 +#include <stdio.h>
@@ -16708,6 +16977,7 @@ v7diff.sh
 @@ -7 +7 @@
 -	register i;
 +	register int i;
+
 % usr/src/libc/nlist.c usr/src/libc/gen/nlist.c
 @@ -2,2 +1,0 @@
 -int a_magic[] = {A_MAGIC1, A_MAGIC2, A_MAGIC3, A_MAGIC4, 0};
@@ -16907,6 +17177,7 @@ v7diff.sh
 +				p->n_type = N_DATA | N_EXT;
 +			else
 +				p->n_type = N_BSS | N_EXT;
+
 % usr/src/libc/perror.c usr/src/libc/gen/perror.c
 @@ -4,0 +5 @@
 +#include <stdio.h>
@@ -16924,6 +17195,7 @@ v7diff.sh
 @@ -13 +14 @@
 -	register n;
 +	register int n;
+
 % usr/src/libc/printf.c usr/src/libc/stdio/printf.c
 @@ -1,0 +2,2 @@
 +#include	<stdarg.h>
@@ -16939,6 +17211,7 @@ v7diff.sh
 +	va_start(ap, fmt);
 +	_doprnt(fmt, &ap, stdout);
 +	va_end(ap);
+
 % usr/src/libc/putchar.c usr/src/libc/stdio/putchar.c
 @@ -8,2 +8,2 @@
 -putchar(c)
@@ -16948,6 +17221,7 @@ v7diff.sh
 @@ -11 +11 @@
 -	putc(c, stdout);
 +	return(putc(c, stdout));
+
 % usr/src/libc/puts.c usr/src/libc/stdio/puts.c
 @@ -3,2 +3,2 @@
 -puts(s)
@@ -16960,6 +17234,7 @@ v7diff.sh
 @@ -8 +8 @@
 -	while (c = *s++)
 +	while ((c = *s++))
+
 % usr/src/libc/putw.c usr/src/libc/stdio/putw.c
 @@ -3,3 +3,2 @@
 -putw(i, iop)
@@ -16969,6 +17244,7 @@ v7diff.sh
 +putw(register int i, register struct _iobuf *iop)
 @@ -8,0 +8 @@
 +	return(i);
+
 % usr/src/libc/qsort.c usr/src/libc/gen/qsort.c
 @@ -3,0 +4,3 @@
 +static void qs1(char *a, char *l);
@@ -17007,6 +17283,7 @@ v7diff.sh
 -char *i, *j, *k;
 +static void
 +qstexc(char *i, char *j, char *k)
+
 % usr/src/libc/rand.c usr/src/libc/gen/rand.c
 @@ -3,2 +3,2 @@
 -srand(x)
@@ -17017,6 +17294,7 @@ v7diff.sh
 -rand()
 +int
 +rand(void)
+
 % usr/src/libc/rdwr.c usr/src/libc/stdio/rdwr.c
 @@ -3,4 +3,2 @@
 -fread(ptr, size, count, iop)
@@ -17035,12 +17313,14 @@ v7diff.sh
 -register FILE *iop;
 +int
 +fwrite(register char *ptr, unsigned size, unsigned count, register FILE *iop)
+
 % usr/src/libc/rew.c usr/src/libc/stdio/rew.c
 @@ -3,2 +3,2 @@
 -rewind(iop)
 -	register struct _iobuf *iop;
 +void
 +rewind(register struct _iobuf *iop)
+
 % usr/src/libc/rindex.c usr/src/libc/gen/rindex.c
 @@ -9,2 +9 @@
 -rindex(sp, c)
@@ -17049,6 +17329,7 @@ v7diff.sh
 @@ -16 +15 @@
 -		if (*sp == c)
 +		if (*sp == (char)c)
+
 % usr/src/libc/scanf.c usr/src/libc/stdio/scanf.c
 @@ -1,0 +2,2 @@
 +#include	<stdarg.h>
@@ -17095,6 +17376,7 @@ v7diff.sh
 +	r = _doscan(&_strbuf, fmt, &ap);
 +	va_end(ap);
 +	return(r);
+
 % usr/src/libc/setbuf.c usr/src/libc/stdio/setbuf.c
 @@ -3,3 +3,2 @@
 -setbuf(iop, buf)
@@ -17102,6 +17384,7 @@ v7diff.sh
 -char *buf;
 +void
 +setbuf(register struct _iobuf *iop, char *buf)
+
 % usr/src/libc/sprintf.c usr/src/libc/stdio/sprintf.c
 @@ -1,0 +2,2 @@
 +#include	<stdarg.h>
@@ -17118,6 +17401,7 @@ v7diff.sh
 +	va_start(ap, fmt);
 +	_doprnt(fmt, &ap, &_strbuf);
 +	va_end(ap);
+
 % usr/src/libc/stdio/popen.c
 @@ -14 +14,2 @@
 -	register myside, hisside, pid;
@@ -17147,6 +17431,7 @@ v7diff.sh
 +	signal(SIGINT, (int)istat);
 +	signal(SIGQUIT, (int)qstat);
 +	signal(SIGHUP, (int)hstat);
+
 % usr/src/libc/strcat.c usr/src/libc/gen/strcat.c
 @@ -7,2 +7 @@
 -strcat(s1, s2)
@@ -17155,12 +17440,14 @@ v7diff.sh
 @@ -16 +15 @@
 -	while (*s1++ = *s2++)
 +	while ((*s1++ = *s2++))
+
 % usr/src/libc/strcmp.c usr/src/libc/gen/strcmp.c
 @@ -5,2 +5,2 @@
 -strcmp(s1, s2)
 -register char *s1, *s2;
 +int
 +strcmp(register char *s1, register char *s2)
+
 % usr/src/libc/strcpy.c usr/src/libc/gen/strcpy.c
 @@ -7,2 +7 @@
 -strcpy(s1, s2)
@@ -17169,6 +17456,7 @@ v7diff.sh
 @@ -13 +12 @@
 -	while (*s1++ = *s2++)
 +	while ((*s1++ = *s2++))
+
 % usr/src/libc/strlen.c usr/src/libc/gen/strlen.c
 @@ -6,2 +6,2 @@
 -strlen(s)
@@ -17178,6 +17466,7 @@ v7diff.sh
 @@ -9 +9 @@
 -	register n;
 +	register int n;
+
 % usr/src/libc/strncat.c usr/src/libc/gen/strncat.c
 @@ -8,3 +8 @@
 -strncat(s1, s2, n)
@@ -17187,6 +17476,7 @@ v7diff.sh
 @@ -18 +16 @@
 -	while (*s1++ = *s2++)
 +	while ((*s1++ = *s2++))
+
 % usr/src/libc/strncmp.c usr/src/libc/gen/strncmp.c
 @@ -5,3 +5,2 @@
 -strncmp(s1, s2, n)
@@ -17194,6 +17484,7 @@ v7diff.sh
 -register n;
 +int
 +strncmp(register char *s1, register char *s2, register int n)
+
 % usr/src/libc/strncpy.c usr/src/libc/gen/strncpy.c
 @@ -7,2 +7 @@
 -strncpy(s1, s2, n)
@@ -17202,6 +17493,7 @@ v7diff.sh
 @@ -10 +9 @@
 -	register i;
 +	register int i;
+
 % usr/src/libc/strout.c usr/src/libc/stdio/strout.c
 @@ -3,5 +3,2 @@
 -_strout(string, count, adjust, file, fillch)
@@ -17211,6 +17503,7 @@ v7diff.sh
 -register struct _iobuf *file;
 +void
 +_strout(register char *string, register int count, int adjust, register struct _iobuf *file, int fillch)
+
 % usr/src/libc/swab.c usr/src/libc/gen/swab.c
 @@ -6,3 +6,2 @@
 -swab(pf, pt, n)
@@ -17218,6 +17511,7 @@ v7diff.sh
 -register n;
 +void
 +swab(register short *pf, register short *pt, register int n)
+
 % usr/src/libc/sys/access.s
 @@ -1,5 +0,0 @@
 -/ access(file, request)
@@ -17259,6 +17553,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/acct.s
 @@ -1 +0,0 @@
 -/ C library -- acct
@@ -17296,6 +17591,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/alarm.c /dev/null
 @@ -0,0 +1,9 @@
 +#define S_ALARM 27
@@ -17307,6 +17603,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_ALARM, n, 0, 0));
 +}
+
 % usr/src/libc/sys/brk.c /dev/null
 @@ -0,0 +1,28 @@
 +extern char end[];
@@ -17337,6 +17634,7 @@ v7diff.sh
 +	curbrk = p;
 +	return(0);
 +}
+
 % usr/src/libc/syscall.s /dev/null
 @@ -0,0 +1,30 @@
 +.globl syscall3
@@ -17369,6 +17667,7 @@ v7diff.sh
 +	cmp r0, #0
 +	moveq r0, #1
 +	bx lr
+
 % usr/src/libc/sys/chdir.s
 @@ -1 +0,0 @@
 -/ C library -- chdir
@@ -17406,6 +17705,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/chmod.s
 @@ -1 +0,0 @@
 -/ C library -- chmod
@@ -17444,6 +17744,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/chown.s
 @@ -1 +0,0 @@
 -/ C library -- chown
@@ -17483,6 +17784,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/chroot.s
 @@ -1 +0,0 @@
 -/ C library -- chroot
@@ -17520,6 +17822,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/close.s
 @@ -1 +0,0 @@
 -/ C library -- close
@@ -17554,6 +17857,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/creat.s
 @@ -1 +0,0 @@
 -/ C library -- creat
@@ -17593,6 +17897,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/dup.c /dev/null
 @@ -0,0 +1,9 @@
 +#define S_DUP 41
@@ -17604,6 +17909,7 @@ v7diff.sh
 +		return(syscall3(S_DUP, a, b, 0));
 +	return(syscall3(S_DUP, a, -1, 0));
 +}
+
 % usr/src/libc/sys/execl.c /dev/null
 @@ -0,0 +1,34 @@
 +#include <stdarg.h>
@@ -17640,6 +17946,7 @@ v7diff.sh
 +	free((char *)argv);
 +	return(r);
 +}
+
 % usr/src/libc/sys/execv.c /dev/null
 @@ -0,0 +1,8 @@
 +#define S_EXECE 59
@@ -17650,6 +17957,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_EXECE, (int)path, (int)argv, (int)environ));
 +}
+
 % usr/src/libc/sys/execve.c /dev/null
 @@ -0,0 +1,7 @@
 +#define S_EXECE 59
@@ -17659,6 +17967,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_EXECE, (int)path, (int)argv, (int)envp));
 +}
+
 % usr/src/libc/sys/exit.s
 @@ -1 +0,0 @@
 -/ C library -- _exit
@@ -17689,6 +17998,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/fork.s
 @@ -1 +0,0 @@
 -/ C library -- fork
@@ -17730,6 +18040,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/fstat.s
 @@ -1 +0,0 @@
 -/ C library -- fstat
@@ -17772,6 +18083,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/ftime.c /dev/null
 @@ -0,0 +1,10 @@
 +#include <sys/timeb.h>
@@ -17784,6 +18096,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_FTIME, (int)gorpp, 0, 0));
 +}
+
 % usr/src/libc/sys/getgid.s
 @@ -1 +0,0 @@
 -/ C library -- getgid, getegid
@@ -17827,6 +18140,7 @@ v7diff.sh
 +	mov r7, ip
 +	mov r0, r1
 +	bx lr
+
 % usr/src/libc/sys/getpid.s
 @@ -1 +0,0 @@
 -/ getpid -- get process ID
@@ -17860,6 +18174,7 @@ v7diff.sh
 +.data
 +.globl _last_ppid
 +_last_ppid: .word 0
+
 % usr/src/libc/sys/getuid.s
 @@ -1 +0,0 @@
 -/ C library -- getuid, geteuid
@@ -17903,6 +18218,7 @@ v7diff.sh
 +	mov r7, ip
 +	mov r0, r1
 +	bx lr
+
 % usr/src/libc/sys/gtty.c /dev/null
 @@ -0,0 +1,7 @@
 +#include <sgtty.h>
@@ -17912,6 +18228,7 @@ v7diff.sh
 +{
 +	return(ioctl(fd, TIOCGETP, (char *)ap));
 +}
+
 % usr/src/libc/sys/ioctl.s
 @@ -1 +0,0 @@
 -/ C library -- ioctl
@@ -17953,6 +18270,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/kill.s
 @@ -1 +0,0 @@
 -/ C library -- kill
@@ -17989,6 +18307,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/link.s
 @@ -1 +0,0 @@
 -/ C library -- link
@@ -18027,6 +18346,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/lock.s
 @@ -1 +0,0 @@
 -/ lock -- C library
@@ -18064,6 +18384,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/lseek.s
 @@ -1 +0,0 @@
 -/ C library -- lseek
@@ -18105,6 +18426,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/mknod.s
 @@ -1 +0,0 @@
 -/ C library -- mknod
@@ -18143,6 +18465,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/mount.s
 @@ -1 +0,0 @@
 -/ C library -- mount
@@ -18182,6 +18505,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/nice.s
 @@ -1 +0,0 @@
 -/ C library-- nice
@@ -18216,6 +18540,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/open.c /dev/null
 @@ -0,0 +1,7 @@
 +#define S_OPEN 5
@@ -18225,6 +18550,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_OPEN, (int)path, mode, 0));
 +}
+
 % usr/src/libc/sys/pause.c /dev/null
 @@ -0,0 +1,7 @@
 +#define S_PAUSE 29
@@ -18234,6 +18560,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_PAUSE, 0, 0, 0));
 +}
+
 % usr/src/libc/sys/pipe.s
 @@ -1 +0,0 @@
 -/ pipe -- C library
@@ -18278,6 +18605,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/profil.s
 @@ -1 +0,0 @@
 -/ profil
@@ -18311,6 +18639,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/ptrace.s
 @@ -1 +0,0 @@
 -/ ptrace -- C library
@@ -18357,6 +18686,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/read.s
 @@ -1 +0,0 @@
 -/ C library -- read
@@ -18396,6 +18726,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/setgid.s
 @@ -1 +0,0 @@
 -/ C library -- setgid
@@ -18430,6 +18761,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/setuid.s
 @@ -1 +0,0 @@
 -/ C library -- setuid
@@ -18464,6 +18796,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/signal.s
 @@ -1 +0,0 @@
 -/ C library -- signal
@@ -18568,6 +18901,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/stat.s
 @@ -1 +0,0 @@
 -/ C library -- stat
@@ -18606,6 +18940,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/stime.c /dev/null
 @@ -0,0 +1,7 @@
 +#define S_STIME 25
@@ -18615,6 +18950,7 @@ v7diff.sh
 +{
 +	return(syscall3(S_STIME, t ? (int)*t : 0, 0, 0));
 +}
+
 % usr/src/libc/sys/stty.c usr/src/libc/gen/stty.c
 @@ -1,3 +0,0 @@
 -/*
@@ -18635,6 +18971,7 @@ v7diff.sh
 @@ -16 +9 @@
 -	return(ioctl(fd, TIOCGETP, ap));
 +	return(ioctl(fd, TIOCSETP, (char *)ap));
+
 % usr/src/libc/sys/sync.s
 @@ -1,2 +0,0 @@
 -.globl	_sync
@@ -18659,6 +18996,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/system.c usr/src/libc/stdio/system.c
 @@ -0,0 +1 @@
 +#include	<stdio.h>
@@ -18677,6 +19015,7 @@ v7diff.sh
 -	signal(SIGQUIT, qstat);
 +	signal(SIGINT, (int)istat);
 +	signal(SIGQUIT, (int)qstat);
+
 % usr/src/libc/sys/time.c /dev/null
 @@ -0,0 +1,11 @@
 +#define S_TIME 13
@@ -18690,6 +19029,7 @@ v7diff.sh
 +		*t = now;
 +	return(now);
 +}
+
 % usr/src/libc/sys/times.s
 @@ -1 +0,0 @@
 -/ C library -- times
@@ -18720,6 +19060,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/umask.s
 @@ -1 +0,0 @@
 -/ C library -- umask
@@ -18756,6 +19097,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/umount.s
 @@ -1 +0,0 @@
 -/ C library -- umount
@@ -18794,6 +19136,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/unlink.s
 @@ -1 +0,0 @@
 -/ C library -- unlink
@@ -18831,6 +19174,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/utime.s
 @@ -1 +0,0 @@
 -/ C library -- utime
@@ -18869,6 +19213,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/sys/wait.s
 @@ -1 +0,0 @@
 -/ C library -- wait
@@ -18915,6 +19260,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		pop {r4, pc}
+
 % usr/src/libc/sys/write.s
 @@ -1 +0,0 @@
 -/ C library -- write
@@ -18955,6 +19301,7 @@ v7diff.sh
 +		str r1, [r2]
 +		mvn r0, #0
 +		bx lr
+
 % usr/src/libc/tell.c usr/src/libc/gen/tell.c
 @@ -5 +5 @@
 -long	lseek();
@@ -18962,6 +19309,7 @@ v7diff.sh
 @@ -7 +7 @@
 -long tell(f)
 +long tell(int f)
+
 % usr/src/libc/timezone.c usr/src/libc/gen/timezone.c
 @@ -8,0 +9 @@
 +#include <stdio.h>
@@ -18983,6 +19331,7 @@ v7diff.sh
 @@ -24 +25 @@
 -char *timezone(zone, dst)
 +char *timezone(int zone, int dst)
+
 % usr/src/libc/ttyname.c usr/src/libc/gen/ttyname.c
 @@ -7,0 +8 @@
 +#include <stdio.h>
@@ -18997,6 +19346,7 @@ v7diff.sh
 @@ -23 +24 @@
 -	register df;
 +	register int df;
+
 % usr/src/libc/ttyslot.c usr/src/libc/gen/ttyslot.c
 @@ -6,0 +7 @@
 +#include <stdio.h>
@@ -19022,6 +19372,7 @@ v7diff.sh
 -getttys(f)
 +char *
 +getttys(int f)
+
 % usr/src/libc/u.ld /dev/null
 @@ -0,0 +1,10 @@
 +ENTRY(_start)
@@ -19034,6 +19385,7 @@ v7diff.sh
 +	.bss : { *(.bss*) *(COMMON) }
 +	end = .;
 +}
+
 % usr/src/libc/ungetc.c usr/src/libc/stdio/ungetc.c
 @@ -3,2 +3,2 @@
 -ungetc(c, iop)
@@ -19048,6 +19400,7 @@ v7diff.sh
 +			iop->_ptr++;
 @@ -12,0 +13 @@
 +	}
+
 % usr/src/libm/asin.c
 @@ -10,2 +10,2 @@
 -double atan();
@@ -19060,6 +19413,7 @@ v7diff.sh
 @@ -40 +40 @@
 -acos(arg) double arg; {
 +acos(double arg) {
+
 % usr/src/libm/atan.c
 @@ -17 +17 @@
 -double static sq2p1	 =2.414213562373095048802e0;
@@ -19095,6 +19449,7 @@ v7diff.sh
 -xatan(arg)
 -double arg;
 +xatan(double arg)
+
 % usr/src/libm/exp.c
 @@ -21,0 +22,2 @@
 +extern double floor(double);
@@ -19103,11 +19458,13 @@ v7diff.sh
 -exp(arg)
 -double arg;
 +exp(double arg)
+
 % usr/src/libm/fabs.c
 @@ -2,2 +2 @@
 -fabs(arg)
 -double arg;
 +fabs(double arg)
+
 % usr/src/libm/floor.c
 @@ -6 +6 @@
 -double	modf();
@@ -19120,6 +19477,7 @@ v7diff.sh
 -ceil(d)
 -double d;
 +ceil(double d)
+
 % usr/src/libm/hypot.c
 @@ -6 +6 @@
 -double sqrt();
@@ -19135,6 +19493,7 @@ v7diff.sh
 @@ -38 +36 @@
 -	double hypot();
 +	double hypot(double, double);
+
 % usr/src/libm/j0.c
 @@ -42,0 +43 @@
 +static void asympt(double);
@@ -19154,6 +19513,7 @@ v7diff.sh
 -static
 -asympt(arg) double arg;{
 +static void asympt(double arg){
+
 % usr/src/libm/j1.c
 @@ -42,0 +43 @@
 +static void asympt(double);
@@ -19174,6 +19534,7 @@ v7diff.sh
 -asympt(arg) double arg;{
 +static void
 +asympt(double arg){
+
 % usr/src/libm/jn.c
 @@ -39 +39 @@
 -jn(n,x) int n; double x;{
@@ -19187,6 +19548,7 @@ v7diff.sh
 @@ -85 +85 @@
 -	double y0(), y1();
 +	double y0(double), y1(double);
+
 % usr/src/libm/log.c
 @@ -14 +14 @@
 -double	frexp();
@@ -19199,6 +19561,7 @@ v7diff.sh
 -log10(arg)
 -double arg;
 +log10(double arg)
+
 % usr/src/libm/pow.c
 @@ -8 +8 @@
 -double log(), exp();
@@ -19207,6 +19570,7 @@ v7diff.sh
 -pow(arg1,arg2)
 -double arg1, arg2;
 +pow(double arg1, double arg2)
+
 % usr/src/libm/sin.c
 @@ -18,0 +19 @@
 +static double sinus(double, int);
@@ -19230,6 +19594,7 @@ v7diff.sh
 @@ -42 +37 @@
 -	double modf();
 +	double modf(double, double *);
+
 % usr/src/libm/sinh.c
 @@ -15 +15 @@
 -double	exp();
@@ -19245,6 +19610,7 @@ v7diff.sh
 -cosh(arg)
 -double arg;
 +cosh(double arg)
+
 % usr/src/libm/sqrt.c
 @@ -11 +11 @@
 -double frexp();
@@ -19253,6 +19619,7 @@ v7diff.sh
 -sqrt(arg)
 -double arg;
 +sqrt(double arg)
+
 % usr/src/libm/tan.c
 @@ -23,2 +23 @@
 -tan(arg)
@@ -19261,6 +19628,7 @@ v7diff.sh
 @@ -26 +25 @@
 -	double modf();
 +	double modf(double, double *);
+
 % usr/src/libm/tanh.c
 @@ -9 +9 @@
 -double sinh(), cosh();
@@ -19269,6 +19637,7 @@ v7diff.sh
 -tanh(arg)
 -double arg;
 +tanh(double arg)
+
 % usr/sys/conf/arm_qemu.ld /dev/null
 @@ -0,0 +1,27 @@
 +ENTRY(_start)
@@ -19298,6 +19667,7 @@ v7diff.sh
 +    *(.stack)
 + }
 +}
+
 % usr/sys/conf/conf.c /dev/null
 @@ -0,0 +1,84 @@
 +#include "../h/param.h"
@@ -19384,6 +19754,7 @@ v7diff.sh
 +struct buf bfreelist;
 +struct acct acctbuf;
 +struct inode *acctp;
+
 % usr/sys/conf/low.s /dev/null
 @@ -0,0 +1,236 @@
 +@ Low core: exception vector table and the trap/interrupt entry stubs
@@ -19622,6 +19993,7 @@ v7diff.sh
 +irq_stack_bottom:
 +	.space 4096
 +irq_stack_top:
+
 % usr/sys/conf/mch.s
 @@ -1,2 +1,4 @@
 -/ machine language assist
@@ -20868,6 +21240,7 @@ v7diff.sh
 +	bx	lr
 +	.size	dcflush, .-dcflush
 +	.ltorg
+
 % usr/sys/conf/mp135.c /dev/null
 @@ -0,0 +1,404 @@
 +/*
@@ -21274,6 +21647,7 @@ v7diff.sh
 +}
 +
 +#endif
+
 % usr/sys/conf/mp135/memmap.h /dev/null
 @@ -0,0 +1,33 @@
 +/*
@@ -21309,6 +21683,7 @@ v7diff.sh
 +/* Cortex-A7 built-in GICv2: distributor at PERIPHBASE+0x1000, CPU IF +0x2000. */
 +#define GIC_DIST_BASE	0xA0021000U
 +#define GIC_CPU_BASE	0xA0022000U
+
 % usr/sys/conf/qemu.c /dev/null
 @@ -0,0 +1,30 @@
 +/*
@@ -21341,6 +21716,7 @@ v7diff.sh
 +}
 +
 +#endif
+
 % usr/sys/conf/qemu/memmap.h /dev/null
 @@ -0,0 +1,25 @@
 +/*
@@ -21368,6 +21744,7 @@ v7diff.sh
 +/* GICv2 distributor + CPU interface (qemu virt). */
 +#define GIC_DIST_BASE	0x08000000U
 +#define GIC_CPU_BASE	0x08010000U
+
 % usr/sys/conf/sysram.ld /dev/null
 @@ -0,0 +1,35 @@
 +/*
@@ -21405,6 +21782,7 @@ v7diff.sh
 +		__ddrbss_end = .;
 +	} > DDR
 +}
+
 % usr/sys/dev/bio.c
 @@ -8,0 +9,13 @@
 +void brelse(struct buf *bp);
@@ -21606,6 +21984,7 @@ v7diff.sh
 -register struct buf *bp;
 +void
 +geterror(struct buf *bp)
+
 % usr/sys/dev/mem.c
 @@ -15,2 +15,3 @@
 -#include "../h/conf.h"
@@ -21687,7 +22066,9 @@ v7diff.sh
 +		*(char *)(unsigned int)(u.u_offset-1) = c;
 @@ -69,0 +58 @@
 +	return(0);
+
 % usr/sys/dev/partab.c
+
 % usr/sys/dev/pl011.c /dev/null
 @@ -0,0 +1,238 @@
 +/*
@@ -21928,6 +22309,7 @@ v7diff.sh
 +}
 +
 +#endif
+
 % usr/sys/dev/stm32sd.c /dev/null
 @@ -0,0 +1,291 @@
 +/*
@@ -22221,6 +22603,7 @@ v7diff.sh
 +}
 +
 +#endif
+
 % usr/sys/dev/stm32usart.c /dev/null
 @@ -0,0 +1,267 @@
 +/*
@@ -22490,6 +22873,7 @@ v7diff.sh
 +}
 +
 +#endif
+
 % usr/sys/dev/sys.c
 @@ -11 +11,2 @@
 -syopen(dev, flag)
@@ -22527,6 +22911,7 @@ v7diff.sh
 +	(void)dev;
 @@ -37,0 +48 @@
 +	return(0);
+
 % usr/sys/dev/tty.c
 @@ -11 +10,0 @@
 -#include "../h/mx.h"
@@ -22745,6 +23130,7 @@ v7diff.sh
 @@ -720 +739 @@
 -		spl0();
 +		intr_enable();
+
 % usr/sys/dev/virtio_blk.c /dev/null
 @@ -0,0 +1,247 @@
 +#include "../h/param.h"
@@ -22994,14 +23380,23 @@ v7diff.sh
 +#endif
 +
 +#endif
+
 % usr/sys/h/acct.h
+
 % usr/sys/h/buf.h
+
 % usr/sys/h/callo.h
+
 % usr/sys/h/conf.h
+
 % usr/sys/h/dir.h
+
 % usr/sys/h/fblk.h
+
 % usr/sys/h/file.h
+
 % usr/sys/h/filsys.h
+
 % usr/sys/h/inode.h
 @@ -41 +41 @@
 -		};
@@ -23014,14 +23409,18 @@ v7diff.sh
 +#define	i_lastr	u_reg.i_lastr
 +#define	i_rdev	u_dev.i_rdev
 +#define	i_group	u_dev.i_group
+
 % usr/sys/h/ino.h
+
 % usr/sys/h/map.h
 @@ -3,2 +3,2 @@
 -	short	m_size;
 -	unsigned short m_addr;
 +	int		m_size;		/* Armv7: 32-bit (clicks exceed 16 bits) */
 +	unsigned int	m_addr;
+
 % usr/sys/h/mount.h
+
 % usr/sys/h/param.h
 @@ -83,2 +83,3 @@
 -#define	USIZE	16		/* size of user block (*64) */
@@ -23043,12 +23442,14 @@ v7diff.sh
 @@ -133 +135 @@
 -typedef	int		label_t[6];	/* regs 2-7 */
 +typedef	int		label_t[10];	/* regs 2-7 */
+
 % usr/sys/h/proc.h
 @@ -21,2 +21,2 @@
 -	short	p_addr;		/* address of swappable image */
 -	short	p_size;		/* size of swappable image (clicks) */
 +	int	p_addr;		/* address of swappable image (Armv7: 32-bit click index) */
 +	int	p_size;		/* size of swappable image (clicks) */
+
 % usr/sys/h/reg.h
 @@ -2,2 +2 @@
 - * Location of the users' stored
@@ -23082,6 +23483,7 @@ v7diff.sh
 @@ -17 +21 @@
 -#define	TBIT	020		/* PS trace bit */
 +#define	TBIT	0		/* no PDP-11 trace bit on Arm */
+
 % usr/sys/h/seg.h
 @@ -2 +2 @@
 - * KT-11 addresses and bits.
@@ -23145,7 +23547,9 @@ v7diff.sh
 + * exercises the same machine_init() the MP135 runs.
 + */
 +struct memregion { unsigned int start, end, attr; };
+
 % usr/sys/h/stat.h
+
 % usr/sys/h/systm.h
 @@ -41,0 +42 @@
 +extern	char	*msgbufp;	/* next saved printf character */
@@ -23211,6 +23615,7 @@ v7diff.sh
 @@ -80 +107 @@
 -	int	(*sy_call)();		/* handler */
 +	void	(*sy_call)(void);	/* handler (Armv7/C99: void(void)) */
+
 % usr/sys/h/text.h
 @@ -9,3 +9,3 @@
 -	short	x_daddr;	/* disk address of segment (relative to swplo) */
@@ -23219,7 +23624,9 @@ v7diff.sh
 +	int	x_daddr;	/* disk address of segment (relative to swplo) */
 +	int	x_caddr;	/* core address, if loaded (Armv7: 32-bit click) */
 +	int	x_size;		/* size (clicks) */
+
 % usr/sys/h/timeb.h
+
 % usr/sys/h/tty.h
 @@ -59 +59 @@
 -		struct tc;
@@ -23227,6 +23634,7 @@ v7diff.sh
 @@ -64 +64 @@
 -#define	tun	tp->t_un
 +#define	tun	tp->t_un.tc
+
 % usr/sys/h/user.h
 @@ -38 +38 @@
 -		};
@@ -23241,6 +23649,7 @@ v7diff.sh
 + * resume() maps the current process there, so `u` names that window.
 + */
 +#define	u	(*(struct user *)UBASE)
+
 % usr/sys/sys/acct.c
 @@ -8 +7,0 @@
 -#include "../h/seg.h"
@@ -23272,6 +23681,7 @@ v7diff.sh
 -syslock()
 +void
 +syslock(void)
+
 % usr/sys/sys/alloc.c
 @@ -11,0 +12,8 @@
 +void sleep(caddr_t chan, int pri);
@@ -23319,6 +23729,7 @@ v7diff.sh
 -update()
 +void
 +update(void)
+
 % usr/sys/sys/clock.c
 @@ -4 +3,0 @@
 -#include "../h/seg.h"
@@ -23450,6 +23861,7 @@ v7diff.sh
 +	cntv_ctl_set(1);
 +	irq_ready = 1;
 +	irq_enable();
+
 % usr/sys/sys/fio.c
 @@ -9 +9 @@
 -#include "../h/reg.h"
@@ -23510,6 +23922,7 @@ v7diff.sh
 @@ -245 +253 @@
 -	register i;
 +	register int i;
+
 % usr/sys/sys/iget.c
 @@ -10,0 +11,12 @@
 +void sleep(caddr_t chan, int pri);
@@ -23591,6 +24004,7 @@ v7diff.sh
 -struct inode *ip;
 +void
 +wdir(struct inode *ip)
+
 % usr/sys/sys/machdep.c
 @@ -3 +2,0 @@
 -#include "../h/acct.h"
@@ -24081,6 +24495,7 @@ v7diff.sh
 +	 */
 +	maxmem = (int)(USERSIZE >> 6) + USIZE;
 +	bdinit();
+
 % usr/sys/sys/main.c
 @@ -13,0 +14,13 @@
 +void startup(void);
@@ -24127,6 +24542,7 @@ v7diff.sh
 @@ -125 +148 @@
 -binit()
 +void binit(void)
+
 % usr/sys/sys/malloc.c
 @@ -3,0 +4 @@
 +void wakeup(caddr_t chan);
@@ -24161,6 +24577,7 @@ v7diff.sh
 @@ -77 +77 @@
 -			} while (size = t);
 +			} while ((size = t));
+
 % usr/sys/sys/nami.c
 @@ -7,0 +8 @@
 +void brelse(struct buf *bp);
@@ -24182,6 +24599,7 @@ v7diff.sh
 @@ -218 +220 @@
 -	register c;
 +	register int c;
+
 % usr/sys/sys/pipe.c
 @@ -7 +7,2 @@
 -#include "../h/reg.h"
@@ -24214,6 +24632,7 @@ v7diff.sh
 -register struct inode *ip;
 +void
 +prele(register struct inode *ip)
+
 % usr/sys/sys/prf.c
 @@ -2,2 +1,0 @@
 -#include "../h/systm.h"
@@ -24287,6 +24706,7 @@ v7diff.sh
 -register struct buf *bp;
 +void
 +deverror(register struct buf *bp, int o1, int o2)
+
 % usr/sys/sys/prim.c
 @@ -5,0 +6,2 @@
 +int intr_disable(void);
@@ -24405,6 +24825,7 @@ v7diff.sh
 @@ -324 +323 @@
 -	splx(s);
 +	intr_restore(s);
+
 % usr/sys/sys/rdwri.c
 @@ -7,0 +8,5 @@
 +void clrbuf(struct buf *bp);
@@ -24467,6 +24888,7 @@ v7diff.sh
 -			else
 -				t = copyiout((caddr_t)cp, u.u_base, n);
 +			t = copyout((caddr_t)cp, u.u_base, n);
+
 % usr/sys/sys/sig.c
 @@ -7 +6,0 @@
 -#include "../h/reg.h"
@@ -24663,6 +25085,7 @@ v7diff.sh
 -		exit(fsig(u.u_procp));
 +		exit(0x100 | fsig(u.u_procp));
 +		return(1);
+
 % usr/sys/sys/slp.c
 @@ -10,0 +11,31 @@
 +#include "../h/seg.h"
@@ -24879,6 +25302,7 @@ v7diff.sh
 +	 * allocations stay page-aligned.
 +	 */
 +	newsize = (newsize + 63) & ~63;
+
 % usr/sys/sys/subr.c
 @@ -3 +2,0 @@
 -#include "../h/conf.h"
@@ -24954,6 +25378,7 @@ v7diff.sh
 -register count;
 +void
 +bcopy(caddr_t from, caddr_t to, register unsigned int count)
+
 % usr/sys/sys/sys1.c
 @@ -12,0 +13,41 @@
 +void exec(void);
@@ -25535,6 +25960,7 @@ v7diff.sh
 -		clearseg(--a);
 +	u.u_dsize += d;
 +	return;
+
 % usr/sys/sys/sys2.c
 @@ -5 +4,0 @@
 -#include "../h/reg.h"
@@ -25599,6 +26025,7 @@ v7diff.sh
 @@ -292 +309 @@
 -	register svuid, svgid;
 +	register int svuid, svgid;
+
 % usr/sys/sys/sys3.c
 @@ -5 +4,0 @@
 -#include "../h/reg.h"
@@ -25644,6 +26071,7 @@ v7diff.sh
 @@ -240 +243 @@
 -getmdev()
 +getmdev(void)
+
 % usr/sys/sys/sys4.c
 @@ -5 +4,0 @@
 -#include "../h/reg.h"
@@ -25801,6 +26229,7 @@ v7diff.sh
 -utime()
 +void
 +utime(void)
+
 % usr/sys/sys/sysent.c
 @@ -2,0 +3,29 @@
 +#include "../h/dir.h"
@@ -26095,6 +26524,7 @@ v7diff.sh
 +}
 +void nosys(void)   { u.u_error = EINVAL; }
 +void nullsys(void) { }
+
 % usr/sys/sys/text.c
 @@ -3 +2,0 @@
 -#include "../h/map.h"
@@ -26179,6 +26609,7 @@ v7diff.sh
 -register struct text *xp;
 +void
 +xuntext(register struct text *xp)
+
 % usr/sys/sys/ureg.c
 @@ -7,0 +8,2 @@
 +int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
@@ -26303,40 +26734,104 @@ v7diff.sh
 -err:
 -	u.u_error = ENOMEM;
 -	return(-1);
-.
+EOF
+# How the check works.  One awk pass reads the entries above.  For each
+# entry it loads the v7 file, applies the hunks (each - line must match the
+# v7 line it deletes), compares the result with the repo file and records
+# the file name in $T/h.  Then the set of entries must equal the set of
+# repo files less what X excludes: an X entry excludes itself and
+# everything under it.  With -u, every entry's hunks are first
+# regenerated with diff -U0 from its header line.
 export LC_ALL=C
-V=${V7:-v7} T=${TMPDIR:-/tmp}/v7diff.$$ r=0
-mkdir "$T" || exit 1
+S=$(cd "$(dirname "$0")" && pwd)/${0##*/}
+cd "$(dirname "$S")" && cd "$(git rev-parse --show-toplevel)" || exit 1
+V=${V7:-usr/local/test/v7}
+T=$(mktemp -d) || exit 1
 trap 'rm -rf "$T"' 0
-awk -v T="$T" 'p&&/^\.$/{exit} p&&/^% /{close(f);f=T"/"++n;print>T"/l";printf "">f;next}
-	p{print>f} /^: <</{p=1}' "$0"
-touch "$T/l"
-src() { case ${2:-$1} in /*) echo "${2:-$1}";; *) echo "$V/${2:-$1}";; esac; }
 if [ "$1" = -u ]; then
-	{ sed '/^: <</q' "$0"
-	while read -r h f s; do
-		echo "$h $f${s:+ $s}"
-		diff -U0 "$(src "$f" "$s")" "$f" | sed 1,2d
-	done <"$T/l"
-	sed -n '/^\.$/,$p' "$0"; } >"$T/new" && cat "$T/new" >"$0"
-	rm -rf "$T"; exec sh "$0"
+	{ sed '/^: <<\\EOF$/q' "$S"
+	grep '^% ' "$S" | while read -r h f s; do
+		printf '\n%% %s%s\n' "$f" "${s:+ $s}"
+		case $s in '') s=$V/$f;; /*) ;; *) s=$V/$s;; esac
+		diff -U0 "$s" "$f" | sed 1,2d
+	done
+	sed -n '/^EOF$/,$p' "$S"; } >"$T/u" && cat "$T/u" >"$S" && rm -rf "$T" && exec sh "$S"
+	exit 1
 fi
-n=0
-while read -r h f s; do
-	n=$((n+1))
-	cp "$(src "$f" "$s")" "$T/in" 2>/dev/null || { echo "$f: no v7 file"; r=1; continue; }
-	if [ -s "$T/$n" ]; then
-		patch -s -o "$T/out" "$T/in" <"$T/$n" >/dev/null 2>&1
+: >"$T/h"
+awk -v V="$V" -v H="$T/h" '
+function load(path, a,   n, l, r) {
+	split("", a)
+	n = 0
+	while ((r = getline l < path) > 0)
+		a[++n] = l
+	close(path)
+	return r < 0 ? -1 : n
+}
+function fail(m) {
+	if (!bad[f]++)
+		print f ": " m
+}
+function finish(   m, i) {
+	if (f == "")
+		return
+	while (p <= n0)
+		r[++k] = o[p++]
+	if ((m = load(f, c)) < 0)
+		fail("not in repo")
+	else if (m != k)
+		fail("diff does not match")
 	else
-		cp "$T/in" "$T/out"
-	fi
-	cmp -s "$T/out" "$f" || { echo "$f: diff does not match"; r=1; }
-done <"$T/l"
-{ printf '%s\n' $X; cut -d' ' -f2 "$T/l"; } | sort >"$T/have"
-git ls-files | sort >"$T/git"
-uniq -d "$T/have" | sed 's/$/: listed twice/'
-sort -u "$T/have" | comm -23 - "$T/git" | sed 's/$/: not tracked/'
-sort -u "$T/have" | comm -13 - "$T/git" | sed 's/$/: neither diffed nor excluded/'
-[ -n "$(uniq -d "$T/have"; sort -u "$T/have" | comm -3 - "$T/git")" ] && r=1
-[ $r = 0 ] && echo "ok: $(wc -c <"$0") bytes"
-exit $r
+		for (i = 1; i <= k; i++)
+			if (c[i] != r[i]) {
+				fail("diff does not match")
+				break
+			}
+	f = ""
+}
+$0 == ": <<\\EOF" { on = 1; next }
+!on { next }
+$0 == "EOF" { finish(); exit }
+/^% / {
+	finish()
+	f = $2
+	src = NF < 3 ? V "/" f : $3 == "/dev/null" ? $3 : V "/" $3
+	split("", r); k = 0; p = 1
+	if ((n0 = load(src, o)) < 0)
+		fail("no v7 file " src)
+	print f > H
+	next
+}
+/^$/ || /^\\/ { next }
+f == "" { print "stray line " NR ": " $0; exit 1 }
+/^@@ / {
+	split(substr($2, 2), a, ",")
+	end = ("2" in a) && a[2] == 0 ? a[1] : a[1] - 1
+	if (end < p - 1)
+		fail("hunks out of order")
+	while (p <= end)
+		r[++k] = o[p++]
+	next
+}
+/^-/ {
+	if (p > n0 || o[p] != substr($0, 2))
+		fail("diff does not match")
+	p++
+	next
+}
+/^\+/ { r[++k] = substr($0, 2); next }
+{ fail("bad line " NR) }
+' "$S" >"$T/e" || { cat "$T/e"; exit 1; }
+git ls-files -co --exclude-standard | awk -v X="$X" '
+BEGIN { n = split(X, x, "\n") }
+{ for (i = 1; i <= n; i++)
+	if (x[i] != "" && ($0 == x[i] || index($0, x[i] "/") == 1))
+		next
+  print }' | sort >"$T/n"
+sort "$T/h" >"$T/hs"
+uniq -d "$T/hs" | sed 's/$/: listed twice/' >>"$T/e"
+uniq "$T/hs" | comm -23 - "$T/n" | sed 's/$/: listed but not in repo, or excluded/' >>"$T/e"
+uniq "$T/hs" | comm -13 - "$T/n" | sed 's/$/: neither diffed nor excluded/' >>"$T/e"
+cat "$T/e"
+[ -s "$T/e" ] && exit 1
+echo "ok: $(wc -c <"$S") bytes"

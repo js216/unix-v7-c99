@@ -147,7 +147,7 @@ ROOT_BUILT = etc/init etc/getty bin/login bin/sh \
 	bin/quot bin/dump bin/dumpdir \
 	bin/restor bin/tk bin/dc bin/tar bin/tp \
 	bin/prof bin/tc bin/graph bin/factor bin/primes \
-	bin/expr bin/iostat bin/pstat \
+	bin/expr bin/iostat bin/pstat bin/ps bin/dmesg bin/osh bin/sa \
 	usr/games/fortune usr/games/arithmetic usr/games/hangman \
 	usr/games/backgammon usr/games/fish usr/games/quiz \
 	usr/games/wump
@@ -169,7 +169,7 @@ $(SUBDIR_BINS): bin/%: force-subdir usr/src/cmd/%/makefile libc | bin
 # Rootfs
 
 boot/rootfs.img: force-root-image boot/unix etc/mkfs boot/rootfs.proto \
-	nullboot .profile $(ROOT_BUILT)
+	nullboot .profile $(ROOT)
 	rm -f bin/bc
 	set -e; for i in $(ROOT); do \
 		test -e "$$i" || { echo "$$i: missing root payload"; exit 1; }; \
@@ -198,6 +198,11 @@ force-subdir:
 
 boot bin etc usr/lib usr/dict usr/games usr/games/lib:
 	mkdir -p $@
+
+$(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | bin usr/lib usr/dict usr/games/lib
+	cp $< $@
+
+$(filter etc/%,$(ROOTFS_STATIC)): ;
 
 nullboot:
 	: > $@
