@@ -236,6 +236,8 @@ advance(char *alp, char *aep)
 		return(0);
 
 	case CEOF:
+		if(lp == locs)
+			return(0);
 		loc2 = lp;
 		return(1);
 
@@ -373,14 +375,17 @@ dosub(char *rhsbuf)
 			continue;
 		}
 		*sp++ = c&0177;
-		if (sp >= &genbuf[LBSIZE])
+		if (sp >= &genbuf[LBSIZE]) {
 			fprintf(stderr, "output line too long.\n");
+			exit(2);
+		}
 	}
 	lp = loc2;
 	loc2 = sp - genbuf + linebuf;
 	while ((*sp++ = *lp++))
 		if (sp >= &genbuf[LBSIZE]) {
 			fprintf(stderr, "Output line too long.\n");
+			exit(2);
 		}
 	lp = linebuf;
 	sp = genbuf;
@@ -396,8 +401,10 @@ char	*place(char *asp, char *al1, char *al2)
 	l2 = al2;
 	while (l1 < l2) {
 		*sp++ = *l1++;
-		if (sp >= &genbuf[LBSIZE])
+		if (sp >= &genbuf[LBSIZE]) {
 			fprintf(stderr, "Output line too long.\n");
+			exit(2);
+		}
 	}
 	return(sp);
 }
