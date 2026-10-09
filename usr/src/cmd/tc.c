@@ -55,16 +55,15 @@ int erase = 1;
 void	(*sigint)(int sig);
 void	(*sigquit)(int sig);
 
-void lig(), init(), kwait(), callunix(), sendpt();
-int readch(), atoi(), getch();
+void lig(char *x), init(void), kwait(void), callunix(char line[]), sendpt(void);
+void ex(int sig);
+long tscale(int n);
+int readch(void), atoi(void), getch(void);
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i, j;
 	register char *k;
-	extern void ex();
 
 	while((--argc > 0) && ((++argv)[0][0]=='-')){
 		switch(argv[0][1]){
@@ -225,11 +224,10 @@ char **argv;
 			continue;
 		}
 	}
-	ex();
+	ex(0);
 }
 void
-lig(x)
-char *x;
+lig(char *x)
 {
 	register int i, j;
 	register char *k;
@@ -250,7 +248,7 @@ char *x;
 	sendpt();
 }
 void
-init(){
+init(void){
 
 	fflush(stdout);
 	if(erase){
@@ -267,7 +265,8 @@ init(){
 	sendpt();
 }
 void
-ex(){
+ex(int sig){
+	(void)sig;
 	yy = MAXY;
 	xx = 0;
 	sendpt();
@@ -278,7 +277,7 @@ ex(){
 	exit(0);
 }
 void
-kwait(){
+kwait(void){
 	char buf[128]; char *bptr; char c;
 	if(pgskip) return;
 next:
@@ -302,12 +301,11 @@ next:
 				goto next;
 		}
 	}
-	else if (c==0) ex();
+	else if (c==0) ex(0);
 	else	return;
 }
 void
-callunix(line)
-char line[];
+callunix(char line[])
 {
 	int rc, status, unixpid;
 	if( (unixpid=fork())==0 ) {
@@ -324,13 +322,13 @@ char line[];
 	}
 }
 int
-readch(){
+readch(void){
 	char c;
 	if (read(2,&c,1)<1) c=0;
 	return(c);
 }
 void
-sendpt(){
+sendpt(void){
 	int hy,xb,ly,hx,lx;
 
 	oput(GS);
@@ -354,12 +352,11 @@ sendpt(){
 	return;
 }
 int
-atoi()
+atoi(void)
 {
 	register int i, j, acc;
 	int field, digits;
 	long dd;
-	long tscale();
 
 	field = digits = acc = 0;
 a1:
@@ -385,8 +382,7 @@ a1:
 	ch = 0;
 	return(acc);
 }
-long tscale(n)
-int n;
+long tscale(int n)
 {
 	register int i, j;
 
@@ -413,7 +409,7 @@ int n;
 	return((long)n*j);
 }
 int
-getch(){
+getch(void){
 	register int i;
 
 	if(ch){
