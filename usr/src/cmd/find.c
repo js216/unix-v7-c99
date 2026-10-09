@@ -31,32 +31,27 @@ long	Newer;
 
 struct stat Statb;
 
-struct	anode	*exp(void), *e1(void), *e2(void), *e3(void);
-struct	anode	*mk(int (*f)(), struct anode *l, struct anode *r);
-char	*nxtarg(void);
+struct	anode	*exp(),
+		*e1(),
+		*e2(),
+		*e3(),
+		*mk();
+char	*nxtarg();
 char	Home[128];
 long	Blocks;
-char *rindex(char *sp, int c);
-char *sbrk(int);
-int	pr(char *s);
-int	descend(char *name, char *fname, struct anode *exlist);
-int	cpio(void);
-int	getunum(char *f, char *s);
-int	gmatch(char *s, char *p);
-int	scomp(int a, int b, int s);
-int	doex(int com);
-int	bwrite(short *rp, int c);
-int	chgreel(int x, int fl);
-int	amatch(char *s, char *p);
-int	umatch(char *s, char *p);
+char *rindex();
+char *sbrk();
+void	pr(), bwrite();
+int	descend(), cpio(), getunum(), gmatch(), scomp(), doex(), chgreel(), amatch(), umatch();
 int
-main(int argc, char *argv[])
+main(argc, argv) char *argv[];
+int	argc;
 {
 	struct anode *exlist;
 	int paths;
 	register char *cp, *sp = 0;
 	FILE *pwd, *popen();
-	int pclose(FILE *);
+	int pclose();
 
 	time(&Now);
 	pwd = popen("pwd", "r");
@@ -107,8 +102,8 @@ usage:		pr("Usage: find path-list predicate-list\n");
 
 /* compile time functions:  priority is  exp()<e1()<e2()<e3()  */
 
-struct anode *exp(void) { /* parse ALTERNATION (-o)  */
-	int or(register struct anode *p);
+struct anode *exp() { /* parse ALTERNATION (-o)  */
+	int or();
 	register struct anode * p1;
 
 	p1 = e1() /* get left operand */ ;
@@ -119,8 +114,8 @@ struct anode *exp(void) { /* parse ALTERNATION (-o)  */
 	else if(Ai <= Argc) --Ai;
 	return(p1);
 }
-struct anode *e1(void) { /* parse CONCATENATION (formerly -a) */
-	int and(register struct anode *p);
+struct anode *e1() { /* parse CONCATENATION (formerly -a) */
+	int and();
 	register struct anode * p1;
 	register char *a;
 
@@ -136,8 +131,8 @@ And:
 	} else if(Ai <= Argc) --Ai;
 	return(p1);
 }
-struct anode *e2(void) { /* parse NOT (!) */
-	int not(register struct anode *p);
+struct anode *e2() { /* parse NOT (!) */
+	int not();
 
 	if(Randlast) {
 		pr("find: operand follows operand\n");
@@ -149,12 +144,10 @@ struct anode *e2(void) { /* parse NOT (!) */
 	else if(Ai <= Argc) --Ai;
 	return(e3());
 }
-struct anode *e3(void) { /* parse parens and predicates */
-	int exeq(void *vp), ok(void *vp), glob(void *vp);
-	int mtime(void *vp), atime(void *vp), ctime(void *vp);
-	int user(void *vp), group(void *vp), size(void *vp), perm(void *vp);
-	int links(void *vp), print(void), type(void *vp), ino(void *vp);
-	int cpio(void), newer(void);
+struct anode *e3() { /* parse parens and predicates */
+	int exeq(), ok(), glob(),  mtime(), atime(), ctime(), user(),
+		group(), size(), perm(), links(), print(),
+		type(), ino(), cpio(), newer();
 	struct anode *p1;
 	int i;
 	register char *a, *b, s;
@@ -176,45 +169,45 @@ struct anode *e3(void) { /* parse parens and predicates */
 	if(EQ(a, "-name"))
 		return(mk(glob, (struct anode *)b, (struct anode *)0));
 	else if(EQ(a, "-mtime"))
-		return(mk(mtime, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(mtime, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-atime"))
-		return(mk(atime, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(atime, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-ctime"))
-		return(mk(ctime, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(ctime, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-user")) {
 		if((i=getunum("/etc/passwd", b)) == -1) {
 			if(gmatch(b, "[0-9][0-9][0-9]*")
 			|| gmatch(b, "[0-9][0-9]")
 			|| gmatch(b, "[0-9]"))
-				return mk(user, (struct anode *)(long)atoi(b), (struct anode *)(long)s);
+				return mk(user, (struct anode *)atoi(b), (struct anode *)(int)s);
 			pr("find: cannot find -user name\n");
 			exit(1);
 		}
-		return(mk(user, (struct anode *)(long)i, (struct anode *)(long)s));
+		return(mk(user, (struct anode *)i, (struct anode *)(int)s));
 	}
 	else if(EQ(a, "-inum"))
-		return(mk(ino, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(ino, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-group")) {
 		if((i=getunum("/etc/group", b)) == -1) {
 			if(gmatch(b, "[0-9][0-9][0-9]*")
 			|| gmatch(b, "[0-9][0-9]")
 			|| gmatch(b, "[0-9]"))
-				return mk(group, (struct anode *)(long)atoi(b), (struct anode *)(long)s);
+				return mk(group, (struct anode *)atoi(b), (struct anode *)(int)s);
 			pr("find: cannot find -group name\n");
 			exit(1);
 		}
-		return(mk(group, (struct anode *)(long)i, (struct anode *)(long)s));
+		return(mk(group, (struct anode *)i, (struct anode *)(int)s));
 	} else if(EQ(a, "-size"))
-		return(mk(size, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(size, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-links"))
-		return(mk(links, (struct anode *)(long)atoi(b), (struct anode *)(long)s));
+		return(mk(links, (struct anode *)atoi(b), (struct anode *)(int)s));
 	else if(EQ(a, "-perm")) {
 		for(i=0; *b ; ++b) {
 			if(*b=='-') continue;
 			i <<= 3;
 			i = i + (*b - '0');
 		}
-		return(mk(perm, (struct anode *)(long)i, (struct anode *)(long)s));
+		return(mk(perm, (struct anode *)i, (struct anode *)(int)s));
 	}
 	else if(EQ(a, "-type")) {
 		i = s=='d' ? S_IFDIR :
@@ -255,7 +248,9 @@ err:	pr("find: bad option "), pr(a), pr("\n");
 	exit(1);
 	return(0);
 }
-struct anode *mk(int (*f)(), struct anode *l, struct anode *r)
+struct anode *mk(f, l, r)
+int (*f)();
+struct anode *l, *r;
 {
 	Node[Nn].F = f;
 	Node[Nn].L = l;
@@ -263,7 +258,7 @@ struct anode *mk(int (*f)(), struct anode *l, struct anode *r)
 	return(&(Node[Nn++]));
 }
 
-char *nxtarg(void) { /* get next arg from command line */
+char *nxtarg() { /* get next arg from command line */
 	static int strikes = 0;
 
 	if(strikes==3) {
@@ -280,105 +275,108 @@ char *nxtarg(void) { /* get next arg from command line */
 
 /* execution time functions */
 int
-and(register struct anode *p)
+and(p)
+register struct anode *p;
 {
 	return(((*p->L->F)(p->L)) && ((*p->R->F)(p->R))?1:0);
 }
 int
-or(register struct anode *p)
+or(p)
+register struct anode *p;
 {
 	 return(((*p->L->F)(p->L)) || ((*p->R->F)(p->R))?1:0);
 }
 int
-not(register struct anode *p)
+not(p)
+register struct anode *p;
 {
 	return( !((*p->L->F)(p->L)));
 }
 int
-glob(void *vp)
+glob(p)
+register struct { int f; char *pat; } *p; 
 {
-	struct { int f; char *pat; } *p = vp;
 	return(gmatch(Fname, p->pat));
 }
 int
-print(void)
+print()
 {
 	puts(Pathname);
 	return(1);
 }
 int
-mtime(void *vp)
+mtime(p)
+register struct { int f, t, s; } *p; 
 {
-	struct { int f, t, s; } *p = vp;
 	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), p->t, p->s));
 }
 int
-atime(void *vp)
+atime(p)
+register struct { int f, t, s; } *p; 
 {
-	struct { int f, t, s; } *p = vp;
 	return(scomp((int)((Now - Statb.st_atime) / A_DAY), p->t, p->s));
 }
 int
-ctime(void *vp)
+ctime(p)
+register struct { int f, t, s; } *p; 
 {
-	struct { int f, t, s; } *p = vp;
 	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), p->t, p->s));
 }
 int
-user(void *vp)
+user(p)
+register struct { int f, u, s; } *p; 
 {
-	struct { int f, u, s; } *p = vp;
 	return(scomp(Statb.st_uid, p->u, p->s));
 }
 int
-ino(void *vp)
+ino(p)
+register struct { int f, u, s; } *p;
 {
-	struct { int f, u, s; } *p = vp;
 	return(scomp((int)Statb.st_ino, p->u, p->s));
 }
 int
-group(void *vp)
+group(p)
+register struct { int f, u; } *p; 
 {
-	struct { int f, u; } *p = vp;
 	return(p->u == Statb.st_gid);
 }
 int
-links(void *vp)
+links(p)
+register struct { int f, link, s; } *p; 
 {
-	struct { int f, link, s; } *p = vp;
 	return(scomp(Statb.st_nlink, p->link, p->s));
 }
 int
-size(void *vp)
+size(p)
+register struct { int f, sz, s; } *p; 
 {
-	struct { int f, sz, s; } *p = vp;
 	return(scomp((int)((Statb.st_size+511)>>9), p->sz, p->s));
 }
 int
-perm(void *vp)
+perm(p)
+register struct { int f, per, s; } *p; 
 {
-	struct { int f, per, s; } *p = vp;
 	register int i;
 	i = (p->s=='-') ? p->per : 07777; /* '-' means only arg bits */
 	return((Statb.st_mode & i & 07777) == p->per);
 }
 int
-type(void *vp)
+type(p)
+register struct { int f, per, s; } *p;
 {
-	struct { int f, per, s; } *p = vp;
 	return((Statb.st_mode&S_IFMT)==p->per);
 }
 int
-exeq(void *vp)
+exeq(p)
+register struct { int f, com; } *p;
 {
-	struct { int f, com; } *p = vp;
 	fflush(stdout); /* to flush possible `-print' */
 	return(doex(p->com));
 }
 int
-ok(void *vp)
+ok(p)
+struct { int f, com; } *p;
 {
-	struct { int f, com; } *p = vp;
 	int c;  int yes;
 	yes = 0;
 	fflush(stdout); /* to flush possible `-print' */
@@ -396,7 +394,8 @@ ok(void *vp)
 
 #define MKSHORT(v, lv) {U.l=1L;if(U.c[0]) U.l=lv, v[0]=U.s[1], v[1]=U.s[0]; else U.l=lv, v[0]=U.s[0], v[1]=U.s[1];}
 union { long l; short s[2]; char c[4]; } U;
-long mklong(short v[])
+long mklong(v)
+short v[];
 {
 	U.l = 1;
 	if(U.c[0] /* VAX */)
@@ -406,7 +405,7 @@ long mklong(short v[])
 	return U.l;
 }
 int
-cpio(void)
+cpio()
 {
 #define MAGIC 070707
 	struct header {
@@ -466,14 +465,16 @@ cerror:
 	return(0);
 }
 int
-newer(void)
+newer()
 {
 	return Statb.st_mtime > Newer;
 }
 
 /* support functions */
 int
-scomp(register int a, register int b, register int s) /* funny signed compare */
+scomp(a, b, s) /* funny signed compare */
+register int a, b;
+register char s;
 {
 	if(s == '+')
 		return(a > b);
@@ -483,7 +484,8 @@ scomp(register int a, register int b, register int s) /* funny signed compare */
 }
 
 int
-doex(int com)
+doex(com)
+int	com;
 {
 	register int np;
 	register char *na;
@@ -508,7 +510,7 @@ doex(int com)
 }
 
 int
-getunum(char *f, char *s) { /* find user/group name and return number */
+getunum(f, s) char *f, *s; { /* find user/group name and return number */
 	register int i;
 	register char *sp;
 	register int c;
@@ -543,7 +545,9 @@ getunum(char *f, char *s) { /* find user/group name and return number */
 }
 
 int
-descend(char *name, char *fname, struct anode *exlist)
+descend(name, fname, exlist)
+struct anode *exlist;
+char *name, *fname;
 {
 	int	dir = 0, /* open directory */
 		offset,
@@ -639,14 +643,16 @@ ret:
 }
 
 int
-gmatch(register char *s, register char *p) /* string match as in glob */
+gmatch(s, p) /* string match as in glob */
+register char *s, *p;
 {
 	if (*s=='.' && *p!='.') return(0);
 	return amatch(s, p);
 }
 
 int
-amatch(register char *s, register char *p)
+amatch(s, p)
+register char *s, *p;
 {
 	register int cc;
 	int scc, k;
@@ -688,7 +694,8 @@ amatch(register char *s, register char *p)
 }
 
 int
-umatch(register char *s, register char *p)
+umatch(s, p)
+register char *s, *p;
 {
 	if(*p==0) return(1);
 	while(*s)
@@ -696,8 +703,10 @@ umatch(register char *s, register char *p)
 	return(0);
 }
 
-int
-bwrite(register short *rp, register int c)
+void
+bwrite(rp, c)
+register short *rp;
+register int c;
 {
 	register short *wp = Wp;
 
@@ -717,10 +726,11 @@ again:
 		--Wct;
 	}
 	Wp = wp;
-	return(0);
 }
 int
-chgreel(int x, int fl)
+chgreel(x, fl)
+int	fl;
+int	x;
 {
 	register int f;
 	char str[22];
@@ -746,9 +756,9 @@ again:
 	}
 	return f;
 }
-int
-pr(char *s)
+void
+pr(s)
+char *s;
 {
 	fputs(s, stderr);
-	return(0);
 }
