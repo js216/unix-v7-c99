@@ -125,7 +125,7 @@ trap(int *r)
 	}
 	if (issig())
 		psig();
-	(void)setpri(u.u_procp);
+	curpri = setpri(u.u_procp);
 	if (runrun)
 		qswtch();
 }
@@ -146,7 +146,7 @@ user_trap_handler(int signo, int *r)
 	psignal(u.u_procp, signo);
 	if (issig())
 		psig();
-	(void)setpri(u.u_procp);
+	curpri = setpri(u.u_procp);
 	if (runrun)
 		qswtch();
 }

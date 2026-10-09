@@ -201,7 +201,25 @@ extern struct intr intrtab[];
 static unsigned int timer_reload;
 int irq_ready;
 caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
-void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
+void
+addupc(pc, p, t)
+caddr_t pc;
+register unsigned *p;
+int t;
+{
+	register unsigned i;
+	short c;
+
+	i = ((unsigned long long)(((unsigned)pc-p[2])>>1) * (p[3]>>1) >> 14) & ~1;
+	if (i >= p[1])
+		return;
+	if (copyin((caddr_t)p[0]+i, (caddr_t)&c, 2) < 0) {
+		p[3] = 0;
+		return;
+	}
+	c += t;
+	copyout((caddr_t)&c, (caddr_t)p[0]+i, 2);
+}
 void
 clock_irq_handler(int *tf)
 {

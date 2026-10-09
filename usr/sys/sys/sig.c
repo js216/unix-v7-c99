@@ -137,6 +137,10 @@ psig()
 	register struct proc *rp;
 
 	rp = u.u_procp;
+	if (u.u_fpsaved==0) {
+		savfp(&u.u_fps);
+		u.u_fpsaved = 1;
+	}
 	if (rp->p_flag&STRC)
 		stop();
 	n = fsig(rp);
@@ -349,7 +353,7 @@ procxmt()
 		i = (int)ipc.ip_addr;
 		if (i<0 || i >= ctob(USIZE))
 			goto error;
-		ipc.ip_data = *(int *)((char *)&u + i);
+		ipc.ip_data = ((physadr)&u)->r[i>>2];
 		break;
 
 	/* write user I */
@@ -358,9 +362,8 @@ procxmt()
 		/*
 		 * If text, must assure exclusive use
 		 */
-		xp = u.u_procp->p_textp;
-		if (xp != NULL) {
-			if (xp->x_count!=1 || (xp->x_iptr->i_mode&ISVTX))
+		if ((xp = u.u_procp->p_textp)) {
+			if (xp->x_count!=1 || xp->x_iptr->i_mode&ISVTX)
 				goto error;
 			xp->x_iptr->i_flag &= ~ITEXT;
 		}
@@ -384,11 +387,17 @@ procxmt()
 	/* write u */
 	case 6:
 		i = (int)ipc.ip_addr;
-		if (i<0 || i+(int)sizeof(int) > ctob(USIZE))
-			goto error;
-		p = (int *)((char *)&u + i);
+		p = (int *)&((physadr)&u)->r[i>>2];
 		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
 			goto ok;
+		for (i=0; i<8; i++)
+			if (p == &u.u_ar0[regloc[i]&0377])
+				goto ok;
+		if (p == &u.u_ar0[RPS]) {
+			ipc.ip_data = (ipc.ip_data&0xf80f0000) | 020;	/* assure user space */
+			ipc.ip_data &= ~0340;	/* priority 0 */
+			goto ok;
+		}
 		goto error;
 
 	ok:
@@ -399,11 +408,8 @@ procxmt()
 	/*  one version causes a trace-trap */
 	case 9:
 	case 7:
-		if ((int)ipc.ip_addr != 1) {
-			p = u.u_ar0;
-			if (p != NULL)
-				p[PC] = (int)ipc.ip_addr;
-		}
+		if ((int)ipc.ip_addr != 1)
+			u.u_ar0[PC] = (int)ipc.ip_addr;
 		u.u_procp->p_sig = 0;
 		if (ipc.ip_data)
 			psignal(u.u_procp, ipc.ip_data);
