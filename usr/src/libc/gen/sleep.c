@@ -5,19 +5,19 @@
 static jmp_buf jmp;
 static void sleepx(int sig);
 
-unsigned
+void
 sleep(volatile unsigned n)
 {
 	volatile unsigned altime;
 	void (*volatile alsig)(int sig) = SIG_DFL;
 
 	if (n==0)
-		return(0);
+		return;
 	altime = alarm(1000);	/* time to maneuver */
 	if (setjmp(jmp)) {
 		signal(SIGALRM, alsig);
 		alarm(altime);
-		return(0);
+		return;
 	}
 	if (altime) {
 		if (altime > n)
