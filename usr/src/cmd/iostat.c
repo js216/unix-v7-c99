@@ -5,12 +5,12 @@ int	tflg;
 int	iflg;
 int	aflg;
 int	sflg;
-struct nlent {
+struct
+{
 	char	name[8];
 	int	type;
 	unsigned	value;
-};
-struct nlent nl[] = {
+} nl[] = {
 	{"_dk_busy", 0, 0},
 	{"_io_info", 0, 0},
 	{"_dk_time", 0, 0},
@@ -20,7 +20,8 @@ struct nlent nl[] = {
 	{"_tk_nout", 0, 0},
 	{"\0\0\0\0\0\0\0\0", 0, 0}
 };
-struct sample {
+struct
+{
 	int	busy;
 	long	etime[32];
 	long	numb[3];
@@ -41,17 +42,14 @@ double	etime;
 
 int	mf;
 
-int	stats(int);
-int	stat1(int);
-int	stats2(double);
-int	stats3(double);
-int	biostats(void);
-int	atoi(char *);
-int	nlist(char *, struct nlent *);
+int nlist();
+void stats(), stat1(), stats2(), stats3(), biostats();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
-	extern char *ctime(long *t);
+	extern char *ctime();
 	register  int i;
 	int iter;
 	double f1, f2;
@@ -183,7 +181,6 @@ contin:
 		sleep(atoi(argv[1]));
 		goto loop;
 	}
-	return(0);
 }
 
 /* usec per word for the various disks */
@@ -193,8 +190,9 @@ double	xf[] = {
 	2.48,	/* RP06 */
 };
 
-int
-stats(int dn)
+void
+stats(dn)
+int dn;
 {
 	register int i;
 	double f1, f2, f3;
@@ -210,7 +208,7 @@ stats(int dn)
 	f2 = s.numb[dn];
 	if(f2 == 0.) {
 		printf("%6.0f%6.1f%6.1f", 0.0, 0.0, 0.0);
-		return(0);
+		return;
 	}
 	f3 = s.wds[dn];
 	f3 = f3*32.;
@@ -221,11 +219,11 @@ stats(int dn)
 	printf("%6.0f", f2*60./etime);
 	printf("%6.1f", f5*1000./f2);
 	printf("%6.1f", f6*1000./f2);
-	return(0);
 }
 
-int
-stat1(int o)
+void
+stat1(o)
+int o;
 {
 	register int i;
 	long t;
@@ -242,11 +240,11 @@ stat1(int o)
 		t += s.etime[o+i];
 	f2 = t;
 	printf("%6.2f", f2*100./f1);
-	return(0);
 }
 
-int
-stats2(double t)
+void
+stats2(t)
+double t;
 {
 	register int i, j;
 
@@ -255,11 +253,11 @@ stats2(double t)
 			printf("%6.2f\n", s.etime[8*i+j]/(t/100));
 		printf("\n");
 	}
-	return(0);
 }
 
-int
-stats3(double t)
+void
+stats3(t)
+double t;
 {
 	register int i;
 	double sum;
@@ -301,16 +299,13 @@ stats3(double t)
 		if (i&04)
 			sum += s.etime[i];
 	printf("%6.2f RP active\n", sum/t);
-	return(0);
 }
 
-int
-biostats(void)
+void
+biostats()
 {
-	register int i;
+register int i;
 
-	if (nl[1].type == 0)
-		return(0);
 	lseek(mf,(long)nl[1].value, 0);
 	read(mf, (char *)&io_info, sizeof(io_info));
 	printf("%D\t%D\t%D\t%D\n",
@@ -324,5 +319,4 @@ biostats(void)
 			printf("\n");
 	}
 	io_delta = io_info;
-	return(0);
 }
