@@ -273,7 +273,7 @@ check(char *spth, ino_t dinode)
 			fprintf(stderr, "mv: cannot move a directory into itself\n");
 			return(1);
 		}
-		if (strlen(nspth) > (int)(MAXN-2-sizeof(DOTDOT))) {
+		if (strlen(nspth) > MAXN-2-(int)sizeof(DOTDOT)) {
 			fprintf(stderr, "mv: name too long\n");
 			return(1);
 		}

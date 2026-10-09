@@ -21,8 +21,7 @@ main(int argc, char *argv[])
 {
 	register int i, f;
 	unsigned n;
-	int j;
-	unsigned k;
+	unsigned j, k;
 	long off;
 
 	if(argc < 3) {

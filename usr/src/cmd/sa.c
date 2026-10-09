@@ -143,7 +143,7 @@ main(int argc, char **argv)
 	else while (--argc)
 		doacct(*++argv);
 	if (uflg) {
-		return 0;
+		return(0);
 	}
 
 /*
