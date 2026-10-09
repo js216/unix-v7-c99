@@ -73,7 +73,6 @@
 #define low(x)	(x&((1L<<HALFLONG)-1))
 #define high(x)	(x>>HALFLONG)
 FILE *input[2];
-FILE *fopen();
 
 struct cand {
 	int x;
@@ -103,23 +102,23 @@ char *empty = "";
 int bflag;
 
 char *tempfile;	/*used when comparing against std input*/
-char *mktemp();
-void done(), noroom(), sort(), unsort(), filename(), prepare(), prune(), equiv(), unravel(), check(), output(), change(), range(), fetch(), mesg();
-int stone(), newcand(), search(), skipline(), readhash();
-char *talloc(), *ralloc();
+void noroom(void), unravel(int p), check(char **argv), output(char **argv);
+void change(int a,int b,int c,int d), range(int a,int b,char *separator);
+void fetch(long *f,int a,int b,FILE *lb,char *s), mesg(char *s,char *t);
+int stone(int *a,int n,int *b,int *c), newcand(int x,int y,int pred);
+int search(int *c, int k, int y), skipline(int f), readhash(FILE *f);
 char *dummy;	/*used in resetting storage search ptr*/
 
-void
-done()
+static void
+done(int sig)
 {
+	(void)sig;
 	unlink(tempfile);
 	exit(status);
 }
 
-char *talloc(n)
-int n;
+static char *talloc(int n)
 {
-	extern char *malloc();
 	register char *p;
 	p = malloc((unsigned)n);
 	if(p!=NULL)
@@ -128,12 +127,9 @@ int n;
 	return(NULL);
 }
 
-char *ralloc(p,n)	/*compacting reallocation */
-int n;
-char *p;
+static char *ralloc(char *p,int n)	/*compacting reallocation */
 {
 	register char *q;
-	char *realloc();
 	free(p);
 	free(dummy);
 	dummy = malloc(1);
@@ -144,16 +140,14 @@ char *p;
 }
 
 void
-noroom()
+noroom(void)
 {
 	mesg("files too big, try -h\n",empty);
-	done();
+	done(0);
 }
 
-void
-sort(a,n)	/*shellsort CACM #201*/
-int n;
-struct line *a;
+static void
+sort(struct line *a,int n)	/*shellsort CACM #201*/
 {
 	struct line w;
 	register int j,m = 0;
@@ -184,11 +178,8 @@ struct line *a;
 	}
 }
 
-void
-unsort(f, l, b)
-int l;
-struct line *f;
-int *b;
+static void
+unsort(struct line *f, int l, int *b)
 {
 	register int *a;
 	register int i;
@@ -200,9 +191,8 @@ int *b;
 	free((char *)a);
 }
 
-void
-filename(pa1, pa2)
-char **pa1, **pa2;
+static void
+filename(char **pa1, char **pa2)
 {
 	register char *a1, *b1, *a2;
 	char buf[512];
@@ -227,7 +217,7 @@ char **pa1, **pa2;
 		*pa1 = tempfile = mktemp("/tmp/dXXXXX");
 		if((f=creat(tempfile,0600)) < 0) {
 			mesg("cannot create ",tempfile);
-			done();
+			done(0);
 		}
 		while((i=read(0,buf,512))>0)
 			write(f,buf,i);
@@ -235,16 +225,14 @@ char **pa1, **pa2;
 	}
 }
 
-void
-prepare(i, arg)
-int i;
-char *arg;
+static void
+prepare(int i, char *arg)
 {
 	register struct line *p;
 	register int j,h;
 	if((input[i] = fopen(arg,"r")) == NULL){
 		mesg("cannot open ", arg);
-		done();
+		done(0);
 	}
 	p = (struct line *)talloc(3*sizeof(line));
 	for(j=0; (h=readhash(input[i]));) {
@@ -256,8 +244,8 @@ char *arg;
 	fclose(input[i]);
 }
 
-void
-prune()
+static void
+prune(void)
 {
 	register int i,j;
 	for(pref=0;pref<len[0]&&pref<len[1]&&
@@ -274,11 +262,8 @@ prune()
 	}
 }
 
-void
-equiv(a,n,b,m,c)
-int n, m;
-struct line *a, *b;
-int *c;
+static void
+equiv(struct line *a,int n,struct line *b,int m,int *c)
 {
 	register int i, j;
 	i = j = 1;
@@ -305,9 +290,7 @@ int *c;
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int k;
 	char **args;
@@ -330,13 +313,13 @@ char **argv;
 			case 'h':
 				execv("/usr/lib/diffh",args);
 				mesg("cannot find diffh",empty);
-				done();
+				done(0);
 			}
 		}
 	}
 	if(argc!=3) {
 		mesg("arg count",empty);
-		done();
+		done(0);
 	}
 	dummy = malloc(1);
 
@@ -372,15 +355,11 @@ char **argv;
 	check(argv);
 	output(argv);
 	status = anychange;
-	done();
+	done(0);
 }
 
 int
-stone(a,n,b,c)
-int n;
-int *a;
-int *b;
-int *c;
+stone(int *a,int n,int *b,int *c)
 {
 	register int i, k,y;
 	int j, l;
@@ -419,8 +398,7 @@ int *c;
 }
 
 int
-newcand(x,y,pred)
-int x, y, pred;
+newcand(int x,int y,int pred)
 {
 	register struct cand *q;
 	clist = (struct cand *)ralloc((char *)clist,++clen*sizeof(cand));
@@ -432,9 +410,7 @@ int x, y, pred;
 }
 
 int
-search(c, k, y)
-int k, y;
-int *c;
+search(int *c, int k, int y)
 {
 	register int i, j, l;
 	int t;
@@ -455,8 +431,7 @@ int *c;
 }
 
 void
-unravel(p)
-int p;
+unravel(int p)
 {
 	register int i;
 	register struct cand *q;
@@ -474,8 +449,7 @@ to confounding by hashing (which result in "jackpot")
 2.  collect random access indexes to the two files */
 
 void
-check(argv)
-char **argv;
+check(char **argv)
 {
 	register int i, j;
 	int jackpot;
@@ -539,8 +513,7 @@ char **argv;
 }
 
 int
-skipline(f)
-int f;
+skipline(int f)
 {
 	register int i;
 	for(i=1;getc(input[f])!='\n';i++) ;
@@ -548,8 +521,7 @@ int f;
 }
 
 void
-output(argv)
-char **argv;
+output(char **argv)
 {
 	int m;
 	register int i0, i1, j1;
@@ -581,8 +553,7 @@ char **argv;
 }
 
 void
-change(a,b,c,d)
-int a, b, c, d;
+change(int a,int b,int c,int d)
 {
 	if(a>b&&c>d) return;
 	anychange = 1;
@@ -604,9 +575,7 @@ int a, b, c, d;
 }
 
 void
-range(a,b,separator)
-int a, b;
-char *separator;
+range(int a,int b,char *separator)
 {
 	printf("%d", a>b?b:a);
 	if(a<b) {
@@ -615,11 +584,7 @@ char *separator;
 }
 
 void
-fetch(f,a,b,lb,s)
-int a, b;
-long *f;
-FILE *lb;
-char *s;
+fetch(long *f,int a,int b,FILE *lb,char *s)
 {
 	register int i, j;
 	register int nc;
@@ -638,8 +603,7 @@ char *s;
 */
 
 int
-readhash(f)
-FILE *f;
+readhash(FILE *f)
 {
 	long sum;
 	register unsigned shift;
@@ -678,8 +642,7 @@ FILE *f;
 }
 
 void
-mesg(s,t)
-char *s, *t;
+mesg(char *s,char *t)
 {
 	fprintf(stderr,"diff: %s%s\n",s,t);
 }
