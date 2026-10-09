@@ -2,12 +2,11 @@
 #include <sys/types.h>
 #include <sys/acct.h>
 #include <signal.h>
-#include <pwd.h>
 
 /* interpret command time accounting */
 
 #define	size 	1000
-#define	NC	sizeof(acctbuf.ac_comm)
+#define	NC	(int)sizeof(acctbuf.ac_comm)
 struct acct acctbuf;
 int	lflg;
 int	cflg;
@@ -25,11 +24,11 @@ int	sflg;
 int	bflg;
 int	mflg;
 
-struct	user_acct {
+struct	user {
 	int	ncomm;
 	int	fill;
 	float	fctime;
-} usr[256];
+} user[256];
 
 struct	tab {
 	char	name[NC];
@@ -45,24 +44,18 @@ float	tsys;
 int	junkp = -1;
 char	*sname;
 float	ncom;
+time_t	expand();
+int	tcmp(), ncmp(), bcmp(), enter(), getpw();
+void	init(), doacct(), strip(), printmoney(), column(), col();
 
-time_t expand(unsigned t);
-int tcmp(struct tab *p1, struct tab *p2);
-int ncmp(struct tab *p1, struct tab *p2);
-int bcmp(struct tab *p1, struct tab *p2);
-float sum(struct tab *p);
-void doacct(char *f);
-int enter(char *np);
-void init(void);
-void strip(void);
-void printmoney(void);
-void column(double n, double a, double b, double c);
-void col(double n, double a, double m);
 int
-main(int argc, char **argv)
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	FILE *ff;
 	int i, j, k;
+	extern float sum();
 	float ft;
 
 	if (argc>1)
@@ -163,7 +156,7 @@ main(int argc, char **argv)
 	if(!aflg)
 	for (i=0; i<size; i++)
 	if (tab[i].name[0]) {
-		for(j=0; j<(int)NC; j++)
+		for(j=0; j<NC; j++)
 			if(tab[i].name[j] == '?')
 				goto yes;
 		if(tab[i].count != 1)
@@ -179,7 +172,7 @@ main(int argc, char **argv)
 	}
 	for(i=k=0; i<size; i++)
 	if(tab[i].name[0]) {
-		for(j=0; j<(int)NC; j++)
+		for(j=0; j<NC; j++)
 			tab[k].name[j] = tab[i].name[j];
 		tab[k].count = tab[i].count;
 		tab[k].realt = tab[i].realt;
@@ -190,7 +183,7 @@ main(int argc, char **argv)
 	if (sflg) {
 		signal(SIGINT, SIG_IGN);
 		if ((ff = fopen("/usr/adm/usracct", "w")) != NULL) {
-			fwrite((char *)usr, sizeof(usr), 1, ff);
+			fwrite((char *)user, sizeof(user), 1, ff);
 			fclose(ff);
 		}
 		if ((ff = fopen("/usr/adm/savacct", "w")) == NULL) {
@@ -209,7 +202,7 @@ main(int argc, char **argv)
 		printmoney();
 		exit(0);
 	}
-	qsort((char *)tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
+	qsort(tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
 	column(ncom, treal, tcpu, tsys);
 	printf("\n");
 	for (i=0; i<k; i++)
@@ -218,30 +211,35 @@ main(int argc, char **argv)
 		column(ft, tab[i].realt, tab[i].cput, tab[i].syst);
 		printf("   %.10s\n", tab[i].name);
 	}
-	return 0;
 }
 
 void
-printmoney(void)
+printmoney()
 {
-	int i;
-	struct passwd *pw;
+	register int i;
+	char buf[128];
+	register char *cp;
 
 	for (i=0; i<256; i++) {
-		if (usr[i].ncomm) {
-			pw = getpwuid(i);
-			if (pw == NULL)
+		if (user[i].ncomm) {
+			if (getpw(i, buf)!=0)
 				printf("%-8d", i);
-			else
-				printf("%-8s", pw->pw_name);
+			else {
+				cp = buf;
+				while (*cp!=':' &&*cp!='\n' && *cp)
+					cp++;
+				*cp = 0;
+				printf("%-8s", buf);
+			}
 			printf("%5u %7.2f\n",
-			    usr[i].ncomm, usr[i].fctime/60);
+			    user[i].ncomm, user[i].fctime/60);
 		}
 	}
 }
 
 void
-column(double n, double a, double b, double c)
+column(n, a, b, c)
+double n, a, b, c;
 {
 
 	printf("%6.0f", n);
@@ -263,7 +261,8 @@ column(double n, double a, double b, double c)
 }
 
 void
-col(double n, double a, double m)
+col(n, a, m)
+double n, a, m;
 {
 
 	if(jflg)
@@ -277,14 +276,15 @@ col(double n, double a, double m)
 }
 
 void
-doacct(char *f)
+doacct(f)
+char *f;
 {
 	int i;
 	FILE *ff;
 	long x;
 	struct acct fbuf;
-	char *cp;
-	int c;
+	register char *cp;
+	register int c;
 
 	if (sflg && sname) {
 		printf("Only 1 file with -s\n");
@@ -320,8 +320,8 @@ doacct(char *f)
 			continue;
 		}
 		c = fbuf.ac_uid&0377;
-		usr[c].ncomm++;
-		usr[c].fctime += x/60.;
+		user[c].ncomm++;
+		user[c].fctime += x/60.;
 		ncom += 1.0;
 		i = enter(fbuf.ac_comm);
 		tab[i].count++;
@@ -339,7 +339,8 @@ doacct(char *f)
 }
 
 int
-ncmp(struct tab *p1, struct tab *p2)
+ncmp(p1, p2)
+struct tab *p1, *p2;
 {
 
 	if(p1->count == p2->count)
@@ -350,9 +351,11 @@ ncmp(struct tab *p1, struct tab *p2)
 }
 
 int
-bcmp(struct tab *p1, struct tab *p2)
+bcmp(p1, p2)
+struct tab *p1, *p2;
 {
 	float f1, f2;
+	float sum();
 
 	f1 = sum(p1)/p1->count;
 	f2 = sum(p2)/p2->count;
@@ -369,8 +372,10 @@ bcmp(struct tab *p1, struct tab *p2)
 	return(0);
 }
 int
-tcmp(struct tab *p1, struct tab *p2)
+tcmp(p1, p2)
+struct tab *p1, *p2;
 {
+	extern float sum();
 	float f1, f2;
 
 	f1 = sum(p1);
@@ -388,8 +393,8 @@ tcmp(struct tab *p1, struct tab *p2)
 	return(0);
 }
 
-float
-sum(struct tab *p)
+float sum(p)
+struct tab *p;
 {
 
 	if(p->name[0] == 0)
@@ -400,7 +405,7 @@ sum(struct tab *p)
 }
 
 void
-init(void)
+init()
 {
 	struct tab tbuf;
 	int i;
@@ -423,41 +428,42 @@ init(void)
  gshm:
 	if ((f = fopen("/usr/adm/usracct", "r")) == NULL)
 		return;
-	fread((char *)usr, sizeof(usr), 1, f);
+	fread((char *)user, sizeof(user), 1, f);
 	fclose(f);
 }
 
 int
-enter(char *np)
+enter(np)
+char *np;
 {
 	int i, j;
 
-	for (i=j=0; i<(int)NC; i++) {
+	for (i=j=0; i<NC; i++) {
 		if (np[i]==0)
 			j = i;
 		if (j)
 			np[i] = 0;
 	}
-	for (i=0, j=0; j<(int)NC; j++) {
+	for (i=j=0; j<NC; j++) {
 		i = i*7 + np[j];
 	}
 	if (i < 0)
 		i = -i;
 	for (i%=size; tab[i].name[0]; i = (i+1)%size) {
-		for (j=0; j<(int)NC; j++)
+		for (j=0; j<NC; j++)
 			if (tab[i].name[j]!=np[j])
 				goto no;
 		goto yes;
 	no:;
 	}
-	for (j=0; j<(int)NC; j++)
+	for (j=0; j<NC; j++)
 		tab[i].name[j] = np[j];
 yes:
 	return(i);
 }
 
 void
-strip(void)
+strip()
 {
 	int i, j, c;
 
@@ -479,9 +485,10 @@ strip(void)
 }
 
 time_t
-expand(unsigned t)
+expand(t)
+unsigned t;
 {
-	time_t nt;
+	register time_t nt;
 
 	nt = t&017777;
 	t >>= 13;
