@@ -5,11 +5,10 @@
  * (a significant part of a second).
  */
 
-char	*crypt();
-int	read(), write();
+#include <stdio.h>
 
 int
-main()
+main(void)
 {
 	char key[8];
 	char salt[2];
