@@ -27,10 +27,10 @@ all: $(KERNELS)
 .SECONDARY: $(GEN)
 
 OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ)
-$(OBJ): Makefile
+$(OBJ) $(GEN): Makefile
 
 %.c: %.y
-	bison -y -o $@ $<
+	bison -o $@ $<
 
 boot/unix: usr/sys/conf/qemu/unix | boot
 	cp $< $@
