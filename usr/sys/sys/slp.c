@@ -8,12 +8,9 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 #include "../h/buf.h"
-#include "../h/seg.h"
-#include "../h/reg.h"
 
 #define SQSIZE 0100	/* Must be power of 2 */
 #define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
-#define ARM_FORK_STACK_COPY 1024
 struct proc *slpque[SQSIZE];
 
 /*
@@ -530,30 +527,12 @@ retry:
 		xswap(rpp, 0, 0);
 		rip->p_stat = SRUN;
 	} else {
-		register int low, stack;
+		/*
+		 * There is core, so just copy.
+		 */
 		rpp->p_addr = a2;
-		low = (int)u.u_dsize;
-		stack = (int)u.u_ssize;
-		if(stack < ARM_FORK_STACK_COPY)
-			stack = ARM_FORK_STACK_COPY;
-		stack = USIZE + (int)(USERSIZE >> 6) - stack;
-		if(u.u_ar0 != NULL) {
-			unsigned usp;
-			int spclick;
-			usp = (unsigned)u.u_ar0[R6];
-			spclick = USIZE + (int)(usp >> 6);
-			if(usp < USERSIZE && spclick < stack)
-				stack = spclick;
-		}
-		if(low <= 0 || low > stack - USIZE) {
-			while(n--)
-				copyseg(a1++, a2++);
-		} else {
-			for(n = 0; n < USIZE + low; n++)
-				copyseg(a1 + n, a2 + n);
-			for(n = stack; n < rpp->p_size; n++)
-				copyseg(a1 + n, a2 + n);
-		}
+		while(n--)
+			copyseg(a1++, a2++);
 	}
 	u.u_procp = rip;
 	setrq(rpp);
