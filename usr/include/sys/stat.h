@@ -1,6 +1,3 @@
-#ifndef SYS_STAT_H
-#define SYS_STAT_H
-#include <sys/types.h>
 struct	stat
 {
 	dev_t	st_dev;
@@ -29,4 +26,3 @@ struct	stat
 #define	S_IREAD	0000400		/* read permission, owner */
 #define	S_IWRITE	0000200		/* write permission, owner */
 #define	S_IEXEC	0000100		/* execute/search permission, owner */
-#endif

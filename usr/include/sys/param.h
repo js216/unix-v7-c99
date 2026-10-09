@@ -80,8 +80,8 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
-#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
+#define	USIZE	128		/* size of user block (*64) */
+#define	UBASE	0x4F000000U	/* abs. addr of user block */
 #ifndef NULL
 #define	NULL	0
 #endif

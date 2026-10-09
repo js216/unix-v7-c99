@@ -1,5 +1,3 @@
-#ifndef TIME_H
-#define TIME_H
 struct tm { /* see ctime(3) */
 	int	tm_sec;
 	int	tm_min;
@@ -11,4 +9,3 @@ struct tm { /* see ctime(3) */
 	int	tm_yday;
 	int	tm_isdst;
 };
-#endif

@@ -12,11 +12,11 @@
 #define	NADDR	13
 #define	NINDEX	15
 
-struct mpx_group {
+struct group {
 	short	g_state;
 	char	g_index;
 	char	g_rot;
-	struct	mpx_group	*g_group;
+	struct	group	*g_group;
 	struct	inode	*g_inode;
 	struct	file	*g_file;
 	short	g_rotmask;
@@ -41,7 +41,7 @@ struct	inode
 		} u_reg;
 		struct	{
 			daddr_t	i_rdev;			/* i_addr[0] */
-			struct	mpx_group	i_group;	/*  multiplexor group file */
+			struct	group	i_group;	/*  multiplexor group file */
 		} u_dev;
 	} i_un;
 };

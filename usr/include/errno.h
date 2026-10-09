@@ -1,8 +1,6 @@
 /*
  * Error codes
  */
-#ifndef ERRNO_H
-#define ERRNO_H
 
 #define	EPERM	1
 #define	ENOENT	2
@@ -41,4 +39,3 @@
 #define	EDOM	33
 #define	ERANGE	34
 extern int errno;
-#endif
