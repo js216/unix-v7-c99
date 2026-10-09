@@ -26,15 +26,12 @@ int	headpr;
 unsigned	nfiles;
 
 int	nerror;
-daddr_t	bmap();
-void	check(), pass1(), pass2(), bread();
-long	atol();
-char	*malloc();
+daddr_t	bmap(int i);
+void	check(char *file), pass1(struct dinode *ip), pass2(struct dinode *ip);
+void	bread(daddr_t bno, char *buf, int cnt);
 
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	long n;
@@ -66,8 +63,7 @@ char *argv[];
 }
 
 void
-check(file)
-char *file;
+check(char *file)
 {
 	register int i;
 	register int j;
@@ -122,8 +118,7 @@ char *file;
 }
 
 void
-pass1(ip)
-register struct dinode *ip;
+pass1(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -170,8 +165,7 @@ register struct dinode *ip;
 }
 
 void
-pass2(ip)
-register struct dinode *ip;
+pass2(register struct dinode *ip)
 {
 	register int i;
 
@@ -191,10 +185,7 @@ register struct dinode *ip;
 }
 
 void
-bread(bno, buf, cnt)
-int	cnt;
-daddr_t bno;
-char *buf;
+bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
@@ -208,8 +199,7 @@ char *buf;
 
 
 daddr_t
-bmap(i)
-int	i;
+bmap(int i)
 {
 	daddr_t ibuf[NINDIR];
 
