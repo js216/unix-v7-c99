@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 int	errno;
-int	sys_nerr;
+extern int	sys_nerr;
 extern char	*sys_errlist[];
 void
 perror(char *s)
