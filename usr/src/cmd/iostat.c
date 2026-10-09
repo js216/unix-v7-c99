@@ -95,26 +95,16 @@ main(int argc, char *argv[])
 loop:
 	lseek(mf, (long)nl[0].value, 0);
 	read(mf, (char *)&s.busy, sizeof(s.busy));
-	if (nl[2].type != 0) {
-		lseek(mf, (long)nl[2].value, 0);
-		read(mf, (char *)s.etime, sizeof(s.etime));
-	}
-	if (nl[3].type != 0) {
-		lseek(mf, (long)nl[3].value, 0);
-		read(mf, (char *)s.numb, sizeof(s.numb));
-	}
-	if (nl[4].type != 0) {
-		lseek(mf, (long)nl[4].value, 0);
-		read(mf, (char *)s.wds, sizeof(s.wds));
-	}
-	if (nl[5].type != 0) {
-		lseek(mf, (long)nl[5].value, 0);
-		read(mf, (char *)&s.tin, sizeof(s.tin));
-	}
-	if (nl[6].type != 0) {
-		lseek(mf, (long)nl[6].value, 0);
-		read(mf, (char *)&s.tout, sizeof(s.tout));
-	}
+	lseek(mf, (long)nl[2].value, 0);
+	read(mf, (char *)s.etime, sizeof(s.etime));
+	lseek(mf, (long)nl[3].value, 0);
+	read(mf, (char *)s.numb, sizeof(s.numb));
+	lseek(mf, (long)nl[4].value, 0);
+	read(mf, (char *)s.wds, sizeof(s.wds));
+	lseek(mf, (long)nl[5].value, 0);
+	read(mf, (char *)&s.tin, sizeof(s.tin));
+	lseek(mf, (long)nl[6].value, 0);
+	read(mf, (char *)&s.tout, sizeof(s.tout));
 	for(i=0; i<32; i++) {
 		t = s.etime[i];
 		s.etime[i] -= s1.etime[i];
