@@ -11,14 +11,11 @@ int	base =	010;
 int	max;
 long	addr;
 
-void offset(register char *s);
-void line(long a, unsigned short *w, int n);
-void putx(unsigned n, int c);
-void cput(int c);
-void putn(long n, int b, int c);
-void pre(int n);
+void offset(), line(), putx(), cput(), putn(), pre();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	register char *p;
 	register int n, f, same;
@@ -101,7 +98,10 @@ main(int argc, char *argv[])
 }
 
 void
-line(long a, unsigned short *w, int n)
+line(a, w, n)
+int	n;
+long a;
+unsigned short *w;
 {
 	register int i, f, c;
 
@@ -123,7 +123,9 @@ line(long a, unsigned short *w, int n)
 }
 
 void
-putx(unsigned n, int c)
+putx(n, c)
+int	c;
+unsigned n;
 {
 
 	switch(c) {
@@ -161,7 +163,8 @@ putx(unsigned n, int c)
 }
 
 void
-cput(int c)
+cput(c)
+int	c;
 {
 	c &= 0377;
 	if(c>037 && c<0177) {
@@ -194,7 +197,10 @@ cput(int c)
 }
 
 void
-putn(long n, int b, int c)
+putn(n, b, c)
+int	c;
+int	b;
+long n;
 {
 	register int d;
 
@@ -209,7 +215,8 @@ putn(long n, int b, int c)
 }
 
 void
-pre(int n)
+pre(n)
+int	n;
 {
 	int i;
 
@@ -218,7 +225,8 @@ pre(int n)
 }
 
 void
-offset(register char *s)
+offset(s)
+register char *s;
 {
 	register char *p;
 	long a;
