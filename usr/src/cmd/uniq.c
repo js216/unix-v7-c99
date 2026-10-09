@@ -8,20 +8,20 @@ int	letters;
 int	linec;
 char	mode;
 int	uniq;
-char	*skip(register char *s);
-int	gline(char *buf);
-void	pline(char *buf);
-int	equal(char *b1, char *b2);
-void	printe(char *p, char *s);
+char	*skip();
+int	gline(), equal();
+void	pline(), printe();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	static char b1[1000], b2[1000];
 
 	while(argc > 1) {
 		if(*argv[1] == '-') {
-			if (isdigit((unsigned char)argv[1][1]))
+			if (isdigit(argv[1][1]&0377))
 				fields = atoi(&argv[1][1]);
 			else mode = argv[1][1];
 			argc--;
@@ -66,7 +66,8 @@ main(int argc, char *argv[])
 }
 
 int
-gline(char buf[])
+gline(buf)
+register char buf[];
 {
 	register int c;
 
@@ -80,7 +81,8 @@ gline(char buf[])
 }
 
 void
-pline(char buf[])
+pline(buf)
+register char buf[];
 {
 
 	switch(mode) {
@@ -105,7 +107,8 @@ pline(char buf[])
 }
 
 int
-equal(char b1[], char b2[])
+equal(b1, b2)
+register char b1[], b2[];
 {
 	register char c;
 
@@ -120,7 +123,8 @@ equal(char b1[], char b2[])
 }
 
 char *
-skip(register char *s)
+skip(s)
+register char *s;
 {
 	register int nf, nl;
 
@@ -137,7 +141,8 @@ skip(register char *s)
 }
 
 void
-printe(char *p, char *s)
+printe(p,s)
+char *p,*s;
 {
 	fprintf(stderr, p, s);
 	exit(1);

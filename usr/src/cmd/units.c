@@ -4,6 +4,10 @@
 #define	NTAB	601
 char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
+double	getflt();
+void	fperr(), init(), units();
+int	convr(), pu(), lookup(), equal(), get();
+struct	table	*hash();
 struct unit
 {
 	double	factor;
@@ -16,13 +20,6 @@ struct table
 	signed char	dim[NDIM];
 	char	*name;
 } table[NTAB];
-double	getflt(void);
-int	fperr(int sig);
-struct	table	*hash(char *name);
-int	init(void), convr(struct unit *up), units(struct unit *up);
-int	pu(int u, int i, int f);
-int	lookup(char *name, struct unit *up, int den, int c);
-int	equal(char *s1, char *s2), get(void);
 char	names[NTAB*10];
 struct prefix
 {
@@ -54,7 +51,9 @@ int	peekc;
 int	dumpflg;
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register int i;
 	register char *file;
@@ -110,8 +109,9 @@ fp:
 	goto loop;
 }
 
-int
-units(struct unit *up)
+void
+units(up)
+struct unit *up;
 {
 	register struct unit *p;
 	register int f, i;
@@ -128,11 +128,11 @@ units(struct unit *up)
 			f |= pu(-p->dim[i], i, f);
 	}
 	putchar('\n');
-	return(0);
 }
 
 int
-pu(int u, int i, int f)
+pu(u, i, f)
+int u, i, f;
 {
 
 	if(u > 0) {
@@ -151,7 +151,8 @@ pu(int u, int i, int f)
 }
 
 int
-convr(struct unit *up)
+convr(up)
+struct unit *up;
 {
 	register struct unit *p;
 	register int c;
@@ -202,7 +203,10 @@ loop:
 }
 
 int
-lookup(char *name, struct unit *up, int den, int c)
+lookup(name, up, den, c)
+int den, c;
+char *name;
+struct unit *up;
 {
 	register struct unit *p;
 	register struct table *q;
@@ -255,7 +259,8 @@ loop:
 }
 
 int
-equal(char *s1, char *s2)
+equal(s1, s2)
+char *s1, *s2;
 {
 	register char *c1, *c2;
 
@@ -267,8 +272,8 @@ equal(char *s1, char *s2)
 	return(0);
 }
 
-int
-init(void)
+void
+init()
 {
 	register char *cp;
 	register struct table *tp, *lp;
@@ -294,17 +299,17 @@ init(void)
 l0:
 	c = get();
 	if(c == 0) {
-		printf("%d units; %d bytes\n\n", i, (int)(cp-names));
+		printf("%d units; %d bytes\n\n", i, cp-names);
 		if(dumpflg)
 		for(tp = &table[0]; tp < &table[NTAB]; tp++) {
 			if(tp->name == 0)
 				continue;
 			printf("%s", tp->name);
-			units((struct unit *)tp);
+			units(tp);
 		}
 		fclose(inp);
 		inp = stdin;
-		return(0);
+		return;
 	}
 	if(c == '/') {
 		while(c != '\n' && c != 0)
@@ -336,7 +341,7 @@ l0:
 	lp = hash(np);
 	if(lp->name)
 		goto redef;
-	convr((struct unit *)lp);
+	convr(lp);
 	lp->name = np;
 	f = 0;
 	i++;
@@ -362,7 +367,7 @@ redef:
 }
 
 double
-getflt(void)
+getflt()
 {
 	register int c, i, dp;
 	double d, e;
@@ -419,7 +424,7 @@ l1:
 }
 
 int
-get(void)
+get()
 {
 	register int c;
 
@@ -439,7 +444,8 @@ get(void)
 }
 
 struct table *
-hash(char *name)
+hash(name)
+char *name;
 {
 	register struct table *tp;
 	register char *np;
@@ -462,12 +468,10 @@ l0:
 	goto l0;
 }
 
-int
-fperr(int sig)
+void
+fperr()
 {
 
-	(void)sig;
 	signal(8, fperr);
 	fperrc++;
-	return(0);
 }

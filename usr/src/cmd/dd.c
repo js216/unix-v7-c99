@@ -18,7 +18,9 @@ char	*ifile;
 char	*ofile;
 char	*ibuf;
 char	*obuf;
-char	*sbrk(int);
+char	*sbrk();
+void	flsh(), null(), stats(), term();
+int	match(), number();
 int	ibs	= 512;
 int	obs	= 512;
 int	bs;
@@ -35,16 +37,6 @@ int	ibf;
 int	obf;
 char	*op;
 int	nspace;
-void	flsh(void);
-int	match(char *s);
-int	number(int big);
-void	cnull(int cc);
-void	null(int c);
-void	ascii(int cc);
-void	ebcdic(int cc);
-void	ibm(int cc);
-void	term(void);
-void	stats(void);
 char	etoa[] = {
 	0000,0001,0002,0003,0234,0011,0206,0177,
 	0227,0215,0216,0013,0014,0015,0016,0017,
@@ -151,11 +143,14 @@ char	atoibm[] =
 
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int	argc;
+char	**argv;
 {
 	void (*conv)();
 	register char *ip = 0;
 	register int c;
+	void ebcdic(), ibm(), ascii(), null(), cnull(), term();
 	int a;
 
 	conv = null;
@@ -351,7 +346,7 @@ loop:
 }
 
 void
-flsh(void)
+flsh()
 {
 	register int c;
 
@@ -369,7 +364,8 @@ flsh(void)
 }
 
 int
-match(char *s)
+match(s)
+char *s;
 {
 	register char *cs;
 
@@ -387,7 +383,8 @@ true:
 }
 
 int
-number(int big)
+number(big)
+int big;
 {
 	register char *cs;
 	long n;
@@ -415,8 +412,8 @@ number(int big)
 	case 'x':
 		string = cs;
 		n *= number(BIG);
-
 		/* fallthrough */
+
 	case '\0':
 		if (n>=big || n<0) {
 			fprintf(stderr, "dd: argument %D out of range\n", n);
@@ -428,7 +425,8 @@ number(int big)
 }
 
 void
-cnull(int cc)
+cnull(cc)
+int cc;
 {
 	register int c;
 
@@ -441,7 +439,8 @@ cnull(int cc)
 }
 
 void
-null(int c)
+null(c)
+int c;
 {
 
 	*op = c;
@@ -453,7 +452,8 @@ null(int c)
 }
 
 void
-ascii(int cc)
+ascii(cc)
+int cc;
 {
 	register int c;
 
@@ -481,7 +481,8 @@ out:
 }
 
 void
-ebcdic(int cc)
+ebcdic(cc)
+int cc;
 {
 	register int c;
 
@@ -511,7 +512,8 @@ ebcdic(int cc)
 }
 
 void
-ibm(int cc)
+ibm(cc)
+int cc;
 {
 	register int c;
 
@@ -541,7 +543,7 @@ ibm(int cc)
 }
 
 void
-term(void)
+term()
 {
 
 	stats();
@@ -549,7 +551,7 @@ term(void)
 }
 
 void
-stats(void)
+stats()
 {
 
 	fprintf(stderr,"%u+%u records in\n", nifr, nipr);

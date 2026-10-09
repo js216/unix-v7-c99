@@ -42,17 +42,12 @@ int last[4];
 int eflag;
 int debug  = 0;
 
-int readin(char *name, struct diff *dd), number(char **lc), digit(int c);
-int getchange(FILE *b), getline(FILE *b), merge(int m1, int m2);
-int separate(char *s), change(int i, struct range *rold, int dup);
-int prange(struct range *rold);
-int keep(int i, struct range *rold, struct range *rnew);
-int skip(int i, int from, char *pr);
-int duplicate(struct range *r1, struct range *r2);
-int repos(int nchar), trouble(void);
-int edit(struct diff *diff, int dup, int j), edscript(int n);
+int readin(), number(), digit(), getchange(), getline(), skip(), duplicate(), edit();
+void merge(), separate(), change(), prange(), keep(), repos(), trouble(), edscript();
 int
-main(int argc, char **argv)
+main(argc,argv)
+int argc;
+char **argv;
 {
 	register int i,m,n;
 	if(*argv[1]=='-') {
@@ -81,7 +76,6 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	merge(m,n);
-	return(0);
 }
 
 /*pick up the line numbers of allcahnges from
@@ -93,7 +87,9 @@ main(int argc, char **argv)
 */
 
 int
-readin(char *name, struct diff *dd)
+readin(name,dd)
+char *name;
+struct diff *dd;
 {
 	register int i;
 	int a,b,c,d;
@@ -135,7 +131,8 @@ readin(char *name, struct diff *dd)
 }
 
 int
-number(char **lc)
+number(lc)
+char **lc;
 {
 	register int nn;
 	nn = 0;
@@ -145,13 +142,15 @@ number(char **lc)
 }
 
 int
-digit(int c)
+digit(c)
+int c;
 {
 	return(c>='0'&&c<='9');
 }
 
 int
-getchange(FILE *b)
+getchange(b)
+FILE *b;
 {
 	while(getline(b))
 		if(digit(line[0]))
@@ -160,7 +159,8 @@ getchange(FILE *b)
 }
 
 int
-getline(FILE *b)
+getline(b)
+FILE *b;
 {
 	register int i, c;
 	for(i=0;i<(int)sizeof(line)-1;i++) {
@@ -176,8 +176,9 @@ getline(FILE *b)
 	return(0);
 }
 
-int
-merge(int m1, int m2)
+void
+merge(m1,m2)
+int m1, m2;
 {
 	register struct diff *d1, *d2, *d3;
 	int dup;
@@ -195,7 +196,7 @@ merge(int m1, int m2)
 			d2->new.from,d2->new.to);
 		}
 /*			first file is different from others*/
-		if(!t2 || (t1 && d1->new.to < d2->new.from)) {
+		if(!t2||(t1&&d1->new.to < d2->new.from)) {
 /*			stuff peculiar to 1st file */
 			if(eflag==0) {
 				separate("1");
@@ -207,7 +208,7 @@ merge(int m1, int m2)
 			continue;
 		}
 /*			second file is different from others*/
-		if(!t1 || (t2 && d2->new.to < d1->new.from)) {
+		if(!t1||(t2&&d2->new.to < d1->new.from)) {
 			if(eflag==0) {
 				separate("2");
 				keep(1,&d2->old,&d2->new);
@@ -274,41 +275,42 @@ merge(int m1, int m2)
 	}
 	if(eflag)
 		edscript(j);
-	return(0);
 }
 
-int
-separate(char *s)
+void
+separate(s)
+char *s;
 {
 	printf("====%s\n",s);
-	return(0);
 }
 
 /*	the range of ines rold.from thru rold.to in file i
  *	is to be changed. it is to be printed only if
  *	it does not duplicate something to be printed later
 */
-int
-change(int i, struct range *rold, int dup)
+void
+change(i,rold,dup)
+int i, dup;
+struct range *rold;
 {
 	printf("%d:",i);
 	last[i] = rold->to;
 	prange(rold);
 	if(dup)
-		return(0);
+		return;
 	if(debug)
-		return(0);
+		return;
 	i--;
 	skip(i,rold->from,(char *)0);
 	skip(i,rold->to,"  ");
-	return(0);
 }
 
 /*	print the range of line numbers, rold.from  thru rold.to
  *	as n1,n2 or n1
 */
-int
-prange(struct range *rold)
+void
+prange(rold)
+struct range *rold;
 {
 	if(rold->to<=rold->from)
 		printf("%da\n",rold->from-1);
@@ -318,7 +320,6 @@ prange(struct range *rold)
 			printf(",%d",rold->to-1);
 		printf("c\n");
 	}
-	return(0);
 }
 
 /*	no difference was reported by diff between file 1(or 2)
@@ -326,17 +327,18 @@ prange(struct range *rold)
  *	must be ginned up to correspond to the change reported
  *	in the other file
 */
-int
-keep(int i, struct range *rold, struct range *rnew)
+void
+keep(i,rold,rnew)
+int i;
+struct range *rold, *rnew;
 {
 	register int delta;
-	struct range trange;
 	(void)rold;
+	struct range trange;
 	delta = last[3] - last[i];
 	trange.from = rnew->from - delta;
 	trange.to = rnew->to - delta;
 	change(i,&trange,1);
-	return(0);
 }
 
 /*	skip to just befor line number from in file i
@@ -344,7 +346,9 @@ keep(int i, struct range *rold, struct range *rnew)
  * w	with string pr as a prefix
 */
 int
-skip(int i, int from, char *pr)
+skip(i,from,pr)
+int i, from;
+char *pr;
 {
 	register int j,n;
 	for(n=0;cline[i]<from-1;n+=j) {
@@ -362,7 +366,8 @@ skip(int i, int from, char *pr)
  *	as the new range (in file 2)
 */
 int
-duplicate(struct range *r1, struct range *r2)
+duplicate(r1,r2)
+struct range *r1, *r2;
 {
 	register int c,d;
 	register int nchar;
@@ -389,27 +394,28 @@ duplicate(struct range *r1, struct range *r2)
 	return(1);
 }
 
-int
-repos(int nchar)
+void
+repos(nchar)
+int nchar;
 {
 	register int i;
 	for(i=0;i<2;i++) 
 		fseek(fp[i], (long)-nchar, 1);
-	return(0);
 }
 
-int
-trouble(void)
+void
+trouble()
 {
 	fprintf(stderr,"diff3: logic error\n");
 	abort();
-	return(0);
 }
 
 /*	collect an editing script for later regurgitation
 */
 int
-edit(struct diff *diff, int dup, int j)
+edit(diff,dup,j)
+int dup, j;
+struct diff *diff;
 {
 	if(((dup+1)&eflag)==0)
 		return(j);
@@ -424,8 +430,9 @@ edit(struct diff *diff, int dup, int j)
 }
 
 /*		regurgitate */
-int
-edscript(int n)
+void
+edscript(n)
+int n;
 {
 	register int j,k;
 	char block[512];
@@ -440,5 +447,4 @@ edscript(int n)
 		}
 		printf(".\n");
 	}
-	return(0);
 }

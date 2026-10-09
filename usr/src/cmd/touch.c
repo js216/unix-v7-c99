@@ -1,9 +1,11 @@
 #include <stdio.h>
 
-void touch(int force, char *name);
 
+void touch();
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char *argv[];
 {
 int i;
 static int force = 1;
@@ -23,7 +25,9 @@ for(i = 1 ; i < argc ; ++i)
 
 
 void
-touch(int force, char *name)
+touch(force, name)
+int force;
+char *name;
 {
 struct stat stbuff;
 char junk[1];

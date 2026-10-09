@@ -12,10 +12,12 @@ struct	passwd	*pwd,*getpwnam();
 struct	stat	stbuf;
 int	uid;
 int	status;
-int	isnumber(char *s);
 
+int isnumber();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register int c;
 
@@ -45,12 +47,13 @@ cho:
 }
 
 int
-isnumber(char *s)
+isnumber(s)
+char *s;
 {
 	register int c;
 
-	while ((c = *s++))
-		if (!isdigit(c))
+	while((c = *s++))
+		if(!isdigit(c))
 			return(0);
 	return(1);
 }

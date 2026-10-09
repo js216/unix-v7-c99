@@ -8,10 +8,15 @@
 #include <stdio.h>
 
 int	Errors = 0;
-void	rmdir(char *d);
+char	*rindex();
+char	*strcat();
+char	*strcpy();
+void	rmdir();
 
 int
-main(int argc, char **argv)
+main(argc,argv)
+int argc;
+char **argv;
 {
 
 	if(argc < 2) {
@@ -24,7 +29,8 @@ main(int argc, char **argv)
 }
 
 void
-rmdir(char *d)
+rmdir(d)
+char *d;
 {
 	int	fd;
 	char	*np, name[500];

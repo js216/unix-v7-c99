@@ -9,7 +9,9 @@
 char	stdbuf[BUFSIZ];
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int fflg = 0;
 	register FILE *fi;

@@ -1,10 +1,11 @@
 #include <stdio.h>
 #define MAXINT 32768.
 float fract = 2;
+double	atof();
 char rflag,eflag,c;
 char ibuf[BUFSIZ],obuf[BUFSIZ],line[BUFSIZ];
 int
-main(int argc, char **argv)
+main(argc,argv) int argc; char **argv;
 {
 	long tvec;
 	int i;

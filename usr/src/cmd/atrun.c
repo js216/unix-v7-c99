@@ -11,19 +11,18 @@
 # define PDIR	"past"
 # define LASTF "/usr/spool/at/lasttimedone"
 
-int	makenowtime(void), updatetime(int t), run(char *file);
 int	nowtime;
 int	nowdate;
 int	nowyear;
+void	makenowtime(), updatetime(), run();
 
 int
-main(int argc, char **argv)
+main()
 {
 	int tt, day, year, uniq;
 	struct direct dirent;
 	char file[DIRSIZ+1];
 	FILE *dirf;
-	(void)argc; (void)argv;
 
 	chdir(DIR);
 	makenowtime();
@@ -51,10 +50,11 @@ main(int argc, char **argv)
 	exit(0);
 }
 
-int
-makenowtime(void)
+void
+makenowtime()
 {
 	long t;
+	struct tm *localtime();
 	register struct tm *tp;
 
 	time(&t);
@@ -62,11 +62,11 @@ makenowtime(void)
 	nowtime = tp->tm_hour*100 + tp->tm_min;
 	nowdate = tp->tm_yday;
 	nowyear = tp->tm_year;
-	return(0);
 }
 
-int
-updatetime(int t)
+void
+updatetime(t)
+int t;
 {
 	FILE *tfile;
 
@@ -76,18 +76,18 @@ updatetime(int t)
 		exit(1);
 	}
 	fprintf(tfile, "%04d\n", t);
-	return(0);
 }
 
-int
-run(char *file)
+void
+run(file)
+char *file;
 {
 	struct stat stbuf;
 	register int pid, i;
 	char sbuf[64];
 
 	if (fork()!=0)
-		return(0);
+		return;
 	for (i=0; i<15; i++)
 		close(i);
 	dup(dup(open("/dev/null", 0)));
@@ -110,5 +110,4 @@ run(char *file)
 	execl("/usr/bin/sh", "sh", file, 0);
 	fprintf(stderr, "Can't execl shell\n");
 	exit(1);
-	return(0);
 }

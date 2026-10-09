@@ -20,13 +20,12 @@ char *as[] = {
 	"globl","byte","even","text","data","bss","comm",0};
 int	ifile;
 
-void type(char *file);
-int lookup(char *tab[]);
-int ccom(void);
-int ascom(void);
-int english(char *bp, int n);
+void type();
+int ccom(), ascom(), english(), lookup();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	FILE *fl;
 	register char *p;
@@ -59,7 +58,8 @@ main(int argc, char **argv)
 }
 
 void
-type(char *file)
+type(file)
+char *file;
 {
 	int j,nl;
 	char ch;
@@ -106,8 +106,8 @@ spcl:
 
 	case 0411:
 		printf("separate ");
-
 		/* fallthrough */
+
 	case 0407:
 exec:
 		printf("executable");
@@ -187,7 +187,7 @@ notfort:
 			printf("assembler program text"); 
 			goto outa;
 		}
-		else if(buf[j] == '\n' && isalpha((unsigned char)buf[j+2])){
+		else if(buf[j] == '\n' && isalpha(buf[j+2]&0377)){
 			printf("roff, nroff, or eqn input text");
 			goto outa;
 		}
@@ -204,7 +204,7 @@ notfort:
 				printf("assembler program text"); 
 				goto outa; 
 			}
-			else if(buf[j] == '\n' && isalpha((unsigned char)buf[j+2])){
+			else if(buf[j] == '\n' && isalpha(buf[j+2]&0377)){
 				printf("roff, nroff, or eqn input text");
 				goto outa;
 			}
@@ -246,7 +246,8 @@ outa:
 out:;
 }
 int
-lookup(char *tab[])
+lookup(tab)
+char *tab[];
 {
 	char r;
 	int k,j,l;
@@ -264,7 +265,7 @@ lookup(char *tab[])
 	return(0);
 }
 int
-ccom(void){
+ccom(){
 	char cc;
 	while((cc = buf[i]) == ' ' || cc == '\t' || cc == '\n')if(i++ >= in)return(0);
 	if(buf[i] == '/' && buf[i+1] == '*'){
@@ -280,7 +281,7 @@ ccom(void){
 	return(1);
 }
 int
-ascom(void){
+ascom(){
 	while(buf[i] == '/'){
 		i++;
 		while(buf[i++] != '\n')if(i >= in)return(0);
@@ -290,7 +291,9 @@ ascom(void){
 }
 
 int
-english (char *bp, int n)
+english (bp, n)
+char *bp;
+int n;
 {
 # define NASC 128
 	int ct[NASC], j, vow, freq, rare;

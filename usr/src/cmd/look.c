@@ -10,12 +10,13 @@ int tab;
 char entry[250];
 char word[250];
 char key[50];
+void canon();
+int compare(), getword();
 
-void canon(char *old, char *new);
-int compare(register char *s, register char *t);
-int getword(char *w);
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char **argv;
 {
 	register int c;
 	long top,bot,mid;
@@ -112,11 +113,11 @@ main(int argc, char *argv[])
 		}
 		break;
 	}
-	return(0);
 }
 
 int
-compare(register char *s, register char *t)
+compare(s,t)
+register char *s,*t;
 {
 	for(;*s==*t;s++,t++)
 		if(*s==0)
@@ -128,7 +129,8 @@ compare(register char *s, register char *t)
 }
 
 int
-getword(char *w)
+getword(w)
+char *w;
 {
 	register int c;
 	for(;;) {
@@ -144,7 +146,8 @@ getword(char *w)
 }
 
 void
-canon(char *old, char *new)
+canon(old,new)
+char *old,*new;
 {
 	register int c;
 	for(;;) {

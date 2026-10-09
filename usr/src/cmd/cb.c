@@ -1,14 +1,8 @@
 #include <stdio.h>
 #define	puts	cb_puts
 #define	gets	cb_gets
-int	getch(void);
-int	lookup(char **tab);
-int	gotelse(void);
-int	getnl(void);
-int	ptabs(void);
-int	comment(void);
-int	puts(void);
-int	gets(void);
+int	getch(), lookup(), getnl(), gets();
+void	ptabs(), comment(), puts(), gotelse();
 int	slevel[10];
 int	clevel	= 0;
 int	spflg[20][10];
@@ -47,10 +41,8 @@ int	tabs	= 0;
 int	lastchar;
 int	c;
 int
-main(int argc, char *argv[])
+main()
 {
-	(void)argc;
-	(void)argv;
 	while((c = getch()) != EOF){
 		switch(c){
 		case ' ':
@@ -270,23 +262,21 @@ cont:
 			if(c != ',')lchar = c;
 		}
 	}
-	return(0);
 }
-int
-ptabs(void){
+void
+ptabs(){
 	int i;
 	for(i=0; i < tabs; i++)printf("\t");
-	return(0);
 }
 int
-getch(void){
+getch(){
 	if(peek < 0 && lastchar != ' ' && lastchar != '\t')pchar = lastchar;
 	lastchar = (peek<0) ? getc(stdin):peek;
 	peek = -1;
 	return(lastchar);
 }
-int
-puts(void){
+void
+puts(){
 	if(j > 0){
 		if(sflg != 0){
 			ptabs();
@@ -306,10 +296,10 @@ puts(void){
 			aflg = 0;
 		}
 	}
-	return(0);
 }
 int
-lookup(char *tab[])
+lookup(tab)
+char *tab[];
 {
 	char r;
 	int l,kk,k,i;
@@ -324,7 +314,7 @@ lookup(char *tab[])
 	return(0);
 }
 int
-gets(void){
+gets(){
 	char ch;
 beg:
 	if((ch = string[j++] = getch()) == '\\'){
@@ -342,16 +332,15 @@ beg:
 	}
 	else return(ch);
 }
-int
-gotelse(void){
+void
+gotelse(){
 	tabs = stabs[clevel][iflev];
 	pflg[level] = spflg[clevel][iflev];
 	ind[level] = sind[clevel][iflev];
 	ifflg = 1;
-	return(0);
 }
 int
-getnl(void){
+getnl(){
 	while((peek = getch()) == '\t' || peek == ' '){
 		string[j++] = peek;
 		peek = -1;
@@ -372,8 +361,8 @@ getnl(void){
 	}
 	return(0);
 }
-int
-comment(void){
+void
+comment(){
 rep:
 	while((c = string[j++] = getch()) != '*')
 		if(c == '\n'){
@@ -385,5 +374,4 @@ gotstar:
 		if(c == '*')goto gotstar;
 		goto rep;
 	}
-	return(0);
 }

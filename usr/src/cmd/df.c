@@ -14,13 +14,13 @@ char	*dargv[] = {
 struct	filsys sblock;
 
 int	fi;
-extern int	errno;
-daddr_t	alloc(void);
-void	dfree(char *file);
-void	bread(daddr_t bno, char *buf, int cnt);
+daddr_t	alloc();
+void	dfree(), bread();
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int i;
 
@@ -35,7 +35,8 @@ main(int argc, char **argv)
 }
 
 void
-dfree(char *file)
+dfree(file)
+char *file;
 {
 	daddr_t i;
 
@@ -54,7 +55,7 @@ dfree(char *file)
 }
 
 daddr_t
-alloc(void)
+alloc()
 {
 	int i;
 	daddr_t b;
@@ -83,9 +84,13 @@ alloc(void)
 }
 
 void
-bread(daddr_t bno, char *buf, int cnt)
+bread(bno, buf, cnt)
+daddr_t bno;
+char *buf;
+int cnt;
 {
 	int n;
+	extern int errno;
 
 	lseek(fi, bno<<BSHIFT, 0);
 	if((n=read(fi, buf, cnt)) != cnt) {

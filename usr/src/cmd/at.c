@@ -53,17 +53,16 @@ int	today; /* day of year today */
 FILE	*file;
 FILE	*ifile;
 char	**environ;
-char	*prefix(char *begin, char *full);
+char	*prefix();
 FILE	*popen();
 
-int	pclose(FILE *ptr);
-int	makeutime(char *pp), makeuday(int argc, char **argv);
-int	filename(char *dir, int y, int d, int t);
-int	onintr(int sig);
+int makeutime(), makeuday(), filename(), pclose();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
-	extern int onintr(int sig);
+	extern void onintr();
 	register int c;
 	char pwbuf[100];
 	FILE *pwfil;
@@ -121,7 +120,8 @@ main(int argc, char **argv)
 }
 
 int
-makeutime(char *pp)
+makeutime(pp)
+char *pp; 
 {
 	register int val;
 	register char *p;
@@ -129,7 +129,7 @@ makeutime(char *pp)
 	/* p points to a user time */
 	p = pp;
 	val = 0;
-	while(isdigit((unsigned char)*p)) {
+	while(isdigit(*p&0377)) {
 		val = val*10+(*p++ -'0');
 	}
 	if (p-pp < 3)
@@ -140,8 +140,8 @@ makeutime(char *pp)
 
 		case ':':
 			++p;
-			if (isdigit((unsigned char)*p)) {
-				if (isdigit((unsigned char)p[1])) {
+			if (isdigit(*p&0377)) {
+				if (isdigit(p[1]&0377)) {
 					val +=(10* *p + p[1] - 11*'0');
 					p += 2;
 					continue;
@@ -149,6 +149,7 @@ makeutime(char *pp)
 			}
 			fprintf(stderr, "at: bad time format:\n");
 			exit(1);
+			break;
 
 		case 'A':
 		case 'a':
@@ -205,7 +206,9 @@ makeutime(char *pp)
 
 
 int
-makeuday(int argc, char **argv)
+makeuday(argc,argv)
+int argc;
+char **argv;
 {
 	/* the presumption is that argv[2], argv[3] are either
 	   month day OR weekday [week].  Returns either 2 or 3 as last
@@ -276,7 +279,8 @@ makeuday(int argc, char **argv)
 }
 
 char *
-prefix(char *begin, char *full)
+prefix(begin, full)
+char *begin, *full;
 {
 	int c;
 	while ((c = *begin++)) {
@@ -291,7 +295,9 @@ prefix(char *begin, char *full)
 }
 
 int
-filename(char *dir, int y, int d, int t)
+filename(dir, y, d, t)
+char *dir;
+int y, d, t;
 {
 	register int i;
 
@@ -303,11 +309,9 @@ filename(char *dir, int y, int d, int t)
 	}
 }
 
-int
-onintr(int sig)
+void
+onintr()
 {
-	(void)sig;
 	unlink(fname);
 	exit(1);
-	return(0);
 }

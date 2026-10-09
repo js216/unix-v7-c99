@@ -1,9 +1,11 @@
 #include <stdio.h>
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	extern int errno;
-	int acct(char *file);
+	int acct();
 	if (argc > 1)
 		acct(argv[1]);
 	else

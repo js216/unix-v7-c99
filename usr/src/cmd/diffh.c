@@ -15,24 +15,16 @@ long n0,n1;		/*scan pointer in each*/
 int bflag;
 int debug = 0;
 FILE *file[2];
-char	*getl(int f, long n);
-void	clrl(int f, long n);
-void	movstr(char *s, char *t);
-int	easysynch(void);
-int	output(int a, int b);
-void	change(long a, int b, long c, int d, char *s);
-void	range(long a, int b);
-int	cmp(char *s, char *t);
-FILE	*dopen(char *f1, char *f2);
-void	progerr(char *s);
-void	error(char *s, char *t);
-int	hardsynch(void);
-int	space(int c);
+int	hardsynch(), easysynch(), output(), cmp();
+void	progerr(), movstr(), error(), change(), range();
 
 	/* return pointer to line n of file f*/
-char *getl(int f, long n)
+char *getl(f,n)
+int f;
+long n;
 {
 	register char *t;
+	char *malloc();
 	register int delta, nt;
 again:
 	delta = n - lineno[f];
@@ -65,7 +57,9 @@ again:
 
 	/*remove thru line n of file f from storage*/
 void
-clrl(int f, long n)
+clrl(f,n)
+int f;
+long n;
 {
 	register int i,j;
 	j = n-lineno[f]+1;
@@ -76,17 +70,20 @@ clrl(int f, long n)
 }
 
 void
-movstr(register char *s, register char *t)
+movstr(s,t)
+register char *s, *t;
 {
 	while((*t++= *s++))
 		continue;
 }
 
 int
-main(int argc, char **argv)
+main(argc,argv)
+int argc;
+char **argv;
 {
 	char *s0,*s1;
-	FILE *dopen(char *f1, char *f2);
+	FILE *dopen();
 	if(*argv[1]=='-') {
 		argc--;
 		argv++;
@@ -121,7 +118,7 @@ main(int argc, char **argv)
 
 	/* synch on C successive matches*/
 int
-easysynch(void)
+easysynch()
 {
 	int i,j;
 	register int k,m;
@@ -154,7 +151,8 @@ cont2:			;
 }
 
 int
-output(int a, int b)
+output(a,b)
+int a, b;
 {
 	register int i;
 	char *s;
@@ -186,7 +184,10 @@ output(int a, int b)
 }
 
 void
-change(long a, int b, long c, int d, char *s)
+change(a,b,c,d,s)
+int b, d;
+long a,c;
+char *s;
 {
 	range(a,b);
 	printf("%s",s);
@@ -195,7 +196,9 @@ change(long a, int b, long c, int d, char *s)
 }
 
 void
-range(long a, int b)
+range(a,b)
+int b;
+long a;
 {
 	if(b==INF)
 		printf("%ld,$",a);
@@ -206,14 +209,15 @@ range(long a, int b)
 }
 
 int
-cmp(char *s, char *t)
+cmp(s,t)
+char *s,*t;
 {
 	if(debug)
 		printf("%s:%s\n",s,t);
 	for(;;){
-		if(bflag&&space(*s)&&space(*t)) {
-			while(space(*++s)) ;
-			while(space(*++t)) ;
+		if(bflag&&isspace(*s&0377)&&isspace(*t&0377)) {
+			while(isspace(*++s&0377)) ;
+			while(isspace(*++t&0377)) ;
 		}
 		if(*s!=*t||*s==0)
 			break;
@@ -223,15 +227,8 @@ cmp(char *s, char *t)
 	return(*s-*t);
 }
 
-int
-space(int c)
-{
-	if(c==' ' || c=='\t' || c=='\n' || c=='\r' || c=='\f' || c=='\v')
-		return(1);
-	return(0);
-}
-FILE *
-dopen(char *f1, char *f2)
+FILE *dopen(f1,f2)
+char *f1,*f2;
 {
 	FILE *f;
 	char b[100],*bptr,*eptr;
@@ -245,14 +242,12 @@ dopen(char *f1, char *f2)
 	if(stat(f1,&statbuf)==-1)
 		error("can't access ",f1);
 	if((statbuf.st_mode&S_IFMT)==S_IFDIR) {
-		for(bptr=b;(*bptr= *f1++);bptr++)
-			;
+		for(bptr=b;(*bptr= *f1++);bptr++) ;
 		*bptr++ = '/';
 		for(eptr=f2;*eptr;eptr++)
 			if(*eptr=='/'&&eptr[1]!=0&&eptr[1]!='/')
 				f2 = eptr+1;
-		while((*bptr++= *f2++))
-			;
+		while((*bptr++= *f2++)) ;
 		f1 = b;
 	}
 	f = fopen(f1,"r");
@@ -263,13 +258,15 @@ dopen(char *f1, char *f2)
 
 
 void
-progerr(char *s)
+progerr(s)
+char *s;
 {
 	error("program error ",s);
 }
 
 void
-error(char *s, char *t)
+error(s,t)
+char *s,*t;
 {
 	fprintf(stderr,"diffh: %s%s\n",s,t);
 	exit(1);
@@ -277,7 +274,7 @@ error(char *s, char *t)
 
 	/*stub for resychronization beyond limits of text buf*/
 int
-hardsynch(void)
+hardsynch()
 {
 	change(n0,INF,n1,INF,"c");
 	printf("---change record omitted\n");

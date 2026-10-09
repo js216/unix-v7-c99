@@ -2,9 +2,9 @@
  * clri filsys inumber ...
  */
 
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/ino.h>
-#include <stdio.h>
 #define ISIZE	(sizeof(struct dinode))
 #define	BSIZE	512
 #define	NI	(BSIZE/ISIZE)
@@ -14,10 +14,12 @@ struct	ino
 };
 struct	ino	buf[NI];
 int	status;
-int	isnumber(char *s);
 
+int isnumber();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register int i, f;
 	unsigned n;
@@ -71,7 +73,8 @@ main(int argc, char *argv[])
 }
 
 int
-isnumber(char *s)
+isnumber(s)
+char *s;
 {
 	register int c;
 
