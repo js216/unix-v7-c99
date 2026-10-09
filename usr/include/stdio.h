@@ -52,7 +52,7 @@ int	mknod(char *name, int mode, int addr), utime(char *file, long *timep);
 int	fork(void), wait(int *status), execv(char *name, char **argv);
 int	execve(char *name, char **argv, char **envp);
 int	execvp(char *name, char **argv), dup(int fd), dup2(int fd, int fd2);
-int	pipe(int *fd), getuid(void), geteuid(void), getgid(void), getegid(void);
+int	pipe(int *fd), getuid(void), getgid(void);
 int	setuid(int uid), setgid(int gid), getpid(void), umask(int mask);
 int	sync(void), kill(int pid, int sig), alarm(unsigned sec), pause(void);
 int	nice(int incr), ioctl(int fd, int req, void *argp), stime(long *tp);
