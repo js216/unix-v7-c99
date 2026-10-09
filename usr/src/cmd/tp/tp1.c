@@ -2,12 +2,9 @@
 #include <stdio.h>
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char c,*ptr;
-	extern void cmd(), cmr(),cmx(), cmt();
 
 	tname = tc;
 	command = cmr;
@@ -66,9 +63,8 @@ char **argv;
 }
 
 void
-optap()
+optap(void)
 {
-	extern void cmr();
 
 	if ((flags & flm) == 0) {	/*  DECTAPE */
 		tapsiz = TCSIZ;
@@ -91,17 +87,15 @@ optap()
 }
 
 void
-setcom(newcom)
-void (*newcom)();
+setcom(void (*newcom)(void))
 {
-	extern void cmr();
 
 	if (command != cmr)  	useerr();
 	command = newcom;
 }
 
 void
-useerr()
+useerr(void)
 {
 	printf("Bad usage\n");
 	done();
@@ -110,9 +104,8 @@ useerr()
 /* COMMANDS */
 
 void
-cmd()
+cmd(void)
 {
-	extern void delete();
 
 	if (flags & (flm|flc))	useerr();
 	if (narg <= 2)			useerr();
@@ -123,7 +116,7 @@ cmd()
 }
 
 void
-cmr()
+cmr(void)
 {
 	if (flags & (flc|flm))		clrdir();
 	else				rddir();
@@ -133,9 +126,8 @@ cmr()
 }
 
 void
-cmt()
+cmt(void)
 {
-	extern void taboc();
 
 	if (flags & (flc|flw))	useerr();
 	rddir();
@@ -146,9 +138,8 @@ cmt()
 }
 
 void
-cmx()
+cmx(void)
 {
-	extern void extract();
 
 	if (flags & (flc))		useerr();
 	rddir();
@@ -157,25 +148,23 @@ cmx()
 }
 
 void
-check()
+check(void)
 {
 	usage();
 	done();
 }
 
 void
-done()
+done(void)
 {
 	printf("End\n");
 	exit(0);
 }
 
 void
-encode(pname,dptr)	/* pname points to the pathname
+encode(char *pname, struct dent *dptr)	/* pname points to the pathname
 			 * nptr points to next location in nameblk
 			 * dptr points to the dir entry		   */
-char	*pname;
-struct	dent *dptr;
 {
 	register  char *np;
 	register int n;
@@ -199,10 +188,8 @@ struct	dent *dptr;
 }
 
 void
-decode(pname,dptr)	/* dptr points to the dir entry
+decode(char *pname, struct dent *dptr)	/* dptr points to the dir entry
 			 * name is placed in pname[] */
-char	*pname;
-struct	dent *dptr;
 {
 
 	strcpy(pname, dptr->d_namep);

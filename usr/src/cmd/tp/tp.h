@@ -66,12 +66,9 @@ int	fio;
 short	ndirent, ndentb;
 struct	dent	*edir;
 struct	dent *lastd;		/* for improvement */
-char	*sbrk();
-char	*strcpy();
-long	lseek();
-void	(*command)();
-void	optap(), setcom(), useerr(), check(), done(), encode(), decode(), clrdir(), clrent(), rddir(), wrdir(), tread(), twrite(), rseek(), wseek(), seekerr(), getfiles(), expand(), fserr(), callout(), swabdir(), gettape(), delete(), update(), update1(), phserr(), bitmap(), setmap(), maperr(), usage(), taboc(), extract();
-int	verify();
+void	(*command)(void);
+void	optap(void), setcom(void (*newcom)(void)), useerr(void), check(void), done(void), encode(char *pname, struct dent *dptr), decode(char *pname, struct dent *dptr), clrdir(void), clrent(struct dent *ptr), rddir(void), wrdir(void), tread(void), twrite(void), rseek(int blk), wseek(int blk), seekerr(void), getfiles(void), expand(void), fserr(void), callout(void), swabdir(struct tent *tp), gettape(void (*how)(struct dent *d)), delete(struct dent *dd), update(void), update1(void), phserr(void), bitmap(void), setmap(struct dent *d), maperr(void), usage(void), taboc(struct dent *dd), extract(struct dent *d), cmd(void), cmr(void), cmx(void), cmt(void);
+int	verify(int key);
 
 char	*nameblk;
 char	*top;

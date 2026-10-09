@@ -8,7 +8,7 @@ struct direct	direct;
 struct stat	statb;
 
 void
-clrdir()
+clrdir(void)
 {
 	register int j, *p;
 
@@ -19,8 +19,7 @@ clrdir()
 }
 
 void
-clrent(ptr)
-struct	dent *ptr;
+clrent(struct dent *ptr)
 {
 	register int *p, j;
 
@@ -38,7 +37,7 @@ struct	dent *ptr;
 
 
 void
-rddir()
+rddir(void)
 {
 	register struct tent *tp;
 	register struct dent *p1;
@@ -108,7 +107,7 @@ rddir()
 
 
 void
-wrdir()
+wrdir(void)
 {
 	register struct tent *tp;
 	register struct dent *dp;
@@ -167,7 +166,7 @@ wrdir()
 }
 
 void
-tread()
+tread(void)
 {
 	register int j, *ptr;
 
@@ -182,7 +181,7 @@ tread()
 }
 
 void
-twrite()
+twrite(void)
 {
 	if (write(fio, (char *)tapeb,BSIZE) != BSIZE) {
 		printf("Tape write error\n");
@@ -192,16 +191,14 @@ twrite()
 }
 
 void
-rseek(blk)
-int blk;
+rseek(int blk)
 {
 	rseeka = blk;
 	if (lseek(fio,(long)blk*BSIZE,0) < 0)	seekerr();
 }
 
 void
-wseek(blk)
-int blk;
+wseek(int blk)
 {
 	register int amt, b;
 
@@ -216,15 +213,14 @@ int blk;
 }
 
 void
-seekerr()
+seekerr(void)
 {
 	printf("Tape seek error\n");
 	done();
 }
 
 int
-verify(key)
-int key;
+verify(int key)
 {
 	register int c;
 
@@ -247,7 +243,7 @@ repeat:	printf("%c %s ", key, name);
 }
 
 void
-getfiles()
+getfiles(void)
 {
 
 	if ((narg -= 2) == 0) {
@@ -261,7 +257,7 @@ getfiles()
 
 
 void
-expand()
+expand(void)
 {
 	register  char *p0, *save0;
 	int n, fid;
@@ -291,14 +287,14 @@ expand()
 }
 
 void
-fserr()
+fserr(void)
 {
 	printf("%s -- Cannot open file\n", name);
 	done();
 }
 
 void
-callout()
+callout(void)
 {
 	register struct dent *d;
 	register char *ptr1, *ptr0;
@@ -357,8 +353,7 @@ copydir:
 }
 
 void
-swabdir(tp)
-register struct tent *tp;
+swabdir(register struct tent *tp)
 {
 	swab((char *)tp, (char *)tp, sizeof(*tp));
 	swab(tp->pathnam, tp->pathnam, NAMELEN);

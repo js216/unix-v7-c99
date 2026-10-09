@@ -2,8 +2,7 @@
 #include <stdio.h>
 
 void
-gettape(how)
-void (*how)();
+gettape(void (*how)(struct dent *d))
 {
 	register char *ptr0, *ptr1;
 	register struct dent *d;
@@ -33,8 +32,7 @@ cont:			continue;
 }
 
 void
-delete(dd)
-struct dent *dd;
+delete(struct dent *dd)
 {
 	if (verify('d') >= 0)
 		clrent(dd);
@@ -42,7 +40,7 @@ struct dent *dd;
 
 
 void
-update()
+update(void)
 {
 	register struct dent *d;
 	register int b, last;
@@ -73,7 +71,7 @@ toosmall:	++first;
 
 
 void
-update1()
+update1(void)
 {
 	register struct dent *d, *id;
 	register int index;
@@ -113,12 +111,12 @@ update1()
 }
 
 void
-phserr()
+phserr(void)
 {	printf("%s -- Phase error \n", name);  }
 
 
 void
-bitmap()	/* place old files in the map */
+bitmap(void)	/* place old files in the map */
 {
 	register char *m;
 	register int count;
@@ -135,8 +133,7 @@ bitmap()	/* place old files in the map */
 }
 
 void
-setmap(d)
-register struct dent *d;
+setmap(register struct dent *d)
 {
 	unsigned c, block;
 	char bit;
@@ -155,7 +152,7 @@ register struct dent *d;
 }
 
 void
-maperr()
+maperr(void)
 {
 	printf("Tape overflow\n");
 	done();
@@ -163,7 +160,7 @@ maperr()
 
 
 void
-usage()
+usage(void)
 {
 	register int reg,count;
 	int	nused, nentr, nfree;
@@ -198,8 +195,7 @@ usage()
 
 
 void
-taboc(dd)
-struct dent *dd;
+taboc(struct dent *dd)
 {
 	register int  mode;
 	register int *m;
@@ -231,8 +227,7 @@ struct dent *dd;
 
 
 void
-extract(d)
-register struct dent *d;
+extract(register struct dent *d)
 {
 	register int count, id;
 
