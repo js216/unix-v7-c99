@@ -14,10 +14,14 @@ struct {
 	int	dev,
 		ino;
 } ml[ML];
-long	descend(char *np, char *fname);
+long	descend();
+char	*rindex();
+char	*strcpy();
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register int	i = 1;
 	long	blocks = 0;
@@ -55,7 +59,8 @@ main(int argc, char **argv)
 }
 
 long
-descend(char *np, char *fname)
+descend(np, fname)
+char *np, *fname;
 {
 	int dir = 0, /* open directory */
 		offset,
