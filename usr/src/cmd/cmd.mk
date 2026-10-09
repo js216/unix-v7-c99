@@ -21,7 +21,7 @@ $C/bc.o $C/egrep.o $C/expr.o $(AWK_OBJ): CPPFLAGS += -DYYSTACK_USE_ALLOCA=1
 
 $(CMD_BIN:%=bin/%): bin/%: $(CRT) $C/%.o $(LIBM) $(LIBC) | bin
 	$(LINK)
-$(CMD_ETC:%=etc/%): etc/%: $(CRT) $C/%.o $(LIBC) | etc
+$(CMD_ETC:%=etc/%): etc/%: $(CRT) $C/%.o $(LIBC)
 	$(LINK)
 $(CMD_USRLIB:%=usr/lib/%): usr/lib/%: $(CRT) $C/%.o $(LIBC) | usr/lib
 	$(LINK)

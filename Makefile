@@ -38,7 +38,7 @@ $(OBJ) $(GEN): Makefile
 %.c: %.y
 	$(call T,YACC)bison -o $@ $<
 
-boot/unix: usr/sys/conf/qemu/unix | boot
+boot/unix: usr/sys/conf/qemu/unix
 	$(call T,CP)cp $< $@
 
 qemu: boot/unix boot/rootfs.img
@@ -53,14 +53,14 @@ ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 
 ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC)
 
-DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
+DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
 boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 	$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ boot/rootfs.proto
 	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 	    usr/sys/conf/qemuconf) $@
 
-etc/mkfs: usr/src/cmd/mkfs.c | etc
+etc/mkfs: usr/src/cmd/mkfs.c
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
 	    mkdir -p "$$tmpinc"; \
