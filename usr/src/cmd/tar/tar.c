@@ -4,10 +4,9 @@
 #include <sys/dir.h>
 #include <signal.h>
 
-void	usage(), dorep(), getdir(), passtape(), putfile(), doxtract(), dotable(), putempty(), longt(), pmode(), select(), checkdir(), tomodes(), done(), getwdir(), backtape(), flushtape(), copy();
-int	endtape(), checksum(), checkw(), response(), checkupdate(), prefix(), cmp(), readtape(), writetape();
-char	*strcat();
-daddr_t	bsrch();
+void	usage(void), dorep(char *argv[]), getdir(void), passtape(void), putfile(char *longname, char *shortname), doxtract(char *argv[]), dotable(void), putempty(void), longt(struct stat *st), pmode(struct stat *st), select(int *pairp, struct stat *st), checkdir(char *name), tomodes(struct stat *sp), done(int n), getwdir(char *s), backtape(void), flushtape(void), copy(char *to, char *from), onintr(int sig), onquit(int sig), onhup(int sig), onterm(int sig);
+int	endtape(void), checksum(void), checkw(int c, char *name), response(void), checkupdate(char *arg), prefix(char *s1, char *s2), cmp(char *b, char *s, int n), readtape(char *buffer), writetape(char *buffer);
+daddr_t	bsrch(char *s, int n, daddr_t l, daddr_t h), lookup(char *s);
 #define TBLOCK	512
 #define NBLOCK	20
 #define NAMSIZ	100
@@ -51,15 +50,11 @@ char	tname[] = "/tmp/tarXXXXXX";
 char	*usefile;
 char	magtape[]	= "/dev/mt1";
 
-char	*malloc();
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	char *cp;
-	void onintr(), onquit(), onhup(), onterm();
 
 	if (argc < 2)
 		usage();
@@ -195,15 +190,14 @@ noupdate:
 }
 
 void
-usage()
+usage(void)
 {
 	fprintf(stderr, "tar: usage  tar -{txru}[cvfblm] [tapefile] [blocksize] file1 file2...\n");
 	done(1);
 }
 
 void
-dorep(argv)
-char	*argv[];
+dorep(char *argv[])
 {
 	register char *cp, *cp2;
 	char wdir[60];
@@ -258,7 +252,7 @@ char	*argv[];
 }
 
 int
-endtape()
+endtape(void)
 {
 	if (dblock.dbuf.name[0] == '\0') {
 		backtape();
@@ -269,7 +263,7 @@ endtape()
 }
 
 void
-getdir()
+getdir(void)
 {
 	register struct stat *sp;
 	int i;
@@ -296,7 +290,7 @@ getdir()
 }
 
 void
-passtape()
+passtape(void)
 {
 	long blocks;
 	char buf[TBLOCK];
@@ -312,9 +306,7 @@ passtape()
 }
 
 void
-putfile(longname, shortname)
-char *longname;
-char *shortname;
+putfile(char *longname, char *shortname)
 {
 	int infile;
 	long blocks;
@@ -448,8 +440,7 @@ char *shortname;
 
 
 void
-doxtract(argv)
-char	*argv[];
+doxtract(char *argv[])
 {
 	long blocks, bytes;
 	char buf[TBLOCK];
@@ -525,7 +516,7 @@ gotit:
 }
 
 void
-dotable()
+dotable(void)
 {
 	for (;;) {
 		getdir();
@@ -542,7 +533,7 @@ dotable()
 }
 
 void
-putempty()
+putempty(void)
 {
 	char buf[TBLOCK];
 	char *cp;
@@ -553,11 +544,9 @@ putempty()
 }
 
 void
-longt(st)
-register struct stat *st;
+longt(register struct stat *st)
 {
 	register char *cp;
-	char *ctime();
 
 	pmode(st);
 	printf("%3d/%1d", st->st_uid, st->st_gid);
@@ -591,8 +580,7 @@ int	m9[] = { 2, STXT, 't', XOTH, 'x', '-' };
 int	*m[] = { m1, m2, m3, m4, m5, m6, m7, m8, m9};
 
 void
-pmode(st)
-register struct stat *st;
+pmode(register struct stat *st)
 {
 	register int **mp;
 
@@ -601,9 +589,7 @@ register struct stat *st;
 }
 
 void
-select(pairp, st)
-int *pairp;
-struct stat *st;
+select(int *pairp, struct stat *st)
 {
 	register int n, *ap;
 
@@ -615,8 +601,7 @@ struct stat *st;
 }
 
 void
-checkdir(name)
-register char *name;
+checkdir(register char *name)
 {
 	register char *cp;
 	int i;
@@ -639,36 +624,39 @@ register char *name;
 }
 
 void
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 	signal(SIGINT, SIG_IGN);
 	term++;
 }
 
 void
-onquit()
+onquit(int sig)
 {
+	(void)sig;
 	signal(SIGQUIT, SIG_IGN);
 	term++;
 }
 
 void
-onhup()
+onhup(int sig)
 {
+	(void)sig;
 	signal(SIGHUP, SIG_IGN);
 	term++;
 }
 
 void
-onterm()
+onterm(int sig)
 {
+	(void)sig;
 	signal(SIGTERM, SIG_IGN);
 	term++;
 }
 
 void
-tomodes(sp)
-register struct stat *sp;
+tomodes(register struct stat *sp)
 {
 	register char *cp;
 
@@ -682,7 +670,7 @@ register struct stat *sp;
 }
 
 int
-checksum()
+checksum(void)
 {
 	register int i;
 	register char *cp;
@@ -696,9 +684,7 @@ checksum()
 }
 
 int
-checkw(c, name)
-char *name;
-int c;
+checkw(int c, char *name)
 {
 	if (wflag) {
 		printf("%c ", c);
@@ -714,7 +700,7 @@ int c;
 }
 
 int
-response()
+response(void)
 {
 	char c;
 
@@ -726,13 +712,11 @@ response()
 }
 
 int
-checkupdate(arg)
-char	*arg;
+checkupdate(char *arg)
 {
 	char name[100];
 	long	mtime;
 	daddr_t seekp;
-	daddr_t	lookup();
 
 	rewind(tfile);
 	for (;;) {
@@ -748,16 +732,14 @@ char	*arg;
 }
 
 void
-done(n)
-int n;
+done(int n)
 {
 	unlink(tname);
 	exit(n);
 }
 
 int
-prefix(s1, s2)
-register char *s1, *s2;
+prefix(register char *s1, register char *s2)
 {
 	while (*s1)
 		if (*s1++ != *s2++)
@@ -768,8 +750,7 @@ register char *s1, *s2;
 }
 
 void
-getwdir(s)
-char *s;
+getwdir(char *s)
 {
 	int i;
 	int	pipdes[2];
@@ -797,8 +778,7 @@ char *s;
 #define	N	200
 int	njab;
 daddr_t
-lookup(s)
-char *s;
+lookup(char *s)
 {
 	register int i;
 	daddr_t a;
@@ -811,10 +791,7 @@ char *s;
 }
 
 daddr_t
-bsrch(s, n, l, h)
-daddr_t l, h;
-char *s;
-int n;
+bsrch(char *s, int n, daddr_t l, daddr_t h)
 {
 	register int i, j;
 	char b[N];
@@ -858,9 +835,7 @@ loop:
 }
 
 int
-cmp(b, s, n)
-char *b, *s;
-int n;
+cmp(char *b, char *s, int n)
 {
 	register int i;
 
@@ -876,8 +851,7 @@ int n;
 }
 
 int
-readtape(buffer)
-char *buffer;
+readtape(char *buffer)
 {
 	int i, j;
 
@@ -908,13 +882,12 @@ char *buffer;
 		recno = 0;
 	}
 	first = 1;
-	copy(buffer, &tbuf[recno++]);
+	copy(buffer, (char *)&tbuf[recno++]);
 	return(TBLOCK);
 }
 
 int
-writetape(buffer)
-char *buffer;
+writetape(char *buffer)
 {
 	first = 1;
 	if (nblock == 0)
@@ -926,7 +899,7 @@ char *buffer;
 		}
 		recno = 0;
 	}
-	copy(&tbuf[recno++], buffer);
+	copy((char *)&tbuf[recno++], buffer);
 	if (recno >= nblock) {
 		if (write(mt, (char *)tbuf, TBLOCK*nblock) < 0) {
 			fprintf(stderr, "Tar: tape write error\n");
@@ -938,7 +911,7 @@ char *buffer;
 }
 
 void
-backtape()
+backtape(void)
 {
 	lseek(mt, (long) -TBLOCK, 1);
 	if (recno >= nblock) {
@@ -952,14 +925,13 @@ backtape()
 }
 
 void
-flushtape()
+flushtape(void)
 {
 	write(mt, (char *)tbuf, TBLOCK*nblock);
 }
 
 void
-copy(to, from)
-register char *to, *from;
+copy(register char *to, register char *from)
 {
 	register int i;
 
