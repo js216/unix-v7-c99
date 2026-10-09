@@ -5,7 +5,9 @@
 #include <stdio.h>
 
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char **argv;
 {
 	register unsigned sum;
 	register int i, c;
