@@ -69,6 +69,8 @@ malloc(unsigned nbytes)
 		alloct = &allocs[1];
 		allocp = &allocs[0];
 	}
+	if(nbytes > (~0u>>1) - BLOCK - 2*WORD)
+		return(NULL);
 	nw = (nbytes+WORD+WORD-1)/WORD;
 	ASSERT(allocp>=allocs && allocp<=alloct);
 	ASSERT(allock());
@@ -79,7 +81,7 @@ malloc(unsigned nbytes)
 					ASSERT(q>p&&q<alloct);
 					p->ptr = q->ptr;
 				}
-				if(q>=p+nw && p+nw>=p)
+				if(q-p >= nw)
 					goto found;
 			}
 			q = p;
@@ -94,7 +96,7 @@ malloc(unsigned nbytes)
 		}
 		temp = ((nw+BLOCK/WORD)/(BLOCK/WORD))*(BLOCK/WORD);
 		q = (union store *)sbrk(0);
-		if(q+temp+GRANULE < q) {
+		if((unsigned)q+(temp+GRANULE)*WORD < (unsigned)q) {
 			return(NULL);
 		}
 		q = (union store *)sbrk(temp*WORD);
