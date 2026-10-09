@@ -16,11 +16,13 @@
 #define LBIN 4097
 struct	stat	statb;
 char bin[LBIN];
-extern int errno;
+int errno;
 
-int digit(int c);
+int digit();
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char **argv;
 {
 	long n,di;
 	register int i,j,k;
@@ -30,7 +32,7 @@ main(int argc, char *argv[])
 	lseek(0,(long)0,1);
 	piped = errno==ESPIPE;
 	arg = argv[1];
-	if(argc<=1 || (*arg!='-' && *arg!='+')) {
+	if(argc<=1 || (*arg!='-'&&*arg!='+')) {
 		arg = "-10l";
 		argc++;
 		argv--;
@@ -181,7 +183,8 @@ errcom:
 }
 
 int
-digit(int c)
+digit(c)
+int c;
 {
 	return(c>='0'&&c<='9');
 }
