@@ -8,13 +8,13 @@ char	*ldr[3];
 
 FILE *ib1;
 FILE *ib2;
-FILE *openfil(char *s);
-int rd(FILE *file, char *buf);
-void wr(char *str, int n);
-void copy(FILE *ibuf, char *lbuf, int n);
-int compare(char *a, char *b);
+FILE *openfil();
+int rd(), compare();
+void wr(), copy();
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char	*argv[];
 {
 	int	l;
 	char	lb1[LB],lb2[LB];
@@ -95,7 +95,9 @@ main(int argc, char *argv[])
 }
 
 int
-rd(FILE *file, char *buf)
+rd(file,buf)
+FILE *file;
+char *buf;
 {
 
 	register int i, c;
@@ -113,7 +115,9 @@ rd(FILE *file, char *buf)
 }
 
 void
-wr(char *str, int n)
+wr(str,n)
+	char	*str;
+	int n;
 {
 
 	switch(n) {
@@ -133,7 +137,10 @@ wr(char *str, int n)
 }
 
 void
-copy(FILE *ibuf, char *lbuf, int n)
+copy(ibuf,lbuf,n)
+int n;
+FILE *ibuf;
+char *lbuf;
 {
 	do {
 		wr(lbuf,n);
@@ -143,7 +150,8 @@ copy(FILE *ibuf, char *lbuf, int n)
 }
 
 int
-compare(char *a, char *b)
+compare(a,b)
+	char	*a,*b;
 {
 	register char *ra,*rb;
 
@@ -154,8 +162,8 @@ compare(char *a, char *b)
 	if(*ra < *rb)	return(1);
 	return(2);
 }
-FILE *
-openfil(char *s)
+FILE *openfil(s)
+char *s;
 {
 	FILE *b;
 	if(s[0]=='-' && s[1]==0)
