@@ -1,149 +1,142 @@
 #include <stdio.h>
+#include <math.h>
 
-#define MAXNUM 72057594037927936ULL
+#define	BIG	72057594037927935LL
+#define	TABSIZ	1000
+#define	TSIZ8	8000
 
-static int
-parse_number(char *s, unsigned long long *out)
+long long pt[] = {
+	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43,
+	47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97
+};
+int	factab[] = {
+	10, 2, 4, 2, 4, 6, 2, 6,
+	4, 2, 4, 6, 6, 2, 6, 4,
+	2, 6, 4, 6, 8, 4, 2, 4,
+	2, 4, 8, 6, 4, 6, 2, 4,
+	6, 2, 6, 6, 4, 2, 4, 6,
+	2, 6, 4, 2, 4, 2, 10, 2
+};
+char	table[TABSIZ];
+char	iobuf[512];
+int	nbuf;
+char	*arg;
+long long nn;
+
+int
+getch()
 {
-	unsigned long long n;
-	int any;
+	char c;
 
-	while (*s == ' ' || *s == '\t' || *s == '\n')
-		s++;
+	if(arg)
+		return(*arg++);
+	if(read(0, &c, 1) != 1)
+		exit(0);
+	return(c);
+}
+
+long long
+getnum()
+{
+	register int c;
+	long long n;
+
 	n = 0;
-	any = 0;
-	while (*s >= '0' && *s <= '9') {
-		any = 1;
-		if (n > (MAXNUM - (unsigned long long)(*s - '0')) / 10ULL)
-			return(-1);
-		n = n * 10ULL + (unsigned long long)(*s - '0');
-		s++;
+	for(;;) {
+		c = getch();
+		if(c == ' ')
+			continue;
+		if(c < '0' || c > '9')
+			return(n);
+		if(n < BIG)
+			n = n*10 + c-'0';
 	}
-	while (*s == ' ' || *s == '\t' || *s == '\n')
-		s++;
-	if (!any || *s != '\0' || n >= MAXNUM)
-		return(-1);
-	*out = n;
-	return(0);
 }
 
-static int
-read_number(unsigned long long *out)
+void
+wrchar(c)
+int c;
 {
-	char buf[80];
-	int c, i;
-
-	i = 0;
-	while ((c = getchar()) != EOF) {
-		if (c != ' ' && c != '\t' && c != '\n')
-			break;
+	iobuf[nbuf++] = c;
+	if(nbuf >= 512) {
+		write(1, iobuf, 512);
+		nbuf = 0;
 	}
-	if (c == EOF)
-		return(0);
-	do {
-		if (i < (int)sizeof(buf) - 1)
-			buf[i++] = (char)c;
-		c = getchar();
-	} while (c != EOF && c != ' ' && c != '\t' && c != '\n');
-	buf[i] = '\0';
-	if (parse_number(buf, out) < 0)
-		return(-1);
-	return(1);
 }
 
-static void
-putnum(unsigned long long n)
+void
+ftoa(n)
+long long n;
 {
-	char buf[24];
-	int i;
-
-	i = 0;
-	if (n == 0)
-		buf[i++] = '0';
-	else while (n != 0) {
-		buf[i++] = (char)('0' + (int)(n % 10ULL));
-		n /= 10ULL;
-	}
-	while (i > 0)
-		putchar(buf[--i]);
+	if(n >= 10)
+		ftoa(n/10);
+	wrchar((int)(n%10) + '0');
 }
 
-static int
-prime(unsigned long long n)
+void
+mark(p)
+int p;
 {
-	unsigned long long p;
+	long long off;
 
-	if (n < 2ULL)
-		return(0);
-	if (n == 2ULL || n == 3ULL)
-		return(1);
-	if ((n % 2ULL) == 0 || (n % 3ULL) == 0)
-		return(0);
-	p = 5ULL;
-	while (p <= n / p) {
-		if ((n % p) == 0)
-			return(0);
-		p += 2ULL;
-		if (p > n / p)
-			break;
-		if ((n % p) == 0)
-			return(0);
-		p += 4ULL;
-	}
-	return(1);
-}
-
-static int
-print_prime(unsigned long long n)
-{
-	putnum(n);
-	if (putchar('\n') == EOF)
-		return(-1);
-	if (fflush(stdout) == EOF)
-		return(-1);
-	return(0);
-}
-
-static void
-ouch(void)
-{
-	fprintf(stderr, "Ouch.\n");
+	off = nn/p*p - nn;
+	if(off < 0)
+		off += p;
+	for(; off < TSIZ8; off += p)
+		table[off>>3] |= 1<<(off&7);
 }
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
-	unsigned long long n;
-	int r;
+	register int i, f, p;
+	long long n;
+	double v;
 
-	if (argc > 1) {
-		if (parse_number(argv[1], &n) < 0) {
-			ouch();
-			return(1);
-		}
-		if (n == 0ULL)
-			return(0);
-	} else {
-		r = read_number(&n);
-		if (r <= 0 || n == 0ULL) {
-			if (r < 0)
-				ouch();
-			return(r < 0 ? 1 : 0);
+	if(argc > 1)
+		arg = argv[1];
+	while((n = getnum()) >= BIG) {
+		write(2, "Ouch.\n", 6);
+		if(arg)
+			exit(1);
+	}
+	if(n == 0)
+		exit(0);
+	if(n < 100) {
+		for(i = 0; i < 25 && pt[i] < n; i++)
+			;
+		if(i < 25) {
+			for(; i < 25; i++) {
+				ftoa(pt[i]);
+				wrchar('\n');
+			}
+			n = 100;
 		}
 	}
-	if (n >= MAXNUM) {
-		ouch();
-		return(1);
-	}
-	if (n <= 2ULL) {
-		if (print_prime(2ULL) < 0)
-			return(0);
-		n = 3ULL;
-	} else if ((n % 2ULL) == 0)
-		n++;
-	for (;;) {
-		if (prime(n) && print_prime(n) < 0)
-			return(0);
-		n += 2ULL;
+	nn = n/2*2 + 1;
+	for(;;) {
+		for(i = 0; i < TABSIZ; i++)
+			table[i] = 0;
+		v = sqrt((double)(nn+TSIZ8));
+		mark(3);
+		mark(5);
+		mark(7);
+		p = 11;
+		f = 1;
+		do {
+			mark(p);
+			p += factab[f++];
+			if(f >= 48)
+				f = 0;
+		} while(p <= v);
+		for(i = 0; i < TSIZ8; i += 2) {
+			if((table[i>>3] & 1<<(i&7)) == 0) {
+				ftoa(nn);
+				wrchar('\n');
+			}
+			nn += 2;
+		}
 	}
 }
