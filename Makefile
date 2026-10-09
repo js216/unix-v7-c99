@@ -81,4 +81,4 @@ clean:
 .PHONY: all clean qemu
 .DELETE_ON_ERROR:
 
--include $(OBJ:.o=.d)
+-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
