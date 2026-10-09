@@ -18,9 +18,7 @@
  *	2 if name is to be deleted
  */
 struct inode *
-namei(func, flag)
-int (*func)();
-int	flag;
+namei(int (*func)(void), int flag)
 {
 	register struct inode *dp;
 	register int c;
@@ -205,7 +203,7 @@ out:
  * kernel string pointed at by dirp.
  */
 int
-schar()
+schar(void)
 {
 
 	return(*u.u_dirp++ & 0377);
@@ -216,7 +214,7 @@ schar()
  * user string pointed at by dirp.
  */
 int
-uchar()
+uchar(void)
 {
 	register int c;
 

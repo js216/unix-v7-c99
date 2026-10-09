@@ -9,8 +9,7 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-void panic(), dmbsy(), iodone(), deverror(), physio(), rkstart();
-int spl5(), splx();
+void rkstart(void);
 
 #define	RKADDR(off)	(*(volatile int *)(vbase+(off)))
 #define	NVQ	8
@@ -51,7 +50,7 @@ int	vbase;
 int	rkirq;
 
 void
-rkinit()
+rkinit(void)
 {
 	for(vbase=0x0a000000; vbase<0x0a004000; vbase+=0x200)
 		if(RKADDR(0) == 0x74726976 && RKADDR(8) == 2)
@@ -69,9 +68,8 @@ rkinit()
 	rkirq = 48 + (vbase-0x0a000000)/0x200;
 }
 
-int
-rkstrategy(bp)
-register struct buf *bp;
+void
+rkstrategy(register struct buf *bp)
 {
 	int s;
 
@@ -85,11 +83,10 @@ register struct buf *bp;
 	if(rktab.b_active == NULL)
 		rkstart();
 	splx(s);
-	return(0);
 }
 
 void
-rkstart()
+rkstart(void)
 {
 	register struct buf *bp;
 	register int com;
@@ -120,14 +117,14 @@ rkstart()
 	dk_wds[DK_N] += com;
 }
 
-int
-rkintr()
+void
+rkintr(void)
 {
 	register struct buf *bp;
 
 	RKADDR(0x64) = RKADDR(0x60);
 	if (rktab.b_active == NULL || vq->uidx != vq->aidx)
-		return(0);
+		return;
 	dmbsy();
 	dk_busy &= ~(1<<DK_N);
 	bp = rktab.b_actf;
@@ -136,7 +133,7 @@ rkintr()
 		deverror(bp, vstatus, 0);
 		if (++rktab.b_errcnt <= 10) {
 			rkstart();
-			return(0);
+			return;
 		}
 		bp->b_flags |= B_ERROR;
 	}
@@ -145,23 +142,18 @@ rkintr()
 	bp->b_resid = 0;
 	iodone(bp);
 	rkstart();
-	return(0);
 }
 
-int
-rkread(dev)
-dev_t dev;
+void
+rkread(dev_t dev)
 {
 
 	physio(rkstrategy, &rrkbuf, dev, B_READ);
-	return(0);
 }
 
-int
-rkwrite(dev)
-dev_t dev;
+void
+rkwrite(dev_t dev)
 {
 
 	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
-	return(0);
 }

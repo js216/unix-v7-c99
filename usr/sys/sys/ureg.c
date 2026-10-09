@@ -13,7 +13,7 @@
  * been setup prior by estabur.
  */
 void
-sureg()
+sureg(void)
 {
 	register int *udp, *uap, *rap;
 	int auisa[16];
@@ -48,9 +48,7 @@ sureg()
  * segment is read-write or read-only.
  */
 int
-estabur(nt, nd, ns, sep, xrw)
-unsigned nt, nd, ns;
-int	sep, xrw;
+estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 {
 	(void)sep; (void)xrw;
 

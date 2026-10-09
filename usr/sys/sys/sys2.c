@@ -5,12 +5,13 @@
 #include "../h/reg.h"
 #include "../h/file.h"
 #include "../h/inode.h"
+void	rdwr(int mode), open1(struct inode *ip, int mode, int trf);
 
 /*
  * read system call
  */
 void
-read()
+read(void)
 {
 	rdwr(FREAD);
 }
@@ -19,7 +20,7 @@ read()
  * write system call
  */
 void
-write()
+write(void)
 {
 	rdwr(FWRITE);
 }
@@ -30,8 +31,7 @@ write()
  * and switch out to readi, writei, or pipe code.
  */
 void
-rdwr(mode)
-register int mode;
+rdwr(register int mode)
 {
 	register struct file *fp;
 	register struct inode *ip;
@@ -81,7 +81,7 @@ register int mode;
  * open system call
  */
 void
-open()
+open(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -100,7 +100,7 @@ open()
  * creat system call
  */
 void
-creat()
+creat(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -127,10 +127,7 @@ creat()
  * and call the device open routine if any.
  */
 void
-open1(ip, mode, trf)
-register struct inode *ip;
-register int mode;
-int	trf;
+open1(register struct inode *ip, register int mode, int trf)
 {
 	register struct file *fp;
 	int i;
@@ -168,7 +165,7 @@ out:
  * close system call
  */
 void
-close()
+close(void)
 {
 	register struct file *fp;
 	register struct a {
@@ -187,7 +184,7 @@ close()
  * seek system call
  */
 void
-seek()
+seek(void)
 {
 	register struct file *fp;
 	register struct a {
@@ -216,7 +213,7 @@ seek()
  * link system call
  */
 void
-link()
+link(void)
 {
 	register struct inode *ip, *xp;
 	register struct a {
@@ -267,7 +264,7 @@ out:
  * mknod system call
  */
 void
-mknod()
+mknod(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -299,7 +296,7 @@ out:
  * access system call
  */
 void
-saccess()
+saccess(void)
 {
 	register int svuid, svgid;
 	register struct inode *ip;

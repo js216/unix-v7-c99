@@ -11,12 +11,13 @@
 #include "../h/file.h"
 #include "../h/conf.h"
 #include "../h/stat.h"
+void	stat1(struct inode *ip, struct stat *ub, off_t pipeadj);
 
 /*
  * the fstat system call.
  */
 void
-fstat()
+fstat(void)
 {
 	register struct file *fp;
 	register struct a {
@@ -35,7 +36,7 @@ fstat()
  * the stat system call.
  */
 void
-stat()
+stat(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -56,10 +57,7 @@ stat()
  * get the inode and pass appropriate parts back.
  */
 void
-stat1(ip, ub, pipeadj)
-register struct inode *ip;
-struct stat *ub;
-off_t pipeadj;
+stat1(register struct inode *ip, struct stat *ub, off_t pipeadj)
 {
 	register struct dinode *dp;
 	register struct buf *bp;
@@ -95,7 +93,7 @@ off_t pipeadj;
  * the dup system call.
  */
 void
-dup()
+dup(void)
 {
 	register struct file *fp;
 	register struct a {
@@ -133,7 +131,7 @@ dup()
  * the mount system call.
  */
 void
-smount()
+smount(void)
 {
 	dev_t dev;
 	register struct inode *ip;
@@ -200,7 +198,7 @@ out1:
  * the umount system call.
  */
 void
-sumount()
+sumount(void)
 {
 	dev_t dev;
 	register struct inode *ip;
@@ -243,7 +241,7 @@ found:
  * thing on which to mount, and return the device number if so.
  */
 dev_t
-getmdev()
+getmdev(void)
 {
 	dev_t dev;
 	register struct inode *ip;

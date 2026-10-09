@@ -2,53 +2,45 @@
  *	indirect driver for controlling tty.
  */
 #include "../h/param.h"
+#include "../h/systm.h"
 #include "../h/conf.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/tty.h"
 #include "../h/proc.h"
 
-int
-syopen(dev, flag)
-int	dev, flag;
+void
+syopen(int dev, int flag)
 {
 
 	(void)dev;
 	if(u.u_ttyp == NULL) {
 		u.u_error = ENXIO;
-		return(0);
+		return;
 	}
 	(*cdevsw[major(u.u_ttyd)].d_open)(u.u_ttyd, flag);
-	return(0);
 }
 
-int
-syread(dev)
-int	dev;
+void
+syread(int dev)
 {
 
 	(void)dev;
 	(*cdevsw[major(u.u_ttyd)].d_read)(u.u_ttyd);
-	return(0);
 }
 
-int
-sywrite(dev)
-int	dev;
+void
+sywrite(int dev)
 {
 
 	(void)dev;
 	(*cdevsw[major(u.u_ttyd)].d_write)(u.u_ttyd);
-	return(0);
 }
 
-int
-sysioctl(dev, cmd, addr, flag)
-caddr_t addr;
-int	dev, cmd, flag;
+void
+sysioctl(int dev, int cmd, caddr_t addr, int flag)
 {
 
 	(void)dev;
 	(*cdevsw[major(u.u_ttyd)].d_ioctl)(u.u_ttyd, cmd, addr, flag);
-	return(0);
 }

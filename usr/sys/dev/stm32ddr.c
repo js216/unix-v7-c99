@@ -1,3 +1,6 @@
+#include "../h/param.h"
+#include "../h/systm.h"
+
 #define	R(a)	(*(volatile unsigned int *)(a))
 #define	RCC(o)	R(0x50000000+(o))
 #define	DDRC(o)	R(0x5A003000+(o))
@@ -90,7 +93,7 @@ static unsigned int dphy[] = {
 };
 
 void
-ddrinit()
+ddrinit(void)
 {
 	unsigned int *r;
 	int i;

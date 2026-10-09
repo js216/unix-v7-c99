@@ -5,6 +5,7 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
+void	iomove(caddr_t cp, int n, int flag);
 
 /*
  * Read the file corresponding to
@@ -17,8 +18,7 @@
  *	u_segflg	read to kernel/user/user I
  */
 void
-readi(ip)
-register struct inode *ip;
+readi(register struct inode *ip)
 {
 	struct buf *bp;
 	dev_t dev;
@@ -83,8 +83,7 @@ register struct inode *ip;
  *	u_segflg	write to kernel/user/user I
  */
 void
-writei(ip)
-register struct inode *ip;
+writei(register struct inode *ip)
 {
 	struct buf *bp;
 	dev_t dev;
@@ -137,8 +136,7 @@ register struct inode *ip;
  * of the 2 arguments.
  */
 int
-max(a, b)
-unsigned a, b;
+max(unsigned a, unsigned b)
 {
 
 	if(a > b)
@@ -151,8 +149,7 @@ unsigned a, b;
  * of the 2 arguments.
  */
 int
-min(a, b)
-unsigned a, b;
+min(unsigned a, unsigned b)
 {
 
 	if(a < b)
@@ -176,10 +173,7 @@ unsigned a, b;
  * cpass and passc.
  */
 void
-iomove(cp, n, flag)
-register caddr_t cp;
-register int n;
-int	flag;
+iomove(register caddr_t cp, register int n, int flag)
 {
 	register int t;
 

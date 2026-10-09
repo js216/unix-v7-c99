@@ -17,8 +17,7 @@
  * of the descriptor.
  */
 struct file *
-getf(f)
-register int f;
+getf(register int f)
 {
 	register struct file *fp;
 
@@ -43,14 +42,12 @@ register int f;
  * Call device handler on last close.
  */
 void
-closef(fp)
-register struct file *fp;
+closef(register struct file *fp)
 {
 	register struct inode *ip;
 	int flag, mode;
 	dev_t dev;
-	register int (*cfunc)();
-	struct chan *cp;
+	register void (*cfunc)(dev_t dev, int flag);
 
 	if(fp == NULL)
 		return;
@@ -60,7 +57,6 @@ register struct file *fp;
 	}
 	ip = fp->f_inode;
 	flag = fp->f_flag;
-	cp = fp->f_un.f_chan;
 	dev = (dev_t)ip->i_un.i_rdev;
 	mode = ip->i_mode;
 
@@ -92,7 +88,7 @@ register struct file *fp;
 		for(fp=file; fp < &file[NFILE]; fp++)
 			if (fp->f_count && fp->f_inode==ip)
 				return;
-	(*cfunc)(dev, flag, cp);
+	(*cfunc)(dev, flag);
 }
 
 /*
@@ -101,9 +97,7 @@ register struct file *fp;
  * validate before actual IO.
  */
 void
-openi(ip, rw)
-register struct inode *ip;
-int	rw;
+openi(register struct inode *ip, int rw)
 {
 	dev_t dev;
 	register unsigned int maj;
@@ -145,9 +139,7 @@ bad:
  * permissions.
  */
 int
-access(ip, mode)
-register struct inode *ip;
-int	mode;
+access(register struct inode *ip, int mode)
 {
 	register int m;
 
@@ -187,7 +179,7 @@ int	mode;
  * return inode pointer.
  */
 struct inode *
-owner()
+owner(void)
 {
 	register struct inode *ip;
 
@@ -207,7 +199,7 @@ owner()
  * super user.
  */
 int
-suser()
+suser(void)
 {
 
 	if(u.u_uid == 0) {
@@ -222,7 +214,7 @@ suser()
  * Allocate a user file descriptor.
  */
 int
-ufalloc()
+ufalloc(void)
 {
 	register int i;
 
@@ -246,7 +238,7 @@ ufalloc()
  * 	file structures.
  */
 struct file *
-falloc()
+falloc(void)
 {
 	register struct file *fp;
 	register int i;

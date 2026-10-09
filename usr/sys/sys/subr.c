@@ -15,10 +15,7 @@
  * for use in read-ahead.
  */
 daddr_t
-bmap(ip, bn, rwflg)
-register struct inode *ip;
-daddr_t bn;
-int	rwflg;
+bmap(register struct inode *ip, daddr_t bn, int rwflg)
 {
 	register int i;
 	struct buf *bp, *nbp;
@@ -127,8 +124,7 @@ int	rwflg;
  * u_base is in the user address space unless u_segflg is set.
  */
 int
-passc(c)
-register int c;
+passc(register int c)
 {
 	register int id;
 
@@ -153,7 +149,7 @@ register int c;
  * address space unless u_segflg is set.
  */
 int
-cpass()
+cpass(void)
 {
 	register int c, id;
 
@@ -176,31 +172,67 @@ cpass()
  * Routine which sets a user error; placed in
  * illegal entries in the bdevsw and cdevsw tables.
  */
-int
-nodev()
+void
+nodev(dev_t dev, int flag)
 {
 
+	(void)dev; (void)flag;
 	u.u_error = ENODEV;
-	return(0);
 }
 
 /*
  * Null routine; placed in insignificant entries
  * in the bdevsw and cdevsw tables.
  */
-int
-nulldev()
+void
+nulldev(dev_t dev, int flag)
 {
-	return(0);
+	(void)dev; (void)flag;
+}
+
+void
+nostrat(struct buf *bp)
+{
+
+	(void)bp;
+	u.u_error = ENODEV;
+}
+
+void
+nordwr(dev_t dev)
+{
+
+	(void)dev;
+	u.u_error = ENODEV;
+}
+
+void
+noioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+{
+
+	(void)dev; (void)cmd; (void)addr; (void)flag;
+	u.u_error = ENODEV;
+}
+
+void
+nolioctl(int cmd, struct tty *tp, caddr_t addr)
+{
+
+	(void)cmd; (void)tp; (void)addr;
+	u.u_error = ENODEV;
+}
+
+void
+nulltty(struct tty *tp)
+{
+	(void)tp;
 }
 
 /*
  * copy count bytes from from to to.
  */
 void
-bcopy(from, to, count)
-caddr_t from, to;
-register int count;
+bcopy(caddr_t from, caddr_t to, register int count)
 {
 	register char *f, *t;
 

@@ -17,8 +17,7 @@ int	cbad;
  * Character list get/put
  */
 int
-getc(p)
-register struct clist *p;
+getc(register struct clist *p)
 {
 	register struct cblock *bp;
 	register int c, s;
@@ -54,10 +53,7 @@ register struct clist *p;
  * return number of bytes moved.
  */
 int
-q_to_b(q, cp, cc)
-register struct clist *q;
-register char *cp;
-int	cc;
+q_to_b(register struct clist *q, register char *cp, int cc)
 {
 	register struct cblock *bp;
 	register int s;
@@ -103,9 +99,7 @@ int	cc;
  * Stop counting if flag&character is non-null.
  */
 int
-ndqb(q, flag)
-register struct clist *q;
-int	flag;
+ndqb(register struct clist *q, int flag)
 {
 register int cc;
 int s;
@@ -146,9 +140,7 @@ out:
  * were removed.  It is assumed that cc < CBSIZE.
  */
 void
-ndflush(q, cc)
-register struct clist *q;
-register int cc;
+ndflush(register struct clist *q, register int cc)
 {
 register int s;
 
@@ -195,9 +187,7 @@ out:
 	splx(s);
 }
 int
-putc(c, p)
-register struct clist *p;
-int	c;
+putc(int c, register struct clist *p)
 {
 	register struct cblock *bp;
 	register char *cp;
@@ -237,10 +227,7 @@ int	c;
  * return number of bytes not transfered.
  */
 int
-b_to_q(cp, cc, q)
-register char *cp;
-struct clist *q;
-register int cc;
+b_to_q(register char *cp, register int cc, struct clist *q)
 {
 	register char *cq;
 	register struct cblock *bp;
@@ -285,7 +272,7 @@ out:
  * number of character devices. (Once-only routine)
  */
 void
-cinit()
+cinit(void)
 {
 	register int ccp;
 	register struct cblock *cp;
@@ -309,8 +296,7 @@ cinit()
  * using clists
  */
 int
-getw(p)
-register struct clist *p;
+getw(register struct clist *p)
 {
 	register int s;
 
@@ -321,9 +307,7 @@ register struct clist *p;
 }
 
 int
-putw(c, p)
-register struct clist *p;
-int	c;
+putw(int c, register struct clist *p)
 {
 	register int s;
 

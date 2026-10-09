@@ -6,6 +6,7 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/reg.h"
+void	addupc(caddr_t pc, unsigned *p, int t);
 
 #define	SCHMAG	8/10
 
@@ -26,10 +27,7 @@
  */
 
 void
-clock(dev, sp, r1, nps, r0, pc, ps)
-dev_t dev;
-caddr_t pc;
-int	sp, r1, nps, r0, ps;
+clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 {
 	register struct callo *p1, *p2;
 	register struct proc *pp;
@@ -94,7 +92,7 @@ out:
 	if (USERMODE(ps)) {
 		u.u_utime++;
 		if(u.u_prof.pr_scale)
-			addupc(pc, &u.u_prof, 1);
+			addupc(pc, (unsigned *)&u.u_prof, 1);
 		if(u.u_procp->p_nice > NZERO)
 			a += 8;
 	} else {
@@ -153,10 +151,7 @@ out:
  * intelligent to be done if an entry won't fit.
  */
 void
-timeout(fun, arg, tim)
-int (*fun)();
-caddr_t arg;
-int	tim;
+timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim)
 {
 	register struct callo *p1, *p2;
 	register int t;
@@ -187,10 +182,7 @@ int	tim;
 	splx(s);
 }
 void
-addupc(pc, p, t)
-caddr_t pc;
-register unsigned *p;
-int t;
+addupc(caddr_t pc, register unsigned *p, int t)
 {
 	register unsigned i;
 	short c;

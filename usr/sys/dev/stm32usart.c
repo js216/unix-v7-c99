@@ -42,15 +42,11 @@
 #define	TAB1	002000
 
 struct	tty kl11[NKL11+NDL11];
-int	usstart();
-int	ttrstrt();
+void	usstart(struct tty *tp);
 int	usirq = 85;
-int	ttread(), ttioccomm(), getc();
-void	ttyopen(), ttyclose(), ttychars(), ttyinput(), ttstart(), timeout(), wakeup();
-caddr_t	ttwrite();
 
 void
-usinit()
+usinit(void)
 {
 	AHB4ENSETR = 010;
 	(void)AHB4ENSETR;
@@ -64,10 +60,8 @@ usinit()
 	CR1 = UE|TE|RE;
 }
 
-int
-usopen(dev, flag)
-dev_t dev;
-int flag;
+void
+usopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 	register int d;
@@ -76,7 +70,7 @@ int flag;
 	d = minor(dev);
 	if(d >= NKL11+NDL11) {
 		u.u_error = ENXIO;
-		return(0);
+		return;
 	}
 	tp = &kl11[d];
 	tp->t_oproc = usstart;
@@ -87,41 +81,32 @@ int flag;
 	}
 	CR1 |= RXNEIE;
 	ttyopen(dev, tp);
-	return(0);
 }
 
-int
-usclose(dev, flag)
-dev_t dev;
-int flag;
+void
+usclose(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
 	(void)flag;
 	tp = &kl11[minor(dev)];
 	ttyclose(tp);
-	return(0);
-}
-
-int
-usread(dev)
-dev_t dev;
-{
-	ttread(&kl11[minor(dev)]);
-	return(0);
-}
-
-int
-uswrite(dev)
-dev_t dev;
-{
-	ttwrite(&kl11[minor(dev)]);
-	return(0);
 }
 
 void
-usxint(dev)
-dev_t dev;
+usread(dev_t dev)
+{
+	ttread(&kl11[minor(dev)]);
+}
+
+void
+uswrite(dev_t dev)
+{
+	ttwrite(&kl11[minor(dev)]);
+}
+
+static void
+usxint(dev_t dev)
 {
 	register struct tty *tp;
 
@@ -132,9 +117,8 @@ dev_t dev;
 		wakeup((caddr_t)&tp->t_outq);
 }
 
-void
-usrint(dev)
-dev_t dev;
+static void
+usrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
@@ -145,26 +129,21 @@ dev_t dev;
 	ttyinput(c, tp);
 }
 
-int
-usioctl(dev, cmd, addr, flag)
-caddr_t addr;
-dev_t dev;
-int cmd, flag;
+void
+usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
 	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
 		u.u_error = ENOTTY;
-	return(0);
 }
 
-int
-usstart(tp)
-register struct tty *tp;
+void
+usstart(register struct tty *tp)
 {
 	register int c;
 
 	if((ISR&TXE) == 0)
-		return(0);
+		return;
 	if ((c=getc(&tp->t_outq)) >= 0) {
 		if (tp->t_flags&RAW)
 			TDR = c;
@@ -176,17 +155,15 @@ register struct tty *tp;
 		}
 		CR1 |= TXEIE;
 	}
-	return(0);
 }
 
-int
-usintr()
+void
+usintr(void)
 {
 	if (ISR&RXNE)
 		usrint(0);
 	if (ISR&TXE && CR1&TXEIE)
 		usxint(0);
-	return(0);
 }
 
 /*

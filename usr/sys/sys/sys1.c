@@ -9,6 +9,8 @@
 #include "../h/inode.h"
 #include "../h/seg.h"
 #include "../h/acct.h"
+int	getxfile(struct inode *ip, int nargc);
+void	setregs(void);
 
 /*
  * exec system call, with and without environments.
@@ -20,14 +22,14 @@ struct execa {
 };
 
 void
-exec()
+exec(void)
 {
 	((struct execa *)u.u_ap)->envp = NULL;
 	exece();
 }
 
 void
-exece()
+exece(void)
 {
 	register int nc;
 	register char *cp = NULL;
@@ -144,9 +146,7 @@ bad:
  * non-zero means only the text is being replaced
  */
 int
-getxfile(ip, nargc)
-register struct inode *ip;
-int	nargc;
+getxfile(register struct inode *ip, int nargc)
 {
 	register unsigned ds;
 	register int sep;
@@ -279,7 +279,7 @@ bad:
  * Clear registers on exec
  */
 void
-setregs()
+setregs(void)
 {
 	register int *rp;
 	register char *cp;
@@ -312,7 +312,7 @@ setregs()
  * pass back caller's arg
  */
 void
-rexit()
+rexit(void)
 {
 	register struct a {
 		int	rval;
@@ -330,8 +330,7 @@ rexit()
  * and dispose of children.
  */
 void
-exit(rv)
-int	rv;
+exit(int rv)
 {
 	register int i;
 	register struct proc *p, *q;
@@ -384,7 +383,7 @@ int	rv;
  * and pass back status from them.
  */
 void
-wait()
+wait(void)
 {
 	register int f;
 	register struct proc *p;
@@ -430,7 +429,7 @@ loop:
  * fork system call.
  */
 void
-fork()
+fork(void)
 {
 	register struct proc *p1, *p2;
 	register int a;
@@ -484,7 +483,7 @@ out:	;
  *  -- bad planning: "break" is a dirty word in C.
  */
 void
-sbreak()
+sbreak(void)
 {
 	struct a {
 		char	*nsiz;

@@ -8,6 +8,7 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 #include "../h/buf.h"
+int	swapin(struct proc *p);
 
 #define SQSIZE 0100	/* Must be power of 2 */
 #define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
@@ -25,9 +26,7 @@ struct proc *slpque[SQSIZE];
  * sleeping has gone away.
  */
 void
-sleep(chan, pri)
-caddr_t chan;
-int	pri;
+sleep(caddr_t chan, int pri)
 {
 	register struct proc *rp;
 	register int s, h;
@@ -82,8 +81,7 @@ psig:
  * Wake up all processes sleeping on chan.
  */
 void
-wakeup(chan)
-register caddr_t chan;
+wakeup(register caddr_t chan)
 {
 	register struct proc *p, *q;
 	register int i;
@@ -118,9 +116,8 @@ register caddr_t chan;
  * 'proc on q' diagnostic, the
  * diagnostic loop can be removed.
  */
-void
-setrq(p)
-struct proc *p;
+static void
+setrq(struct proc *p)
 {
 	register struct proc *q;
 	register int s;
@@ -142,8 +139,7 @@ out:
  * arrange for it to be swapped in if necessary.
  */
 void
-setrun(p)
-register struct proc *p;
+setrun(register struct proc *p)
 {
 	register caddr_t w;
 
@@ -174,8 +170,7 @@ register struct proc *p;
  * than the currently running process.
  */
 int
-setpri(pp)
-register struct proc *pp;
+setpri(register struct proc *pp)
 {
 	register int p;
 
@@ -206,7 +201,7 @@ register struct proc *pp;
  * core situation changes and in any case once per second.
  */
 void
-sched()
+sched(void)
 {
 	register struct proc *rp, *p;
 	register int outage, inage;
@@ -297,8 +292,7 @@ loop:
  * It would be better to do largest first.
  */
 int
-swapin(p)
-register struct proc *p;
+swapin(register struct proc *p)
 {
 	register struct text *xp;
 	register int a;
@@ -335,7 +329,7 @@ register struct proc *p;
  * call the scheduler.
  */
 void
-qswtch()
+qswtch(void)
 {
 
 	setrq(u.u_procp);
@@ -354,7 +348,7 @@ qswtch()
  * i.e. its not worth putting an spl() in.
  */
 void
-swtch()
+swtch(void)
 {
 	register int n;
 	register struct proc *p, *q, *pp, *pq;
@@ -434,7 +428,7 @@ loop:
  * It returns 1 in the new process, 0 in the old.
  */
 int
-newproc()
+newproc(void)
 {
 	int a1, a2;
 	struct proc *p, *up;
@@ -554,8 +548,7 @@ retry:
  * the user's stack towards or away from the data area.
  */
 void
-expand(newsize)
-int	newsize;
+expand(int newsize)
 {
 	register int i, n;
 	register struct proc *p;

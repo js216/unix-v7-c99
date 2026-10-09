@@ -43,7 +43,7 @@ int	szicode = sizeof(icode);
  * Machine-dependent startup code
  */
 void
-startup()
+startup(void)
 {
 	register int i;
 
@@ -65,7 +65,7 @@ startup()
  * into users virtual address space.
  */
 void
-sysphys()
+sysphys(void)
 {
 	register int i, s, d;
 	register struct a {
@@ -118,16 +118,15 @@ extern struct intr intrtab[];
 unsigned	clkreload;
 int	irq_ready;
 
-void
-gicen(n)
-int n;
+static void
+gicen(int n)
 {
 	*(volatile unsigned char *)(gicdbase+0x400+n) = 0x80;
 	GICD(0x100+(n>>5)*4) = 1U << (n&31);
 }
 
 void
-clkstart()
+clkstart(void)
 {
 	register struct intr *ip;
 
@@ -147,8 +146,7 @@ clkstart()
 }
 
 void
-irq(r)
-int *r;
+irq(int *r)
 {
 	register struct intr *ip;
 	register unsigned n;
@@ -170,9 +168,7 @@ int *r;
  * Let a process handle a signal by simulating an interrupt
  */
 void
-sendsig(p, signo)
-caddr_t p;
-int	signo;
+sendsig(caddr_t p, int signo)
 {
 	register unsigned n;
 
@@ -199,8 +195,7 @@ int	signo;
 int	maplock;
 
 void
-mapalloc(bp)
-register struct buf *bp;
+mapalloc(register struct buf *bp)
 {
 	register int i, a;
 
@@ -223,8 +218,7 @@ register struct buf *bp;
 }
 
 void
-mapfree(bp)
-struct buf *bp;
+mapfree(struct buf *bp)
 {
 
 	bp->b_flags &= ~B_MAP;
@@ -239,7 +233,7 @@ extern unsigned l1[], user_l2[], uarea_l2[];
 char	*msgbufp = msgbuf;
 
 void
-machine_init()
+machine_init(void)
 {
 	register struct memregion *m;
 	register unsigned a;
@@ -262,7 +256,7 @@ machine_init()
 }
 
 void
-arm_sureg()
+arm_sureg(void)
 {
 	register unsigned i, n, base;
 
@@ -276,8 +270,7 @@ arm_sureg()
 }
 
 void
-copyseg(from, to)
-int from, to;
+copyseg(int from, int to)
 {
 	register int *s, *d, i;
 
@@ -288,8 +281,7 @@ int from, to;
 }
 
 void
-clearseg(a)
-int a;
+clearseg(int a)
 {
 	register int *d, i;
 
@@ -298,17 +290,14 @@ int a;
 		d[i] = 0;
 }
 
-int
-uaddr(a, n)
-caddr_t a;
-unsigned n;
+static int
+uaddr(caddr_t a, unsigned n)
 {
 	return((unsigned)a < USERSIZE && n <= USERSIZE - (unsigned)a);
 }
 
 int
-fubyte(a)
-caddr_t a;
+fubyte(caddr_t a)
 {
 	if(!uaddr(a, 1))
 		return(-1);
@@ -316,9 +305,7 @@ caddr_t a;
 }
 
 int
-subyte(a, c)
-caddr_t a;
-int c;
+subyte(caddr_t a, int c)
 {
 	if(!uaddr(a, 1))
 		return(-1);
@@ -327,8 +314,7 @@ int c;
 }
 
 int
-fuword(a)
-caddr_t a;
+fuword(caddr_t a)
 {
 	if(!uaddr(a, sizeof(int)))
 		return(-1);
@@ -336,9 +322,7 @@ caddr_t a;
 }
 
 int
-suword(a, v)
-caddr_t a;
-int v;
+suword(caddr_t a, int v)
 {
 	if(!uaddr(a, sizeof(int)))
 		return(-1);
@@ -347,9 +331,7 @@ int v;
 }
 
 int
-copyin(f, t, n)
-caddr_t f, t;
-unsigned n;
+copyin(caddr_t f, caddr_t t, unsigned n)
 {
 	if(!uaddr(f, n))
 		return(-1);
@@ -358,9 +340,7 @@ unsigned n;
 }
 
 int
-copyout(f, t, n)
-caddr_t f, t;
-unsigned n;
+copyout(caddr_t f, caddr_t t, unsigned n)
 {
 	if(!uaddr(t, n))
 		return(-1);
@@ -369,7 +349,7 @@ unsigned n;
 }
 
 void
-sigreturn()
+sigreturn(void)
 {
 	int f[RPS+1];
 	register int i;
@@ -386,9 +366,8 @@ sigreturn()
 	u.u_r.r_val2 = f[R1];
 }
 
-char *
-memaddr(off)
-off_t off;
+static char *
+memaddr(off_t off)
 {
 	register unsigned a;
 
@@ -403,8 +382,7 @@ off_t off;
 }
 
 int
-fumem(off)
-off_t off;
+fumem(off_t off)
 {
 	register char *a;
 
@@ -414,9 +392,7 @@ off_t off;
 }
 
 int
-sumem(off, c)
-off_t off;
-int c;
+sumem(off_t off, int c)
 {
 	register char *a;
 
@@ -427,14 +403,14 @@ int c;
 }
 
 void
-install_sigtramp()
+install_sigtramp(void)
 {
 	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
 	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
 }
 
 void
-panictrap()
+panictrap(void)
 {
 	panic("trap");
 }

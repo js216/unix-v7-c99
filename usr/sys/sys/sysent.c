@@ -8,18 +8,7 @@
 #include "../h/file.h"
 #include "../h/tty.h"
 #include "../h/seg.h"
-void nullsys(), nosys();
-void rexit(), fork(), read(), write(), open();
-void close(), wait(), creat(), link(), unlink();
-void exec(), exece(), chdir(), gtime(), mknod();
-void chmod(), chown(), sbreak(), stat(), seek();
-void getpid(), smount(), sumount(), setuid(), getuid();
-void stime(), ptrace(), alarm(), fstat(), pause();
-void utime(), saccess(), nice(), ftime(), sync();
-void kill(), dup(), pipe(), times(), profil();
-void setgid(), getgid(), ssig(), sysacct(), syslock();
-void umask(), chroot(), stty(), gtty(), ioctl();
-void sigreturn(), sysphys();
+void nullsys(void), nosys(void);
 
 /*
  * This table is the switch used to transfer
@@ -147,5 +136,5 @@ user_trap_handler(int signo, int *r)
 	if (runrun)
 		qswtch();
 }
-void nosys()   { u.u_error = EINVAL; }
-void nullsys() { }
+void nosys(void)   { u.u_error = EINVAL; }
+void nullsys(void) { }

@@ -29,17 +29,11 @@
 #define	TAB1	002000
 
 struct	tty kl11[NKL11+NDL11];
-int	klstart();
-int	ttrstrt();
+void	klstart(struct tty *tp);
 int	klirq = 33;
-int	ttread(), ttioccomm(), getc();
-void	ttyopen(), ttyclose(), ttychars(), ttyinput(), ttstart(), timeout(), wakeup();
-caddr_t	ttwrite();
 
-int
-klopen(dev, flag)
-dev_t dev;
-int flag;
+void
+klopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 	register int d;
@@ -48,7 +42,7 @@ int flag;
 	d = minor(dev);
 	if(d >= NKL11+NDL11) {
 		u.u_error = ENXIO;
-		return(0);
+		return;
 	}
 	tp = &kl11[d];
 	tp->t_oproc = klstart;
@@ -59,41 +53,32 @@ int flag;
 	}
 	UARTIMSC = RXI|TXI;
 	ttyopen(dev, tp);
-	return(0);
 }
 
-int
-klclose(dev, flag)
-dev_t dev;
-int flag;
+void
+klclose(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
 	(void)flag;
 	tp = &kl11[minor(dev)];
 	ttyclose(tp);
-	return(0);
-}
-
-int
-klread(dev)
-dev_t dev;
-{
-	ttread(&kl11[minor(dev)]);
-	return(0);
-}
-
-int
-klwrite(dev)
-dev_t dev;
-{
-	ttwrite(&kl11[minor(dev)]);
-	return(0);
 }
 
 void
-klxint(dev)
-dev_t dev;
+klread(dev_t dev)
+{
+	ttread(&kl11[minor(dev)]);
+}
+
+void
+klwrite(dev_t dev)
+{
+	ttwrite(&kl11[minor(dev)]);
+}
+
+static void
+klxint(dev_t dev)
 {
 	register struct tty *tp;
 
@@ -103,9 +88,8 @@ dev_t dev;
 		wakeup((caddr_t)&tp->t_outq);
 }
 
-void
-klrint(dev)
-dev_t dev;
+static void
+klrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
@@ -115,26 +99,21 @@ dev_t dev;
 	ttyinput(c, tp);
 }
 
-int
-klioctl(dev, cmd, addr, flag)
-caddr_t addr;
-dev_t dev;
-int cmd, flag;
+void
+klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
 	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
 		u.u_error = ENOTTY;
-	return(0);
 }
 
-int
-klstart(tp)
-register struct tty *tp;
+void
+klstart(register struct tty *tp)
 {
 	register int c;
 
 	if(UARTFR&TXFF)
-		return(0);
+		return;
 	if ((c=getc(&tp->t_outq)) >= 0) {
 		if (tp->t_flags&RAW)
 			UARTDR = c;
@@ -145,16 +124,15 @@ register struct tty *tp;
 			tp->t_state |= TIMEOUT;
 		}
 	}
-	return(0);
 }
 
 void
-klinit()
+klinit(void)
 {
 }
 
-int
-klintr()
+void
+klintr(void)
 {
 	if (UARTMIS&RXI)
 		klrint(0);
@@ -162,7 +140,6 @@ klintr()
 		UARTICR = TXI;
 		klxint(0);
 	}
-	return(0);
 }
 
 /*

@@ -6,6 +6,9 @@
 #include "../h/conf.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
+int	incore(dev_t dev, daddr_t blkno);
+void	iowait(struct buf *bp), notavail(struct buf *bp),
+	geterror(struct buf *bp);
 
 #define	DISKMON	1
 
@@ -53,9 +56,7 @@ struct	buf	swbuf2;
  * Read in (if necessary) the block and return a buffer pointer.
  */
 struct buf *
-bread(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+bread(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 
@@ -81,9 +82,7 @@ daddr_t blkno;
  * read-ahead block (which is not allocated to the caller)
  */
 struct buf *
-breada(dev, blkno, rablkno)
-dev_t dev;
-daddr_t blkno, rablkno;
+breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
 {
 	register struct buf *bp, *rabp;
 
@@ -123,8 +122,7 @@ daddr_t blkno, rablkno;
  * Then release the buffer.
  */
 void
-bwrite(bp)
-register struct buf *bp;
+bwrite(register struct buf *bp)
 {
 	register int flag;
 
@@ -153,8 +151,7 @@ register struct buf *bp;
  * in the same order as requested.
  */
 void
-bdwrite(bp)
-register struct buf *bp;
+bdwrite(register struct buf *bp)
 {
 	register struct buf *dp;
 
@@ -171,8 +168,7 @@ register struct buf *bp;
  * Release the buffer, start I/O on it, but don't wait for completion.
  */
 void
-bawrite(bp)
-register struct buf *bp;
+bawrite(register struct buf *bp)
 {
 
 	bp->b_flags |= B_ASYNC;
@@ -183,8 +179,7 @@ register struct buf *bp;
  * release the buffer, with no I/O implied.
  */
 void
-brelse(bp)
-register struct buf *bp;
+brelse(register struct buf *bp)
 {
 	register struct buf **backp;
 	register int s;
@@ -220,9 +215,7 @@ register struct buf *bp;
  * (mainly to avoid getting hung up on a wait in breada)
  */
 int
-incore(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+incore(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -240,9 +233,7 @@ daddr_t blkno;
  * for the oldest non-busy buffer and reassign it.
  */
 struct buf *
-getblk(dev, blkno)
-dev_t dev;
-daddr_t blkno;
+getblk(dev_t dev, daddr_t blkno)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -311,7 +302,7 @@ daddr_t blkno;
  * not assigned to any particular device
  */
 struct buf *
-geteblk()
+geteblk(void)
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -346,8 +337,7 @@ loop:
  * to the user.
  */
 void
-iowait(bp)
-register struct buf *bp;
+iowait(register struct buf *bp)
 {
 
 	spl6();
@@ -362,8 +352,7 @@ register struct buf *bp;
  * (internal interface)
  */
 void
-notavail(bp)
-register struct buf *bp;
+notavail(register struct buf *bp)
 {
 	register int s;
 
@@ -379,8 +368,7 @@ register struct buf *bp;
  * and wake up anyone waiting for it.
  */
 void
-iodone(bp)
-register struct buf *bp;
+iodone(register struct buf *bp)
 {
 
 	if(bp->b_flags&B_MAP)
@@ -398,8 +386,7 @@ register struct buf *bp;
  * Zero the core associated with a buffer.
  */
 void
-clrbuf(bp)
-struct buf *bp;
+clrbuf(struct buf *bp)
 {
 	register int *p;
 	register int c;
@@ -416,9 +403,7 @@ struct buf *bp;
  * swap I/O
  */
 void
-swap(blkno, coreaddr, count, rdflg)
-register int count;
-int	blkno, coreaddr, rdflg;
+swap(int blkno, int coreaddr, register int count, int rdflg)
 {
 	register struct buf *bp;
 	register int tcount;
@@ -465,8 +450,7 @@ int	blkno, coreaddr, rdflg;
  * (from umount and update)
  */
 void
-bflush(dev)
-dev_t dev;
+bflush(dev_t dev)
 {
 	register struct buf *bp;
 
@@ -494,10 +478,7 @@ loop:
  * validating them.
  */
 void
-physio(strat, bp, dev, rw)
-register struct buf *bp;
-int (*strat)();
-int	dev, rw;
+physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 {
 	register unsigned base;
 	register int nb;
@@ -561,8 +542,7 @@ int	dev, rw;
  * don't yet return specific errors.
  */
 void
-geterror(bp)
-register struct buf *bp;
+geterror(register struct buf *bp)
 {
 
 	if (bp->b_flags&B_ERROR)

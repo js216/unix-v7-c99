@@ -13,9 +13,7 @@
  * Algorithm is first-fit.
  */
 int
-malloc(mp, size)
-struct map *mp;
-int	size;
+malloc(struct map *mp, int size)
 {
 	register unsigned int a;
 	register struct map *bp;
@@ -43,10 +41,7 @@ int	size;
  * one or both ends if possible.
  */
 void
-mfree(mp, size, a)
-struct map *mp;
-register int a;
-int	size;
+mfree(struct map *mp, int size, register int a)
 {
 	register struct map *bp;
 	register unsigned int t;

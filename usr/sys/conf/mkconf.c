@@ -73,9 +73,9 @@ struct tab
 	".globl	_klrint\nklin:	jsr	r0,call; jmp _klrint\n",
 	".globl	_klxint\nklou:	jsr	r0,call; jmp _klxint\n",
 	"",
-	"	klopen, klclose, klread, klwrite, klioctl, nulldev, 0,",
+	"	klopen, klclose, klread, klwrite, klioctl, nulltty, 0,",
 	"",
-	"int	klopen(), klclose(), klread(), klwrite(), klioctl();",
+	"",
 	},
 
 	{
@@ -85,9 +85,9 @@ struct tab
 	"",
 	"",
 	"",
-	"	nulldev, nulldev, mmread, mmwrite, nodev, nulldev, 0, ",
+	"	nulldev, nulldev, mmread, mmwrite, noioctl, nulltty, 0, ",
 	"",
-	"int	mmread(), mmwrite();",
+	"",
 	},
 
 	{
@@ -212,9 +212,9 @@ struct tab
 	".globl	_rkintr\n",
 	"rkio:	jsr	r0,call; jmp _rkintr\n",
 	"	nulldev, nulldev, rkstrategy, &rktab,",
-	"	nulldev, nulldev, rkread, rkwrite, nodev, nulldev, 0,",
-	"int	rkstrategy();\nstruct	buf	rktab;",
-	"int	rkread(), rkwrite();",
+	"	nulldev, nulldev, rkread, rkwrite, noioctl, nulltty, 0,",
+	"struct	buf	rktab;",
+	"",
 	},
 
 	{
@@ -413,9 +413,9 @@ struct tab
 	"",
 	"",
 	"",
-	"	syopen, nulldev, syread, sywrite, sysioctl, nulldev, 0,",
+	"	syopen, nulldev, syread, sywrite, sysioctl, nulltty, 0,",
 	"",
-	"int	syopen(), syread(), sywrite(), sysioctl();",
+	"",
 	},
 
 	{0}
@@ -436,8 +436,6 @@ char	*stre[] =
 	"#include \"../h/inode.h\"",
 	"#include \"../h/acct.h\"",
 	"",
-	"int	nulldev();",
-	"int	nodev();",
 	"#include \"../h/seg.h\"",
 	0
 };
@@ -512,7 +510,7 @@ char	*strj[] =
 {
 	"struct	linesw	linesw[] =",
 	"{",
-	"	{ttyopen, nulldev, ttread, ttwrite, nodev, ttyinput, ttstart, 0, 0, 0}, /* 0 */",
+	"	{ttyopen, nulltty, ttread, ttwrite, nolioctl, ttyinput, 0, 0, ttstart, 0}, /* 0 */",
 	0
 };
 
@@ -599,7 +597,7 @@ main(void)
 				pipemaj = i;
 			goto newb;
 		}
-		printf("	{nodev, nodev, nodev, 0}, /* %s = %d */\n", q, i);
+		printf("	{nodev, nodev, nostrat, 0}, /* %s = %d */\n", q, i);
 	newb:;
 	}
 	if (swapmaj == -1) {
@@ -625,7 +623,7 @@ main(void)
 			printf("	{%s},	/* %s = %d */\n", p->codee, q, i);
 			goto newc;
 		}
-		printf("	{nodev, nodev, nodev, nodev, nodev, nulldev, 0}, /* %s = %d */\n", q, i);
+		printf("	{nodev, nodev, nordwr, nordwr, noioctl, nulltty, 0}, /* %s = %d */\n", q, i);
 	newc:;
 	}
 	puke(strh);
@@ -653,17 +651,14 @@ main(void)
 	for (i=0; i<nmap; i++)
 		printf("\t{0x%lx, 0x%lx, %s},\n", mapb[i], mape[i], mapa[i]);
 	printf("\t{0, 0, 0}\n};\n");
-	printf("\nint\t%sintr(), %sintr();\n", con, dsk);
-	printf("extern int\t%sirq, %sirq;\n", con, dsk);
+	printf("\nextern int\t%sirq, %sirq;\n", con, dsk);
 	printf("struct\tintr\tintrtab[] =\n{\n");
 	printf("\t{&%sirq, %sintr},\n\t{&%sirq, %sintr},\n", con, con, dsk, dsk);
 	printf("\t{0, 0}\n};\n");
-	printf("\nvoid\t%sinit(), %sinit(), %sputchar(char);\n", con, dsk, con);
-	printf("void\tcninit() { %sinit(); }\n", con);
-	printf("void\tbdinit() { %sinit(); }\n", dsk);
+	printf("\nvoid\tcninit(void) { %sinit(); }\n", con);
+	printf("void\tbdinit(void) { %sinit(); }\n", dsk);
 	printf("void\tputchar(int c) { %sputchar(c); }\n", con);
-	printf("\nvoid\tddrinit();\n");
-	printf("void\tclock_ddr_init() { %s}\n", ddr ? "ddrinit(); " : "");
+	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
 }
 
 void

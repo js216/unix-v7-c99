@@ -4,6 +4,7 @@
 #include "../h/buf.h"
 #include "../h/conf.h"
 #include <stdarg.h>
+void	printn(long n, int b);
 
 /*
  * In case console is off,
@@ -57,9 +58,7 @@ loop:
  * Print an unsigned integer in base b.
  */
 void
-printn(n, b)
-long n;
-int	b;
+printn(long n, int b)
 {
 	register long a;
 
@@ -79,8 +78,7 @@ int	b;
  * then loops.
  */
 void
-panic(s)
-char *s;
+panic(char *s)
 {
 	panicstr = s;
 	update();
@@ -96,9 +94,7 @@ char *s;
  * the device argument.
  */
 void
-prdev(str, dev)
-char *str;
-dev_t dev;
+prdev(char *str, dev_t dev)
 {
 
 	printf("%s on dev %u/%u\n", str, major(dev), minor(dev));
@@ -112,9 +108,7 @@ dev_t dev;
  * status register) passed as argument.
  */
 void
-deverror(bp, o1, o2)
-register struct buf *bp;
-int	o1, o2;
+deverror(register struct buf *bp, int o1, int o2)
 {
 
 	prdev("err", bp->b_dev);

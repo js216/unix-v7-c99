@@ -8,6 +8,8 @@
 #include "../h/inode.h"
 #include "../h/buf.h"
 #include "../h/seg.h"
+void	xexpand(struct text *xp), xccdec(struct text *xp),
+	xuntext(struct text *xp);
 
 /*
  * Swap out process p.
@@ -20,9 +22,7 @@
  * panic: out of swap space
  */
 void
-xswap(p, ff, os)
-register struct proc *p;
-int	ff, os;
+xswap(register struct proc *p, int ff, int os)
 {
 	register int a;
 
@@ -50,7 +50,7 @@ int	ff, os;
  * of a process.
  */
 void
-xfree()
+xfree(void)
 {
 	register struct text *xp;
 	register struct inode *ip;
@@ -85,8 +85,7 @@ xfree()
  * a swap has to be done to get it back.
  */
 void
-xalloc(ip)
-register struct inode *ip;
+xalloc(register struct inode *ip)
 {
 	register struct text *xp;
 	register unsigned ts;
@@ -149,8 +148,7 @@ register struct inode *ip;
  * x_ccount must be 0.
  */
 void
-xexpand(xp)
-register struct text *xp;
+xexpand(register struct text *xp)
 {
 	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
 		if ((xp->x_flag&XLOAD)==0)
@@ -174,8 +172,7 @@ register struct text *xp;
  * Lock and unlock a text segment from swapping
  */
 void
-xlock(xp)
-register struct text *xp;
+xlock(register struct text *xp)
 {
 
 	while(xp->x_flag&XLOCK) {
@@ -186,8 +183,7 @@ register struct text *xp;
 }
 
 void
-xunlock(xp)
-register struct text *xp;
+xunlock(register struct text *xp)
 {
 
 	if (xp->x_flag&XWANT)
@@ -200,8 +196,7 @@ register struct text *xp;
  * When it drops to zero, free the core space.
  */
 void
-xccdec(xp)
-register struct text *xp;
+xccdec(register struct text *xp)
 {
 
 	if (xp==NULL || xp->x_ccount==0)
@@ -222,8 +217,7 @@ register struct text *xp;
  * which are from device dev (used by umount system call).
  */
 void
-xumount(dev)
-register int dev;
+xumount(register int dev)
 {
 	register struct text *xp;
 
@@ -236,8 +230,7 @@ register int dev;
  * remove a shared text segment from the text table, if possible.
  */
 void
-xrele(ip)
-register struct inode *ip;
+xrele(register struct inode *ip)
 {
 	register struct text *xp;
 
@@ -253,8 +246,7 @@ register struct inode *ip;
  * the use count must be zero.
  */
 void
-xuntext(xp)
-register struct text *xp;
+xuntext(register struct text *xp)
 {
 	register struct inode *ip;
 

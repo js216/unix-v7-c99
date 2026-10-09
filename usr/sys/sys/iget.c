@@ -8,6 +8,8 @@
 #include "../h/filsys.h"
 #include "../h/conf.h"
 #include "../h/buf.h"
+void	iexpand(struct inode *ip, struct dinode *dp),
+	tloop(dev_t dev, daddr_t bn, int f1, int f2);
 
 /*
  * Look up an inode by device,inumber.
@@ -27,9 +29,7 @@
  *	"cannot happen"
  */
 struct inode *
-iget(dev, ino)
-dev_t dev;
-ino_t ino;
+iget(dev_t dev, ino_t ino)
 {
 	register struct inode *ip;
 	register struct mount *mp;
@@ -90,9 +90,7 @@ loop:
 }
 
 void
-iexpand(ip, dp)
-register struct inode *ip;
-register struct dinode *dp;
+iexpand(register struct inode *ip, register struct dinode *dp)
 {
 	register char *p1;
 	char *p2;
@@ -121,8 +119,7 @@ register struct dinode *dp;
  * truncate and deallocate the file.
  */
 void
-iput(ip)
-register struct inode *ip;
+iput(register struct inode *ip)
 {
 
 	if(ip->i_count == 1) {
@@ -149,9 +146,7 @@ register struct inode *ip;
  * with the current time.
  */
 void
-iupdat(ip, ta, tm)
-register struct inode *ip;
-time_t *ta, *tm;
+iupdat(register struct inode *ip, time_t *ta, time_t *tm)
 {
 	register struct buf *bp;
 	struct dinode *dp;
@@ -205,8 +200,7 @@ time_t *ta, *tm;
  * than FIFO.
  */
 void
-itrunc(ip)
-register struct inode *ip;
+itrunc(register struct inode *ip)
 {
 	register int i;
 	dev_t dev;
@@ -244,10 +238,7 @@ register struct inode *ip;
 }
 
 void
-tloop(dev, bn, f1, f2)
-dev_t dev;
-daddr_t bn;
-int	f1, f2;
+tloop(dev_t dev, daddr_t bn, int f1, int f2)
 {
 	register int i;
 	register struct buf *bp;
@@ -283,8 +274,7 @@ int	f1, f2;
  * Make a new file.
  */
 struct inode *
-maknode(mode)
-int	mode;
+maknode(int mode)
 {
 	register struct inode *ip;
 
@@ -310,8 +300,7 @@ int	mode;
  * to a call to namei.
  */
 void
-wdir(ip)
-struct inode *ip;
+wdir(struct inode *ip)
 {
 
 	if (u.u_pdir->i_nlink <= 0) {

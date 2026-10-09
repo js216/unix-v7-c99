@@ -7,6 +7,7 @@
 #include "../h/reg.h"
 #include "../h/text.h"
 #include "../h/seg.h"
+int	core(void), procxmt(void);
 
 /*
  * Priority for tracing
@@ -37,9 +38,7 @@ struct
  * interrupts.
  */
 void
-signal(pgrp, sig)
-register int pgrp;
-int	sig;
+signal(register int pgrp, int sig)
 {
 	register struct proc *p;
 
@@ -55,9 +54,7 @@ int	sig;
  * the specified process.
  */
 void
-psignal(p, sig)
-register struct proc *p;
-register int sig;
+psignal(register struct proc *p, register int sig)
 {
 
 	if((unsigned)sig >= NSIG)
@@ -82,7 +79,7 @@ register int sig;
  * do something to itself.
  */
 int
-issig()
+issig(void)
 {
 	register int n;
 	register struct proc *p;
@@ -103,8 +100,8 @@ issig()
  * informed and the process is able to
  * receive commands from the parent.
  */
-void
-stop()
+static void
+stop(void)
 {
 	register struct proc *pp, *cp;
 
@@ -131,7 +128,7 @@ loop:
  *		psig();
  */
 void
-psig()
+psig(void)
 {
 	register int n, p;
 	register struct proc *rp;
@@ -176,8 +173,7 @@ psig()
  * representation in p_sig.
  */
 int
-fsig(p)
-struct proc *p;
+fsig(struct proc *p)
 {
 	register int n, i;
 
@@ -201,11 +197,10 @@ struct proc *p;
  * data+stack segments.
  */
 int
-core()
+core(void)
 {
 	register struct inode *ip;
 	register unsigned s;
-	extern int schar();
 
 	u.u_error = 0;
 	u.u_dirp = "core";
@@ -243,8 +238,7 @@ core()
  */
 
 int
-grow(sp)
-unsigned sp;
+grow(unsigned sp)
 {
 	register int si, i;
 	register struct proc *p;
@@ -274,7 +268,7 @@ unsigned sp;
  * sys-trace system call.
  */
 void
-ptrace()
+ptrace(void)
 {
 	register struct proc *p;
 	register struct a {
@@ -321,7 +315,7 @@ ptrace()
  * of the parent process in tracing.
  */
 int
-procxmt()
+procxmt(void)
 {
 	register int i;
 	register int *p;

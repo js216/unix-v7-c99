@@ -10,6 +10,7 @@
 #include "../h/seg.h"
 #include "../h/conf.h"
 #include "../h/buf.h"
+void	iinit(void), binit(void);
 
 /*
  * Initialization code.
@@ -28,7 +29,7 @@
  *	cannot be executed.
  */
 void
-main()
+main(void)
 {
 
 	startup();
@@ -90,7 +91,7 @@ main()
  * block. Usually because of an IO error.
  */
 void
-iinit()
+iinit(void)
 {
 	register struct buf *cp, *bp;
 	register struct filsys *fp;
@@ -126,7 +127,7 @@ char	buffers[NBUF][(BSIZE+BSLOP+3)&~3];
  * all buffers and setting all device buffer lists to empty.
  */
 void
-binit()
+binit(void)
 {
 	register struct buf *bp;
 	register struct buf *dp;

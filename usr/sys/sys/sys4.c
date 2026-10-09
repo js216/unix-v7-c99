@@ -6,6 +6,7 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/timeb.h"
+void	chdirec(struct inode **ipp);
 
 /*
  * Everything in this file is a routine implementing a system call.
@@ -15,7 +16,7 @@
  * return the current time (old-style entry)
  */
 void
-gtime()
+gtime(void)
 {
 	u.u_r.r_time = time;
 }
@@ -25,7 +26,7 @@ gtime()
  * DST flag
  */
 void
-ftime()
+ftime(void)
 {
 	register struct a {
 		struct	timeb	*tp;
@@ -53,7 +54,7 @@ ftime()
  * Set the time
  */
 void
-stime()
+stime(void)
 {
 	register struct a {
 		time_t	time;
@@ -65,7 +66,7 @@ stime()
 }
 
 void
-setuid()
+setuid(void)
 {
 	register int uid;
 	register struct a {
@@ -82,7 +83,7 @@ setuid()
 }
 
 void
-getuid()
+getuid(void)
 {
 
 	u.u_r.r_val1 = u.u_ruid;
@@ -90,7 +91,7 @@ getuid()
 }
 
 void
-setgid()
+setgid(void)
 {
 	register int gid;
 	register struct a {
@@ -106,7 +107,7 @@ setgid()
 }
 
 void
-getgid()
+getgid(void)
 {
 
 	u.u_r.r_val1 = u.u_rgid;
@@ -114,21 +115,21 @@ getgid()
 }
 
 void
-getpid()
+getpid(void)
 {
 	u.u_r.r_val1 = u.u_procp->p_pid;
 	u.u_r.r_val2 = u.u_procp->p_ppid;
 }
 
 void
-sync()
+sync(void)
 {
 
 	update();
 }
 
 void
-nice()
+nice(void)
 {
 	register int n;
 	register struct a {
@@ -153,7 +154,7 @@ nice()
  * in unlinking directories.
  */
 void
-unlink()
+unlink(void)
 {
 	register struct inode *ip, *pp;
 	struct a {
@@ -203,21 +204,20 @@ out1:
 	iput(pp);
 }
 void
-chdir()
+chdir(void)
 {
 	chdirec(&u.u_cdir);
 }
 
 void
-chroot()
+chroot(void)
 {
 	if (suser())
 		chdirec(&u.u_rdir);
 }
 
 void
-chdirec(ipp)
-register struct inode **ipp;
+chdirec(register struct inode **ipp)
 {
 	register struct inode *ip;
 	struct a {
@@ -246,7 +246,7 @@ bad:
 }
 
 void
-chmod()
+chmod(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -268,7 +268,7 @@ chmod()
 }
 
 void
-chown()
+chown(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -287,7 +287,7 @@ chown()
 }
 
 void
-ssig()
+ssig(void)
 {
 	register int a;
 	struct a {
@@ -307,7 +307,7 @@ ssig()
 }
 
 void
-kill()
+kill(void)
 {
 	register struct proc *p, *q;
 	register int a;
@@ -343,7 +343,7 @@ kill()
 }
 
 void
-times()
+times(void)
 {
 	register struct a {
 		time_t	(*times)[4];
@@ -355,7 +355,7 @@ times()
 }
 
 void
-profil()
+profil(void)
 {
 	register struct a {
 		short	*bufbase;
@@ -375,7 +375,7 @@ profil()
  * alarm clock signal
  */
 void
-alarm()
+alarm(void)
 {
 	register struct proc *p;
 	register int c;
@@ -395,7 +395,7 @@ alarm()
  * no one should wakeup(&u)
  */
 void
-pause()
+pause(void)
 {
 
 	for(;;)
@@ -406,7 +406,7 @@ pause()
  * mode mask for creation of files
  */
 void
-umask()
+umask(void)
 {
 	register struct a {
 		int	mask;
@@ -424,7 +424,7 @@ umask()
  * Can't set ICHG.
  */
 void
-utime()
+utime(void)
 {
 	register struct a {
 		char	*fname;

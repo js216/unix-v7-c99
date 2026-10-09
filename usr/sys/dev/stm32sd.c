@@ -9,8 +9,7 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-void iodone(), deverror(), dcflush(), physio(), rkstart();
-int spl5(), splx();
+void rkstart(void);
 
 #define	SD(off)	(*(volatile int *)(0x58005000+(off)))
 #define	ARG	0x08
@@ -43,14 +42,13 @@ struct	buf	sdtab;
 struct	buf	rrkbuf;
 
 void
-sdinit()
+sdinit(void)
 {
 	SD(DTIMER) = -1;
 }
 
-int
-sdstrategy(bp)
-register struct buf *bp;
+void
+sdstrategy(register struct buf *bp)
 {
 	int s;
 
@@ -64,11 +62,10 @@ register struct buf *bp;
 	if(sdtab.b_active == NULL)
 		rkstart();
 	splx(s);
-	return(0);
 }
 
 void
-rkstart()
+rkstart(void)
 {
 	register struct buf *bp;
 	register int com;
@@ -96,8 +93,8 @@ rkstart()
 	dk_wds[DK_N] += com;
 }
 
-int
-sdintr()
+void
+sdintr(void)
 {
 	register struct buf *bp;
 	register int sta;
@@ -107,7 +104,7 @@ sdintr()
 	SD(MASK) = 0;
 	SD(IDMACTRL) = 0;
 	if (sdtab.b_active == NULL)
-		return(0);
+		return;
 	dk_busy &= ~(1<<DK_N);
 	bp = sdtab.b_actf;
 	sdtab.b_active = NULL;
@@ -115,7 +112,7 @@ sdintr()
 		deverror(bp, sta, 0);
 		if (++sdtab.b_errcnt <= 10) {
 			rkstart();
-			return(0);
+			return;
 		}
 		bp->b_flags |= B_ERROR;
 	}
@@ -126,23 +123,18 @@ sdintr()
 	bp->b_resid = 0;
 	iodone(bp);
 	rkstart();
-	return(0);
 }
 
-int
-sdread(dev)
-dev_t dev;
+void
+sdread(dev_t dev)
 {
 
 	physio(sdstrategy, &rrkbuf, dev, B_READ);
-	return(0);
 }
 
-int
-sdwrite(dev)
-dev_t dev;
+void
+sdwrite(dev_t dev)
 {
 
 	physio(sdstrategy, &rrkbuf, dev, B_WRITE);
-	return(0);
 }

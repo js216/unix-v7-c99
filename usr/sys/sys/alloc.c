@@ -9,6 +9,7 @@
 #include "../h/ino.h"
 #include "../h/dir.h"
 #include "../h/user.h"
+int	badblock(struct filsys *fp, daddr_t bn, dev_t dev);
 typedef	struct fblk *FBLKP;
 
 /*
@@ -23,8 +24,7 @@ typedef	struct fblk *FBLKP;
  * the free list is exhausted.
  */
 struct buf *
-alloc(dev)
-dev_t dev;
+alloc(dev_t dev)
 {
 	daddr_t bno;
 	register struct filsys *fp;
@@ -76,9 +76,7 @@ nospace:
  * specified device.
  */
 void
-free(dev, bno)
-dev_t dev;
-daddr_t bno;
+free(dev_t dev, daddr_t bno)
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -119,10 +117,7 @@ daddr_t bno;
  * bad block on dev x/y -- not in range
  */
 int
-badblock(fp, bn, dev)
-register struct filsys *fp;
-daddr_t bn;
-dev_t dev;
+badblock(register struct filsys *fp, daddr_t bn, dev_t dev)
 {
 
 	if (bn < fp->s_isize || bn >= fp->s_fsize) {
@@ -144,8 +139,7 @@ dev_t dev;
  * up NICINOD more.
  */
 struct inode *
-ialloc(dev)
-dev_t dev;
+ialloc(dev_t dev)
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -223,9 +217,7 @@ loop:
  * block and throws away any more.
  */
 void
-ifree(dev, ino)
-dev_t dev;
-ino_t ino;
+ifree(dev_t dev, ino_t ino)
 {
 	register struct filsys *fp;
 
@@ -257,8 +249,7 @@ ino_t ino;
  *	this "cannot happen"
  */
 struct filsys *
-getfs(dev)
-dev_t dev;
+getfs(dev_t dev)
 {
 	register struct mount *mp;
 	register struct filsys *fp;
@@ -287,7 +278,7 @@ dev_t dev;
  * super blocks.
  */
 void
-update()
+update(void)
 {
 	register struct inode *ip;
 	register struct mount *mp;

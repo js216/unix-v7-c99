@@ -16,30 +16,27 @@
 #include "../h/conf.h"
 #include "../h/seg.h"
 
-int
-mmread(dev)
-int	dev;
+void
+mmread(int dev)
 {
 	register int c;
 
 	if(minor(dev) == 2)
-		return(0);
+		return;
 	do {
 		if ((c = fumem(u.u_offset)) < 0)
 			u.u_error = ENXIO;
 	} while(u.u_error==0 && passc(c)>=0);
-	return(0);
 }
 
-int
-mmwrite(dev)
-int	dev;
+void
+mmwrite(int dev)
 {
 	register int c;
 
 	if(minor(dev) == 2) {
 		u.u_count = 0;
-		return(0);
+		return;
 	}
 	for(;;) {
 		if ((c=cpass())<0 || u.u_error!=0)
@@ -47,5 +44,4 @@ int	dev;
 		if (sumem(u.u_offset-1, c) < 0)
 			u.u_error = ENXIO;
 	}
-	return(0);
 }

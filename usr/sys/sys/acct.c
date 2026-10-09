@@ -6,13 +6,14 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
+int	compress(time_t t);
 
 /*
  * Perform process accounting functions.
  */
 
 void
-sysacct()
+sysacct(void)
 {
 	register struct inode *ip;
 	register struct a {
@@ -50,7 +51,7 @@ sysacct()
  * On exit, write a record on the accounting file.
  */
 void
-acct()
+acct(void)
 {
 	register int i;
 	register struct inode *ip;
@@ -88,8 +89,7 @@ acct()
  * with 3 bits base-8 exponent, 13 bits fraction.
  */
 int
-compress(t)
-register time_t t;
+compress(register time_t t)
 {
 	register int exp = 0, round = 0;
 
@@ -114,7 +114,7 @@ register time_t t;
  * occur if core grows.
  */
 void
-syslock()
+syslock(void)
 {
 	register struct proc *p;
 	register struct a {

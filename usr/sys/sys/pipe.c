@@ -23,7 +23,7 @@
  * Put it all together with flags.
  */
 void
-pipe()
+pipe(void)
 {
 	register struct inode *ip;
 	register struct file *rf, *wf;
@@ -60,8 +60,7 @@ pipe()
  * Read call directed to a pipe.
  */
 void
-readp(fp)
-register struct file *fp;
+readp(register struct file *fp)
 {
 	register struct inode *ip;
 
@@ -116,8 +115,7 @@ loop:
  * Write call directed to a pipe.
  */
 void
-writep(fp)
-register struct file *fp;
+writep(register struct file *fp)
 {
 	register int c;
 	register struct inode *ip;
@@ -190,8 +188,7 @@ loop:
  * set the WANT bit and sleep.
  */
 void
-plock(ip)
-register struct inode *ip;
+plock(register struct inode *ip)
 {
 
 	while(ip->i_flag&ILOCK) {
@@ -209,8 +206,7 @@ register struct inode *ip;
  * to unlock inodes in general.
  */
 void
-prele(ip)
-register struct inode *ip;
+prele(register struct inode *ip)
 {
 
 	ip->i_flag &= ~ILOCK;
