@@ -535,7 +535,7 @@ int	ddr;
 unsigned long	ramb, ramn, tabb, tabn, coreb, coret, pguser, gicd, gicc;
 #define	NMAP	8
 unsigned long	mapb[NMAP], mape[NMAP];
-char	mapa[NMAP][32];
+char	mapa[NMAP][100];
 int	nmap;
 
 int
@@ -675,7 +675,7 @@ input(void)
 	register struct tab *q;
 	int count, n;
 	long num;
-	char keyw[32], dev[32];
+	char keyw[100], dev[100];
 
 	if (fgets(line, 100, stdin) == NULL)
 		return(0);
