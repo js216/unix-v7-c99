@@ -5,13 +5,14 @@
  */
 
 void
-swab(char *from, char *to, register int n)
+swab(register char *pf, register char *pt, register int n)
 {
-	register short *pf = (short *)from, *pt = (short *)to;
+	register int c;
 
 	n /= 2;
 	while (--n >= 0) {
-		*pt++ = (*pf << 8) + ((*pf >> 8) & 0377);
-		pf++;
+		c = *pf++;
+		*pt++ = *pf++;
+		*pt++ = c;
 	}
 }
