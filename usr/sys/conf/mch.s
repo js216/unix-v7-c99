@@ -118,9 +118,10 @@ resume:
 	isb
 	ldmia r1, {r4-r11}
 	ldr sp, [r1, #32]
-	ldr lr, [r1, #36]
+	ldr r2, [r1, #36]
+	bl spl0
 	mov r0, #1
-	bx lr
+	bx r2
 
 dcflush:
 	mrc p15, 0, r2, c0, c0, 1
