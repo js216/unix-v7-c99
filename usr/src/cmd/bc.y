@@ -1,5 +1,5 @@
 %{
-	void getout(void);
+	void getout();
 %}
 %define api.value.type {char *}
 %right '='
@@ -18,27 +18,12 @@
 %{
 #include <stdio.h>
 #include <stdarg.h>
-#include <stdint.h>
 #define bundle(...) (yyval = (bundle)(__VA_ARGS__))
 char *yyval;
 char *(bundle)(int i, ...);
-void routput(char *p);
-void output(char *p);
-void conout(char *p, char *s);
-void yyerror(char *s);
-void pp(char *s);
-void tp(char *s);
-void yyinit(int argc, char *argv[]);
-char *getf(char *p);
-char *geta(char *p);
-int yylex(void);
-int cpeek(int c, int yes, int no);
-int getch(void);
-int pipe(int *fd);
-int fork(void);
-int close(int fd);
-int dup(int fd);
-int execl(char *path, char *arg0, ...);
+void output(), conout(), yyerror(), pp(), tp();
+char *getf(), *geta();
+int yylex(), cpeek(), getch();
 FILE *in;
 char cary[1000], *cp = { cary };
 char string[1000], *str = {string};
@@ -370,7 +355,7 @@ char *letr[26] = {
   "k","l","m","n","o","p","q","r","s","t",
   "u","v","w","x","y","z" } ;
 char *dot = { "." };
-int yylex(void){
+int yylex(){
 	int c, ch;
 restart:
 	c = getch();
@@ -465,7 +450,7 @@ int cpeek( int c, int yes, int no ){
 	}
 }
 
-int getch(void){
+int getch(){
 	int ch;
 loop:
 	ch = (peekc < 0) ? getc(in) : peekc;
@@ -497,7 +482,7 @@ char *(bundle)(int i, ...){
 
 	va_start(p, i);
 	q = b_sp_nxt;
-	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)(uintptr_t)q );
+	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)q );
 	while(i-- > 0){
 		if( b_sp_nxt >= & b_space[b_sp_max] ) yyerror( "bundling space exceeded" );
 		* b_sp_nxt++ = va_arg(p, char *);
@@ -508,9 +493,9 @@ char *(bundle)(int i, ...){
 	return( yyval );
 }
 
-void routput(char *p) {
-	if( bdebug ) printf("routput(%o)\n", (unsigned)(uintptr_t)p );
-	if( (uintptr_t)p - (uintptr_t)b_space < sizeof b_space ){
+void routput(p) char *p; {
+	if( bdebug ) printf("routput(%o)\n", (unsigned)p );
+	if( (char **)p >= &b_space[0] && (char **)p < &b_space[b_sp_max]){
 		/* part of a bundle */
 		char **q = (char **)p;
 		while( *q != 0 ) routput( *q++ );
@@ -518,7 +503,7 @@ void routput(char *p) {
 	else printf( p );	 /* character string */
 }
 
-void output( char *p ) {
+void output( p ) char *p; {
 	routput( p );
 	b_sp_nxt = & b_space[0];
 	printf( "\n" );
@@ -527,7 +512,7 @@ void output( char *p ) {
 	crs = rcrs;
 }
 
-void conout( char *p, char *s ) {
+void conout( p, s ) char *p; char *s; {
 	printf("[");
 	routput( p );
 	printf("]s%s\n", s );
@@ -535,7 +520,7 @@ void conout( char *p, char *s ) {
 	lev--;
 }
 
-void yyerror( char *s ) {
+void yyerror( s ) char *s; {
 	if(ifile > sargc)ss="teletype";
 	printf("c[%s on line %d, %s]pc\n", s ,ln+1,ss);
 	fflush(stdout);
@@ -546,7 +531,7 @@ void yyerror( char *s ) {
 	b_sp_nxt = &b_space[0];
 }
 
-void pp( char *s ) {
+void pp( s ) char *s; {
 	/* puts the relevant stuff on pre and post for the letter s */
 
 	bundle(3, "S", s, pre );
@@ -555,14 +540,14 @@ void pp( char *s ) {
 	post = yyval;
 }
 
-void tp( char *s ) { /* same as pp, but for temps */
+void tp( s ) char *s; { /* same as pp, but for temps */
 	bundle(3, "0S", s, pre );
 	pre = yyval;
 	bundle(4, post, "L", s, "s." );
 	post = yyval;
 }
 
-void yyinit(int argc, char *argv[]){
+void yyinit(argc,argv) int argc; char *argv[];{
 	signal( 2, (int(*)())1 );	/* ignore all interrupts */
 	sargv=argv;
 	sargc= -- argc;
@@ -573,23 +558,25 @@ void yyinit(int argc, char *argv[]){
 	ln = 0;
 	ss = sargv[1];
 }
-void getout(void){
+void getout(){
 	printf("q");
 	fflush(stdout);
 	exit(0);
 }
 
 char *
-getf(char *p){
+getf(p) char *p;{
 	return(&funtab[2*(*p -0141)]);
 }
 char *
-geta(char *p){
+geta(p) char *p;{
 	return(&atab[2*(*p - 0141)]);
 }
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int p[2];
 
@@ -621,6 +608,6 @@ main(int argc, char **argv)
 	dup(p[0]);
 	close(p[0]);
 	close(p[1]);
-	execl("/bin/dc", "dc", "-", (char *)0);
-	execl("/usr/bin/dc", "dc", "-", (char *)0);
+	execl("/bin/dc", "dc", "-", 0);
+	execl("/usr/bin/dc", "dc", "-", 0);
 }
