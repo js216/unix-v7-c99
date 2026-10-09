@@ -13,7 +13,7 @@ getit(void)
 {	register int i;
 	register int c;
 	slen=alen=elen=0;
-	for(i=0;;i++)
+	for(i=0;i<(int)sizeof buf;i++)
 	{	buf[i]=c=getchar();
 		switch(c)
 		{
@@ -32,6 +32,8 @@ getit(void)
 			continue;
 		}
 	}
+	alen=i;
+	return(i);
 }
 static void
 putit(int ntab)
