@@ -6,14 +6,10 @@
 #include	<stdio.h>
 
 int	Errors = 0;
-char	*strcat();
-char	*strcpy();
 
-void mkdir();
+void mkdir(char *d);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 
 	signal(SIGHUP, SIG_IGN);
@@ -32,8 +28,7 @@ char *argv[];
 }
 
 void
-mkdir(d)
-char *d;
+mkdir(char *d)
 {
 	char pname[128], dname[128];
 	register int i, slash = 0;
