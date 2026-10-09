@@ -507,26 +507,18 @@ int	dev, rw;
 	/*
 	 * Check odd base, odd count, and address wraparound
 	 */
-	if (base&01 || u.u_count&01 || base>=base+u.u_count)
+	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
+	    base+u.u_count > USERSIZE)
 		goto bad;
 	ts = (u.u_tsize+127) & ~0177;
 	if (u.u_sep)
 		ts = 0;
-	nb = (base>>6) & 01777;
+	nb = base>>6;
 	/*
 	 * Check overlap with text. (ts and nb now
 	 * in 64-byte clicks)
 	 */
 	if (nb < ts)
-		goto bad;
-	/*
-	 * Check that transfer is either entirely in the
-	 * data or in the stack: that is, either
-	 * the end is in the data or the start is in the stack
-	 * (remember wraparound was already checked).
-	 */
-	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
-	    && (unsigned)nb < 1024-u.u_ssize)
 		goto bad;
 	spl6();
 	while (bp->b_flags&B_BUSY) {
@@ -539,8 +531,8 @@ int	dev, rw;
 	 * Compute physical address by simulating
 	 * the segmentation hardware.
 	 */
-	ts = (u.u_sep? &u.u_uisa[8]: &u.u_uisa[0])[nb>>7] + (nb&0177);
-	bp->b_un.b_addr = (caddr_t)((ts<<6) + (base&077));
+	ts = u.u_procp->p_addr + USIZE + nb;
+	bp->b_un.b_addr = CLKADDR(ts) + (base&077);
 	bp->b_xmem = (ts>>10) & 077;
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;
