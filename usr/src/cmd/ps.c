@@ -32,10 +32,10 @@ int	vflg;
 int	kflg;
 int	xflg;
 char	*tptr;
-long	lseek();
-char	*gettty();
-char	*getptr();
-int	prcom(), getbyte(), within(); void getdev();
+char	*gettty(void);
+char	*getptr(char **adr);
+int	prcom(int puid), getbyte(char *adr), within(char *adr, long lbd, long ubd);
+void	getdev(void);
 int	aflg;
 int	mem;
 int	swmem;
@@ -51,9 +51,7 @@ struct devl {
 char	*coref;
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int i;
 	char *ap;
@@ -157,7 +155,7 @@ bbreak:
 }
 
 void
-getdev()
+getdev(void)
 {
 #include <sys/stat.h>
 	register FILE *df;
@@ -187,9 +185,8 @@ getdev()
 	}
 }
 
-long
-round(a, b)
-	long		a, b;
+static long
+round(long a, long b)
 {
 	long		w = ((a+b-1)/b)*b;
 
@@ -203,8 +200,7 @@ struct map {
 struct map datmap;
 int	file;
 int
-prcom(puid)
-int puid;
+prcom(int puid)
 {
 	int abuf[128];
 	long addr;
@@ -344,7 +340,7 @@ int puid;
 }
 
 char *
-gettty()
+gettty(void)
 {
 	register int i;
 	register char *p;
@@ -363,8 +359,7 @@ gettty()
 }
 
 char *
-getptr(adr)
-char **adr;
+getptr(char **adr)
 {
 	char *ptr;
 	register char *p, *pa;
@@ -379,8 +374,7 @@ char **adr;
 }
 
 int
-getbyte(adr)
-char *adr;
+getbyte(char *adr)
 {
 	register struct map *amap = &datmap;
 	char b;
@@ -402,9 +396,7 @@ char *adr;
 
 
 int
-within(adr,lbd,ubd)
-char *adr;
-long lbd, ubd;
+within(char *adr, long lbd, long ubd)
 {
 	return((long)adr>=lbd && (long)adr<ubd);
 }
