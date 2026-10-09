@@ -27,22 +27,21 @@ struct predlist {
 	struct nodelist *pred;
 };
 
-struct nodelist *index(char *s);
-struct nodelist *findloop(void);
-struct nodelist *mark(struct nodelist *i);
-char *malloc(unsigned n);
-int present(struct nodelist *i, struct nodelist *j);
-int anypred(struct nodelist *i);
-int cmp(char *s, char *t);
-void error(char *s, char *t);
-void note(char *s, char *t);
+struct nodelist *index();
+struct nodelist *findloop();
+struct nodelist *mark();
+char *malloc();
+int present(), anypred(), cmp();
+void error(), note();
 char *empty = "";
 
 /*	the first for loop reads in the graph,
  *	the second prints out the ordering
 */
 int
-main(int argc, char **argv)
+main(argc,argv)
+int	argc;
+char **argv;
 {
 	register struct predlist *t;
 	FILE *input = stdin;
@@ -90,7 +89,8 @@ main(int argc, char **argv)
 /*	is i present on j's predecessor list?
 */
 int
-present(struct nodelist *i, struct nodelist *j)
+present(i,j)
+struct nodelist *i, *j;
 {
 	register struct predlist *t;
 	for(t=j->inedges; t!=NULL; t=t->nextpred)
@@ -102,7 +102,8 @@ present(struct nodelist *i, struct nodelist *j)
 /*	is there any live predecessor for i?
 */
 int
-anypred(struct nodelist *i)
+anypred(i)
+struct nodelist *i;
 {
 	register struct predlist *t;
 	for(t=i->inedges; t!=NULL; t=t->nextpred)
@@ -114,7 +115,8 @@ anypred(struct nodelist *i)
 /*	turn a string into a node pointer
 */
 struct nodelist *
-index(register char *s)
+index(s)
+register char *s;
 {
 	register struct nodelist *i;
 	register char *t;
@@ -131,13 +133,13 @@ index(register char *s)
 	i->nextnode->nextnode = NULL;
 	i->nextnode->inedges = NULL;
 	i->nextnode->live = DEAD;
-	while((*t++ = *s++))
-		;
+	while((*t++ = *s++));
 	return(i);
 }
 
 int
-cmp(register char *s, register char *t)
+cmp(s,t)
+register char *s, *t;
 {
 	while(*s==*t) {
 		if(*s==0)
@@ -149,14 +151,16 @@ cmp(register char *s, register char *t)
 }
 
 void
-error(char *s, char *t)
+error(s,t)
+char *s, *t;
 {
 	note(s,t);
 	exit(1);
 }
 
 void
-note(char *s, char *t)
+note(s,t)
+char *s,*t;
 {
 	fprintf(stderr,"tsort: %s%s\n",s,t);
 }
@@ -165,7 +169,7 @@ note(char *s, char *t)
  *	node in it
 */
 struct nodelist *
-findloop(void)
+findloop()
 {
 	register struct nodelist *i, *j;
 	register struct predlist *p;
