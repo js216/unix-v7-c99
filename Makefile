@@ -60,7 +60,7 @@ boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 	    usr/sys/conf/qemuconf) $@
 
-etc/mkfs: usr/src/cmd/mkfs.c
+etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
 	    mkdir -p "$$tmpinc"; \
