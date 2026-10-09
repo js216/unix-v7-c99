@@ -9,11 +9,9 @@
 struct	stat	stbuf1, stbuf2;
 char	iobuf[BSIZE];
 
-int copy();
+int copy(char *from, char *to);
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i, r;
 
@@ -35,8 +33,7 @@ usage:
 }
 
 int
-copy(from, to)
-char *from, *to;
+copy(char *from, char *to)
 {
 	int fold, fnew, n;
 	register char *p1, *p2, *bp;
