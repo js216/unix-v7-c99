@@ -25,7 +25,7 @@ void	iinit(void), binit(void);
  *	fork - process 0 to schedule
  *	     - process 1 execute bootstrap
  *
- * loop at low address in user mode -- /etc/init
+ * exit at low address in user mode -- /etc/init
  *	cannot be executed.
  */
 void

@@ -37,7 +37,7 @@ daddr_t	swplo;			/* block number of swap space */
 int	nswap;			/* size of swap space */
 int	updlock;		/* lock for sync */
 daddr_t	rablock;		/* block to be read ahead */
-extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
+extern	char	regloc[];	/* locs. of saved user registers (sysent.c) */
 char	msgbuf[MSGBUFS];	/* saved "printf" characters */
 extern	char	*msgbufp;	/* next saved printf character */
 dev_t	rootdev;		/* device of the root */

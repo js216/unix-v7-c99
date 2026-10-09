@@ -12,7 +12,7 @@
 #include "../h/conf.h"
 
 /*
- * Icode is the octal bootstrap
+ * Icode is the hex bootstrap
  * program executed in user mode
  * to bring up the system.
  */
