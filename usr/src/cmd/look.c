@@ -10,9 +10,9 @@ int tab;
 char entry[250];
 char word[250];
 char key[50];
+
 void canon(char *old, char *new);
 int compare(char *s, char *t), getword(char *w);
-
 int
 main(int argc, char **argv)
 {

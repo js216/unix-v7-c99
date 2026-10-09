@@ -9,8 +9,8 @@ char	code[256];
 char	squeez[256];
 char	vect[256];
 struct string { int last, max; char *p; } string1, string2;
-int	next(struct string *s), nextc(struct string *s);
 
+int	next(struct string *s), nextc(struct string *s);
 int
 main(int argc, char **argv)
 {

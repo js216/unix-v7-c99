@@ -19,9 +19,9 @@ struct
 } oh;
 
 char	*tmp;
+void	conv(char *fil);
 int	f;
 int	tf;
-void	conv(char *fil);
 union {
 	char	buf[512];
 	int	magic;

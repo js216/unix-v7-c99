@@ -32,13 +32,13 @@
 #define isabreak(c) (btable[c])
 
 extern char *getline(void);
-int status;
 void diag(char *s,char *arg), msg(char *s,char *arg), cmpline(char *pend);
 void getsort(void), putline(char *strt, char *end), putout(char *strt,char *end);
 void onintr(int sig);
 int storeh(int num,char *strtp), hash(char *strtp,char *endp);
 int cmpword(char *cpp,char *pend,char *hpp);
 char *rtrim(char *a,char *c,int d), *ltrim(char *c,char *b,int d);
+int status;
 
 
 char *hasht[MAXT];
