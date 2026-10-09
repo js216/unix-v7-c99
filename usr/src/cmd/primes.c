@@ -23,8 +23,8 @@ int	nbuf;
 char	*arg;
 long long nn;
 
-int
-getch()
+static int
+getch(void)
 {
 	char c;
 
@@ -35,8 +35,8 @@ getch()
 	return(c);
 }
 
-long long
-getnum()
+static long long
+getnum(void)
 {
 	register int c;
 	long long n;
@@ -53,9 +53,8 @@ getnum()
 	}
 }
 
-void
-wrchar(c)
-int c;
+static void
+wrchar(int c)
 {
 	iobuf[nbuf++] = c;
 	if(nbuf >= 512) {
@@ -64,18 +63,16 @@ int c;
 	}
 }
 
-void
-ftoa(n)
-long long n;
+static void
+ftoa(long long n)
 {
 	if(n >= 10)
 		ftoa(n/10);
 	wrchar((int)(n%10) + '0');
 }
 
-void
-mark(p)
-int p;
+static void
+mark(int p)
 {
 	long long off;
 
@@ -87,9 +84,7 @@ int p;
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i, f, p;
 	long long n;
