@@ -5,12 +5,14 @@
 #include <signal.h>
 #include <stdio.h>
 
-extern char *sys_errlist[];
 int
-main(int argc, char **argv)
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	register int signo, pid, res;
 	int errlev;
+	extern char *sys_errlist[];
 	extern int errno;
 
 	errlev = 0;
