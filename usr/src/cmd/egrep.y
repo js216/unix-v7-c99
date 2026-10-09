@@ -57,8 +57,10 @@ int	nsucc;
 
 int	f;
 char	*fname;
-int	yylex(), nextch(), enter(), cclenter(), node(), unary(), cstate(), member(), notin();
-void	yyerror(), synerror(), overflo(), add(), follow(), execute();
+int	yylex(void), nextch(void), enter(int x), cclenter(int x), node(int x, int l, int r);
+int	unary(int x, int d), cstate(int v), member(int symb, int set, int torf), notin(int n);
+void	yyerror(char *s), synerror(void), overflo(void), add(int *array, int n);
+void	follow(int v), execute(char *file);
 %}
 
 %%
@@ -107,13 +109,13 @@ r:	r OR r
 
 %%
 void
-yyerror(s) char *s; {
+yyerror(char *s) {
 	fprintf(stderr, "egrep: %s\n", s);
 	exit(2);
 }
 
 int
-yylex() {
+yylex(void) {
 	extern int yylval;
 	int cclcnt, x;
 	register int c, d;
@@ -165,7 +167,7 @@ yylex() {
 	}
 }
 int
-nextch() {
+nextch(void) {
 	register int c;
 	if (fflag) {
 		if ((c = getc(stdin)) == EOF) return(0);
@@ -175,13 +177,13 @@ nextch() {
 }
 
 void
-synerror() {
+synerror(void) {
 	fprintf(stderr, "egrep: syntax error\n");
 	exit(2);
 }
 
 int
-enter(x) int x; {
+enter(int x) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = 0;
@@ -190,7 +192,7 @@ enter(x) int x; {
 }
 
 int
-cclenter(x) int x; {
+cclenter(int x) {
 	register int linno;
 	linno = enter(x);
 	right[linno] = count;
@@ -198,7 +200,7 @@ cclenter(x) int x; {
 }
 
 int
-node(x, l, r) int x, l, r; {
+node(int x, int l, int r) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = l;
@@ -209,7 +211,7 @@ node(x, l, r) int x, l, r; {
 }
 
 int
-unary(x, d) int x, d; {
+unary(int x, int d) {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = d;
@@ -218,13 +220,13 @@ unary(x, d) int x, d; {
 	return(line++);
 }
 void
-overflo() {
+overflo(void) {
 	fprintf(stderr, "egrep: regular expression too long\n");
 	exit(2);
 }
 
-void
-cfoll(v) int v; {
+static void
+cfoll(int v) {
 	register int i;
 	if (left[v] == 0) {
 		count = 0;
@@ -238,8 +240,8 @@ cfoll(v) int v; {
 		cfoll(right[v]);
 	}
 }
-void
-cgotofn() {
+static void
+cgotofn(void) {
 	register int c, i, k;
 	int n, s;
 	char symbol[NCHARS];
@@ -334,7 +336,7 @@ cgotofn() {
 }
 
 int
-cstate(v) int v; {
+cstate(int v) {
 	register int b;
 	if (left[v] == 0) {
 		if (tmpstat[v] != 1) {
@@ -361,7 +363,7 @@ cstate(v) int v; {
 
 
 int
-member(symb, set, torf) int symb, set, torf; {
+member(int symb, int set, int torf) {
 	register int i, num, pos;
 	num = chars[set];
 	pos = set + 1;
@@ -371,7 +373,7 @@ member(symb, set, torf) int symb, set, torf; {
 }
 
 int
-notin(n) int n; {
+notin(int n) {
 	register int i, j, pos;
 	for (i=0; i<=n; i++) {
 		if (positions[state[i]] == count) {
@@ -387,7 +389,7 @@ notin(n) int n; {
 }
 
 void
-add(array, n) int *array, n; {
+add(int *array, int n) {
 	register int i;
 	if (nxtpos + count > MAXPOS) overflo();
 	array[n] = nxtpos;
@@ -400,7 +402,7 @@ add(array, n) int *array, n; {
 }
 
 void
-follow(v) int v; {
+follow(int v) {
 	int p;
 	if (v == line) return;
 	p = parent[v];
@@ -432,9 +434,7 @@ follow(v) int v; {
 
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -510,8 +510,7 @@ out:
 }
 
 void
-execute(file)
-char *file;
+execute(char *file)
 {
 	register char *p;
 	register int cstat;
