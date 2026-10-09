@@ -38,17 +38,14 @@ int	mflg;
 int	tabc;
 char	*tty;
 int	mode;
-char	*ttyname();
-char	*ctime();
-int	tpgetc(), pgetc(); void done(), fixtty(), print(), mopen(), putpage(), nexbuf(), put(), putcp();
+int	tpgetc(int ai), pgetc(int i);
+void	done(void), onintr(int sig), fixtty(void), print(char *fp, char **argp);
+void	mopen(char **ap), putpage(void), nexbuf(void), put(int ac), putcp(int c);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int nfdone;
-	void onintr();
 
 	setbuf(stdout, obuf);
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
@@ -108,7 +105,7 @@ char **argv;
 }
 
 void
-done()
+done(void)
 {
 
 	if (tty)
@@ -117,16 +114,17 @@ done()
 }
 
 void
-onintr()
+onintr(int sig)
 {
 
+	(void)sig;
 	if (tty)
 		chmod(tty, mode);
 	_exit(1);
 }
 
 void
-fixtty()
+fixtty(void)
 {
 	struct stat sbuf;
 
@@ -139,9 +137,7 @@ fixtty()
 }
 
 void
-print(fp, argp)
-char *fp;
-char **argp;
+print(char *fp, char **argp)
 {
 	struct stat sbuf;
 	register int sncol;
@@ -222,8 +218,7 @@ char **argp;
 }
 
 void
-mopen(ap)
-char **ap;
+mopen(char **ap)
 {
 	register char **p, *p1;
 
@@ -243,7 +238,7 @@ char **ap;
 }
 
 void
-putpage()
+putpage(void)
 {
 	register int lastcol, i, c;
 	int j;
@@ -288,7 +283,7 @@ putpage()
 }
 
 void
-nexbuf()
+nexbuf(void)
 {
 	register int n;
 	register char *rbufp;
@@ -312,8 +307,7 @@ nexbuf()
 }
 
 int
-tpgetc(ai)
-int ai;
+tpgetc(int ai)
 {
 	register char **p;
 	register int c, i;
@@ -349,8 +343,7 @@ loop:
 }
 
 int
-pgetc(i)
-int i;
+pgetc(int i)
 {
 	register int c;
 
@@ -383,8 +376,7 @@ int i;
 	return(c);
 }
 void
-put(ac)
-int ac;
+put(int ac)
 {
 	register int ns, c;
 
@@ -431,8 +423,7 @@ int ac;
 }
 
 void
-putcp(c)
-int c;
+putcp(int c)
 {
 	if (page >= fpage)
 		putchar(c);
