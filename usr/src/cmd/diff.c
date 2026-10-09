@@ -230,10 +230,10 @@ filename(char **pa1, char **pa2)
 				a1 = b1;
 	}
 	else if(a1[0]=='-'&&a1[1]==0&&tempfile==0) {
-		signal(SIGHUP,(int)done);
-		signal(SIGINT,(int)done);
-		signal(SIGPIPE,(int)done);
-		signal(SIGTERM,(int)done);
+		signal(SIGHUP,done);
+		signal(SIGINT,done);
+		signal(SIGPIPE,done);
+		signal(SIGTERM,done);
 		*pa1 = tempfile = mktemp("/tmp/dXXXXX");
 		if((f=creat(tempfile,0600)) < 0) {
 			mesg("cannot create ",tempfile);

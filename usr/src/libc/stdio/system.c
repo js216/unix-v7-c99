@@ -11,13 +11,13 @@ system(char *s)
 		execl("/bin/sh", "sh", "-c", s, 0);
 		_exit(127);
 	}
-	istat = (int (*)())signal(SIGINT, (int)SIG_IGN);
-	qstat = (int (*)())signal(SIGQUIT, (int)SIG_IGN);
+	istat = signal(SIGINT, SIG_IGN);
+	qstat = signal(SIGQUIT, SIG_IGN);
 	while ((w = wait(&status)) != pid && w != -1)
 		;
 	if (w == -1)
 		status = -1;
-	signal(SIGINT, (int)istat);
-	signal(SIGQUIT, (int)qstat);
+	signal(SIGINT, istat);
+	signal(SIGQUIT, qstat);
 	return(status);
 }

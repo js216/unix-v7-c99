@@ -349,7 +349,7 @@ loop:
 	talloc();
 	if(argc<=2)
 		instruct(info);
-	signal(SIGINT, (int)done);
+	signal(SIGINT, done);
 	argv[argc] = 0;
 	if(find(&argv[1],argc-1)==0)
 		dunno();

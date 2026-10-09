@@ -278,11 +278,11 @@ main(int argc, char **argv)
 		exit(1);
 	}
 	close(a);
-	signal(SIGHUP, (int)term);
+	signal(SIGHUP, term);
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
-		signal(SIGINT, (int)term);
-	signal(SIGPIPE,(int)term);
-	signal(SIGTERM,(int)term);
+		signal(SIGINT, term);
+	signal(SIGPIPE,term);
+	signal(SIGTERM,term);
 	nfiles = eargc;
 	if(!mflg && !cflg) {
 		sort();

@@ -82,7 +82,7 @@ int getpid(void);
 int umask(int n);
 int sync(void);
 int kill(int pid, int sig);
-int signal();
+int (*signal())();
 int alarm(int n);
 int pause(void);
 int nice(int incr);

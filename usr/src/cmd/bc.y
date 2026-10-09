@@ -34,7 +34,6 @@ char *geta(char *p);
 int yylex(void);
 int cpeek(int c, int yes, int no);
 int getch(void);
-int signal(int sig, int func);
 int pipe(int *fd);
 int fork(void);
 int close(int fd);
@@ -564,7 +563,7 @@ void tp( char *s ) { /* same as pp, but for temps */
 }
 
 void yyinit(int argc, char *argv[]){
-	signal( 2, 1 );	/* ignore all interrupts */
+	signal( 2, (int(*)())1 );	/* ignore all interrupts */
 	sargv=argv;
 	sargc= -- argc;
 	if(sargc == 0)in=stdin;

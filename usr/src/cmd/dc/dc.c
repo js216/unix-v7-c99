@@ -866,8 +866,8 @@ init(int argc, char *argv[])
 {
 	register struct sym *sp;
 
-	if (signal(SIGINT, (int)SIG_IGN) != (int)SIG_IGN)
-		signal(SIGINT,(int)onintr);
+	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
+		signal(SIGINT,onintr);
 	setbuf(stdout,(char *)NULL);
 	svargc = --argc;
 	svargv = argv;
@@ -922,7 +922,7 @@ init(int argc, char *argv[])
 int
 onintr(){
 
-	signal(SIGINT,(int)onintr);
+	signal(SIGINT,onintr);
 	while(readptr != &readstk[0]){
 		if(*readptr != 0){release(*readptr);}
 		readptr--;
@@ -1572,9 +1572,9 @@ command(void){
 			execl("/bin/sh","sh","-c",line,0);
 			exit(0100);
 		}
-		savint = (int (*)())signal(SIGINT, (int)SIG_IGN);
+		savint = signal(SIGINT, SIG_IGN);
 		while((rpid = wait(&retcode)) != pid && rpid != -1);
-		signal(SIGINT,(int)savint);
+		signal(SIGINT,savint);
 		printf("!\n");
 		return(0);
 	}

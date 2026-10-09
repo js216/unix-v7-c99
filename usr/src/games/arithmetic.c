@@ -22,7 +22,7 @@ main(int argc, char *argv[])
 	int ans,pans,i,j,t;
 	extern int delete(void);
 
-	signal(SIGINT, (int)delete);
+	signal(SIGINT, delete);
 
 	range = 11;
 	dif = 0;

@@ -140,12 +140,12 @@ noupdate:
 			usage();
 			done(1);
 		}
-		if (signal(SIGINT, (int)SIG_IGN) != (int)SIG_IGN)
-			signal(SIGINT, (int)onintr);
-		if (signal(SIGHUP, (int)SIG_IGN) != (int)SIG_IGN)
-			signal(SIGHUP, (int)onhup);
-		if (signal(SIGQUIT, (int)SIG_IGN) != (int)SIG_IGN)
-			signal(SIGQUIT, (int)onquit);
+		if (signal(SIGINT, SIG_IGN) != SIG_IGN)
+			signal(SIGINT, onintr);
+		if (signal(SIGHUP, SIG_IGN) != SIG_IGN)
+			signal(SIGHUP, onhup);
+		if (signal(SIGQUIT, SIG_IGN) != SIG_IGN)
+			signal(SIGQUIT, onquit);
 /*
 		if (signal(SIGTERM, SIG_IGN) != SIG_IGN)
 			signal(SIGTERM, onterm);
@@ -647,7 +647,7 @@ int
 onintr(int sig)
 {
 	(void)sig;
-	signal(SIGINT, (int)SIG_IGN);
+	signal(SIGINT, SIG_IGN);
 	term++;
 	return(0);
 }
@@ -656,7 +656,7 @@ int
 onquit(int sig)
 {
 	(void)sig;
-	signal(SIGQUIT, (int)SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
 	term++;
 	return(0);
 }
@@ -665,7 +665,7 @@ int
 onhup(int sig)
 {
 	(void)sig;
-	signal(SIGHUP, (int)SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
 	term++;
 	return(0);
 }
@@ -674,7 +674,7 @@ int
 onterm(int sig)
 {
 	(void)sig;
-	signal(SIGTERM, (int)SIG_IGN);
+	signal(SIGTERM, SIG_IGN);
 	term++;
 	return(0);
 }

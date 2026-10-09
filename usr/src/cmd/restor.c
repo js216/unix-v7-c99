@@ -159,10 +159,10 @@ usage:
 		}
 	}
 	if (command == 'x') {
-		if (signal(SIGINT, (int)done) == (int)SIG_IGN)
-			signal(SIGINT, (int)SIG_IGN);
-		if (signal(SIGTERM, (int)done) == (int)SIG_IGN)
-			signal(SIGTERM, (int)SIG_IGN);
+		if (signal(SIGINT, done) == SIG_IGN)
+			signal(SIGINT, SIG_IGN);
+		if (signal(SIGTERM, done) == SIG_IGN)
+			signal(SIGTERM, SIG_IGN);
 
 		df = creat(dirfile, 0666);
 		if (df < 0) {

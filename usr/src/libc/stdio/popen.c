@@ -44,15 +44,15 @@ FILE *ptr;
 
 	f = fileno(ptr);
 	fclose(ptr);
-	istat = (int (*)())signal(SIGINT, (int)SIG_IGN);
-	qstat = (int (*)())signal(SIGQUIT, (int)SIG_IGN);
-	hstat = (int (*)())signal(SIGHUP, (int)SIG_IGN);
+	istat = signal(SIGINT, SIG_IGN);
+	qstat = signal(SIGQUIT, SIG_IGN);
+	hstat = signal(SIGHUP, SIG_IGN);
 	while((r = wait(&status)) != popen_pid[f] && r != -1)
 		;
 	if(r == -1)
 		status = -1;
-	signal(SIGINT, (int)istat);
-	signal(SIGQUIT, (int)qstat);
-	signal(SIGHUP, (int)hstat);
+	signal(SIGINT, istat);
+	signal(SIGQUIT, qstat);
+	signal(SIGHUP, hstat);
 	return(status);
 }

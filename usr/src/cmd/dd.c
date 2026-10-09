@@ -286,7 +286,7 @@ main(int argc, char **argv)
 	op = obuf;
 
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
-		signal(SIGINT, (int)term);
+		signal(SIGINT, term);
 	while(skip) {
 		read(ibf, ibuf, ibs);
 		skip--;

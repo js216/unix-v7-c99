@@ -102,9 +102,9 @@ tryagn:
 		saltc[i] = c;
 	}
 	pw = crypt(pwbuf, saltc);
-	signal(SIGHUP, (int)SIG_IGN);
-	signal(SIGINT, (int)SIG_IGN);
-	signal(SIGQUIT, (int)SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+	signal(SIGINT, SIG_IGN);
+	signal(SIGQUIT, SIG_IGN);
 
 	if(access(temp, 0) >= 0) {
 		printf("Temporary file busy -- try again\n");

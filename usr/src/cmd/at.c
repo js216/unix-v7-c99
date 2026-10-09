@@ -94,8 +94,8 @@ main(int argc, char **argv)
 		fprintf(stderr, "at: cannot open input: %s\n", argv[larg]);
 		exit(1);
 	}
-	if ((int (*)())signal(SIGINT, (int)SIG_IGN) != (int (*)())SIG_IGN)
-		signal(SIGINT, (int)onintr);
+	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
+		signal(SIGINT, onintr);
 	file = fopen(fname, "a");
 	chmod(fname, 0644);
 	if (file == NULL) {

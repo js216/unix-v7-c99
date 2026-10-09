@@ -99,8 +99,8 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 	}
-	sigint = (int(*)())signal(SIGINT, (int)ex);
-	sigquit = (int(*)())signal(SIGQUIT, (int)SIG_IGN);
+	sigint = signal(SIGINT, ex);
+	sigquit = signal(SIGQUIT, SIG_IGN);
 	while((i = getchar()) != EOF){
 		if(!i)continue;
 		if(i & 0200){
@@ -312,16 +312,16 @@ int callunix(char line[])
 {
 	int rc, status, unixpid;
 	if( (unixpid=fork())==0 ) {
-		signal(SIGINT,(int)sigint); signal(SIGQUIT,(int)sigquit);
+		signal(SIGINT,sigint); signal(SIGQUIT,sigquit);
 		close(0); dup(2);
 		execl("/bin/sh", "-sh", "-c", line, 0);
 		exit(255);
 	}
 	else if(unixpid == -1)
 		return(0);
-	else{	signal(SIGINT, (int)SIG_IGN); signal(SIGQUIT, (int)SIG_IGN);
+	else{	signal(SIGINT, SIG_IGN); signal(SIGQUIT, SIG_IGN);
 		while( (rc = wait(&status)) != unixpid && rc != -1 ) ;
-		signal(SIGINT,(int)ex); signal(SIGQUIT,(int)sigquit);
+		signal(SIGINT,ex); signal(SIGQUIT,sigquit);
 	}
 	return(0);
 }

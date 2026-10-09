@@ -59,7 +59,7 @@ main(int argc, char **argv)
 	int nfdone;
 	setbuf(stdout, obuf);
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
-		signal(SIGINT, (int)onintr);
+		signal(SIGINT, onintr);
 	lastarg = &argv[argc-1];
 	fixtty();
 	for (nfdone=0; argc>1; argc--) {

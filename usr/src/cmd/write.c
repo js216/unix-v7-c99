@@ -19,7 +19,7 @@ int	logcnt;
 int	eof(void);
 int	timout(void);
 void	ex(char *bp);
-void	sigs(int sig);
+void	sigs();
 FILE	*tf;
 
 int
@@ -101,7 +101,7 @@ cont:
 		printf("No such tty\n");
 		exit(1);
 	}
-	signal(SIGALRM, (int)timout);
+	signal(SIGALRM, timout);
 	alarm(5);
 	if ((tf = fopen(histty, "w")) == NULL)
 		goto perm;
@@ -110,7 +110,7 @@ cont:
 		goto perm;
 	if ((stbuf.st_mode&02) == 0)
 		goto perm;
-	sigs((int)eof);
+	sigs(eof);
 	fprintf(tf, "Message from ");
 #ifdef interdata
 	fprintf(tf, "(Interdata) " );
@@ -165,7 +165,7 @@ ex(char *bp)
 		goto out;
 	}
 	if(i == 0) {
-		sigs(0);
+		sigs((int (*)())0);
 		execl("/bin/sh", "sh", "-c", bp+1, 0);
 		exit(0);
 	}
@@ -173,11 +173,12 @@ ex(char *bp)
 		;
 	printf("!\n");
 out:
-	sigs((int)eof);
+	sigs(eof);
 }
 
 void
-sigs(int sig)
+sigs(sig)
+int (*sig)();
 {
 	register int i;
 

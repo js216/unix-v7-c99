@@ -11,13 +11,14 @@ getpass(char *prompt)
 	register int c;
 	FILE *fi;
 	static char pbuf[9];
+	int (*signal())();
 	int (*sig)();
 
 	if ((fi = fopen("/dev/tty", "r")) == NULL)
 		fi = stdin;
 	else
 		setbuf(fi, (char *)NULL);
-	sig = (int (*)())signal(SIGINT, (int)SIG_IGN);
+	sig = signal(SIGINT, SIG_IGN);
 	gtty(fileno(fi), &ttyb);
 	flags = ttyb.sg_flags;
 	ttyb.sg_flags &= ~ECHO;
@@ -31,7 +32,7 @@ getpass(char *prompt)
 	fprintf(stderr, "\n");
 	ttyb.sg_flags = flags;
 	stty(fileno(fi), &ttyb);
-	signal(SIGINT, (int)sig);
+	signal(SIGINT, sig);
 	if (fi != stdin)
 		fclose(fi);
 	return(pbuf);

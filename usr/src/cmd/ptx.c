@@ -85,12 +85,12 @@ main(int argc, char **argv)
 	char *xfile;
 	FILE *xptr;
 
-	if(signal(SIGHUP,(int)onintr)==(int)SIG_IGN)
-		signal(SIGHUP,(int)SIG_IGN);
-	if(signal(SIGINT,(int)onintr)==(int)SIG_IGN)
-		signal(SIGINT,(int)SIG_IGN);
-	signal(SIGPIPE,(int)onintr);
-	signal(SIGTERM,(int)onintr);
+	if(signal(SIGHUP,onintr)==SIG_IGN)
+		signal(SIGHUP,SIG_IGN);
+	if(signal(SIGINT,onintr)==SIG_IGN)
+		signal(SIGINT,SIG_IGN);
+	signal(SIGPIPE,onintr);
+	signal(SIGTERM,onintr);
 
 /*	argument decoding	*/
 

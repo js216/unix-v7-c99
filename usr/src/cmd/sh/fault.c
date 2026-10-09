@@ -7,9 +7,9 @@
  *
  */
 
+int	signal();
 #include	"defs.h"
 
-extern int signal(int sig, int fun);
 
 STRING		trapcom[MAXTRAP];
 BOOL		trapflg[MAXTRAP];
@@ -22,7 +22,7 @@ fault(INT sig)
 {
 	REG INT		flag;
 
-	signal(sig, (int)fault);
+	signal(sig,fault);
 	IF sig==MEMF
 	THEN	IF setbrk(brkincr) == (BYTPTR)-1
 		THEN	error(nospace);
@@ -65,7 +65,7 @@ getsig(INT n)
 	REG INT		i;
 
 	IF trapflg[i=n]&SIGMOD ORF ignsig(i)==0
-	THEN	signal(i, (int)fault);
+	THEN	signal(i,fault);
 	FI
 	return(0);
 }
@@ -93,7 +93,7 @@ clrsig(INT i)
 {
 	free(trapcom[i]); trapcom[i]=0;
 	IF trapflg[i]&SIGMOD
-	THEN	signal(i, (int)fault);
+	THEN	signal(i,fault);
 		trapflg[i] &= ~SIGMOD;
 	FI
 	return(0);

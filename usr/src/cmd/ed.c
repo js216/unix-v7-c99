@@ -168,9 +168,9 @@ main(int argc, char **argv)
 	extern int onintr(), quit(), onhup();
 	int (*oldintr)();
 
-	oldquit = (int (*)())(long)signal(SIGQUIT, SIG_IGN);
-	oldhup = (int (*)())(long)signal(SIGHUP, SIG_IGN);
-	oldintr = (int (*)())(long)signal(SIGINT, SIG_IGN);
+	oldquit = signal(SIGQUIT, SIG_IGN);
+	oldhup = signal(SIGHUP, SIG_IGN);
+	oldintr = signal(SIGINT, SIG_IGN);
 	if ((int)signal(SIGTERM, SIG_IGN) == 0)
 		signal(SIGTERM, quit);
 	argv++;
@@ -866,7 +866,7 @@ callunix(void)
 		execl("/bin/sh", "sh", "-t", 0);
 		exit(0100);
 	}
-	savint = (int (*)())(long)signal(SIGINT, SIG_IGN);
+	savint = signal(SIGINT, SIG_IGN);
 	while ((rpid = wait(&retcode)) != pid && rpid != -1)
 		;
 	signal(SIGINT, savint);
@@ -1776,7 +1776,7 @@ getkey(void)
 	register char *p;
 	register int c;
 
-	sig = (int (*)())(long)signal(SIGINT, SIG_IGN);
+	sig = signal(SIGINT, SIG_IGN);
 	if (gtty(0, &b) == -1)
 		error("Input not tty");
 	save = b.sg_flags;

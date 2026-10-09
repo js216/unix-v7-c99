@@ -136,7 +136,7 @@ showmotd(void)
 	FILE *mf;
 	register int c;
 
-	signal(SIGINT, (int)catch);
+	signal(SIGINT, catch);
 	if((mf = fopen("/etc/motd","r")) != NULL) {
 		while((c = getc(mf)) != EOF && stopmotd == 0)
 			putchar(c);

@@ -35,7 +35,7 @@ int
 dosync(void)
 {
 	sync();
-	signal(SIGALRM, (int)dosync);
+	signal(SIGALRM, dosync);
 	alarm(30);
 	return(0);
 }

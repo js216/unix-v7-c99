@@ -73,7 +73,7 @@ main(int argc, char *argv[])
 		printf("no table\n");
 		exit(1);
 	}
-	signal(8, (int)fperr);
+	signal(8, fperr);
 	init();
 
 loop:
@@ -467,7 +467,7 @@ fperr(int sig)
 {
 
 	(void)sig;
-	signal(8, (int)fperr);
+	signal(8, fperr);
 	fperrc++;
 	return(0);
 }

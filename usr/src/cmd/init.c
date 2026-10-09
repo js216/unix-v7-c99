@@ -53,7 +53,7 @@ main(void)
 {
 
 	setjmp(sjbuf);
-	signal(SIGHUP, (int)reset);
+	signal(SIGHUP, reset);
 	for(EVER) {
 		shutdown();
 		single();
@@ -73,7 +73,7 @@ shutdown(void)
 	signal(SIGINT, SIG_IGN);
 	for(ALL)
 		term(p);
-	signal(SIGALRM, (int)reset);
+	signal(SIGALRM, reset);
 	alarm(60);
 	for(i=0; i<5; i++)
 		kill(-1, SIGKILL);
@@ -228,7 +228,7 @@ merge(void)
 	register int i;
 
 	close(creat(utmp, 0644));
-	signal(SIGINT, (int)merge);
+	signal(SIGINT, merge);
 	fi = open(ifile, 0);
 	if(fi < 0)
 		return(0);

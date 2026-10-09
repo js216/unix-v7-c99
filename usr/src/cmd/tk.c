@@ -64,7 +64,7 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	}
-	signal(SIGINT, (int)ex);
+	signal(SIGINT, ex);
 	setbuf(stdout, obuf);
 	ncol = maxcol;
 	init();
@@ -210,11 +210,11 @@ execom(void)
 	int (*si)(), (*sq)();
 
 	if (fork() != 0) {
-		si = (int (*)())signal(SIGINT, (int)SIG_IGN);
-		sq = (int (*)())signal(SIGQUIT, (int)SIG_IGN);
+		si = signal(SIGINT, SIG_IGN);
+		sq = signal(SIGQUIT, SIG_IGN);
 		wait((int *)NULL);
-		signal(SIGINT, (int)si);
-		signal(SIGQUIT, (int)sq);
+		signal(SIGINT, si);
+		signal(SIGQUIT, sq);
 		return(0);
 	}
 	if (isatty(fileno(stdin)) == 0) {

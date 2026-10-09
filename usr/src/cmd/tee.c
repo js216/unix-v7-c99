@@ -23,7 +23,6 @@ int	open(char *path, int mode);
 int	read(int fd, char *buf, int n);
 int	stat(char *path, struct stat *buf);
 int	write(int fd, char *buf, int n);
-int	signal(int sig, int fun);
 void	stash(int p);
 void	puts(char *s);
 
