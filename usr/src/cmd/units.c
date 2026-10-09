@@ -5,10 +5,10 @@
 #define	NTAB	601
 char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
-double	getflt();
-void	fperr(), init(), units();
-int	convr(), pu(), lookup(), equal(), get();
-struct	table	*hash();
+double	getflt(void);
+void	fperr(int sig), init(void);
+int	pu(int u, int i, int f), get(void), equal(char *s1, char *s2);
+struct	table	*hash(char *name);
 struct unit
 {
 	double	factor;
@@ -50,11 +50,11 @@ FILE	*inp;
 int	fperrc;
 int	peekc;
 int	dumpflg;
+void	units(struct unit *up);
+int	convr(struct unit *up), lookup(char *name, struct unit *up, int den, int c);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	register char *file;
@@ -111,8 +111,7 @@ fp:
 }
 
 void
-units(up)
-struct unit *up;
+units(struct unit *up)
 {
 	register struct unit *p;
 	register int f, i;
@@ -132,8 +131,7 @@ struct unit *up;
 }
 
 int
-pu(u, i, f)
-int u, i, f;
+pu(int u, int i, int f)
 {
 
 	if(u > 0) {
@@ -152,8 +150,7 @@ int u, i, f;
 }
 
 int
-convr(up)
-struct unit *up;
+convr(struct unit *up)
 {
 	register struct unit *p;
 	register int c;
@@ -204,10 +201,7 @@ loop:
 }
 
 int
-lookup(name, up, den, c)
-int den, c;
-char *name;
-struct unit *up;
+lookup(char *name, struct unit *up, int den, int c)
 {
 	register struct unit *p;
 	register struct table *q;
@@ -260,8 +254,7 @@ loop:
 }
 
 int
-equal(s1, s2)
-char *s1, *s2;
+equal(char *s1, char *s2)
 {
 	register char *c1, *c2;
 
@@ -274,7 +267,7 @@ char *s1, *s2;
 }
 
 void
-init()
+init(void)
 {
 	register char *cp;
 	register struct table *tp, *lp;
@@ -306,7 +299,7 @@ l0:
 			if(tp->name == 0)
 				continue;
 			printf("%s", tp->name);
-			units(tp);
+			units((struct unit *)tp);
 		}
 		fclose(inp);
 		inp = stdin;
@@ -342,7 +335,7 @@ l0:
 	lp = hash(np);
 	if(lp->name)
 		goto redef;
-	convr(lp);
+	convr((struct unit *)lp);
 	lp->name = np;
 	f = 0;
 	i++;
@@ -368,7 +361,7 @@ redef:
 }
 
 double
-getflt()
+getflt(void)
 {
 	register int c, i, dp;
 	double d, e;
@@ -425,7 +418,7 @@ l1:
 }
 
 int
-get()
+get(void)
 {
 	register int c;
 
@@ -445,8 +438,7 @@ get()
 }
 
 struct table *
-hash(name)
-char *name;
+hash(char *name)
 {
 	register struct table *tp;
 	register char *np;
@@ -470,8 +462,9 @@ l0:
 }
 
 void
-fperr()
+fperr(int sig)
 {
+	(void)sig;
 
 	signal(8, fperr);
 	fperrc++;

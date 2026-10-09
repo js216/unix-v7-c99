@@ -18,9 +18,9 @@ char	*ifile;
 char	*ofile;
 char	*ibuf;
 char	*obuf;
-char	*sbrk();
-void	flsh(), null(), stats(), term();
-int	match(), number();
+void	flsh(void), null(int c), stats(void), term(int sig), cnull(int cc);
+void	ascii(int cc), ebcdic(int cc), ibm(int cc);
+int	match(char *s), number(int big);
 int	ibs	= 512;
 int	obs	= 512;
 int	bs;
@@ -143,14 +143,11 @@ char	atoibm[] =
 
 
 int
-main(argc, argv)
-int	argc;
-char	**argv;
+main(int argc, char **argv)
 {
-	void (*conv)();
+	void (*conv)(int c);
 	register char *ip = 0;
 	register int c;
-	void ebcdic(), ibm(), ascii(), null(), cnull(), term();
 	int a;
 
 	conv = null;
@@ -304,7 +301,7 @@ loop:
 			perror("read");
 			if((cflag&NERR) == 0) {
 				flsh();
-				term();
+				term(0);
 			}
 			ibc = 0;
 			for(c=0; c<ibs; c++)
@@ -314,7 +311,7 @@ loop:
 		}
 		if(ibc == 0 && --files<=0) {
 			flsh();
-			term();
+			term(0);
 		}
 		if(ibc != ibs) {
 			nipr++;
@@ -346,7 +343,7 @@ loop:
 }
 
 void
-flsh()
+flsh(void)
 {
 	register int c;
 
@@ -357,15 +354,14 @@ flsh()
 		c = write(obf, obuf, obc);
 		if(c != obc) {
 			perror("write");
-			term();
+			term(0);
 		}
 		obc = 0;
 	}
 }
 
 int
-match(s)
-char *s;
+match(char *s)
 {
 	register char *cs;
 
@@ -383,8 +379,7 @@ true:
 }
 
 int
-number(big)
-int big;
+number(int big)
 {
 	register char *cs;
 	long n;
@@ -425,8 +420,7 @@ int big;
 }
 
 void
-cnull(cc)
-int cc;
+cnull(int cc)
 {
 	register int c;
 
@@ -439,8 +433,7 @@ int cc;
 }
 
 void
-null(c)
-int c;
+null(int c)
 {
 
 	*op = c;
@@ -452,8 +445,7 @@ int c;
 }
 
 void
-ascii(cc)
-int cc;
+ascii(int cc)
 {
 	register int c;
 
@@ -481,8 +473,7 @@ out:
 }
 
 void
-ebcdic(cc)
-int cc;
+ebcdic(int cc)
 {
 	register int c;
 
@@ -512,8 +503,7 @@ int cc;
 }
 
 void
-ibm(cc)
-int cc;
+ibm(int cc)
 {
 	register int c;
 
@@ -543,15 +533,16 @@ int cc;
 }
 
 void
-term()
+term(int sig)
 {
+	(void)sig;
 
 	stats();
 	exit(0);
 }
 
 void
-stats()
+stats(void)
 {
 
 	fprintf(stderr,"%u+%u records in\n", nifr, nipr);
