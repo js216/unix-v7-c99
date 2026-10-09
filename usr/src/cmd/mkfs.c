@@ -22,7 +22,7 @@
 #include <sys/filsys.h>
 #include <sys/fblk.h>
 #include <sys/dir.h>
-void ltol3(cp, lp, n) char *cp; long *lp; int n; {
+static void ltol3(char *cp, long *lp, int n) {
 	int i; long v;
 	for(i=0; i<n; i++) {
 		v = lp[i];
@@ -56,15 +56,17 @@ int	f_n	= MAXFN;
 int	f_m	= 3;
 int	error;
 ino_t	ino;
-long	getnum();
-daddr_t	alloc();
-void	cfile(), getstr(), wtfs(), entry(), newblk(), bflist(), iput();
-int	gmode(), getch(), badblk();
+long	getnum(void);
+daddr_t	alloc(void);
+void	cfile(struct inode *par), getstr(void), wtfs(daddr_t bno, char *bf);
+void	entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib);
+void	newblk(int *adbc, char *db, int *aibc, daddr_t *ib), bflist(void);
+void	iput(struct inode *ip, int *aibc, daddr_t *ib);
+int	gmode(char c, char *s, int m0, int m1, int m2, int m3);
+int	getch(void), badblk(daddr_t bno);
 
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	int f, c;
 	long n;
@@ -196,8 +198,7 @@ f3:
 }
 
 void
-cfile(par)
-struct inode *par;
+cfile(struct inode *par)
 {
 	struct inode in;
 	int dbc, ibc;
@@ -309,9 +310,7 @@ struct inode *par;
 }
 
 int
-gmode(c, s, m0, m1, m2, m3)
-char c, *s;
-int	m0, m1, m2, m3;
+gmode(char c, char *s, int m0, int m1, int m2, int m3)
 {
 	int i;
 	int m[4] = {m0, m1, m2, m3};
@@ -325,7 +324,7 @@ int	m0, m1, m2, m3;
 }
 
 long
-getnum()
+getnum(void)
 {
 	int i, c;
 	long n;
@@ -345,7 +344,7 @@ getnum()
 }
 
 void
-getstr()
+getstr(void)
 {
 	int i, c;
 
@@ -375,10 +374,8 @@ loop:
 	string[i] = '\0';
 }
 
-void
-rdfs(bno, bf)
-daddr_t bno;
-char *bf;
+static void
+rdfs(daddr_t bno, char *bf)
 {
 	int n;
 
@@ -391,9 +388,7 @@ char *bf;
 }
 
 void
-wtfs(bno, bf)
-daddr_t bno;
-char *bf;
+wtfs(daddr_t bno, char *bf)
 {
 	int n;
 
@@ -406,7 +401,7 @@ char *bf;
 }
 
 daddr_t
-alloc()
+alloc(void)
 {
 	int i;
 	daddr_t bno;
@@ -426,9 +421,8 @@ alloc()
 	return(bno);
 }
 
-void
-bfree(bno)
-daddr_t bno;
+static void
+bfree(daddr_t bno)
 {
 	int i;
 
@@ -444,12 +438,7 @@ daddr_t bno;
 }
 
 void
-entry(inum, str, adbc, db, aibc, ib)
-ino_t inum;
-char *str;
-int *adbc, *aibc;
-char *db;
-daddr_t *ib;
+entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib)
 {
 	struct direct *dp;
 	int i;
@@ -468,10 +457,7 @@ daddr_t *ib;
 }
 
 void
-newblk(adbc, db, aibc, ib)
-int *adbc, *aibc;
-char *db;
-daddr_t *ib;
+newblk(int *adbc, char *db, int *aibc, daddr_t *ib)
 {
 	int i;
 	daddr_t bno;
@@ -491,7 +477,7 @@ daddr_t *ib;
 }
 
 int
-getch()
+getch(void)
 {
 
 #ifndef STANDALONE
@@ -504,7 +490,7 @@ getch()
 }
 
 void
-bflist()
+bflist(void)
 {
 	struct inode in;
 	daddr_t ib[NINDIR];
@@ -562,10 +548,7 @@ bflist()
 }
 
 void
-iput(ip, aibc, ib)
-struct inode *ip;
-int *aibc;
-daddr_t *ib;
+iput(struct inode *ip, int *aibc, daddr_t *ib)
 {
 	struct dinode *dp;
 	daddr_t d, dbl[NINDIR];
@@ -631,8 +614,7 @@ daddr_t *ib;
 }
 
 int
-badblk(bno)
-daddr_t bno;
+badblk(daddr_t bno)
 {
 
 	(void)bno;
