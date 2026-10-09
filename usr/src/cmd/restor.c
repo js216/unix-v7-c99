@@ -81,54 +81,16 @@ struct	cache {
 } cache[NCACHE];
 int	curcache;
 
-struct spcl;
-struct dinode;
-int	doit(int command, int argc, char *argv[]);
-int	readhdr(struct spcl *b);
-int	checkvol(struct spcl *b, int t);
-int	pass1(void);
-int	readbits(short *m);
-int	gethead(struct spcl *buf);
-int	checktype(struct spcl *b, int t);
-int	ishead(struct spcl *buf);
-int	readtape(char *b);
-int	flsht(void);
-int	getfile(ino_t n, int (*f1)(), int (*f2)(), long size);
-int	psearch(char *n);
-int	getdino(ino_t inum, struct dinode *b);
-int	putdino(ino_t inum, struct dinode *b);
-int	itrunc(struct dinode *ip);
-int	clri(struct dinode *ip);
-int	dread(daddr_t bno, char *buf, int cnt);
-int	dwrite(daddr_t bno, char *b);
-int	rstrfile(char *b, long s);
-int	rstrskip(char *b, long s);
-int	xtrfile(char *b, long size);
-int	skip(void);
-int	checksum(int *b);
-int	putent(char *cp);
-int	putdir(char *b);
-int	null(void);
-int	copy(char *f, char *t, int s);
-int	clearbuf(char *cp);
-int	writec(int c);
-int	readc(void);
-int	mseek(daddr_t pt);
-int	getent(char *bf);
-int	direq(char *s1, char *s2);
-int	flsh(void);
-int	bfree(daddr_t bn);
-int	tloop(daddr_t bn, int f1, int f2);
-int	l3tol(), ltol3();
-daddr_t	balloc(void);
-daddr_t	bmap(daddr_t iaddr[NADDR], daddr_t bn);
-ino_t	search(ino_t inum, char *cp);
+int readc(), psearch(), direq(), gethead(), ishead(), checktype(), checksum(), checkvol(), readhdr(), l3tol(), ltol3();
+void pass1(), putent(), doit(), getfile(), readtape(), flsht(), copy(), clearbuf(), writec(), flsh(), dwrite(), dread(), clri(), itrunc(), tloop(), bfree(), getdino(), putdino(), readbits();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register char *cp;
 	char command = 0;
-	int done(void);
+	int done();
 
 #ifndef STANDALONE
 	mktemp(dirfile);
@@ -182,16 +144,19 @@ usage:
 #endif
 }
 
-int
-doit(int command, int argc, char *argv[])
+void
+doit(command, argc, argv)
+char	command;
+int	argc;
+char	*argv[];
 {
-	extern char *ctime(long *t);
+	extern char *ctime();
 	register int i, k;
 	ino_t	d;
 #ifndef STANDALONE
-	int	xtrfile(char *b, long size), skip(void);
+	int	xtrfile(), skip();
 #endif
-	int	rstrfile(char *b, long s), rstrskip(char *b, long s);
+	int	rstrfile(), rstrskip();
 	struct dinode *ip, *ip1;
 
 #ifndef STANDALONE
@@ -216,7 +181,7 @@ doit(int command, int argc, char *argv[])
 		}
 		printf("Dump   date: %s", ctime(&spcl.c_date));
 		printf("Dumped from: %s", ctime(&spcl.c_ddate));
-		return(0);
+		return;
 	case 'x':
 		if (readhdr(&spcl) == 0) {
 			printf("Tape is not a dump tape\n");
@@ -245,7 +210,7 @@ newvol:
 getvol:
 		printf("Mount desired tape volume: Specify volume #: ");
 		if (gets(tbf) == NULL)
-			return(0);
+			return;
 		volno = atoi(tbf);
 		if (volno <= 0) {
 			printf("Volume numbers are positive numerics\n");
@@ -288,7 +253,7 @@ checkdone:
 				for (k = 0; xtrlist[k].x_flags; k++)
 					if ((xtrlist[k].x_flags&XTRACTD) == 0)
 						goto newvol;
-				return(0);
+				return;
 			}
 			if (checktype(&spcl, TS_INODE) == 0) {
 				gethead(&spcl);
@@ -377,7 +342,7 @@ ragain:
 				printf("End of tape\n");
 				close(mt);
 				dwrite( (daddr_t) 1, (char *) &sblock);
-				return(0);
+				return;
 			}
 			if (checktype(&spcl, TS_CLRI) == 1) {
 				readbits(clrimap);
@@ -435,7 +400,6 @@ ragain:
 			putdino(ino, &tino);
 		}
 	}
-	return(0);
 }
 
 /*
@@ -443,12 +407,12 @@ ragain:
  * by name
  */
 #ifndef STANDALONE
-int
-pass1(void)
+void
+pass1()
 {
 	register int i;
 	struct dinode *ip;
-	int	putdir(char *b), null();
+	int	putdir(), null();
 
 	while (gethead(&spcl) == 0) {
 		printf("Can't find directory header!\n");
@@ -466,7 +430,7 @@ pass1(void)
 finish:
 			flsh();
 			close(mt);
-			return(0);
+			return;
 		}
 		ip = &spcl.c_dinode;
 		i = ip->di_mode & IFMT;
@@ -485,8 +449,11 @@ finish:
  * Do the file extraction, calling the supplied functions
  * with the blocks
  */
-int
-getfile(ino_t n, int (*f1)(), int (*f2)(), long size)
+void
+getfile(n, f1, f2, size)
+ino_t	n;
+int	(*f2)(), (*f1)();
+long	size;
 {
 	register int i;
 	struct spcl addrblock;
@@ -503,7 +470,7 @@ getfile(ino_t n, int (*f1)(), int (*f2)(), long size)
 		if (checktype(&addrblock, TS_ADDR) == 0) {
 			spcl = addrblock;
 			curino = 0;
-			return(0);
+			return;
 		}
 start:
 		for (i = 0; i < addrblock.c_count; i++) {
@@ -522,7 +489,7 @@ eloop:
 				if (checktype(&spcl, TS_ADDR) == 1)
 					goto eloop;
 				curino = 0;
-				return(0);
+				return;
 			}
 		}
 	}
@@ -532,8 +499,9 @@ eloop:
  * Do the tape i\/o, dealling with volume changes
  * etc..
  */
-int
-readtape(char *b)
+void
+readtape(b)
+char *b;
 {
 	register int i;
 	struct spcl tmpbuf;
@@ -570,22 +538,22 @@ loop:
 				goto loop;
 			}
 			readtape(b);
-			return(0);
+			return;
 		}
 	}
 	copy(&tbf[(bct++*BSIZE)], b, BSIZE);
-	return(0);
 }
 
-int
-flsht(void)
+void
+flsht()
 {
 	bct = NTREC+1;
-	return(0);
 }
 
-int
-copy(register char *f, register char *t, int s)
+void
+copy(f, t, s)
+int s;
+register char *f, *t;
 {
 	register int i;
 
@@ -593,11 +561,11 @@ copy(register char *f, register char *t, int s)
 	do
 		*t++ = *f++;
 	while (--i);
-	return(0);
 }
 
-int
-clearbuf(register char *cp)
+void
+clearbuf(cp)
+register char *cp;
 {
 	register int i;
 
@@ -605,7 +573,6 @@ clearbuf(register char *cp)
 	do
 		*cp++ = 0;
 	while (--i);
-	return(0);
 }
 
 /*
@@ -613,8 +580,9 @@ clearbuf(register char *cp)
  * directory file
  */
 #ifndef STANDALONE
-int
-putent(char *cp)
+void
+putent(cp)
+char	*cp;
 {
 	register int i;
 
@@ -623,13 +591,14 @@ putent(char *cp)
 	for (i = 0; i < DIRSIZ; i++) {
 		writec(*cp);
 		if (*cp++ == 0)
-			return(0);
+			return;
 	}
-	return(0);
+	return;
 }
 
-int
-getent(register char *bf)
+void
+getent(bf)
+register char *bf;
 {
 	register int i;
 
@@ -637,15 +606,16 @@ getent(register char *bf)
 		*bf++ = readc();
 	for (i = 0; i < DIRSIZ; i++)
 		if ((*bf++ = readc()) == 0)
-			return(0);
-	return(0);
+			return;
+	return;
 }
 
 /*
  * read/write te directory file
  */
-int
-writec(int c)
+void
+writec(c)
+char c;
 {
 	drblock[bpt++] = c;
 	seekpt++;
@@ -653,11 +623,10 @@ writec(int c)
 		bpt = 0;
 		write(df, drblock, BSIZE);
 	}
-	return(0);
 }
 
 int
-readc(void)
+readc()
 {
 	if (bpt >= BSIZE) {
 		read(df, drblock, BSIZE);
@@ -666,19 +635,18 @@ readc(void)
 	return(drblock[bpt++]);
 }
 
-int
-mseek(daddr_t pt)
+void
+mseek(pt)
+daddr_t pt;
 {
 	bpt = BSIZE;
 	lseek(df, pt, 0);
-	return(0);
 }
 
-int
-flsh(void)
+void
+flsh()
 {
 	write(df, drblock, bpt+1);
-	return(0);
 }
 
 /*
@@ -686,7 +654,9 @@ flsh(void)
  * looking for entry cp
  */
 ino_t
-search(ino_t inum, char *cp)
+search(inum, cp)
+ino_t	inum;
+char	*cp;
 {
 	register int i;
 	struct direct dir;
@@ -711,7 +681,8 @@ found:
  * for the path pointed at by n
  */
 int
-psearch(char *n)
+psearch(n)
+char	*n;
 {
 	register char *cp, *cp1;
 	char c;
@@ -739,7 +710,8 @@ next:
 }
 
 int
-direq(register char *s1, register char *s2)
+direq(s1, s2)
+register char *s1, *s2;
 {
 	register int i;
 
@@ -757,8 +729,10 @@ direq(register char *s1, register char *s2)
  * read/write a disk block, be sure to update the buffer
  * cache if needed.
  */
-int
-dwrite(daddr_t bno, char *b)
+void
+dwrite(bno, b)
+daddr_t	bno;
+char	*b;
 {
 	register int i;
 
@@ -780,11 +754,13 @@ dwrite(daddr_t bno, char *b)
 #endif
 		exit(1);
 	}
-	return(0);
 }
 
-int
-dread(daddr_t bno, char *buf, int cnt)
+void
+dread(bno, buf, cnt)
+int cnt;
+daddr_t bno;
+char *buf;
 {
 	register int i, j;
 
@@ -795,7 +771,7 @@ dread(daddr_t bno, char *buf, int cnt)
 		if (cache[curcache].c_bno == bno) {
 			copy(cache[curcache].c_block, buf, cnt);
 			cache[curcache].c_time = 0;
-			return(0);
+			return;
 		}
 		else {
 			cache[curcache].c_time++;
@@ -816,7 +792,6 @@ dread(daddr_t bno, char *buf, int cnt)
 	copy(cache[j].c_block, buf, cnt);
 	cache[j].c_time = 0;
 	cache[j].c_bno = bno;
-	return(0);
 }
 
 /*
@@ -824,8 +799,9 @@ dread(daddr_t bno, char *buf, int cnt)
  *
  * clri zeros the inode
  */
-int
-clri(struct dinode *ip)
+void
+clri(ip)
+struct dinode *ip;
 {
 	int i, *p;
 	i = sizeof(struct dinode)/sizeof(int);
@@ -833,23 +809,23 @@ clri(struct dinode *ip)
 	do
 		*p++ = 0;
 	while(--i);
-	return(0);
 }
 
 /*
  * itrunc/tloop/bfree free all of the blocks pointed at by the inode
  */
-int
-itrunc(register struct dinode *ip)
+void
+itrunc(ip)
+register struct dinode *ip;
 {
 	register int i;
 	daddr_t bn, iaddr[NADDR];
 
 	if (ip->di_mode == 0)
-		return(0);
+		return;
 	i = ip->di_mode & IFMT;
 	if (i != IFDIR && i != IFREG)
-		return(0);
+		return;
 	l3tol(iaddr, ip->di_addr, NADDR);
 	for(i=NADDR-1;i>=0;i--) {
 		bn = iaddr[i];
@@ -873,11 +849,12 @@ itrunc(register struct dinode *ip)
 		}
 	}
 	ip->di_size = 0;
-	return(0);
 }
 
-int
-tloop(daddr_t bn, int f1, int f2)
+void
+tloop(bn, f1, f2)
+daddr_t	bn;
+int	f1, f2;
 {
 	register int i;
 	daddr_t nb;
@@ -897,11 +874,11 @@ tloop(daddr_t bn, int f1, int f2)
 		}
 	}
 	bfree(bn);
-	return(0);
 }
 
-int
-bfree(daddr_t bn)
+void
+bfree(bn)
+daddr_t	bn;
 {
 	register int i;
 	union {
@@ -917,14 +894,13 @@ bfree(daddr_t bn)
 		dwrite(bn, fbuf.data);
 	}
 	sblock.s_free[sblock.s_nfree++] = bn;
-	return(0);
 }
 
 /*
  * allocate a block off the free list.
  */
 daddr_t
-balloc(void)
+balloc()
 {
 	daddr_t	bno;
 	register int i;
@@ -958,7 +934,9 @@ balloc(void)
  * the block requested.
  */
 daddr_t
-bmap(daddr_t iaddr[NADDR], daddr_t bn)
+bmap(iaddr, bn)
+daddr_t	iaddr[NADDR];
+daddr_t	bn;
 {
 	register int i;
 	int j, sh;
@@ -1023,7 +1001,8 @@ bmap(daddr_t iaddr[NADDR], daddr_t bn)
  * or not it is a header block.
  */
 int
-gethead(struct spcl *buf)
+gethead(buf)
+struct spcl *buf;
 {
 	readtape((char *)buf);
 	if (buf->c_magic != MAGIC || checksum((int *) buf) == 0)
@@ -1035,7 +1014,8 @@ gethead(struct spcl *buf)
  * return whether or not the buffer contains a header block
  */
 int
-ishead(struct spcl *buf)
+ishead(buf)
+struct spcl *buf;
 {
 	if (buf->c_magic != MAGIC || checksum((int *) buf) == 0)
 		return(0);
@@ -1043,14 +1023,17 @@ ishead(struct spcl *buf)
 }
 
 int
-checktype(struct spcl *b, int t)
+checktype(b, t)
+struct	spcl *b;
+int	t;
 {
 	return(b->c_type == t);
 }
 
 
 int
-checksum(int *b)
+checksum(b)
+int *b;
 {
 	register int i, j;
 
@@ -1067,7 +1050,9 @@ checksum(int *b)
 }
 
 int
-checkvol(struct spcl *b, int t)
+checkvol(b, t)
+struct spcl *b;
+int t;
 {
 	if (b->c_volume == t)
 		return(1);
@@ -1075,7 +1060,8 @@ checkvol(struct spcl *b, int t)
 }
 
 int
-readhdr(struct spcl *b)
+readhdr(b)
+struct	spcl *b;
 {
 	if (gethead(b) == 0)
 		return(0);
@@ -1090,16 +1076,19 @@ readhdr(struct spcl *b)
  */
 #ifndef STANDALONE
 int
-xtrfile(char *b, long size)
+xtrfile(b, size)
+char	*b;
+long	size;
 {
 	write(ofile, b, (int) size);
 	return(0);
 }
 
-int null(void) {return(0);}
+int
+null() {return(0);}
 
 int
-skip(void)
+skip()
 {
 	lseek(ofile, (long) BSIZE, 1);
 	return(0);
@@ -1108,7 +1097,9 @@ skip(void)
 
 
 int
-rstrfile(char *b, long s)
+rstrfile(b, s)
+char *b;
+long s;
 {
 	daddr_t d;
 
@@ -1120,7 +1111,9 @@ rstrfile(char *b, long s)
 }
 
 int
-rstrskip(char *b, long s)
+rstrskip(b, s)
+char *b;
+long s;
 {
 	(void)b; (void)s;
 	curbno += 1;
@@ -1129,7 +1122,8 @@ rstrskip(char *b, long s)
 
 #ifndef STANDALONE
 int
-putdir(char *b)
+putdir(b)
+char *b;
 {
 	register struct direct *dp;
 	register int i;
@@ -1146,8 +1140,10 @@ putdir(char *b)
 /*
  * read/write an inode from the disk
  */
-int
-getdino(ino_t inum, struct dinode *b)
+void
+getdino(inum, b)
+ino_t	inum;
+struct	dinode *b;
 {
 	daddr_t	bno;
 	char buf[BSIZE];
@@ -1156,11 +1152,12 @@ getdino(ino_t inum, struct dinode *b)
 	bno += 2;
 	dread(bno, buf, BSIZE);
 	copy(&buf[((inum-1)%INOPB)*sizeof(struct dinode)], (char *) b, sizeof(struct dinode));
-	return(0);
 }
 
-int
-putdino(ino_t inum, struct dinode *b)
+void
+putdino(inum, b)
+ino_t	inum;
+struct	dinode *b;
 {
 	daddr_t bno;
 	char buf[BSIZE];
@@ -1169,14 +1166,14 @@ putdino(ino_t inum, struct dinode *b)
 	dread(bno, buf, BSIZE);
 	copy((char *) b, &buf[((inum-1)%INOPB)*sizeof(struct dinode)], sizeof(struct dinode));
 	dwrite(bno, buf);
-	return(0);
 }
 
 /*
  * read a bit mask from the tape into m.
  */
-int
-readbits(short *m)
+void
+readbits(m)
+short	*m;
 {
 	register int i;
 
@@ -1188,11 +1185,10 @@ readbits(short *m)
 	}
 	while (gethead(&spcl) == 0)
 		;
-	return(0);
 }
 
 int
-done(void)
+done()
 {
 #ifndef STANDALONE
 	unlink(dirfile);
