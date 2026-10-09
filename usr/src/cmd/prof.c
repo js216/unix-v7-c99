@@ -52,10 +52,10 @@ int	aflg;
 int	vflg;
 int	lflg;
 long	symoff;
+
 int	min(unsigned a, unsigned b), max(unsigned a, unsigned b);
 int	timcmp(char *a, char *b), valcmp(char *a, char *b);
 void	done(void);
-
 int
 main(int argc, char **argv)
 {
@@ -119,8 +119,8 @@ main(int argc, char **argv)
 	}
 	fstat(fileno(pfile), &stbuf);
 	fread((char *)&h, sizeof(struct hdr), 1, pfile);
-	lowpc = h.lowpc - (UNIT *)0;
-	highpc = h.highpc - (UNIT *)0;
+	lowpc = (unsigned)h.lowpc/sizeof(UNIT);
+	highpc = (unsigned)h.highpc/sizeof(UNIT);
 	bufs = stbuf.st_size - sizeof(struct hdr) - h.ncount*sizeof(struct cnt);
 	fread((char *)cbuf, sizeof(struct cnt), h.ncount, pfile);
 #ifdef plot
