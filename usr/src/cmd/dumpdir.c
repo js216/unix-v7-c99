@@ -48,15 +48,20 @@ char prebuf[512];
 
 int volno;
 
-int	readhdr(), checkvol(), gethead(), checktype(), direq(), search(), readc(), checksum();
-void	pass1(), printem(), readbits(), flsh(), getfile(), putent(), mseek(), getent(), readtape(), clearbuf(), flsht(), copy(), writec();
+int	readhdr(struct spcl *b), checkvol(struct spcl *b, int t);
+int	gethead(struct spcl *buf), checktype(struct spcl *b, int t);
+int	direq(char *s1, char *s2), search(ino_t inum), readc(void);
+int	checksum(int *b);
+void	pass1(void), printem(char *prefix, ino_t inum), readbits(short *m);
+void	flsh(void), putent(char *cp), mseek(daddr_t pt), getent(char *bf);
+void	getfile(ino_t n, void (*f1)(char *b, long size),
+	void (*f2)(char *b, long size), long size);
+void	readtape(char *b), clearbuf(char *cp), flsht(void);
+void	copy(char *f, char *t, int s), writec(char c);
+void	putdir(char *b, long size), null(char *b, long size);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
-	extern char *ctime();
-
 	mktemp(dirfile);
 	argv++;
 	if (argc>=3 && *argv[0] == 'f')
@@ -93,11 +98,10 @@ int	i = 0;
  * by name
  */
 void
-pass1()
+pass1(void)
 {
 	register int i;
 	struct dinode *ip;
-	int	putdir(), null();
 
 	while (gethead(&spcl) == 0) {
 		printf("Can't find directory header!\n");
@@ -130,9 +134,7 @@ finish:
 }
 
 void
-printem(prefix, inum)
-char *prefix;
-ino_t	inum;
+printem(char *prefix, ino_t inum)
 {
 	struct direct dir;
 	register int i;
@@ -173,10 +175,8 @@ found:
  * with the blocks
  */
 void
-getfile(n, f1, f2, size)
-ino_t	n;
-int	(*f2)(), (*f1)();
-long	size;
+getfile(ino_t n, void (*f1)(char *b, long size),
+	void (*f2)(char *b, long size), long size)
 {
 	register int i;
 	struct spcl addrblock;
@@ -221,8 +221,7 @@ eloop:
  * etc..
  */
 void
-readtape(b)
-char *b;
+readtape(char *b)
 {
 	register int i;
 	struct spcl tmpbuf;
@@ -262,15 +261,13 @@ loop:
 }
 
 void
-flsht()
+flsht(void)
 {
 	bct = NTREC+1;
 }
 
 void
-copy(f, t, s)
-register char *f, *t;
-int s;
+copy(register char *f, register char *t, int s)
 {
 	register int i;
 
@@ -281,8 +278,7 @@ int s;
 }
 
 void
-clearbuf(cp)
-register char *cp;
+clearbuf(register char *cp)
 {
 	register int i;
 
@@ -297,8 +293,7 @@ register char *cp;
  * directory file
  */
 void
-putent(cp)
-char	*cp;
+putent(char *cp)
 {
 	register int i;
 
@@ -313,8 +308,7 @@ char	*cp;
 }
 
 void
-getent(bf)
-register char *bf;
+getent(register char *bf)
 {
 	register int i;
 
@@ -330,15 +324,14 @@ register char *bf;
  * read/write te directory file
  */
 void
-writec(c)
-char c;
+writec(char c)
 {
 	seekpt++;
 	fwrite(&c, 1, 1, df);
 }
 
 int
-readc()
+readc(void)
 {
 	char c;
 
@@ -347,14 +340,13 @@ readc()
 }
 
 void
-mseek(pt)
-daddr_t pt;
+mseek(daddr_t pt)
 {
 	fseek(df, pt, 0);
 }
 
 void
-flsh()
+flsh(void)
 {
 	fflush(df);
 }
@@ -364,8 +356,7 @@ flsh()
  * looking for entry cp
  */
 int
-search(inum)
-ino_t	inum;
+search(ino_t inum)
 {
 	register int low, high, probe;
 
@@ -386,8 +377,7 @@ printf("low = %d, high = %d, probe = %d, ino = %d, inum = %d\n", low, high, prob
 }
 
 int
-direq(s1, s2)
-register char *s1, *s2;
+direq(register char *s1, register char *s2)
 {
 	register int i;
 
@@ -405,8 +395,7 @@ register char *s1, *s2;
  * or not it is a header block.
  */
 int
-gethead(buf)
-struct spcl *buf;
+gethead(struct spcl *buf)
 {
 	readtape((char *)buf);
 	if (buf->c_magic != MAGIC || checksum((int *) buf) == 0)
@@ -418,17 +407,14 @@ struct spcl *buf;
  * return whether or not the buffer contains a header block
  */
 int
-checktype(b, t)
-struct	spcl *b;
-int	t;
+checktype(struct spcl *b, int t)
 {
 	return(b->c_type == t);
 }
 
 
 int
-checksum(b)
-int *b;
+checksum(int *b)
 {
 	register int i, j;
 
@@ -445,9 +431,7 @@ int *b;
 }
 
 int
-checkvol(b, t)
-struct spcl *b;
-int t;
+checkvol(struct spcl *b, int t)
 {
 	if (b->c_volume == t)
 		return(1);
@@ -455,8 +439,7 @@ int t;
 }
 
 int
-readhdr(b)
-struct	spcl *b;
+readhdr(struct spcl *b)
 {
 	if (gethead(b) == 0)
 		return(0);
@@ -465,27 +448,25 @@ struct	spcl *b;
 	return(1);
 }
 
-int
-putdir(b)
-char *b;
+void
+putdir(char *b, long size)
 {
 	register struct direct *dp;
 	register int i;
 
+	(void)size;
 	for (dp = (struct direct *) b, i = 0; i < BSIZE; dp++, i += sizeof(*dp)) {
 		if (dp->d_ino == 0)
 			continue;
 		putent((char *) dp);
 	}
-	return(0);
 }
 
 /*
  * read a bit mask from the tape into m.
  */
 void
-readbits(m)
-short	*m;
+readbits(short *m)
 {
 	register int i;
 
@@ -499,4 +480,4 @@ short	*m;
 		;
 }
 
-int null() { return(0); }
+void null(char *b, long size) { (void)b; (void)size; }
