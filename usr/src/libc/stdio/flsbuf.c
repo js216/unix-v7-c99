@@ -100,8 +100,8 @@ fclose(register FILE *iop)
 		if (iop->_flag & (_IOMYBUF|_IONBF))
 			iop->_base = NULL;
 	}
-	iop->_flag = (char)(iop->_flag &
-		~(_IOREAD|_IOWRT|_IONBF|_IOMYBUF|_IOERR|_IOEOF|_IOSTRG|_IORW));
+	iop->_flag &=
+		(char)~(_IOREAD|_IOWRT|_IONBF|_IOMYBUF|_IOERR|_IOEOF|_IOSTRG|_IORW);
 	iop->_cnt = 0;
 	return(r);
 }
