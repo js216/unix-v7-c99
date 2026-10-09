@@ -1,9 +1,4 @@
-.globl	syscall3, cerror
-syscall3:
-	mov	ip, r0
-	mov	r0, r1
-	mov	r1, r2
-	mov	r2, r3
+.globl	cerror
 cerror:
 	push	{r7}
 	mov	r7, ip
