@@ -12,15 +12,14 @@
 #include "../../sys/h/proc.h"
 struct tty;
 #include <sys/dir.h>
-#include <sys/stat.h>
 #include "../../sys/h/user.h"
 #undef u
 
 struct nlist nl[] = {
-	{ "_proc",    0, 0 },
+	{ "_proc", 0, 0 },
 	{ "_swapdev", 0, 0 },
-	{ "_swplo",   0, 0 },
-	{ "",         0, 0 },
+	{ "_swplo", 0, 0 },
+	{ "", 0, 0 },
 };
 
 struct	proc mproc;
@@ -33,13 +32,10 @@ int	vflg;
 int	kflg;
 int	xflg;
 char	*tptr;
-long	lseek(int fd, long offset, int ptrname);
-char	*gettty(void);
-char	*getptr(char **adr);
-int	getdev(void);
-int	prcom(int puid);
-int	getbyte(char *adr);
-int	within(char *adr, long lbd, long ubd);
+long	lseek();
+char	*gettty();
+char	*getptr();
+int	prcom(), getbyte(), within(); void getdev();
 int	aflg;
 int	mem;
 int	swmem;
@@ -55,7 +51,9 @@ struct devl {
 char	*coref;
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int i;
 	char *ap;
@@ -158,14 +156,13 @@ bbreak:
 	exit(retcode);
 }
 
-int
-getdev(void)
+void
+getdev()
 {
+#include <sys/stat.h>
 	register FILE *df;
-	register int i;
 	struct stat sbuf;
 	struct direct dbuf;
-	char dpath[DIRSIZ+1];
 
 	if ((df = fopen("/dev", "r")) == NULL) {
 		fprintf(stderr, "Can't open /dev\n");
@@ -175,27 +172,24 @@ getdev(void)
 	while (fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
 		if(dbuf.d_ino == 0)
 			continue;
-		for (i=0; i<DIRSIZ; i++)
-			dpath[i] = dbuf.d_name[i];
-		dpath[DIRSIZ] = '\0';
-		if(stat(dpath, &sbuf) < 0)
+		if(stat(dbuf.d_name, &sbuf) < 0)
 			continue;
 		if ((sbuf.st_mode&S_IFMT) != S_IFCHR)
 			continue;
-		for (i=0; i<DIRSIZ; i++)
-			devl[ndev].dname[i] = dbuf.d_name[i];
+		strcpy(devl[ndev].dname, dbuf.d_name);
 		devl[ndev].dev = sbuf.st_rdev;
 		ndev++;
 	}
 	fclose(df);
 	if ((swap = open("/dev/swap", 0)) < 0) {
-		swap = -1;
+		fprintf(stderr, "Can't open /dev/swap\n");
+		exit(1);
 	}
-	return(0);
 }
 
 long
-round(long a, long b)
+round(a, b)
+	long		a, b;
 {
 	long		w = ((a+b-1)/b)*b;
 
@@ -209,7 +203,8 @@ struct map {
 struct map datmap;
 int	file;
 int
-prcom(int puid)
+prcom(puid)
+int puid;
 {
 	int abuf[128];
 	long addr;
@@ -251,7 +246,7 @@ prcom(int puid)
 		return(0);
 	if (lflg) {
 		printf("%2o %c%4d", mproc.p_flag,
-			"0SWRIZT"[(unsigned char)mproc.p_stat], puid);
+			"0SWRIZT"[mproc.p_stat&0377], puid);
 	}
 	printf("%6u", mproc.p_pid);
 	if (lflg) {
@@ -349,7 +344,7 @@ prcom(int puid)
 }
 
 char *
-gettty(void)
+gettty()
 {
 	register int i;
 	register char *p;
@@ -368,11 +363,12 @@ gettty(void)
 }
 
 char *
-getptr(char **adr)
+getptr(adr)
+char **adr;
 {
 	char *ptr;
 	register char *p, *pa;
-	register unsigned int i;
+	register unsigned i;
 
 	ptr = 0;
 	pa = (char *)adr;
@@ -383,7 +379,8 @@ getptr(char **adr)
 }
 
 int
-getbyte(char *adr)
+getbyte(adr)
+char *adr;
 {
 	register struct map *amap = &datmap;
 	char b;
@@ -405,7 +402,9 @@ getbyte(char *adr)
 
 
 int
-within(char *adr, long lbd, long ubd)
+within(adr,lbd,ubd)
+char *adr;
+long lbd, ubd;
 {
-	return((unsigned long)adr>=(unsigned long)lbd && (unsigned long)adr<(unsigned long)ubd);
+	return((long)adr>=lbd && (long)adr<ubd);
 }
