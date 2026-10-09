@@ -3,6 +3,17 @@
 
 void	fcomp(void), dechain(void);
 int	rline(char *lbuf), cmp(char *a, char *b);
+FILE	*fin, *fcode[12];
+struct reptr	*abuf[ABUFSIZE], **aptr, *ptrend, ptrspace[PTRSIZE], *rep;
+struct reptr	**cmpend[DEPTH], *pending;
+struct label	ltab[LABSIZE], *lab, *labend;
+char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE], *loc1, *loc2, *locs;
+char	seof, *reend, *lbend, *hend, *lcomend, linebuf[LBSIZE+1];
+char	holdsp[LBSIZE+1], *spend, *hspend, *braelist[NBRA], *braslist[NBRA];
+char	fname[12][40], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
+int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag, nlno;
+int	nfiles, f, depth, eargc;
+long	lnum, tlno[NLINES];
 struct label	*labtab = ltab;
 char	CGMES[]	= "command garbled: %s\n";
 char	TMMES[]	= "Too much text: %s\n";
