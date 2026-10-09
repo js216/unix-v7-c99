@@ -56,14 +56,12 @@ char	bittab[] = {
 	128
 };
 
-void compile(char *astr);
-void execute(char *file);
-int advance(register char *lp, register char *ep);
-void succeed(char *f);
-int ecmp(char *a, char *b, int count);
-void errexit(char *s, char *f);
+void	compile(), execute(), succeed(), errexit();
+int	advance(), ecmp();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -122,9 +120,9 @@ out:
 			} else if (*p == '[') {
 				while (*p != '\0' && *p != ']')
 					*s++ = *p++;
-			} else if (islower((unsigned char)*p)) {
+			} else if (islower(*p&0377)) {
 				*s++ = '[';
-				*s++ = toupper((unsigned char)*p);
+				*s++ = toupper(*p);
 				*s++ = *p++;
 				*s++ = ']';
 			} else
@@ -149,7 +147,8 @@ out:
 }
 
 void
-compile(char *astr)
+compile(astr)
+char *astr;
 {
 	register int c;
 	register char *ep, *sp;
@@ -267,7 +266,8 @@ compile(char *astr)
 }
 
 void
-execute(char *file)
+execute(file)
+char *file;
 {
 	register char *p1, *p2;
 	register int c;
@@ -329,7 +329,8 @@ execute(char *file)
 }
 
 int
-advance(register char *lp, register char *ep)
+advance(lp, ep)
+register char *lp, *ep;
 {
 	register char *curlp;
 	char c;
@@ -364,18 +365,18 @@ advance(register char *lp, register char *ep)
 		}
 		return(0);
 	case CBRA:
-		braslist[(unsigned char)*ep++] = lp;
+		braslist[*ep++&0377] = lp;
 		continue;
 
 	case CKET:
-		braelist[(unsigned char)*ep++] = lp;
+		braelist[*ep++&0377] = lp;
 		continue;
 
 	case CBACK:
-		bbeg = braslist[(unsigned char)*ep];
-		if (braelist[(unsigned char)*ep]==0)
+		bbeg = braslist[*ep&0377];
+		if (braelist[*ep&0377]==0)
 			return(0);
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		ct = braelist[*ep++&0377] - bbeg;
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
 			continue;
@@ -383,10 +384,10 @@ advance(register char *lp, register char *ep)
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[(unsigned char)*ep];
-		if (braelist[(unsigned char)*ep]==0)
+		bbeg = braslist[*ep&0377];
+		if (braelist[*ep&0377]==0)
 			return(0);
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		ct = braelist[*ep++&0377] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -444,9 +445,10 @@ advance(register char *lp, register char *ep)
 }
 
 void
-succeed(char *f)
+succeed(f)
+char *f;
 {
-	long ftell(FILE *iop);
+	long ftell();
 	nsucc = 1;
 	if (sflag)
 		return;
@@ -469,7 +471,9 @@ succeed(char *f)
 }
 
 int
-ecmp(char *a, char *b, int count)
+ecmp(a, b, count)
+int	count;
+char	*a, *b;
 {
 	register int cc = count;
 	while(cc--)
@@ -478,7 +482,8 @@ ecmp(char *a, char *b, int count)
 }
 
 void
-errexit(char *s, char *f)
+errexit(s, f)
+char *s, *f;
 {
 	fprintf(stderr, s, f);
 	exit(2);
