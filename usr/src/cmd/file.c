@@ -184,7 +184,7 @@ notfort:
 			printf("assembler program text"); 
 			goto outa;
 		}
-		else if(buf[j] == '\n' && isalpha(buf[j+2]&0377)){
+		else if((j < 0 || buf[j] == '\n') && isalpha(buf[j+2]&0377)){
 			printf("roff, nroff, or eqn input text");
 			goto outa;
 		}
