@@ -15,9 +15,9 @@
 void
 sureg(void)
 {
-	register int *udp, *uap, *rap;
-	int auisa[16];
-	int *limudp;
+	register int *udp, *uap, *rdp;
+	int auisa[16], auisd[16];
+	int *rap, *limudp;
 	int taddr, daddr;
 	struct text *tp;
 
@@ -27,11 +27,12 @@ sureg(void)
 	limudp = &u.u_uisd[16];
 	if (cputype==40)
 		limudp = &u.u_uisd[8];
-	rap = &auisa[0];
+	rap = auisa;
+	rdp = auisd;
 	uap = &u.u_uisa[0];
 	for (udp = &u.u_uisd[0]; udp < limudp;) {
 		*rap++ = *uap++ + (*udp&TX? taddr: (*udp&ABS? 0: daddr));
-		udp++;
+		*rdp++ = *udp++;
 	}
 	arm_sureg();
 }

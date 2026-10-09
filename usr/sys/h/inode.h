@@ -47,7 +47,6 @@ struct	inode
 #define	i_addr	u_reg.i_addr
 #define	i_lastr	u_reg.i_lastr
 #define	i_rdev	u_dev.i_rdev
-#define	i_group	u_dev.i_group
 };
 
 

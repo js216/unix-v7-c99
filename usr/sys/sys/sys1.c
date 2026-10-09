@@ -463,6 +463,7 @@ fork(void)
 		u.u_error = EAGAIN;
 		goto out;
 	}
+	p1 = u.u_procp;
 	if(newproc()) {
 		u.u_r.r_val1 = 0;
 		u.u_start = time;
