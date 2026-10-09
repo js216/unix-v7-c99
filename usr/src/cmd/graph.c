@@ -8,7 +8,7 @@ struct xy {
 	int	xlbf;	/*flag:explicit lower bound*/
 	int 	xubf;	/*flag:explicit upper bound*/
 	int	xqf;	/*flag:explicit quantum*/
-	double (*xf)();	/*transform function, e.g. log*/
+	double (*xf)(double x);	/*transform function, e.g. log*/
 	float	xa,xb;	/*scaling coefficients*/
 	float	xlb,xub;	/*lower and upper bound*/
 	float	xquant;	/*quantum*/
@@ -40,11 +40,18 @@ int	brkf;
 float	dx;
 char	*plotsymb;
 
-double	atof();
-int	numb(), copystring(), setmark(), conv(), getfloat(), getstring(), symbol();
-void	init(), setopt(), limread(), readin(), transpose(), scale(), axes(), submark(), plot(), title(), axlab(), badarg();
-void	space(), erase(), move(), cont(), line(), point(), label(), linemod(), closevt();
-int	scanf(char *, ...);
+int	numb(float *np, int *argcp, char ***argvp), copystring(int k);
+int	setmark(int *xmark, struct xy *p), conv(float xv, struct xy *p, int *ip);
+int	getfloat(float *p), getstring(void), symbol(int ix, int iy, int k);
+void	init(struct xy *p), setopt(int argc, char *argv[]);
+void	limread(struct xy *p, int *argcp, char ***argvp), readin(void);
+void	transpose(void), scale(struct xy *p, struct val *v), axes(void);
+void	submark(int *xmark, int *pxn, float x, struct xy *p), plot(void);
+void	title(void), axlab(char c, struct xy *p), badarg(void);
+void	space(int x0, int y0, int x1, int y1), erase(void);
+void	move(int xi, int yi), cont(int xi, int yi);
+void	line(int x0, int y0, int x1, int y1), point(int xi, int yi);
+void	label(char *s), linemod(char *s), closevt(void);
 #define BSIZ 80
 char	labbuf[BSIZ];
 char	titlebuf[BSIZ];
@@ -58,19 +65,14 @@ char *modes[] = {
 	"longdashed"
 };
 int mode = 1;
-char *realloc();
-char *malloc();
 
-double ident(x)
-double x;
+static double ident(double x)
 {
 	return(x);
 }
 
 int
-main(argc,argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 
 	space(0,0,4096,4096);
@@ -96,17 +98,14 @@ char *argv[];
 }
 
 void
-init(p)
-struct xy *p;
+init(struct xy *p)
 {
 	p->xf = ident;
 	p->xmult = 1;
 }
 
 void
-setopt(argc,argv)
-char *argv[];
-int argc;
+setopt(int argc, char *argv[])
 {
 	char *p1, *p2;
 	float temp;
@@ -205,10 +204,7 @@ again:		switch(argv[0][0]) {
 }
 
 void
-limread(p, argcp, argvp)
-register struct xy *p;
-int *argcp;
-char ***argvp;
+limread(register struct xy *p, int *argcp, char ***argvp)
 {
 	if(*argcp>1 && (*argvp)[1][0]=='l') {
 		(*argcp)--;
@@ -227,10 +223,7 @@ char ***argvp;
 }
 
 int
-numb(np, argcp, argvp)
-int *argcp;
-float *np;
-register char ***argvp;
+numb(float *np, int *argcp, register char ***argvp)
 {
 	register char c;
 
@@ -247,7 +240,7 @@ register char ***argvp;
 }
 
 void
-readin()
+readin(void)
 {
 	register int t;
 	struct val *temp;
@@ -282,7 +275,7 @@ readin()
 }
 
 void
-transpose()
+transpose(void)
 {
 	register int i;
 	float f;
@@ -296,8 +289,7 @@ transpose()
 }
 
 int
-copystring(k)
-int k;
+copystring(int k)
 {
 	register char *temp;
 	register int i;
@@ -313,27 +305,23 @@ int k;
 	return(q);
 }
 
-float
-modceil(f,t)
-float f,t;
+static float
+modceil(float f, float t)
 {
 
 	t = fabs(t);
 	return(ceil(f/t)*t);
 }
 
-float
-modfloor(f,t)
-float f,t;
+static float
+modfloor(float f, float t)
 {
 	t = fabs(t);
 	return(floor(f/t)*t);
 }
 
-void
-getlim(p,v)
-register struct xy *p;
-struct val *v;
+static void
+getlim(register struct xy *p, struct val *v)
 {
 	register int i;
 
@@ -349,11 +337,11 @@ struct val *v;
 
 struct z {
 	float lb,ub,mult,quant;
-} setloglim(), setlinlim();
+} setloglim(int lbf, int ubf, float lb, float ub),
+	setlinlim(int lbf, int ubf, float xlb, float xub);
 
-void
-setlim(p)
-register struct xy *p;
+static void
+setlim(register struct xy *p)
 {
 	float t,delta,sign;
 	struct z z;
@@ -421,9 +409,7 @@ register struct xy *p;
 }
 
 struct z
-setloglim(lbf,ubf,lb,ub)
-int lbf,ubf;
-float lb,ub;
+setloglim(int lbf, int ubf, float lb, float ub)
 {
 	float r,s,t;
 	struct z z;
@@ -455,9 +441,7 @@ float lb,ub;
 }
 
 struct z
-setlinlim(lbf,ubf,xlb,xub)
-int lbf,ubf;
-float xlb,xub;
+setlinlim(int lbf, int ubf, float xlb, float xub)
 {
 	struct z z;
 	float r,s,delta;
@@ -498,9 +482,7 @@ loop:
 }
 
 void
-scale(p,v)
-register struct xy *p;
-struct val *v;
+scale(register struct xy *p, struct val *v)
 {
 	float edge;
 
@@ -514,7 +496,7 @@ struct val *v;
 }
 
 void
-axes()
+axes(void)
 {
 	register int i;
 	int mark[50];
@@ -548,9 +530,7 @@ axes()
 }
 
 int
-setmark(xmark,p)
-int *xmark;
-register struct xy *p;
+setmark(int *xmark, register struct xy *p)
 {
 	int xn = 0;
 	float x,xl,xu;
@@ -579,18 +559,14 @@ register struct xy *p;
 	return(xn);
 }
 void
-submark(xmark,pxn,x,p)
-int *xmark;
-int *pxn;
-float x;
-struct xy *p;
+submark(int *xmark, int *pxn, float x, struct xy *p)
 {
 	if(1.001*p->xlb < x && .999*p->xub > x)
 		xmark[(*pxn)++] = log10(x)*p->xa + p->xb;
 }
 
 void
-plot()
+plot(void)
 {
 	int ix,iy;
 	int i;
@@ -618,10 +594,7 @@ plot()
 }
 
 int
-conv(xv,p,ip)
-float xv;
-register struct xy *p;
-int *ip;
+conv(float xv, register struct xy *p, int *ip)
 {
 	long ix;
 	ix = p->xa*(*p->xf)(xv*p->xmult) + p->xb;
@@ -632,8 +605,7 @@ int *ip;
 }
 
 int
-getfloat(p)
-float *p;
+getfloat(float *p)
 {
 	register int i;
 
@@ -642,7 +614,7 @@ float *p;
 }
 
 int
-getstring()
+getstring(void)
 {
 	register int i;
 	char junk[20];
@@ -674,8 +646,7 @@ getstring()
 
 
 int
-symbol(ix,iy,k)
-int ix,iy,k;
+symbol(int ix, int iy, int k)
 {
 
 	if(symbf==0&&k<0) {
@@ -692,7 +663,7 @@ int ix,iy,k;
 }
 
 void
-title()
+title(void)
 {
 	move(xd.xbot,yd.xbot-60);
 	if (titlebuf[0]) {
@@ -707,9 +678,7 @@ title()
 }
 
 void
-axlab(c,p)
-char c;
-struct xy *p;
+axlab(char c, struct xy *p)
 {
 	char buf[50];
 	sprintf(buf,"%g -%s%c- %g", p->xlb/p->xmult,
@@ -718,20 +687,18 @@ struct xy *p;
 }
 
 void
-badarg()
+badarg(void)
 {
 	fprintf(stderr,"graph: error in arguments\n");
 	exit(1);
 }
-void
-putsi(a)
-int a;{
+static void
+putsi(int a){
 	putc((char)a,stdout);
 	putc((char)(a>>8),stdout);
 }
 void
-space(x0,y0,x1,y1)
-int x0,y0,x1,y1;{
+space(int x0, int y0, int x1, int y1){
 	putc('s',stdout);
 	putsi(x0);
 	putsi(y0);
@@ -739,26 +706,23 @@ int x0,y0,x1,y1;{
 	putsi(y1);
 }
 void
-erase(){
+erase(void){
 	putc('e',stdout);
 }
 void
-move(xi,yi)
-int xi,yi;{
+move(int xi, int yi){
 	putc('m',stdout);
 	putsi(xi);
 	putsi(yi);
 }
 void
-cont(xi,yi)
-int xi,yi;{
+cont(int xi, int yi){
 	putc('n',stdout);
 	putsi(xi);
 	putsi(yi);
 }
 void
-line(x0,y0,x1,y1)
-int x0,y0,x1,y1;{
+line(int x0, int y0, int x1, int y1){
 	putc('l',stdout);
 	putsi(x0);
 	putsi(y0);
@@ -766,15 +730,13 @@ int x0,y0,x1,y1;{
 	putsi(y1);
 }
 void
-point(xi,yi)
-int xi,yi;{
+point(int xi, int yi){
 	putc('p',stdout);
 	putsi(xi);
 	putsi(yi);
 }
 void
-label(s)
-char *s;
+label(char *s)
 {
 	int i;
 	putc('t',stdout);
@@ -782,8 +744,7 @@ char *s;
 	putc('\n',stdout);
 }
 void
-linemod(s)
-char *s;
+linemod(char *s)
 {
 	int i;
 	putc('f',stdout);
@@ -791,6 +752,6 @@ char *s;
 	putc('\n',stdout);
 }
 void
-closevt(){
+closevt(void){
 	fflush(stdout);
 }
