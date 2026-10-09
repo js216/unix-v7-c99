@@ -8,7 +8,9 @@ struct mtab {
 } mtab[NMOUNT];
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register struct mtab *mp;
 	register char *p1, *p2;
