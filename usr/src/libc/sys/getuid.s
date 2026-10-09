@@ -1,22 +1,9 @@
-
-
-
-
-
-
-
-.globl getuid
+.globl	getuid, geteuid
 getuid:
-	mov ip, r7
-	mov r7, #24
-	svc #0
-	mov r7, ip
-	bx lr
-.globl geteuid
+	mov	ip, #24
+	b	cerror
 geteuid:
-	mov ip, r7
-	mov r7, #24
-	svc #0
-	mov r7, ip
-	mov r0, r1
-	bx lr
+	push	{lr}
+	bl	getuid
+	mov	r0, r1
+	pop	{pc}
