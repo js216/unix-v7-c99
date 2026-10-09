@@ -16,11 +16,11 @@ char	**FILENAME;	/* current filename argument */
 cell	*recloc;	/* location of record */
 cell	*nrloc;		/* NR */
 cell	*nfloc;		/* NF */
-int error(), recbld(), hash(), isnumber();
-void checkval();
+int hash(char *s);
+void checkval(cell *vp);
 
 void
-syminit()
+syminit(void)
 {
 	setsymtab("0", tostring("0"), 0.0, NUM|STR|CON|FLD, symtab);
 	recloc = setsymtab("$record", record, 0.0, STR|FLD, symtab);
@@ -37,7 +37,7 @@ syminit()
 	NR = &nrloc->fval;
 }
 
-cell **makesymtab()
+cell **makesymtab(void)
 {
 	int i;
 	cell **cp;
@@ -51,8 +51,7 @@ cell **makesymtab()
 }
 
 void
-freesymtab(ap)	/* free symbol table */
-cell *ap;
+freesymtab(cell *ap)	/* free symbol table */
 {
 	cell *cp, **tp;
 	int i;
@@ -70,15 +69,10 @@ cell *ap;
 	xfree(tp);
 }
 
-cell *setsymtab(n, s, f, t, tab)
-char *n, *s;
-awkfloat f;
-unsigned t;
-cell **tab;
+cell *setsymtab(char *n, char *s, awkfloat f, unsigned t, cell **tab)
 {
 	register int h;
 	register cell *p;
-	cell *lookup();
 
 	if (n != NULL && (p = lookup(n, tab)) != NULL) {
 		xfree(s);
@@ -102,8 +96,7 @@ cell **tab;
 }
 
 int
-hash(s)	/* form hash value for string s */
-register char *s;
+hash(register char *s)	/* form hash value for string s */
 {
 	register int hashval;
 
@@ -112,9 +105,7 @@ register char *s;
 	return(hashval % MAXSYM);
 }
 
-cell *lookup(s, tab)	/* look for s in tab */
-register char *s;
-cell **tab;
+cell *lookup(register char *s, cell **tab)	/* look for s in tab */
 {
 	register cell *p;
 
@@ -124,9 +115,7 @@ cell **tab;
 	return(NULL);	/* not found */
 }
 
-awkfloat setfval(vp, f)
-register cell *vp;
-awkfloat f;
+awkfloat setfval(register cell *vp, awkfloat f)
 {
 	dprintf("setfval: %o %g\n", vp, f, NULL);
 	checkval(vp);
@@ -139,9 +128,7 @@ awkfloat f;
 	return(vp->fval = f);
 }
 
-char *setsval(vp, s)
-register cell *vp;
-char *s;
+char *setsval(register cell *vp, char *s)
 {
 	dprintf("setsval: %o %s\n", vp, s, NULL);
 	checkval(vp);
@@ -157,11 +144,8 @@ char *s;
 	return(vp->sval = tostring(s));
 }
 
-awkfloat getfval(vp)
-register cell *vp;
+awkfloat getfval(register cell *vp)
 {
-	awkfloat atof();
-
 	if (vp->sval == record && donerec == 0)
 		recbld();
 	dprintf("getfval: %o", vp, NULL, NULL);
@@ -183,8 +167,7 @@ register cell *vp;
 	return(vp->fval);
 }
 
-char *getsval(vp)
-register cell *vp;
+char *getsval(register cell *vp)
 {
 	char s[100];
 
@@ -208,8 +191,7 @@ register cell *vp;
 }
 
 void
-checkval(vp)
-register cell *vp;
+checkval(register cell *vp)
 {
 	if (vp->tval & ARR)
 		error(FATAL, "illegal reference to array %s", vp->nval);
@@ -218,8 +200,7 @@ register cell *vp;
 			vp->sval, vp->fval, vp->tval);
 }
 
-char *tostring(s)
-register char *s;
+char *tostring(register char *s)
 {
 	register char *p;
 

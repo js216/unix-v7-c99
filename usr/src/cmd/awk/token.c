@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "awk.def"
 #include "awk.h"
 struct tok
 {	char *tnm;
@@ -82,8 +83,7 @@ struct tok
 {"LASTTOKEN", 333},
 };
 void
-ptoken(n)
-int n;
+ptoken(int n)
 {
 	if(n<128) printf("lex: %c\n",n);
 	else	if(n<=256) printf("lex:? %o\n",n);
@@ -92,8 +92,7 @@ int n;
 	return;
 }
 
-char *tokname(n)
-int n;
+char *tokname(int n)
 {
 	if (n<=256 || n >= LASTTOKEN)
 		n = 257;

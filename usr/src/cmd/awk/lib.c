@@ -2,8 +2,8 @@
 #include "awk.def"
 #include "awk.h"
 #include "ctype.h"
-int error(), fldbld(), member(), isnumber();
-void setclvar();
+#include <stdarg.h>
+void setclvar(char *s), _doprnt(char *fmt, va_list *argp, FILE *iop);
 
 FILE	*infile	= NULL;
 char	*file;
@@ -31,7 +31,7 @@ int	maxfld	= 0;	/* last used field */
 
 
 int
-getrec()
+getrec(void)
 {
 	register char *rr;
 	extern int svargc;
@@ -88,8 +88,7 @@ getrec()
 }
 
 void
-setclvar(s)	/* set var=value from s */
-char *s;
+setclvar(char *s)	/* set var=value from s */
 {
 	char *p;
 	cell *q;
@@ -102,8 +101,8 @@ char *s;
 	dprintf("command line set %s to |%s|\n", s, p, NULL);
 }
 
-int
-fldbld()
+void
+fldbld(void)
 {
 	register char *r, *fr, sep;
 	int i, j;
@@ -161,17 +160,16 @@ fldbld()
 	if (dbg)
 		for (i = 0; i <= maxfld; i++)
 			printf("field %d: |%s|\n", i, fldtab[i].sval);
-	return(0);
 }
 
-int
-recbld()
+void
+recbld(void)
 {
 	int i;
 	register char *r, *p;
 
 	if (donefld == 0 || donerec == 1)
-		return(0);
+		return;
 	r = record;
 	for (i = 1; i <= *NF; i++) {
 		p = getsval(&fldtab[i]);
@@ -186,11 +184,9 @@ recbld()
 	if (r > record+RECSIZE)
 		error(FATAL, "built giant record `%.20s...'", record);
 	dprintf("recbld = |%s|\n", record, NULL, NULL);
-	return(0);
 }
 
-cell *fieldadr(n)
-int n;
+cell *fieldadr(int n)
 {
 	if (n >= MAXFLD)
 		error(FATAL, "trying to access field %d", n);
@@ -199,27 +195,28 @@ int n;
 
 int	errorflag	= 0;
 
-int
-yyerror(s) char *s; {
+void
+yyerror(char *s) {
 	fprintf(stderr, "awk: %s near line %d\n", s, lineno);
 	errorflag = 2;
-	return(0);
 }
 
-int
-error(f, s, a1, a2, a3, a4, a5, a6, a7) char *s; int f, a1, a2, a3, a4, a5, a6, a7; {
+void
+error(int f, char *s, ...) {
+	va_list a;
 	fprintf(stderr, "awk: ");
-	fprintf(stderr, s, a1, a2, a3, a4, a5, a6, a7);
+	va_start(a, s);
+	_doprnt(s, &a, stderr);
+	va_end(a);
 	fprintf(stderr, "\n");
 	if (*NR > 0)
 		fprintf(stderr, " record number %g\n", *NR);
 	if (f)
 		exit(2);
-	return(0);
 }
 
 void
-PUTS(s) char *s; {
+PUTS(char *s) {
 	(void)s;
 	dprintf("%s\n", s, NULL, NULL);
 }
@@ -227,8 +224,7 @@ PUTS(s) char *s; {
 #define	MAXEXPON	38	/* maximum exponenet for fp number */
 
 int
-isnumber(s)
-register char *s;
+isnumber(register char *s)
 {
 	register int d1, d2;
 	int point;

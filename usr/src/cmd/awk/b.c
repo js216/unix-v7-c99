@@ -1,11 +1,10 @@
 #include "awk.def"
 #include "stdio.h"
 #include "awk.h"
-int error(), first(), notin();
-void overflo(), penter(), follow(), cfoll(), freetr();
+int first(node *p), notin(int **array, int n, int *prev), *add(int n);
+void overflo(void), penter(node *p), follow(node *v), cfoll(node *v), freetr(node *p);
 
-extern node *op2();
-extern struct fa *cgotofn();
+extern struct fa *cgotofn(void);
 #define MAXLIN 256
 #define NCHARS 128
 #define NSTATES 256
@@ -40,8 +39,7 @@ int	setcnt;
 int	line;
 
 
-struct fa *makedfa(p)	/* returns dfa for tree pointed to by p */
-node *p;
+struct fa *makedfa(node *p)	/* returns dfa for tree pointed to by p */
 {
 	node *p1;
 	struct fa *fap;
@@ -60,8 +58,7 @@ node *p;
 }
 
 void
-penter(p)	/* set up parent pointers and leaf indices */
-node *p;
+penter(node *p)	/* set up parent pointers and leaf indices */
 {
 	switch(type(p)) {
 		LEAF
@@ -86,8 +83,7 @@ node *p;
 }
 
 void
-freetr(p)	/* free parse tree and follow sets */
-node *p;
+freetr(node *p)	/* free parse tree and follow sets */
 {
 	switch(type(p)) {
 		LEAF
@@ -109,8 +105,7 @@ node *p;
 			break;
 	}
 }
-char *cclenter(p)
-register char *p;
+char *cclenter(register char *p)
 {
 	register int i, c;
 	char *op;
@@ -141,18 +136,16 @@ register char *p;
 }
 
 void
-overflo()
+overflo(void)
 {
 	error(FATAL, "regular expression too long\n");
 }
 
 void
-cfoll(v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
-register node *v;
+cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
 {
 	register int i;
 	int prev;
-	int *add();
 
 	switch(type(v)) {
 		LEAF
@@ -180,8 +173,8 @@ register node *v;
 }
 
 int
-first(p)			/* collects initially active leaves of p into setvec */
-register node *p;		/* returns 0 or 1 depending on whether p matches empty string */
+first(register node *p)			/* collects initially active leaves of p into setvec */
+				/* returns 0 or 1 depending on whether p matches empty string */
 {
 	register int b;
 
@@ -215,8 +208,7 @@ register node *p;		/* returns 0 or 1 depending on whether p matches empty string
 }
 
 void
-follow(v)
-node *v;		/* collects leaves that can follow v into setvec */
+follow(node *v)		/* collects leaves that can follow v into setvec */
 {
 	node *p;
 
@@ -251,8 +243,7 @@ node *v;		/* collects leaves that can follow v into setvec */
 }
 
 int
-member(c, s)	/* is c in s? */
-register char c, *s;
+member(register char c, register char *s)	/* is c in s? */
 {
 	while (*s)
 		if (c == *s++)
@@ -261,10 +252,7 @@ register char c, *s;
 }
 
 int
-notin(array, n, prev)		/* is setvec in array[0] thru array[n]? */
-int **array;
-int n;
-int *prev; {
+notin(int **array, int n, int *prev) {		/* is setvec in array[0] thru array[n]? */
 	register int i, j;
 	int *ptr;
 	for (i=0; i<=n; i++) {
@@ -280,7 +268,7 @@ int *prev; {
 	return(1);
 }
 
-int *add(n) int n; {		/* remember setvec */
+int *add(int n) {		/* remember setvec */
 	int *ptr, *p;
 	register int i;
 	if ((p = ptr = (int *) malloc((n+1)*sizeof(int))) == NULL)
@@ -296,7 +284,7 @@ int *add(n) int n; {		/* remember setvec */
 	return(p);
 }
 
-struct fa *cgotofn()
+struct fa *cgotofn(void)
 {
 	register int i, k;
 	register int *ptr;
@@ -516,9 +504,7 @@ struct fa *cgotofn()
 }
 
 int
-match(pfa, p)
-register struct fa *pfa;
-register char *p;
+match(register struct fa *pfa, register char *p)
 {
 	register int count;
 	char c;

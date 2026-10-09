@@ -12,8 +12,7 @@
 #undef	input	/* defeat lex */
 extern int	yylval;
 extern int	mustfld;
-cell	*fieldadr();
-int	yyerror(), input();
+int	input(void);
 void	*memset(void *s, int c, unsigned int n);
 #undef	YY_INPUT
 #define	YY_INPUT(buf,result,max_size) \
@@ -29,7 +28,7 @@ int	lineno = 1;
 #else
 #	define	RETURN(x)	return(x)
 #endif
-#define	CADD	cbuf[clen++]=yytext[0]; if(clen>=CBUFLEN-1) {yyerror("string too long", cbuf); BEGIN A;}
+#define	CADD	cbuf[clen++]=yytext[0]; if(clen>=CBUFLEN-1) {yyerror("string too long"); BEGIN A;}
 #define	CBUFLEN	150
 char	cbuf[CBUFLEN];
 int	clen, cflag;
@@ -162,7 +161,7 @@ WS	[ \t]
 %%
 
 int
-input()
+input(void)
 {
 	register int c;
 	extern char *lexprog;
@@ -179,7 +178,7 @@ input()
 }
 
 void
-startreg()
+startreg(void)
 {
 	BEGIN reg;
 }

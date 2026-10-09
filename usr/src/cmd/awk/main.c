@@ -1,8 +1,8 @@
 #include "stdio.h"
 #include "awk.def"
 #include "awk.h"
-int run(), error(), yyparse();
-void logit(), msgfiles(), syminit();
+int yywrap(void);
+void logit(int n, char *s[]), msgfiles(void);
 
 int	dbg	= 0;
 int	svargc;
@@ -15,7 +15,7 @@ int filefd, iflag, symnum, ansfd;
 char *filelist;
 extern int maxsym, errno;
 int
-main(argc, argv) int argc; char *argv[]; {
+main(int argc, char *argv[]) {
 	if (argc == 1)
 		error(FATAL, "Usage: awk [-f source | 'cmds'] [files]");
 	if (strcmp(argv[0], "a.out"))
@@ -78,7 +78,7 @@ iloop:
 }
 
 void
-logit(n, s) int n; char *s[];
+logit(int n, char *s[])
 {	int i, tvec[2];
 	FILE *f, *g;
 	char buf[512];
@@ -104,13 +104,13 @@ logit(n, s) int n; char *s[];
 }
 
 int
-yywrap()
+yywrap(void)
 {
 	return(1);
 }
 
 void
-msgfiles()
+msgfiles(void)
 {	char buf[512], *p, *q, **s;
 	int n;
 	n=read(filefd, buf, 512);

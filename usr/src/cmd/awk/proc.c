@@ -1,7 +1,6 @@
 #include "stdio.h"
-#include <string.h>
 #include "awk.h"
-char *tokname();
+#include "awk.def"
 struct xx
 {	int token;
 	char *name;
@@ -61,17 +60,13 @@ struct xx
 char *table[SIZE];
 char *names[SIZE];
 int
-main()
+main(void)
 {	struct xx *p;
 	int i;
 	printf("#include \"awk.def\"\n");
-	printf("obj nullproc();\n");
-	for(p=proc;p->token!=0;p++)
-		if(p==proc || strcmp(p->name, (p-1)->name))
-			printf("extern obj %s();\n",p->name);
 	for(p=proc;p->token!=0;p++)
 		table[p->token-FIRSTTOKEN]=p->name;
-	printf("obj (*proctab[%d])() = {\n", SIZE);
+	printf("obj (*proctab[%d])(node **a, int n) = {\n", SIZE);
 	for(i=0;i<SIZE;i++)
 		if(table[i]==0) printf("/*%s*/\tnullproc,\n",tokname(i+FIRSTTOKEN));
 		else printf("/*%s*/\t%s,\n",tokname(i+FIRSTTOKEN),table[i]);

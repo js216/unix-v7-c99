@@ -3,8 +3,9 @@
 #define RECSIZE 512
 #include "awk.h"
 #include "stdio.h"
-int error(), fldbld(), getrec(), match();
-void tempfree(), redirprint(), freesymtab();
+void tempfree(obj a), redirprint(char *s, int a, node *b);
+char *format(char *s, node *a);
+obj gettemp(void), arrayel(node *a, obj b);
 
 #define FILENUM	10
 struct
@@ -12,9 +13,8 @@ struct
 	FILE *fp;
 	char *fname;
 } files[FILENUM];
-FILE *popen();
 
-extern obj execute(), nodetoobj(), fieldel(), dopa2();
+extern obj execute(node *u), nodetoobj(node *a);
 #define PA2NUM	29
 int pairstack[PA2NUM], paircnt;
 node *winner = (node *)NULL;
@@ -25,14 +25,14 @@ obj	true	={ OBOOL, BTRUE, 0 };
 obj	false	={ OBOOL, BFALSE, 0 };
 
 int
-run()
+run(void)
 {
 	return(execute(winner).otype);
 }
 
-obj execute(u) node *u;
+obj execute(node *u)
 {
-	register obj (*proc)();
+	register obj (*proc)(node **a, int n);
 	obj x;
 	node *a;
 	extern char *printname[];
@@ -63,8 +63,7 @@ obj execute(u) node *u;
 	}
 }
 
-obj program(a, n) node **a;
-int n;
+obj program(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -97,11 +96,9 @@ int n;
 	return(true);
 }
 
-obj array(a,n) node **a;
-int n;
+obj array(node **a, int n)
 {
 	obj x, y;
-	extern obj arrayel();
 	(void)n;
 
 	x = execute(a[1]);
@@ -110,7 +107,7 @@ int n;
 	return(y);
 }
 
-obj arrayel(a,b) node *a; obj b;
+obj arrayel(node *a, obj b)
 {
 	char *s;
 	cell *x;
@@ -126,14 +123,13 @@ obj arrayel(a,b) node *a; obj b;
 		x->tval |= ARR;
 		x->sval = (char *) makesymtab();
 	}
-	y.optr = setsymtab(s, tostring(""), 0.0, STR, x->sval);
+	y.optr = setsymtab(s, tostring(""), 0.0, STR, (cell **)x->sval);
 	y.otype = OCELL;
 	y.osub = CVAR;
 	return(y);
 }
 
-obj matchop(a,n) node **a;
-int n;
+obj matchop(node **a, int n)
 {
 	obj x;
 	char *s;
@@ -143,15 +139,14 @@ int n;
 	if (isstr(x)) s = x.optr->sval;
 	else	s = getsval(x.optr);
 	tempfree(x);
-	i = match(a[1], s);
+	i = match((struct fa *)a[1], s);
 	if ((n==MATCH && i==1) || (n==NOTMATCH && i==0))
 		return(true);
 	else
 		return(false);
 }
 
-obj boolop(a,n) node **a;
-int n;
+obj boolop(node **a, int n)
 {
 	obj x, y;
 	int i;
@@ -183,8 +178,7 @@ int n;
 	}
 }
 
-obj relop(a,n) node **a;
-int n;
+obj relop(node **a, int n)
 {
 	int i;
 	obj x, y;
@@ -220,14 +214,14 @@ int n;
 }
 
 void
-tempfree(a) obj a;
+tempfree(obj a)
 {
 	if (!istemp(a)) return;
 	xfree(a.optr->sval);
 	a.optr->tval = 0;
 }
 
-obj gettemp()
+obj gettemp(void)
 {
 	int i;
 	obj x;
@@ -244,12 +238,10 @@ obj gettemp()
 	return(x);
 }
 
-obj indirect(a,n) node **a;
-int n;
+obj indirect(node **a, int n)
 {
 	obj x;
 	int m;
-	cell *fieldadr();
 	(void)n;
 
 	x = execute(a[0]);
@@ -261,8 +253,7 @@ int n;
 	return(x);
 }
 
-obj substr(a, nnn) node **a;
-int nnn;
+obj substr(node **a, int nnn)
 {
 	char *s, *p, temp[100];
 	obj x;
@@ -302,8 +293,7 @@ int nnn;
 	return(x);
 }
 
-obj sindex(a, nnn) node **a;
-int nnn;
+obj sindex(node **a, int nnn)
 {
 	obj x, y;
 	char *s1, *s2, *p1, *p2, *q;
@@ -329,7 +319,7 @@ int nnn;
 	return(x);
 }
 
-char *format(s,a) char *s; node *a;
+char *format(char *s, node *a)
 {
 	char *buf, *p, fmt[100], *t, *os;
 	obj x;
@@ -399,8 +389,7 @@ char *format(s,a) char *s; node *a;
 	return(buf);
 }
 
-obj asprintf(a,n) node **a;
-int n;
+obj asprintf(node **a, int n)
 {
 	obj x;
 	node *y;
@@ -417,8 +406,7 @@ int n;
 	return(x);
 }
 
-obj arith(a,n) node **a;
-int n;
+obj arith(node **a, int n)
 {
 	awkfloat i,j=0;
 	obj x,y,z;
@@ -462,8 +450,7 @@ int n;
 	return(z);
 }
 
-obj incrdecr(a, n) node **a;
-int n;
+obj incrdecr(node **a, int n)
 {
 	obj x, z;
 	int k;
@@ -484,8 +471,7 @@ int n;
 }
 
 
-obj assign(a,n) node **a;
-int n;
+obj assign(node **a, int n)
 {
 	obj x, y;
 	awkfloat xf, yf;
@@ -528,8 +514,7 @@ int n;
 	return(x);
 }
 
-obj cat(a,q) node **a;
-int q;
+obj cat(node **a, int q)
 {
 	obj x,y,z;
 	int n;
@@ -552,8 +537,7 @@ int q;
 	return(z);
 }
 
-obj pastat(a,n) node **a;
-int n;
+obj pastat(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -569,8 +553,7 @@ int n;
 	return(x);
 }
 
-obj dopa2(a,n) node **a;
-int n;
+obj dopa2(node **a, int n)
 {
 	obj x;
 
@@ -591,8 +574,7 @@ int n;
 	return(false);
 }
 
-obj aprintf(a,n) node **a;
-int n;
+obj aprintf(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -607,8 +589,7 @@ int n;
 	return(x);
 }
 
-obj split(a,nnn) node **a;
-int nnn;
+obj split(node **a, int nnn)
 {
 	obj x;
 	cell *ap;
@@ -651,7 +632,7 @@ int nnn;
 		*t = '\0';
 		dprintf("n=%d, s=|%s|, temp=|%s|\n", n, s, temp);
 		sprintf(num, "%d", n);
-		setsymtab(num, tostring(temp), 0.0, STR, ap->sval);
+		setsymtab(num, tostring(temp), 0.0, STR, (cell **)ap->sval);
 		if (*p == '\0')	/* all done */
 			break;
 		s = p + 1;
@@ -662,8 +643,7 @@ int nnn;
 	return(x);
 }
 
-obj ifstat(a,n) node **a;
-int n;
+obj ifstat(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -680,8 +660,7 @@ int n;
 	return(x);
 }
 
-obj whilestat(a,n) node **a;
-int n;
+obj whilestat(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -701,8 +680,7 @@ int n;
 	}
 }
 
-obj forstat(a,n) node **a;
-int n;
+obj forstat(node **a, int n)
 {
 	obj x;
 	(void)n;
@@ -726,8 +704,7 @@ int n;
 	}
 }
 
-obj instat(a, n) node **a;
-int n;
+obj instat(node **a, int n)
 {
 	cell *vp, *arrayp, *cp, **tp;
 	obj x;
@@ -757,8 +734,7 @@ int n;
 	return(true);
 }
 
-obj jump(a,n) node **a;
-int n;
+obj jump(node **a, int n)
 {
 	obj x;
 	(void)a;
@@ -784,8 +760,7 @@ int n;
 	return(x);
 }
 
-obj fncn(a,n) node **a;
-int n;
+obj fncn(node **a, int n)
 {
 	obj x;
 	awkfloat u=0;
@@ -812,8 +787,7 @@ int n;
 	return(x);
 }
 
-obj print(a,n) node **a;
-int n;
+obj print(node **a, int n)
 {
 	register node *x;
 	obj y;
@@ -840,9 +814,9 @@ int n;
 	return(false);
 }
 
-obj nullproc() { return(true); }
+obj nullproc(node **a, int n) { (void)a; (void)n; return(true); }
 
-obj nodetoobj(a) node *a;
+obj nodetoobj(node *a)
 {
 	obj x;
 
@@ -854,7 +828,7 @@ obj nodetoobj(a) node *a;
 }
 
 void
-redirprint(s, a, b) char *s; int a; node *b;
+redirprint(char *s, int a, node *b)
 {
 	register int i;
 	obj x;
