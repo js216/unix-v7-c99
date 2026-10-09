@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <stdio.h>
 
+#define	atoi	tcatoi
 #define	oput(c) do { if (pgskip==0) putchar(c); } while (0)
 #define MAXY 3071
 #define US 037
@@ -54,28 +55,23 @@ int erase = 1;
 int	(*sigint)();
 int	(*sigquit)();
 
-int lig(char *x);
-int init(void);
-int ex(void);
-int kwait(void);
-int callunix(char line[]);
-int readch(void);
-int sendpt(void);
-int tcatoi(void);
-int getch(void);
-long tscale(int n);
-int main(int argc, char **argv)
+void lig(), init(), kwait(), callunix(), sendpt();
+int readch(), atoi(), getch();
+int
+main(argc,argv)
+int argc;
+char **argv;
 {
 	register int i, j;
 	register char *k;
-	extern int ex(void);
+	extern void ex();
 
 	while((--argc > 0) && ((++argv)[0][0]=='-')){
 		switch(argv[0][1]){
 			case 'p':
 				ap = &argv[0][2];
 				dfact = 72;
-				if((i = tcatoi()))pl = i/3;
+				if((i = atoi()))pl = i/3;
 				continue;
 			case 't':
 				tflag++;
@@ -83,13 +79,13 @@ int main(int argc, char **argv)
 			case 's':
 				ap = &argv[0][2];
 				dfact = 1;
-				pgskip = tcatoi();
+				pgskip = atoi();
 				continue;
 			default:
 				dfact = 1;
 				ap = &argv[0][1];
-				if((i = tcatoi()))mpy = i;
-				if((i = tcatoi()))div = i;
+				if((i = atoi()))mpy = i;
+				if((i = atoi()))div = i;
 				continue;
 		}
 	}
@@ -231,7 +227,9 @@ int main(int argc, char **argv)
 	}
 	ex();
 }
-int lig(char *x)
+void
+lig(x)
+char *x;
 {
 	register int i, j;
 	register char *k;
@@ -250,9 +248,9 @@ int lig(char *x)
 	}
 	xx -= j;
 	sendpt();
-	return(0);
 }
-int init(void){
+void
+init(){
 
 	fflush(stdout);
 	if(erase){
@@ -267,9 +265,9 @@ int init(void){
 */
 	skip = 0;
 	sendpt();
-	return(0);
 }
-int ex(void){
+void
+ex(){
 	yy = MAXY;
 	xx = 0;
 	sendpt();
@@ -278,11 +276,11 @@ int ex(void){
 	oput(US);
 	fflush(stdout);
 	exit(0);
-	return(0);
 }
-int kwait(void){
+void
+kwait(){
 	char buf[128]; char *bptr; char c;
-	if(pgskip) return(0);
+	if(pgskip) return;
 next:
 	bptr=buf;
 	while((c=readch())&&(c!='\n')) *bptr++=c;
@@ -297,7 +295,7 @@ next:
 			case 's':
 				ap = &buf[1];
 				dfact = 1;
-				pgskip = tcatoi() + 1;
+				pgskip = atoi() + 1;
 				goto next;
 			default:
 				fputs("?\n", stderr);
@@ -305,10 +303,11 @@ next:
 		}
 	}
 	else if (c==0) ex();
-	else	return(0);
-	return(0);
+	else	return;
 }
-int callunix(char line[])
+void
+callunix(line)
+char line[];
 {
 	int rc, status, unixpid;
 	if( (unixpid=fork())==0 ) {
@@ -318,19 +317,20 @@ int callunix(char line[])
 		exit(255);
 	}
 	else if(unixpid == -1)
-		return(0);
+		return;
 	else{	signal(SIGINT, SIG_IGN); signal(SIGQUIT, SIG_IGN);
 		while( (rc = wait(&status)) != unixpid && rc != -1 ) ;
 		signal(SIGINT,ex); signal(SIGQUIT,sigquit);
 	}
-	return(0);
 }
-int readch(void){
+int
+readch(){
 	char c;
 	if (read(2,&c,1)<1) c=0;
 	return(c);
 }
-int sendpt(void){
+void
+sendpt(){
 	int hy,xb,ly,hx,lx;
 
 	oput(GS);
@@ -351,13 +351,15 @@ int sendpt(void){
 	ohx = hx;
 	olx = lx;
 	alpha = 0;
-	return(0);
+	return;
 }
-int tcatoi(void)
+int
+atoi()
 {
 	register int i, j, acc;
 	int field, digits;
 	long dd;
+	long tscale();
 
 	field = digits = acc = 0;
 a1:
@@ -383,7 +385,8 @@ a1:
 	ch = 0;
 	return(acc);
 }
-long tscale(int n)
+long tscale(n)
+int n;
 {
 	register int i, j;
 
@@ -409,7 +412,8 @@ long tscale(int n)
 	}
 	return((long)n*j);
 }
-int getch(void){
+int
+getch(){
 	register int i;
 
 	if(ch){
