@@ -3,10 +3,9 @@
  *	(but carefully)
  */
 
-double sqrt();
+#include <math.h>
 double
-hypot(a,b)
-double a,b;
+hypot(double a, double b)
 {
 	double t;
 	if(a<0) a = -a;
@@ -30,12 +29,10 @@ struct	complex
 	double	r;
 	double	i;
 };
+double	cabs(struct complex arg);
 
 double
-cabs(arg)
-struct complex arg;
+cabs(struct complex arg)
 {
-	double hypot();
-
 	return(hypot(arg.r, arg.i));
 }

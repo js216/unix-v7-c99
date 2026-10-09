@@ -16,31 +16,25 @@ static double q1	=  .4081792252343299749395779e6;
 static double q2	=  .9463096101538208180571257e4;
 static double q3	=  .1326534908786136358911494e3;
 
-static double sinus();
+#include <math.h>
+static double sinus(double arg, int quad);
 double
-cos(arg)
-double arg;
+cos(double arg)
 {
-	double sinus();
 	if(arg<0)
 		arg = -arg;
 	return(sinus(arg, 1));
 }
 
 double
-sin(arg)
-double arg;
+sin(double arg)
 {
-	double sinus();
 	return(sinus(arg, 0));
 }
 
 static double
-sinus(arg, quad)
-double arg;
-int quad;
+sinus(double arg, int quad)
 {
-	double modf();
 	double e, f;
 	double ysq;
 	double x,y;

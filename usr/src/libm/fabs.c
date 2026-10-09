@@ -1,6 +1,6 @@
+#include <math.h>
 double
-fabs(arg)
-double arg;
+fabs(double arg)
 {
 
 	if(arg < 0.)

@@ -20,8 +20,7 @@ static double	sqrt2	= 1.4142135623730950488016887;
 static double	maxf	= 10000;
 
 double
-exp(arg)
-double arg;
+exp(double arg)
 {
 	double fract;
 	double temp1, temp2, xsq;

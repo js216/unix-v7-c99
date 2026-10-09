@@ -3,11 +3,10 @@
  * (resp least >=)
  */
 
-double	modf();
+#include <math.h>
 
 double
-floor(d)
-double d;
+floor(double d)
 {
 	double fract;
 
@@ -23,8 +22,7 @@ double d;
 }
 
 double
-ceil(d)
-double d;
+ceil(double d)
 {
 	return(-floor(-d));
 }
