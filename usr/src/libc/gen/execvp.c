@@ -39,7 +39,6 @@ execvp(char *name, char **argv)
 {
 	char *pathstr;
 	register char *cp;
-	char fname[128];
 	char *newargs[256];
 	int i;
 	register unsigned etxtbsy = 1;
@@ -48,6 +47,7 @@ execvp(char *name, char **argv)
 	if ((pathstr = getenv("PATH")) == NULL)
 		pathstr = ":/bin:/usr/bin";
 	cp = index(name, '/')? "": pathstr;
+	char fname[strlen(pathstr)+strlen(name)+2];
 
 	do {
 		cp = execat(cp, name, fname);
