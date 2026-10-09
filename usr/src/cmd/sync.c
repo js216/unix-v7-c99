@@ -1,6 +1,6 @@
-void sync();
+#include <stdio.h>
 int
-main()
+main(void)
 {
 
 	sync();
