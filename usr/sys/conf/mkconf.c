@@ -566,7 +566,7 @@ main()
 	printf("\t.rodata : { *(.rodata*) } > RAM\n");
 	printf("\t.data : { *(.data*) } > RAM\n");
 	printf("\t__bss_start = .;\n\t.bss : { *(.bss*) *(COMMON) } > RAM\n");
-	printf("\t__bss_end = .;\n\t.stack : { *(.stack) } > RAM\n");
+	printf("\t__bss_end = .;\n");
 	printf("\t.ddrbss (NOLOAD) : ALIGN(16384) {\n");
 	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
 	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n", tabn ? "TAB" : "RAM");

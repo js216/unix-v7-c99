@@ -229,7 +229,7 @@ return_frame:
 	ldr ip, [ip, #48]
 	movs pc, lr
 
-.section .stack
+.bss
 .balign 8
 stack_bottom:
 	.space 8192
