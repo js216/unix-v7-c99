@@ -18,7 +18,7 @@
 #define	RCOM	17
 #define	GO	0x1140
 #define	DRESET	014
-#define	IENABLE	0x12a
+#define	IENABLE	0x800013f
 #define	DRY	0200
 #define	ARDY	0100
 #define	WLO	020000
@@ -33,7 +33,7 @@
 #define	MASK	0x3c
 #define	IDMACTRL	0x50
 #define	IDMABASER	0x58
-#define	ERR	0x2a
+#define	ERR	0x800003f
 #define	DTDIR	02
 #define	BLK512	0220
 #define	CLEAR	0x1fe00fff
