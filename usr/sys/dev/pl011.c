@@ -10,8 +10,12 @@
 
 /* base address */
 #define	KLADDR	0x09000000
+#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
+#define	DLBASE	((struct device *)0175610)	/* dl-e */
 #define	NKL11	1
 #define	NDL11	0
+#define DSRDY	02
+#define	RDRENB	01
 #define	UARTDR	(*(volatile int *)(KLADDR+0x00))
 #define	UARTFR	(*(volatile int *)(KLADDR+0x18))
 #define	UARTIMSC	(*(volatile int *)(KLADDR+0x38))
@@ -31,6 +35,13 @@
 struct	tty kl11[NKL11+NDL11];
 void	klstart(struct tty *tp);
 int	klirq = 33;
+
+struct device {
+	int	rcsr;
+	int	rbuf;
+	int	tcsr;
+	int	tbuf;
+};
 
 void
 klopen(dev_t dev, int flag)

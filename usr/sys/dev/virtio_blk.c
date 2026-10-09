@@ -9,9 +9,20 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-void rkstart(void);
-
 #define	RKADDR(off)	(*(volatile int *)(vbase+(off)))
+#define	NRK	4
+#define	NRKBLK	4872
+
+#define	RESET	0
+#define	WCOM	2
+#define	RCOM	4
+#define	GO	01
+#define	DRESET	014
+#define	IENABLE	0100
+#define	DRY	0200
+#define	ARDY	0100
+#define	WLO	020000
+#define	CTLRDY	0200
 #define	NVQ	8
 
 /*
@@ -36,6 +47,7 @@ struct	vring
 	int	uring[2*NVQ];
 };
 
+void rkstart(void);
 struct	buf	rktab;
 struct	buf	rrkbuf;
 volatile struct vring *vq;

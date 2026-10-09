@@ -9,9 +9,20 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-void rkstart(void);
-
 #define	SD(off)	(*(volatile int *)(0x58005000+(off)))
+#define	NRK	4
+#define	NRKBLK	4872
+
+#define	RESET	0
+#define	WCOM	24
+#define	RCOM	17
+#define	GO	0x1140
+#define	DRESET	014
+#define	IENABLE	0x12a
+#define	DRY	0200
+#define	ARDY	0100
+#define	WLO	020000
+#define	CTLRDY	0200
 #define	ARG	0x08
 #define	CMD	0x0c
 #define	DTIMER	0x24
@@ -22,11 +33,6 @@ void rkstart(void);
 #define	MASK	0x3c
 #define	IDMACTRL	0x50
 #define	IDMABASER	0x58
-
-#define	WCOM	24
-#define	RCOM	17
-#define	GO	0x1140
-#define	IENABLE	0x12a
 #define	ERR	0x2a
 #define	DTDIR	02
 #define	BLK512	0220
@@ -37,6 +43,7 @@ void rkstart(void);
  */
 #define	DK_N	1
 
+void rkstart(void);
 int	rkirq = 82;
 struct	buf	rktab;
 struct	buf	rrkbuf;
