@@ -595,8 +595,9 @@ div(struct blk *ddivd, struct blk *ddivr)
 	rem = 0;
 	p = salloc(0);
 	if(length(ddivr) == 0){
-		pushp(ddivr);
-		{printf("divide by 0\n"); return((struct blk *)1); }
+		printf("divide by 0\n");
+		rem = salloc(0);
+		return(p);
 	}
 	divsign = remsign = 0;
 	divr = ddivr;
@@ -1125,7 +1126,7 @@ loop:
 	}
 	lastchar = getc(curfile);
 	if(lastchar != EOF)return(lastchar);
-	if(readptr != &readptr[0]){
+	if(readptr != &readstk[0]){
 		readptr--;
 		if(*readptr == 0)curfile = stdin;
 		goto loop;
@@ -1588,7 +1589,7 @@ int
 cond(char c)
 {
 	register struct blk *p;
-	register signed char cc;
+	register int cc;
 
 	if(subt() != 0)return(1);
 	p = pop();
