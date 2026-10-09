@@ -10,7 +10,6 @@
 #define stackbas(siz) (0x100000L-siz)
 #include <sys/param.h>
 #include "../../sys/h/proc.h"
-struct tty;
 #include <sys/dir.h>
 #include "../../sys/h/user.h"
 #undef u
@@ -44,7 +43,7 @@ daddr_t	swplo;
 
 int	ndev;
 struct devl {
-	char	dname[DIRSIZ];
+	char	dname[DIRSIZ+1];
 	dev_t	dev;
 } devl[256];
 
@@ -167,14 +166,14 @@ getdev(void)
 		exit(1);
 	}
 	ndev = 0;
-	while (fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
+	while (ndev < 256 && fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
 		if(dbuf.d_ino == 0)
 			continue;
-		if(stat(dbuf.d_name, &sbuf) < 0)
+		strncpy(devl[ndev].dname, dbuf.d_name, DIRSIZ);
+		if(stat(devl[ndev].dname, &sbuf) < 0)
 			continue;
 		if ((sbuf.st_mode&S_IFMT) != S_IFCHR)
 			continue;
-		strcpy(devl[ndev].dname, dbuf.d_name);
 		devl[ndev].dev = sbuf.st_rdev;
 		ndev++;
 	}
