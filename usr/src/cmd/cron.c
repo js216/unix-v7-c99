@@ -15,20 +15,17 @@
 char	crontab[]	= "/usr/lib/crontab";
 time_t	itime;
 struct	tm *loct;
-struct	tm *localtime();
-char	*malloc();
-char	*realloc();
 int	flag;
 char	*list;
 unsigned listsize;
-void	slp(), ex(), init();
-int	number();
+void	slp(void), ex(char *s), init(void);
+int	number(int c);
+char	*cmp(char *p, int v);
 
 int
-main()
+main(void)
 {
 	register char *cp;
-	char *cmp();
 	time_t filetime = 0;
 
 	setuid(1);
@@ -74,9 +71,7 @@ main()
 }
 
 char *
-cmp(p, v)
-char *p;
-int v;
+cmp(char *p, int v)
 {
 	register char *cp;
 
@@ -112,7 +107,7 @@ int v;
 }
 
 void
-slp()
+slp(void)
 {
 	register int i;
 	time_t t;
@@ -124,8 +119,7 @@ slp()
 }
 
 void
-ex(s)
-char *s;
+ex(char *s)
 {
 	int st;
 
@@ -141,7 +135,7 @@ char *s;
 }
 
 void
-init()
+init(void)
 {
 	register int i, c;
 	register char *cp;
@@ -244,8 +238,7 @@ ignore:
 }
 
 int
-number(c)
-register int c;
+number(register int c)
 {
 	register int n = 0;
 
