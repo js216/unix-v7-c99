@@ -20,6 +20,14 @@ LOCAL BOOL	beenhere = FALSE;
 CHAR		tmpout[20] = "/tmp/sh-";
 FILEBLK		stdfile;
 FILE		standin = &stdfile;
+INT		ioset, dolc, wdval, wdnum, wdset, serial, peekc, flags;
+INT		exitval, execbrk, loopcnt, breakcnt;
+IOPTR		iotemp, iopend;
+STRING		*dolv, cmdadr, exitadr, dolladr, pcsadr, pidadr, tmpnam, comdiv;
+DOLPTR		argfor;
+ARGPTR		gchain, wdarg;
+BOOL		reserv, trapnote;
+jmp_buf		subshell, errshell;
 #include	<execargs.h>
 
 LOCAL VOID	exfile(BOOL prof);

@@ -16,7 +16,7 @@ LOCAL INT	split(STRING s);
 
 #define ARGMK	01
 
-INT		errno;
+extern INT	errno;
 extern STRING	sysmsg[];
 
 /* fault handling */

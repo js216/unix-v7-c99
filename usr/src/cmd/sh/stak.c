@@ -10,6 +10,8 @@
 #include	"defs.h"
 
 STKPTR		stakbot=nullstr;
+BLKPTR		stakbsy;
+STKPTR		stakbas, brkend, staktop;
 
 
 

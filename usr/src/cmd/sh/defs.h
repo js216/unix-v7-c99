@@ -146,16 +146,16 @@ STRING		sbrk(int incr);
 #define assert(x)	;
 
 /* temp files and io */
-UFD		output;
-INT		ioset;
-IOPTR		iotemp;		/* files to be deleted sometime */
-IOPTR		iopend;		/* documents waiting to be read at NL */
+extern UFD		output;
+extern INT		ioset;
+extern IOPTR		iotemp;		/* files to be deleted sometime */
+extern IOPTR		iopend;		/* documents waiting to be read at NL */
 
 /* substitution */
-INT		dolc;
-STRING		*dolv;
-DOLPTR		argfor;
-ARGPTR		gchain;
+extern INT		dolc;
+extern STRING		*dolv;
+extern DOLPTR		argfor;
+extern ARGPTR		gchain;
 
 /* stack */
 #define		BLK(x)	((BLKPTR)(x))
@@ -179,11 +179,11 @@ extern MSG	synmsg;
 
 /* name tree and words */
 extern SYSTAB	reserved;
-INT		wdval;
-INT		wdnum;
-ARGPTR		wdarg;
-INT		wdset;
-BOOL		reserv;
+extern INT		wdval;
+extern INT		wdnum;
+extern ARGPTR		wdarg;
+extern INT		wdset;
+extern BOOL		reserv;
 
 /* prompting */
 extern MSG	stdprompt;
@@ -191,21 +191,21 @@ extern MSG	supprompt;
 extern MSG	profile;
 
 /* built in names */
-NAMNOD		fngnod;
-NAMNOD		ifsnod;
-NAMNOD		homenod;
-NAMNOD		mailnod;
-NAMNOD		pathnod;
-NAMNOD		ps1nod;
-NAMNOD		ps2nod;
+extern NAMNOD		fngnod;
+extern NAMNOD		ifsnod;
+extern NAMNOD		homenod;
+extern NAMNOD		mailnod;
+extern NAMNOD		pathnod;
+extern NAMNOD		ps1nod;
+extern NAMNOD		ps2nod;
 
 /* special names */
 extern MSG	flagadr;
-STRING		cmdadr;
-STRING		exitadr;
-STRING		dolladr;
-STRING		pcsadr;
-STRING		pidadr;
+extern STRING		cmdadr;
+extern STRING		exitadr;
+extern STRING		dolladr;
+extern STRING		pcsadr;
+extern STRING		pidadr;
 
 extern MSG	defpath;
 
@@ -220,14 +220,14 @@ extern MSG	ps2name;
 
 /* transput */
 extern CHAR	tmpout[];
-STRING		tmpnam;
-INT		serial;
+extern STRING		tmpnam;
+extern INT		serial;
 #define		TMPNAM 7
-FILE		standin;
+extern FILE		standin;
 #define input	(standin->fdes)
 #define eof	(standin->feof)
-INT		peekc;
-STRING		comdiv;
+extern INT		peekc;
+extern STRING		comdiv;
 extern MSG	devnull;
 
 /* flags */
@@ -245,17 +245,17 @@ extern MSG	devnull;
 #define		execpr	04000
 #define		readpr	010000
 #define		keyflg	020000
-INT		flags;
+extern INT		flags;
 
 /* error exits from various parts of shell */
 #include	<setjmp.h>
-jmp_buf		subshell;
-jmp_buf		errshell;
+extern jmp_buf		subshell;
+extern jmp_buf		errshell;
 
 /* fault handling */
 #include	"brkincr.h"
 #include	<signal.h>
-POS		brkincr;
+extern POS		brkincr;
 
 #define MINTRAP	0
 #define MAXTRAP	17
@@ -270,21 +270,21 @@ POS		brkincr;
 #define SIGMOD	8
 
 VOID		fault(INT sig);
-BOOL		trapnote;
+extern BOOL		trapnote;
 extern STRING	trapcom[];
 extern BOOL	trapflg[];
 
 /* name tree and words */
-STRING		*environ;
+extern STRING		*environ;
 extern CHAR	numbuf[];
 extern MSG	export;
 extern MSG	readonly;
 
 /* execflgs */
-INT		exitval;
-INT		execbrk;
-INT		loopcnt;
-INT		breakcnt;
+extern INT		exitval;
+extern INT		execbrk;
+extern INT		loopcnt;
+extern INT		breakcnt;
 
 /* messages */
 extern MSG	mailmsg;

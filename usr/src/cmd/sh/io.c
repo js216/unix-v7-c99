@@ -107,7 +107,7 @@ tmpfil(void)
 }
 
 /* set by trim */
-BOOL		nosubst;
+extern BOOL	nosubst;
 
 VOID
 copy(IOPTR ioparg)
