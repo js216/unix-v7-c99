@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 struct tab;
@@ -691,10 +690,6 @@ input(void)
 	if (equal(keyw, "map") && nmap < NMAP) {
 		if (sscanf(line, "%*s%lx%lx%s", &mapb[nmap], &mape[nmap], mapa[nmap]) != 3)
 			goto badl;
-		if (equal(mapa[nmap], "kern") || equal(mapa[nmap], "dev"))
-			sprintf(mapa[nmap], "SEC_%s", equal(mapa[nmap], "kern") ? "KERN" : "DEV");
-		else
-			sprintf(mapa[nmap], "0x%lx", strtoul(mapa[nmap], 0, 16));
 		nmap++;
 		return(1);
 	}
