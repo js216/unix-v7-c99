@@ -9,8 +9,8 @@
 
 #include	"defs.h"
 
-LOCAL BOOL	chkid();
-LOCAL VOID	namwalk();
+LOCAL BOOL	chkid(STRING nam);
+LOCAL VOID	namwalk(NAMPTR np);
 
 
 NAMNOD	ps2nod	= {	0,		0,		ps2name,0,0,0},
@@ -27,9 +27,7 @@ NAMPTR		namep = &mailnod;
 /* ========	variable and string handling	======== */
 
 INT
-syslook(w,syswds)
-	STRING		w;
-	SYSTAB		syswds;
+syslook(STRING w, SYSTAB syswds)
 {
 	REG CHAR	first;
 	REG STRING	s;
@@ -48,9 +46,7 @@ syslook(w,syswds)
 }
 
 VOID
-setlist(arg,xp)
-	REG ARGPTR	arg;
-	INT		xp;
+setlist(REG ARGPTR arg, INT xp)
 {
 	WHILE arg
 	DO REG STRING	s=mactrim(arg->argval);
@@ -63,9 +59,7 @@ setlist(arg,xp)
 	OD
 }
 
-VOID	setname(argi, xp)
-	STRING		argi;
-	INT		xp;
+VOID	setname(STRING argi, INT xp)
 {
 	REG STRING	argscan=argi;
 	REG NAMPTR	n;
@@ -88,17 +82,13 @@ VOID	setname(argi, xp)
 }
 
 VOID
-replace(a, v)
-	REG STRING	*a;
-	STRING		v;
+replace(REG STRING *a, STRING v)
 {
 	free(*a); *a=make(v);
 }
 
 VOID
-dfault(n,v)
-	NAMPTR		n;
-	STRING		v;
+dfault(NAMPTR n, STRING v)
 {
 	IF n->namval==0
 	THEN	assign(n,v)
@@ -106,9 +96,7 @@ dfault(n,v)
 }
 
 VOID
-assign(n,v)
-	NAMPTR		n;
-	STRING		v;
+assign(NAMPTR n, STRING v)
 {
 	IF n->namflg&N_RDONLY
 	THEN	failed(n->namid,wtfailed);
@@ -116,8 +104,7 @@ assign(n,v)
 	FI
 }
 
-INT	readvar(names)
-	STRING		*names;
+INT	readvar(STRING *names)
 {
 	FILEBLK		fb;
 	REG FILE	f = &fb;
@@ -157,15 +144,12 @@ INT	readvar(names)
 }
 
 VOID
-assnum(p, i)
-	STRING		*p;
-	INT		i;
+assnum(STRING *p, INT i)
 {
 	itos(i); replace(p,numbuf);
 }
 
-STRING	make(v)
-	STRING		v;
+STRING	make(STRING v)
 {
 	REG STRING	p;
 
@@ -177,8 +161,7 @@ STRING	make(v)
 }
 
 
-NAMPTR		lookup(nam)
-	REG STRING	nam;
+NAMPTR		lookup(REG STRING nam)
 {
 	REG NAMPTR	nscan=namep;
 	REG NAMPTR	*prev = 0;
@@ -205,8 +188,7 @@ NAMPTR		lookup(nam)
 	return(*prev = nscan);
 }
 
-LOCAL BOOL	chkid(nam)
-	STRING		nam;
+LOCAL BOOL	chkid(STRING nam)
 {
 	REG CHAR *	cp=nam;
 
@@ -221,17 +203,15 @@ LOCAL BOOL	chkid(nam)
 	return(TRUE);
 }
 
-LOCAL VOID (*namfn)();
+LOCAL VOID (*namfn)(NAMPTR n);
 VOID
-namscan(fn)
-	VOID		(*fn)();
+namscan(VOID (*fn)(NAMPTR n))
 {
 	namfn=fn;
 	namwalk(namep);
 }
 
-LOCAL VOID	namwalk(np)
-	REG NAMPTR	np;
+LOCAL VOID	namwalk(REG NAMPTR np)
 {
 	IF np
 	THEN	namwalk(np->namlft);
@@ -240,8 +220,7 @@ LOCAL VOID	namwalk(np)
 	FI
 }
 
-VOID	printnam(n)
-	NAMPTR		n;
+VOID	printnam(NAMPTR n)
 {
 	REG STRING	s;
 
@@ -253,8 +232,7 @@ VOID	printnam(n)
 	FI
 }
 
-LOCAL STRING	staknam(n)
-	REG NAMPTR	n;
+LOCAL STRING	staknam(REG NAMPTR n)
 {
 	REG STRING	p;
 
@@ -264,8 +242,7 @@ LOCAL STRING	staknam(n)
 	return(getstak(p+1-ADR(stakbot)));
 }
 
-VOID	exname(n)
-	REG NAMPTR	n;
+VOID	exname(REG NAMPTR n)
 {
 	IF n->namflg&N_EXPORT
 	THEN	free(n->namenv);
@@ -275,8 +252,7 @@ VOID	exname(n)
 	FI
 }
 
-VOID	printflg(n)
-	REG NAMPTR		n;
+VOID	printflg(REG NAMPTR n)
 {
 	IF n->namflg&N_EXPORT
 	THEN	prs(export); blank();
@@ -289,7 +265,7 @@ VOID	printflg(n)
 	FI
 }
 
-VOID	getenv()
+VOID	getenv(void)
 {
 	REG STRING	*e=environ;
 
@@ -299,8 +275,7 @@ VOID	getenv()
 
 LOCAL INT	namec;
 
-VOID	countnam(n)
-	NAMPTR		n;
+LOCAL VOID	countnam(NAMPTR n)
 {
 	(void)n;
 	namec++;
@@ -308,15 +283,14 @@ VOID	countnam(n)
 
 LOCAL STRING 	*argnam;
 
-VOID	pushnam(n)
-	NAMPTR		n;
+LOCAL VOID	pushnam(NAMPTR n)
 {
 	IF n->namval
 	THEN	*argnam++ = staknam(n);
 	FI
 }
 
-STRING	*setenv()
+STRING	*setenv(void)
 {
 	REG STRING	*er;
 

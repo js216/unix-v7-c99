@@ -12,13 +12,12 @@
 
 LOCAL CHAR	quote;	/* used locally */
 LOCAL CHAR	quoted;	/* used locally */
-LOCAL INT	getch();
-LOCAL VOID	comsubst(), flush();
+LOCAL INT	getch(CHAR endch);
+LOCAL VOID	comsubst(void), flush(INT ot);
 
 
 
-LOCAL STRING	copyto(endch)
-	REG CHAR	endch;
+LOCAL STRING	copyto(REG CHAR endch)
 {
 	REG CHAR	c;
 
@@ -29,8 +28,7 @@ LOCAL STRING	copyto(endch)
 	return(0);
 }
 
-LOCAL VOID	skipto(endch)
-	REG CHAR	endch;
+LOCAL VOID	skipto(REG CHAR endch)
 {
 	/* skip chars up to } */
 	REG CHAR	c;
@@ -49,8 +47,7 @@ LOCAL VOID	skipto(endch)
 	IF c!=endch THEN error(badsub) FI
 }
 
-LOCAL INT	getch(endch)
-	CHAR		endch;
+LOCAL INT	getch(CHAR endch)
 {
 	REG CHAR	d;
 
@@ -148,8 +145,7 @@ retry:
 	return(d);
 }
 
-STRING	macro(as)
-	STRING		as;
+STRING	macro(STRING as)
 {
 	/* Strip "" and do $ substitution
 	 * Leaves result on top of stack
@@ -158,7 +154,7 @@ STRING	macro(as)
 	REG CHAR	savq = quote;
 	FILEHDR		fb;
 
-	push(&fb); estabf(as);
+	push((FILE)&fb); estabf(as);
 	usestak();
 	quote=0; quoted=0;
 	copyto(0);
@@ -168,7 +164,7 @@ STRING	macro(as)
 	return(fixstak());
 }
 
-LOCAL VOID	comsubst()
+LOCAL VOID	comsubst(void)
 {
 	/* command substn */
 	FILEBLK		cb;
@@ -210,8 +206,7 @@ LOCAL VOID	comsubst()
 #define CPYSIZ	512
 
 VOID
-subst(in,ot)
-	INT		in, ot;
+subst(INT in, INT ot)
 {
 	REG CHAR	c;
 	FILEBLK		fb;
@@ -229,8 +224,7 @@ subst(in,ot)
 	pop();
 }
 
-LOCAL VOID	flush(ot)
-	INT		ot;
+LOCAL VOID	flush(INT ot)
 {
 	write(ot,stakbot,staktop-stakbot);
 	IF flags&execpr THEN write(output,stakbot,staktop-stakbot) FI

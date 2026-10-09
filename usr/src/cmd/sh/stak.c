@@ -15,8 +15,7 @@ STKPTR		stakbot=nullstr;
 
 /* ========	storage allocation	======== */
 
-STKPTR	getstak(asize)
-	INT		asize;
+STKPTR	getstak(INT asize)
 {	/* allocate requested stack */
 	REG STKPTR	oldstak;
 	REG INT		size;
@@ -27,7 +26,7 @@ STKPTR	getstak(asize)
 	return(oldstak);
 }
 
-STKPTR	locstak()
+STKPTR	locstak(void)
 {	/* set up stack for local use
 	 * should be followed by `endstak'
 	 */
@@ -40,14 +39,13 @@ STKPTR	locstak()
 	return(stakbot);
 }
 
-STKPTR	savstak()
+STKPTR	savstak(void)
 {
 	assert(staktop==stakbot);
 	return(stakbot);
 }
 
-STKPTR	endstak(argp)
-	REG STRING	argp;
+STKPTR	endstak(REG STRING argp)
 {	/* tidy up after `locstak' */
 	REG STKPTR	oldstak;
 	*argp++=0;
@@ -55,8 +53,7 @@ STKPTR	endstak(argp)
 	return(oldstak);
 }
 
-VOID	tdystak(x)
-	REG STKPTR 	x;
+VOID	tdystak(REG STKPTR x)
 {
 	/* try to bring stack back to x */
 	WHILE ADR(stakbsy)>ADR(x)
@@ -64,19 +61,18 @@ VOID	tdystak(x)
 	   stakbsy = stakbsy->word;
 	OD
 	staktop=stakbot=max(ADR(x),ADR(stakbas));
-	rmtemp(x);
+	rmtemp((IOPTR)x);
 }
 
 VOID
-stakchk()
+stakchk(void)
 {
 	IF (brkend-stakbas)>BRKINCR+BRKINCR
 	THEN	setbrk(-BRKINCR);
 	FI
 }
 
-STKPTR	cpystak(x)
-	STKPTR		x;
+STKPTR	cpystak(STKPTR x)
 {
 	return(endstak(movstr(x,locstak())));
 }

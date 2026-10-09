@@ -10,8 +10,7 @@
 #include	"defs.h"
 
 BYTPTR
-setbrk(incr)
-	INT		incr;
+setbrk(INT incr)
 {
 	REG BYTPTR	a=sbrk(incr);
 	brkend=a+incr;

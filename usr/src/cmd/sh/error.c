@@ -13,13 +13,13 @@
 /* ========	error handling	======== */
 
 VOID
-exitset()
+exitset(void)
 {
 	assnum(&exitadr,exitval);
 }
 
 VOID
-sigchk()
+sigchk(void)
 {
 	/* Find out if it is time to go away.
 	 * `trapnote' is set to SIGSET when fault is seen and
@@ -31,8 +31,7 @@ sigchk()
 }
 
 VOID
-failed(s1,s2)
-	STRING	s1, s2;
+failed(STRING s1, STRING s2)
 {
 	prp(); prs(s1); 
 	IF s2
@@ -42,15 +41,13 @@ failed(s1,s2)
 }
 
 VOID
-error(s)
-	STRING	s;
+error(STRING s)
 {
 	failed(s,NIL);
 }
 
 VOID
-exitsh(xno)
-	INT	xno;
+exitsh(INT xno)
 {
 	/* Arrive here from `FATAL' errors
 	 *  a) exit command,
@@ -68,7 +65,7 @@ exitsh(xno)
 }
 
 VOID
-done()
+done(void)
 {
 	REG STRING	t;
 	IF (t=trapcom[0])
@@ -80,8 +77,7 @@ done()
 }
 
 VOID
-rmtemp(base)
-	IOPTR		base;
+rmtemp(IOPTR base)
 {
 	WHILE iotemp>base
 	DO  unlink(iotemp->ioname);

@@ -16,8 +16,7 @@ BOOL		trapflg[MAXTRAP];
 /* ========	fault handling routines	   ======== */
 
 
-VOID	fault(sig)
-	REG INT		sig;
+VOID	fault(REG INT sig)
 {
 	REG INT		flag;
 
@@ -37,7 +36,7 @@ VOID	fault(sig)
 }
 
 VOID
-stdsigs()
+stdsigs(void)
 {
 	ignsig(QUIT);
 	getsig(INTR);
@@ -46,20 +45,18 @@ stdsigs()
 }
 
 INT
-ignsig(n)
-	INT		n;
+ignsig(INT n)
 {
 	REG INT		s, i;
 
-	IF (s=signal(i=n,1)&01)==0
+	IF (s=signal(i=n,SIG_IGN)==SIG_IGN)==0
 	THEN	trapflg[i] |= SIGMOD;
 	FI
 	return(s);
 }
 
 VOID
-getsig(n)
-	INT		n;
+getsig(INT n)
 {
 	REG INT		i;
 
@@ -69,7 +66,7 @@ getsig(n)
 }
 
 VOID
-oldsigs()
+oldsigs(void)
 {
 	REG INT		i;
 	REG STRING	t;
@@ -86,8 +83,7 @@ oldsigs()
 }
 
 VOID
-clrsig(i)
-	INT		i;
+clrsig(INT i)
 {
 	free(trapcom[i]); trapcom[i]=0;
 	IF trapflg[i]&SIGMOD
@@ -97,7 +93,7 @@ clrsig(i)
 }
 
 VOID
-chktrap()
+chktrap(void)
 {
 	/* check for traps */
 	REG INT		i=MAXTRAP;

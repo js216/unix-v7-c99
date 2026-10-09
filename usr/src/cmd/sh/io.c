@@ -14,8 +14,7 @@
 /* ========	input output and file copying ======== */
 
 VOID
-initf(fd)
-	UFD		fd;
+initf(UFD fd)
 {
 	REG FILE	f=standin;
 
@@ -25,8 +24,7 @@ initf(fd)
 }
 
 INT
-estabf(s)
-	REG STRING	s;
+estabf(REG STRING s)
 {
 	REG FILE	f;
 
@@ -37,8 +35,7 @@ estabf(s)
 }
 
 VOID
-push(af)
-	FILE		af;
+push(FILE af)
 {
 	REG FILE	f;
 
@@ -48,7 +45,7 @@ push(af)
 }
 
 INT
-pop()
+pop(void)
 {
 	REG FILE	f;
 
@@ -61,8 +58,7 @@ pop()
 }
 
 VOID
-chkpipe(pv)
-	INT		*pv;
+chkpipe(INT *pv)
 {
 	IF pipe(pv)<0 ORF pv[INPIPE]<0 ORF pv[OTPIPE]<0
 	THEN	error(piperr);
@@ -70,8 +66,7 @@ chkpipe(pv)
 }
 
 INT
-chkopen(idf)
-	STRING		idf;
+chkopen(STRING idf)
 {
 	REG INT		rc;
 
@@ -83,19 +78,17 @@ chkopen(idf)
 }
 
 VOID
-rename(f1,f2)
-	REG INT		f1, f2;
+rename(REG INT f1, REG INT f2)
 {
 	IF f1!=f2
-	THEN	dup(f1|DUPFLG, f2);
+	THEN	dup2(f1, f2);
 		close(f1);
 		IF f2==0 THEN ioset|=1 FI
 	FI
 }
 
 INT
-create(s)
-	STRING		s;
+create(STRING s)
 {
 	REG INT		rc;
 
@@ -107,7 +100,7 @@ create(s)
 }
 
 INT
-tmpfil()
+tmpfil(void)
 {
 	itos(serial++); movstr(numbuf,tmpnam);
 	return(create(tmpout));
@@ -117,8 +110,7 @@ tmpfil()
 BOOL		nosubst;
 
 VOID
-copy(ioparg)
-	IOPTR		ioparg;
+copy(IOPTR ioparg)
 {
 	CHAR		c, *ends;
 	REG CHAR	*cline, *clinep;

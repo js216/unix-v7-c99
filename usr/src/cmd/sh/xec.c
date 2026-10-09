@@ -20,10 +20,7 @@ extern SYSTAB	commands;
 
 
 INT
-execute(argt, execflg, pf1, pf2)
-	TREPTR		argt;
-	INT		*pf1, *pf2;
-	INT		execflg;
+execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 {
 	/* `stakbot' is preserved by this routine */
 	REG TREPTR	t;
@@ -203,7 +200,7 @@ execute(argt, execflg, pf1, pf2)
 	
 				case SYSEVAL:
 					IF a1
-					THEN	execexp(a1,&com[2]);
+					THEN	execexp(a1,(UFD)&com[2]);
 					FI
 					break;
 
@@ -226,7 +223,7 @@ execute(argt, execflg, pf1, pf2)
                                         break;
 	
 				default:
-					internal=builtin(argn,com);
+					internal=builtin();
 	
 				ENDSW
 
@@ -276,7 +273,7 @@ execute(argt, execflg, pf1, pf2)
 				/* except for those `lost' by trap   */
 				oldsigs();
 				IF treeflgs&FINT
-				THEN	signal(INTR,1); signal(QUIT,1);
+				THEN	signal(INTR,SIG_IGN); signal(QUIT,SIG_IGN);
 				FI
 
 				/* pipe in or out */
@@ -421,9 +418,7 @@ execute(argt, execflg, pf1, pf2)
 
 
 VOID
-execexp(s,f)
-	STRING		s;
-	UFD		f;
+execexp(STRING s, UFD f)
 {
 	FILEBLK		fb;
 	push(&fb);

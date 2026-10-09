@@ -10,17 +10,17 @@
 #include	"defs.h"
 #include	"sym.h"
 
-LOCAL IOPTR	inout();
-LOCAL VOID	chkword();
-LOCAL VOID	chksym();
-LOCAL TREPTR	term();
-LOCAL TREPTR	makelist();
-LOCAL TREPTR	list();
-LOCAL REGPTR	syncase();
-LOCAL TREPTR	item();
-LOCAL INT	skipnl();
-LOCAL VOID	prsym();
-LOCAL VOID	synbad();
+LOCAL IOPTR	inout(IOPTR lastio);
+LOCAL VOID	chkword(void);
+LOCAL VOID	chksym(INT sym);
+LOCAL TREPTR	term(INT flg);
+LOCAL TREPTR	makelist(INT type, TREPTR i, TREPTR r);
+LOCAL TREPTR	list(INT flg);
+LOCAL REGPTR	syncase(INT esym);
+LOCAL TREPTR	item(BOOL flag);
+LOCAL INT	skipnl(void);
+LOCAL VOID	prsym(INT sym);
+LOCAL VOID	synbad(void);
 
 
 /* ========	command line decoding	========*/
@@ -28,9 +28,7 @@ LOCAL VOID	synbad();
 
 
 
-TREPTR	makefork(flgs, i)
-	INT		flgs;
-	TREPTR		i;
+TREPTR	makefork(INT flgs, TREPTR i)
 {
 	REG TREPTR	t;
 	REG FORKPTR	f;
@@ -41,9 +39,7 @@ TREPTR	makefork(flgs, i)
 	return(t);
 }
 
-LOCAL TREPTR	makelist(type,i,r)
-	INT		type;
-	TREPTR		i, r;
+LOCAL TREPTR	makelist(INT type, TREPTR i, TREPTR r)
 {
 	REG TREPTR	t = 0;
 	REG LSTPTR	l;
@@ -66,9 +62,7 @@ LOCAL TREPTR	makelist(type,i,r)
  *	list [ ; cmd ]
  */
 
-TREPTR	cmd(sym,flg)
-	REG INT		sym;
-	INT		flg;
+TREPTR	cmd(REG INT sym, INT flg)
 {
 	REG TREPTR	i, e;
 
@@ -119,8 +113,7 @@ TREPTR	cmd(sym,flg)
  *	list || term
  */
 
-LOCAL TREPTR	list(flg)
-	INT		flg;
+LOCAL TREPTR	list(INT flg)
 {
 	REG TREPTR	r;
 	REG INT		b;
@@ -138,8 +131,7 @@ LOCAL TREPTR	list(flg)
  *	item |^ term
  */
 
-LOCAL TREPTR	term(flg)
-	INT		flg;
+LOCAL TREPTR	term(INT flg)
 {
 	REG TREPTR	t;
 
@@ -155,8 +147,7 @@ LOCAL TREPTR	term(flg)
 	FI
 }
 
-LOCAL REGPTR	syncase(esym)
-	REG INT	esym;
+LOCAL REGPTR	syncase(REG INT esym)
 {
 	skipnl();
 	IF wdval==esym
@@ -194,8 +185,7 @@ LOCAL REGPTR	syncase(esym)
  *	begin ... end
  */
 
-LOCAL TREPTR	item(flag)
-	BOOL		flag;
+LOCAL TREPTR	item(BOOL flag)
 {
 	REG TREPTR	t;
 	REG IOPTR	io;
@@ -324,14 +314,13 @@ LOCAL TREPTR	item(flag)
 }
 
 
-LOCAL INT	skipnl()
+LOCAL INT	skipnl(void)
 {
 	WHILE (reserv++, word()==NL) DO chkpr(NL) OD
 	return(wdval);
 }
 
-LOCAL IOPTR	inout(lastio)
-	IOPTR		lastio;
+LOCAL IOPTR	inout(IOPTR lastio)
 {
 	REG INT		iof;
 	REG IOPTR	iop;
@@ -375,15 +364,14 @@ LOCAL IOPTR	inout(lastio)
 	return(iop);
 }
 
-LOCAL VOID	chkword()
+LOCAL VOID	chkword(void)
 {
 	IF word()
 	THEN	synbad();
 	FI
 }
 
-LOCAL VOID	chksym(sym)
-	INT		sym;
+LOCAL VOID	chksym(INT sym)
 {
 	REG INT		x = sym&wdval;
 	IF ((x&SYMFLG) ? x : sym) != wdval
@@ -391,8 +379,7 @@ LOCAL VOID	chksym(sym)
 	FI
 }
 
-LOCAL VOID	prsym(sym)
-	INT		sym;
+LOCAL VOID	prsym(INT sym)
 {
 	IF sym&SYMFLG
 	THEN	REG SYSPTR	sp=reserved;
@@ -410,7 +397,7 @@ LOCAL VOID	prsym(sym)
 	FI
 }
 
-LOCAL VOID	synbad()
+LOCAL VOID	synbad(void)
 {
 	prp(); prs(synmsg);
 	IF (flags&ttyflg)==0

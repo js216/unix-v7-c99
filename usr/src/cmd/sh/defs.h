@@ -78,51 +78,65 @@
 
 /* result type declarations */
 #define alloc malloc
-ADDRESS		alloc();
-VOID		addblok();
-STRING		make();
-STRING		movstr();
-TREPTR		cmd();
-TREPTR		makefork();
-NAMPTR		lookup();
-VOID		setname();
-VOID		setargs();
-DOLPTR		useargs();
-REAL		expr();
-STRING		catpath();
-STRING		getpath();
-STRING		*scan();
-STRING		mactrim();
-STRING		macro();
-VOID		await();
-VOID		post();
-VOID		exname();
-VOID		printnam();
-VOID		printflg();
-VOID		prs();
-VOID		prc();
-VOID		getenv();
-STRING		*setenv();
-INT		any(), builtin(), cf(), chkopen(), create(), estabf(),
-		execute(), expand(), getarg(), gmatch(), ignsig(),
-		length(), nextc(), options(), pathopen(), pop(),
-		readc(), readvar(), stoi(), syslook(), tmpfil(), word(),
-		alarm(), chdir(), close(), creat(), dup(), execve(),
-		fork(), getpid(), getuid(), gtty(), ioctl(), open(),
-		pause(), pipe(), read(), signal(), stat(), times(),
-		umask(), unlink(), wait(), write();
-VOID		assign(), assnum(), blank(), chkpipe(), chkpr(),
-		chktrap(), clearup(), copy(), dfault(), done(), error(),
-		execa(), execexp(), exitset(), exitsh(), failed(),
-		free(), getsig(), initf(), initio(), itos(), Ldup(),
-		makearg(), namscan(), newline(), oldsigs(), postclr(),
-		prn(), prp(), prt(), push(), rename(), replace(),
-		rmtemp(), setlist(), settmp(), sigchk(), stakchk(),
-		stdsigs(), subst(), tdystak(), trim(), clrsig(), exit();
-DOLPTR		freeargs();
-BYTPTR		setbrk();
-L_INT		lseek();
-STRING		sbrk();
+ADDRESS		alloc(POS nbytes);
+VOID		addblok(POS reqd);
+STRING		make(STRING v);
+STRING		movstr(STRING a, STRING b);
+TREPTR		cmd(INT sym, INT flg);
+TREPTR		makefork(INT flgs, TREPTR i);
+NAMPTR		lookup(STRING nam);
+VOID		setname(STRING argi, INT xp);
+VOID		setargs(STRING argi[]);
+DOLPTR		useargs(void);
+STRING		catpath(STRING path, STRING name);
+STRING		getpath(STRING s);
+STRING		*scan(INT argn);
+STRING		mactrim(STRING s);
+STRING		macro(STRING as);
+VOID		await(INT i);
+VOID		post(INT pcsid);
+VOID		exname(NAMPTR n);
+VOID		printnam(NAMPTR n);
+VOID		printflg(NAMPTR n);
+VOID		prs(STRING as);
+VOID		prc(CHAR c);
+VOID		getenv(void);
+STRING		*setenv(void);
+INT		any(CHAR c, STRING s), builtin(void), cf(STRING s1, STRING s2),
+		chkopen(STRING idf), create(STRING s), estabf(STRING s),
+		execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2),
+		expand(STRING as, INT rflg), getarg(COMPTR ac),
+		gmatch(STRING s, STRING p), ignsig(INT n), length(STRING as),
+		nextc(CHAR quote), options(INT argc, STRING *argv),
+		pathopen(STRING path, STRING name), pop(void), readc(void),
+		readvar(STRING *names), stoi(STRING icp),
+		syslook(STRING w, SYSTAB syswds), tmpfil(void), word(void),
+		alarm(unsigned sec), chdir(char *dir), close(int fd),
+		creat(char *name, int mode), dup(int fd), dup2(int fd, int fd2),
+		execve(char *name, char **argv, char **envp), fork(void),
+		getpid(void), getuid(void), ioctl(int fd, int req, void *argp),
+		open(char *name, int mode), pause(void), pipe(int *fd),
+		read(int fd, char *buf, int n), times(L_INT *t),
+		umask(int mask), unlink(char *name), wait(int *status),
+		write(int fd, char *buf, int n);
+VOID		assign(NAMPTR n, STRING v), assnum(STRING *p, INT i),
+		blank(void), chkpipe(INT *pv), chkpr(char eor), chktrap(void),
+		clearup(void), copy(IOPTR ioparg), dfault(NAMPTR n, STRING v),
+		done(void), error(STRING s), execa(STRING at[]),
+		execexp(STRING s, UFD f), exitset(void), exitsh(INT xno),
+		failed(STRING s1, STRING s2), free(void *ap), getsig(INT n),
+		initf(UFD fd), initio(IOPTR iop), itos(INT n),
+		Ldup(INT fa, INT fb), makearg(ARGPTR args),
+		namscan(VOID (*fn)(NAMPTR n)), newline(void), oldsigs(void),
+		postclr(void), prn(INT n), prp(void), prt(L_INT t),
+		push(FILE af), rename(INT f1, INT f2), replace(STRING *a, STRING v),
+		rmtemp(IOPTR base), setlist(ARGPTR arg, INT xp), settmp(void),
+		sigchk(void), stakchk(void), stdsigs(void), subst(INT in, INT ot),
+		tdystak(STKPTR x), trim(STRING at), clrsig(INT i), exit(int status);
+DOLPTR		freeargs(DOLPTR blk);
+BYTPTR		setbrk(INT incr);
+L_INT		lseek(int fd, long off, int ptr);
+STRING		sbrk(int incr);
 
 #define attrib(n,f)	(n->namflg |= f)
 #define round(a,b)	(((int)((ADR(a)+b)-1))&~((b)-1))
@@ -240,6 +254,7 @@ jmp_buf		errshell;
 
 /* fault handling */
 #include	"brkincr.h"
+#include	<signal.h>
 POS		brkincr;
 
 #define MINTRAP	0
@@ -254,7 +269,7 @@ POS		brkincr;
 #define SIGSET	4
 #define SIGMOD	8
 
-VOID		fault();
+VOID		fault(INT sig);
 BOOL		trapnote;
 extern STRING	trapcom[];
 extern BOOL	trapflg[];

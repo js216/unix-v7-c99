@@ -10,9 +10,9 @@
 #include	"defs.h"
 
 
-LOCAL VOID	gsort();
-LOCAL STRING	execs();
-LOCAL INT	split();
+LOCAL VOID	gsort(STRING from[], STRING to[]);
+LOCAL STRING	execs(STRING ap, STRING t[]);
+LOCAL INT	split(STRING s);
 
 #define ARGMK	01
 
@@ -30,8 +30,7 @@ extern STRING	sysmsg[];
 
 /* service routines for `execute' */
 
-VOID	initio(iop)
-	IOPTR		iop;
+VOID	initio(IOPTR iop)
 {
 	REG STRING	ion;
 	REG INT		iof, fd = -1;
@@ -67,8 +66,7 @@ VOID	initio(iop)
 	FI
 }
 
-STRING	getpath(s)
-	STRING		s;
+STRING	getpath(STRING s)
 {
 	REG STRING	path;
 	IF any('/',s)
@@ -83,8 +81,7 @@ STRING	getpath(s)
 	return(0);
 }
 
-INT	pathopen(path, name)
-	REG STRING	path, name;
+INT	pathopen(REG STRING path, REG STRING name)
 {
 	REG UFD		f;
 
@@ -93,9 +90,7 @@ INT	pathopen(path, name)
 	return(f);
 }
 
-STRING	catpath(path,name)
-	REG STRING	path;
-	STRING		name;
+STRING	catpath(REG STRING path, STRING name)
 {
 	/* leaves result on top of stack */
 	REG STRING	scanp = path,
@@ -112,8 +107,7 @@ STRING	catpath(path,name)
 LOCAL STRING	xecmsg;
 LOCAL STRING	*xecenv;
 
-VOID	execa(at)
-	STRING		at[];
+VOID	execa(STRING at[])
 {
 	REG STRING	path;
 	REG STRING	*t = at;
@@ -127,9 +121,7 @@ VOID	execa(at)
 	FI
 }
 
-LOCAL STRING	execs(ap,t)
-	STRING		ap;
-	REG STRING	t[];
+LOCAL STRING	execs(STRING ap, REG STRING t[])
 {
 	REG STRING	p, prefix;
 
@@ -179,7 +171,7 @@ LOCAL INT	pwlist[MAXP];
 LOCAL INT	pwc;
 
 VOID
-postclr()
+postclr(void)
 {
 	REG INT		*pw = pwlist;
 
@@ -188,8 +180,7 @@ postclr()
 	pwc=0;
 }
 
-VOID	post(pcsid)
-	INT		pcsid;
+VOID	post(INT pcsid)
 {
 	REG INT		*pw = pwlist;
 
@@ -203,8 +194,7 @@ VOID	post(pcsid)
 	FI
 }
 
-VOID	await(i)
-	INT		i;
+VOID	await(INT i)
 {
 	INT		rc=0, wx=0;
 	INT		w;
@@ -259,8 +249,7 @@ VOID	await(i)
 BOOL		nosubst;
 
 VOID
-trim(at)
-	STRING		at;
+trim(STRING at)
 {
 	REG STRING	p;
 	REG CHAR	c;
@@ -273,16 +262,14 @@ trim(at)
 	nosubst=q&QUOTE;
 }
 
-STRING	mactrim(s)
-	STRING		s;
+STRING	mactrim(STRING s)
 {
 	REG STRING	t=macro(s);
 	trim(t);
 	return(t);
 }
 
-STRING	*scan(argn)
-	INT		argn;
+STRING	*scan(INT argn)
 {
 	REG ARGPTR	argp = (ARGPTR)(Rcheat(gchain)&~ARGMK);
 	REG STRING	*comargn, *comargm;
@@ -304,8 +291,7 @@ STRING	*scan(argn)
 	return(comargn);
 }
 
-LOCAL VOID	gsort(from,to)
-	STRING		from[], to[];
+LOCAL VOID	gsort(STRING from[], STRING to[])
 {
 	INT		k, m, n;
 	REG INT		i, j;
@@ -330,8 +316,7 @@ LOCAL VOID	gsort(from,to)
 
 /* Argument list generation */
 
-INT	getarg(ac)
-	COMPTR		ac;
+INT	getarg(COMPTR ac)
 {
 	REG ARGPTR	argp;
 	REG INT		count=0;
@@ -347,8 +332,7 @@ INT	getarg(ac)
 	return(count);
 }
 
-LOCAL INT	split(s)
-	REG STRING	s;
+LOCAL INT	split(REG STRING s)
 {
 	REG STRING	argp;
 	REG INT		c;
@@ -368,7 +352,7 @@ LOCAL INT	split(s)
 		IF (c=expand(((ARGPTR)(argp=endstak(argp)))->argval,0))
 		THEN	count += c;
 		ELSE	/* assign(&fngnod, argp->argval); */
-			makearg(argp); count++;
+			makearg((ARGPTR)argp); count++;
 		FI
 		gchain=(ARGPTR)(Rcheat(gchain)|ARGMK);
 	POOL

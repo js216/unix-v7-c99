@@ -22,15 +22,13 @@ FILEBLK		stdfile;
 FILE		standin = &stdfile;
 #include	<execargs.h>
 
-LOCAL VOID	exfile();
+LOCAL VOID	exfile(BOOL prof);
 
 
 
 
 int
-main(c, v)
-	INT		c;
-	STRING		v[];
+main(INT c, STRING v[])
 {
 	REG INT		rflag=ttyflg;
 
@@ -90,8 +88,7 @@ main(c, v)
 	done();
 }
 
-LOCAL VOID	exfile(prof)
-BOOL		prof;
+LOCAL VOID	exfile(BOOL prof)
 {
 	volatile L_INT	mailtime = 0;
 	REG INT		userid;
@@ -153,8 +150,7 @@ BOOL		prof;
 }
 
 VOID
-chkpr(eor)
-char eor;
+chkpr(char eor)
 {
 	IF (flags&prompt) ANDF standin->fstak==0 ANDF eor==NL
 	THEN	prs(ps2nod.namval);
@@ -162,17 +158,16 @@ char eor;
 }
 
 VOID
-settmp()
+settmp(void)
 {
 	itos(getpid()); serial=0;
 	tmpnam=movstr(numbuf,&tmpout[TMPNAM]);
 }
 
 VOID
-Ldup(fa, fb)
-	REG INT		fa, fb;
+Ldup(REG INT fa, REG INT fb)
 {
-	dup(fa|DUPFLG, fb);
+	dup2(fa, fb);
 	close(fa);
 	ioctl(fb, FIOCLEX, 0);
 }

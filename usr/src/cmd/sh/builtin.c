@@ -1,3 +1,4 @@
+#include	"defs.h"
 int
-builtin()
+builtin(void)
 {return(0);}

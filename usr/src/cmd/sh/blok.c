@@ -24,8 +24,7 @@ BLKPTR		bloktop=BLK(end);	/*top of arena (last blok)*/
 
 
 
-ADDRESS	alloc(nbytes)
-	POS		nbytes;
+ADDRESS	alloc(POS nbytes)
 {
 	REG POS		rbytes = round(nbytes+BYTESPERWORD,BYTESPERWORD);
 
@@ -49,8 +48,7 @@ ADDRESS	alloc(nbytes)
 	POOL
 }
 
-VOID	addblok(reqd)
-	POS		reqd;
+VOID	addblok(POS reqd)
 {
 	IF stakbas!=staktop
 	THEN	REG STKPTR	rndstak;
@@ -74,8 +72,7 @@ VOID	addblok(reqd)
 	END
 }
 
-VOID	free(ap)
-	BLKPTR		ap;
+VOID	free(void *ap)
 {
 	REG BLKPTR	p;
 
