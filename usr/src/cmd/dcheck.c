@@ -206,7 +206,7 @@ bmap(int i)
 	if(i < NADDR-3)
 		return(iaddr[i]);
 	i -= NADDR-3;
-	if(i > (int)NINDIR) {
+	if(i >= (int)NINDIR) {
 		printf("%u - huge directory\n", ino);
 		return((daddr_t)0);
 	}
