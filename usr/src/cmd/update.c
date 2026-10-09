@@ -3,10 +3,9 @@
  * For cache benefit, open certain system directories.
  */
 
-#include <stdio.h>
 #include <signal.h>
+#include <stdio.h>
 
-int	dosync(void);
 char *fillst[] = {
 	"/bin",
 	"/usr",
@@ -14,8 +13,9 @@ char *fillst[] = {
 	0,
 };
 
+void dosync();
 int
-main(void)
+main()
 {
 	char **f;
 
@@ -31,11 +31,10 @@ main(void)
 		pause();
 }
 
-int
-dosync(void)
+void
+dosync()
 {
 	sync();
 	signal(SIGALRM, dosync);
 	alarm(30);
-	return(0);
 }
