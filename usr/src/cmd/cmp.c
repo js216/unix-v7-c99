@@ -9,10 +9,12 @@ long	chr	= 0;
 long	skip1;
 long	skip2;
 
-long	otoi(char *s);
+long	otoi();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	register int c1, c2;
 	char *arg;
@@ -93,7 +95,7 @@ loop:
 
 narg:
 	printf("cmp: arg count\n");
-	exit(2);
+	return(2);
 
 barg:
 	if (lflg)
@@ -105,8 +107,8 @@ earg:
 	exit(1);
 }
 
-long
-otoi(char *s)
+long otoi(s)
+char *s;
 {
 	long v;
 	int base;
@@ -115,7 +117,7 @@ otoi(char *s)
 	base = 10;
 	if (*s == '0')
 		base = 8;
-	while(isdigit((unsigned char)*s))
+	while(isdigit(*s&0377))
 		v = v*base + *s++ - '0';
 	return(v);
 }
