@@ -3,12 +3,9 @@
  */
 
 #include <stdio.h>
-char	*ttyname();
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *p;
 
