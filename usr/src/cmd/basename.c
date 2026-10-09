@@ -1,7 +1,9 @@
 #include	"stdio.h"
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	register char *p1, *p2, *p3;
 
@@ -24,6 +26,6 @@ main(int argc, char *argv[])
 		*p1 = '\0';
 	}
 output:
-	puts(p2);
+	puts(p2, stdout);
 	exit(0);
 }
