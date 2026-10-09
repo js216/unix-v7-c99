@@ -1,7 +1,9 @@
 #include <stdio.h>
-int number(char *s);
+int number();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int m, a, b;
 
@@ -29,7 +31,8 @@ usage:
 }
 
 int
-number(char *s)
+number(s)
+char *s;
 {
 	int n, c;
 
