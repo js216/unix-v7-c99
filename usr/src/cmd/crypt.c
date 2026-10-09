@@ -17,7 +17,7 @@ setup(char *pw)
 	int ic, i, k, temp, pf[2];
 	unsigned random;
 	char buf[13];
-	long seed;
+	unsigned long seed;
 
 	strncpy(buf, pw, 8);
 	while (*pw)
@@ -47,7 +47,7 @@ setup(char *pw)
 		t1[i] = i;
 	for(i=0;i<ROTORSZ;i++) {
 		seed = 5*seed + buf[i%13];
-		random = seed % 65521;
+		random = (long)seed % 65521;
 		k = ROTORSZ-1 - i;
 		ic = (random&MASK)%(k+1);
 		random >>= 8;
