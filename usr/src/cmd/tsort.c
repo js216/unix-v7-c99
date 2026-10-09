@@ -27,21 +27,18 @@ struct predlist {
 	struct nodelist *pred;
 };
 
-struct nodelist *index();
-struct nodelist *findloop();
-struct nodelist *mark();
-char *malloc();
-int present(), anypred(), cmp();
-void error(), note();
+struct nodelist *index(char *s);
+struct nodelist *findloop(void);
+int present(struct nodelist *i, struct nodelist *j), anypred(struct nodelist *i);
+int cmp(char *s, char *t);
+void error(char *s, char *t), note(char *s, char *t);
 char *empty = "";
 
 /*	the first for loop reads in the graph,
  *	the second prints out the ordering
 */
 int
-main(argc,argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register struct predlist *t;
 	FILE *input = stdin;
@@ -89,8 +86,7 @@ char **argv;
 /*	is i present on j's predecessor list?
 */
 int
-present(i,j)
-struct nodelist *i, *j;
+present(struct nodelist *i, struct nodelist *j)
 {
 	register struct predlist *t;
 	for(t=j->inedges; t!=NULL; t=t->nextpred)
@@ -102,8 +98,7 @@ struct nodelist *i, *j;
 /*	is there any live predecessor for i?
 */
 int
-anypred(i)
-struct nodelist *i;
+anypred(struct nodelist *i)
 {
 	register struct predlist *t;
 	for(t=i->inedges; t!=NULL; t=t->nextpred)
@@ -115,8 +110,7 @@ struct nodelist *i;
 /*	turn a string into a node pointer
 */
 struct nodelist *
-index(s)
-register char *s;
+index(register char *s)
 {
 	register struct nodelist *i;
 	register char *t;
@@ -138,8 +132,7 @@ register char *s;
 }
 
 int
-cmp(s,t)
-register char *s, *t;
+cmp(register char *s, register char *t)
 {
 	while(*s==*t) {
 		if(*s==0)
@@ -151,16 +144,14 @@ register char *s, *t;
 }
 
 void
-error(s,t)
-char *s, *t;
+error(char *s, char *t)
 {
 	note(s,t);
 	exit(1);
 }
 
 void
-note(s,t)
-char *s,*t;
+note(char *s, char *t)
 {
 	fprintf(stderr,"tsort: %s%s\n",s,t);
 }
@@ -169,7 +160,7 @@ char *s,*t;
  *	node in it
 */
 struct nodelist *
-findloop()
+findloop(void)
 {
 	register struct nodelist *i, *j;
 	register struct predlist *p;
