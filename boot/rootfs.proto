@@ -115,6 +115,7 @@ d--755 0 0
 		kmem	c--640 0 0 8 1
 		null	c--666 0 0 8 2
 		root	b--640 0 0 0 0
+		swap	b--640 0 0 0 0
 		tty	c--666 0 0 17 0
 		$
 	etc	d--755 0 0
@@ -128,7 +129,6 @@ d--755 0 0
 		rc	---755 0 0 etc/rc
 		ttys	---644 0 0 etc/ttys
 		update	---755 0 0 etc/update
-		utmp	---644 0 0 /dev/null
 		dmesg	---755 0 0 etc/dmesg
 		mknod	---755 0 0 etc/mknod
 		mount	---755 0 0 etc/mount
@@ -136,11 +136,9 @@ d--755 0 0
 		wall	---755 0 0 etc/wall
 		$
 	tmp	d--777 0 0
-		.keep	---644 0 0 /dev/null
 		$
 	usr	d--755 0 0
 		adm	d--755 0 0
-			acct	---644 0 0 /dev/null
 			wtmp	---644 0 0 /dev/null
 			$
 		dict	d--755 0 0
@@ -172,7 +170,6 @@ d--755 0 0
 			at	d--777 0 0
 				lasttimedone	---666 0 0 /dev/null
 				past	d--777 0 0
-					.keep	---644 0 0 /dev/null
 					$
 				$
 			$
