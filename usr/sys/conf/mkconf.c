@@ -548,10 +548,10 @@ main(void)
 	while(input());
 
 /*
- * pass1 -- create the linker script
+ * pass1 -- create linker script
  */
 	freopen("unix.ld", "w", stdout);
-	printf("ENTRY(_start)\nMEMORY\n{\n");
+	printf("MEMORY\n{\n");
 	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramb, ramn);
 	if (tabn)
 		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabb, tabn);
