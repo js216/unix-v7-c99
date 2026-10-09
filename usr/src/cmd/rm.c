@@ -5,14 +5,13 @@ int	errcode;
 #include <sys/stat.h>
 #include <sys/dir.h>
 
-char	*sprintf(char *buf, char *fmt, ...);
-void	rm(char *arg, int fflg, int rflg, int iflg, int level);
-int	dotname(char *s);
-int	rmdir(char *f, int iflg);
-int	yes(void);
+void	rm();
+int	dotname(), rmdir(), yes();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char *argv[];
 {
 	register char *arg;
 	int fflg, iflg, rflg;
@@ -53,7 +52,12 @@ main(int argc, char *argv[])
 }
 
 void
-rm(char arg[], int fflg, int rflg, int iflg, int level)
+rm(arg, fflg, rflg, iflg, level)
+int	level;
+int	iflg;
+int	rflg;
+int	fflg;
+char arg[];
 {
 	struct stat buf;
 	struct direct direct;
@@ -118,22 +122,25 @@ rm(char arg[], int fflg, int rflg, int iflg, int level)
 }
 
 int
-dotname(char *s)
+dotname(s)
+char *s;
 {
 	if(s[0] == '.') {
-		if(s[1] == '.') {
+		if(s[1] == '.')
 			if(s[2] == '\0')
 				return(1);
 			else
 				return(0);
-		} else if(s[1] == '\0')
+		else if(s[1] == '\0')
 			return(1);
 	}
 	return(0);
 }
 
 int
-rmdir(char *f, int iflg)
+rmdir(f, iflg)
+int	iflg;
+char *f;
 {
 	int status, i;
 
@@ -158,7 +165,7 @@ rmdir(char *f, int iflg)
 }
 
 int
-yes(void)
+yes()
 {
 	int i, b;
 
