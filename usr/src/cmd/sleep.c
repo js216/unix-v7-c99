@@ -1,6 +1,8 @@
 #include <stdio.h>
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int c, n;
 	char *s;
