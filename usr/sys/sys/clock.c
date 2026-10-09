@@ -7,8 +7,6 @@
 #include "../h/seg.h"
 #include "../h/conf.h"
 extern void addupc(caddr_t pc, void *prof, int inc);
-int intr_disable(void);
-void intr_restore(int s);
 void wakeup(caddr_t chan);
 void panic(char *s);
 
@@ -71,7 +69,7 @@ clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
 	 * callout
 	 */
 
-	intr_disable();
+	spl5();
 	if(callout[0].c_time <= 0) {
 		p1 = &callout[0];
 		while(p1->c_func != 0 && p1->c_time <= 0) {
@@ -114,7 +112,7 @@ out:
 			return;
 		lbolt -= HZ;
 		++time;
-		intr_disable();
+		spl1();
 		runrun++;
 		wakeup((caddr_t)&lbolt);
 		for(pp = &proc[0]; pp < &proc[NPROC]; pp++)
@@ -163,7 +161,7 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 
 	t = tim;
 	p1 = &callout[0];
-	s = intr_disable();
+	s = spl7();
 	while(p1->c_func != 0 && p1->c_time <= t) {
 		t -= p1->c_time;
 		p1++;
@@ -183,7 +181,7 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 	p1->c_time = t;
 	p1->c_func = fun;
 	p1->c_arg = arg;
-	intr_restore(s);
+	splx(s);
 }
 #define GICD_BASE	GIC_DIST_BASE
 #define GICC_BASE	GIC_CPU_BASE
@@ -198,7 +196,6 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 #define TIMER_HZ	HZ
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
-extern void irq_enable(void);
 extern struct intr intrtab[];
 static unsigned int timer_reload;
 int irq_ready;
@@ -248,5 +245,5 @@ clkstart(void)
 	cntv_tval_set(timer_reload);
 	cntv_ctl_set(1);
 	irq_ready = 1;
-	irq_enable();
+	spl0();
 }

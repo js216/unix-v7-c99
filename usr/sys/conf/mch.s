@@ -4,10 +4,12 @@
 
 	.globl mmu_on
 	.globl dmbsy
-	.globl irq_enable
-	.globl intr_enable
-	.globl intr_disable
-	.globl intr_restore
+	.globl spl0
+	.globl spl1
+	.globl spl5
+	.globl spl6
+	.globl spl7
+	.globl splx
 	.globl cntfrq_get
 	.globl cntv_tval_set
 	.globl cntv_ctl_set
@@ -64,11 +66,8 @@ dmbsy:
 	dmb sy
 	bx lr
 
-irq_enable:
-	cpsie i
-	bx lr
-
-intr_enable:
+spl0:
+spl1:
 	mrs r0, cpsr
 	ldr r1, =irq_ready
 	ldr r1, [r1]
@@ -77,12 +76,14 @@ intr_enable:
 	cpsie i
 	bx lr
 
-intr_disable:
+spl5:
+spl6:
+spl7:
 	mrs r0, cpsr
 	cpsid i
 	bx lr
 
-intr_restore:
+splx:
 	tst r0, #0x80
 	bne 1f
 	ldr r1, =irq_ready

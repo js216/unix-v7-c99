@@ -10,8 +10,7 @@ void dmbsy(void);
 void iodone(struct buf *bp);
 void deverror(struct buf *bp, int o1, int o2);
 void dcflush(unsigned int addr, unsigned int n);	/* clean+invalidate D-cache (mch.s) */
-int intr_disable(void);
-void intr_restore(int s);
+int spl5(), splx();
 void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 
 extern int	dk_busy;
@@ -137,14 +136,14 @@ sdstrategy(struct buf *bp)
 	int s, idle;
 
 	bp->av_forw = NULL;
-	s = intr_disable();
+	s = spl5();
 	if (sdtab.b_actf == NULL)
 		sdtab.b_actf = bp;
 	else
 		sdtab.b_actl->av_forw = bp;
 	sdtab.b_actl = bp;
 	idle = (sdtab.b_active == 0);
-	intr_restore(s);
+	splx(s);
 	if (idle)
 		sdstart();
 	return(0);

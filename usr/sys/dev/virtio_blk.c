@@ -6,8 +6,7 @@ void panic(char *s);
 void dmbsy(void);
 void iodone(struct buf *bp);
 void deverror(struct buf *bp, int o1, int o2);
-int intr_disable(void);
-void intr_restore(int s);
+int spl5(), splx();
 void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 
 extern int	dk_busy;
@@ -171,7 +170,7 @@ rkstrategy(struct buf *bp)
 	int s;
 
 	bp->av_forw = NULL;
-	s = intr_disable();
+	s = spl5();
 	if(rktab.b_actf == NULL)
 		rktab.b_actf = bp;
 	else
@@ -179,7 +178,7 @@ rkstrategy(struct buf *bp)
 	rktab.b_actl = bp;
 	if(rktab.b_active == 0)
 		virtio_start();
-	intr_restore(s);
+	splx(s);
 	return(0);
 }
 

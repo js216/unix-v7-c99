@@ -22,9 +22,6 @@ void swtch(void);
 int newproc(void);
 void expand(int newsize);
 int issig(void);
-int intr_enable(void);
-int intr_disable(void);
-void intr_restore(int s);
 void panic(char *s);
 void printf(char *fmt, ...);
 int save(int *lp) __attribute__((returns_twice));
@@ -63,7 +60,7 @@ sleep(caddr_t chan, int pri)
 	register int s, h;
 
 	rp = u.u_procp;
-	s = intr_disable();
+	s = spl6();
 	if (chan==0)
 		panic("zero wchan");
 	rp->p_stat = SSLEEP;
@@ -79,10 +76,10 @@ sleep(caddr_t chan, int pri)
 			rp->p_wchan = 0;
 			rp->p_stat = SRUN;
 			slpque[h] = rp->p_link;
-			intr_enable();
+			spl0();
 			goto psig;
 		}
-		intr_enable();
+		spl0();
 		if(runin != 0) {
 			runin = 0;
 			wakeup((caddr_t)&runin);
@@ -91,10 +88,10 @@ sleep(caddr_t chan, int pri)
 		if(issig())
 			goto psig;
 	} else {
-		intr_enable();
+		spl0();
 		swtch();
 	}
-	intr_restore(s);
+	splx(s);
 	return;
 
 	/*
@@ -118,7 +115,7 @@ wakeup(caddr_t chan)
 	register int i;
 	int s;
 
-	s = intr_disable();
+	s = spl6();
 	i = HASH(chan);
 	p = slpque[i];
 	q = NULL;
@@ -138,7 +135,7 @@ wakeup(caddr_t chan)
 		q = p;
 		p = p->p_link;
 	}
-	intr_restore(s);
+	splx(s);
 }
 
 /*
@@ -153,7 +150,7 @@ setrq(struct proc *p)
 	register struct proc *q;
 	register int s;
 
-	s = intr_disable();
+	s = spl6();
 	for(q=runq; q!=NULL; q=q->p_link)
 		if(q == p) {
 			printf("proc on q\n");
@@ -162,7 +159,7 @@ setrq(struct proc *p)
 	p->p_link = runq;
 	runq = p;
 out:
-	intr_restore(s);
+	splx(s);
 }
 
 /*
@@ -244,7 +241,7 @@ sched(void)
 	 */
 
 loop:
-	intr_disable();
+	spl6();
 	outage = -20000;
 	p = NULL;
 	for (rp = &proc[0]; rp < &proc[NPROC]; rp++)
@@ -261,7 +258,7 @@ loop:
 		sleep((caddr_t)&runout, PSWP);
 		goto loop;
 	}
-	intr_enable();
+	spl0();
 
 	/*
 	 * See if there is core for that process;
@@ -278,7 +275,7 @@ loop:
 	 * at bad priority; if none, select the oldest.
 	 */
 
-	intr_disable();
+	spl6();
 	p = NULL;
 	maxsize = -1;
 	inage = -1;
@@ -300,7 +297,7 @@ loop:
 			}
 		}
 	}
-	intr_enable();
+	spl0();
 	/*
 	 * Swap found user out if sleeping at bad pri,
 	 * or if he has spent at least 2 seconds in core and
@@ -312,7 +309,7 @@ loop:
 		xswap(p, 1, 0);
 		goto loop;
 	}
-	intr_disable();
+	spl6();
 	runin++;
 	sleep((caddr_t)&runin, PSWP);
 	goto loop;
@@ -413,7 +410,7 @@ swtch(void)
 	if (save(u.u_qsav)==0 && save(u.u_rsav))
 		return;
 loop:
-	intr_disable();
+	spl6();
 	runrun = 0;
 	pp = NULL;
 	q = NULL;
@@ -446,7 +443,7 @@ loop:
 	else
 		q->p_link = p->p_link;
 	curpri = n;
-	intr_enable();
+	spl0();
 	/*
 	 * The rsav (ssav) contents are interpreted in the new address space
 	 */

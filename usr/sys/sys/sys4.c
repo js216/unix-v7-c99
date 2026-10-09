@@ -5,8 +5,6 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/timeb.h"
-int intr_enable(void);
-int intr_disable(void);
 void chdirec(struct inode **ipp);
 void sleep(caddr_t chan, int pri);
 void sysacct(void);
@@ -62,10 +60,10 @@ ftime(void)
 	register unsigned ms;
 
 	uap = (struct a *)u.u_ap;
-	intr_disable();
+	spl7();
 	t.time = time;
 	ms = lbolt;
-	intr_enable();
+	spl0();
 	if (ms > HZ) {
 		ms -= HZ;
 		t.time++;

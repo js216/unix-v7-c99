@@ -88,6 +88,7 @@ void	psignal(struct proc *p, int sig);
 void	bcopy(char *f, char *t, unsigned int n);
 int	copyin(caddr_t f, caddr_t t, unsigned int n);
 int	copyout(caddr_t f, caddr_t t, unsigned int n);
+int	spl0(), spl1(), spl5(), spl6(), spl7(), splx();
 /*
  * Instrumentation
  */

@@ -15,9 +15,6 @@
 
 extern char	partab[];
 
-int intr_enable(void);
-int intr_disable(void);
-void intr_restore(int s);
 int getc(struct clist *p);
 int putc(int c, struct clist *p);
 int b_to_q(char *cp, int cc, struct clist *q);
@@ -320,14 +317,14 @@ void
 wflushtty(register struct tty *tp)
 {
 
-	intr_disable();
+	spl5();
 	while (tp->t_outq.c_cc && tp->t_state&CARR_ON) {
 		(*tp->t_oproc)(tp);
 		tp->t_state |= ASLEEP;
 		sleep((caddr_t)&tp->t_outq, TTOPRI);
 	}
 	flushtty(tp);
-	intr_enable();
+	spl0();
 }
 
 /*
@@ -342,7 +339,7 @@ flushtty(register struct tty *tp)
 		;
 	wakeup((caddr_t)&tp->t_rawq);
 	wakeup((caddr_t)&tp->t_outq);
-	s = intr_disable();
+	s = spl6();
 	tp->t_state &= ~TTSTOP;
 	(*cdevsw[major(tp->t_dev)].d_stop)(tp);
 	while (getc(&tp->t_outq) >= 0)
@@ -350,7 +347,7 @@ flushtty(register struct tty *tp)
 	while (getc(&tp->t_rawq) >= 0)
 		;
 	tp->t_delct = 0;
-	intr_restore(s);
+	splx(s);
 }
 
 
@@ -369,7 +366,7 @@ canon(register struct tty *tp)
 	register int c;
 	int mc;
 
-	intr_disable();
+	spl5();
 	while (((tp->t_flags&(RAW|CBREAK))==0 && tp->t_delct==0)
 	    || ((tp->t_flags&(RAW|CBREAK))!=0 && tp->t_rawq.c_cc==0)) {
 		if ((tp->t_state&CARR_ON)==0) {
@@ -377,7 +374,7 @@ canon(register struct tty *tp)
 		}
 		sleep((caddr_t)&tp->t_rawq, TTIPRI);
 	}
-	intr_enable();
+	spl0();
 loop:
 	bp = &canonb[2];
 	while ((c=getc(&tp->t_rawq)) >= 0) {
@@ -696,10 +693,10 @@ ttstart(register struct tty *tp)
 {
 	register int s;
 
-	s = intr_disable();
+	s = spl5();
 	if((tp->t_state&(TIMEOUT|TTSTOP|BUSY)) == 0)
 		(*tp->t_oproc)(tp);
-	intr_restore(s);
+	splx(s);
 }
 
 /*
@@ -730,13 +727,13 @@ ttwrite(register struct tty *tp)
 	if ((tp->t_state&CARR_ON)==0)
 		return(NULL);
 	while (u.u_count) {
-		intr_disable();
+		spl5();
 		while (tp->t_outq.c_cc > TTHIWAT) {
 			ttstart(tp);
 			tp->t_state |= ASLEEP;
 			sleep((caddr_t)&tp->t_outq, TTOPRI);
 		}
-		intr_enable();
+		spl0();
 		if ((c = cpass()) < 0)
 			break;
 		ttyoutput(c, tp);
