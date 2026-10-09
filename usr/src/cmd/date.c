@@ -13,8 +13,7 @@ char	*ap, *ep, *sp;
 int	uflag;
 
 char	*timezone();
-int	gtime(void);
-int	gp(int dfault);
+int	gtime(), gp();
 static	int	dmsize[12] =
 {
 	31,
@@ -39,7 +38,9 @@ struct	tm *localtime();
 struct	tm *gmtime();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register char *tzn;
 	struct timeb info;
@@ -95,7 +96,7 @@ main(int argc, char *argv[])
 }
 
 int
-gtime(void)
+gtime()
 {
 	register int i, year, month;
 	int day, hour, mins, secs;
@@ -154,7 +155,8 @@ gtime(void)
 }
 
 int
-gp(int dfault)
+gp(dfault)
+int dfault;
 {
 	register int c, d;
 
