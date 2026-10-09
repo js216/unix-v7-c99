@@ -2,13 +2,9 @@
 #include "../h/systm.h"
 #include "../h/dir.h"
 #include "../h/user.h"
-#include "../h/proc.h"
 #include "../h/reg.h"
-#include "../h/inode.h"
-#include "../h/file.h"
-#include "../h/tty.h"
-#include "../h/seg.h"
-void nullsys(void), nosys(void);
+static void nullsys(void) { }
+static void nosys(void) { u.u_error = EINVAL; }
 
 /*
  * This table is the switch used to transfer
@@ -136,5 +132,3 @@ user_trap_handler(int signo, int *r)
 	if (runrun)
 		qswtch();
 }
-void nosys(void)   { u.u_error = EINVAL; }
-void nullsys(void) { }
