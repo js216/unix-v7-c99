@@ -7,7 +7,7 @@ char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
 double	getflt(void);
 void	fperr(int sig), init(void);
-int	pu(int u, int i, int f), get(void), equal(char *s1, char *s2);
+int	pu(int u, int i, int f), get(void);
 struct	table	*hash(char *name);
 struct unit
 {
@@ -50,9 +50,9 @@ FILE	*inp;
 int	fperrc;
 int	peekc;
 int	dumpflg;
+
 void	units(struct unit *up);
 int	convr(struct unit *up), lookup(char *name, struct unit *up, int den, int c);
-
 int
 main(int argc, char *argv[])
 {
@@ -253,7 +253,7 @@ loop:
 	return(1);
 }
 
-int
+static int
 equal(char *s1, char *s2)
 {
 	register char *c1, *c2;

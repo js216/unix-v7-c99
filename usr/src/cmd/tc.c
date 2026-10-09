@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 #define	atoi	tcatoi
-#define	oput(c) do { if (pgskip==0) putchar(c); } while (0)
+#define	oput(c) if (pgskip==0) putchar(c)
 #define MAXY 3071
 #define US 037
 #define GS 035

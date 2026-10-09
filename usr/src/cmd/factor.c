@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define	BIG	72057594037927936LL
+#define	BIG	72057594037927936
 
 char	tab[] = {
 	10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4,

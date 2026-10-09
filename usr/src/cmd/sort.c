@@ -275,7 +275,7 @@ main(int argc, char **argv)
 		sort();
 		fclose(stdin);
 	}
-	for(a = (mflg|cflg)?0:eargc; a+N<nfiles || (unsafeout&&a<eargc); a=i) {
+	for(a = mflg|cflg?0:eargc; a+N<nfiles || (unsafeout&&a<eargc); a=i) {
 		i = a+N;
 		if(i>=nfiles)
 			i = nfiles;
@@ -353,8 +353,8 @@ struct merg
 	char	l[L];
 	FILE	*b;
 } *ibuf[256];
-int	rline(struct merg *mp);
 
+int	rline(struct merg *mp);
 void
 merge(int a, int b)
 {

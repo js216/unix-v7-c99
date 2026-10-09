@@ -15,9 +15,8 @@ char in[512];
 
 char out[512];
 
-long	lseek(int fd, long off, int ptr);
-int	open(char *name, int mode), creat(char *name, int mode);
-int	read(int fd, char *buf, int n), write(int fd, char *buf, int n);
+#include <stdio.h>
+#define	puts	tee_puts
 
 void stash(int p), puts(char *s);
 int
