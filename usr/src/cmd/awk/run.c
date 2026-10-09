@@ -111,9 +111,7 @@ obj arrayel(node *a, obj b)
 {
 	char *s;
 	cell *x;
-	int i;
 	obj y;
-	(void)i;
 
 	s = getsval(b.optr);
 	x = (cell *) a;

@@ -1,11 +1,6 @@
-%option noyywrap noinput nounistd noyy_scan_string
+%option noinput nounistd noyy_scan_string
 %Start A str chc sc reg comment
 
-%top{
-#include <stddef.h>
-#define	_STRING_H_
-#define	_STDLIB_H_
-}
 %{
 #include	"awk.h"
 #include	"awk.def"
@@ -14,7 +9,6 @@ extern int	yylval;
 extern int	mustfld;
 int	input(void);
 void	*memset(void *s, int c, unsigned int n);
-#undef	YY_INPUT
 #define	YY_INPUT(buf,result,max_size) \
 do { \
 	int c = input(); \

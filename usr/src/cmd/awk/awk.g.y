@@ -46,6 +46,7 @@
 #define	exptostat(a)	(int)exptostat(N(a))
 #define	genjump(a)	(int)genjump(a)
 #define	cclenter(p)	cclenter((char *)(p))
+#define	nullstat	(int)nullstat
 #ifndef	DEBUG	
 #	define	PUTS(x)
 #endif
@@ -60,13 +61,13 @@ program:
 begin:
 	  XBEGIN '{' stat_list '}'	{ PUTS("XBEGIN list"); $$ = $3; }
 	| begin NL
-	| 	{ PUTS("empty XBEGIN"); $$ = (int)nullstat; }
+	| 	{ PUTS("empty XBEGIN"); $$ = nullstat; }
 	;
 
 end:
 	  XEND '{' stat_list '}'	{ PUTS("XEND list"); $$ = $3; }
 	| end NL
-	|	{ PUTS("empty END"); $$ = (int)nullstat; }
+	|	{ PUTS("empty END"); $$ = nullstat; }
 	;
 
 compound_conditional:
@@ -171,7 +172,7 @@ pa_stat:
 
 pa_stats:
 	  pa_stats pa_stat st	{ PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
-	| %prec ASGNOP	{ PUTS("null pa_stat"); $$ = (int)nullstat; }
+	| %prec ASGNOP	{ PUTS("null pa_stat"); $$ = nullstat; }
 	| pa_stats pa_stat %prec ASGNOP	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
 	;
 
@@ -245,7 +246,7 @@ simple_stat:
 	| PRINTF print_list	
 		{ PUTS("printf list"); $$ = stat3($1, $2, nullstat, nullstat); }
 	| expr	{ PUTS("expr"); $$ = exptostat($1); }
-	|		{ PUTS("null simple statement"); $$ = (int)nullstat; }
+	|		{ PUTS("null simple statement"); $$ = nullstat; }
 	| error		{ yyclearin; yyerror("illegal statement"); }
 	;
 
@@ -265,7 +266,7 @@ statement:
 
 stat_list:
 	  stat_list statement	{ PUTS("stat_list stat"); $$ = linkum($1, $2); }
-	|			{ PUTS("null stat list"); $$ = (int)nullstat; }
+	|			{ PUTS("null stat list"); $$ = nullstat; }
 	;
 
 while:

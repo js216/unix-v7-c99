@@ -146,6 +146,7 @@ char *setsval(register cell *vp, char *s)
 
 awkfloat getfval(register cell *vp)
 {
+
 	if (vp->sval == record && donerec == 0)
 		recbld();
 	dprintf("getfval: %o", vp, NULL, NULL);
