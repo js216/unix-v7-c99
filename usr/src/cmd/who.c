@@ -7,13 +7,10 @@
 #include <pwd.h>
 struct utmp utmp;
 struct passwd *pw;
-struct passwd *getpwuid();
 
-void putline();
+void putline(void);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *tp = 0, *s;
 	register FILE *fi;
@@ -55,7 +52,7 @@ char **argv;
 }
 
 void
-putline()
+putline(void)
 {
 	register char *cbuf;
 
