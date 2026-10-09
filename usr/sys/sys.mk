@@ -12,17 +12,17 @@ $(SYS_OBJ): $S/sys.mk
 $(LIB1): $(LIB1_OBJ)
 $(LIB2): $(LIB2_OBJ)
 $(LIB1) $(LIB2):
-	rm -f $@
-	$(AR) rc $@ $^
+	$Qrm -f $@
+	$(call T,AR)$(AR) rc $@ $^
 
 $S/conf/mkconf: $S/conf/mkconf.c
-	$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
+	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
 
 $S/conf/%/c.c $S/conf/%/unix.ld: $S/conf/%conf $S/conf/mkconf
-	mkdir -p $(@D)
-	cd $(@D) && ../mkconf <../$*conf
+	$Qmkdir -p $(@D)
+	$(call T,MKCONF)cd $(@D) && ../mkconf <../$*conf
 
 $S/conf/%/c.o: CPPFLAGS = -I$S/conf
 
 $S/conf/%/unix: $S/conf/low.o $S/conf/mch.o $S/conf/%/c.o $(LIB1) $(LIB2) $S/conf/%/unix.ld
-	$(CC) -nostdlib -T $(@D)/unix.ld -o $@ $(filter-out %.ld,$^)
+	$(call T,LD)$(CC) -nostdlib -T $(@D)/unix.ld -o $@ $(filter-out %.ld,$^)

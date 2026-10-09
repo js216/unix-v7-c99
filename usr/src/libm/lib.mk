@@ -5,5 +5,5 @@ $(LIBM_OBJ): CPPFLAGS = -Iusr/include
 $(LIBM_OBJ): usr/src/libm/lib.mk
 
 $(LIBM): $(LIBM_OBJ)
-	rm -f $@
-	$(AR) rc $@ $^
+	$Qrm -f $@
+	$(call T,AR)$(AR) rc $@ $^

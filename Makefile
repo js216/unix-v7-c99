@@ -14,7 +14,11 @@ ASFLAGS = -mcpu=cortex-a7
 HOSTCFLAGS = $W -static \
 	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
 
-LINK = $(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
+T = $(if $V,,@printf '  %-7s %s\n' $1 $@;)
+Q = $(if $V,,@)
+COMPILE.c = $(call T,CC)$(CC) $(CFLAGS) $(CPPFLAGS) -c
+COMPILE.s = $(call T,AS)$(AS) $(ASFLAGS)
+LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
 
 all: boot/unix boot/rootfs.img
 
@@ -32,10 +36,10 @@ OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ)
 $(OBJ) $(GEN): Makefile
 
 %.c: %.y
-	bison -o $@ $<
+	$(call T,YACC)bison -o $@ $<
 
 boot/unix: usr/sys/conf/qemu/unix | boot
-	cp $< $@
+	$(call T,CP)cp $< $@
 
 qemu: boot/unix boot/rootfs.img
 	qemu-system-arm -machine virt -cpu cortex-a7 -nographic \
@@ -52,22 +56,22 @@ ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC)
 DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 
 boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
-	V7_MKFS_TIME=284774400 etc/mkfs $@ boot/rootfs.proto
-	truncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
+	$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ boot/rootfs.proto
+	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 	    usr/sys/conf/qemuconf) $@
 
 etc/mkfs: usr/src/cmd/mkfs.c | etc
-	tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
+	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
 	    mkdir -p "$$tmpinc"; \
 	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
 	    $(HOSTCC) $(HOSTCFLAGS) -I"$$tmpinc" -o $@ $<
 
 $(DIRS):
-	mkdir -p $@
+	$Qmkdir -p $@
 
 $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
-	cp -f $< $@
+	$(call T,CP)cp -f $< $@
 
 clean:
 	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES)

@@ -8,5 +8,5 @@ $(LIBC_OBJ) $(CRT): CPPFLAGS = -Iusr/include -Iusr
 $(LIBC_OBJ) $(CRT): $L/lib.mk
 
 $(LIBC): $(LIBC_OBJ)
-	rm -f $@
-	$(AR) rc $@ $^
+	$Qrm -f $@
+	$(call T,AR)$(AR) rc $@ $^
