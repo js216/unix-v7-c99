@@ -2,9 +2,11 @@
 
 #include <stdio.h>
 
-void wcp(register char *wd, long charct, long wordct, long linect);
+void wcp();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char **argv;
 {
 	int i, token;
 	register FILE *fp;
@@ -68,7 +70,9 @@ main(int argc, char *argv[])
 }
 
 void
-wcp(register char *wd, long charct, long wordct, long linect)
+wcp(wd, charct, wordct, linect)
+register char *wd;
+long charct; long wordct; long linect;
 {
 	while (*wd) switch (*wd++) {
 	case 'l':
