@@ -47,7 +47,7 @@ qemu: boot/unix boot/rootfs.img
 	    -device virtio-blk-device,drive=hd0
 
 ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
-	etc/passwd etc/group etc/ttys \
+	etc/passwd etc/group etc/ttys etc/rc \
 	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
 	usr/lib/lib.b
 
