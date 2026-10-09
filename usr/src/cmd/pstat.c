@@ -7,7 +7,7 @@
 #include <a.out.h>
 #include <sys/param.h>
 #include "../../sys/h/tty.h"
-#include "../../sys/h/inode.h"
+#include <sys/inode.h>
 #include "../../sys/h/text.h"
 #include "../../sys/h/proc.h"
 #include <sys/dir.h>
@@ -100,7 +100,7 @@ main(int argc, char **argv)
 	if (argc>1)
 		fnlist = argv[1];
 	nlist(fnlist, (struct nlist *)setup);
-	if (setup[SINODE].type == -1) {
+	if (setup[SINODE].type == 0) {
 		printf("no namelist\n");
 		exit(1);
 	}
@@ -258,7 +258,7 @@ dotty(void)
 	mesg = " # RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP\n";
 	printf(mesg);
 	ttyprt(0, &dh11[0]);
-	if (setup[SNDH].type == -1)
+	if (setup[SNDH].type == 0)
 		return;
 	lseek(fc, (long)setup[SNDH].value, 0);
 	read(fc, (char *)&ndh, sizeof(ndh));
