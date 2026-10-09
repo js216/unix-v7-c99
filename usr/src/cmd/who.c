@@ -9,7 +9,6 @@ struct utmp utmp;
 struct passwd *pw;
 struct passwd *getpwuid();
 
-char *ttyname(), *rindex(), *ctime(), *strcpy(), *index();
 void putline();
 int
 main(argc, argv)

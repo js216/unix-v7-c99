@@ -56,7 +56,6 @@ expr:	'(' expr ')' { $$ = $2; }
 	;
 %%
 /*	expression command */
-#include <stdio.h>
 #define ESIZE	256
 #define error(c)	errxx(c)
 #define EQL(x,y) !strcmp(x,y)

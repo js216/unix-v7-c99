@@ -8,7 +8,6 @@
 #include <stdio.h>
 
 int	Errors = 0;
-char	*rindex();
 char	*strcat();
 char	*strcpy();
 void	rmdir();

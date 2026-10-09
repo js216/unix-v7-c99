@@ -112,7 +112,7 @@ BOOL		prof;
 	userid=getuid();
 
 	/* decide whether interactive */
-	IF (flags&intflg) ORF ((flags&oneflg)==0 ANDF gtty(output,&statb)==0 ANDF gtty(input,&statb)==0)
+	IF (flags&intflg) ORF ((flags&oneflg)==0 ANDF gtty(output,(struct sgttyb *)&statb)==0 ANDF gtty(input,(struct sgttyb *)&statb)==0)
 	THEN	dfault(&ps1nod, (userid?stdprompt:supprompt));
 		dfault(&ps2nod, readmsg);
 		flags |= ttyflg|prompt; ignsig(KILL);

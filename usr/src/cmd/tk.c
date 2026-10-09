@@ -205,7 +205,7 @@ kwait()
 void
 execom()
 {
-	int (*si)(), (*sq)();
+	void (*si)(int sig), (*sq)(int sig);
 
 	if (fork() != 0) {
 		si = signal(SIGINT, SIG_IGN);

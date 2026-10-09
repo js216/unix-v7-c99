@@ -81,7 +81,7 @@ struct	cache {
 } cache[NCACHE];
 int	curcache;
 
-int readc(), psearch(), direq(), gethead(), ishead(), checktype(), checksum(), checkvol(), readhdr(), l3tol(), ltol3();
+int readc(), psearch(), direq(), gethead(), ishead(), checktype(), checksum(), checkvol(), readhdr();
 void pass1(), putent(), doit(), getfile(), readtape(), flsht(), copy(), clearbuf(), writec(), flsh(), dwrite(), dread(), clri(), itrunc(), tloop(), bfree(), getdino(), putdino(), readbits();
 int
 main(argc, argv)
@@ -90,7 +90,7 @@ char *argv[];
 {
 	register char *cp;
 	char command = 0;
-	int done();
+	void done();
 
 #ifndef STANDALONE
 	mktemp(dirfile);
@@ -1187,12 +1187,11 @@ short	*m;
 		;
 }
 
-int
+void
 done()
 {
 #ifndef STANDALONE
 	unlink(dirfile);
 #endif
 	exit(0);
-	return(0);
 }

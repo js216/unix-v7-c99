@@ -886,7 +886,7 @@ char *buffer;
 			j = NBLOCK;
 		else
 			j = nblock;
-		if ((i = read(mt, tbuf, TBLOCK*j)) < 0) {
+		if ((i = read(mt, (char *)tbuf, TBLOCK*j)) < 0) {
 			fprintf(stderr, "Tar: tape read error\n");
 			done(3);
 		}
@@ -920,7 +920,7 @@ char *buffer;
 	if (nblock == 0)
 		nblock = 1;
 	if (recno >= nblock) {
-		if (write(mt, tbuf, TBLOCK*nblock) < 0) {
+		if (write(mt, (char *)tbuf, TBLOCK*nblock) < 0) {
 			fprintf(stderr, "Tar: tape write error\n");
 			done(2);
 		}
@@ -928,7 +928,7 @@ char *buffer;
 	}
 	copy(&tbuf[recno++], buffer);
 	if (recno >= nblock) {
-		if (write(mt, tbuf, TBLOCK*nblock) < 0) {
+		if (write(mt, (char *)tbuf, TBLOCK*nblock) < 0) {
 			fprintf(stderr, "Tar: tape write error\n");
 			done(2);
 		}
@@ -943,7 +943,7 @@ backtape()
 	lseek(mt, (long) -TBLOCK, 1);
 	if (recno >= nblock) {
 		recno = nblock - 1;
-		if (read(mt, tbuf, TBLOCK*nblock) < 0) {
+		if (read(mt, (char *)tbuf, TBLOCK*nblock) < 0) {
 			fprintf(stderr, "Tar: tape read error after seek\n");
 			done(4);
 		}
@@ -954,7 +954,7 @@ backtape()
 void
 flushtape()
 {
-	write(mt, tbuf, TBLOCK*nblock);
+	write(mt, (char *)tbuf, TBLOCK*nblock);
 }
 
 void

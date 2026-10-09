@@ -109,7 +109,6 @@ int	logo;
 int	log10;
 int	count;
 char	*pp;
-int	(*signal())();
 void	onintr();
 char	*malloc();
 char	*nalloc();

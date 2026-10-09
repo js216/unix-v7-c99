@@ -30,7 +30,6 @@ daddr_t	bmap();
 void	check(), pass1(), pass2(), bread();
 long	atol();
 char	*malloc();
-int	l3tol();
 
 int
 main(argc, argv)

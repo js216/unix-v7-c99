@@ -17,6 +17,7 @@
 
 %{
 #include <stdio.h>
+#include <signal.h>
 #include <stdarg.h>
 #define bundle(...) (yyval = (bundle)(__VA_ARGS__))
 char *yyval;
@@ -548,7 +549,7 @@ void tp( s ) char *s; { /* same as pp, but for temps */
 }
 
 void yyinit(argc,argv) int argc; char *argv[];{
-	signal( 2, (int(*)())1 );	/* ignore all interrupts */
+	signal( 2, SIG_IGN );	/* ignore all interrupts */
 	sargv=argv;
 	sargc= -- argc;
 	if(sargc == 0)in=stdin;

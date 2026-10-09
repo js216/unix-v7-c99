@@ -26,7 +26,6 @@ void	showmotd();
 char	*ttyname();
 char	*crypt();
 char	*getpass();
-char	*rindex(), *index();
 extern	char **environ;
 
 int

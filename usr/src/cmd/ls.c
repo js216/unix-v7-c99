@@ -144,7 +144,7 @@ char *argv[];
 		ep->ln.namep = *argv;
 		ep->lflags |= ISARG;
 	}
-	qsort(firstp, lastp - firstp, sizeof *lastp, compar);
+	qsort((char *)firstp, lastp - firstp, sizeof *lastp, compar);
 	slastp = lastp;
 	for (epp=firstp; epp<slastp; epp++) {
 		ep = *epp;
@@ -154,7 +154,7 @@ char *argv[];
 			lastp = slastp;
 			readdir(ep->ln.namep);
 			if (fflg==0)
-				qsort(slastp,lastp - slastp,sizeof *lastp,compar);
+				qsort((char *)slastp,lastp - slastp,sizeof *lastp,compar);
 			if (lflg || sflg)
 				printf("total %D\n", tblocks);
 			for (ep1=slastp; ep1<lastp; ep1++)

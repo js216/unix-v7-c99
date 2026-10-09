@@ -39,7 +39,6 @@ struct	anode	*exp(),
 char	*nxtarg();
 char	Home[128];
 long	Blocks;
-char *rindex();
 char *sbrk();
 void	pr(), bwrite();
 int	descend(), cpio(), getunum(), gmatch(), scomp(), doex(), chgreel(), amatch(), umatch();

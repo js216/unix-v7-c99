@@ -56,8 +56,8 @@ int	ninbuf;
 int	io;
 int	pflag;
 long	lseek();
-int	(*oldhup)();
-int	(*oldquit)();
+void	(*oldhup)(int sig);
+void	(*oldquit)(int sig);
 int	vflag	= 1;
 int	xflag;
 int	xtflag;
@@ -102,16 +102,16 @@ char	*malloc();
 char	*realloc();
 jmp_buf	savej;
 
-void	commands(), setdot(), setall(), setnoaddr(), nonzero(), newline(), filename(), exfile(), error(), dosub(), blkio(), callunix(), compile(), crblock(), delete(), global(), init(), join(), move(), putchr(), putd(), putfile(), reverse(), puts(), substitute(), rdelete(), makekey();
-int	advance(), append(), backref(), cclass(), compsub(), crinit(), execute(), getchr(), quit(), getkey(), putline();
+void	commands(), setdot(), setall(), setnoaddr(), nonzero(), newline(), filename(), exfile(), error(), dosub(), blkio(), callunix(), compile(), crblock(), delete(), global(), init(), join(), move(), putchr(), putd(), putfile(), reverse(), puts(), substitute(), rdelete(), makekey(), quit();
+int	advance(), append(), backref(), cclass(), compsub(), crinit(), execute(), getchr(), getkey(), putline();
 int
 main(argc, argv)
 int	argc;
 char **argv;
 {
 	register char *p1, *p2;
-	extern int onintr(), quit(), onhup();
-	int (*oldintr)();
+	extern void onintr(), quit(), onhup();
+	void (*oldintr)(int sig);
 
 	oldquit = signal(SIGQUIT, SIG_IGN);
 	oldhup = signal(SIGHUP, SIG_IGN);
@@ -584,17 +584,16 @@ exfile()
 	}
 }
 
-int
+void
 onintr()
 {
 	signal(SIGINT, onintr);
 	putchr('\n');
 	lastc = '\n';
 	error(Q);
-	return 0;
 }
 
-int
+void
 onhup()
 {
 	signal(SIGINT, SIG_IGN);
@@ -608,7 +607,6 @@ onhup()
 	}
 	fchange = 0;
 	quit();
-	return(0);
 }
 
 void
@@ -800,7 +798,8 @@ int (*f)();
 void
 callunix()
 {
-	register int (*savint)(), pid, rpid;
+	register void (*savint)(int sig);
+	register int pid, rpid;
 	int retcode;
 
 	setnoaddr();
@@ -817,7 +816,7 @@ callunix()
 	puts("!");
 }
 
-int
+void
 quit()
 {
 	if (vflag && fchange && dol!=zero) {
@@ -826,7 +825,6 @@ quit()
 	}
 	unlink(tfname);
 	exit(0);
-	return(0);
 }
 
 void
@@ -1725,7 +1723,7 @@ getkey()
 {
 	struct sgttyb b;
 	int save;
-	int (*sig)();
+	void (*sig)(int sig);
 	register char *p;
 	register int c;
 

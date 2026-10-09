@@ -155,7 +155,7 @@ char **argv;
 				np->ncall = cp->cncall;
 				break;
 			}
-	qsort(nl, nname, sizeof(struct nl), valcmp);
+	qsort((char *)nl, nname, sizeof(struct nl), valcmp);
 	scale = highpc - lowpc;
 	scale /= bufs/sizeof(UNIT);
 	for(i=0;;i++) {
@@ -256,7 +256,7 @@ print:
 	actime = 0;
 	printf("    name %%time  cumsecs  #call  ms/call\n");
 	if (!lflg)
-		qsort(nl, nname, sizeof(struct nl), timcmp);
+		qsort((char *)nl, nname, sizeof(struct nl), timcmp);
 	for (np = nl; np<npe-1; np++) {
 		ftim = np->time/totime;
 		actime += np->time;

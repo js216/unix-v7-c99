@@ -40,7 +40,7 @@ int	nerror;
 
 long	atol();
 daddr_t	alloc();
-int	l3tol(), chk(), duped(); void check(), pass1(), bread(), bwrite(), makefree();
+int	chk(), duped(); void check(), pass1(), bread(), bwrite(), makefree();
 #ifndef STANDALONE
 char	*malloc();
 #endif

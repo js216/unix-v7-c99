@@ -1584,7 +1584,8 @@ int
 command(){
 	int c;
 	char line[100],*sl;
-	register int (*savint)(),pid,rpid;
+	register void (*savint)(int sig);
+	register int pid,rpid;
 	int retcode;
 
 	switch(c = readc()){

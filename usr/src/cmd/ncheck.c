@@ -38,7 +38,7 @@ daddr_t	bmap();
 long	atol();
 struct htab *lookup();
 void	check(), pass1(), pass2(), pass3(), pname(), bread();
-int	dotname(), l3tol();
+int	dotname();
 
 int
 main(argc, argv)

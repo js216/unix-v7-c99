@@ -18,7 +18,6 @@ char	*mytty;
 char	histty[32];
 char	*histtya;
 char	*ttyname();
-char	*rindex(), *index();
 int	logcnt;
 void	eof();
 void	timout(), ex(), sigs();
@@ -168,7 +167,7 @@ char *bp;
 		goto out;
 	}
 	if(i == 0) {
-		sigs((int (*)())0);
+		sigs(SIG_DFL);
 		execl("/bin/sh", "sh", "-c", bp+1, 0);
 		exit(0);
 	}
@@ -181,7 +180,7 @@ out:
 
 void
 sigs(sig)
-int (*sig)();
+void (*sig)(int sig);
 {
 	register int i;
 

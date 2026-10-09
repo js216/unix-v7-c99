@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 
 #define	NDIM	10
 #define	NTAB	601

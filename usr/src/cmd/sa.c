@@ -202,7 +202,7 @@ char **argv;
 		printmoney();
 		exit(0);
 	}
-	qsort(tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
+	qsort((char *)tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
 	column(ncom, treal, tcpu, tsys);
 	printf("\n");
 	for (i=0; i<k; i++)

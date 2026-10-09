@@ -1,4 +1,4 @@
-%option noyywrap noinput nounistd
+%option noyywrap noinput nounistd noyy_scan_string
 %Start A str chc sc reg comment
 
 %top{

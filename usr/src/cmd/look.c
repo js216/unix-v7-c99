@@ -95,7 +95,7 @@ char **argv;
 			return(0);
 		case -1:
 		case 0:
-			puts(entry,stdout);
+			puts(entry);
 			break;
 		case 1:
 		case 2:
@@ -108,7 +108,7 @@ char **argv;
 		switch(compare(key,word)) {
 		case -1:
 		case 0:
-			puts(entry,stdout);
+			puts(entry);
 			continue;
 		}
 		break;

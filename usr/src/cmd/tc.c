@@ -52,8 +52,8 @@ int alpha;
 extern char *asctab[128];
 extern char *spectab[128];
 int erase = 1;
-int	(*sigint)();
-int	(*sigquit)();
+void	(*sigint)(int sig);
+void	(*sigquit)(int sig);
 
 void lig(), init(), kwait(), callunix(), sendpt();
 int readch(), atoi(), getch();

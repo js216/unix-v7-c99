@@ -50,7 +50,6 @@ int	tapsrec();
 int	dmpspc();
 int	dsrch();
 int	nullf();
-int	l3tol();
 void	pass(), icat(), indir(), bitmap(), spclrec(), bread(), CLR(), taprec(), flusht(), otape(), getitime(), putitime(), est(), bmapest();
 
 #define	HOUR	(60L*60L)

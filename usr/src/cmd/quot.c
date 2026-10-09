@@ -216,7 +216,7 @@ report()
 		printf("%d	%d	%D\n", TSIZE-1, sizes[TSIZE-1], overflow+t);
 		return;
 	}
-	qsort(du, NUID, sizeof(du[0]), qcmp);
+	qsort((char *)du, NUID, sizeof(du[0]), qcmp);
 	for (i=0; i<NUID; i++) {
 		if (du[i].blocks==0)
 			return;
