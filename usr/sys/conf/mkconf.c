@@ -559,7 +559,7 @@ main(void)
 	printf("\t.text : { *(.text*) } > RAM\n");
 	printf("\t.rodata : { *(.rodata*) } > RAM\n");
 	printf("\t.data : { *(.data*) } > RAM\n");
-	printf("\t__bss_start = .;\n\t.bss : { *(.bss*) *(COMMON) } > RAM\n");
+	printf("\t. = ALIGN(4);\n\t__bss_start = .;\n\t.bss : { *(.bss*) *(COMMON) } > RAM\n");
 	printf("\t__bss_end = .;\n");
 	printf("\t.ddrbss (NOLOAD) : ALIGN(16384) {\n");
 	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
