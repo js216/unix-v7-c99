@@ -39,7 +39,8 @@ struct	vring
 
 struct	buf	rktab;
 struct	buf	rrkbuf;
-volatile struct vring vq __attribute__((aligned(4096)));
+volatile struct vring *vq;
+char	vqbuf[sizeof(struct vring)+4095];
 struct {
 	int	type;
 	int	reserved;
@@ -62,7 +63,8 @@ rkinit()
 	RKADDR(0x28) = 4096;
 	RKADDR(0x38) = NVQ;
 	RKADDR(0x3c) = 4;
-	RKADDR(0x40) = (int)&vq >> 12;
+	vq = (struct vring *)(((int)vqbuf+4095) & ~4095);
+	RKADDR(0x40) = (int)vq >> 12;
 	RKADDR(0x70) = 7;
 	rkirq = 48 + (vbase-0x0a000000)/0x200;
 }
@@ -97,19 +99,19 @@ rkstart()
 	rktab.b_active++;
 	vreq.type = bp->b_flags&B_READ ? 0 : 1;
 	vreq.sector = bp->b_blkno;
-	vq.desc[0].addr = (int)&vreq;
-	vq.desc[0].len = sizeof(vreq);
-	vq.desc[0].flags = 1;
-	vq.desc[0].next = 1;
-	vq.desc[1].addr = (int)bp->b_un.b_addr;
-	vq.desc[1].len = bp->b_bcount;
-	vq.desc[1].flags = bp->b_flags&B_READ ? 3 : 1;
-	vq.desc[1].next = 2;
-	vq.desc[2].addr = (int)&vstatus;
-	vq.desc[2].len = 1;
-	vq.desc[2].flags = 2;
+	vq->desc[0].addr = (int)&vreq;
+	vq->desc[0].len = sizeof(vreq);
+	vq->desc[0].flags = 1;
+	vq->desc[0].next = 1;
+	vq->desc[1].addr = (int)bp->b_un.b_addr;
+	vq->desc[1].len = bp->b_bcount;
+	vq->desc[1].flags = bp->b_flags&B_READ ? 3 : 1;
+	vq->desc[1].next = 2;
+	vq->desc[2].addr = (int)&vstatus;
+	vq->desc[2].len = 1;
+	vq->desc[2].flags = 2;
 	dmbsy();
-	vq.aidx++;
+	vq->aidx++;
 	dmbsy();
 	RKADDR(0x50) = 0;
 	dk_busy |= 1<<DK_N;
@@ -124,7 +126,7 @@ rkintr()
 	register struct buf *bp;
 
 	RKADDR(0x64) = RKADDR(0x60);
-	if (rktab.b_active == NULL || vq.uidx != vq.aidx)
+	if (rktab.b_active == NULL || vq->uidx != vq->aidx)
 		return(0);
 	dmbsy();
 	dk_busy &= ~(1<<DK_N);
