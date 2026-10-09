@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <utmp.h>
 
+char	*strcat();
+char	*strcpy();
 struct	utmp ubuf;
 int	signum[] = {SIGHUP, SIGINT, SIGQUIT, 0};
 char	me[10]	= "???";
@@ -15,15 +17,17 @@ char	*him;
 char	*mytty;
 char	histty[32];
 char	*histtya;
+char	*ttyname();
+char	*rindex(), *index();
 int	logcnt;
-int	eof(void);
-int	timout(void);
-void	ex(char *bp);
-void	sigs();
+void	eof();
+void	timout(), ex(), sigs();
 FILE	*tf;
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	struct stat stbuf;
 	register int i;
@@ -135,26 +139,25 @@ perm:
 	exit(1);
 }
 
-int
-timout(void)
+void
+timout()
 {
 
 	printf("Timeout opening his tty\n");
 	exit(1);
-	return(0);
 }
 
-int
-eof(void)
+void
+eof()
 {
 
 	fprintf(tf, "EOF\n");
 	exit(0);
-	return(0);
 }
 
 void
-ex(char *bp)
+ex(bp)
+char *bp;
 {
 	register int i;
 
