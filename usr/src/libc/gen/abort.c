@@ -1,6 +1,9 @@
-extern void _exit(int n);
+#include <stdio.h>
+#include <signal.h>
+
 void
-abort(void)
+abort()
 {
+	kill(getpid(), SIGIOT);
 	_exit(1);
 }
