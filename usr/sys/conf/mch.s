@@ -1,70 +1,42 @@
-	.syntax unified
-	.arch armv7-a
-	.text
-
-	.globl mmu_on
-	.globl dmbsy
-	.globl spl0
-	.globl spl1
-	.globl spl5
-	.globl spl6
-	.globl spl7
-	.globl splx
-	.globl cntfrq_get
-	.globl cntv_tval_set
-	.globl cntv_ctl_set
-	.globl save
-	.globl resume
-	.globl dcflush
-	.globl arm_sync_icache
-	.globl idle
-	.globl waitloc
-	.globl savfp
-	.globl dfar
-	.globl dfsr
-	.globl l1
-	.globl user_l2
-	.globl uarea_l2
+.globl mmu_on, dmbsy, spl0, spl1, spl5, spl6, spl7, splx
+.globl cntfrq_get, cntv_tval_set, cntv_ctl_set, save, resume, dcflush
+.globl arm_sync_icache, idle, waitloc, savfp, dfar, dfsr
+.globl l1, user_l2, uarea_l2
 
 mmu_on:
 	push {r4, r5, r6, r7, r8, r9}
-	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
-	orr r1, r1, #(1 << 6)		@ SMP: join the inner-shareable coherency domain
+	mrc p15, 0, r1, c1, c0, 1
+	orr r1, r1, #(1 << 6)
 	mcr p15, 0, r1, c1, c0, 1
 	isb
-	mcr p15, 0, r0, c2, c0, 0	@ TTBR0 = page table
+	mcr p15, 0, r0, c2, c0, 0
 	mov r1, #1
-	mcr p15, 0, r1, c3, c0, 0	@ DACR: domain 0 = manager
+	mcr p15, 0, r1, c3, c0, 0
 	mov r1, #0
-	mcr p15, 0, r1, c8, c7, 0	@ TLBIALL
-	mcr p15, 0, r1, c7, c5, 0	@ ICIALLU: invalidate I-cache
-	mcr p15, 0, r1, c7, c5, 6	@ BPIALL: invalidate branch predictor
-	@ invalidate the whole L1 data cache by set/way before enabling it
-	mov r1, #0
-	mcr p15, 2, r1, c0, c0, 0	@ CSSELR = 0 (L1 data)
+	mcr p15, 2, r1, c0, c0, 0
 	isb
-	mrc p15, 1, r2, c0, c0, 0	@ CCSIDR
+	mrc p15, 1, r2, c0, c0, 0
 	and r3, r2, #7
-	add r3, r3, #4			@ r3 = log2(line bytes)
+	add r3, r3, #4
 	movw r4, #0x3ff
-	and r4, r4, r2, lsr #3		@ r4 = ways - 1
-	clz r5, r4			@ r5 = way bit shift
+	and r4, r4, r2, lsr #3
+	clz r5, r4
 	movw r6, #0x7fff
-	and r6, r6, r2, lsr #13		@ r6 = sets - 1
-1:	mov r7, r4			@ r7 = way counter
+	and r6, r6, r2, lsr #13
+1:	mov r7, r4
 2:	lsl r8, r7, r5
 	lsl r9, r6, r3
-	orr r8, r8, r9			@ (way<<shift) | (set<<lineorder)
-	mcr p15, 0, r8, c7, c6, 2	@ DCISW: invalidate D-cache line
+	orr r8, r8, r9
+	mcr p15, 0, r8, c7, c6, 2
 	subs r7, r7, #1
 	bge 2b
 	subs r6, r6, #1
 	bge 1b
 	dsb
-	mrc p15, 0, r1, c1, c0, 0	@ SCTLR
-	orr r1, r1, #1			@ M:  MMU enable
-	orr r1, r1, #(1 << 2)		@ C:  data cache enable
-	orr r1, r1, #(1 << 12)		@ I:  instruction cache enable
+	mrc p15, 0, r1, c1, c0, 0
+	orr r1, r1, #1
+	orr r1, r1, #(1 << 2)
+	orr r1, r1, #(1 << 12)
 	mcr p15, 0, r1, c1, c0, 0
 	isb
 	pop {r4, r5, r6, r7, r8, r9}
@@ -118,124 +90,113 @@ cntv_ctl_set:
 	isb
 	bx lr
 
-	.type	save, %function
 save:
-	stmia	r0, {r4-r11}
-	str	sp, [r0, #32]
-	str	lr, [r0, #36]
-	mov	r0, #0
-	bx	lr
-	.size	save, .-save
+	stmia r0, {r4-r11}
+	str sp, [r0, #32]
+	str lr, [r0, #36]
+	mov r0, #0
+	bx lr
 
-	.type	resume, %function
 resume:
-	cpsid	i
-	ldr	r2, =uarea_l2		@ kernel VA of the u-area L2 (PA==VA)
-	ldr	r3, =corebase		@ board COREBASE (resolved in machdep.c)
-	ldr	r3, [r3]
-	add	r3, r3, r0, lsl #6	@ CLKADDR(p_addr) = phys u-area base
-	orr	r3, r3, #0x12		@ kernel rw, uncached
-	str	r3, [r2, #0]
-	add	r3, r3, #0x1000
-	str	r3, [r2, #4]
-	add	r3, r3, #0x1000
-	str	r3, [r2, #8]
-	add	r3, r3, #0x1000
-	str	r3, [r2, #12]
-	dsb	ish
-	mov	r3, #0
-	mcr	p15, 0, r3, c8, c7, 0	@ TLBIALL
-	dsb	ish
+	cpsid i
+	ldr r2, =uarea_l2
+	ldr r3, =corebase
+	ldr r3, [r3]
+	add r3, r3, r0, lsl #6
+	orr r3, r3, #0x12
+	str r3, [r2, #0]
+	add r3, r3, #0x1000
+	str r3, [r2, #4]
+	add r3, r3, #0x1000
+	str r3, [r2, #8]
+	add r3, r3, #0x1000
+	str r3, [r2, #12]
+	dsb ish
+	mov r3, #0
+	mcr p15, 0, r3, c8, c7, 0
+	dsb ish
 	isb
-	ldmia	r1, {r4-r11}
-	ldr	sp, [r1, #32]
-	ldr	lr, [r1, #36]
-	mov	r0, #1
-	bx	lr
-	.size	resume, .-resume
+	ldmia r1, {r4-r11}
+	ldr sp, [r1, #32]
+	ldr lr, [r1, #36]
+	mov r0, #1
+	bx lr
 
-	.type	dcflush, %function
 dcflush:
-	mrc	p15, 0, r2, c0, c0, 1	@ CTR
-	lsr	r2, r2, #16
-	and	r2, r2, #0xf		@ DminLine = log2(words/line)
-	mov	r3, #4
-	lsl	r2, r3, r2		@ r2 = cache line size in bytes
-	add	r1, r0, r1		@ r1 = end address
-	sub	r3, r2, #1
-	bic	r0, r0, r3		@ align start down to a line
-1:	mcr	p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean+invalidate by MVA
-	add	r0, r0, r2
-	cmp	r0, r1
-	blo	1b
+	mrc p15, 0, r2, c0, c0, 1
+	lsr r2, r2, #16
+	and r2, r2, #0xf
+	mov r3, #4
+	lsl r2, r3, r2
+	add r1, r0, r1
+	sub r3, r2, #1
+	bic r0, r0, r3
+1:	mcr p15, 0, r0, c7, c14, 1
+	add r0, r0, r2
+	cmp r0, r1
+	blo 1b
 	dsb
-	bx	lr
-	.size	dcflush, .-dcflush
+	bx lr
 
-	.type	arm_sync_icache, %function
 arm_sync_icache:
-	mov	r0, #0
-	dsb	ish
-	mcr	p15, 0, r0, c8, c7, 0	@ TLBIALL
-	dsb	ish
+	mov r0, #0
+	dsb ish
+	mcr p15, 0, r0, c8, c7, 0
+	dsb ish
 	isb
-	push	{r4, r5, r6, r7}
-	mov	r0, #0
-	mcr	p15, 2, r0, c0, c0, 0	@ CSSELR = 0 (L1 data)
+	push {r4, r5, r6, r7}
+	mcr p15, 2, r0, c0, c0, 0
 	isb
-	mrc	p15, 1, r0, c0, c0, 0	@ CCSIDR
-	and	r1, r0, #7
-	add	r1, r1, #4		@ r1 = log2(line bytes)
-	movw	r2, #0x3ff
-	and	r2, r2, r0, lsr #3	@ r2 = ways - 1
-	clz	r3, r2			@ r3 = way bit shift
-	movw	r4, #0x7fff
-	and	r4, r4, r0, lsr #13	@ r4 = sets - 1
-1:	mov	r5, r2			@ r5 = way counter
-2:	lsl	r6, r5, r3
-	lsl	r7, r4, r1
-	orr	r6, r6, r7		@ (way<<shift) | (set<<lineorder)
-	mcr	p15, 0, r6, c7, c10, 2	@ DCCSW: clean D-cache line
-	subs	r5, r5, #1
-	bge	2b
-	subs	r4, r4, #1
-	bge	1b
-	dsb
-	pop	{r4, r5, r6, r7}
-	mov	r0, #0
-	dsb	ish
-	mcr	p15, 0, r0, c7, c5, 0	@ ICIALLU
-	mcr	p15, 0, r0, c7, c5, 6	@ BPIALL
-	dsb	ish
+	mrc p15, 1, r0, c0, c0, 0
+	and r1, r0, #7
+	add r1, r1, #4
+	movw r2, #0x3ff
+	and r2, r2, r0, lsr #3
+	clz r3, r2
+	movw r4, #0x7fff
+	and r4, r4, r0, lsr #13
+1:	mov r5, r2
+2:	lsl r6, r5, r3
+	lsl r7, r4, r1
+	orr r6, r6, r7
+	mcr p15, 0, r6, c7, c10, 2
+	subs r5, r5, #1
+	bge 2b
+	subs r4, r4, #1
+	bge 1b
+	pop {r4, r5, r6, r7}
+	mov r0, #0
+	dsb ish
+	mcr p15, 0, r0, c7, c5, 0
+	mcr p15, 0, r0, c7, c5, 6
+	dsb ish
 	isb
-	bx	lr
-	.size	arm_sync_icache, .-arm_sync_icache
+	bx lr
 
 idle:
-	cpsie	i
+	cpsie i
 	wfi
-1:	cpsid	i
+1:	cpsid i
 savfp:
-	bx	lr
+	bx lr
 
 dfar:
-	mrc	p15, 0, r0, c6, c0, 0
-	bx	lr
+	mrc p15, 0, r0, c6, c0, 0
+	bx lr
 
 dfsr:
-	mrc	p15, 0, r0, c5, c0, 0
-	bx	lr
-	.ltorg
+	mrc p15, 0, r0, c5, c0, 0
+	bx lr
 
-	.data
+.data
 waitloc:
-	.word	1b
+	.word 1b
 
-	.section .ddrbss,"aw",%nobits
-	.balign	16384
+.section .ddrbss,"aw",%nobits
+.balign 16384
 l1:
-	.space	16384
+	.space 16384
 user_l2:
-	.space	1024
+	.space 1024
 uarea_l2:
-	.space	1024
+	.space 1024
