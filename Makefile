@@ -5,11 +5,13 @@ AR = $(CROSS_COMPILE)ar
 HOSTCC = arm-linux-gnueabihf-gcc
 LEX = flex
 
-CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon \
+W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
+	-Wold-style-definition -Wmissing-prototypes
+CFLAGS = $W -fcommon \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 \
 	-MMD -MP
 ASFLAGS = -mcpu=cortex-a7
-HOSTCFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -static \
+HOSTCFLAGS = $W -static \
 	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
 
 LINK = $(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
@@ -65,7 +67,7 @@ $(DIRS):
 	mkdir -p $@
 
 $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
-	cp $< $@
+	cp -f $< $@
 
 clean:
 	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES)
