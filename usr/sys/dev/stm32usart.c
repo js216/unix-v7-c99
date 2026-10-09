@@ -1,222 +1,231 @@
 /*
- *   STM32 USART console driver (UART4 on the MP135 board)
+ *   KL/DL-11 driver
  */
 #include "../h/param.h"
 #include "../h/conf.h"
-#include "../h/dir.h"
+#include	"../h/dir.h"
 #include "../h/user.h"
 #include "../h/tty.h"
 #include "../h/systm.h"
 
+/* base address */
+#define	KLADDR	0x40010000
+#define	RCC	0x50000000
+#define	GPIOD	0x50005000
+#define	NKL11	1
+#define	NDL11	0
+#define	CR1	(*(volatile int *)(KLADDR+0x00))
+#define	BRR	(*(volatile int *)(KLADDR+0x0c))
+#define	ISR	(*(volatile int *)(KLADDR+0x1c))
+#define	ICR	(*(volatile int *)(KLADDR+0x20))
+#define	RDR	(*(volatile int *)(KLADDR+0x24))
+#define	TDR	(*(volatile int *)(KLADDR+0x28))
+#define	UART4CKSELR	(*(volatile int *)(RCC+0x61c))
+#define	APB1ENSETR	(*(volatile int *)(RCC+0x700))
+#define	AHB4ENSETR	(*(volatile int *)(RCC+0x770))
+#define	GPIOD_MODER	(*(volatile int *)(GPIOD+0x00))
+#define	GPIOD_AFRL	(*(volatile int *)(GPIOD+0x20))
+#define	GPIOD_AFRH	(*(volatile int *)(GPIOD+0x24))
+#define	UE	01
+#define	RE	04
+#define	TE	010
+#define	RXNEIE	040
+#define	TXEIE	0200
+#define	RXNE	040
+#define	TXE	0200
+#define	DLDELAY	4	/* Extra delay for DL's (double buff) */
 
-#define	UART4	0x40010000U		/* APB1 UART4 */
-#define	RCC	0x50000000U		/* reset/clock controller */
-#define	NCONS	1			/* one console line */
-#define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
+#define	NL1	000400
+#define	NL2	001000
+#define	CR2	020000
+#define	FF1	040000
+#define	TAB1	002000
 
-#define	CR1	(*(volatile unsigned int *)(UART4+0x00))
-#define	BRR	(*(volatile unsigned int *)(UART4+0x0c))
-#define	ISR	(*(volatile unsigned int *)(UART4+0x1c))
-#define	ICR	(*(volatile unsigned int *)(UART4+0x20))
-#define	RDR	(*(volatile unsigned int *)(UART4+0x24))
-#define	TDR	(*(volatile unsigned int *)(UART4+0x28))
-#define	APB1ENSETR (*(volatile unsigned int *)(RCC+0x700))	/* APB1 clk set-reg */
-#define	UART4CKSELR (*(volatile unsigned int *)(RCC+0x61c))	/* UART4 kernel clk sel */
-#define	AHB4ENSETR (*(volatile unsigned int *)(RCC+0x770))	/* AHB4 (non-secure) clk set */
-#define	GPIODEN	0x00000008U		/* AHB4ENSETR bit 3: GPIOD bus clock */
-#define	GPIOD	0x50005000U		/* GPIO port D (UART4 pins) */
-#define	GPIOD_MODER (*(volatile unsigned int *)(GPIOD+0x00))
-#define	GPIOD_AFRL  (*(volatile unsigned int *)(GPIOD+0x20))	/* AF for pins 0-7 */
-#define	GPIOD_AFRH  (*(volatile unsigned int *)(GPIOD+0x24))	/* AF for pins 8-15 */
-#define	CR1_UE	0x00000001U		/* USART enable */
-#define	CR1_RE	0x00000004U		/* receiver enable */
-#define	CR1_TE	0x00000008U		/* transmitter enable */
-#define	CR1_RXNEIE 0x00000020U		/* receive-not-empty interrupt enable */
-#define	CR1_TXEIE  0x00000080U		/* transmit-empty interrupt enable */
-#define	CR1_FIFOEN 0x20000000U		/* enable RX/TX FIFOs */
-#define	ISR_RXNE 0x00000020U		/* read data register not empty */
-#define	ISR_TXE	0x00000080U		/* transmit data register empty */
-#define	ICR_ERR	0x0000000fU		/* clear PE/FE/NE/ORE error flags */
-#define	UART4EN	0x00010000U		/* APB1ENSETR bit 16: UART4 bus clock */
-#define	UART4SRC_HSI 0x00000002U	/* UART4CKSELR: kernel clock = HSI (64 MHz) */
-
-struct	tty cons[NCONS];
-int	usirq = 85;		/* GIC INTID of the UART4 console (SPI 53) */
-extern char partab[];
-void ttyopen(dev_t dev, struct tty *tp);
-void ttyclose(struct tty *tp);
-void ttychars(struct tty *tp);
-int ttread(struct tty *tp);
-caddr_t ttwrite(struct tty *tp);
-int ttioccomm(int com, struct tty *tp, caddr_t addr, dev_t dev);
-void ttyinput(int c, struct tty *tp);
-void ttstart(struct tty *tp);
-int ttrstrt(struct tty *tp);
-void timeout(int (*fun)(), caddr_t arg, int tim);
-void wakeup(caddr_t chan);
-int getc(struct clist *p);
-int usstart(struct tty *tp);
-int usrint(dev_t dev);
-int usxint(dev_t dev);
-void usputchar(char c);
+struct	tty kl11[NKL11+NDL11];
+int	usstart();
+int	ttrstrt();
+int	usirq = 85;
+int	ttread(), ttioccomm(), getc();
+void	ttyopen(), ttyclose(), ttychars(), ttyinput(), ttstart(), timeout(), wakeup();
+caddr_t	ttwrite();
 
 void
-usinit(void)
+usinit()
 {
-	AHB4ENSETR = GPIODEN;
-	(void)AHB4ENSETR;			/* read-back: clock live before access */
-	GPIOD_MODER = (GPIOD_MODER & ~((3U<<12)|(3U<<16))) | (2U<<12) | (2U<<16);
-	GPIOD_AFRL = (GPIOD_AFRL & ~(0xfU<<24)) | (8U<<24);	/* PD6 -> AF8 */
-	GPIOD_AFRH = (GPIOD_AFRH & ~(0xfU<<0))  | (8U<<0);	/* PD8 -> AF8 */
-
-	APB1ENSETR = UART4EN;
-	(void)APB1ENSETR;			/* read-back: clock live before access */
-	UART4CKSELR = (UART4CKSELR & ~7U) | UART4SRC_HSI;
-	CR1 = 0;
+	AHB4ENSETR = 010;
+	(void)AHB4ENSETR;
+	GPIOD_MODER = (GPIOD_MODER & ~(3<<12|3<<16)) | 2<<12 | 2<<16;
+	GPIOD_AFRL = (GPIOD_AFRL & ~(017<<24)) | 8<<24;
+	GPIOD_AFRH = (GPIOD_AFRH & ~017) | 8;
+	APB1ENSETR = 0x10000;
+	(void)APB1ENSETR;
+	UART4CKSELR = (UART4CKSELR & ~7) | 2;
 	BRR = 556;
-	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE;
+	CR1 = UE|TE|RE;
 }
 
 int
-usopen(dev_t dev, int flag)
+usopen(dev, flag)
+dev_t dev;
+int flag;
 {
 	register struct tty *tp;
+	register int d;
 
 	(void)flag;
-	if(minor(dev) >= NCONS) {
+	d = minor(dev);
+	if(d >= NKL11+NDL11) {
 		u.u_error = ENXIO;
 		return(0);
 	}
-	tp = &cons[minor(dev)];
-	tp->t_addr = (caddr_t)UART4;
+	tp = &kl11[d];
 	tp->t_oproc = usstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
-		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
+		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
 		ttychars(tp);
 	}
-	CR1 |= CR1_RXNEIE;
+	CR1 |= RXNEIE;
 	ttyopen(dev, tp);
 	return(0);
 }
 
 int
-usclose(dev_t dev, int flag)
-{
-	(void)flag;
-	ttyclose(&cons[minor(dev)]);
-	return(0);
-}
-
-int
-usread(dev_t dev)
-{
-	ttread(&cons[minor(dev)]);
-	return(0);
-}
-
-int
-uswrite(dev_t dev)
-{
-	ttwrite(&cons[minor(dev)]);
-	return(0);
-}
-
-int
-usstart(struct tty *tp)
-{
-	register int c;
-
-	if ((ISR & ISR_TXE) == 0)
-		return(0);
-	if ((c=getc(&tp->t_outq)) >= 0) {
-		if (tp->t_flags&RAW)
-			TDR = c & 0177;
-		else if (c<=0177)
-			TDR = c;
-		else {
-			timeout(ttrstrt, (caddr_t)tp, (c&0177) + OUTDELAY);
-			tp->t_state |= TIMEOUT;
-			CR1 &= ~CR1_TXEIE;
-			return(0);
-		}
-		CR1 |= CR1_TXEIE;
-	} else
-		CR1 &= ~CR1_TXEIE;
-	return(0);
-}
-
-int
-usxint(dev_t dev)
+usclose(dev, flag)
+dev_t dev;
+int flag;
 {
 	register struct tty *tp;
 
-	tp = &cons[minor(dev)];
+	(void)flag;
+	tp = &kl11[minor(dev)];
+	ttyclose(tp);
+	return(0);
+}
+
+int
+usread(dev)
+dev_t dev;
+{
+	ttread(&kl11[minor(dev)]);
+	return(0);
+}
+
+int
+uswrite(dev)
+dev_t dev;
+{
+	ttwrite(&kl11[minor(dev)]);
+	return(0);
+}
+
+void
+usxint(dev)
+dev_t dev;
+{
+	register struct tty *tp;
+
+	tp = &kl11[minor(dev)];
+	CR1 &= ~TXEIE;
 	ttstart(tp);
-	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
+	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 		wakeup((caddr_t)&tp->t_outq);
-	return(0);
 }
 
-int
-usrint(dev_t dev)
+void
+usrint(dev)
+dev_t dev;
 {
 	register int c;
 	register struct tty *tp;
 
-	tp = &cons[minor(dev)];
-	while (ISR & ISR_RXNE) {
-		c = RDR;
-		ttyinput(c, tp);
-	}
-	ICR = ICR_ERR;
-	return(0);
+	tp = &kl11[minor(dev)];
+	c = RDR;
+	ICR = 017;
+	ttyinput(c, tp);
 }
 
 int
-usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+usioctl(dev, cmd, addr, flag)
+caddr_t addr;
+dev_t dev;
+int cmd, flag;
 {
 	(void)flag;
-	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
+	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
 		u.u_error = ENOTTY;
 	return(0);
 }
 
 int
-usintr(void)
+usstart(tp)
+register struct tty *tp;
 {
-	unsigned int isr = ISR;
+	register int c;
 
-	if (isr & ISR_RXNE)
+	if((ISR&TXE) == 0)
+		return(0);
+	if ((c=getc(&tp->t_outq)) >= 0) {
+		if (tp->t_flags&RAW)
+			TDR = c;
+		else if (c<=0177)
+			TDR = c;
+		else {
+			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
+			tp->t_state |= TIMEOUT;
+		}
+		CR1 |= TXEIE;
+	}
+	return(0);
+}
+
+int
+usintr()
+{
+	if (ISR&RXNE)
 		usrint(0);
-	if ((isr & ISR_TXE) && (CR1 & CR1_TXEIE))
+	if (ISR&TXE && CR1&TXEIE)
 		usxint(0);
 	return(0);
 }
 
-
+/*
+ * Print a character on console.
+ * Attempts to save and restore device
+ * status.
+ * If the switches are 0, all
+ * printing is inhibited.
+ *
+ * Whether or not printing is inhibited,
+ * the last MSGBUFS characters
+ * are saved in msgbuf for inspection later.
+ */
 void
 usputchar(char c)
 {
-	register int timo;
-	unsigned int s;
+	register int s, timo;
 
 	if (c != '\0' && c != '\r' && c != 0177) {
 		*msgbufp++ = c;
-		if (msgbufp >= &msgbuf[MSGBUFS])
+		if(msgbufp >= &msgbuf[MSGBUFS])
 			msgbufp = msgbuf;
 	}
 	timo = 30000;
-	while ((ISR & ISR_TXE) == 0)
-		if (--timo == 0)
+	/*
+	 * Try waiting for the console tty to come ready,
+	 * otherwise give up after a reasonable time.
+	 */
+	while((ISR&TXE) == 0)
+		if(--timo == 0)
 			break;
-	if (c == 0)
+	if(c == 0)
 		return;
 	s = CR1;
-	CR1 &= ~CR1_TXEIE;
+	CR1 &= ~TXEIE;
 	TDR = c;
-	if (c == '\n')
+	if(c == '\n') {
 		usputchar('\r');
+	}
+	usputchar(0);
 	CR1 = s;
 }
-
