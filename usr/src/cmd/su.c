@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <pwd.h>
 
-struct	passwd *pwd;
+struct	passwd *pwd,*getpwnam();
+char	*crypt();
+char	*getpass();
 char	**environ;
 
 int
-main(int argc, char **argv)
+main(argc,argv)
+int	argc;
+char	**argv;
 {
 	register char **p;
 	char *nptr;
