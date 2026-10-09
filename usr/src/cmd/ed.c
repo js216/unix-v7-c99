@@ -55,7 +55,6 @@ char	*linebp;
 int	ninbuf;
 int	io;
 int	pflag;
-long	lseek();
 void	(*oldhup)(int sig);
 void	(*oldquit)(int sig);
 int	vflag	= 1;
@@ -93,24 +92,30 @@ int	fchange;
 int	wrapp;
 unsigned nlall = 128;
 
-int	*address();
-char	*getline();
-char	*getblock();
-char	*place();
-char	*mktemp();
-char	*malloc();
-char	*realloc();
+int	*address(void);
+char	*getline(int tl);
+char	*getblock(int atl, int iof);
+char	*place(char *sp, char *l1, char *l2);
 jmp_buf	savej;
 
-void	commands(), setdot(), setall(), setnoaddr(), nonzero(), newline(), filename(), exfile(), error(), dosub(), blkio(), callunix(), compile(), crblock(), delete(), global(), init(), join(), move(), putchr(), putd(), putfile(), reverse(), puts(), substitute(), rdelete(), makekey(), quit();
-int	advance(), append(), backref(), cclass(), compsub(), crinit(), execute(), getchr(), getkey(), putline();
+void	commands(void), setdot(void), setall(void), setnoaddr(void), nonzero(void);
+void	newline(void), filename(int comm), exfile(void), error(char *s), dosub(void);
+void	blkio(int b, char *buf, int (*iofcn)(int fd, char *buf, int n));
+void	callunix(void), compile(int aeof), delete(void), global(int k), init(void);
+void	join(void), move(int cflag), putchr(int ac), putd(void), putfile(void);
+void	reverse(int *a1, int *a2), puts(char *sp), substitute(int inglob);
+void	crblock(char *permp, char *buf, int nchar, long startn);
+void	rdelete(int *ad1, int *ad2), makekey(char *a, char *b);
+void	onintr(int sig), onhup(int sig), quit(int sig);
+int	advance(char *lp, char *ep), append(int (*f)(void), int *a);
+int	backref(int i, char *lp), cclass(char *set, char c, int af), compsub(void);
+int	crinit(char *keyp, char *permp), execute(int gf, int *addr), getchr(void);
+int	getkey(void), putline(void), getfile(void), gettty(void), getsub(void);
+int	getcopy(void);
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *p1, *p2;
-	extern void onintr(), quit(), onhup();
 	void (*oldintr)(int sig);
 
 	oldquit = signal(SIGQUIT, SIG_IGN);
@@ -159,13 +164,12 @@ char **argv;
 		signal(SIGHUP, onhup);
 	setjmp(savej);
 	commands();
-	quit();
+	quit(0);
 }
 
 void
-commands()
+commands(void)
 {
-	int getfile(), gettty();
 	register int *a1, c;
 
 	for (;;) {
@@ -294,7 +298,7 @@ commands()
 	case 'q':
 		setnoaddr();
 		newline();
-		quit();
+		quit(0);
 		/* fallthrough */
 
 	case 'r':
@@ -386,7 +390,7 @@ commands()
 }
 
 int *
-address()
+address(void)
 {
 	register int *a1, minus, c;
 	int n, relerr;
@@ -483,7 +487,7 @@ address()
 }
 
 void
-setdot()
+setdot(void)
 {
 	if (addr2 == 0)
 		addr1 = addr2 = dot;
@@ -492,7 +496,7 @@ setdot()
 }
 
 void
-setall()
+setall(void)
 {
 	if (addr2==0) {
 		addr1 = zero+1;
@@ -504,21 +508,21 @@ setall()
 }
 
 void
-setnoaddr()
+setnoaddr(void)
 {
 	if (addr2)
 		error(Q);
 }
 
 void
-nonzero()
+nonzero(void)
 {
 	if (addr1<=zero || addr2>dol)
 		error(Q);
 }
 
 void
-newline()
+newline(void)
 {
 	register int c;
 
@@ -535,8 +539,7 @@ newline()
 }
 
 void
-filename(comm)
-int	comm;
+filename(int comm)
 {
 	register char *p1, *p2;
 	register int c;
@@ -574,7 +577,7 @@ int	comm;
 }
 
 void
-exfile()
+exfile(void)
 {
 	close(io);
 	io = -1;
@@ -585,8 +588,9 @@ exfile()
 }
 
 void
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 	signal(SIGINT, onintr);
 	putchr('\n');
 	lastc = '\n';
@@ -594,8 +598,9 @@ onintr()
 }
 
 void
-onhup()
+onhup(int sig)
 {
+	(void)sig;
 	signal(SIGINT, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
 	if (dol > zero) {
@@ -606,12 +611,11 @@ onhup()
 			putfile();
 	}
 	fchange = 0;
-	quit();
+	quit(0);
 }
 
 void
-error(s)
-char *s;
+error(char *s)
 {
 	register int c;
 
@@ -637,7 +641,7 @@ char *s;
 }
 
 int
-getchr()
+getchr(void)
 {
 	char c;
 	if ((lastc=peekc)) {
@@ -657,7 +661,7 @@ getchr()
 }
 
 int
-gettty()
+gettty(void)
 {
 	register int c;
 	register char *gf;
@@ -684,7 +688,7 @@ gettty()
 }
 
 int
-getfile()
+getfile(void)
 {
 	register int c;
 	register char *lp, *fp;
@@ -721,7 +725,7 @@ getfile()
 }
 
 void
-putfile()
+putfile(void)
 {
 	int *a1, n;
 	register char *fp, *lp;
@@ -761,9 +765,7 @@ putfile()
 }
 
 int
-append(f, a)
-int *a;
-int (*f)();
+append(int (*f)(void), int *a)
 {
 	register int *a1, *a2, *rdot;
 	int nline, tl;
@@ -796,7 +798,7 @@ int (*f)();
 }
 
 void
-callunix()
+callunix(void)
 {
 	register void (*savint)(int sig);
 	register int pid, rpid;
@@ -817,8 +819,9 @@ callunix()
 }
 
 void
-quit()
+quit(int sig)
 {
+	(void)sig;
 	if (vflag && fchange && dol!=zero) {
 		fchange = 0;
 		error(Q);
@@ -828,7 +831,7 @@ quit()
 }
 
 void
-delete()
+delete(void)
 {
 	setdot();
 	newline();
@@ -837,8 +840,7 @@ delete()
 }
 
 void
-rdelete(ad1, ad2)
-int *ad1, *ad2;
+rdelete(int *ad1, int *ad2)
 {
 	register int *a1, *a2, *a3;
 
@@ -856,8 +858,8 @@ int *ad1, *ad2;
 	fchange = 1;
 }
 
-void
-gdelete()
+static void
+gdelete(void)
 {
 	register int *a1, *a2, *a3;
 
@@ -879,8 +881,7 @@ gdelete()
 }
 
 char *
-getline(tl)
-int	tl;
+getline(int tl)
 {
 	register char *bp, *lp;
 	register int nl;
@@ -898,7 +899,7 @@ int	tl;
 }
 
 int
-putline()
+putline(void)
 {
 	register char *bp, *lp;
 	register int nl;
@@ -927,8 +928,7 @@ putline()
 }
 
 char *
-getblock(atl, iof)
-int	atl, iof;
+getblock(int atl, int iof)
 {
 	register int bno, off;
 	register char *p1, *p2;
@@ -977,10 +977,7 @@ int	atl, iof;
 }
 
 void
-blkio(b, buf, iofcn)
-int	b;
-char *buf;
-int (*iofcn)();
+blkio(int b, char *buf, int (*iofcn)(int fd, char *buf, int n))
 {
 	lseek(tfile, (long)b<<9, 0);
 	if ((*iofcn)(tfile, buf, 512) != 512) {
@@ -989,7 +986,7 @@ int (*iofcn)();
 }
 
 void
-init()
+init(void)
 {
 	register int *markp;
 
@@ -1012,8 +1009,7 @@ init()
 }
 
 void
-global(k)
-int	k;
+global(int k)
 {
 	register char *gp;
 	register int c;
@@ -1066,7 +1062,7 @@ int	k;
 }
 
 void
-join()
+join(void)
 {
 	register char *gp, *lp;
 	register int *a1;
@@ -1089,12 +1085,10 @@ join()
 }
 
 void
-substitute(inglob)
-int	inglob;
+substitute(int inglob)
 {
 	register int *markp, *a1, nl;
 	int gsubf;
-	int getsub();
 
 	gsubf = compsub();
 	for (a1 = addr1; a1 <= addr2; a1++) {
@@ -1130,7 +1124,7 @@ int	inglob;
 }
 
 int
-compsub()
+compsub(void)
 {
 	register int seof, c;
 	register char *p;
@@ -1166,7 +1160,7 @@ compsub()
 }
 
 int
-getsub()
+getsub(void)
 {
 	register char *p1, *p2;
 
@@ -1180,7 +1174,7 @@ getsub()
 }
 
 void
-dosub()
+dosub(void)
 {
 	register char *lp, *sp, *rp;
 	int c;
@@ -1214,8 +1208,7 @@ dosub()
 }
 
 char *
-place(sp, l1, l2)
-register char *sp, *l1, *l2;
+place(register char *sp, register char *l1, register char *l2)
 {
 
 	while (l1 < l2) {
@@ -1227,11 +1220,9 @@ register char *sp, *l1, *l2;
 }
 
 void
-move(cflag)
-int	cflag;
+move(int cflag)
 {
 	register int *adt, *ad1, *ad2;
-	int getcopy();
 
 	setdot();
 	nonzero();
@@ -1272,8 +1263,7 @@ int	cflag;
 }
 
 void
-reverse(a1, a2)
-register int *a1, *a2;
+reverse(register int *a1, register int *a2)
 {
 	register int t;
 
@@ -1287,7 +1277,7 @@ register int *a1, *a2;
 }
 
 int
-getcopy()
+getcopy(void)
 {
 	if (addr1 > addr2)
 		return(EOF);
@@ -1296,8 +1286,7 @@ getcopy()
 }
 
 void
-compile(aeof)
-int	aeof;
+compile(int aeof)
 {
 	register int eof, c;
 	register char *ep;
@@ -1427,9 +1416,7 @@ int	aeof;
 }
 
 int
-execute(gf, addr)
-int	gf;
-int *addr;
+execute(int gf, int *addr)
 {
 	register char *p1, *p2, c;
 
@@ -1480,8 +1467,7 @@ int *addr;
 }
 
 int
-advance(lp, ep)
-register char *ep, *lp;
+advance(register char *lp, register char *ep)
 {
 	register char *curlp;
 	int i;
@@ -1588,9 +1574,7 @@ register char *ep, *lp;
 }
 
 int
-backref(i, lp)
-register int i;
-register char *lp;
+backref(register int i, register char *lp)
 {
 	register char *bp;
 
@@ -1602,9 +1586,7 @@ register char *lp;
 }
 
 int
-cclass(set, c, af)
-int	af;
-register char *set, c;
+cclass(register char *set, register char c, int af)
 {
 	register int n;
 
@@ -1618,7 +1600,7 @@ register char *set, c;
 }
 
 void
-putd()
+putd(void)
 {
 	register int r;
 
@@ -1630,8 +1612,7 @@ putd()
 }
 
 void
-puts(sp)
-register char *sp;
+puts(register char *sp)
 {
 	col = 0;
 	while (*sp)
@@ -1643,8 +1624,7 @@ char	line[70];
 char	*linp	= line;
 
 void
-putchr(ac)
-int	ac;
+putchr(int ac)
 {
 	register char *lp;
 	register int c;
@@ -1688,11 +1668,7 @@ out:
 	linp = lp;
 }
 void
-crblock(permp, buf, nchar, startn)
-int	nchar;
-char *permp;
-char *buf;
-long startn;
+crblock(char *permp, char *buf, int nchar, long startn)
 {
 	register char *p1;
 	int n1;
@@ -1719,7 +1695,7 @@ long startn;
 }
 
 int
-getkey()
+getkey(void)
 {
 	struct sgttyb b;
 	int save;
@@ -1751,8 +1727,7 @@ getkey()
  * returns 0 if the key is null, and 1 if it is non-null.
  */
 int
-crinit(keyp, permp)
-char	*keyp, *permp;
+crinit(char *keyp, char *permp)
 {
 	register char *t1, *t2, *t3;
 	register int i;
@@ -1815,8 +1790,7 @@ char	*keyp, *permp;
 }
 
 void
-makekey(a, b)
-char *a, *b;
+makekey(char *a, char *b)
 {
 	register int i;
 	long t;
