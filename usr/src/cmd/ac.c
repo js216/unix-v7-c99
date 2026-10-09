@@ -32,10 +32,13 @@ long	day	= 86400L;
 int	pcount;
 char	**pptr;
 
-int	loop(void), print(void), upall(int f), update(struct tbuf *tp, int f);
-int	among(int i), newday(void), pdate(void);
+void	update(), upall(), print(), loop();
+int	among();
+void	pdate(), newday();
 int
-main(int argc, char **argv)
+main(argc, argv) 
+int	argc;
+char **argv;
 {
 	int c, fl;
 	register int i;
@@ -91,8 +94,8 @@ main(int argc, char **argv)
 	exit(0);
 }
 
-int
-loop(void)
+void
+loop()
 {
 	register int i;
 	register struct tbuf *tp;
@@ -100,15 +103,15 @@ loop(void)
 
 	if(ibuf.ut_line[0] == '|') {
 		dtime = ibuf.ut_time;
-		return(0);
+		return;
 	}
 	if(ibuf.ut_line[0] == '}') {
 		if(dtime == 0)
-			return(0);
+			return;
 		for(tp = tbuf; tp < &tbuf[TSIZE]; tp++)
 			tp->ttime += ibuf.ut_time-dtime;
 		dtime = 0;
-		return(0);
+		return;
 	}
 	if (lastime>ibuf.ut_time || lastime+(1.5*day)<ibuf.ut_time)
 		midnight = 0;
@@ -125,7 +128,7 @@ loop(void)
 	if (ibuf.ut_line[0] == '~') {
 		ibuf.ut_name[0] = '\0';
 		upall(0);
-		return(0);
+		return;
 	}
 	if (ibuf.ut_line[0]=='t')
 		i = (ibuf.ut_line[3]-'0')*10 + (ibuf.ut_line[4]-'0');
@@ -135,11 +138,10 @@ loop(void)
 		i = TSIZE-1;
 	tp = &tbuf[i];
 	update(tp, 0);
-	return(0);
 }
 
-int
-print(void)
+void
+print()
 {
 	int i;
 	long ttime, t;
@@ -160,21 +162,22 @@ print(void)
 		pdate();
 		printf("\ttotal%9.2f\n", ttime/3600.);
 	}
-	return(0);
 }
 
-int
-upall(int f)
+void
+upall(f)
+int	f;
 {
 	register struct tbuf *tp;
 
 	for (tp=tbuf; tp < &tbuf[TSIZE]; tp++)
 		update(tp, f);
-	return(0);
 }
 
-int
-update(struct tbuf *tp, int f)
+void
+update(tp, f)
+int	f;
+struct tbuf *tp;
 {
 	int j;
 	struct ubuf *up;
@@ -191,10 +194,10 @@ update(struct tbuf *tp, int f)
 	}
 	tp->ttime = t;
 	if (f)
-		return(0);
+		return;
 	if (ibuf.ut_name[0]=='\0') {
 		tp->userp = 0;
-		return(0);
+		return;
 	}
 	for (up=ubuf; up < &ubuf[USIZE]; up++) {
 		if (up->uname[0] == '\0')
@@ -206,11 +209,11 @@ update(struct tbuf *tp, int f)
 	for (j=0; j<8; j++)
 		up->uname[j] = ibuf.ut_name[j];
 	tp->userp = up;
-	return(0);
 }
 
 int
-among(int i)
+among(i)
+int	i;
 {
 	register int j, k;
 	register char *p;
@@ -230,12 +233,12 @@ among(int i)
 	return(0);
 }
 
-int
-newday(void)
+void
+newday()
 {
 	long ttime;
 	struct timeb tb;
-	struct tm *localtime(long *tim);
+	struct tm *localtime();
 
 	time(&ttime);
 	if (midnight == 0) {
@@ -246,18 +249,16 @@ newday(void)
 	}
 	while (midnight <= ibuf.ut_time)
 		midnight += day;
-	return(0);
 }
 
-int
-pdate(void)
+void
+pdate()
 {
 	long x;
-	char *ctime(long *);
+	char *ctime();
 
 	if (byday==0)
-		return(0);
+		return;
 	x = midnight-1;
 	printf("%.6s", ctime(&x)+4);
-	return(0);
 }
