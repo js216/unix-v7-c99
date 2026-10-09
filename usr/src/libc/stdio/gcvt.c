@@ -3,10 +3,13 @@
  * minimal length string
  */
 
-char	*ecvt(double arg, int ndigits, int *decpt, int *sign);
+char	*ecvt();
 
 char *
-gcvt(double number, int ndigit, char *buf)
+gcvt(number, ndigit, buf)
+double number;
+int ndigit;
+char *buf;
 {
 	int sign, decpt;
 	register char *p1, *p2;
@@ -31,6 +34,10 @@ gcvt(double number, int ndigit, char *buf)
 			*p2++ = '-';
 		} else
 			*p2++ = '+';
+		if (decpt >= 100) {
+			*p2++ = decpt/100 + '0';
+			decpt %= 100;
+		}
 		*p2++ = decpt/10 + '0';
 		*p2++ = decpt%10 + '0';
 	} else {

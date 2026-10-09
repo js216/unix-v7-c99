@@ -5,29 +5,35 @@
  *	sign is set to 0 for positive, 1 for negative
  */
 
-static char	*cvt(double, int, int *, int *, int);
+static char	*cvt();
 
 #define	NDIG	80
 char*
-ecvt(double arg, int ndigits, int *decpt, int *sign)
+ecvt(arg, ndigits, decpt, sign)
+double arg;
+int ndigits, *decpt, *sign;
 {
 	return(cvt(arg, ndigits, decpt, sign, 1));
 }
 
 char*
-fcvt(double arg, int ndigits, int *decpt, int *sign)
+fcvt(arg, ndigits, decpt, sign)
+double arg;
+int ndigits, *decpt, *sign;
 {
 	return(cvt(arg, ndigits, decpt, sign, 0));
 }
 
 static char*
-cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
+cvt(arg, ndigits, decpt, sign, eflag)
+double arg;
+int ndigits, *decpt, *sign, eflag;
 {
 	register int r2;
 	double fi, fj;
 	register char *p, *p1;
 	static char buf[NDIG];
-	double modf(double value, double *iptr);
+	double modf();
 
 	if (ndigits<0)
 		ndigits = 0;
@@ -40,6 +46,8 @@ cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 		*sign = 1;
 		arg = -arg;
 	}
+	if (!(arg <= 1.7976931348623157e308))
+		arg = 1.7976931348623157e308;
 	arg = modf(arg, &fi);
 	p1 = &buf[NDIG];
 	/*
@@ -47,6 +55,9 @@ cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 	 */
 	if (fi != 0) {
 		p1 = &buf[NDIG];
+		for (; fi >= 1e40; r2 += 10)
+			fi /= 1e10;
+		modf(fi, &fi);
 		while (fi != 0) {
 			fj = modf(fi/10, &fi);
 			*--p1 = (int)((fj+.03)*10) + '0';
