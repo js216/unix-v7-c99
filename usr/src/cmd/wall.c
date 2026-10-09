@@ -5,14 +5,10 @@
 char	mesg[3000];
 int	msize;
 struct	utmp utmp[USERS];
-char	*strcpy();
-char	*strcat();
 
-void sendmes();
+void sendmes(char *tty);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	register struct utmp *p;
@@ -44,8 +40,7 @@ char *argv[];
 }
 
 void
-sendmes(tty)
-char *tty;
+sendmes(char *tty)
 {
 	register int i;
 	char t[50], buf[BUFSIZ];
