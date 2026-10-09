@@ -44,7 +44,7 @@ main(int argc, char **argv)
 				for (p1 = (char *)mp; p1 < (char *)(mp+1);)
 					*p1++ = 0;
 				mp = &mtab[NMOUNT];
-				while ((--mp)->file[0] == 0);
+				while (mp > mtab && (--mp)->file[0] == 0);
 				mf = creat("/etc/mtab", 0644);
 				write(mf, (char *)mtab, (mp-mtab+1)*2*NAMSIZ);
 				return(0);
