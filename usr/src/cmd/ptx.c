@@ -31,11 +31,14 @@
 
 #define isabreak(c) (btable[c])
 
-extern char *calloc(), *mktemp();
-extern char *getline();
+extern char *getline(void);
 int status;
-void diag(), msg(), cmpline(), getsort(), putline(), putout(), onintr();
-int storeh(), hash(), cmpword();
+void diag(char *s,char *arg), msg(char *s,char *arg), cmpline(char *pend);
+void getsort(void), putline(char *strt, char *end), putout(char *strt,char *end);
+void onintr(int sig);
+int storeh(int num,char *strtp), hash(char *strtp,char *endp);
+int cmpword(char *cpp,char *pend,char *hpp);
+char *rtrim(char *a,char *c,int d), *ltrim(char *c,char *b,int d);
 
 
 char *hasht[MAXT];
@@ -69,15 +72,12 @@ char *bfile;	/*contains user supplied break chars */
 FILE *bptr;
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc,char **argv)
 {
 	register int c;
 	register char *bufp;
 	int pid;
 	char *pend;
-	extern void onintr();
 
 	char *xfile;
 	FILE *xptr;
@@ -249,20 +249,17 @@ char **argv;
 
 
 	getsort();
-	onintr();
+	onintr(0);
 }
 
 void
-msg(s,arg)
-char *s;
-char *arg;
+msg(char *s,char *arg)
 {
 	fprintf(stderr,"%s %s\n",s,arg);
 	return;
 }
 void
-diag(s,arg)
-char *s, *arg;
+diag(char *s,char *arg)
 {
 
 	msg(s,arg);
@@ -270,7 +267,7 @@ char *s, *arg;
 }
 
 
-char *getline()
+char *getline(void)
 {
 
 	register int c;
@@ -307,8 +304,7 @@ char *getline()
 }
 
 void
-cmpline(pend)
-char *pend;
+cmpline(char *pend)
 {
 
 	char *pstrt, *pchar, *cp;
@@ -355,8 +351,7 @@ char *pend;
 }
 
 int
-cmpword(cpp,pend,hpp)
-char *cpp, *pend, *hpp;
+cmpword(char *cpp,char *pend,char *hpp)
 {
 	char c;
 
@@ -370,8 +365,7 @@ char *cpp, *pend, *hpp;
 }
 
 void
-putline(strt, end)
-char *strt, *end;
+putline(char *strt, char *end)
 {
 	char *cp;
 
@@ -387,13 +381,12 @@ char *strt, *end;
 }
 
 void
-getsort()
+getsort(void)
 {
 	register int c;
 	register char *tilde, *linep, *ref;
 	char *p1a,*p1b,*p2a,*p2b,*p3a,*p3b,*p4a,*p4b;
 	int w;
-	char *rtrim(), *ltrim();
 
 	if((sortptr = fopen(sortfile,"r")) == NULL)
 		diag("Cannot open sorted data:",sortfile);
@@ -468,9 +461,7 @@ getsort()
 	}
 }
 
-char *rtrim(a,c,d)
-char *a,*c;
-int d;
+char *rtrim(char *a,char *c,int d)
 {
 	char *b,*x;
 	b = c;
@@ -482,9 +473,7 @@ int d;
 	return(b);
 }
 
-char *ltrim(c,b,d)
-char *c,*b;
-int d;
+char *ltrim(char *c,char *b,int d)
 {
 	char *a,*x;
 	a = c;
@@ -497,8 +486,7 @@ int d;
 }
 
 void
-putout(strt,end)
-char *strt, *end;
+putout(char *strt,char *end)
 {
 	char *cp;
 
@@ -510,8 +498,9 @@ char *strt, *end;
 }
 
 void
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 
 	if(*sortfile)
 		unlink(sortfile);
@@ -519,8 +508,7 @@ onintr()
 }
 
 int
-hash(strtp,endp)
-char *strtp, *endp;
+hash(char *strtp,char *endp)
 {
 	char *cp, c;
 	int i, j, k;
@@ -547,9 +535,7 @@ char *strtp, *endp;
 }
 
 int
-storeh(num,strtp)
-int num;
-char *strtp;
+storeh(int num,char *strtp)
 {
 	int i;
 
