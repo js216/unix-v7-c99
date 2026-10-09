@@ -110,7 +110,12 @@ retry:
 void
 getstr(char *s)
 {
-	while((*s=getchar())!='\n')s++;
+	char *e = s+99;
+
+	while((*s=getchar())!='\n'){
+		if(feof(stdin))exit(0);
+		if(s<e)s++;
+	}
 	*s=0;
 }
 
@@ -582,12 +587,11 @@ colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin)
 	}
 }
 
-int rrno = 0;
+unsigned rrno = 0;
 
 void
 srand(void){
-	rrno = _look( (int *)0x40000 );
-	_store( (int *)0x40000, rrno+1 );
+	rrno = time((long *)0);
 	}
 
 int
