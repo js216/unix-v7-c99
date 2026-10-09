@@ -1,9 +1,7 @@
 #include	"stdio.h"
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *p1, *p2, *p3;
 
