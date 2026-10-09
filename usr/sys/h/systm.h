@@ -76,8 +76,8 @@ void	acct(), addupc(), arm_sureg(), arm_sync_icache(), bawrite(),
 	stat1(), sureg(), swap(), swtch(), timeout(), tloop(), ttstart(),
 	ttyblock(), ttychars(), ttyclose(), ttyinput(), ttyopen(), ttyoutput(),
 	update(), wakeup(), wdir(), wflushtty(), writei(), writep(), xccdec(),
-	xexpand(), xfree(), xlock(), xrele(), xswap(), xumount(), xunlock(),
-	xuntext();
+	xalloc(), xexpand(), xfree(), xlock(), xrele(), xswap(), xumount(),
+	xunlock(), xuntext();
 int	access(), b_to_q(), badblock(), cntfrq_get(), compress(), copyin(),
 	copyout(), core(), cpass(), estabur(), fsig(), fubyte(), fumem(),
 	fuword(), getc(), getxfile(), incore(), issig(), malloc(), max(),

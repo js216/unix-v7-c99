@@ -79,12 +79,14 @@ struct	user
 	struct {			/* header of executable file */
 		int	ux_mag;		/* magic number */
 		unsigned ux_tsize;	/* text size */
-		unsigned ux_dsize;	/* data size */
-		unsigned ux_bsize;	/* bss size */
-		unsigned ux_ssize;	/* symbol table size */
+		int	ux_x[4];
 		unsigned ux_entloc;	/* entry location */
-		unsigned ux_unused;
-		unsigned ux_relflg;
+		unsigned ux_phoff;
+		int	ux_y[3];
+		short	ux_phnum, ux_z[3];
+		unsigned ux_type, ux_off, ux_addr, ux_paddr;
+		unsigned ux_dsize;	/* data size */
+		unsigned ux_msize;
 	} u_exdata;
 	char	u_comm[DIRSIZ];
 	time_t	u_start;

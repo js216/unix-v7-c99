@@ -29,14 +29,17 @@ exec()
 void
 exece()
 {
+	register int nc;
+	register char *cp = NULL;
+	register struct buf *bp;
 	register struct execa *uap;
-	register int nc, c, ap;
+	int na, ne, bno, ucp, ap, c;
 	struct inode *ip;
-	int i;
-	char e_argbuf[UARGLEN];
 
 	if ((ip = namei(uchar, 0)) == NULL)
 		return;
+	bno = 0;
+	bp = 0;
 	if(access(ip, IEXEC))
 		goto bad;
 	if((ip->i_mode & IFMT) != IFREG ||
@@ -44,237 +47,232 @@ exece()
 		u.u_error = EACCES;
 		goto bad;
 	}
-	uap = (struct execa *)u.u_ap;
+	/*
+	 * Collect arguments on "file" in swap space.
+	 */
+	na = 0;
+	ne = 0;
 	nc = 0;
+	uap = (struct execa *)u.u_ap;
+	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
+		panic("Out of swap");
 	if (uap->argp) for (;;) {
-		ap = fuword((caddr_t)uap->argp);
-		uap->argp++;
-		if (ap == 0)
-			break;
-		if (ap == -1) {
-			u.u_error = EFAULT;
-			goto bad;
+		ap = NULL;
+		if (uap->argp) {
+			ap = fuword((caddr_t)uap->argp);
+			uap->argp++;
 		}
-		do {
-			if ((c = fubyte((caddr_t)ap++)) < 0) {
-				u.u_error = EFAULT;
-				goto bad;
-			}
-			if (nc >= UARGLEN-2) {
-				u.u_error = E2BIG;
-				goto bad;
-			}
-			e_argbuf[nc++] = c;
-		} while (c);
-	}
-	e_argbuf[nc++] = 0;		/* empty string terminates arg list */
-	if (uap->envp) for (;;) {
-		ap = fuword((caddr_t)uap->envp);
-		uap->envp++;
-		if (ap == 0)
-			break;
-		if (ap == -1) {
-			u.u_error = EFAULT;
-			goto bad;
+		if (ap==NULL && uap->envp) {
+			uap->argp = NULL;
+			if ((ap = fuword((caddr_t)uap->envp)) == NULL)
+				break;
+			uap->envp++;
+			ne++;
 		}
+		if (ap==NULL)
+			break;
+		na++;
+		if(ap == -1)
+			u.u_error = EFAULT;
 		do {
-			if ((c = fubyte((caddr_t)ap++)) < 0) {
-				u.u_error = EFAULT;
-				goto bad;
-			}
-			if (nc >= UARGLEN-2) {
+			if (nc >= NCARGS-1)
 				u.u_error = E2BIG;
+			if ((c = fubyte((caddr_t)ap++)) < 0)
+				u.u_error = EFAULT;
+			if (u.u_error)
 				goto bad;
+			if ((nc&BMASK) == 0) {
+				if (bp)
+					bawrite(bp);
+				bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));
+				cp = bp->b_un.b_addr;
 			}
-			e_argbuf[nc++] = c;
-		} while (c);
+			nc++;
+			*cp++ = c;
+		} while (c>0);
 	}
-	e_argbuf[nc++] = 0;		/* empty string terminates env list */
+	if (bp)
+		bawrite(bp);
+	bp = 0;
+	nc = (nc + NBPW-1) & ~(NBPW-1);
 	if (getxfile(ip, nc) || u.u_error)
 		goto bad;
 
 	/*
-	 * set SUID/SGID protections, if no tracing
+	 * copy back arglist
 	 */
 
-	if ((u.u_procp->p_flag&STRC)==0) {
-		if(ip->i_mode&ISUID)
-			if(u.u_uid != 0) {
-				u.u_uid = ip->i_uid;
-				u.u_procp->p_uid = ip->i_uid;
+	ucp = USERSIZE - nc - NBPW;
+	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
+	u.u_ar0[R6] = ap;
+	suword((caddr_t)ap, na-ne);
+	nc = 0;
+	for (;;) {
+		ap += NBPW;
+		if (na==ne) {
+			suword((caddr_t)ap, 0);
+			ap += NBPW;
+		}
+		if (--na < 0)
+			break;
+		suword((caddr_t)ap, ucp);
+		do {
+			if ((nc&BMASK) == 0) {
+				if (bp)
+					brelse(bp);
+				bp = bread(swapdev, swplo+bno+(nc>>BSHIFT));
+				cp = bp->b_un.b_addr;
 			}
-		if(ip->i_mode&ISGID)
-			u.u_gid = ip->i_gid;
-	} else
-		psignal(u.u_procp, SIGTRC);
-	{
-		unsigned int strbase, sp;
-		int na, ne, j, k;
-		strbase = (USERSIZE - 4U - (unsigned)nc) & ~3U;
-		for (i = 0; i < nc; i++)
-			subyte((caddr_t)(strbase + (unsigned)i), e_argbuf[i]);
-		i = 0;
-		na = 0;
-		while (e_argbuf[i]) {
-			na++;
-			while (e_argbuf[i])
-				i++;
-			i++;
-		}
-		i++;
-		ne = 0;
-		while (e_argbuf[i]) {
-			ne++;
-			while (e_argbuf[i])
-				i++;
-			i++;
-		}
-		sp = (strbase - 4U*(unsigned)(na + ne + 3)) & ~7U;
-		suword((caddr_t)sp, na);
-		i = 0;
-		j = 0;
-		while (j < na) {
-			suword((caddr_t)(sp + 4U*(unsigned)(1 + j)),
-			    (int)(strbase + (unsigned)i));
-			while (e_argbuf[i])
-				i++;
-			i++;
-			j++;
-		}
-		suword((caddr_t)(sp + 4U*(unsigned)(1 + na)), 0);
-		i++;
-		k = 0;
-		while (k < ne) {
-			suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + k)),
-			    (int)(strbase + (unsigned)i));
-			while (e_argbuf[i])
-				i++;
-			i++;
-			k++;
-		}
-		suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + ne)), 0);
-		setregs();
-		u.u_ar0[R6] = (int)sp;
+			subyte((caddr_t)ucp++, (c = *cp++));
+			nc++;
+		} while(c&0377);
 	}
+	suword((caddr_t)ap, 0);
+	suword((caddr_t)ucp, 0);
+	setregs();
 bad:
+	if (bp)
+		brelse(bp);
+	if(bno)
+		mfree(swapmap, (NCARGS+BSIZE-1)/BSIZE, bno);
 	iput(ip);
 }
 
-struct elf32_ehdr {
-	unsigned char e_ident[16];
-	unsigned short e_type;
-	unsigned short e_machine;
-	unsigned int e_version;
-	unsigned int e_entry;
-	unsigned int e_phoff;
-	unsigned int e_shoff;
-	unsigned int e_flags;
-	unsigned short e_ehsize;
-	unsigned short e_phentsize;
-	unsigned short e_phnum;
-	unsigned short e_shentsize;
-	unsigned short e_shnum;
-	unsigned short e_shstrndx;
-};
-
-struct elf32_phdr {
-	unsigned int p_type;
-	unsigned int p_offset;
-	unsigned int p_vaddr;
-	unsigned int p_paddr;
-	unsigned int p_filesz;
-	unsigned int p_memsz;
-	unsigned int p_flags;
-	unsigned int p_align;
-};
-#define	PT_LOAD	1
-
-static void
-readbytes(struct inode *ip, caddr_t kbuf, unsigned int off, unsigned int n)
-{
-	u.u_base = kbuf;
-	u.u_count = n;
-	u.u_offset = off;
-	u.u_segflg = 1;
-	readi(ip);
-	u.u_segflg = 0;
-}
+/*
+ * Read in and set up memory for executed file.
+ * Zero return is normal;
+ * non-zero means only the text is being replaced
+ */
 int
 getxfile(ip, nargc)
 register struct inode *ip;
 int	nargc;
 {
-	struct elf32_ehdr eh;
-	struct elf32_phdr ph;
-	register int i;
-	int n, low, stack;
-	unsigned int end, maxend;
-	(void)nargc;
-	readbytes(ip, (caddr_t)&eh, 0, sizeof(eh));
+	register unsigned ds;
+	register int sep;
+	register unsigned ts, ss;
+	register int i, overlay;
+	long lsize;
+
+	/*
+	 * read in first few bytes
+	 * of file for segment
+	 * sizes:
+	 * ux_mag = 407/410/411/405
+	 *  407 is plain executable
+	 *  410 is RO text
+	 *  411 is separated ID
+	 *  405 is overlaid text
+	 */
+
+	u.u_base = (caddr_t)&u.u_exdata;
+	u.u_count = sizeof(u.u_exdata);
+	u.u_offset = 0;
+	u.u_segflg = 1;
+	readi(ip);
+	u.u_segflg = 0;
 	if(u.u_error)
 		goto bad;
-	if(eh.e_ident[0] != 0x7f || eh.e_ident[1] != 'E' ||
-	   eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F' || eh.e_type != 2) {
+	if (u.u_count!=0) {
 		u.u_error = ENOEXEC;
 		goto bad;
 	}
+	sep = 0;
+	overlay = 0;
+	for(i = 0; u.u_exdata.ux_mag == 0x464c457f && i < u.u_exdata.ux_phnum; i++) {
+		u.u_base = (caddr_t)&u.u_exdata.ux_type;
+		u.u_count = 24;
+		u.u_offset = u.u_exdata.ux_phoff + 32*i;
+		u.u_segflg = 1;
+		readi(ip);
+		u.u_segflg = 0;
+		if(u.u_exdata.ux_type == 1)
+			break;
+	}
+	if(u.u_exdata.ux_mag != 0x464c457f || i == u.u_exdata.ux_phnum) {
+		u.u_error = ENOEXEC;
+		goto bad;
+	}
+	u.u_exdata.ux_tsize = 0;
+	if(u.u_exdata.ux_tsize!=0 && (ip->i_flag&ITEXT)==0 && ip->i_count!=1) {
+		u.u_error = ETXTBSY;
+		goto bad;
+	}
+
 	/*
-	 * Find text and data sizes, and try them out for possible overflow.
+	 * find text and data sizes
+	 * try them out for possible
+	 * overflow of max sizes
 	 */
-	maxend = 0;
-	for(i = 0; i < (int)eh.e_phnum; i++) {
-		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
-		    sizeof(ph));
-		if(u.u_error)
-			goto bad;
-		if(ph.p_type != PT_LOAD)
-			continue;
-		if(ph.p_vaddr >= USERSIZE || ph.p_memsz > USERSIZE - ph.p_vaddr ||
-		   ph.p_filesz > ph.p_memsz) {
+	ts = btoc(u.u_exdata.ux_tsize);
+	lsize = (long)u.u_exdata.ux_addr + u.u_exdata.ux_msize;
+	if ((unsigned)lsize < u.u_exdata.ux_msize) {
+		u.u_error = ENOMEM;
+		goto bad;
+	}
+	ds = btoc(lsize);
+	ss = SSIZE + btoc(nargc);
+	if (overlay) {
+		if ((u.u_sep==0 && ctos(ts) != ctos(u.u_tsize)) || nargc) {
 			u.u_error = ENOMEM;
 			goto bad;
 		}
-		end = ph.p_vaddr + ph.p_memsz;
-		if(end > maxend)
-			maxend = end;
-	}
-
-	u.u_prof.pr_scale = 0;
-	xfree();
-	n = USIZE + (int)(USERSIZE >> 6);
-	expand(n);
-	low = (int)btoc(maxend);
-	for(i = 0; i < low; i++)
-		clearseg(u.u_procp->p_addr + USIZE + i);
-	stack = (int)(USERSIZE >> 6) - SSIZE;
-	for(i = stack; i < (int)(USERSIZE >> 6); i++)
-		clearseg(u.u_procp->p_addr + USIZE + i);
-	u.u_tsize = 0;
-	u.u_dsize = (unsigned)low;
-	u.u_ssize = SSIZE;
-	u.u_sep = 0;
-	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
-		goto bad;
-	for(i = 0; i < (int)eh.e_phnum; i++) {
-		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
-		    sizeof(ph));
-		if(u.u_error)
+		ds = u.u_dsize;
+		ss = u.u_ssize;
+		sep = u.u_sep;
+		xfree();
+		xalloc(ip);
+		u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
+	} else {
+		if(estabur(ts, ds, ss, sep, RO))
 			goto bad;
-		if(ph.p_type != PT_LOAD || ph.p_filesz == 0)
-			continue;
-		u.u_base = (caddr_t)ph.p_vaddr;
-		u.u_count = ph.p_filesz;
-		u.u_offset = ph.p_offset;
-		u.u_segflg = 0;
+	
+		/*
+		 * allocate and clear core
+		 * at this point, committed
+		 * to the new image
+		 */
+	
+		u.u_prof.pr_scale = 0;
+		xfree();
+		i = USIZE+(USERSIZE>>6);
+		expand(i);
+		while(--i >= USIZE)
+			clearseg(u.u_procp->p_addr+i);
+		xalloc(ip);
+	
+		/*
+		 * read in data segment
+		 */
+	
+		estabur((unsigned)0, ds, (unsigned)0, 0, RO);
+		u.u_base = (caddr_t)u.u_exdata.ux_addr;
+		u.u_offset = u.u_exdata.ux_off;
+		u.u_count = u.u_exdata.ux_dsize;
 		readi(ip);
-		if(u.u_error)
-			goto bad;
+		/*
+		 * set SUID/SGID protections, if no tracing
+		 */
+		if ((u.u_procp->p_flag&STRC)==0) {
+			if(ip->i_mode&ISUID)
+				if(u.u_uid != 0) {
+					u.u_uid = ip->i_uid;
+					u.u_procp->p_uid = ip->i_uid;
+				}
+			if(ip->i_mode&ISGID)
+				u.u_gid = ip->i_gid;
+		} else
+			psignal(u.u_procp, SIGTRC);
 	}
-	u.u_exdata.ux_entloc = eh.e_entry;
+	u.u_tsize = ts;
+	u.u_dsize = ds;
+	u.u_ssize = ss;
+	u.u_sep = sep;
+	estabur(ts, ds, ss, sep, RO);
 	install_sigtramp();
 	arm_sync_icache();
 bad:
-	return(0);
+	return(overlay);
 }
 
 /*
@@ -302,10 +300,10 @@ setregs()
 			u.u_pofile[i] &= ~EXCLOSE;
 		}
 	}
-	u.u_acflag &= ~AFORK;
 	/*
 	 * Remember file name for accounting.
 	 */
+	u.u_acflag &= ~AFORK;
 	bcopy((caddr_t)u.u_dbuf, (caddr_t)u.u_comm, DIRSIZ);
 }
 
