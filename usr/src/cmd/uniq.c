@@ -67,11 +67,13 @@ int
 gline(register char buf[])
 {
 	register int c;
+	char *e = &buf[999];
 
 	while((c = getchar()) != '\n') {
 		if(c == EOF)
 			return(1);
-		*buf++ = c;
+		if(buf < e)
+			*buf++ = c;
 	}
 	*buf = 0;
 	return(0);
