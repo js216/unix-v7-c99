@@ -1,7 +1,7 @@
 %{
 	void getout(void);
+#define YYSTYPE char *
 %}
-%define api.value.type {char *}
 %right '='
 %left '+' '-'
 %left '*' '/' '%'
@@ -454,7 +454,7 @@ int cpeek( int c, int yes, int no ){
 int getch(void){
 	int ch;
 loop:
-	ch = (peekc < 0) ? getc(in) : peekc;
+	ch = (peekc < 0) ? in == NULL ? EOF : getc(in) : peekc;
 	peekc = -1;
 	if(ch != EOF)return(ch);
 	if(++ifile > sargc){
@@ -463,7 +463,7 @@ loop:
 		ln = 0;
 		goto loop;
 	}
-	fclose(in);
+	if(in != NULL)fclose(in);
 	if((in = fopen(sargv[ifile],"r")) != NULL){
 		ln = 0;
 		ss = sargv[ifile];
