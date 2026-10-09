@@ -2,13 +2,13 @@
  * Type tty name
  */
 
-char	*ttyname(int f);
-int strcmp(char *a, char *b);
-int printf(char *fmt, ...);
-void exit(int n);
+#include <stdio.h>
+char	*ttyname();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	register char *p;
 
