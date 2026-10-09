@@ -102,7 +102,7 @@ line(long a, unsigned short *w, int n)
 	register int i, f, c;
 
 	f = 1;
-	for(c=1; c; c<<=1) {
+	for(c=1; c&0177; c<<=1) {
 		if((c&conv) == 0)
 			continue;
 		if(f) {
