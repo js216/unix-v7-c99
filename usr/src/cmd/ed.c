@@ -5,17 +5,13 @@
 #include <signal.h>
 #include <sgtty.h>
 #include <setjmp.h>
-#define	puts	u_puts
 #include <stdio.h>
-#undef	puts
 #define	NULL	0
 #define	FNSIZE	64
 #define	LBSIZE	512
 #define	ESIZE	128
 #define	GBSIZE	256
 #define	NBRA	5
-#undef	EOF
-#define	EOF	-1
 #define	KSIZE	9
 
 #define	CBRA	1
@@ -103,7 +99,7 @@ void	newline(void), filename(int comm), exfile(void), error(char *s), dosub(void
 void	blkio(int b, char *buf, int (*iofcn)(int fd, char *buf, int n));
 void	callunix(void), compile(int aeof), delete(void), global(int k), init(void);
 void	join(void), move(int cflag), putchr(int ac), putd(void), putfile(void);
-void	reverse(int *a1, int *a2), puts(char *sp), substitute(int inglob);
+void	reverse(int *a1, int *a2), substitute(int inglob);
 void	crblock(char *permp, char *buf, int nchar, long startn);
 void	rdelete(int *ad1, int *ad2), makekey(char *a, char *b);
 void	onintr(int sig), onhup(int sig), quit(int sig);
@@ -773,7 +769,7 @@ append(int (*f)(void), int *a)
 	nline = 0;
 	dot = a;
 	while ((*f)() == 0) {
-		if ((unsigned)((dol-zero)+1) >= nlall) {
+		if ((dol-zero)+1 >= (int)nlall) {
 			int *ozero = zero;
 			nlall += 512;
 			free((char *)zero);
@@ -1611,13 +1607,14 @@ putd(void)
 	putchr(r + '0');
 }
 
-void
+int
 puts(register char *sp)
 {
 	col = 0;
 	while (*sp)
 		putchr(*sp++);
 	putchr('\n');
+	return(0);
 }
 
 char	line[70];
