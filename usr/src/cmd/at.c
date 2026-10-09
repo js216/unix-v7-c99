@@ -52,7 +52,7 @@ int	uyear; /* year */
 int	today; /* day of year today */
 FILE	*file;
 FILE	*ifile;
-char	**environ;
+extern char	**environ;
 char	*prefix(char *begin, char *full);
 
 void makeutime(char *pp), filename(char *dir, int y, int d, int t), onintr(int sig);

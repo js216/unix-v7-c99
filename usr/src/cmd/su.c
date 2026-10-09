@@ -2,7 +2,7 @@
 #include <pwd.h>
 
 struct	passwd *pwd;
-char	**environ;
+extern char	**environ;
 
 int
 main(int argc, char **argv)
