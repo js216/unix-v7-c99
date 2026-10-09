@@ -34,12 +34,14 @@ int	alpha;
 int	ry;
 FILE	*ttyin;
 
-int	init(void), sendpt(int a), kwait(void), execom(void);
+void	init(), sendpt(), kwait(), execom();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register int i, j;
-	extern int ex(void);
+	extern void ex();
 
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch(argv[0][1]) {
@@ -149,11 +151,10 @@ main(int argc, char **argv)
 	putchar(US);
 	kwait();
 	ex();
-	return(0);
 }
 
-int
-init(void)
+void
+init()
 {
 	ohx = oxb = olx = ohy = oly = -1;
 	if (ncol >= maxcol) {
@@ -169,28 +170,26 @@ init(void)
 	if (ncol==0)
 		fputs("\033\014\033;", stdout);
 	sendpt(0);
-	return(0);
 }
 
-int
-ex(void)
+void
+ex()
 {
 	yy = MAXY;
 	xx = 0;
 	fputs("\033;\037", stdout);
 	sendpt(1);
 	exit(0);
-	return(0);
 }
 
-int
-kwait(void)
+void
+kwait()
 {
 	register int c;
 
 	fflush(stdout);
 	if (ttyin==NULL)
-		return(0);
+		return;
 	while ((c=getc(ttyin))!='\n') {
 		if (c=='!') {
 			execom();
@@ -201,11 +200,10 @@ kwait(void)
 		if (c==EOF)
 			ex();
 	}
-	return(0);
 }
 
-int
-execom(void)
+void
+execom()
 {
 	int (*si)(), (*sq)();
 
@@ -215,24 +213,24 @@ execom(void)
 		wait((int *)NULL);
 		signal(SIGINT, si);
 		signal(SIGQUIT, sq);
-		return(0);
+		return;
 	}
 	if (isatty(fileno(stdin)) == 0) {
 		if (freopen("/dev/tty", "r", stdin)==NULL)
 			freopen("/dev/null", "r", stdin);
 	}
 	execl("/bin/sh", "sh", "-t", 0);
-	return(0);
 }
 
-int
-sendpt(int a)
+void
+sendpt(a)
+int a;
 {
 	register int zz;
 	int hy,xb,ly,hx,lx;
 
 	if (a)
-		return(0);
+		return;
 	if ((zz = yy) < 0)
 		zz = 0;
 	hy = ((zz>>7) & 037);
@@ -256,5 +254,4 @@ sendpt(int a)
 	ohx = hx;
 	olx = lx;
 	alpha = 0;
-	return(0);
 }
