@@ -11,6 +11,7 @@
 %left CHAR DOT CCL NCCL '('
 %left CAT
 %left STAR PLUS QUEST
+%left error
 
 %{
 #include <stdio.h>

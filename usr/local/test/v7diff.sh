@@ -5414,19 +5414,21 @@ usr/local
 +	return(0);
 
 % usr/src/cmd/egrep.y
-@@ -20 +20 @@
+@@ -13,0 +14 @@
++%left error
+@@ -20 +21 @@
 -#define NCHARS 128
 +#define NCHARS 256
-@@ -26 +26 @@
+@@ -26 +27 @@
 -int line 1;
 +int line = 1;
-@@ -33 +33 @@
+@@ -33 +34 @@
 -char chars[MAXLIN];
 +int chars[MAXLIN];
-@@ -35 +35 @@
+@@ -35 +36 @@
 -int nxtchar 0;
 +int nxtchar = 0;
-@@ -58 +58,18 @@
+@@ -58 +59,18 @@
 -int	fname;
 +char	*fname;
 +int	yylex(void);
@@ -5446,156 +5448,156 @@ usr/local
 +void	add(int *array, int n);
 +void	follow(int v);
 +void	execute(char *file);
-@@ -63 +80 @@
+@@ -63 +81 @@
 -		={ unary(FINAL, $1);
 +		{ unary(FINAL, $1);
-@@ -68 +85 @@
+@@ -68 +86 @@
 -		={ $$ = node(CAT, $1, $2); }
 +		{ $$ = node(CAT, $1, $2); }
-@@ -70 +87 @@
+@@ -70 +88 @@
 -		={ $$ = node(CAT, $2, $3); }
 +		{ $$ = node(CAT, $2, $3); }
-@@ -72 +89 @@
+@@ -72 +90 @@
 -		={ $$ = node(CAT, $2, $3); }
 +		{ $$ = node(CAT, $2, $3); }
-@@ -74 +91 @@
+@@ -74 +92 @@
 -		={ $$ = node(CAT, $1, $2); }
 +		{ $$ = node(CAT, $1, $2); }
-@@ -77 +94 @@
+@@ -77 +95 @@
 -		={ $$ = enter(DOT);
 +		{ $$ = enter(DOT);
-@@ -81 +98 @@
+@@ -81 +99 @@
 -		={ $$ = enter($1); }
 +		{ $$ = enter($1); }
-@@ -83 +100 @@
+@@ -83 +101 @@
 -		={ $$ = enter(DOT); }
 +		{ $$ = enter(DOT); }
-@@ -85 +102 @@
+@@ -85 +103 @@
 -		={ $$ = cclenter(CCL); }
 +		{ $$ = cclenter(CCL); }
-@@ -87 +104 @@
+@@ -87 +105 @@
 -		={ $$ = cclenter(NCCL); }
 +		{ $$ = cclenter(NCCL); }
-@@ -91 +108 @@
+@@ -91 +109 @@
 -		={ $$ = node(OR, $1, $3); }
 +		{ $$ = node(OR, $1, $3); }
-@@ -93 +110 @@
+@@ -93 +111 @@
 -		={ $$ = node(CAT, $1, $2); }
 +		{ $$ = node(CAT, $1, $2); }
-@@ -95 +112 @@
+@@ -95 +113 @@
 -		={ $$ = unary(STAR, $1); }
 +		{ $$ = unary(STAR, $1); }
-@@ -97 +114 @@
+@@ -97 +115 @@
 -		={ $$ = unary(PLUS, $1); }
 +		{ $$ = unary(PLUS, $1); }
-@@ -99 +116 @@
+@@ -99 +117 @@
 -		={ $$ = unary(QUEST, $1); }
 +		{ $$ = unary(QUEST, $1); }
-@@ -101 +118 @@
+@@ -101 +119 @@
 -		={ $$ = $2; }
 +		{ $$ = $2; }
-@@ -106 +123,2 @@
+@@ -106 +124,2 @@
 -yyerror(s) {
 +int
 +yyerror(char *s) {
-@@ -108,0 +127 @@
+@@ -108,0 +128 @@
 +	return(0);
-@@ -111 +130,2 @@
+@@ -111 +131,2 @@
 -yylex() {
 +int
 +yylex(void) {
-@@ -114 +134 @@
+@@ -114 +135 @@
 -	register char c, d;
 +	register int c, d;
-@@ -156,0 +177,2 @@
+@@ -156,0 +178,2 @@
 +			yylval = c;
 +			return (CHAR);
-@@ -161,2 +183,3 @@
+@@ -161,2 +184,3 @@
 -nextch() {
 -	register char c;
 +int
 +nextch(void) {
 +	register int c;
-@@ -166 +189 @@
+@@ -166 +190 @@
 -	else c = *input++;
 +	else c = *input++ & 0377;
-@@ -170 +193,2 @@
+@@ -170 +194,2 @@
 -synerror() {
 +void
 +synerror(void) {
-@@ -175 +199,2 @@
+@@ -175 +200,2 @@
 -enter(x) int x; {
 +int
 +enter(int x) {
-@@ -183,2 +208,3 @@
+@@ -183,2 +209,3 @@
 -cclenter(x) int x; {
 -	register linno;
 +int
 +cclenter(int x) {
 +	register int linno;
-@@ -190 +216,2 @@
+@@ -190 +217,2 @@
 -node(x, l, r) {
 +int
 +node(int x, int l, int r) {
-@@ -200 +227,2 @@
+@@ -200 +228,2 @@
 -unary(x, d) {
 +int
 +unary(int x, int d) {
-@@ -208 +236,2 @@
+@@ -208 +237,2 @@
 -overflo() {
 +void
 +overflo(void) {
-@@ -213,2 +242,3 @@
+@@ -213,2 +243,3 @@
 -cfoll(v) {
 -	register i;
 +void
 +cfoll(int v) {
 +	register int i;
-@@ -227,2 +257,3 @@
+@@ -227,2 +258,3 @@
 -cgotofn() {
 -	register c, i, k;
 +void
 +cgotofn(void) {
 +	register int c, i, k;
-@@ -321,2 +352,3 @@
+@@ -321,2 +353,3 @@
 -cstate(v) {
 -	register b;
 +int
 +cstate(int v) {
 +	register int b;
-@@ -347,2 +379,3 @@
+@@ -347,2 +380,3 @@
 -member(symb, set, torf) {
 -	register i, num, pos;
 +int
 +member(int symb, int set, int torf) {
 +	register int i, num, pos;
-@@ -356,2 +389,3 @@
+@@ -356,2 +390,3 @@
 -notin(n) {
 -	register i, j, pos;
 +int
 +notin(int n) {
 +	register int i, j, pos;
-@@ -371,2 +405,3 @@
+@@ -371,2 +406,3 @@
 -add(array, n) int *array; {
 -	register i;
 +void
 +add(int *array, int n) {
 +	register int i;
-@@ -383 +418,2 @@
+@@ -383 +419,2 @@
 -follow(v) int v; {
 +void
 +follow(int v) {
-@@ -414,2 +450,2 @@
+@@ -414,2 +451,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(int argc, char **argv)
-@@ -490,2 +526,2 @@
+@@ -490,2 +527,2 @@
 -execute(file)
 -char *file;
 +void
 +execute(char *file)
-@@ -494,2 +530,2 @@
+@@ -494,2 +531,2 @@
 -	register cstat;
 -	register ccount;
 +	register int cstat;
