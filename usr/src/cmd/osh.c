@@ -2,6 +2,10 @@
  */
 
 #include <setjmp.h>
+#include <signal.h>
+#include <stdio.h>
+#undef	getc
+#undef	putc
 #define	INTR	2
 #define	QUIT	3
 #define LINSIZ 1000
@@ -51,6 +55,7 @@ char	*arginp;
 int	onelflg;
 int	stoperr;
 
+#undef	NSIG
 #define	NSIG	16
 char	*mesg[NSIG] = {
 	0,
@@ -75,15 +80,14 @@ char	line[LINSIZ];
 char	*args[ARGSIZ];
 int	trebuf[TRESIZ];
 
-int	*syntax(), *syn1(), *syn2(), *syn3(), readc(), getc(), any(), equal();
-void	main1(), word(), prs(), prn(), putc(), err(), texec(), pwait(), execute(), exit();
-int	read(), write(), close(), open(), creat(), pipe(), dup(), fork(), wait(), execv();
-int	getpid(), getuid(), chdir(), signal();
-long	lseek();
+int	*syntax(char **p1, char **p2), *syn1(char **p1, char **p2);
+int	*syn2(char **p1, char **p2), *syn3(char **p1, char **p2);
+int	readc(void), getc(void), any(int c, char *as), equal(char *as1, char *as2);
+void	main1(void), word(void), prs(char *as), prn(int n), putc(int c);
+void	err(char *s, int exitno), texec(char *f, int *at), pwait(int i, int *t);
+void	execute(int *t, int *pf1, int *pf2);
 int
-main(c, av)
-int c;
-char **av;
+main(int c, char **av)
 {
 	register int f;
 	register char **v;
@@ -123,8 +127,8 @@ char **av;
 		}
 	}
 	if(**v == '-') {
-		signal(QUIT, 1);
-		f = signal(INTR, 1);
+		signal(QUIT, SIG_IGN);
+		f = (int)signal(INTR, SIG_IGN);
 		if ((arginp==0&&onelflg==0) || (f&01)==0)
 			setintr++;
 	}
@@ -140,7 +144,7 @@ loop:
 }
 
 void
-main1()
+main1(void)
 {
 	register char  *cp;
 	register int *t;
@@ -171,7 +175,7 @@ main1()
 }
 
 void
-word()
+word(void)
 {
 	register char c, c1;
 
@@ -227,9 +231,8 @@ pack:
 	}
 }
 
-int *
-tree(n)
-int n;
+static int *
+tree(int n)
 {
 	register int *t;
 
@@ -244,7 +247,7 @@ int n;
 }
 
 int
-getc()
+getc(void)
 {
 	register char c;
 
@@ -299,7 +302,7 @@ getd:
 }
 
 int
-readc()
+readc(void)
 {
 	int rdstat;
 	char cc;
@@ -332,8 +335,7 @@ readc()
  */
 
 int *
-syntax(p1, p2)
-char **p1, **p2;
+syntax(char **p1, char **p2)
 {
 
 	while(p1 != p2) {
@@ -352,8 +354,7 @@ char **p1, **p2;
  */
 
 int *
-syn1(p1, p2)
-char **p1, **p2;
+syn1(char **p1, char **p2)
 {
 	register char **p;
 	register int *t, *t1;
@@ -403,8 +404,7 @@ char **p1, **p2;
  */
 
 int *
-syn2(p1, p2)
-char **p1, **p2;
+syn2(char **p1, char **p2)
 {
 	register char **p;
 	register int l, *t;
@@ -442,8 +442,7 @@ char **p1, **p2;
  */
 
 int *
-syn3(p1, p2)
-char **p1, **p2;
+syn3(char **p1, char **p2)
 {
 	register char **p;
 	char **lp, **rp;
@@ -531,10 +530,8 @@ out:
 	return(t);
 }
 
-void
-scan(at, f)
-int *at;
-int (*f)();
+static void
+scan(int *at, int (*f)(int c))
 {
 	register char *p, c;
 	register int *t;
@@ -545,9 +542,8 @@ int (*f)();
 			*p++ = (*f)(c);
 }
 
-int
-tglob(c)
-int c;
+static int
+tglob(int c)
 {
 
 	if(any(c, "[?*"))
@@ -555,17 +551,15 @@ int c;
 	return(c);
 }
 
-int
-trim(c)
-int c;
+static int
+trim(int c)
 {
 
 	return(c&0177);
 }
 
 void
-execute(t, pf1, pf2)
-int *t, *pf1, *pf2;
+execute(int *t, int *pf1, int *pf2)
 {
 	int i, f, pv[2];
 	register int *t1;
@@ -685,8 +679,8 @@ int *t, *pf1, *pf2;
 			open("/dev/null", 0);
 		}
 		if((f&FINT) == 0 && setintr) {
-			signal(INTR, 0);
-			signal(QUIT, 0);
+			signal(INTR, SIG_DFL);
+			signal(QUIT, SIG_DFL);
 		}
 		if(t[DTYP] == TPAR) {
 			if((t1 = (int *)t[DSPR]))
@@ -743,9 +737,7 @@ int *t, *pf1, *pf2;
 }
 
 void
-texec(f, at)
-int	f;
-int *at;
+texec(char *f, int *at)
 {
 	extern int errno;
 	register int *t;
@@ -768,9 +760,7 @@ int *at;
 }
 
 void
-err(s, exitno)
-char *s;
-int exitno;
+err(char *s, int exitno)
 {
 
 	prs(s);
@@ -782,8 +772,7 @@ int exitno;
 }
 
 void
-prs(as)
-char *as;
+prs(char *as)
 {
 	register char *s;
 
@@ -793,8 +782,7 @@ char *as;
 }
 
 void
-putc(c)
-int	c;
+putc(int c)
 {
 	char cc;
 
@@ -803,8 +791,7 @@ int	c;
 }
 
 void
-prn(n)
-int n;
+prn(int n)
 {
 	register int a;
 
@@ -814,9 +801,7 @@ int n;
 }
 
 int
-any(c, as)
-int c;
-char *as;
+any(int c, char *as)
 {
 	register char *s;
 
@@ -828,8 +813,7 @@ char *as;
 }
 
 int
-equal(as1, as2)
-char *as1, *as2;
+equal(char *as1, char *as2)
 {
 	register char *s1, *s2;
 
@@ -842,8 +826,7 @@ char *as1, *as2;
 }
 
 void
-pwait(i, t)
-int i, *t;
+pwait(int i, int *t)
 {
 	register int p, e;
 	int s;
