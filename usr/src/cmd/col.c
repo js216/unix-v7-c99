@@ -16,12 +16,11 @@ int cp, lp;
 int ll, llh, mustwr;
 int pcp = 0;
 char *pgmname;
-char *strcpy();
-void outc(), store(), fetch(), emit(), incr(), decr();
+void outc(char c), emit(char *s, int lineno);
+void incr(void), decr(void);
 
 int
-main (argc, argv)
-	int argc; char **argv;
+main (int argc, char **argv)
 {
 	int i;
 	int greek;
@@ -162,8 +161,7 @@ main (argc, argv)
 }
 
 void
-outc (c)
-	register char c;
+outc (register char c)
 {
 	if (lp > cp) {
 		line = lbuff;
@@ -208,11 +206,9 @@ outc (c)
 	}
 }
 
-void
-store (lno)
-int lno;
+static void
+store (int lno)
 {
-	char *malloc();
 
 	lno %= PL;
 	if (page[lno] != 0)
@@ -225,9 +221,8 @@ int lno;
 	strcpy (page[lno],lbuff);
 }
 
-void
-fetch(lno)
-int lno;
+static void
+fetch(int lno)
 {
 	register char *p;
 
@@ -241,9 +236,7 @@ int lno;
 		strcpy (line, page[lno]);
 }
 void
-emit (s, lineno)
-	char *s;
-	int lineno;
+emit (char *s, int lineno)
 {
 	static int cline = 0;
 	register int ncp;
@@ -300,7 +293,7 @@ emit (s, lineno)
 }
 
 void
-incr()
+incr(void)
 {
 	store (ll++);
 	if (ll > llh)
@@ -315,7 +308,7 @@ incr()
 }
 
 void
-decr()
+decr(void)
 {
 	if (ll > mustwr - PL) {
 		store (ll--);
