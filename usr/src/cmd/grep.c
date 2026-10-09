@@ -56,12 +56,11 @@ char	bittab[] = {
 	128
 };
 
-void	compile(), execute(), succeed(), errexit();
-int	advance(), ecmp();
+void	compile(char *astr), execute(char *file), succeed(char *f);
+void	errexit(char *s, char *f);
+int	advance(char *lp, char *ep), ecmp(char *a, char *b, int count);
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -147,8 +146,7 @@ out:
 }
 
 void
-compile(astr)
-char *astr;
+compile(char *astr)
 {
 	register int c;
 	register char *ep, *sp;
@@ -266,8 +264,7 @@ char *astr;
 }
 
 void
-execute(file)
-char *file;
+execute(char *file)
 {
 	register char *p1, *p2;
 	register int c;
@@ -329,8 +326,7 @@ char *file;
 }
 
 int
-advance(lp, ep)
-register char *lp, *ep;
+advance(register char *lp, register char *ep)
 {
 	register char *curlp;
 	char c;
@@ -445,10 +441,8 @@ register char *lp, *ep;
 }
 
 void
-succeed(f)
-char *f;
+succeed(char *f)
 {
-	long ftell();
 	nsucc = 1;
 	if (sflag)
 		return;
@@ -471,9 +465,7 @@ char *f;
 }
 
 int
-ecmp(a, b, count)
-int	count;
-char	*a, *b;
+ecmp(char *a, char *b, int count)
 {
 	register int cc = count;
 	while(cc--)
@@ -482,8 +474,7 @@ char	*a, *b;
 }
 
 void
-errexit(s, f)
-char *s, *f;
+errexit(char *s, char *f)
 {
 	fprintf(stderr, s, f);
 	exit(2);
