@@ -14,8 +14,15 @@ int j;
 int l;
 int m;
 int count;
-void getstr(), prtmov(), update(), roll(), movegen(), moverecord(), instructions(), prtbrd(), numline(), colorline(), srand(), _store();
-int play(), nextmove(), piececount(), strategy(), eval(), getprob(), rand(), _look();
+void getstr(char *s), prtmov(int k), update(int *player, int *playee, int k), roll(void);
+void movegen(int *mover, int *movee), moverecord(int *mover), instructions(void);
+void prtbrd(void), numline(int *upcol, int *downcol, int start, int fin), srand(void);
+void colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin);
+void _store(int *p, int numb);
+int play(int *player, int *playee, int pos[]), nextmove(int *player, int *playee);
+int piececount(int *player, int startrow, int endrow), rand(void), _look(int *p);
+int strategy(int *player, int *playee), eval(int *player, int *playee, int k, int *prob);
+int getprob(int *player, int *playee, int start, int finish);
 int red[]     = {0,2,0,0,0,0,0,0,0,0,0,0,5,
 		 0,0,0,0,3,0,5,0,0,0,0,0,
 		 0,0,0,0,0,0};
@@ -30,7 +37,7 @@ int probmoves[MAXGMOV] ;
 struct {int pos[4],mov[4];} moves[MAXIMOVES] ;
 
 int
-main()
+main(void)
 {
 	int t,k,n,go[6];
 	char s[100];
@@ -102,16 +109,14 @@ retry:
 }
 
 void
-getstr(s)
-char *s;
+getstr(char *s)
 {
 	while((*s=getchar())!='\n')s++;
 	*s=0;
 }
 
 int
-play(player,playee,pos)
-int *player,*playee,pos[];
+play(int *player, int *playee, int pos[])
 {
 	int k,n,die,ipos;
 	for(k=0;k<player[0];k++){  /*blots on player[0] must be moved first*/
@@ -154,8 +159,7 @@ badmove:
 	return(-1);
 }
 int
-nextmove(player,playee)
-int *player,*playee;
+nextmove(int *player, int *playee)
 {
 	int k;
 	imoves=0;
@@ -176,8 +180,7 @@ int *player,*playee;
 	return(0);
 }
 void
-prtmov(k)
-int k;
+prtmov(int k)
 {
 	int n;
 	if(k==NIL)printf( "no move possible\n");
@@ -188,8 +191,7 @@ int k;
 	printf( "\n");
 }
 void
-update(player,playee,k)
-int *player,*playee,k;
+update(int *player, int *playee, int k)
 {
 	int n,t;
 	for(n=0;n<4;n++){
@@ -204,8 +206,7 @@ int *player,*playee,k;
 	}
 }
 int
-piececount(player,startrow,endrow)
-int *player,startrow,endrow;
+piececount(int *player, int startrow, int endrow)
 {
 	int sum;
 	sum=0;
@@ -230,7 +231,7 @@ prtmovs()
 */
 
 void
-roll()
+roll(void)
 {
 	extern int die1,die2;
 	die1=(rand()>>8)%6+1;
@@ -238,8 +239,7 @@ roll()
 }
 
 void
-movegen(mover,movee)
-int *mover,*movee;
+movegen(int *mover, int *movee)
 {
 	extern int i,j,l,m,count;
 	extern int die1,die2;
@@ -330,8 +330,7 @@ int *mover,*movee;
 	}
 }
 void
-moverecord(mover)
-int *mover;
+moverecord(int *mover)
 {
 	extern int i,j,l,m,imoves,count;
 	int t;
@@ -376,8 +375,7 @@ case 1:
 
 
 int
-strategy(player,playee)
-int *player,*playee;
+strategy(int *player, int *playee)
 {
 	extern char level;
 	int k,n,nn,bestval,moveval,prob;
@@ -414,8 +412,7 @@ int *player,*playee;
 }
 
 int
-eval(player,playee,k,prob)
-int *player,*playee,k,*prob;
+eval(int *player, int *playee, int k, int *prob)
 {
 	extern char level;
 	int newtry[31],newother[31],*r,*q,*p,n,sum,first;
@@ -477,7 +474,7 @@ int *player,*playee,k,*prob;
 	return(sum);
 }
 void
-instructions()
+instructions(void)
 {
 	printf( "To play backgammon, type the numbers of the points\n");
 	printf( "from which pieces are to be moved. Thus, if the\n");
@@ -507,8 +504,7 @@ instructions()
 }
 
 int
-getprob(player,playee,start,finish)
-int *player,*playee,start,finish;
+getprob(int *player, int *playee, int start, int finish)
 {			/*returns the probability (times 102) that any
 			  pieces belonging to 'player' and lying between
 			  his points 'start' and 'finish' will be hit
@@ -527,7 +523,7 @@ int *player,*playee,start,finish;
 	return(sum);
 }
 void
-prtbrd()
+prtbrd(void)
 {
 	int k;
 	printf( "White's Home\n");
@@ -566,8 +562,7 @@ prtbrd()
 	printf( "\nRed's Home\n\n\n\n\n");
 }
 void
-numline(upcol,downcol,start,fin)
-int *upcol,*downcol,start,fin;
+numline(int *upcol, int *downcol, int start, int fin)
 {
 	int k,n;
 	for(k=start;k<=fin;k++){
@@ -576,9 +571,7 @@ int *upcol,*downcol,start,fin;
 	}
 }
 void
-colorline(upcol,c1,downcol,c2,start,fin)
-int *upcol,*downcol,start,fin;
-char c1,c2;
+colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin)
 {
 	int k;
 	char c;
@@ -593,24 +586,24 @@ char c1,c2;
 int rrno = 0;
 
 void
-srand(){
-	rrno = _look( 0x40000 );
-	_store( 0x40000, rrno+1 );
+srand(void){
+	rrno = _look( (int *)0x40000 );
+	_store( (int *)0x40000, rrno+1 );
 	}
 
 int
-rand(){
+rand(void){
 	rrno *= 0106273;
 	rrno += 020202;
 	return( rrno & 077777 );
 	}
 
 int
-_look(p) int *p; {
+_look(int *p) {
 	return( *p );
 	}
 
 void
-_store( p, numb ) int *p; int numb; {
+_store( int *p, int numb ){
 	*p = numb;
 	}

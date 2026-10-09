@@ -11,18 +11,15 @@ int	wrongs;
 long	stvec;
 long	etvec;
 long	dtvec;
-int	getnum(), random(), skrand();
-void	getline(), score();
+int	getnum(char *s), random(int range), skrand(int range);
+void	getline(char *s), score(void), delete(int sig);
 
 int
-main(argc,argv)
-int argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	int range, k, dif, l;
 	char line[100];
 	int ans,pans,i,j,t;
-	extern	void delete();
 
 	signal(SIGINT, delete);
 
@@ -124,8 +121,7 @@ loop1:
 }
 
 void
-getline(s)
-char *s;
+getline(char *s)
 {
 	register char	*rs;
 
@@ -146,8 +142,7 @@ char *s;
 }
 
 int
-getnum(s)
-char *s;
+getnum(char *s)
 {
 	int	a;
 	char	c;
@@ -161,16 +156,13 @@ char *s;
 
 
 int
-random(range)
-int range;
+random(int range)
 {
 	return(rand()%range);
 }
 
 int
-skrand(range)
-int range;
-{
+skrand(int range){
 int temp;
 	temp = random(range) + random(range);
 	if(temp > range - 1) temp = 2*range - 1 - temp;
@@ -178,7 +170,7 @@ int temp;
 	}
 
 void
-score()
+score(void)
 {
 	time(&etvec);
 
@@ -196,8 +188,9 @@ score()
 }
 
 void
-delete()
+delete(int sig)
 {
+	(void)sig;
 	if(rights + wrongs == 0.) {
 		printf("\n");
 		exit(0);

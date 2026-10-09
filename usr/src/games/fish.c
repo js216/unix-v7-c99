@@ -19,13 +19,16 @@ HAND yourhand;
 char deck[DECK];
 short nextcd;
 int proflag;
-int	choose(), draw(), empty(), mark(), game(), move(), guess(), myguess();
-void	shuffle(), error(), score(), deal(), stats(), phand(), instruct(), madebook(), start(), hedrew(), heguessed();
+int	choose(char a[], int n), draw(void), empty(HAND h), mark(HAND hand, int cd);
+int	game(void), move(HAND hs, HAND ht, int g, int v), guess(void), myguess(void);
+void	shuffle(void), error(char *s), score(void), deal(HAND hand, int n), stats(void);
+void	phand(HAND h), instruct(void), madebook(int x), start(HAND h);
+void	hedrew(int d), heguessed(int d);
 
 /* utility and output programs */
 
 void
-shuffle(){
+shuffle(void){
 	/* shuffle the deck, and reset nextcd */
 	/* uses the random number generator `rand' in the C library */
 	/* assumes that `srand' has already been called */
@@ -42,7 +45,7 @@ shuffle(){
 	}
 
 int
-choose( a, n ) char a[]; int n; {
+choose( char a[], int n ){
 	/* pick and return one at random from the n choices in a */
 	/* The last one is moved to replace the one chosen */
 	register int j, t;
@@ -56,20 +59,20 @@ choose( a, n ) char a[]; int n; {
 	}
 
 int
-draw() {
+draw(void) {
 	if( nextcd >= DECK ) return( NOMORE );
 	return( deck[nextcd++] );
 	}
 
 void
-error( s ) char *s; {
+error( char *s ){
 	fprintf( stderr, "error: " );
 	fprintf( stderr, s );
 	exit( 1 );
 	}
 
 int
-empty( h ) HAND h; {
+empty( HAND h ){
 	register int i;
 
 	for( i=1; i<=CTYPE; ++i ){
@@ -79,7 +82,7 @@ empty( h ) HAND h; {
 	}
 
 int
-mark( cd, hand ) int cd; HAND hand; {
+mark( HAND hand, int cd ){
 	if( cd != NOMORE ){
 		++hand[cd];
 		if( hand[cd] > 4 ){
@@ -90,7 +93,7 @@ mark( cd, hand ) int cd; HAND hand; {
 	}
 
 void
-deal( hand, n ) HAND hand; int n; {
+deal( HAND hand, int n ){
 	while( n-- ){
 		if( mark( hand, draw() ) == NOMORE ) error( "deck exhausted" );
 		}
@@ -114,7 +117,7 @@ char *cname[] = {
 	};
 
 void
-stats(){
+stats(void){
 	register int i, ct, b;
 
 	if( proflag ) printf( "Pro level\n" );
@@ -138,7 +141,7 @@ stats(){
 	}
 
 void
-phand( h ) HAND h; {
+phand( HAND h ){
 	register int i, j;
 
 	j = 0;
@@ -166,7 +169,7 @@ phand( h ) HAND h; {
 	}
 
 int
-main( argc, argv ) int argc; char * argv[]; { 
+main( int argc, char * argv[] ){ 
 	/* initialize shuffling, ask for instructions, play game, die */
 	register int c;
 
@@ -218,7 +221,7 @@ char *inst[] = {
 	};
 
 void
-instruct(){
+instruct(void){
 	register char **cpp;
 
 	printf( "\n" );
@@ -229,7 +232,7 @@ instruct(){
 	}
 
 int
-game(){
+game(void){
 
 	shuffle();
 
@@ -268,7 +271,7 @@ game(){
 /*	reflect the effect of a move on the hands */
 
 int
-move( hs, ht, g, v ) HAND hs, ht; int g, v; {
+move( HAND hs, HAND ht, int g, int v ){
 	/* hand hs has made a guess, g, directed towards ht */
 	/* v on indicates that the guess was made by the machine */
 	register int d;
@@ -328,12 +331,12 @@ move( hs, ht, g, v ) HAND hs, ht; int g, v; {
 	}
 
 void
-madebook( x ) int x; {
+madebook( int x ){
 	printf( "Made a book of %s's\n", cname[x] );
 	}
 
 void
-score(){
+score(void){
 	register int my, your, i;
 
 	my = your = 0;
@@ -365,7 +368,7 @@ score(){
 # define G(x) { if(go) goto err;  else go = x; }
 
 int
-guess(){
+guess(void){
 	/* get the guess from the tty and return it... */
 	register int g, go;
 
@@ -448,23 +451,23 @@ char haveguessed[CTSIZ];
 char hehas[CTSIZ];
 
 void
-start( h ) HAND h; {
+start( HAND h ){
 	(void)h;
 	;
 	}
 
 void
-hedrew( d ) int d; {
+hedrew( int d ){
 	++hehas[d];
 	}
 
 void
-heguessed( d ) int d; {
+heguessed( int d ){
 	++hehas[d];
 	}
 
 int
-myguess(){
+myguess(void){
 
 	register int i, lg, t;
 

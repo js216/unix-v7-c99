@@ -10,11 +10,12 @@ char *dictfile;
 int alive,lost;
 FILE *dict;
 long int dictlen;
-void	setup(), fatal(), startnew(), stateout(), getguess(), wordout(), youwon(), getword(), pscore();
-double	frand();
+void	setup(void), fatal(char *s), startnew(void), stateout(void), getguess(void);
+void	wordout(void), youwon(void), getword(void), pscore(void);
+double	frand(void);
 float errors=0, words=0;
 int
-main(argc,argv) int argc; char **argv;
+main(int argc, char **argv)
 {
 	if(argc==1) dictfile=DICT;
 	else if(*argv[1]=='-') dictfile=EDICT;
@@ -32,7 +33,7 @@ main(argc,argv) int argc; char **argv;
 	}
 }
 void
-setup()
+setup(void)
 {	int tvec[2];
 	struct stat statb;
 	time((long *)tvec);
@@ -41,13 +42,13 @@ setup()
 	if(stat(dictfile,&statb)<0) fatal("can't stat");
 	dictlen=statb.st_size;
 }
-double frand()
+double frand(void)
 {
 	return(rand()/32768.);
 }
 char word[26],alph[26],realword[26];
 void
-startnew()
+startnew(void)
 {	int i;
 	long int pos;
 	char buf[128];
@@ -60,7 +61,7 @@ startnew()
 	lost=0;
 }
 void
-stateout()
+stateout(void)
 {	int i;
 	printf("guesses: ");
 	for(i=0;i<26;i++)
@@ -69,7 +70,7 @@ stateout()
 	printf("errors: %d/%d\n",MAXERR-alive,MAXERR);
 }
 void
-getguess()
+getguess(void)
 {	char gbuf[128],c;
 	int ok=0,i;
 loop:
@@ -105,24 +106,24 @@ loop:
 	return;
 }
 void
-wordout()
+wordout(void)
 {
 	errors=errors+2;
 	printf("the answer was %s, you blew it\n",realword);
 }
 void
-youwon()
+youwon(void)
 {
 	printf("you win, the word is %s\n",realword);
 }
 void
-fatal(s) char *s;
+fatal(char *s)
 {
 	fprintf(stderr,"%s\n",s);
 	exit(1);
 }
 void
-getword()
+getword(void)
 {	char wbuf[128],c;
 	int i,j;
 loop:
@@ -152,7 +153,7 @@ long int freq[]=
 	1743
 };
 void
-pscore()
+pscore(void)
 {
 	if(words!=0) printf("(%4.2f/%.0f) ",errors/words,words);
 }

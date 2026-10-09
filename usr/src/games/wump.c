@@ -17,7 +17,8 @@ struct room
 	int	flag;
 } room[NROOM];
 
-int	tunnel(), rline(), rnum(), rin(), near();
+int	tunnel(int i), rline(void), rnum(int n), rin(void);
+int	near(struct room *ap, int ahaz), icomp(char *p1, char *p2);
 char	*intro[] =
 {
 	"\n",
@@ -95,11 +96,11 @@ int	wloc;
 int	tchar;
 
 int
-main()
+main(void)
 {
 	register int i, j;
 	register struct room *p;
-	int k, icomp();
+	int k;
 
 	printf("Instructions? (y-n) ");
 	if(rline() == 'y')
@@ -288,8 +289,7 @@ done:
 }
 
 int
-tunnel(i)
-int i;
+tunnel(int i)
 {
 	register struct room *p;
 	register int n, j;
@@ -312,7 +312,7 @@ loop:
 }
 
 int
-rline()
+rline(void)
 {
 	register char c, r;
 
@@ -328,8 +328,7 @@ rline()
 }
 
 int
-rnum(n)
-int n;
+rnum(int n)
 {
 	static long first;
 
@@ -341,7 +340,7 @@ int n;
 }
 
 int
-rin()
+rin(void)
 {
 	register int n, c;
 
@@ -363,9 +362,7 @@ rin()
 }
 
 int
-near(ap, ahaz)
-int ahaz;
-struct room *ap;
+near(struct room *ap, int ahaz)
 {
 	register struct room *p;
 	register int haz, i;
@@ -379,9 +376,8 @@ struct room *ap;
 }
 
 int
-icomp(p1, p2)
-int *p1, *p2;
+icomp(char *p1, char *p2)
 {
 
-	return(*p1 - *p2);
+	return(*(int *)p1 - *(int *)p2);
 }
