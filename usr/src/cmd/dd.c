@@ -396,7 +396,7 @@ number(int big)
 		continue;
 
 	case 'w':
-		n *= sizeof(int);
+		n *= 2;
 		continue;
 
 	case 'b':
