@@ -120,7 +120,7 @@ iinit(void)
  * I/O to be done-- e.g. swbuf for
  * swapping.
  */
-char	buffers[NBUF][(BSIZE+BSLOP+3)&~3];
+int	buffers[NBUF][(BSIZE+BSLOP+3)/4];
 
 /*
  * Initialize the buffer I/O system by freeing
@@ -139,7 +139,7 @@ binit(void)
 	for (i=0; i<NBUF; i++) {
 		bp = &buf[i];
 		bp->b_dev = NODEV;
-		bp->b_un.b_addr = buffers[i];
+		bp->b_un.b_addr = (caddr_t)buffers[i];
 		bp->b_back = &bfreelist;
 		bp->b_forw = bfreelist.b_forw;
 		bfreelist.b_forw->b_back = bp;
