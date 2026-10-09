@@ -3,7 +3,6 @@
 #
 #define NIL (-1)
 #define srand bg_srand
-#define rand bg_rand
 #define MAXGMOV 10
 #define MAXIMOVES 1000
 	char level;		/*'b'=beginner, 'i'=intermediate, 'e'=expert*/
@@ -20,7 +19,7 @@ void prtbrd(void), numline(int *upcol, int *downcol, int start, int fin), srand(
 void colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin);
 void _store(int *p, int numb);
 int play(int *player, int *playee, int pos[]), nextmove(int *player, int *playee);
-int piececount(int *player, int startrow, int endrow), rand(void), _look(int *p);
+int piececount(int *player, int startrow, int endrow), _look(int *p);
 int strategy(int *player, int *playee), eval(int *player, int *playee, int k, int *prob);
 int getprob(int *player, int *playee, int start, int finish);
 int red[]     = {0,2,0,0,0,0,0,0,0,0,0,0,5,
