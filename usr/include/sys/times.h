@@ -7,3 +7,4 @@ struct tms {
 	time_t	tms_cutime;		/* user time, children */
 	time_t	tms_cstime;		/* system time, children */
 };
+int	times(struct tms *buf);

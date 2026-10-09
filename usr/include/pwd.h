@@ -9,5 +9,5 @@ struct	passwd { /* see getpwent(3) */
 	char	*pw_dir;
 	char	*pw_shell;
 };
-struct	passwd	*getpwent(), *getpwuid(), *getpwnam();
-void	setpwent(), endpwent();
+struct	passwd	*getpwent(void), *getpwuid(int uid), *getpwnam(char *name);
+void	setpwent(void), endpwent(void);

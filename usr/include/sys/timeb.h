@@ -8,3 +8,4 @@ struct timeb {
 	short	timezone;
 	short	dstflag;
 };
+int	ftime(struct timeb *tp);
