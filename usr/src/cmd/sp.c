@@ -8,11 +8,8 @@ int slen;	/*length at start of line*/
 int alen;	/*actual length*/
 int elen;	/*length on current line*/
 char buf[256];
-int	getit(void);
-int	putit(int ntab);
-int	clean(void);
 int
-getit(void)
+getit()
 {	register int i;
 	register int c;
 	slen=alen=elen=0;
@@ -36,21 +33,21 @@ getit(void)
 		}
 	}
 }
-int
-putit(int ntab)
+void
+putit(ntab)
+int	ntab;
 {	register int i;
 	for(i=0;i<ntab;i++) putchar('\t');
 	for(i=0;i<alen;i++) putchar(buf[i]);
-	return(0);
 }
-int
-clean(void)
+void
+clean()
 {
 	putchar('\n');
-	return(0);
 }
 int
-main(int argc, char *argv[])
+main(argc,argv) char *argv[];
+int	argc;
 {	int len,ntab;
 	int i;
 	len=80;
