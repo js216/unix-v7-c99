@@ -6,7 +6,6 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/reg.h"
-void	addupc(caddr_t pc, unsigned *p, int t);
 
 #define	SCHMAG	8/10
 
@@ -91,7 +90,7 @@ out:
 	if (USERMODE(ps)) {
 		u.u_utime++;
 		if(u.u_prof.pr_scale)
-			addupc(pc, (unsigned *)&u.u_prof, 1);
+			addupc(pc, &u.u_prof, 1);
 		if(u.u_procp->p_nice > NZERO)
 			a += 8;
 	} else {
@@ -181,18 +180,18 @@ timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim)
 	splx(s);
 }
 void
-addupc(caddr_t pc, register unsigned *p, int t)
+addupc(caddr_t pc, register struct uprof *p, int t)
 {
 	register unsigned i;
 	short c;
 
-	i = ((unsigned long long)(((unsigned)pc-p[2])>>1) * (p[3]>>1) >> 14) & ~1;
-	if (i >= p[1])
+	i = ((unsigned long long)(((unsigned)pc-p->pr_off)>>1) * (p->pr_scale>>1) >> 14) & ~1;
+	if (i >= p->pr_size)
 		return;
-	if (copyin((caddr_t)p[0]+i, (caddr_t)&c, 2) < 0) {
-		p[3] = 0;
+	if (copyin((caddr_t)p->pr_base+i, (caddr_t)&c, 2) < 0) {
+		p->pr_scale = 0;
 		return;
 	}
 	c += t;
-	copyout((caddr_t)&c, (caddr_t)p[0]+i, 2);
+	copyout((caddr_t)&c, (caddr_t)p->pr_base+i, 2);
 }

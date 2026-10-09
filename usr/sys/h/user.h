@@ -66,7 +66,7 @@ struct	user
 	time_t	u_cutime;		/* sum of childs' utimes */
 	time_t	u_cstime;		/* sum of childs' stimes */
 	int	*u_ar0;			/* address of users saved R0 */
-	struct {			/* profile arguments */
+	struct uprof {			/* profile arguments */
 		short	*pr_base;	/* buffer base */
 		unsigned pr_size;	/* buffer size */
 		unsigned pr_off;	/* pc offset */
