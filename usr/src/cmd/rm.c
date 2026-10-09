@@ -5,13 +5,11 @@ int	errcode;
 #include <sys/stat.h>
 #include <sys/dir.h>
 
-void	rm();
-int	dotname(), rmdir(), yes();
+void	rm(char arg[], int fflg, int rflg, int iflg, int level);
+int	dotname(char *s), rmdir(char *f, int iflg), yes(void);
 
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register char *arg;
 	int fflg, iflg, rflg;
@@ -52,12 +50,7 @@ char *argv[];
 }
 
 void
-rm(arg, fflg, rflg, iflg, level)
-int	level;
-int	iflg;
-int	rflg;
-int	fflg;
-char arg[];
+rm(char arg[], int fflg, int rflg, int iflg, int level)
 {
 	struct stat buf;
 	struct direct direct;
@@ -122,8 +115,7 @@ char arg[];
 }
 
 int
-dotname(s)
-char *s;
+dotname(char *s)
 {
 	if(s[0] == '.') {
 		if(s[1] == '.')
@@ -138,9 +130,7 @@ char *s;
 }
 
 int
-rmdir(f, iflg)
-int	iflg;
-char *f;
+rmdir(char *f, int iflg)
 {
 	int status, i;
 
@@ -165,7 +155,7 @@ char *f;
 }
 
 int
-yes()
+yes(void)
 {
 	int i, b;
 
