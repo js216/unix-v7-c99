@@ -30,28 +30,24 @@ LOCAL VOID	synbad(void);
 
 TREPTR	makefork(INT flgs, TREPTR i)
 {
-	REG TREPTR	t;
-	REG FORKPTR	f;
+	REG FORKPTR	t;
 
-	t=(TREPTR)getstak(FORKTYPE);
-	f=(FORKPTR)t;
-	f->forktyp=flgs|TFORK; f->forktre=i; f->forkio=0;
-	return(t);
+	t=(FORKPTR)getstak(FORKTYPE);
+	t->forktyp=flgs|TFORK; t->forktre=i; t->forkio=0;
+	return((TREPTR)t);
 }
 
 LOCAL TREPTR	makelist(INT type, TREPTR i, TREPTR r)
 {
-	REG TREPTR	t = 0;
-	REG LSTPTR	l;
+	REG LSTPTR	t = 0;
 
 	IF i==0 ORF r==0
 	THEN	synbad();
-	ELSE	t = (TREPTR)getstak(LSTTYPE);
-		l = (LSTPTR)t;
-		l->lsttyp = type;
-		l->lstlef = i; l->lstrit = r;
+	ELSE	t = (LSTPTR)getstak(LSTTYPE);
+		t->lsttyp = type;
+		t->lstlef = i; t->lstrit = r;
 	FI
-	return(t);
+	return((TREPTR)t);
 }
 
 /*

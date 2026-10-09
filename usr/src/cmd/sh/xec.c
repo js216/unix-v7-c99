@@ -85,7 +85,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 	
 				case SYSEXIT:
 					exitsh(a1?stoi(a1):oldexit);
-					/* fallthrough */
+					break;
 	
 				case SYSNULL:
 					io=0;
@@ -139,7 +139,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				case SYSLOGIN:
 					flags |= forked;
 					oldsigs(); execa(com); done();
-					/* fallthrough */
+					break;
 	
 				case SYSCD:
 					IF flags&rshflg
@@ -206,7 +206,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 
                                 case SYSUMASK:
                                         if (a1) {
-						int c, i;
+                                                int c, i;
                                                 i = 0;
                                                 while ((c = *a1++) >= '0' &&
                                                         c <= '7')
@@ -307,7 +307,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			rename(dup(2),output);
 			execute(((PARPTR)t)->partre,execflg,0,0);
 			done();
-			/* fallthrough */
+			break;
 
 		case TFIL:
 			BEGIN

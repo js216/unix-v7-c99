@@ -17,7 +17,7 @@ LOCAL VOID	comsubst(void), flush(INT ot);
 
 
 
-LOCAL STRING	copyto(REG CHAR endch)
+LOCAL VOID	copyto(REG CHAR endch)
 {
 	REG CHAR	c;
 
@@ -25,7 +25,6 @@ LOCAL STRING	copyto(REG CHAR endch)
 	DO pushstak(c|quote) OD
 	zerostak();
 	IF c!=endch THEN error(badsub) FI
-	return(0);
 }
 
 LOCAL VOID	skipto(REG CHAR endch)
@@ -59,7 +58,7 @@ retry:
 	IF d==DOLLAR
 	THEN	REG INT	c;
 		IF (c=readc(), dolchar(c))
-		THEN	NAMPTR		n=(NAMPTR)NIL;
+		THEN	NAMPTR		n=0;
 			INT		dolg=0;
 			BOOL		bra;
 			REG STRING	argp, v=0;
