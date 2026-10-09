@@ -1,20 +1,19 @@
 double
-frexp(double value, int *eptr)
+frexp(value, eptr)
+double value;
+int *eptr;
 {
-	union { double d; unsigned int u[2]; } u;
-	int exp;
+	union { double d; unsigned u[2]; } x;
 
-	u.d = value;
-	exp = (int)((u.u[1] >> 20) & 0x7ff);
-	if (value == 0.0) {
-		*eptr = 0;
-		return (0.0);
+	*eptr = 0;
+	if (value == 0)
+		return(value);
+	x.d = value;
+	if ((x.u[1] & 0x7ff00000) == 0) {
+		x.d *= 18014398509481984.0;
+		*eptr = -54;
 	}
-	if (exp == 0x7ff) {
-		*eptr = 0;
-		return (value);
-	}
-	*eptr = exp - 1022;
-	u.u[1] = (u.u[1] & 0x800fffffU) | (1022U << 20);
-	return (u.d);
+	*eptr += (x.u[1]>>20 & 03777) - 1022;
+	x.u[1] = (x.u[1] & 0x800fffff) | 1022<<20;
+	return(x.d);
 }

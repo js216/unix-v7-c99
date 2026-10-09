@@ -1,20 +1,20 @@
 double
-modf(double value, double *iptr)
+modf(value, iptr)
+double value, *iptr;
 {
-	double ipart;
-	long ll;
+	union { double d; unsigned u[2]; } x;
+	register int e;
 
-	if (value < 0.0) {
-		double r = modf(-value, &ipart);
-		*iptr = -ipart;
-		return (-r);
-	}
-	if (value >= 9.2233720368547758e18) {
-		*iptr = value;
-		return (0.0);
-	}
-	ll = (long)value;
-	ipart = (double)ll;
-	*iptr = ipart;
-	return (value - ipart);
+	x.d = value;
+	e = (x.u[1]>>20 & 03777) - 1023;
+	if (e < 0) {
+		x.u[1] &= 0x80000000;
+		x.u[0] = 0;
+	} else if (e < 20) {
+		x.u[1] &= ~(0xfffff>>e);
+		x.u[0] = 0;
+	} else if (e < 52)
+		x.u[0] &= ~(0xffffffff>>(e-20));
+	*iptr = x.d;
+	return(value - x.d);
 }

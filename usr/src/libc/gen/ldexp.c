@@ -1,25 +1,22 @@
-double
-ldexp(double value, int n)
-{
-	union { double d; unsigned int u[2]; } u;
-	int exp;
+#include <errno.h>
 
-	if (value == 0.0)
-		return (0.0);
-	u.d = value;
-	exp = (int)((u.u[1] >> 20) & 0x7ff);
-	if (exp == 0x7ff)
-		return (value);
-	exp += n;
-	if (exp >= 0x7ff)
-		return (value < 0 ? -1e308 * 10.0 : 1e308 * 10.0);
-	if (exp <= 0) {
-		double v;
-		u.u[1] = (u.u[1] & 0x800fffffU) | (1U << 20);
-		v = u.d;
-		while (exp <= 0) { v *= 0.5; exp++; }
-		return (v);
+double
+ldexp(value, n)
+double value;
+int n;
+{
+	union { double d; unsigned u[2]; } x;
+	register int k;
+
+	x.u[0] = 0;
+	for (; n; n -= k) {
+		k = n > 1000? 1000: n < -1000? -1000: n;
+		x.u[1] = (k+1023) << 20;
+		value *= x.d;
 	}
-	u.u[1] = (u.u[1] & 0x800fffffU) | ((unsigned)exp << 20);
-	return (u.d);
+	if (value > 1.7976931348623157e308 || value < -1.7976931348623157e308) {
+		errno = ERANGE;
+		value = value < 0? -1.7976931348623157e308: 1.7976931348623157e308;
+	}
+	return(value);
 }
