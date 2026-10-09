@@ -20,18 +20,11 @@ char	homedir[64] = "HOME=";
 char	*envinit[] = {homedir, "PATH=:/bin:/usr/bin", 0};
 struct	passwd *pwd;
 
-struct	passwd *getpwnam();
-char	*strcat();
-void	showmotd();
-char	*ttyname();
-char	*crypt();
-char	*getpass();
+void	showmotd(void);
 extern	char **environ;
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register char *namep;
 	int t, f, c;
@@ -129,15 +122,16 @@ char **argv;
 }
 
 int	stopmotd;
-void
-catch()
+static void
+catch(int sig)
 {
+	(void)sig;
 	signal(SIGINT, SIG_IGN);
 	stopmotd++;
 }
 
 void
-showmotd()
+showmotd(void)
 {
 	FILE *mf;
 	register int c;
