@@ -212,7 +212,7 @@ struct tab
 	"rkio:	jsr	r0,call; jmp _rkintr\n",
 	"	nulldev, nulldev, rkstrategy, &rktab,",
 	"	nulldev, nulldev, rkread, rkwrite, noioctl, nulltty, 0,",
-	"struct	buf	rktab;",
+	"extern struct	buf	rktab;",
 	"",
 	},
 
