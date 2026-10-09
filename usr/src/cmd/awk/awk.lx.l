@@ -10,12 +10,10 @@
 #include	"awk.h"
 #include	"awk.def"
 #undef	input	/* defeat lex */
-extern YYSTYPE	yylval;
+extern int	yylval;
 extern int	mustfld;
-cell	*fieldadr(int n);
-void	yyerror(char *s);
-int	input(void);
-int	startreg(void);
+cell	*fieldadr();
+int	yyerror(), input();
 void	*memset(void *s, int c, unsigned int n);
 #undef	YY_INPUT
 #define	YY_INPUT(buf,result,max_size) \
@@ -31,7 +29,7 @@ int	lineno = 1;
 #else
 #	define	RETURN(x)	return(x)
 #endif
-#define	CADD	cbuf[clen++]=yytext[0]; if(clen>=CBUFLEN-1) {yyerror("string too long"); BEGIN A;}
+#define	CADD	cbuf[clen++]=yytext[0]; if(clen>=CBUFLEN-1) {yyerror("string too long", cbuf); BEGIN A;}
 #define	CBUFLEN	150
 char	cbuf[CBUFLEN];
 int	clen, cflag;
@@ -81,17 +79,17 @@ WS	[ \t]
 <A>"="		{ yylval = ASSIGN; RETURN(ASGNOP); }
 
 <A>"$"{D}+	{	if (atoi(yytext+1)==0) {
-				yylval = (YYSTYPE)lookup("$record", symtab);
+				yylval = (int)lookup("$record", symtab);
 				RETURN(STRING);
 			} else {
-				yylval = (YYSTYPE)fieldadr(atoi(yytext+1));
+				yylval = (int)fieldadr(atoi(yytext+1));
 				RETURN(FIELD);
 			}
 		}
 <A>"$"{WS}*	{ RETURN(INDIRECT); }
-<A>NF		{ mustfld=1; yylval = (YYSTYPE)setsymtab(yytext, NULL, 0.0, NUM, symtab); RETURN(VAR); }
+<A>NF		{ mustfld=1; yylval = (int)setsymtab(yytext, NULL, 0.0, NUM, symtab); RETURN(VAR); }
 <A>({D}+("."?){D}*|"."{D}+)((e|E)("+"|-)?{D}+)?	{
-		yylval = (YYSTYPE)setsymtab(yytext, NULL, atof(yytext), CON|NUM, symtab); RETURN(NUMBER); }
+		yylval = (int)setsymtab(yytext, NULL, atof(yytext), CON|NUM, symtab); RETURN(NUMBER); }
 <A>"}"{WS}*\n	{ BEGIN sc; lineno++; RETURN(';'); }
 <A>"}"		{ BEGIN sc; RETURN(';'); }
 <A>;\n		{ lineno++; RETURN(';'); }
@@ -116,7 +114,7 @@ WS	[ \t]
 <A>int		{ yylval = FINT; RETURN(FNCN); }
 <A>exp		{ yylval = FEXP; RETURN(FNCN); }
 <A>sqrt		{ yylval = FSQRT; RETURN(FNCN); }
-<A>{A}{B}*	{ yylval = (YYSTYPE)setsymtab(yytext, tostring(""), 0.0, STR, symtab); RETURN(VAR); }
+<A>{A}{B}*	{ yylval = (int)setsymtab(yytext, tostring(""), 0.0, STR, symtab); RETURN(VAR); }
 <A>\"		{ BEGIN str; clen=0; }
 
 <A>#		{ BEGIN comment; }
@@ -146,7 +144,7 @@ WS	[ \t]
 <reg>\n		{ yyerror("newline in regular expression"); lineno++; BEGIN A; }
 <reg>.		{ yylval = yytext[0]; RETURN(CHAR); }
 
-<str>\"		{ BEGIN A; cbuf[clen]=0; yylval = (YYSTYPE)setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
+<str>\"		{ BEGIN A; cbuf[clen]=0; yylval = (int)setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
 <str>\n		{ yyerror("newline in string"); lineno++; BEGIN A; }
 <str>"\\\""	{ cbuf[clen++]='"'; }
 <str,chc>"\\"n	{ cbuf[clen++]='\n'; }
@@ -155,7 +153,7 @@ WS	[ \t]
 <str>.		{ CADD; }
 
 <chc>"\\""]"	{ cbuf[clen++]=']'; }
-<chc>"]"	{ BEGIN reg; cbuf[clen]=0; yylval = (YYSTYPE)tostring(cbuf);
+<chc>"]"	{ BEGIN reg; cbuf[clen]=0; yylval = (int)tostring(cbuf);
 		if (cflag==0) { RETURN(CCL); }
 		else { RETURN(NCCL); } }
 <chc>\n		{ yyerror("newline in character class"); lineno++; BEGIN A; }
@@ -164,7 +162,7 @@ WS	[ \t]
 %%
 
 int
-input(void)
+input()
 {
 	register int c;
 	extern char *lexprog;
@@ -180,9 +178,8 @@ input(void)
 	return(c);
 }
 
-int
-startreg(void)
+void
+startreg()
 {
 	BEGIN reg;
-	return(0);
 }

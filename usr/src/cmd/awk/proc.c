@@ -82,5 +82,4 @@ main()
 	for(i=0; i<SIZE; i++)
 		printf("/*%s*/\t\"%s\",\n",tokname(i+FIRSTTOKEN),names[i]);
 	printf("};\n");
-	return(0);
 }

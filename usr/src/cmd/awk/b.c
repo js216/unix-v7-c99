@@ -1,7 +1,8 @@
 #include "awk.def"
 #include "stdio.h"
 #include "awk.h"
-int error(), overflo(), penter(), follow(), first(), notin(), cfoll(), freetr();
+int error(), first(), notin();
+void overflo(), penter(), follow(), cfoll(), freetr();
 
 extern node *op2();
 extern struct fa *cgotofn();
@@ -58,7 +59,7 @@ node *p;
 	return(fap);
 }
 
-int
+void
 penter(p)	/* set up parent pointers and leaf indices */
 node *p;
 {
@@ -82,10 +83,9 @@ node *p;
 			error(FATAL, "unknown type %d in penter\n", type(p));
 			break;
 	}
-	return(0);
 }
 
-int
+void
 freetr(p)	/* free parse tree and follow sets */
 node *p;
 {
@@ -108,9 +108,9 @@ node *p;
 			error(FATAL, "unknown type %d in freetr", type(p));
 			break;
 	}
-	return(0);
 }
-char *cclenter(register char *p)
+char *cclenter(p)
+register char *p;
 {
 	register int i, c;
 	char *op;
@@ -140,19 +140,19 @@ char *cclenter(register char *p)
 	return(tostring(chars));
 }
 
-int
-overflo(void)
+void
+overflo()
 {
 	error(FATAL, "regular expression too long\n");
-	return(0);
 }
 
-int
-cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
+void
+cfoll(v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
+register node *v;
 {
 	register int i;
 	int prev;
-	int *add(int n);
+	int *add();
 
 	switch(type(v)) {
 		LEAF
@@ -177,12 +177,11 @@ cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[
 		default:
 			error(FATAL, "unknown type %d in cfoll", type(v));
 	}
-	return(0);
 }
 
 int
-first(register node *p)			/* collects initially active leaves of p into setvec */
-				/* returns 0 or 1 depending on whether p matches empty string */
+first(p)			/* collects initially active leaves of p into setvec */
+register node *p;		/* returns 0 or 1 depending on whether p matches empty string */
 {
 	register int b;
 
@@ -215,44 +214,45 @@ first(register node *p)			/* collects initially active leaves of p into setvec *
 	return(-1);
 }
 
-int
-follow(node *v)		/* collects leaves that can follow v into setvec */
+void
+follow(v)
+node *v;		/* collects leaves that can follow v into setvec */
 {
 	node *p;
 
 	if (type(v) == FINAL)
-		return(0);
+		return;
 	p = parent(v);
 	switch (type(p)) {
 		case STAR:
 		case PLUS:	first(v);
 				follow(p);
-				return(0);
+				return;
 
 		case OR:
 		case QUEST:	follow(p);
-				return(0);
+				return;
 
 		case CAT:	if (v == left(p)) {	/* v is left child of p */
 					if (first(right(p)) == 0) {
 						follow(p);
-						return(0);
+						return;
 					}
 				}
 				else		/* v is right child */
 					follow(p);
-				return(0);
+				return;
 		case FINAL:	if (setvec[line] != 1) {
 					setvec[line] = 1;
 					setcnt++;
 				}
-				return(0);
+				return;
 	}
-	return(0);
 }
 
 int
-member(register char c, register char *s)	/* is c in s? */
+member(c, s)	/* is c in s? */
+register char c, *s;
 {
 	while (*s)
 		if (c == *s++)
@@ -261,8 +261,10 @@ member(register char c, register char *s)	/* is c in s? */
 }
 
 int
-notin(int **array, int n, int *prev)		/* is setvec in array[0] thru array[n]? */
-{
+notin(array, n, prev)		/* is setvec in array[0] thru array[n]? */
+int **array;
+int n;
+int *prev; {
 	register int i, j;
 	int *ptr;
 	for (i=0; i<=n; i++) {
@@ -278,7 +280,7 @@ notin(int **array, int n, int *prev)		/* is setvec in array[0] thru array[n]? */
 	return(1);
 }
 
-int *add(int n) {		/* remember setvec */
+int *add(n) int n; {		/* remember setvec */
 	int *ptr, *p;
 	register int i;
 	if ((p = ptr = (int *) malloc((n+1)*sizeof(int))) == NULL)
@@ -294,7 +296,7 @@ int *add(int n) {		/* remember setvec */
 	return(p);
 }
 
-struct fa *cgotofn(void)
+struct fa *cgotofn()
 {
 	register int i, k;
 	register int *ptr;
@@ -353,8 +355,8 @@ struct fa *cgotofn(void)
 			case CCL:
 				for (p = (char *) right(cp); *p; p++) {
 					if (*p != HAT) {
-						if (isyms[(unsigned char)*p] != 1) {
-							isyms[(unsigned char)*p] = 1;
+						if (isyms[*p&0377] != 1) {
+							isyms[*p&0377] = 1;
 							ssyms[ssmax++] = *p;
 						}
 					}
@@ -414,8 +416,8 @@ struct fa *cgotofn(void)
 				case CCL:
 					for (p = (char *) right(cp); *p; p++) {
 						if (*p != HAT) {
-							if (isyms[(unsigned char)*p] == 0 && symbol[(unsigned char)*p] == 0) {
-								symbol[(unsigned char)*p] = 1;
+							if (isyms[*p&0377] == 0 && symbol[*p&0377] == 0) {
+								symbol[*p&0377] = 1;
 								ssyms[ssmax++] = *p;
 							}
 						}
@@ -434,7 +436,7 @@ struct fa *cgotofn(void)
 		}
 		for (j=0; j<ssmax; j++) {	/* nextstate(s, ssyms[j]) */
 			c = ssyms[j];
-			symbol[(unsigned char)c] = 0;
+			symbol[c&0377] = 0;
 			setcnt = 0;
 			for (k=0; k<=line; k++) setvec[k] = 0;
 			for (i=0; i<spmax; i++) {
@@ -514,7 +516,9 @@ struct fa *cgotofn(void)
 }
 
 int
-match(register struct fa *pfa, register char *p)
+match(pfa, p)
+register struct fa *pfa;
+register char *p;
 {
 	register int count;
 	char c;

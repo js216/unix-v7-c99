@@ -2,9 +2,9 @@
 #include	"math.h"
 #define RECSIZE 512
 #include "awk.h"
-#undef NULL
 #include "stdio.h"
-int error(), fldbld(), tempfree(), redirprint(), getrec(), match(), freesymtab();
+int error(), fldbld(), getrec(), match();
+void tempfree(), redirprint(), freesymtab();
 
 #define FILENUM	10
 struct
@@ -219,13 +219,12 @@ int n;
 	}
 }
 
-int
+void
 tempfree(a) obj a;
 {
-	if (!istemp(a)) return(0);
+	if (!istemp(a)) return;
 	xfree(a.optr->sval);
 	a.optr->tval = 0;
-	return(0);
 }
 
 obj gettemp()
@@ -841,7 +840,7 @@ int n;
 	return(false);
 }
 
-obj nullproc() { obj x = {0,0,0}; return(x); }
+obj nullproc() { return(true); }
 
 obj nodetoobj(a) node *a;
 {
@@ -854,7 +853,7 @@ obj nodetoobj(a) node *a;
 	return(x);
 }
 
-int
+void
 redirprint(s, a, b) char *s; int a; node *b;
 {
 	register int i;
@@ -882,5 +881,4 @@ redirprint(s, a, b) char *s; int a; node *b;
 doit:
 	fprintf(files[i].fp, "%s", s);
 	tempfree(x);
-	return(0);
 }

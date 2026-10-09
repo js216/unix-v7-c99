@@ -2,7 +2,8 @@
 #include "awk.def"
 #include "awk.h"
 #include "ctype.h"
-int error(), fldbld(), setclvar(), member(), isnumber(), awkdigit();
+int error(), fldbld(), member(), isnumber();
+void setclvar();
 
 FILE	*infile	= NULL;
 char	*file;
@@ -30,7 +31,7 @@ int	maxfld	= 0;	/* last used field */
 
 
 int
-getrec(void)
+getrec()
 {
 	register char *rr;
 	extern int svargc;
@@ -86,8 +87,9 @@ getrec(void)
 	return(0);	/* true end of file */
 }
 
-int
-setclvar(char *s)	/* set var=value from s */
+void
+setclvar(s)	/* set var=value from s */
+char *s;
 {
 	char *p;
 	cell *q;
@@ -98,11 +100,10 @@ setclvar(char *s)	/* set var=value from s */
 	q = setsymtab(s, tostring(p), 0.0, STR, symtab);
 	setsval(q, p);
 	dprintf("command line set %s to |%s|\n", s, p, NULL);
-	return(0);
 }
 
 int
-fldbld(void)
+fldbld()
 {
 	register char *r, *fr, sep;
 	int i, j;
@@ -164,7 +165,7 @@ fldbld(void)
 }
 
 int
-recbld(void)
+recbld()
 {
 	int i;
 	register char *r, *p;
@@ -188,7 +189,8 @@ recbld(void)
 	return(0);
 }
 
-cell *fieldadr(int n)
+cell *fieldadr(n)
+int n;
 {
 	if (n >= MAXFLD)
 		error(FATAL, "trying to access field %d", n);
@@ -198,15 +200,14 @@ cell *fieldadr(int n)
 int	errorflag	= 0;
 
 int
-yyerror(char *s) {
+yyerror(s) char *s; {
 	fprintf(stderr, "awk: %s near line %d\n", s, lineno);
 	errorflag = 2;
 	return(0);
 }
 
 int
-error(int f, char *s, int a1, int a2, int a3, int a4, int a5, int a6, int a7)
-{
+error(f, s, a1, a2, a3, a4, a5, a6, a7) char *s; int f, a1, a2, a3, a4, a5, a6, a7; {
 	fprintf(stderr, "awk: ");
 	fprintf(stderr, s, a1, a2, a3, a4, a5, a6, a7);
 	fprintf(stderr, "\n");
@@ -217,17 +218,17 @@ error(int f, char *s, int a1, int a2, int a3, int a4, int a5, int a6, int a7)
 	return(0);
 }
 
-int
-PUTS(char *s) {
+void
+PUTS(s) char *s; {
 	(void)s;
 	dprintf("%s\n", s, NULL, NULL);
-	return(0);
 }
 
 #define	MAXEXPON	38	/* maximum exponenet for fp number */
 
 int
-isnumber(register char *s)
+isnumber(s)
+register char *s;
 {
 	register int d1, d2;
 	int point;
@@ -240,13 +241,13 @@ isnumber(register char *s)
 		return(0);	/* empty stuff isn't number */
 	if (*s == '+' || *s == '-')
 		s++;
-	if (!awkdigit(*s) && *s != '.')
+	if (!isdigit(*s&0377) && *s != '.')
 		return(0);
-	if (awkdigit(*s)) {
+	if (isdigit(*s&0377)) {
 		d1++;
 		do {
 			s++;
-		} while (awkdigit(*s));
+		} while (isdigit(*s&0377));
 	}
 	if (*s == '.') {
 		point++;
@@ -254,11 +255,11 @@ isnumber(register char *s)
 	}
 	if (d1 == 0 && point == 0)
 		return(0);
-	if (awkdigit(*s)) {
+	if (isdigit(*s&0377)) {
 		d2++;
 		do {
 			s++;
-		} while (awkdigit(*s));
+		} while (isdigit(*s&0377));
 	}
 	if (!(d1 || (point && d2)))
 		return(0);
@@ -266,12 +267,12 @@ isnumber(register char *s)
 		s++;
 		if (*s == '+' || *s == '-')
 			s++;
-		if (!awkdigit(*s))
+		if (!isdigit(*s&0377))
 			return(0);
 		es = s;
 		do {
 			s++;
-		} while (awkdigit(*s));
+		} while (isdigit(*s&0377));
 		if (s - es > 2)
 			return(0);
 		else if (s - es == 2 && 10 * (*es-'0') + *(es+1)-'0' >= MAXEXPON)
@@ -283,13 +284,6 @@ isnumber(register char *s)
 		return(1);
 	else
 		return(0);
-}
-int
-awkdigit(int c)
-{
-	if(c >= '0' && c <= '9')
-		return(1);
-	return(0);
 }
 /*
 isnumber(s) char *s; {return(0);}

@@ -81,17 +81,19 @@ struct tok
 {"INDIRECT", 332},
 {"LASTTOKEN", 333},
 };
-int
-ptoken(int n)
+void
+ptoken(n)
+int n;
 {
 	if(n<128) printf("lex: %c\n",n);
 	else	if(n<=256) printf("lex:? %o\n",n);
 	else	if(n<LASTTOKEN) printf("lex: %s\n",tok[n-FIRSTTOKEN].tnm);
 	else	printf("lex:? %o\n",n);
-	return(0);
+	return;
 }
 
-char *tokname(int n)
+char *tokname(n)
+int n;
 {
 	if (n<=256 || n >= LASTTOKEN)
 		n = 257;

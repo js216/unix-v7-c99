@@ -9,13 +9,14 @@ node *ALLOC(int n)
 		error(FATAL, "out of space in ALLOC");
 	return(x);
 }
-node *exptostat(node *a)
+node *exptostat(a) node *a;
 {
 	a->ntype = NSTAT;
 	return(a);
 }
 node	*nullstat;
-node *node0(int a)
+node *node0(a)
+int a;
 {	node *x;
 	x=ALLOC(0);
 	x->nnext = NULL;
@@ -104,7 +105,7 @@ node *stat4(int a, node *b, node *c, node *d, node *e)
 }
 node *valtonode(cell *a, int b)
 {	node *x;
-	x = node0((int)a);
+	x = node0(a);
 	x->ntype = NVALUE;
 	x->subtype = b;
 	return(x);
@@ -115,13 +116,13 @@ node *genjump(int a)
 	x->ntype = NSTAT;
 	return(x);
 }
-node *pa2stat(node *a, node *b, node *c)
+node *pa2stat(a,b,c) node *a, *b, *c;
 {	node *x;
 	x = node3(paircnt++, a, b, c);
 	x->ntype = NPA2;
 	return(x);
 }
-node *linkum(node *a, node *b)
+node *linkum(a,b) node *a, *b;
 {	node *c;
 	if(a == NULL) return(b);
 	else if(b == NULL) return(a);
@@ -129,7 +130,7 @@ node *linkum(node *a, node *b)
 	c->nnext = b;
 	return(a);
 }
-node *genprint(void)
+node *genprint()
 {	node *x;
 	x = stat2(PRINT,valtonode(lookup("$record", symtab), CFLD), nullstat);
 	return(x);

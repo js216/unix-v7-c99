@@ -1,7 +1,8 @@
 #include "stdio.h"
 #include "awk.def"
 #include "awk.h"
-int logit(), syminit(), run(), msgfiles(), error(), yyparse();
+int run(), error(), yyparse();
+void logit(), msgfiles(), syminit();
 
 int	dbg	= 0;
 int	svargc;
@@ -14,7 +15,7 @@ int filefd, iflag, symnum, ansfd;
 char *filelist;
 extern int maxsym, errno;
 int
-main(int argc, char *argv[]) {
+main(argc, argv) int argc; char *argv[]; {
 	if (argc == 1)
 		error(FATAL, "Usage: awk [-f source | 'cmds'] [files]");
 	if (strcmp(argv[0], "a.out"))
@@ -76,13 +77,13 @@ iloop:
 	goto iloop;
 }
 
-int
-logit(int n, char *s[])
+void
+logit(n, s) int n; char *s[];
 {	int i, tvec[2];
 	FILE *f, *g;
 	char buf[512];
 	if ((f=fopen("/usr/pjw/awk/awkhist", "a"))==NULL)
-		return(0);
+		return;
 	time((long *)tvec);
 	fprintf(f, "%-8s %s", getlogin(), ctime((long *)tvec));
 	for (i=0; i<n; i++)
@@ -90,27 +91,26 @@ logit(int n, char *s[])
 	putc('\n', f);
 	if (strcmp(s[1], "-f")) {
 		fclose(f);
-		return(0);
+		return;
 	}
 	if ((g=fopen(s[2], "r"))==NULL) {
 		fclose(f);
-		return(0);
+		return;
 	}
 	while ((i=fread(buf, 1, 512, g))>0)
 		fwrite(buf, 1, i, f);
 	fclose(f);
 	fclose(g);
-	return(0);
 }
 
 int
-yywrap(void)
+yywrap()
 {
 	return(1);
 }
 
-int
-msgfiles(void)
+void
+msgfiles()
 {	char buf[512], *p, *q, **s;
 	int n;
 	n=read(filefd, buf, 512);
@@ -143,5 +143,4 @@ msgfiles(void)
 		*s++=p;
 		while (*p++ != 0);
 	}
-	return(0);
 }
