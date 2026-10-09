@@ -1,5 +1,5 @@
 %{
-	void getout();
+	void getout(void);
 %}
 %define api.value.type {char *}
 %right '='
@@ -22,9 +22,9 @@
 #define bundle(...) (yyval = (bundle)(__VA_ARGS__))
 char *yyval;
 char *(bundle)(int i, ...);
-void output(), conout(), yyerror(), pp(), tp();
-char *getf(), *geta();
-int yylex(), cpeek(), getch();
+void output(char *p), conout(char *p, char *s), yyerror(char *s), pp(char *s), tp(char *s);
+char *getf(char *p), *geta(char *p);
+int yylex(void), cpeek(int c, int yes, int no), getch(void);
 FILE *in;
 char cary[1000], *cp = { cary };
 char string[1000], *str = {string};
@@ -356,7 +356,7 @@ char *letr[26] = {
   "k","l","m","n","o","p","q","r","s","t",
   "u","v","w","x","y","z" } ;
 char *dot = { "." };
-int yylex(){
+int yylex(void){
 	int c, ch;
 restart:
 	c = getch();
@@ -451,7 +451,7 @@ int cpeek( int c, int yes, int no ){
 	}
 }
 
-int getch(){
+int getch(void){
 	int ch;
 loop:
 	ch = (peekc < 0) ? getc(in) : peekc;
@@ -494,7 +494,7 @@ char *(bundle)(int i, ...){
 	return( yyval );
 }
 
-void routput(p) char *p; {
+static void routput(char *p){
 	if( bdebug ) printf("routput(%o)\n", (unsigned)p );
 	if( (char **)p >= &b_space[0] && (char **)p < &b_space[b_sp_max]){
 		/* part of a bundle */
@@ -504,7 +504,7 @@ void routput(p) char *p; {
 	else printf( p );	 /* character string */
 }
 
-void output( p ) char *p; {
+void output( char *p ){
 	routput( p );
 	b_sp_nxt = & b_space[0];
 	printf( "\n" );
@@ -513,7 +513,7 @@ void output( p ) char *p; {
 	crs = rcrs;
 }
 
-void conout( p, s ) char *p; char *s; {
+void conout( char *p, char *s ){
 	printf("[");
 	routput( p );
 	printf("]s%s\n", s );
@@ -521,7 +521,7 @@ void conout( p, s ) char *p; char *s; {
 	lev--;
 }
 
-void yyerror( s ) char *s; {
+void yyerror( char *s ){
 	if(ifile > sargc)ss="teletype";
 	printf("c[%s on line %d, %s]pc\n", s ,ln+1,ss);
 	fflush(stdout);
@@ -532,7 +532,7 @@ void yyerror( s ) char *s; {
 	b_sp_nxt = &b_space[0];
 }
 
-void pp( s ) char *s; {
+void pp( char *s ){
 	/* puts the relevant stuff on pre and post for the letter s */
 
 	bundle(3, "S", s, pre );
@@ -541,14 +541,14 @@ void pp( s ) char *s; {
 	post = yyval;
 }
 
-void tp( s ) char *s; { /* same as pp, but for temps */
+void tp( char *s ){ /* same as pp, but for temps */
 	bundle(3, "0S", s, pre );
 	pre = yyval;
 	bundle(4, post, "L", s, "s." );
 	post = yyval;
 }
 
-void yyinit(argc,argv) int argc; char *argv[];{
+static void yyinit(int argc,char *argv[]){
 	signal( 2, SIG_IGN );	/* ignore all interrupts */
 	sargv=argv;
 	sargc= -- argc;
@@ -559,25 +559,23 @@ void yyinit(argc,argv) int argc; char *argv[];{
 	ln = 0;
 	ss = sargv[1];
 }
-void getout(){
+void getout(void){
 	printf("q");
 	fflush(stdout);
 	exit(0);
 }
 
 char *
-getf(p) char *p;{
+getf(char *p){
 	return(&funtab[2*(*p -0141)]);
 }
 char *
-geta(p) char *p;{
+geta(char *p){
 	return(&atab[2*(*p - 0141)]);
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int p[2];
 
