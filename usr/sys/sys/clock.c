@@ -27,13 +27,12 @@ void	addupc(caddr_t pc, unsigned *p, int t);
  */
 
 void
-clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
+clock(caddr_t pc, int ps)
 {
 	register struct callo *p1, *p2;
 	register struct proc *pp;
 	int a;
 	extern caddr_t waitloc;
-	(void)dev; (void)sp; (void)r1; (void)nps; (void)r0;
 
 	/*
 	 * restart clock

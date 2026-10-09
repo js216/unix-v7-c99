@@ -155,8 +155,7 @@ irq(int *r)
 	if((n&0x3ff) == TIMER) {
 		cntv_tval_set(clkreload);
 		if(u.u_procp != NULL)
-			clock(0, 0, 0, 0, 0, (caddr_t)r[PC],
-			    (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
+			clock((caddr_t)r[PC], (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
 	} else
 		for(ip = intrtab; ip->i_irq; ip++)
 			if(*ip->i_irq == (int)(n&0x3ff))
