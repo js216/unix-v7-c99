@@ -16,17 +16,15 @@
 #define MODEBITS 07777
 #define ROOTINO 2
 
-char	*pname(register char *name);
-char	*sprintf(char *buf, char *fmt, ...);
-char	*dname(register char *name);
-int	move(char *source, char *target);
-int	mvdir(char *source, char *target);
-int	check(char *spth, ino_t dinode);
-int	chkdot(char *s);
+char	*pname();
+char	*dname();
+int	move(), mvdir(), check(), chkdot();
 struct	stat s1, s2;
 
 int
-main(int argc, register char *argv[])
+main(argc, argv)
+int argc;
+register char *argv[];
 {
 	register int i, r;
 
@@ -55,7 +53,8 @@ usage:
 }
 
 int
-move(char *source, char *target)
+move(source, target)
+char *source, *target;
 {
 	register int c, i;
 	int	status;
@@ -124,7 +123,8 @@ move(char *source, char *target)
 }
 
 int
-mvdir(char *source, char *target)
+mvdir(source, target)
+char *source, *target;
 {
 	register char *p;
 	register int i;
@@ -230,7 +230,8 @@ mvdir(char *source, char *target)
 }
 
 char *
-pname(register char *name)
+pname(name)
+register char *name;
 {
 	register int c;
 	register char *p, *q;
@@ -247,7 +248,8 @@ pname(register char *name)
 }
 
 char *
-dname(register char *name)
+dname(name)
+register char *name;
 {
 	register char *p;
 
@@ -259,7 +261,9 @@ dname(register char *name)
 }
 
 int
-check(char *spth, ino_t dinode)
+check(spth, dinode)
+char *spth;
+ino_t dinode;
 {
 	char nspth[MAXN];
 	struct stat sbuf;
@@ -287,7 +291,8 @@ check(char *spth, ino_t dinode)
 }
 
 int
-chkdot(register char *s)
+chkdot(s)
+register char *s;
 {
 	do {
 		if (strcmp(dname(s), DOTDOT) == 0)
