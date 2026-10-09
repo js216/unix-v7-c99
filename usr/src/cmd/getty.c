@@ -5,9 +5,10 @@
 
 #include <sgtty.h>
 #include <signal.h>
-int read(), write(), ioctl(), stty(), getname();
-int execl(char *path, char *arg0, ...);
-void exit(), puts(), putchr();
+int read(int fd, char *buf, int n), write(int fd, char *buf, int n);
+int ioctl(int fd, int req, void *argp), getname(void);
+int execl(char *name, char *arg0, ...);
+void exit(int status), puts(char *as), putchr(int cc);
 #define ERASE	'#'
 #define KILL	'@'
 
@@ -129,9 +130,7 @@ char partab[] = {
 };
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register struct tab *tabp;
 	int tname;
@@ -181,7 +180,7 @@ char **argv;
 }
 
 int
-getname()
+getname(void)
 {
 	register char *np;
 	register int c;
@@ -226,8 +225,7 @@ getname()
 }
 
 void
-puts(as)
-char *as;
+puts(char *as)
 {
 	register char *s;
 
@@ -237,8 +235,7 @@ char *as;
 }
 
 void
-putchr(cc)
-int cc;
+putchr(int cc)
 {
 	char c;
 	c = cc;
