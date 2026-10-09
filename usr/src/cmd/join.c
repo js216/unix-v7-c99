@@ -22,17 +22,17 @@ int	unpub1;
 int	unpub2;
 int	aflg;
 
-int input(int n);
-void output(int on1, int on2);
-void error(char *s1, char *s2, char *s3, char *s4, char *s5);
-int cmp(char *s1, char *s2);
+int input(), cmp();
+void output(), error();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	int i;
 	int n1, n2;
 	long top2 = 0, bot2;
-	long ftell(FILE *iop);
+	long ftell();
 
 	while (argc > 1 && argv[1][0] == '-') {
 		if (argv[1][1] == '\0')
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 	for (i = 0; i < no; i++)
 		olist[i]--;	/* 0 origin */
 	if (argc != 3)
-		error("usage: join [-j1 x -j2 y] [-o list] file1 file2", 0, 0, 0, 0);
+		error("usage: join [-j1 x -j2 y] [-o list] file1 file2");
 	j1--;
 	j2--;	/* everyone else believes in 0 origin */
 	s1 = ppi[F1][j1];
@@ -97,9 +97,9 @@ main(int argc, char *argv[])
 	if (argv[1][0] == '-')
 		f[F1] = stdin;
 	else if ((f[F1] = fopen(argv[1], "r")) == NULL)
-		error("can't open %s", argv[1], 0, 0, 0);
+		error("can't open %s", argv[1]);
 	if ((f[F2] = fopen(argv[2], "r")) == NULL)
-		error("can't open %s", argv[2], 0, 0, 0);
+		error("can't open %s", argv[2]);
 
 #define get1() n1=input(F1)
 #define get2() n2=input(F2)
@@ -206,7 +206,8 @@ int on1, on2;
 }
 
 void
-error(char *s1, char *s2, char *s3, char *s4, char *s5)
+error(s1, s2, s3, s4, s5)
+char *s1, *s2, *s3, *s4, *s5;
 {
 	fprintf(stderr, "join: ");
 	fprintf(stderr, s1, s2, s3, s4, s5);
@@ -215,7 +216,8 @@ error(char *s1, char *s2, char *s3, char *s4, char *s5)
 }
 
 int
-cmp(char *s1, char *s2)
+cmp(s1, s2)
+char *s1, *s2;
 {
 	return(strcmp(s1, s2));
 }
