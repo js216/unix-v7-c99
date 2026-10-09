@@ -22,17 +22,14 @@ int	unpub1;
 int	unpub2;
 int	aflg;
 
-int input(), cmp();
-void output(), error();
+int input(int n), cmp(char *s1, char *s2);
+void output(int on1, int on2), error(char *s1, char *s2);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	int i;
 	int n1, n2;
 	long top2 = 0, bot2;
-	long ftell();
 
 	while (argc > 1 && argv[1][0] == '-') {
 		if (argv[1][1] == '\0')
@@ -89,7 +86,7 @@ char *argv[];
 	for (i = 0; i < no; i++)
 		olist[i]--;	/* 0 origin */
 	if (argc != 3)
-		error("usage: join [-j1 x -j2 y] [-o list] file1 file2");
+		error("usage: join [-j1 x -j2 y] [-o list] file1 file2", "");
 	j1--;
 	j2--;	/* everyone else believes in 0 origin */
 	s1 = ppi[F1][j1];
@@ -144,8 +141,7 @@ char *argv[];
 }
 
 int
-input(n)		/* get input line and split into fields */
-int n;
+input(int n)		/* get input line and split into fields */
 {
 	register int i, c;
 	char *bp;
@@ -174,8 +170,7 @@ int n;
 }
 
 void
-output(on1, on2)	/* print items from olist */
-int on1, on2;
+output(int on1, int on2)	/* print items from olist */
 {
 	int i;
 	char *temp;
@@ -206,18 +201,16 @@ int on1, on2;
 }
 
 void
-error(s1, s2, s3, s4, s5)
-char *s1, *s2, *s3, *s4, *s5;
+error(char *s1, char *s2)
 {
 	fprintf(stderr, "join: ");
-	fprintf(stderr, s1, s2, s3, s4, s5);
+	fprintf(stderr, s1, s2);
 	fprintf(stderr, "\n");
 	exit(1);
 }
 
 int
-cmp(s1, s2)
-char *s1, *s2;
+cmp(char *s1, char *s2)
 {
 	return(strcmp(s1, s2));
 }
