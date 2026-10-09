@@ -191,6 +191,8 @@ putchar(register int c)
 	UARTDR = c;
 	if(c == '\n') {
 		putchar('\r');
+		putchar(0177);
+		putchar(0177);
 	}
 	putchar(0);
 	UARTIMSC = s;

@@ -213,6 +213,8 @@ putchar(register int c)
 	TDR = c;
 	if(c == '\n') {
 		putchar('\r');
+		putchar(0177);
+		putchar(0177);
 	}
 	putchar(0);
 	CR1 = s;
