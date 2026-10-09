@@ -22,7 +22,7 @@
 #define	tapeblk	&tpentry[0]
 #define tapeb	&tpentry[0]
 
-struct 	tent	{	/* Structure of a tape directory block */
+extern struct 	tent	{	/* Structure of a tape directory block */
 	char	pathnam[NAMELEN];
 	short	mode;
 	char	uid;
@@ -36,7 +36,7 @@ struct 	tent	{	/* Structure of a tape directory block */
 	short	cksum;
 }	tpentry[TPB];
 
-struct	dent {	/* in core version of tent with "unused" removed
+extern struct	dent {	/* in core version of tent with "unused" removed
 		 * and pathname replaced by pointer to same in a
 		 * packed area (nameblock).
 		 */
@@ -49,30 +49,30 @@ struct	dent {	/* in core version of tent with "unused" removed
 	int	d_tapea;
 }  dir[MDIRENT];
 
-char	map[MAPSIZE];
-char	name[NAMELEN];
-char	name1[NAMELEN];
+extern char	map[MAPSIZE];
+extern char	name[NAMELEN];
+extern char	name1[NAMELEN];
 extern	char mt[];
 extern	char tc[];
-char	*tname;
+extern char	*tname;
 extern	char mheader[];
 extern	char theader[];
 
-int	narg, rnarg;
-char	**parg;
-int	wseeka,rseeka;
-int	tapsiz;
-int	fio;
-short	ndirent, ndentb;
-struct	dent	*edir;
-struct	dent *lastd;		/* for improvement */
-void	(*command)(void);
+extern int	narg, rnarg;
+extern char	**parg;
+extern int	wseeka,rseeka;
+extern int	tapsiz;
+extern int	fio;
+extern short	ndirent, ndentb;
+extern struct	dent	*edir;
+extern struct	dent *lastd;		/* for improvement */
+extern void	(*command)(void);
 void	optap(void), setcom(void (*newcom)(void)), useerr(void), check(void), done(void), encode(char *pname, struct dent *dptr), decode(char *pname, struct dent *dptr), clrdir(void), clrent(struct dent *ptr), rddir(void), wrdir(void), tread(void), twrite(void), rseek(int blk), wseek(int blk), seekerr(void), getfiles(void), expand(void), fserr(void), callout(void), swabdir(struct tent *tp), gettape(void (*how)(struct dent *d)), delete(struct dent *dd), update(void), update1(void), phserr(void), bitmap(void), setmap(struct dent *d), maperr(void), usage(void), taboc(struct dent *dd), extract(struct dent *d), cmd(void), cmr(void), cmx(void), cmt(void);
 int	verify(int key);
 
-char	*nameblk;
-char	*top;
-char	*nptr;
+extern char	*nameblk;
+extern char	*top;
+extern char	*nptr;
 
 extern	int	flags;
 #define	flc	0001
