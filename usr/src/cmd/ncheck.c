@@ -34,16 +34,15 @@ int	nhent;
 int	nxfile;
 
 int	nerror;
-daddr_t	bmap();
-long	atol();
-struct htab *lookup();
-void	check(), pass1(), pass2(), pass3(), pname(), bread();
-int	dotname();
+daddr_t	bmap(int i);
+struct htab *lookup(ino_t i, int ef);
+void	check(char *file), pass1(struct dinode *ip), pass2(struct dinode *ip);
+void	pass3(struct dinode *ip), pname(ino_t i, int lev);
+void	bread(daddr_t bno, char *buf, int cnt);
+int	dotname(struct direct *dp);
 
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	long n;
@@ -83,8 +82,7 @@ char *argv[];
 }
 
 void
-check(file)
-char *file;
+check(char *file)
 {
 	register int i, j;
 	ino_t mino;
@@ -140,8 +138,7 @@ char *file;
 }
 
 void
-pass1(ip)
-register struct dinode *ip;
+pass1(register struct dinode *ip)
 {
 	if((ip->di_mode & IFMT) != IFDIR) {
 		if (sflg==0 || nxfile>=NB)
@@ -155,8 +152,7 @@ register struct dinode *ip;
 }
 
 void
-pass2(ip)
-register struct dinode *ip;
+pass2(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -199,8 +195,7 @@ register struct dinode *ip;
 }
 
 void
-pass3(ip)
-register struct dinode *ip;
+pass3(register struct dinode *ip)
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -249,8 +244,7 @@ register struct dinode *ip;
 }
 
 int
-dotname(dp)
-register struct direct *dp;
+dotname(register struct direct *dp)
 {
 
 	if (dp->d_name[0]=='.')
@@ -260,9 +254,7 @@ register struct direct *dp;
 }
 
 void
-pname(i, lev)
-int	lev;
-ino_t i;
+pname(ino_t i, int lev)
 {
 	register struct htab *hp;
 
@@ -281,9 +273,7 @@ ino_t i;
 }
 
 struct htab *
-lookup(i, ef)
-ino_t i;
-int	ef;
+lookup(ino_t i, int ef)
 {
 	register struct htab *hp;
 
@@ -304,10 +294,7 @@ int	ef;
 }
 
 void
-bread(bno, buf, cnt)
-int	cnt;
-daddr_t bno;
-char *buf;
+bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
@@ -320,8 +307,7 @@ char *buf;
 }
 
 daddr_t
-bmap(i)
-int	i;
+bmap(int i)
 {
 	daddr_t ibuf[NINDIR];
 
