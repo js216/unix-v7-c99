@@ -9,10 +9,6 @@
 
 typedef	short UNIT;		/* unit of profiling */
 
-int min(unsigned a, unsigned b);
-int max(unsigned a, unsigned b);
-int done(void);
-int timcmp(const void *vp1, const void *vp2), valcmp(const void *vp1, const void *vp2);
 struct stat stbuf;
 struct	nl {
 	char	name[8];
@@ -56,18 +52,24 @@ int	aflg;
 int	vflg;
 int	lflg;
 long	symoff;
+int	min(), max(); void done();
 
-int main(int argc, char **argv)
+int
+main(argc, argv)
+int argc;
+char **argv;
 {
 	char *namfil;
-	int timcmp(const void *, const void *), valcmp(const void *, const void *);
+	int timcmp(), valcmp();
 	int i, overlap;
 #ifdef plot
 	long pfpos;
 	double lastsx;
-	double tx, ty;
 #endif
 	struct cnt *cp;
+#ifdef plot
+	double tx, ty;
+#endif
 	struct exec xbuf;
 	struct hdr h;
 
@@ -268,29 +270,35 @@ print:
 	done();
 }
 
-int min(unsigned a, unsigned b)
+int
+min(a, b)
+unsigned a, b;
 {
 	if (a<b)
 		return(a);
 	return(b);
 }
 
-int max(unsigned a, unsigned b)
+int
+max(a, b)
+unsigned a, b;
 {
 	if (a>b)
 		return(a);
 	return(b);
 }
 
-int valcmp(const void *vp1, const void *vp2)
+int
+valcmp(p1, p2)
+struct nl *p1, *p2;
 {
-	const struct nl *p1 = vp1, *p2 = vp2;
 	return(p1->value - p2->value);
 }
 
-int timcmp(const void *vp1, const void *vp2)
+int
+timcmp(p1, p2)
+struct nl *p1, *p2;
 {
-	const struct nl *p1 = vp1, *p2 = vp2;
 	float d;
 
 	d = p2->time - p1->time;
@@ -301,7 +309,8 @@ int timcmp(const void *vp1, const void *vp2)
 	return(0);
 }
 
-int done(void)
+void
+done()
 {
 
 #ifdef plot
@@ -311,5 +320,4 @@ int done(void)
 	}
 #endif
 	exit(0);
-	return(0);
 }
