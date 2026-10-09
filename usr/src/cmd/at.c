@@ -53,16 +53,13 @@ int	today; /* day of year today */
 FILE	*file;
 FILE	*ifile;
 char	**environ;
-char	*prefix();
-FILE	*popen();
+char	*prefix(char *begin, char *full);
 
-int makeutime(), makeuday(), filename(), pclose();
+void makeutime(char *pp), filename(char *dir, int y, int d, int t), onintr(int sig);
+int makeuday(int argc, char **argv);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
-	extern void onintr();
 	register int c;
 	char pwbuf[100];
 	FILE *pwfil;
@@ -119,9 +116,8 @@ char **argv;
 	exit(0);
 }
 
-int
-makeutime(pp)
-char *pp; 
+void
+makeutime(char *pp)
 {
 	register int val;
 	register char *p;
@@ -201,14 +197,11 @@ char *pp;
 		exit(1);
 	}
 	utime = val;
-	return(0);
 }
 
 
 int
-makeuday(argc,argv)
-int argc;
-char **argv;
+makeuday(int argc, char **argv)
 {
 	/* the presumption is that argv[2], argv[3] are either
 	   month day OR weekday [week].  Returns either 2 or 3 as last
@@ -217,7 +210,7 @@ char **argv;
 	long tm;
 	int found = -1;
 	char **ps;
-	struct tm *detail, *localtime();
+	struct tm *detail;
 	struct monstr *pt;
 
 	time(&tm);
@@ -279,8 +272,7 @@ char **argv;
 }
 
 char *
-prefix(begin, full)
-char *begin, *full;
+prefix(char *begin, char *full)
 {
 	int c;
 	while ((c = *begin++)) {
@@ -294,10 +286,8 @@ char *begin, *full;
 	return(full);
 }
 
-int
-filename(dir, y, d, t)
-char *dir;
-int y, d, t;
+void
+filename(char *dir, int y, int d, int t)
 {
 	register int i;
 
@@ -305,13 +295,14 @@ int y, d, t;
 		sprintf(fname, "%s/%02d.%03d.%04d.%02d", dir, y, d, t,
 		   (getpid()+i)%100);
 		if (access(fname, 0) == -1)
-			return(0);
+			return;
 	}
 }
 
 void
-onintr()
+onintr(int sig)
 {
+	(void)sig;
 	unlink(fname);
 	exit(1);
 }

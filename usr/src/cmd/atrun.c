@@ -14,10 +14,10 @@
 int	nowtime;
 int	nowdate;
 int	nowyear;
-void	makenowtime(), updatetime(), run();
+void	makenowtime(void), updatetime(int t), run(char *file);
 
 int
-main()
+main(void)
 {
 	int tt, day, year, uniq;
 	struct direct dirent;
@@ -51,10 +51,9 @@ main()
 }
 
 void
-makenowtime()
+makenowtime(void)
 {
 	long t;
-	struct tm *localtime();
 	register struct tm *tp;
 
 	time(&t);
@@ -65,8 +64,7 @@ makenowtime()
 }
 
 void
-updatetime(t)
-int t;
+updatetime(int t)
 {
 	FILE *tfile;
 
@@ -79,8 +77,7 @@ int t;
 }
 
 void
-run(file)
-char *file;
+run(char *file)
 {
 	struct stat stbuf;
 	register int pid, i;
