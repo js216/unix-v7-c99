@@ -4,7 +4,7 @@ char line[500];
 char bline[500];
 
 int
-main(void)
+main()
 {
 	double p;
 	register char * l;

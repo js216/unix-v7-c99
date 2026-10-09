@@ -3,8 +3,6 @@
 
 #define	MAX	100
 
-int	getnum(char *s), random(int range), skrand(int range);
-int	score(void), getline(char *s), delete(void);
 char	types[10];
 int	right[MAX];
 int	left[MAX];
@@ -13,14 +11,18 @@ int	wrongs;
 long	stvec;
 long	etvec;
 long	dtvec;
+int	getnum(), random(), skrand();
+void	getline(), score();
 
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char	*argv[];
 {
 	int range, k, dif, l;
 	char line[100];
 	int ans,pans,i,j,t;
-	extern int delete(void);
+	extern	void delete();
 
 	signal(SIGINT, delete);
 
@@ -121,8 +123,9 @@ loop1:
 	}
 }
 
-int
-getline(char *s)
+void
+getline(s)
+char *s;
 {
 	register char	*rs;
 
@@ -140,11 +143,11 @@ getline(char *s)
 			*++rs = getchar();
 	while(*--rs == ' ')
 		*rs = '\n';
-	return(0);
 }
 
 int
-getnum(char *s)
+getnum(s)
+char *s;
 {
 	int	a;
 	char	c;
@@ -158,13 +161,15 @@ getnum(char *s)
 
 
 int
-random(int range)
+random(range)
+int range;
 {
 	return(rand()%range);
 }
 
 int
-skrand(int range)
+skrand(range)
+int range;
 {
 int temp;
 	temp = random(range) + random(range);
@@ -172,15 +177,15 @@ int temp;
 	return(temp);
 	}
 
-int
-score(void)
+void
+score()
 {
 	time(&etvec);
 
 	printf("\n\nRights %d; Wrongs %d; Score %d%%\n", rights, wrongs,
 		(rights * 100)/(rights + wrongs));
 
-	if(rights == 0)	return(0);
+	if(rights == 0)	return;
 	printf("Total time %ld seconds; %.1f seconds per problem\n\n\n",
 		etvec - stvec,
 		(etvec - stvec) / (rights + 0.));
@@ -188,11 +193,10 @@ score(void)
 	sleep(3);
 	time(&dtvec);
 	stvec += dtvec - etvec;
-	return(0);
 }
 
-int
-delete(void)
+void
+delete()
 {
 	if(rights + wrongs == 0.) {
 		printf("\n");
@@ -200,5 +204,4 @@ delete(void)
 	}
 	score();
 	exit(0);
-	return(0);
 }

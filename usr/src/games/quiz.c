@@ -7,13 +7,6 @@
 #define SL 100
 #define NA 10
 
-int	readline(void), cmp(char *u, char *v), disj(int s), string(int s);
-int	eat(int s, int c), fold(int c), publish(char *t), pub1(int s);
-int	segment(char *u, char *w[]);
-int	perm(char *u[], int m, char *v[], int n, int p[]);
-int	find(char *u[], int m), readindex(void), talloc(void);
-int	query(char *r), next(void), done(void);
-int	instruct(char *info), badinfo(void), dunno(void);
 int tflag;
 int xx[NL];
 signed char score[NL];
@@ -30,10 +23,12 @@ char line[150];
 char response[100];
 char *tmp[NF];
 int select[NF];
-char	*malloc(unsigned n);
+char	*malloc();
+int	disj(), string(), eat(), fold(), segment(), perm(), find(), query(), next();
+void	publish(), done(), instruct(), dunno(), pub1(), readindex(), talloc(), badinfo();
 
 int
-readline(void)
+readline()
 {
 	char *t;
 	register int c;
@@ -53,10 +48,10 @@ loop:
 		if(t-line>=NC) {
 			printf("Too hard for me\n");
 			do {
-				c = getc(input);
-				if(c==EOF)
+				*line = getc(input);
+				if((*line&0377)==0377)
 					return(0);
-			} while(c!='\n');
+			} while(*line!='\n');
 			goto loop;
 		}
 	}
@@ -66,7 +61,8 @@ loop:
 char *eu;
 char *ev;
 int
-cmp(char *u, char *v)
+cmp(u,v)
+char *u, *v;
 {
 	int x;
 	eu = u;
@@ -78,7 +74,8 @@ cmp(char *u, char *v)
 }
 
 int
-disj(int s)
+disj(s)
+int s;
 {
 	int t, x;
 	char *u;
@@ -118,7 +115,8 @@ disj(int s)
 }
 
 int
-string(int s)
+string(s)
+int s;
 {
 	int x;
 	for(;;) {
@@ -164,7 +162,9 @@ string(int s)
 }
 
 int
-eat(int s, int c)
+eat(s,c)
+int s;
+char c;
 {
 	if(*ev!=c)
 		return(2);
@@ -180,23 +180,25 @@ eat(int s, int c)
 }
 
 int
-fold(int c)
+fold(c)
+char c;
 {
 	if(c<'A'||c>'Z')
 		return(c);
 	return(c|040);
 }
 
-int
-publish(char *t)
+void
+publish(t)
+char *t;
 {
 	ev = t;
 	pub1(1);
-	return(0);
 }
 
-int
-pub1(int s)
+void
+pub1(s)
+int s;
 {
 	for(;;ev++){
 		switch(*ev) {
@@ -206,7 +208,7 @@ pub1(int s)
 		case ']':
 		case '}':
 		case 0:
-			return(0);
+			return;
 		case '[':
 		case '{':
 			ev++;
@@ -224,7 +226,8 @@ pub1(int s)
 }
 
 int
-segment(char *u, char *w[])
+segment(u,w)
+char *u, *w[];
 {
 	char *s;
 	int i;
@@ -256,7 +259,10 @@ segment(char *u, char *w[])
 }
 
 int
-perm(char *u[], int m, char *v[], int n, int p[])
+perm(u,m,v,n,p)
+int m, n;
+int p[];
+char *u[], *v[];
 {
 	int i, j;
 	int x;
@@ -276,7 +282,9 @@ uloop:		;
 }
 
 int
-find(char *u[], int m)
+find(u,m)
+int m;
+char *u[];
 {
 	int n;
 	while(readline()){
@@ -287,8 +295,8 @@ find(char *u[], int m)
 	return(0);
 }
 
-int
-readindex(void)
+void
+readindex()
 {
 	xx[0] = nc = 0;
 	while(readline()) {
@@ -299,20 +307,20 @@ readindex(void)
 			break;
 		}
 	}
-	return(0);
 }
 
-int
-talloc(void)
+void
+talloc()
 {
 	int i;
 	for(i=0;i<NF;i++)
 		tmp[i] = malloc(SL);
-	return(0);
 }
 
 int
-main(int argc, char *argv[])
+main(argc,argv)
+int argc;
+char *argv[];
 {
 	register int j;
 	int i;
@@ -320,7 +328,7 @@ main(int argc, char *argv[])
 	int z;
 	char *info;
 	long tm;
-	extern int done(void);
+	extern void done();
 	int count;
 	info = "/usr/games/quiz.k/index";
 	time(&tm);
@@ -400,7 +408,8 @@ loop:
 }
 
 int
-query(char *r)
+query(r)
+char *r;
 {
 	char *t;
 	for(t=r;;t++) {
@@ -419,7 +428,7 @@ query(char *r)
 }
 
 int
-next(void)
+next()
 {
 	int flag;
 	inc = inc*3125&077777;
@@ -434,18 +443,18 @@ next(void)
 	return(ptr);
 }
 
-int
-done(void)
+void
+done()
 {
 	printf("\nRights %d, wrongs %d, ", rights, wrongs);
 	if(guesses)
 		printf("extra guesses %d, ", guesses);
 	printf("score %d%%\n",100*rights/(rights+wrongs));
 	exit(0);
-	return(0);
 }
-int
-instruct(char *info)
+void
+instruct(info)
+char *info;
 {
 	int i, n;
 	printf("Subjects:\n\n");
@@ -480,19 +489,16 @@ instruct(char *info)
 	printf("\nworks the other way around\n");
 	printf("\nType empty line to get correct answer.\n");
 	exit(0);
-	return(0);
 }
 
-int
-badinfo(void){
+void
+badinfo(){
 	printf("Bad info %s\n",line);
-	return(0);
 }
 
-int
-dunno(void)
+void
+dunno()
 {
 	printf("I don't know about that\n");
 	exit(0);
-	return(0);
 }

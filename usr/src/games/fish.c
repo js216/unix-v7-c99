@@ -12,9 +12,6 @@ typedef char HAND[CTSIZ];
 
 /* data structures */
 
-int	shuffle(), choose(), draw(), error(), empty(), mark(), deal(),
-	stats(), phand(), instruct(), game(), move(), madebook(),
-	score(), guess(), start(), hedrew(), heguessed(), myguess();
 short debug;
 
 HAND myhand;
@@ -22,11 +19,13 @@ HAND yourhand;
 char deck[DECK];
 short nextcd;
 int proflag;
+int	choose(), draw(), empty(), mark(), game(), move(), guess(), myguess();
+void	shuffle(), error(), score(), deal(), stats(), phand(), instruct(), madebook(), start(), hedrew(), heguessed();
 
 /* utility and output programs */
 
-int
-shuffle(void){
+void
+shuffle(){
 	/* shuffle the deck, and reset nextcd */
 	/* uses the random number generator `rand' in the C library */
 	/* assumes that `srand' has already been called */
@@ -40,7 +39,6 @@ shuffle(void){
 		}
 
 	nextcd = 0;
-	return(0);
 	}
 
 int
@@ -58,17 +56,16 @@ choose( a, n ) char a[]; int n; {
 	}
 
 int
-draw(void) {
+draw() {
 	if( nextcd >= DECK ) return( NOMORE );
 	return( deck[nextcd++] );
 	}
 
-int
+void
 error( s ) char *s; {
 	fprintf( stderr, "error: " );
 	fprintf( stderr, s );
 	exit( 1 );
-	return(0);
 	}
 
 int
@@ -92,12 +89,11 @@ mark( cd, hand ) int cd; HAND hand; {
 	return( cd );
 	}
 
-int
+void
 deal( hand, n ) HAND hand; int n; {
 	while( n-- ){
 		if( mark( hand, draw() ) == NOMORE ) error( "deck exhausted" );
 		}
-	return(0);
 	}
 
 char *cname[] = {
@@ -117,8 +113,8 @@ char *cname[] = {
 	"K",
 	};
 
-int
-stats(void){
+void
+stats(){
 	register int i, ct, b;
 
 	if( proflag ) printf( "Pro level\n" );
@@ -139,10 +135,9 @@ stats(void){
 
 	printf( "%d cards in my hand, %d in the pool\n", ct, DECK-nextcd );
 	printf( "You ask me for: " );
-	return(0);
 	}
 
-int
+void
 phand( h ) HAND h; {
 	register int i, j;
 
@@ -168,11 +163,10 @@ phand( h ) HAND h; {
 		}
 
 	printf( "\n" );
-	return(0);
 	}
 
 int
-main( argc, argv ) int argc; char * argv[]; {
+main( argc, argv ) int argc; char * argv[]; { 
 	/* initialize shuffling, ask for instructions, play game, die */
 	register int c;
 
@@ -191,7 +185,6 @@ main( argc, argv ) int argc; char * argv[]; {
 		}
 
 	game();
-	return(0);
 	}
 
 /*	print instructions */
@@ -224,8 +217,8 @@ char *inst[] = {
 	"",
 	};
 
-int
-instruct(void){
+void
+instruct(){
 	register char **cpp;
 
 	printf( "\n" );
@@ -233,11 +226,10 @@ instruct(void){
 	for( cpp = inst; **cpp != '\0'; ++cpp ){
 		printf( "%s\n", *cpp );
 		}
-	return(0);
 	}
 
 int
-game(void){
+game(){
 
 	shuffle();
 
@@ -335,14 +327,13 @@ move( hs, ht, g, v ) HAND hs, ht; int g, v; {
 	return( 0 );
 	}
 
-int
+void
 madebook( x ) int x; {
 	printf( "Made a book of %s's\n", cname[x] );
-	return(0);
 	}
 
-int
-score(void){
+void
+score(){
 	register int my, your, i;
 
 	my = your = 0;
@@ -369,13 +360,12 @@ score(void){
 
 	printf( "\n%s win!!!\n", my>your?"I":"You" );
 	exit(0);
-	return(0);
 	}
 
 # define G(x) { if(go) goto err;  else go = x; }
 
 int
-guess(void){
+guess(){
 	/* get the guess from the tty and return it... */
 	register int g, go;
 
@@ -457,27 +447,24 @@ char haveguessed[CTSIZ];
 
 char hehas[CTSIZ];
 
-int
+void
 start( h ) HAND h; {
 	(void)h;
 	;
-	return(0);
 	}
 
-int
+void
 hedrew( d ) int d; {
 	++hehas[d];
-	return(0);
 	}
 
-int
+void
 heguessed( d ) int d; {
 	++hehas[d];
-	return(0);
 	}
 
 int
-myguess(void){
+myguess(){
 
 	register int i, lg, t;
 
@@ -490,7 +477,7 @@ myguess(void){
 	ntry = 0;
 	for( i=1; i<=CTYPE; ++i ){
 		if( myhand[i] == 0 || myhand[i] == 4 ) continue;
-		try[(unsigned char)ntry++] = i;
+		try[ntry++&0377] = i;
 		}
 
 	if( !proflag ) goto random;
@@ -498,7 +485,7 @@ myguess(void){
 	/* get ones he has, if any */
 
 	for( i=0; i<ntry; ++i ){
-		if( hehas[(unsigned char)try[i]] ) {
+		if( hehas[try[i]&0377] ) {
 			i = try[i];
 			goto gotguess;
 			}
@@ -507,13 +494,13 @@ myguess(void){
 	/* is there one that has never been guessed; if so, guess it */
 	lg = 101;
 	for( i=0; i<ntry; ++i ){
-		if( haveguessed[(unsigned char)try[i]] < lg ) lg = haveguessed[(unsigned char)try[i]];
+		if( haveguessed[try[i]&0377] < lg ) lg = haveguessed[try[i]&0377];
 		}
 	/* remove all those not guessed longest ago */
 
 	t = 0;
 	for( i=0; i<ntry; ++i ){
-		if( haveguessed[(unsigned char)try[i]] == lg ) try[t++] = try[i];
+		if( haveguessed[try[i]&0377] == lg ) try[t++] = try[i];
 		}
 	ntry = t;
 	if( t <= 0 ) error( "bad guessing loop" );
