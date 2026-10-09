@@ -23,13 +23,10 @@ char	*ban;
 int	npages	= 1;
 char	chrtab[];
 int	lineno;
-char	*ctime();
-int	send(), getline(); void putline(), banner();
+int	send(void), getline(void); void putline(int ff), banner(char *s);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 
 	if ((out = fopen("/dev/vp0", "w")) == NULL) {
@@ -73,7 +70,7 @@ char **argv;
 }
 
 int
-send()
+send(void)
 {
 	register int nskipped;
 
@@ -99,7 +96,7 @@ send()
 }
 
 int
-getline()
+getline(void)
 {
 	register int col, maxcol, c;
 
@@ -178,8 +175,7 @@ getline()
 }
 
 void
-putline(ff)
-int ff;
+putline(int ff)
 {
 	register char *lp;
 	register int c;
@@ -210,8 +206,7 @@ int ff;
 }
 
 void
-banner(s)
-char *s;
+banner(char *s)
 {
 	long timeb;
 	register char *sp;
