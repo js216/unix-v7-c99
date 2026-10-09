@@ -47,6 +47,7 @@ void rkstart(void);
 int	rkirq = 82;
 struct	buf	rktab;
 struct	buf	rrkbuf;
+unsigned	rkoff;
 
 void
 rkinit(void)
@@ -60,6 +61,11 @@ rkstrategy(register struct buf *bp)
 
 	if(bp->b_flags&B_PHYS)
 		mapalloc(bp);
+	if (bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
+		bp->b_flags |= B_ERROR;
+		iodone(bp);
+		return;
+	}
 	bp->av_forw = (struct buf *)NULL;
 	spl5();
 	if(rktab.b_actf == NULL)
@@ -81,15 +87,15 @@ rkstart(void)
 	if ((bp = rktab.b_actf) == NULL)
 		return;
 	rktab.b_active++;
-	dcflush(bp->b_un.b_addr, bp->b_bcount);
+	dcflush(bp->b_un.b_addr+rkoff, BSIZE);
 	SD(ICR) = CLEAR;
 	SD(DCTRL) = 0;
-	SD(DLEN) = bp->b_bcount;
+	SD(DLEN) = BSIZE;
 	SD(DCTRL) = bp->b_flags&B_READ ? BLK512|DTDIR : BLK512;
-	SD(IDMABASER) = (int)bp->b_un.b_addr;
+	SD(IDMABASER) = (int)bp->b_un.b_addr+rkoff;
 	SD(IDMACTRL) = 1;
 	SD(MASK) = IENABLE;
-	SD(ARG) = bp->b_blkno;
+	SD(ARG) = bp->b_blkno+(rkoff>>BSHIFT);
 	com = GO;
 	if(bp->b_flags & B_READ)
 		com |= RCOM; else
@@ -97,7 +103,7 @@ rkstart(void)
 	SD(CMD) = com;
 	dk_busy |= 1<<DK_N;
 	dk_numb[DK_N] += 1;
-	com = bp->b_bcount>>6;
+	com = BSIZE>>6;
 	dk_wds[DK_N] += com;
 }
 
@@ -123,7 +129,11 @@ rkintr(void)
 			return;
 		}
 		bp->b_flags |= B_ERROR;
+	} else if ((rkoff += BSIZE) < bp->b_bcount) {
+		rkstart();
+		return;
 	}
+	rkoff = 0;
 	if (bp->b_flags & B_READ)
 		dcflush(bp->b_un.b_addr, bp->b_bcount);
 	rktab.b_errcnt = 0;
