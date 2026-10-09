@@ -34,14 +34,11 @@ int	alpha;
 int	ry;
 FILE	*ttyin;
 
-void	init(), sendpt(), kwait(), execom();
+void	init(void), sendpt(int a), kwait(void), execom(void), ex(int sig);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i, j;
-	extern void ex();
 
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch(argv[0][1]) {
@@ -150,11 +147,11 @@ char **argv;
 	sendpt(0);
 	putchar(US);
 	kwait();
-	ex();
+	ex(0);
 }
 
 void
-init()
+init(void)
 {
 	ohx = oxb = olx = ohy = oly = -1;
 	if (ncol >= maxcol) {
@@ -173,8 +170,9 @@ init()
 }
 
 void
-ex()
+ex(int sig)
 {
+	(void)sig;
 	yy = MAXY;
 	xx = 0;
 	fputs("\033;\037", stdout);
@@ -183,7 +181,7 @@ ex()
 }
 
 void
-kwait()
+kwait(void)
 {
 	register int c;
 
@@ -198,12 +196,12 @@ kwait()
 			continue;
 		}
 		if (c==EOF)
-			ex();
+			ex(0);
 	}
 }
 
 void
-execom()
+execom(void)
 {
 	void (*si)(int sig), (*sq)(int sig);
 
@@ -223,8 +221,7 @@ execom()
 }
 
 void
-sendpt(a)
-int a;
+sendpt(int a)
 {
 	register int zz;
 	int hy,xb,ly,hx,lx;
