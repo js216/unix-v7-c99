@@ -16,7 +16,6 @@
 #define LBIN 4097
 struct	stat	statb;
 char bin[LBIN];
-int errno;
 
 int digit(int c);
 int
