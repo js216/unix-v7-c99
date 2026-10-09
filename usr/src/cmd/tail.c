@@ -18,11 +18,9 @@ struct	stat	statb;
 char bin[LBIN];
 int errno;
 
-int digit();
+int digit(int c);
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	long n,di;
 	register int i,j,k;
@@ -183,8 +181,7 @@ errcom:
 }
 
 int
-digit(c)
-int c;
+digit(int c)
 {
 	return(c>='0'&&c<='9');
 }
