@@ -17,10 +17,13 @@
 %{
 #include <stdio.h>
 #define index expr_index
-int yylex(), ematch(), advance(), ecmp();
-void errxx(), getrnge(), yyerror();
-char *compile();
-char *rel(), *arith(), *conj(), *substr(), *length(), *index(), *match();
+int yylex(void), ematch(char *s, char *p), step(char *p1, char *p2);
+int advance(char *lp, char *ep), ecmp(char *a, char *b, int count);
+void errxx(int c), getrnge(char *str), yyerror(char *s);
+char *compile(char *instring, char *ep, char *endbuf, int seof);
+char *rel(int op, char *r1, char *r2), *arith(int op, char *r1, char *r2);
+char *conj(int op, char *r1, char *r2), *substr(char *v, char *s, char *w);
+char *length(char *s), *index(char *s, char *t), *match(char *s, char *p);
 %}
 %%
 
@@ -59,17 +62,15 @@ expr:	'(' expr ')' { $$ = $2; }
 #define ESIZE	256
 #define error(c)	errxx(c)
 #define EQL(x,y) !strcmp(x,y)
-long atol();
 char	**Av;
 int	Ac;
 int	Argi;
 
 char Mstring[1][128];
-char *malloc();
 extern int nbra;
 
 int
-main(argc, argv) int argc; char **argv; {
+main(int argc, char **argv) {
 	Ac = argc;
 	Argi = 1;
 	Av = argv;
@@ -83,7 +84,7 @@ int op[] = { OR, AND, ADD,  SUBT, MULT, DIV, REM, MCH,
 	EQ, EQ, LT, LEQ, GT, GEQ, NEQ,
 	MATCH, SUBSTR, LENGTH, INDEX };
 int
-yylex() {
+yylex(void) {
 	register char *p;
 	register int i;
 
@@ -101,7 +102,7 @@ yylex() {
 	return A_STRING;
 }
 
-char *rel(op, r1, r2) int op; register char *r1, *r2; {
+char *rel(int op, register char *r1, register char *r2) {
 	register int i;
 
 	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "[0-9]*$"))
@@ -119,7 +120,7 @@ char *rel(op, r1, r2) int op; register char *r1, *r2; {
 	return i? "1": "0";
 }
 
-char *arith(op, r1, r2) int op; char *r1, *r2; {
+char *arith(int op, char *r1, char *r2) {
 	long i1, i2;
 	register char *rv;
 
@@ -139,7 +140,7 @@ char *arith(op, r1, r2) int op; char *r1, *r2; {
 	sprintf(rv, "%D", i1);
 	return rv;
 }
-char *conj(op, r1, r2) int op; char *r1, *r2; {
+char *conj(int op, char *r1, char *r2) {
 	register char *rv = 0;
 
 	switch(op) {
@@ -169,7 +170,7 @@ char *conj(op, r1, r2) int op; char *r1, *r2; {
 	return rv;
 }
 
-char *substr(v, s, w) char *v, *s, *w; {
+char *substr(char *v, char *s, char *w) {
 register int si, wi;
 register char *res;
 
@@ -185,7 +186,7 @@ register char *res;
 	return res;
 }
 
-char *length(s) register char *s; {
+char *length(register char *s) {
 	register int i = 0;
 	register char *rv;
 
@@ -196,7 +197,7 @@ char *length(s) register char *s; {
 	return rv;
 }
 
-char *index(s, t) char *s, *t; {
+char *index(char *s, char *t) {
 	register int i, j;
 	register char *rv;
 
@@ -209,8 +210,7 @@ char *index(s, t) char *s, *t; {
 	return "0";
 }
 
-char *match(s, p)
-char *s, *p;
+char *match(char *s, char *p)
 {
 	register char *rv;
 
@@ -231,12 +231,9 @@ char *s, *p;
 
 
 int
-ematch(s, p)
-char *s;
-register char *p;
+ematch(char *s, register char *p)
 {
 	static char expbuf[ESIZE];
-	char *compile();
 	register int num;
 	extern char *braslist[], *braelist[], *loc2;
 
@@ -256,8 +253,7 @@ register char *p;
 }
 
 void
-errxx(c)
-int c;
+errxx(int c)
 {
 	(void)c;
 	yyerror("RE error");
@@ -302,10 +298,7 @@ char	bittab[] = {
 };
 
 char *
-compile(instring, ep, endbuf, seof)
-register char *ep;
-char *instring, *endbuf;
-int seof;
+compile(char *instring, register char *ep, char *endbuf, int seof)
 {
 	INIT	/* Dependent declarations and initializations */
 	register int c;
@@ -482,8 +475,7 @@ int seof;
 }
 
 int
-step(p1, p2)
-register char *p1, *p2;
+step(register char *p1, register char *p2)
 {
 	register int c;
 
@@ -515,8 +507,7 @@ register char *p1, *p2;
 }
 
 int
-advance(lp, ep)
-register char *lp, *ep;
+advance(register char *lp, register char *ep)
 {
 	register char *curlp;
 	char c;
@@ -662,17 +653,14 @@ register char *lp, *ep;
 }
 
 void
-getrnge(str)
-register char *str;
+getrnge(register char *str)
 {
 	low = *str++ & 0377;
 	size = (*str & 0377) == 255 ? 20000 : (*str &0377) - low;
 }
 
 int
-ecmp(a, b, count)
-register char	*a, *b;
-register int	count;
+ecmp(register char *a, register char *b, register int count)
 {
 	if(a == b) /* should have been caught in compile() */
 		error(51);
@@ -682,8 +670,7 @@ register int	count;
 }
 
 void
-yyerror(s)
-char *s;
+yyerror(char *s)
 {
 	fprintf(stderr, "%s\n", s);
 	exit(2);
