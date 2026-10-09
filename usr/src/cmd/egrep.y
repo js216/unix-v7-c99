@@ -57,23 +57,8 @@ int	nsucc;
 
 int	f;
 char	*fname;
-int	yylex(void);
-int	yyerror(char *s);
-int	nextch(void);
-void	synerror(void);
-int	enter(int x);
-int	cclenter(int x);
-int	node(int x, int l, int r);
-int	unary(int x, int d);
-void	overflo(void);
-void	cfoll(int v);
-void	cgotofn(void);
-int	cstate(int v);
-int	member(int symb, int set, int torf);
-int	notin(int n);
-void	add(int *array, int n);
-void	follow(int v);
-void	execute(char *file);
+int	yylex(), nextch(), enter(), cclenter(), node(), unary(), cstate(), member(), notin();
+void	yyerror(), synerror(), overflo(), add(), follow(), execute();
 %}
 
 %%
@@ -121,15 +106,14 @@ r:	r OR r
 	;
 
 %%
-int
-yyerror(char *s) {
+void
+yyerror(s) char *s; {
 	fprintf(stderr, "egrep: %s\n", s);
 	exit(2);
-	return(0);
 }
 
 int
-yylex(void) {
+yylex() {
 	extern int yylval;
 	int cclcnt, x;
 	register int c, d;
@@ -175,14 +159,13 @@ yylex(void) {
 			return (x);
 		case '\\':
 			if ((c = nextch()) == '\0') synerror();
-			yylval = c;
-			return (CHAR);
+			goto defchar;
 		defchar:
 		default: yylval = c; return (CHAR);
 	}
 }
 int
-nextch(void) {
+nextch() {
 	register int c;
 	if (fflag) {
 		if ((c = getc(stdin)) == EOF) return(0);
@@ -192,13 +175,13 @@ nextch(void) {
 }
 
 void
-synerror(void) {
+synerror() {
 	fprintf(stderr, "egrep: syntax error\n");
 	exit(2);
 }
 
 int
-enter(int x) {
+enter(x) int x; {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = 0;
@@ -207,7 +190,7 @@ enter(int x) {
 }
 
 int
-cclenter(int x) {
+cclenter(x) int x; {
 	register int linno;
 	linno = enter(x);
 	right[linno] = count;
@@ -215,7 +198,7 @@ cclenter(int x) {
 }
 
 int
-node(int x, int l, int r) {
+node(x, l, r) int x, l, r; {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = l;
@@ -226,7 +209,7 @@ node(int x, int l, int r) {
 }
 
 int
-unary(int x, int d) {
+unary(x, d) int x, d; {
 	if(line >= MAXLIN) overflo();
 	name[line] = x;
 	left[line] = d;
@@ -235,13 +218,13 @@ unary(int x, int d) {
 	return(line++);
 }
 void
-overflo(void) {
+overflo() {
 	fprintf(stderr, "egrep: regular expression too long\n");
 	exit(2);
 }
 
 void
-cfoll(int v) {
+cfoll(v) int v; {
 	register int i;
 	if (left[v] == 0) {
 		count = 0;
@@ -256,7 +239,7 @@ cfoll(int v) {
 	}
 }
 void
-cgotofn(void) {
+cgotofn() {
 	register int c, i, k;
 	int n, s;
 	char symbol[NCHARS];
@@ -351,7 +334,7 @@ cgotofn(void) {
 }
 
 int
-cstate(int v) {
+cstate(v) int v; {
 	register int b;
 	if (left[v] == 0) {
 		if (tmpstat[v] != 1) {
@@ -378,7 +361,7 @@ cstate(int v) {
 
 
 int
-member(int symb, int set, int torf) {
+member(symb, set, torf) int symb, set, torf; {
 	register int i, num, pos;
 	num = chars[set];
 	pos = set + 1;
@@ -388,7 +371,7 @@ member(int symb, int set, int torf) {
 }
 
 int
-notin(int n) {
+notin(n) int n; {
 	register int i, j, pos;
 	for (i=0; i<=n; i++) {
 		if (positions[state[i]] == count) {
@@ -404,7 +387,7 @@ notin(int n) {
 }
 
 void
-add(int *array, int n) {
+add(array, n) int *array, n; {
 	register int i;
 	if (nxtpos + count > MAXPOS) overflo();
 	array[n] = nxtpos;
@@ -417,7 +400,7 @@ add(int *array, int n) {
 }
 
 void
-follow(int v) {
+follow(v) int v; {
 	int p;
 	if (v == line) return;
 	p = parent[v];
@@ -449,7 +432,9 @@ follow(int v) {
 
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int	argc;
+char **argv;
 {
 	while (--argc > 0 && (++argv)[0][0]=='-')
 		switch (argv[0][1]) {
@@ -525,7 +510,8 @@ out:
 }
 
 void
-execute(char *file)
+execute(file)
+char *file;
 {
 	register char *p;
 	register int cstat;
