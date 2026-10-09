@@ -16,10 +16,11 @@ struct stat sbuf;
 char *tty;
 char *ttyname();
 
-void error(char *s);
-void newmode(int m);
+void error(), newmode();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char *argv[];
 {
 	int r=0;
 	tty = ttyname(2);
@@ -44,14 +45,16 @@ main(int argc, char *argv[])
 }
 
 void
-error(char *s)
+error(s)
+char *s;
 {
 	fprintf(stderr,"mesg: %s\n",s);
 	exit(-1);
 }
 
 void
-newmode(int m)
+newmode(m)
+int	m;
 {
 	if(chmod(tty,m)<0)
 		error("cannot change mode");
