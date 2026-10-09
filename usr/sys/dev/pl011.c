@@ -1,154 +1,125 @@
 /*
- *   PL011 UART console driver
+ *   KL/DL-11 driver
  */
 #include "../h/param.h"
 #include "../h/conf.h"
-#include "../h/dir.h"
+#include	"../h/dir.h"
 #include "../h/user.h"
 #include "../h/tty.h"
 #include "../h/systm.h"
 
+/* base address */
+#define	KLADDR	0x09000000
+#define	NKL11	1
+#define	NDL11	0
+#define	UARTDR	(*(volatile int *)(KLADDR+0x00))
+#define	UARTFR	(*(volatile int *)(KLADDR+0x18))
+#define	UARTIMSC	(*(volatile int *)(KLADDR+0x38))
+#define	UARTMIS	(*(volatile int *)(KLADDR+0x40))
+#define	UARTICR	(*(volatile int *)(KLADDR+0x44))
+#define	TXFF	040
+#define	RXI	020
+#define	TXI	040
+#define	DLDELAY	4	/* Extra delay for DL's (double buff) */
 
-#define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
-#define	NCONS	1			/* one console line */
-#define	OUTDELAY 4		/* slop added to ttyoutput delay characters */
+#define	NL1	000400
+#define	NL2	001000
+#define	CR2	020000
+#define	FF1	040000
+#define	TAB1	002000
 
-#define	UARTDR		(*(volatile unsigned int *)(PL011_BASE+0x000))
-#define	UARTFR		(*(volatile unsigned int *)(PL011_BASE+0x018))
-#define	UARTLCRH	(*(volatile unsigned int *)(PL011_BASE+0x02c))
-#define	UARTIMSC	(*(volatile unsigned int *)(PL011_BASE+0x038))
-#define	UARTMIS		(*(volatile unsigned int *)(PL011_BASE+0x040))
-#define	UARTICR		(*(volatile unsigned int *)(PL011_BASE+0x044))
-#define	TXFF	0x20		/* FR: transmit holding register full */
-#define	RXFE	0x10		/* FR: receive holding register empty */
-#define	FEN	0x10		/* LCRH: FIFO enable */
-#define	RXI	0x10		/* interrupt: receiver */
-#define	TXI	0x20		/* interrupt: transmitter */
-#define	RTI	0x40		/* interrupt: receive timeout */
-
-struct	tty kl11[NCONS];
-int	klirq = 33;		/* GIC INTID of the PL011 console (SPI 1) */
-
-extern char partab[];
-void ttyopen(dev_t dev, struct tty *tp);
-void ttyclose(struct tty *tp);
-void ttychars(struct tty *tp);
-int ttread(struct tty *tp);
-caddr_t ttwrite(struct tty *tp);
-int ttioccomm(int com, struct tty *tp, caddr_t addr, dev_t dev);
-void ttyinput(int c, struct tty *tp);
-void ttstart(struct tty *tp);
-int ttrstrt(struct tty *tp);
-void timeout(int (*fun)(), caddr_t arg, int tim);
-void wakeup(caddr_t chan);
-int getc(struct clist *p);
-int klstart(struct tty *tp);
-int klrint(dev_t dev);
-int klxint(dev_t dev);
-
-void
-klinit(void)
-{
-}
+struct	tty kl11[NKL11+NDL11];
+int	klstart();
+int	ttrstrt();
+int	klirq = 33;
+int	ttread(), ttioccomm(), getc();
+void	ttyopen(), ttyclose(), ttychars(), ttyinput(), ttstart(), timeout(), wakeup();
+caddr_t	ttwrite();
 
 int
-klopen(dev_t dev, int flag)
+klopen(dev, flag)
+dev_t dev;
+int flag;
 {
 	register struct tty *tp;
+	register int d;
 
 	(void)flag;
-	if(minor(dev) >= NCONS) {
+	d = minor(dev);
+	if(d >= NKL11+NDL11) {
 		u.u_error = ENXIO;
 		return(0);
 	}
-	tp = &kl11[minor(dev)];
-	tp->t_addr = (caddr_t)PL011_BASE;
+	tp = &kl11[d];
 	tp->t_oproc = klstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
-		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
+		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
 		ttychars(tp);
 	}
-	UARTLCRH &= ~FEN;
-	UARTIMSC |= RXI|RTI;
+	UARTIMSC = RXI|TXI;
 	ttyopen(dev, tp);
 	return(0);
 }
 
 int
-klclose(dev_t dev, int flag)
+klclose(dev, flag)
+dev_t dev;
+int flag;
 {
+	register struct tty *tp;
+
 	(void)flag;
-	ttyclose(&kl11[minor(dev)]);
+	tp = &kl11[minor(dev)];
+	ttyclose(tp);
 	return(0);
 }
 
 int
-klread(dev_t dev)
+klread(dev)
+dev_t dev;
 {
 	ttread(&kl11[minor(dev)]);
 	return(0);
 }
 
 int
-klwrite(dev_t dev)
+klwrite(dev)
+dev_t dev;
 {
 	ttwrite(&kl11[minor(dev)]);
 	return(0);
 }
 
-int
-klstart(struct tty *tp)
-{
-	register int c;
-
-	if (UARTFR & TXFF)
-		return(0);
-	if ((c=getc(&tp->t_outq)) >= 0) {
-		if (tp->t_flags&RAW)
-			UARTDR = c & 0177;
-		else if (c<=0177)
-			UARTDR = c;
-		else {
-			timeout(ttrstrt, (caddr_t)tp, (c&0177) + OUTDELAY);
-			tp->t_state |= TIMEOUT;
-			UARTIMSC &= ~TXI;
-			return(0);
-		}
-		UARTIMSC |= TXI;
-	} else
-		UARTIMSC &= ~TXI;
-	return(0);
-}
-
-int
-klxint(dev_t dev)
+void
+klxint(dev)
+dev_t dev;
 {
 	register struct tty *tp;
 
 	tp = &kl11[minor(dev)];
 	ttstart(tp);
-	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
+	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 		wakeup((caddr_t)&tp->t_outq);
-	return(0);
 }
 
-int
-klrint(dev_t dev)
+void
+klrint(dev)
+dev_t dev;
 {
 	register int c;
 	register struct tty *tp;
 
 	tp = &kl11[minor(dev)];
-	while ((UARTFR & RXFE) == 0) {
-		c = UARTDR;
-		ttyinput(c, tp);
-	}
-	return(0);
+	c = UARTDR;
+	ttyinput(c, tp);
 }
 
 int
-klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+klioctl(dev, cmd, addr, flag)
+caddr_t addr;
+dev_t dev;
+int cmd, flag;
 {
 	(void)flag;
 	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
@@ -157,44 +128,80 @@ klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 }
 
 int
-klintr(void)
+klstart(tp)
+register struct tty *tp;
 {
-	register unsigned int mis;
+	register int c;
 
-	mis = UARTMIS;
-	if (mis & (RXI|RTI)) {
-		UARTICR = RXI|RTI;
-		klrint(0);
+	if(UARTFR&TXFF)
+		return(0);
+	if ((c=getc(&tp->t_outq)) >= 0) {
+		if (tp->t_flags&RAW)
+			UARTDR = c;
+		else if (c<=0177)
+			UARTDR = c;
+		else {
+			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
+			tp->t_state |= TIMEOUT;
+		}
 	}
-	if (mis & TXI) {
+	return(0);
+}
+
+void
+klinit()
+{
+}
+
+int
+klintr()
+{
+	if (UARTMIS&RXI)
+		klrint(0);
+	if (UARTMIS&TXI) {
 		UARTICR = TXI;
 		klxint(0);
 	}
 	return(0);
 }
 
+/*
+ * Print a character on console.
+ * Attempts to save and restore device
+ * status.
+ * If the switches are 0, all
+ * printing is inhibited.
+ *
+ * Whether or not printing is inhibited,
+ * the last MSGBUFS characters
+ * are saved in msgbuf for inspection later.
+ */
 void
 klputchar(char c)
 {
-	register int timo;
-	unsigned int s;
+	register int s, timo;
 
 	if (c != '\0' && c != '\r' && c != 0177) {
 		*msgbufp++ = c;
-		if (msgbufp >= &msgbuf[MSGBUFS])
+		if(msgbufp >= &msgbuf[MSGBUFS])
 			msgbufp = msgbuf;
 	}
 	timo = 30000;
-	while (UARTFR & TXFF)
-		if (--timo == 0)
+	/*
+	 * Try waiting for the console tty to come ready,
+	 * otherwise give up after a reasonable time.
+	 */
+	while(UARTFR&TXFF)
+		if(--timo == 0)
 			break;
-	if (c == 0)
+	if(c == 0)
 		return;
 	s = UARTIMSC;
-	UARTIMSC &= ~TXI;
+	UARTIMSC = 0;
 	UARTDR = c;
-	if (c == '\n')
+	if(c == '\n') {
 		klputchar('\r');
+	}
+	klputchar(0);
 	UARTIMSC = s;
 }
-
