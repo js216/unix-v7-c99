@@ -15,15 +15,13 @@ char in[512];
 
 char out[512];
 
-extern int errno;
-long	lseek();
-int	fstat(), open(), creat(), stat(), read(), write();
+long	lseek(int fd, long off, int ptr);
+int	open(char *name, int mode), creat(char *name, int mode);
+int	read(int fd, char *buf, int n), write(int fd, char *buf, int n);
 
-void stash(), puts();
+void stash(int p), puts(char *s);
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc,char **argv)
 {
 	register int r,w,p;
 	struct stat buf;
@@ -81,8 +79,7 @@ char **argv;
 }
 
 void
-stash(p)
-int p;
+stash(int p)
 {
 	int k;
 	int i;
@@ -94,8 +91,7 @@ int p;
 }
 
 void
-puts(s)
-char *s;
+puts(char *s)
 {
 	while(*s)
 		write(2,s++,1);
