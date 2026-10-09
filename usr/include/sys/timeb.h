@@ -1,4 +1,3 @@
-#include <sys/types.h>
 /*
  * Structure returned by ftime system call
  */

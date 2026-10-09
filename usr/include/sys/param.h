@@ -128,7 +128,6 @@
 #define	makedev(x,y)	(dev_t)((x)<<8 | (y))
 
 typedef	struct { int r[1]; } *	physadr;
-#ifndef SYS_TYPES_H
 typedef	long		daddr_t;
 typedef char *		caddr_t;
 typedef	unsigned short	ino_t;
@@ -136,8 +135,6 @@ typedef	long		time_t;
 typedef	int		label_t[10];	/* regs 2-7 */
 typedef	int		dev_t;
 typedef	long		off_t;
-#define	SYS_TYPES_H
-#endif
 
 /*
  * Machine-dependent bits and macros
