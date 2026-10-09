@@ -17,22 +17,10 @@
 %{
 #include <stdio.h>
 #define index expr_index
-long	atol();
-int	yylex(void);
-int	yyerror(char *s);
-char	*rel(int op, char *r1, char *r2);
-char	*arith(int op, char *r1, char *r2);
-char	*conj(int op, char *r1, char *r2);
-char	*substr(char *v, char *s, char *w);
-char	*length(char *s);
-char	*index(char *s, char *t);
-char	*match(char *s, char *p);
-int	ematch(char *s, char *p);
-void	errxx(int c);
-char	*compile(char *instring, char *ep, char *endbuf, int seof);
-int	advance(char *lp, char *ep);
-int	getrnge(char *str);
-int	ecmp(char *a, char *b, int count);
+int yylex(), ematch(), advance(), ecmp();
+void errxx(), getrnge(), yyerror();
+char *compile();
+char *rel(), *arith(), *conj(), *substr(), *length(), *index(), *match();
 %}
 %%
 
@@ -68,9 +56,11 @@ expr:	'(' expr ')' { $$ = $2; }
 	;
 %%
 /*	expression command */
+#include <stdio.h>
 #define ESIZE	256
 #define error(c)	errxx(c)
 #define EQL(x,y) !strcmp(x,y)
+long atol();
 char	**Av;
 int	Ac;
 int	Argi;
@@ -80,12 +70,11 @@ char *malloc();
 extern int nbra;
 
 int
-main(int argc, char **argv) {
+main(argc, argv) int argc; char **argv; {
 	Ac = argc;
 	Argi = 1;
 	Av = argv;
 	yyparse();
-	return(0);
 }
 
 char *operators[] = { "|", "&", "+", "-", "*", "/", "%", ":",
@@ -95,7 +84,7 @@ int op[] = { OR, AND, ADD,  SUBT, MULT, DIV, REM, MCH,
 	EQ, EQ, LT, LEQ, GT, GEQ, NEQ,
 	MATCH, SUBSTR, LENGTH, INDEX };
 int
-yylex(void) {
+yylex() {
 	register char *p;
 	register int i;
 
@@ -113,8 +102,7 @@ yylex(void) {
 	return A_STRING;
 }
 
-char *
-rel(int op, register char *r1, register char *r2) {
+char *rel(op, r1, r2) int op; register char *r1, *r2; {
 	register int i;
 
 	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "[0-9]*$"))
@@ -132,8 +120,7 @@ rel(int op, register char *r1, register char *r2) {
 	return i? "1": "0";
 }
 
-char *
-arith(int op, char *r1, char *r2) {
+char *arith(op, r1, r2) int op; char *r1, *r2; {
 	long i1, i2;
 	register char *rv;
 
@@ -150,11 +137,10 @@ arith(int op, char *r1, char *r2) {
 	case REM: i1 = i1 % i2; break;
 	}
 	rv = malloc(16);
-	sprintf(rv, "%ld", i1);
+	sprintf(rv, "%D", i1);
 	return rv;
 }
-char *
-conj(int op, char *r1, char *r2) {
+char *conj(op, r1, r2) int op; char *r1, *r2; {
 	register char *rv = 0;
 
 	switch(op) {
@@ -184,8 +170,7 @@ conj(int op, char *r1, char *r2) {
 	return rv;
 }
 
-char *
-substr(char *v, char *s, char *w) {
+char *substr(v, s, w) char *v, *s, *w; {
 register int si, wi;
 register char *res;
 
@@ -201,8 +186,7 @@ register char *res;
 	return res;
 }
 
-char *
-length(register char *s) {
+char *length(s) register char *s; {
 	register int i = 0;
 	register char *rv;
 
@@ -213,8 +197,7 @@ length(register char *s) {
 	return rv;
 }
 
-char *
-index(char *s, char *t) {
+char *index(s, t) char *s, *t; {
 	register int i, j;
 	register char *rv;
 
@@ -227,8 +210,8 @@ index(char *s, char *t) {
 	return "0";
 }
 
-char *
-match(char *s, char *p)
+char *match(s, p)
+char *s, *p;
 {
 	register char *rv;
 
@@ -249,9 +232,12 @@ match(char *s, char *p)
 
 
 int
-ematch(char *s, register char *p)
+ematch(s, p)
+char *s;
+register char *p;
 {
 	static char expbuf[ESIZE];
+	char *compile();
 	register int num;
 	extern char *braslist[], *braelist[], *loc2;
 
@@ -271,7 +257,8 @@ ematch(char *s, register char *p)
 }
 
 void
-errxx(int c)
+errxx(c)
+int c;
 {
 	(void)c;
 	yyerror("RE error");
@@ -316,7 +303,10 @@ char	bittab[] = {
 };
 
 char *
-compile(char *instring, register char *ep, char *endbuf, int seof)
+compile(instring, ep, endbuf, seof)
+register char *ep;
+char *instring, *endbuf;
+int seof;
 {
 	INIT	/* Dependent declarations and initializations */
 	register int c;
@@ -481,7 +471,7 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 					continue;
 				}
 			}
-			/* fallthrough */
+			/* fallthrough - to default to use \ to turn off special chars */
 
 		defchar:
 		default:
@@ -493,7 +483,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 }
 
 int
-step(register char *p1, register char *p2)
+step(p1, p2)
+register char *p1, *p2;
 {
 	register int c;
 
@@ -525,10 +516,11 @@ step(register char *p1, register char *p2)
 }
 
 int
-advance(register char *lp, register char *ep)
+advance(lp, ep)
+register char *lp, *ep;
 {
 	register char *curlp;
-	int c;
+	char c;
 	char *bbeg;
 	int ct;
 
@@ -561,11 +553,11 @@ advance(register char *lp, register char *ep)
 		}
 		return(0);
 	case CBRA:
-		braslist[(unsigned char)*ep++] = lp;
+		braslist[*ep++&0377] = lp;
 		continue;
 
 	case CKET:
-		braelist[(unsigned char)*ep++] = lp;
+		braelist[*ep++&0377] = lp;
 		continue;
 
 	case CCHR|RNGE:
@@ -616,8 +608,8 @@ advance(register char *lp, register char *ep)
 		goto star;
 
 	case CBACK:
-		bbeg = braslist[(unsigned char)*ep];
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		bbeg = braslist[*ep&0377];
+		ct = braelist[*ep++&0377] - bbeg;
 
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
@@ -626,8 +618,8 @@ advance(register char *lp, register char *ep)
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[(unsigned char)*ep];
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		bbeg = braslist[*ep&0377];
+		ct = braelist[*ep++&0377] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -670,16 +662,18 @@ advance(register char *lp, register char *ep)
 	}
 }
 
-int
-getrnge(register char *str)
+void
+getrnge(str)
+register char *str;
 {
 	low = *str++ & 0377;
 	size = (*str & 0377) == 255 ? 20000 : (*str &0377) - low;
-	return(0);
 }
 
 int
-ecmp(register char *a, register char *b, register int count)
+ecmp(a, b, count)
+register char	*a, *b;
+register int	count;
 {
 	if(a == b) /* should have been caught in compile() */
 		error(51);
@@ -688,11 +682,10 @@ ecmp(register char *a, register char *b, register int count)
 	return(1);
 }
 
-int
-yyerror(char *s)
-
+void
+yyerror(s)
+char *s;
 {
 	fprintf(stderr, "%s\n", s);
 	exit(2);
-	return(0);
 }
