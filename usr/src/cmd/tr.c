@@ -9,12 +9,10 @@ char	code[256];
 char	squeez[256];
 char	vect[256];
 struct string { int last, max; char *p; } string1, string2;
-int	next(), nextc();
+int	next(struct string *s), nextc(struct string *s);
 
 int
-main(argc,argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i;
 	int j;
@@ -89,8 +87,7 @@ char **argv;
 }
 
 int
-next(s)
-struct string *s;
+next(struct string *s)
 {
 
 again:
@@ -116,8 +113,7 @@ again:
 }
 
 int
-nextc(s)
-struct string *s;
+nextc(struct string *s)
 {
 	register int c, i, n;
 
