@@ -5,7 +5,7 @@ AR = $(CROSS_COMPILE)ar
 HOSTCC = arm-linux-gnueabihf-gcc
 LEX = flex
 
-CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon -fno-builtin \
+CFLAGS = -std=c99 -Wall -Wextra -Wpedantic -Werror -fcommon \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 \
 	-MMD -MP
 ASFLAGS = -mcpu=cortex-a7
@@ -50,11 +50,9 @@ ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC)
 DIRS = boot bin etc usr/lib usr/dict usr/games usr/games/lib
 
 boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
-	trap 'rm -f boot/rootfs.img.tmp' EXIT; \
-	    V7_MKFS_TIME=284774400 etc/mkfs boot/rootfs.img.tmp boot/rootfs.proto; \
-	    size=$$(awk '/^(swplo|nswap) /{n+=$$2} END{print n}' usr/sys/conf/qemuconf); \
-	    truncate -s "$$((size * 512))" boot/rootfs.img.tmp; \
-	    mv boot/rootfs.img.tmp boot/rootfs.img
+	V7_MKFS_TIME=284774400 etc/mkfs $@ boot/rootfs.proto
+	truncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
+	    usr/sys/conf/qemuconf) $@
 
 etc/mkfs: usr/src/cmd/mkfs.c | etc
 	tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
@@ -72,8 +70,9 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 clean:
 	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
-	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs.img.tmp
+	rm -f etc/mkfs boot/unix boot/rootfs.img
 
 .PHONY: all clean qemu
+.DELETE_ON_ERROR:
 
 -include $(OBJ:.o=.d)
