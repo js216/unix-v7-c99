@@ -35,21 +35,11 @@ struct	tab
 int	fi;
 char	tty[20];
 jmp_buf	sjbuf;
+void	shutdown(), single(), runcom(), merge(), multiple(), term(), maktty(), dfork(), rmut(), reset();
+int	rline(), get();
 
-int shutdown(void);
-int single(void);
-int runcom(void);
-int multiple(void);
-int merge(void);
-int term(struct tab *p);
-int rline(void);
-int maktty(char *lin);
-int get(void);
-int dfork(struct tab *p);
-int rmut(struct tab *p);
-void reset(void);
 int
-main(void)
+main()
 {
 
 	setjmp(sjbuf);
@@ -61,11 +51,10 @@ main(void)
 		merge();
 		multiple();
 	}
-	return(0);
 }
 
-int
-shutdown(void)
+void
+shutdown()
 {
 	register int i;
 	register struct tab *p;
@@ -83,11 +72,10 @@ shutdown(void)
 	signal(SIGALRM, SIG_DFL);
 	for(i=0; i<10; i++)
 		close(i);
-	return(0);
 }
 
-int
-single(void)
+void
+single()
 {
 	register int pid;
 
@@ -107,11 +95,10 @@ single(void)
 	}
 	while(wait((int *)0) != pid)
 		;
-	return(0);
 }
 
-int
-runcom(void)
+void
+runcom()
 {
 	register int pid;
 
@@ -125,11 +112,10 @@ runcom(void)
 	}
 	while(wait((int *)0) != pid)
 		;
-	return(0);
 }
 
-int
-multiple(void)
+void
+multiple()
 {
 	register struct tab *p;
 	register int pid;
@@ -137,7 +123,7 @@ multiple(void)
 	for(EVER) {
 		pid = wait((int *)0);
 		if(pid == -1)
-			return(0);
+			return;
 		for(ALL)
 			if(p->pid == pid || p->pid == -1) {
 				rmut(p);
@@ -146,8 +132,9 @@ multiple(void)
 	}
 }
 
-int
-term(struct tab *p)
+void
+term(p)
+register struct tab *p;
 {
 
 	if(p->pid != 0) {
@@ -156,11 +143,10 @@ term(struct tab *p)
 	}
 	p->pid = 0;
 	p->line[0] = 0;
-	return(0);
 }
 
 int
-rline(void)
+rline()
 {
 	register int c, i;
 
@@ -194,8 +180,9 @@ bad:
 	return(1);
 }
 
-int
-maktty(char *lin)
+void
+maktty(lin)
+char *lin;
 {
 	register int i, j;
 
@@ -206,11 +193,10 @@ maktty(char *lin)
 		i++;
 	}
 	tty[i] = 0;
-	return(0);
 }
 
 int
-get(void)
+get()
 {
 	char b;
 
@@ -221,8 +207,8 @@ get(void)
 	return(b);
 }
 
-int
-merge(void)
+void
+merge()
 {
 	register struct tab *p, *q;
 	register int i;
@@ -231,7 +217,7 @@ merge(void)
 	signal(SIGINT, merge);
 	fi = open(ifile, 0);
 	if(fi < 0)
-		return(0);
+		return;
 	q = &itab[0];
 	while(rline()) {
 		if(line.flag == '0')
@@ -264,11 +250,11 @@ merge(void)
 	for(ALL)
 		if(p->line[0] != 0 && p->pid == 0)
 			dfork(p);
-	return(0);
 }
 
-int
-dfork(struct tab *p)
+void
+dfork(p)
+struct tab *p;
 {
 	register int pid;
 
@@ -288,11 +274,11 @@ dfork(struct tab *p)
 		exit(0);
 	}
 	p->pid = pid;
-	return(0);
 }
 
-int
-rmut(struct tab *p)
+void
+rmut(p)
+register struct tab *p;
 {
 	register int i, f;
 
@@ -322,11 +308,10 @@ rmut(struct tab *p)
 		write(f, (char *)&wtmp, sizeof(wtmp));
 		close(f);
 	}
-	return(0);
 }
 
 void
-reset(void)
+reset()
 {
 	longjmp(sjbuf, 1);
 }
