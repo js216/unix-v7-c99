@@ -22,8 +22,11 @@
 #include <sys/filsys.h>
 #include <sys/fblk.h>
 #include <sys/dir.h>
-static void ltol3(char *cp, long *lp, int n) {
-	int i; long v;
+static void
+ltol3(char *cp, long *lp, int n)
+{
+	int i;
+	long v;
 	for(i=0; i<n; i++) {
 		v = lp[i];
 		*cp++ = v; *cp++ = v >> 8; *cp++ = v >> 16;
@@ -42,14 +45,14 @@ char	buf[BSIZE];
 union {
 	struct fblk fb;
 	char pad1[BSIZE];
-} fbuf_storage;
-#define fbuf fbuf_storage.fb
+} fbuf;
+#define fbuf fbuf.fb
 char	string[50];
 union {
 	struct filsys fs;
 	char pad2[BSIZE];
-} filsys_storage;
-#define filsys filsys_storage.fs
+} filsys;
+#define filsys filsys.fs
 char	*fsys;
 char	*proto;
 int	f_n	= MAXFN;
@@ -332,7 +335,7 @@ getnum(void)
 	getstr();
 	n = 0;
 	i = 0;
-	for(i=0; (c=string[i]) != 0; i++) {
+	for(i=0; (c=string[i]); i++) {
 		if(c<'0' || c>'9') {
 			printf("%s: bad number\n", string);
 			error = 1;
