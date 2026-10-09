@@ -28,6 +28,7 @@
 %left	STAR PLUS QUEST
 %left	POSTINCR PREINCR POSTDECR PREDECR INCR DECR
 %left	FIELD INDIRECT
+%left	NL SPRINTF SPLIT ',' '{' ELSE
 %token	LASTTOKEN	/* has to be last */
 
 %{
@@ -119,7 +120,7 @@ var:
 	| field
 	;
 term:
-	  var
+	  var %prec ASGNOP
 	| FNCN		{ PUTS("func");
 			$$ = op2(FNCN, $1, valtonode(lookup("$record", symtab), CFLD));
 			}
@@ -153,20 +154,20 @@ term:
 	;
 
 expr:
-	  term		{ PUTS("term"); }
-	| expr term	{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
+	  term %prec ASGNOP	{ PUTS("term"); }
+	| expr term %prec ASGNOP	{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
 	| var ASGNOP expr	{ PUTS("var=expr"); $$ = stat2($2, $1, $3); }
 	;
 
 optNL:
 	  NL
-	|
+	| %prec ASGNOP
 	;
 
 pa_stat:
-	  pattern	{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
+	  pattern %prec ASGNOP	{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
 	| pattern '{' stat_list '}'	{ PUTS("pattern {...}"); $$ = stat2(PASTAT, $1, $3); }
-	| pattern ',' pattern		{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
+	| pattern ',' pattern %prec ASGNOP	{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
 	| pattern ',' pattern '{' stat_list '}'	
 					{ PUTS("srch, srch {...}"); $$ = pa2stat($1, $3, $5); }
 	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, (long)nullstat, $2); }
@@ -174,8 +175,8 @@ pa_stat:
 
 pa_stats:
 	  pa_stats pa_stat st	{ PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
-	|	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
-	| pa_stats pa_stat	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
+	| %prec ASGNOP	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
+	| pa_stats pa_stat %prec ASGNOP	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
 	;
 
 pattern:
@@ -188,14 +189,14 @@ pattern:
 	;
 
 print_list:
-	  expr	{ PUTS("expr"); }
-	| pe_list	{ PUTS("pe_list"); }
-	|		{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
+	  expr %prec ASGNOP	{ PUTS("expr"); }
+	| pe_list %prec ASGNOP	{ PUTS("pe_list"); }
+	| %prec ASGNOP	{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
 	;
 
 pe_list:
-	  expr ',' expr	{$$ = linkum($1, $3); }
-	| pe_list ',' expr	{$$ = linkum($1, $3); }
+	  expr ',' expr %prec ASGNOP	{$$ = linkum($1, $3); }
+	| pe_list ',' expr %prec ASGNOP	{$$ = linkum($1, $3); }
 	| '(' pe_list ')'		{$$ = $2; }
 	;
 
@@ -254,7 +255,7 @@ simple_stat:
 
 statement:
 	  simple_stat st	{ PUTS("simple stat"); }
-	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
+	| if statement %prec ASGNOP	{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
 	| if statement else statement
 		{ PUTS("if-else stat"); $$ = stat3(IF, $1, $2, $4); }
 	| while statement	{ PUTS("while stat"); $$ = stat2(WHILE, $1, $2); }

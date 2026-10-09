@@ -1114,7 +1114,9 @@ usr/local
 % usr/src/cmd/awk/awk.g.y
 @@ -0,0 +1 @@
 +%define api.value.type {long}
-@@ -33,0 +35,17 @@
+@@ -29,0 +31 @@
++%left	NL SPRINTF SPLIT ',' '{' ELSE
+@@ -33,0 +36,17 @@
 +int	yylex(void);
 +void	yyerror(char *s);
 +int	startreg(void);
@@ -1132,43 +1134,74 @@ usr/local
 +long	exptostat();
 +long	genjump(int a);
 +char	*cclenter();
-@@ -41 +59 @@
+@@ -41 +60 @@
 -	  begin pa_stats end	{ if (errorflag==0) winner = stat3(PROGRAM, $1, $2, $3); }
 +	  begin pa_stats end	{ if (errorflag==0) winner = (node *)stat3(PROGRAM, $1, $2, $3); }
-@@ -48 +66 @@
+@@ -48 +67 @@
 -	| 	{ PUTS("empty XBEGIN"); $$ = nullstat; }
 +	| 	{ PUTS("empty XBEGIN"); $$ = (long)nullstat; }
-@@ -54 +72 @@
+@@ -54 +73 @@
 -	|	{ PUTS("empty END"); $$ = nullstat; }
 +	|	{ PUTS("empty END"); $$ = (long)nullstat; }
-@@ -116 +134 @@
+@@ -104 +123 @@
+-	  var
++	  var %prec ASGNOP
+@@ -116 +135 @@
 -			{ PUTS("substr(e,e,e)"); $$ = op3(SUBSTR, $3, $5, nullstat); }
 +			{ PUTS("substr(e,e,e)"); $$ = op3(SUBSTR, $3, $5, (long)nullstat); }
-@@ -120 +138 @@
+@@ -120 +139 @@
 -			{ PUTS("split(e,e,e)"); $$ = op3(SPLIT, $3, $5, nullstat); }
 +			{ PUTS("split(e,e,e)"); $$ = op3(SPLIT, $3, $5, (long)nullstat); }
-@@ -154 +172 @@
+@@ -138,2 +157,2 @@
+-	  term		{ PUTS("term"); }
+-	| expr term	{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
++	  term %prec ASGNOP	{ PUTS("term"); }
++	| expr term %prec ASGNOP	{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
+@@ -145 +164 @@
+-	|
++	| %prec ASGNOP
+@@ -149 +168 @@
+-	  pattern	{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
++	  pattern %prec ASGNOP	{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
+@@ -151 +170 @@
+-	| pattern ',' pattern		{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
++	| pattern ',' pattern %prec ASGNOP	{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
+@@ -154 +173 @@
 -	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, nullstat, $2); }
 +	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, (long)nullstat, $2); }
-@@ -159 +177 @@
+@@ -159,2 +178,2 @@
 -	|	{ PUTS("null pa_stat"); $$ = nullstat; }
-+	|	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
-@@ -227 +245 @@
+-	| pa_stats pa_stat	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
++	| %prec ASGNOP	{ PUTS("null pa_stat"); $$ = (long)nullstat; }
++	| pa_stats pa_stat %prec ASGNOP	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
+@@ -173,3 +192,3 @@
+-	  expr	{ PUTS("expr"); }
+-	| pe_list	{ PUTS("pe_list"); }
+-	|		{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
++	  expr %prec ASGNOP	{ PUTS("expr"); }
++	| pe_list %prec ASGNOP	{ PUTS("pe_list"); }
++	| %prec ASGNOP	{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
+@@ -179,2 +198,2 @@
+-	  expr ',' expr	{$$ = linkum($1, $3); }
+-	| pe_list ',' expr	{$$ = linkum($1, $3); }
++	  expr ',' expr %prec ASGNOP	{$$ = linkum($1, $3); }
++	| pe_list ',' expr %prec ASGNOP	{$$ = linkum($1, $3); }
+@@ -227 +246 @@
 -		{ PUTS("print list"); $$ = stat3($1, $2, nullstat, nullstat); }
 +		{ PUTS("print list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
-@@ -231 +249 @@
+@@ -231 +250 @@
 -		{ PUTS("printf list"); $$ = stat3($1, $2, nullstat, nullstat); }
 +		{ PUTS("printf list"); $$ = stat3($1, $2, (long)nullstat, (long)nullstat); }
-@@ -233 +251 @@
+@@ -233 +252 @@
 -	|		{ PUTS("null simple statement"); $$ = nullstat; }
 +	|		{ PUTS("null simple statement"); $$ = (long)nullstat; }
-@@ -239 +257 @@
+@@ -239 +258 @@
 -	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, nullstat); }
-+	| if statement		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
-@@ -253 +271 @@
++	| if statement %prec ASGNOP	{ PUTS("if stat"); $$ = stat3(IF, $1, $2, (long)nullstat); }
+@@ -253 +272 @@
 -	|			{ PUTS("null stat list"); $$ = nullstat; }
 +	|			{ PUTS("null stat list"); $$ = (long)nullstat; }
-@@ -264 +282 @@
+@@ -264 +283 @@
 -		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, nullstat, $6, $9); }
 +		{ PUTS("for(e;e;e)"); $$ = stat4(FOR, $3, (long)nullstat, $6, $9); }
 
