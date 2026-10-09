@@ -4,7 +4,7 @@
 #include "../h/buf.h"
 #include "../h/conf.h"
 #include <stdarg.h>
-void	printn(long n, int b);
+void	printn(unsigned long n, int b);
 
 /*
  * In case console is off,
@@ -43,7 +43,7 @@ loop:
 	}
 	c = *fmt++;
 	if(c == 'd' || c == 'u' || c == 'o' || c == 'x')
-		printn((long)va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
+		printn(va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
 	else if(c == 's') {
 		s = va_arg(adx, char *);
 		while((c = *s++))
@@ -58,14 +58,10 @@ loop:
  * Print an unsigned integer in base b.
  */
 void
-printn(long n, int b)
+printn(unsigned long n, int b)
 {
 	register long a;
 
-	if (n<0) {	/* shouldn't happen */
-		putchar('-');
-		n = -n;
-	}
 	if((a = n/b))
 		printn(a, b);
 	putchar("0123456789ABCDEF"[(int)(n%b)]);
