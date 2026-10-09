@@ -118,6 +118,8 @@ gtime(void)
 	day = gp(L->tm_mday);
 	month = gp(L->tm_mon+1);
 	year = gp(L->tm_year);
+	if(year < 70)
+		year += 100;
 	if(*sp)
 		return(1);
 	if( month<1 || month>12 ||
