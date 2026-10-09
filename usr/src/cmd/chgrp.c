@@ -8,16 +8,14 @@
 #include <sys/stat.h>
 #include <grp.h>
 
-struct	group	*gr,*getgrnam();
+struct	group	*gr;
 struct	stat	stbuf;
 int	gid;
 int	status;
-int	isnumber();
+int	isnumber(char *s);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int c;
 
@@ -45,8 +43,7 @@ char *argv[];
 }
 
 int
-isnumber(s)
-char *s;
+isnumber(char *s)
 {
 	register int c;
 
