@@ -6,7 +6,7 @@
 #include "../h/file.h"
 #include "../h/conf.h"
 #include "../h/inode.h"
-#include "../h/mount.h"
+#include "../h/reg.h"
 #include "../h/acct.h"
 
 /*

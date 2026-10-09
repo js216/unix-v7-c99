@@ -53,12 +53,12 @@ int	size;
 
 	if ((bp = mp)==coremap && runin) {
 		runin = 0;
-		wakeup((caddr_t)&runin);
+		wakeup((caddr_t)&runin);	/* Wake scheduler when freeing core */
 	}
-	for (; bp->m_addr<=(unsigned)a && bp->m_size!=0; bp++);
-	if (bp>mp && (bp-1)->m_addr+(bp-1)->m_size == (unsigned)a) {
+	for (; bp->m_addr<=a && bp->m_size!=0; bp++);
+	if (bp>mp && (bp-1)->m_addr+(bp-1)->m_size == a) {
 		(bp-1)->m_size += size;
-		if ((unsigned)(a+size) == bp->m_addr) {
+		if (a+size == bp->m_addr) {
 			(bp-1)->m_size += bp->m_size;
 			while (bp->m_size) {
 				bp++;
@@ -67,7 +67,7 @@ int	size;
 			}
 		}
 	} else {
-		if ((unsigned)(a+size) == bp->m_addr && bp->m_size) {
+		if (a+size == bp->m_addr && bp->m_size) {
 			bp->m_addr -= size;
 			bp->m_size += size;
 		} else if (size) {

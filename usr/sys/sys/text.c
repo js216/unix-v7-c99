@@ -1,14 +1,13 @@
 #include "../h/param.h"
 #include "../h/systm.h"
+#include "../h/map.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/text.h"
 #include "../h/inode.h"
 #include "../h/buf.h"
-#include "../h/map.h"
 #include "../h/seg.h"
-struct map;
 
 /*
  * Swap out process p.

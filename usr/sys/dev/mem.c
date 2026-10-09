@@ -25,7 +25,7 @@ int	dev;
 	if(minor(dev) == 2)
 		return(0);
 	do {
-		if ((c = fumem((unsigned int)u.u_offset)) < 0)
+		if ((c = fumem(u.u_offset)) < 0)
 			u.u_error = ENXIO;
 	} while(u.u_error==0 && passc(c)>=0);
 	return(0);
@@ -36,17 +36,15 @@ mmwrite(dev)
 int	dev;
 {
 	register int c;
-	unsigned int off;
 
 	if(minor(dev) == 2) {
 		u.u_count = 0;
 		return(0);
 	}
 	for(;;) {
-		off = (unsigned int)u.u_offset;
 		if ((c=cpass())<0 || u.u_error!=0)
 			break;
-		if (sumem(off, c) < 0)
+		if (sumem(u.u_offset-1, c) < 0)
 			u.u_error = ENXIO;
 	}
 	return(0);

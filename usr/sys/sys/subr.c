@@ -1,5 +1,6 @@
 #include "../h/param.h"
 #include "../h/systm.h"
+#include "../h/conf.h"
 #include "../h/inode.h"
 #include "../h/dir.h"
 #include "../h/user.h"
@@ -129,13 +130,15 @@ int
 passc(c)
 register int c;
 {
+	register int id;
 
-	if(u.u_segflg == 1)
+	if((id = u.u_segflg) == 1)
 		*u.u_base = c;
-	else if(subyte(u.u_base, c) < 0) {
-		u.u_error = EFAULT;
-		return(-1);
-	}
+	else
+		if(id?suibyte(u.u_base, c):subyte(u.u_base, c) < 0) {
+			u.u_error = EFAULT;
+			return(-1);
+		}
 	u.u_count--;
 	u.u_offset++;
 	u.u_base++;
@@ -152,16 +155,17 @@ register int c;
 int
 cpass()
 {
-	register int c;
+	register int c, id;
 
 	if(u.u_count == 0)
 		return(-1);
-	if(u.u_segflg == 1)
+	if((id = u.u_segflg) == 1)
 		c = *u.u_base;
-	else if((c = fubyte(u.u_base)) < 0) {
-		u.u_error = EFAULT;
-		return(-1);
-	}
+	else
+		if((c = id==0?fubyte(u.u_base):fuibyte(u.u_base)) < 0) {
+			u.u_error = EFAULT;
+			return(-1);
+		}
 	u.u_count--;
 	u.u_offset++;
 	u.u_base++;

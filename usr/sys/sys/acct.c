@@ -5,6 +5,7 @@
 #include "../h/user.h"
 #include "../h/inode.h"
 #include "../h/proc.h"
+#include "../h/seg.h"
 
 /*
  * Perform process accounting functions.

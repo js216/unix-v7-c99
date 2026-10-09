@@ -33,7 +33,7 @@ sureg()
 		*rap++ = *uap++ + (*udp&TX? taddr: (*udp&ABS? 0: daddr));
 		udp++;
 	}
-	arm_sureg(auisa, &u.u_uisd[0], limudp - &u.u_uisd[0]);
+	arm_sureg();
 }
 
 /*
@@ -54,11 +54,12 @@ int	sep, xrw;
 {
 	(void)sep; (void)xrw;
 
-	if((int)(nt+nd+ns+USIZE) > maxmem) {
-		u.u_error = ENOMEM;
-		return(-1);
-	}
+	if((int)(nt+nd+ns+USIZE) > maxmem)
+		goto err;
 	sureg();
 	return(0);
 
+err:
+	u.u_error = ENOMEM;
+	return(-1);
 }

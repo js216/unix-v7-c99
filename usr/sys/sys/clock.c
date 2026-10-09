@@ -1,11 +1,11 @@
 #include "../h/param.h"
 #include "../h/systm.h"
 #include "../h/callo.h"
+#include "../h/seg.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/proc.h"
-#include "../h/seg.h"
-#include "../h/conf.h"
+#include "../h/reg.h"
 
 #define	SCHMAG	8/10
 
@@ -77,7 +77,7 @@ int	sp, r1, nps, r0, ps;
 			p1++;
 		}
 		p2 = &callout[0];
-		while((p2->c_func = p1->c_func) != 0) {
+		while((p2->c_func = p1->c_func)) {
 			p2->c_time = p1->c_time;
 			p2->c_arg = p1->c_arg;
 			p1++;

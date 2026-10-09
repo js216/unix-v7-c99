@@ -87,6 +87,12 @@ int	access(), b_to_q(), badblock(), cntfrq_get(), compress(), copyin(),
 	suword(), swapin(), ttioccomm(), ttread(), ttrstrt(), ufalloc();
 caddr_t	ttwrite();
 void	printf(char *, ...);
+#define	fuibyte	fubyte
+#define	fuiword	fuword
+#define	suibyte	subyte
+#define	suiword	suword
+#define	copyiin	copyin
+#define	copyiout	copyout
 /*
  * Instrumentation
  */

@@ -7,7 +7,6 @@
 #include "../h/reg.h"
 #include "../h/text.h"
 #include "../h/seg.h"
-#define	SINCR	20
 
 /*
  * Priority for tracing
@@ -123,6 +122,7 @@ loop:
 		}
 	exit(fsig(u.u_procp));
 }
+
 /*
  * Perform the action specified by
  * the current signal.
@@ -336,9 +336,9 @@ procxmt()
 
 	/* read user I */
 	case 1:
-		if (fubyte((caddr_t)ipc.ip_addr) == -1)
+		if (fuibyte((caddr_t)ipc.ip_addr) == -1)
 			goto error;
-		ipc.ip_data = fuword((caddr_t)ipc.ip_addr);
+		ipc.ip_data = fuiword((caddr_t)ipc.ip_addr);
 		break;
 
 	/* read user D */
@@ -368,8 +368,8 @@ procxmt()
 			xp->x_iptr->i_flag &= ~ITEXT;
 		}
 		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RW);
-		i = suword((caddr_t)ipc.ip_addr, 0);
-		suword((caddr_t)ipc.ip_addr, ipc.ip_data);
+		i = suiword((caddr_t)ipc.ip_addr, 0);
+		suiword((caddr_t)ipc.ip_addr, ipc.ip_data);
 		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
 		if (i<0)
 			goto error;

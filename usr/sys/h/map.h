@@ -1,7 +1,7 @@
 struct map
 {
-	int		m_size;
-	unsigned int	m_addr;
+	int	m_size;
+	int	m_addr;
 };
 
 struct map coremap[CMAPSIZ];	/* space for core allocation */

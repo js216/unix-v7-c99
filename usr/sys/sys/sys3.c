@@ -2,6 +2,7 @@
 #include "../h/systm.h"
 #include "../h/mount.h"
 #include "../h/ino.h"
+#include "../h/reg.h"
 #include "../h/buf.h"
 #include "../h/filsys.h"
 #include "../h/dir.h"
@@ -205,6 +206,9 @@ sumount()
 	register struct inode *ip;
 	register struct mount *mp;
 	struct buf *bp;
+	struct a {
+		char	*fspec;
+	};
 
 	dev = getmdev();
 	if(u.u_error)

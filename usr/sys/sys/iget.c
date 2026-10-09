@@ -255,7 +255,6 @@ int	f1, f2;
 	daddr_t nb;
 
 	bp = NULL;
-	bap = NULL;
 	for(i=NINDIR-1; i>=0; i--) {
 		if(bp == NULL) {
 			bp = bread(dev, bn);

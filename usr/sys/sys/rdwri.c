@@ -190,9 +190,15 @@ int	flag;
 	  ((int)cp&(NBPW-1)) == 0 &&
 	  ((int)u.u_base&(NBPW-1)) == 0) {
 		if (flag==B_WRITE)
-			t = copyin(u.u_base, (caddr_t)cp, n);
+			if (u.u_segflg==0)
+				t = copyin(u.u_base, (caddr_t)cp, n);
+			else
+				t = copyiin(u.u_base, (caddr_t)cp, n);
 		else
-			t = copyout((caddr_t)cp, u.u_base, n);
+			if (u.u_segflg==0)
+				t = copyout((caddr_t)cp, u.u_base, n);
+			else
+				t = copyiout((caddr_t)cp, u.u_base, n);
 		if (t) {
 			u.u_error = EFAULT;
 			return;

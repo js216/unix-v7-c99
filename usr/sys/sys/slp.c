@@ -156,7 +156,7 @@ register struct proc *p;
 	 * The assignment to w is necessary because of
 	 * race conditions. (Interrupt between test and use)
 	 */
-	if ((w = p->p_wchan) != 0) {
+	if ((w = p->p_wchan)) {
 		wakeup(w);
 		return;
 	}
@@ -223,7 +223,6 @@ sched()
 loop:
 	spl6();
 	outage = -20000;
-	p = NULL;
 	for (rp = &proc[0]; rp < &proc[NPROC]; rp++)
 	if (rp->p_stat==SRUN && (rp->p_flag&SLOAD)==0 &&
 	    rp->p_time - (rp->p_nice-NZERO)*8 > outage) {
@@ -310,7 +309,7 @@ register struct proc *p;
 
 	if ((a = malloc(coremap, p->p_size)) == NULL)
 		return(0);
-	if ((xp = p->p_textp) != 0) {
+	if ((xp = p->p_textp)) {
 		xlock(xp);
 		if (xp->x_ccount==0) {
 			if ((x = malloc(coremap, xp->x_size)) == NULL) {
@@ -395,7 +394,6 @@ loop:
 	runrun = 0;
 	pp = NULL;
 	q = NULL;
-	pq = NULL;
 	n = 128;
 	/*
 	 * Search for highest-priority runnable process
@@ -442,9 +440,9 @@ int
 newproc()
 {
 	int a1, a2;
-	struct proc *volatile p, *up;
-	struct proc *rpp, *rip;
-	int n;
+	struct proc *p, *up;
+	register struct proc *rpp, *rip;
+	register int n;
 
 	p = NULL;
 	/*
@@ -460,7 +458,7 @@ retry:
 		goto retry;
 	}
 	for(rpp = &proc[0]; rpp < &proc[NPROC]; rpp++) {
-		if(rpp->p_stat == 0 && p==NULL)
+		if(rpp->p_stat == NULL && p==NULL)
 			p = rpp;
 		if (rpp->p_pid==mpid || rpp->p_pgrp==mpid)
 			goto retry;

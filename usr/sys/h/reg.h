@@ -9,9 +9,9 @@
 #define	R3	(3)
 #define	R4	(4)
 #define	R5	(5)
-#define	R6	(13)		/* user stack pointer */
-#define	R7	(15)		/* user program counter */
+#define	R6	(13)
+#define	R7	(15)
 #define	PC	(15)
-#define	RPS	(16)		/* saved cpsr */
+#define	RPS	(16)
 
-#define	TBIT	0		/* no PDP-11 trace bit on Arm */
+#define	TBIT	020		/* PS trace bit */

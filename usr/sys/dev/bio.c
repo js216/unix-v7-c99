@@ -267,7 +267,6 @@ daddr_t blkno;
 			sleep((caddr_t)bp, PRIBIO+1);
 			goto loop;
 		}
-		notavail(bp);
 		spl0();
 #ifdef	DISKMON
 		i = 0;
@@ -279,6 +278,7 @@ daddr_t blkno;
 		if (i<NBUF)
 			io_info.bufcount[i]++;
 #endif
+		notavail(bp);
 		return(bp);
 	}
 	spl6();
@@ -287,9 +287,8 @@ daddr_t blkno;
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
 		goto loop;
 	}
-	bp = bfreelist.av_forw;
-	notavail(bp);
 	spl0();
+	notavail(bp = bfreelist.av_forw);
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -323,10 +322,9 @@ loop:
 		bfreelist.b_flags |= B_WANTED;
 		sleep((caddr_t)&bfreelist, PRIBIO+1);
 	}
-	dp = &bfreelist;
-	bp = bfreelist.av_forw;
-	notavail(bp);
 	spl0();
+	dp = &bfreelist;
+	notavail(bp = bfreelist.av_forw);
 	if (bp->b_flags & B_DELWRI) {
 		bp->b_flags |= B_ASYNC;
 		bwrite(bp);
@@ -556,7 +554,7 @@ int	dev, rw;
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
 	spl0();
-	bp->b_flags &= ~(B_BUSY|B_WANTED|B_PHYS);
+	bp->b_flags &= ~(B_BUSY|B_WANTED);
 	u.u_count = bp->b_resid;
 	geterror(bp);
 	return;
