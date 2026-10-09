@@ -1,171 +1,75 @@
+/*
+ * RK disk driver
+ */
+
 #include "../h/param.h"
+#include "../h/systm.h"
 #include "../h/buf.h"
+#include "../h/conf.h"
+#include	"../h/dir.h"
+#include "../h/user.h"
 
-
-void panic(char *s);
-void dmbsy(void);
-void iodone(struct buf *bp);
-void deverror(struct buf *bp, int o1, int o2);
+void panic(), dmbsy(), iodone(), deverror(), physio(), rkstart();
 int spl5(), splx();
-void physio(int (*strat)(), struct buf *bp, dev_t dev, int rw);
 
-extern int	dk_busy;
-extern long	dk_numb[3];
-extern long	dk_wds[3];
+#define	RKADDR(off)	(*(volatile int *)(vbase+(off)))
+#define	NVQ	8
 
-int	rkirq;		/* GIC INTID of the block device (0 if none) */
+/*
+ * Monitoring device bit
+ */
+#define	DK_N	1
 
-#define	VRING_DESC_F_NEXT	1
-#define	VRING_DESC_F_WRITE	2
-#define	VIRTIO_FIRST		0x0a000000U
-#define	VIRTIO_LAST		0x0a004000U
-#define	VIRTIO_STEP		0x00000200U
-#define	VIRTIO_IRQ_BASE		48		/* QEMU virt: SPI 16 -> INTID 48 */
-#define	VIRTIO_MAGIC		0x74726976U
-#define	VIRTIO_BLK_T_IN		0
-#define	VIRTIO_BLK_T_OUT	1
-#define	VQSIZE			8
-
-struct vqdesc {
-	unsigned int	addrlo;
-	unsigned int	addrhi;
-	unsigned int	len;
-	unsigned short	flags;
-	unsigned short	next;
-};
-
-struct vqavail {
-	unsigned short	flags;
-	unsigned short	idx;
-	unsigned short	ring[VQSIZE];
-};
-
-struct vqused_elem {
-	unsigned int	id;
-	unsigned int	len;
-};
-
-struct vqused {
-	unsigned short	flags;
-	unsigned short	idx;
-	struct vqused_elem ring[VQSIZE];
-};
-
-struct virtio_blk_req {
-	unsigned int	type;
-	unsigned int	reserved;
-	unsigned long long sector;
-};
-
-struct buf rktab;
-
-static volatile unsigned char virtio_vq[512] __attribute__((aligned(4096)));
-static struct virtio_blk_req virtio_vreq __attribute__((aligned(16)));
-static volatile unsigned char virtio_vstatus __attribute__((aligned(4)));
-static unsigned int virtio_vbase;
-static unsigned int virtio_lastused;
-
-#define	QDOFF	0
-#define	QAOFF	(sizeof(struct vqdesc) * VQSIZE)
-#define	QUOFF	((QAOFF + sizeof(struct vqavail) + 3) & ~3)
-#define	qdesc	((volatile struct vqdesc *)(void *)&virtio_vq[QDOFF])
-#define	qavail	(*(volatile struct vqavail *)(void *)&virtio_vq[QAOFF])
-#define	qused	(*(volatile struct vqused *)(void *)&virtio_vq[QUOFF])
-
-static unsigned int
-vmmio(unsigned int off)
+struct	vring
 {
+	struct {
+		int	addr;
+		int	addrhi;
+		int	len;
+		short	flags;
+		short	next;
+	} desc[NVQ];
+	unsigned short	aflags;
+	unsigned short	aidx;
+	unsigned short	aring[NVQ];
+	unsigned short	uflags;
+	unsigned short	uidx;
+	int	uring[2*NVQ];
+};
 
-	return(*(volatile unsigned int *)(virtio_vbase + off));
-}
-
-static void
-vmmios(unsigned int off, unsigned int val)
-{
-
-	*(volatile unsigned int *)(virtio_vbase + off) = val;
-}
+struct	buf	rktab;
+struct	buf	rrkbuf;
+volatile struct vring vq __attribute__((aligned(4096)));
+struct {
+	int	type;
+	int	reserved;
+	long long	sector;
+} vreq;
+volatile char	vstatus;
+int	vbase;
+int	rkirq;
 
 void
-rkinit(void)
+rkinit()
 {
-	unsigned int n;
-
-	for(virtio_vbase=VIRTIO_FIRST; virtio_vbase<VIRTIO_LAST;
-	    virtio_vbase+=VIRTIO_STEP)
-		if(vmmio(0) == VIRTIO_MAGIC && vmmio(8) == 2)
+	for(vbase=0x0a000000; vbase<0x0a004000; vbase+=0x200)
+		if(RKADDR(0) == 0x74726976 && RKADDR(8) == 2)
 			break;
-	if(virtio_vbase == VIRTIO_LAST)
+	if(vbase == 0x0a004000)
 		panic("virtio");
-	vmmios(0x70, 0);
-	vmmios(0x70, 1);
-	vmmios(0x70, 3);
-	(void)vmmio(0x10);
-	vmmios(0x20, 0);
-	vmmios(0x70, 11);
-	if((vmmio(0x70) & 8) == 0)
-		panic("virtio features");
-	vmmios(0x28, 4096);
-	vmmios(0x30, 0);
-	n = vmmio(0x34);
-	if(n < VQSIZE)
-		panic("virtio queue");
-	vmmios(0x38, VQSIZE);
-	vmmios(0x3c, 4);
-	vmmios(0x40, ((unsigned int)virtio_vq) >> 12);
-	vmmios(0x70, 15);
-	virtio_lastused = 0;
-	rkirq = VIRTIO_IRQ_BASE +
-	    (virtio_vbase - VIRTIO_FIRST) / VIRTIO_STEP;
-	rktab.b_actf = NULL;
-	rktab.b_active = 0;
-}
-
-static void
-virtio_start(void)
-{
-	register struct buf *bp;
-	unsigned short aidx;
-	unsigned int type;
-
-	if((bp = rktab.b_actf) == NULL)
-		return;
-	rktab.b_active++;
-	type = (bp->b_flags & B_READ) ? VIRTIO_BLK_T_IN : VIRTIO_BLK_T_OUT;
-	virtio_vreq.type = type;
-	virtio_vreq.reserved = 0;
-	virtio_vreq.sector = (unsigned long long)bp->b_blkno;
-	virtio_vstatus = 0xff;
-	qdesc[0].addrlo = (unsigned int)&virtio_vreq;
-	qdesc[0].addrhi = 0;
-	qdesc[0].len = sizeof(virtio_vreq);
-	qdesc[0].flags = VRING_DESC_F_NEXT;
-	qdesc[0].next = 1;
-	qdesc[1].addrlo = (unsigned int)bp->b_un.b_addr;
-	qdesc[1].addrhi = 0;
-	qdesc[1].len = bp->b_bcount;
-	qdesc[1].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-	if(type == VIRTIO_BLK_T_OUT)
-		qdesc[1].flags = VRING_DESC_F_NEXT;
-	qdesc[1].next = 2;
-	qdesc[2].addrlo = (unsigned int)&virtio_vstatus;
-	qdesc[2].addrhi = 0;
-	qdesc[2].len = 1;
-	qdesc[2].flags = VRING_DESC_F_WRITE;
-	qdesc[2].next = 0;
-	aidx = qavail.idx;
-	qavail.ring[aidx % VQSIZE] = 0;
-	dmbsy();
-	qavail.idx = aidx + 1;
-	dmbsy();
-	vmmios(0x50, 0);		/* QueueNotify */
-	dk_busy |= 1;
-	dk_numb[0]++;
-	dk_wds[0] += bp->b_bcount>>6;
+	RKADDR(0x70) = 1;
+	RKADDR(0x70) = 3;
+	RKADDR(0x28) = 4096;
+	RKADDR(0x38) = NVQ;
+	RKADDR(0x3c) = 4;
+	RKADDR(0x40) = (int)&vq >> 12;
+	RKADDR(0x70) = 7;
+	rkirq = 48 + (vbase-0x0a000000)/0x200;
 }
 
 int
-rkstrategy(struct buf *bp)
+rkstrategy(bp)
+register struct buf *bp;
 {
 	int s;
 
@@ -176,41 +80,71 @@ rkstrategy(struct buf *bp)
 	else
 		rktab.b_actl->av_forw = bp;
 	rktab.b_actl = bp;
-	if(rktab.b_active == 0)
-		virtio_start();
+	if(rktab.b_active == NULL)
+		rkstart();
 	splx(s);
 	return(0);
 }
 
-int
-rkintr(void)
+void
+rkstart()
 {
 	register struct buf *bp;
-	unsigned int is;
+	register int com;
 
-	is = vmmio(0x60);		/* InterruptStatus */
-	vmmios(0x64, is);		/* InterruptACK */
-	if(rktab.b_active == 0)
-		return(0);
-	if(qused.idx == virtio_lastused)
+	if ((bp = rktab.b_actf) == NULL)
+		return;
+	rktab.b_active++;
+	vreq.type = bp->b_flags&B_READ ? 0 : 1;
+	vreq.sector = bp->b_blkno;
+	vq.desc[0].addr = (int)&vreq;
+	vq.desc[0].len = sizeof(vreq);
+	vq.desc[0].flags = 1;
+	vq.desc[0].next = 1;
+	vq.desc[1].addr = (int)bp->b_un.b_addr;
+	vq.desc[1].len = bp->b_bcount;
+	vq.desc[1].flags = bp->b_flags&B_READ ? 3 : 1;
+	vq.desc[1].next = 2;
+	vq.desc[2].addr = (int)&vstatus;
+	vq.desc[2].len = 1;
+	vq.desc[2].flags = 2;
+	dmbsy();
+	vq.aidx++;
+	dmbsy();
+	RKADDR(0x50) = 0;
+	dk_busy |= 1<<DK_N;
+	dk_numb[DK_N] += 1;
+	com = bp->b_bcount>>6;
+	dk_wds[DK_N] += com;
+}
+
+int
+rkintr()
+{
+	register struct buf *bp;
+
+	RKADDR(0x64) = RKADDR(0x60);
+	if (rktab.b_active == NULL || vq.uidx != vq.aidx)
 		return(0);
 	dmbsy();
-	virtio_lastused++;
-	dk_busy &= ~1;
+	dk_busy &= ~(1<<DK_N);
 	bp = rktab.b_actf;
-	rktab.b_active = 0;
-	if(virtio_vstatus != 0) {
-		deverror(bp, virtio_vstatus, 0);
+	rktab.b_active = NULL;
+	if (vstatus) {
+		deverror(bp, vstatus, 0);
+		if (++rktab.b_errcnt <= 10) {
+			rkstart();
+			return(0);
+		}
 		bp->b_flags |= B_ERROR;
 	}
+	rktab.b_errcnt = 0;
 	rktab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);
-	virtio_start();
+	rkstart();
 	return(0);
 }
-
-struct	buf	rrkbuf;
 
 int
 rkread(dev)
