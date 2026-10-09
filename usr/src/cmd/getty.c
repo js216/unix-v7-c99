@@ -5,21 +5,15 @@
 
 #include <sgtty.h>
 #include <signal.h>
+int read(), write(), ioctl(), stty(), getname();
+int execl(char *path, char *arg0, ...);
+void exit(), puts(), putchr();
 #define ERASE	'#'
 #define KILL	'@'
 
 struct sgttyb tmode;
 struct tchars tchars = { '\177', '\034', '\021', '\023', '\004', '\377' };
 
-int read(int fd, char *buf, int n);
-int write(int fd, char *buf, int n);
-int ioctl(int fd, int cmd, void *arg);
-int stty(int fd, void *buf);
-int execl(char *path, char *arg0, ...);
-void exit(int n);
-int getname(void);
-void puts(char *as);
-void putchr(int cc);
 struct	tab {
 	char	tname;		/* this table name */
 	char	nname;		/* successor table name */
@@ -135,7 +129,9 @@ char partab[] = {
 };
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register struct tab *tabp;
 	int tname;
@@ -185,7 +181,7 @@ main(int argc, char *argv[])
 }
 
 int
-getname(void)
+getname()
 {
 	register char *np;
 	register int c;
@@ -230,7 +226,8 @@ getname(void)
 }
 
 void
-puts(char *as)
+puts(as)
+char *as;
 {
 	register char *s;
 
@@ -240,7 +237,8 @@ puts(char *as)
 }
 
 void
-putchr(int cc)
+putchr(cc)
+int cc;
 {
 	char c;
 	c = cc;
