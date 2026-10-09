@@ -49,7 +49,7 @@ int	*treeend;
 char	peekc;
 char	gflg;
 char	error;
-char	uid;
+int	uid;
 char	setintr;
 char	*arginp;
 int	onelflg;
