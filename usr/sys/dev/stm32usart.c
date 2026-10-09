@@ -42,11 +42,11 @@
 #define	TAB1	002000
 
 struct	tty kl11[NKL11+NDL11];
-void	usstart(struct tty *tp);
-int	usirq = 85;
+void	klstart(struct tty *tp);
+int	klirq = 85;
 
 void
-usinit(void)
+klinit(void)
 {
 	AHB4ENSETR = 010;
 	(void)AHB4ENSETR;
@@ -61,7 +61,7 @@ usinit(void)
 }
 
 void
-usopen(dev_t dev, int flag)
+klopen(dev_t dev, int flag)
 {
 	register struct tty *tp;
 	register int d;
@@ -73,7 +73,7 @@ usopen(dev_t dev, int flag)
 		return;
 	}
 	tp = &kl11[d];
-	tp->t_oproc = usstart;
+	tp->t_oproc = klstart;
 	if ((tp->t_state&ISOPEN) == 0) {
 		tp->t_state = ISOPEN|CARR_ON;
 		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
@@ -84,7 +84,7 @@ usopen(dev_t dev, int flag)
 }
 
 void
-usclose(dev_t dev, int flag)
+klclose(dev_t dev, int flag)
 {
 	register struct tty *tp;
 
@@ -94,19 +94,19 @@ usclose(dev_t dev, int flag)
 }
 
 void
-usread(dev_t dev)
+klread(dev_t dev)
 {
 	ttread(&kl11[minor(dev)]);
 }
 
 void
-uswrite(dev_t dev)
+klwrite(dev_t dev)
 {
 	ttwrite(&kl11[minor(dev)]);
 }
 
 static void
-usxint(dev_t dev)
+klxint(dev_t dev)
 {
 	register struct tty *tp;
 
@@ -118,7 +118,7 @@ usxint(dev_t dev)
 }
 
 static void
-usrint(dev_t dev)
+klrint(dev_t dev)
 {
 	register int c;
 	register struct tty *tp;
@@ -130,7 +130,7 @@ usrint(dev_t dev)
 }
 
 void
-usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 {
 	(void)flag;
 	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
@@ -138,7 +138,7 @@ usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 }
 
 void
-usstart(register struct tty *tp)
+klstart(register struct tty *tp)
 {
 	register int c;
 
@@ -158,12 +158,12 @@ usstart(register struct tty *tp)
 }
 
 void
-usintr(void)
+klintr(void)
 {
 	if (ISR&RXNE)
-		usrint(0);
+		klrint(0);
 	if (ISR&TXE && CR1&TXEIE)
-		usxint(0);
+		klxint(0);
 }
 
 /*
@@ -178,7 +178,7 @@ usintr(void)
  * are saved in msgbuf for inspection later.
  */
 void
-usputchar(char c)
+putchar(register int c)
 {
 	register int s, timo;
 
@@ -201,8 +201,8 @@ usputchar(char c)
 	CR1 &= ~TXEIE;
 	TDR = c;
 	if(c == '\n') {
-		usputchar('\r');
+		putchar('\r');
 	}
-	usputchar(0);
+	putchar(0);
 	CR1 = s;
 }

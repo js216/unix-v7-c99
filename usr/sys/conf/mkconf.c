@@ -3,7 +3,7 @@
 #include <string.h>
 
 struct tab;
-void	puke(char **s), subst(struct tab *q, char *n);
+void	puke(char **s);
 int	input(void), equal(char *a, char *b), badline(char *line);
 
 #define CHAR	01
@@ -532,8 +532,6 @@ long	swplo	= 4000;
 int	nswap = 872;
 int	pack;
 int	nldisp = 1;
-char	*con = "kl";
-char	*dsk = "rk";
 int	ddr;
 unsigned long	ramb, ramn, tabb, tabn, coreb, coret, pguser, gicd, gicc;
 #define	NMAP	8
@@ -651,13 +649,12 @@ main(void)
 	for (i=0; i<nmap; i++)
 		printf("\t{0x%lx, 0x%lx, %s},\n", mapb[i], mape[i], mapa[i]);
 	printf("\t{0, 0, 0}\n};\n");
-	printf("\nextern int\t%sirq, %sirq;\n", con, dsk);
+	printf("\nextern int\tklirq, rkirq;\n");
 	printf("struct\tintr\tintrtab[] =\n{\n");
-	printf("\t{&%sirq, %sintr},\n\t{&%sirq, %sintr},\n", con, con, dsk, dsk);
+	printf("\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
 	printf("\t{0, 0}\n};\n");
-	printf("\nvoid\tcninit(void) { %sinit(); }\n", con);
-	printf("void\tbdinit(void) { %sinit(); }\n", dsk);
-	printf("void\tputchar(int c) { %sputchar(c); }\n", con);
+	printf("\nvoid\tcninit(void) { klinit(); }\n");
+	printf("void\tbdinit(void) { rkinit(); }\n");
 	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
 }
 
@@ -717,11 +714,7 @@ input(void)
 	}
 	for(q=table; q->name; q++)
 	if(equal(q->name, keyw)) {
-		if (n > 2)
-			subst(q, dev);
 		if(q->count < 0) {
-			if (n > 2)
-				return(1);
 			fprintf(stderr, "%s: no more, no less\n", keyw);
 			return(1);
 		}
@@ -808,40 +801,6 @@ badline(char *line)
 {
 	fprintf(stderr, "Bad line: %s", line);
 	return(1);
-}
-
-static char *
-repl(char *s, char *o, char *n)
-{
-	char *t, *d;
-	size_t lo = strlen(o), ln = strlen(n);
-
-	t = d = malloc(strlen(s) * (ln + 1) + 1);
-	while (*s)
-		if (strncmp(s, o, lo) == 0) {
-			strcpy(d, n);
-			d += ln;
-			s += lo;
-		} else
-			*d++ = *s++;
-	*d = 0;
-	return(t);
-}
-
-void
-subst(struct tab *q, char *n)
-{
-	char *o = equal(q->name, "console") ? con : q->name;
-
-	n = strcpy(malloc(strlen(n) + 1), n);
-	q->coded = repl(q->coded, o, n);
-	q->codee = repl(q->codee, o, n);
-	q->codef = repl(q->codef, o, n);
-	q->codeg = repl(q->codeg, o, n);
-	if (equal(q->name, "console"))
-		con = n;
-	if (equal(q->name, "rk"))
-		dsk = n;
 }
 
 int

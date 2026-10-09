@@ -37,29 +37,29 @@ void rkstart(void);
  */
 #define	DK_N	1
 
-int	sdirq = 82;
-struct	buf	sdtab;
+int	rkirq = 82;
+struct	buf	rktab;
 struct	buf	rrkbuf;
 
 void
-sdinit(void)
+rkinit(void)
 {
 	SD(DTIMER) = -1;
 }
 
 void
-sdstrategy(register struct buf *bp)
+rkstrategy(register struct buf *bp)
 {
 	int s;
 
 	bp->av_forw = NULL;
 	s = spl5();
-	if (sdtab.b_actf == NULL)
-		sdtab.b_actf = bp;
+	if (rktab.b_actf == NULL)
+		rktab.b_actf = bp;
 	else
-		sdtab.b_actl->av_forw = bp;
-	sdtab.b_actl = bp;
-	if(sdtab.b_active == NULL)
+		rktab.b_actl->av_forw = bp;
+	rktab.b_actl = bp;
+	if(rktab.b_active == NULL)
 		rkstart();
 	splx(s);
 }
@@ -70,9 +70,9 @@ rkstart(void)
 	register struct buf *bp;
 	register int com;
 
-	if ((bp = sdtab.b_actf) == NULL)
+	if ((bp = rktab.b_actf) == NULL)
 		return;
-	sdtab.b_active++;
+	rktab.b_active++;
 	dcflush(bp->b_un.b_addr, bp->b_bcount);
 	SD(ICR) = CLEAR;
 	SD(DCTRL) = 0;
@@ -94,7 +94,7 @@ rkstart(void)
 }
 
 void
-sdintr(void)
+rkintr(void)
 {
 	register struct buf *bp;
 	register int sta;
@@ -103,14 +103,14 @@ sdintr(void)
 	SD(ICR) = CLEAR;
 	SD(MASK) = 0;
 	SD(IDMACTRL) = 0;
-	if (sdtab.b_active == NULL)
+	if (rktab.b_active == NULL)
 		return;
 	dk_busy &= ~(1<<DK_N);
-	bp = sdtab.b_actf;
-	sdtab.b_active = NULL;
+	bp = rktab.b_actf;
+	rktab.b_active = NULL;
 	if (sta & ERR) {
 		deverror(bp, sta, 0);
-		if (++sdtab.b_errcnt <= 10) {
+		if (++rktab.b_errcnt <= 10) {
 			rkstart();
 			return;
 		}
@@ -118,23 +118,23 @@ sdintr(void)
 	}
 	if (bp->b_flags & B_READ)
 		dcflush(bp->b_un.b_addr, bp->b_bcount);
-	sdtab.b_errcnt = 0;
-	sdtab.b_actf = bp->av_forw;
+	rktab.b_errcnt = 0;
+	rktab.b_actf = bp->av_forw;
 	bp->b_resid = 0;
 	iodone(bp);
 	rkstart();
 }
 
 void
-sdread(dev_t dev)
+rkread(dev_t dev)
 {
 
-	physio(sdstrategy, &rrkbuf, dev, B_READ);
+	physio(rkstrategy, &rrkbuf, dev, B_READ);
 }
 
 void
-sdwrite(dev_t dev)
+rkwrite(dev_t dev)
 {
 
-	physio(sdstrategy, &rrkbuf, dev, B_WRITE);
+	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
 }

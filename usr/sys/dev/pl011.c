@@ -154,7 +154,7 @@ klintr(void)
  * are saved in msgbuf for inspection later.
  */
 void
-klputchar(char c)
+putchar(register int c)
 {
 	register int s, timo;
 
@@ -177,8 +177,8 @@ klputchar(char c)
 	UARTIMSC = 0;
 	UARTDR = c;
 	if(c == '\n') {
-		klputchar('\r');
+		putchar('\r');
 	}
-	klputchar(0);
+	putchar(0);
 	UARTIMSC = s;
 }
