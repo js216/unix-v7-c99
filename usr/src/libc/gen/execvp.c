@@ -2,43 +2,41 @@
  *	execlp(name, arg,...,0)	(like execl, but does path search)
  *	execvp(name, argv)	(like execv, but does path search)
  */
-#include <stdio.h>
 #include <errno.h>
-#include <stdarg.h>
 #define	NULL	0
+#include <stdio.h>
+#include <stdarg.h>
 
 static	char shell[] =	"/bin/sh";
-static char	*execat(register char *s1, register char *s2, char *si);
+static char	*execat();
 extern	int errno;
 
 int
 execlp(char *name, char *arg0, ...)
 {
 	va_list ap;
-	char **argv;
-	int i, n, r;
+	int n;
 
-	n = 1;
+	n = 2;
 	va_start(ap, arg0);
 	while(va_arg(ap, char *) != 0)
 		n++;
 	va_end(ap);
+	{
+	char *argv[n];
 
-	argv = (char **)malloc((unsigned)((n+1) * sizeof(char *)));
-	if(argv == 0)
-		return(-1);
 	argv[0] = arg0;
 	va_start(ap, arg0);
-	for(i=1; i<=n; i++)
-		argv[i] = va_arg(ap, char *);
+	for(n=1; (argv[n] = va_arg(ap, char *)); n++)
+		;
 	va_end(ap);
-	r = execvp(name, argv);
-	free((char *)argv);
-	return(r);
+	return(execvp(name, argv));
+	}
 }
 
 int
-execvp(char *name, char **argv)
+execvp(name, argv)
+char *name, **argv;
 {
 	char *pathstr;
 	register char *cp;
@@ -87,7 +85,9 @@ execvp(char *name, char **argv)
 }
 
 static char *
-execat(register char *s1, register char *s2, char *si)
+execat(s1, s2, si)
+register char *s1, *s2;
+char *si;
 {
 	register char *s;
 
