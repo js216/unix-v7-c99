@@ -4,7 +4,7 @@
  */
 
 #include <stdio.h>
-int	errno;
+extern int	errno;
 extern int	sys_nerr;
 extern char	*sys_errlist[];
 void
