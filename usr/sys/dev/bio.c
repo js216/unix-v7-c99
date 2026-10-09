@@ -425,7 +425,7 @@ swap(int blkno, int coreaddr, register int count, int rdflg)
 			tcount = 01700;
 		bp->b_bcount = ctob(tcount);
 		bp->b_blkno = swplo+blkno;
-		bp->b_un.b_addr = (caddr_t)(coreaddr<<6);
+		bp->b_un.b_addr = CLKADDR(coreaddr);
 		bp->b_xmem = (coreaddr>>10) & 077;
 		(*bdevsw[major(swapdev)].d_strategy)(bp);
 		spl6();
