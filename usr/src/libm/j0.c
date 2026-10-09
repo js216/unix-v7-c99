@@ -40,7 +40,7 @@
 #include <math.h>
 #include <errno.h>
 
-static void asympt(double);
+static void asympt();
 int	errno;
 static double pzero, qzero;
 static double tpi	= .6366197723675813430755350535e0;
@@ -127,9 +127,9 @@ static double q4[] = {
 };
 
 double
-j0(double arg){
+j0(arg) double arg;{
 	double argsq, n, d;
-	double sin(double), cos(double), sqrt(double);
+	double sin(), cos(), sqrt();
 	int i;
 
 	if(arg < 0.) arg = -arg;
@@ -147,9 +147,9 @@ j0(double arg){
 }
 
 double
-y0(double arg){
+y0(arg) double arg;{
 	double argsq, n, d;
-	double sin(double), cos(double), sqrt(double), log(double), j0(double);
+	double sin(), cos(), sqrt(), log(), j0();
 	int i;
 
 	errno = 0;
@@ -170,7 +170,8 @@ y0(double arg){
 	return(n/d + tpi*j0(arg)*log(arg));
 }
 
-static void asympt(double arg){
+static void
+asympt(arg) double arg;{
 	double zsq, n, d;
 	int i;
 	zsq = 64./(arg*arg);

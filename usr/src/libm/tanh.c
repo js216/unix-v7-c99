@@ -6,10 +6,11 @@
 	would cause overflow improperly.
 */
 
-double sinh(double), cosh(double);
+double sinh(), cosh();
 
 double
-tanh(double arg)
+tanh(arg)
+double arg;
 {
 	double sign;
 

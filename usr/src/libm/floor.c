@@ -3,10 +3,11 @@
  * (resp least >=)
  */
 
-double	modf(double, double *);
+double	modf();
 
 double
-floor(double d)
+floor(d)
+double d;
 {
 	double fract;
 
@@ -22,7 +23,8 @@ floor(double d)
 }
 
 double
-ceil(double d)
+ceil(d)
+double d;
 {
 	return(-floor(-d));
 }

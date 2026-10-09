@@ -12,7 +12,7 @@
 	all arguments.
 */
 
-double	exp(double);
+double	exp();
 
 static double p0  = -0.6307673640497716991184787251e+6;
 static double p1  = -0.8991272022039509355398013511e+5;
@@ -23,7 +23,8 @@ static double q1   = 0.1521517378790019070696485176e+5;
 static double q2  = -0.173678953558233699533450911e+3;
 
 double
-sinh(double arg)
+sinh(arg)
+double arg;
 {
 	double temp, argsq;
 	register int sign;
@@ -53,7 +54,8 @@ sinh(double arg)
 }
 
 double
-cosh(double arg)
+cosh(arg)
+double arg;
 {
 	if(arg < 0)
 		arg = - arg;

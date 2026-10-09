@@ -1,5 +1,6 @@
 double
-fabs(double arg)
+fabs(arg)
+double arg;
 {
 
 	if(arg < 0.)

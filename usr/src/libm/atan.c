@@ -29,8 +29,7 @@ static double q2	 = .16667838148816337184521798e4;
 static double q1	 = .207933497444540981287275926e4;
 static double q0	 = .89678597403663861962481162e3;
 
-static double satan(double);
-static double xatan(double);
+static double satan(), xatan();
 
 /*
 	atan makes its argument positive and
@@ -38,9 +37,11 @@ static double xatan(double);
 */
 
 double
-atan(double arg)
-
+atan(arg)
+double arg;
 {
+	double satan();
+
 	if(arg>0)
 		return(satan(arg));
 	else
@@ -54,9 +55,11 @@ atan(double arg)
 */
 
 double
-atan2(double arg1, double arg2)
-
+atan2(arg1,arg2)
+double arg1,arg2;
 {
+	double satan();
+
 	if((arg1+arg2)==arg1)
 		if(arg1 >= 0.) return(pio2);
 		else return(-pio2);
@@ -77,9 +80,11 @@ atan2(double arg1, double arg2)
 */
 
 static double
-satan(double arg)
-
+satan(arg)
+double arg;
 {
+	double	xatan();
+
 	if(arg < sq2m1)
 		return(xatan(arg));
 	else if(arg > sq2p1)
@@ -94,7 +99,8 @@ satan(double arg)
 */
 
 static double
-xatan(double arg)
+xatan(arg)
+double arg;
 {
 	double argsq;
 	double value;

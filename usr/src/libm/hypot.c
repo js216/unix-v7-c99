@@ -3,9 +3,10 @@
  *	(but carefully)
  */
 
-double sqrt(double);
+double sqrt();
 double
-hypot(double a, double b)
+hypot(a,b)
+double a,b;
 {
 	double t;
 	if(a<0) a = -a;
@@ -31,9 +32,10 @@ struct	complex
 };
 
 double
-cabs(struct complex arg)
+cabs(arg)
+struct complex arg;
 {
-	double hypot(double, double);
+	double hypot();
 
 	return(hypot(arg.r, arg.i));
 }

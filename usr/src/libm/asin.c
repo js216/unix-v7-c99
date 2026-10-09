@@ -7,12 +7,12 @@
 
 #include	<errno.h>
 int errno;
-double atan(double);
-double sqrt(double);
+double atan();
+double sqrt();
 static double pio2	= 1.570796326794896619;
 
 double
-asin(double arg) {
+asin(arg) double arg; {
 
 	double sign, temp;
 
@@ -37,7 +37,7 @@ asin(double arg) {
 }
 
 double
-acos(double arg) {
+acos(arg) double arg; {
 
 	if((arg > 1.) || (arg < -1.)){
 		errno = EDOM;

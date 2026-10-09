@@ -21055,241 +21055,56 @@ usr/local
 +	bx lr
 
 % usr/src/libm/asin.c
-@@ -10,2 +10,2 @@
--double atan();
--double sqrt();
-+double atan(double);
-+double sqrt(double);
-@@ -15 +15 @@
--asin(arg) double arg; {
-+asin(double arg) {
-@@ -40 +40 @@
--acos(arg) double arg; {
-+acos(double arg) {
 
 % usr/src/libm/atan.c
 @@ -17 +17 @@
 -double static sq2p1	 =2.414213562373095048802e0;
 +static double sq2p1	 =2.414213562373095048802e0;
-@@ -31,0 +32,2 @@
-+static double satan(double);
-+static double xatan(double);
-@@ -39,4 +41 @@
--atan(arg)
--double arg;
--{
--	double satan();
-+atan(double arg)
-@@ -43,0 +43 @@
-+{
-@@ -57,4 +57 @@
--atan2(arg1,arg2)
--double arg1,arg2;
--{
--	double satan();
-+atan2(double arg1, double arg2)
-@@ -61,0 +59 @@
-+{
-@@ -82,4 +80 @@
--satan(arg)
--double arg;
--{
--	double	xatan();
-+satan(double arg)
-@@ -86,0 +82 @@
-+{
-@@ -101,2 +97 @@
--xatan(arg)
--double arg;
-+xatan(double arg)
+@@ -31,0 +32 @@
++static double satan(), xatan();
 
 % usr/src/libm/exp.c
-@@ -21,0 +22,2 @@
-+extern double floor(double);
-+extern double ldexp(double, int);
-@@ -23,2 +25 @@
--exp(arg)
--double arg;
-+exp(double arg)
 
 % usr/src/libm/fabs.c
-@@ -2,2 +2 @@
--fabs(arg)
--double arg;
-+fabs(double arg)
 
 % usr/src/libm/floor.c
-@@ -6 +6 @@
--double	modf();
-+double	modf(double, double *);
-@@ -9,2 +9 @@
--floor(d)
--double d;
-+floor(double d)
-@@ -26,2 +25 @@
--ceil(d)
--double d;
-+ceil(double d)
 
 % usr/src/libm/hypot.c
-@@ -6 +6 @@
--double sqrt();
-+double sqrt(double);
-@@ -8,2 +8 @@
--hypot(a,b)
--double a,b;
-+hypot(double a, double b)
-@@ -35,2 +34 @@
--cabs(arg)
--struct complex arg;
-+cabs(struct complex arg)
-@@ -38 +36 @@
--	double hypot();
-+	double hypot(double, double);
 
 % usr/src/libm/j0.c
 @@ -42,0 +43 @@
-+static void asympt(double);
-@@ -129 +130 @@
--j0(arg) double arg;{
-+j0(double arg){
-@@ -131 +132 @@
--	double sin(), cos(), sqrt();
-+	double sin(double), cos(double), sqrt(double);
-@@ -149 +150 @@
--y0(arg) double arg;{
-+y0(double arg){
-@@ -151 +152 @@
--	double sin(), cos(), sqrt(), log(), j0();
-+	double sin(double), cos(double), sqrt(double), log(double), j0(double);
-@@ -172,2 +173 @@
++static void asympt();
+@@ -172 +173 @@
 -static
--asympt(arg) double arg;{
-+static void asympt(double arg){
++static void
 
 % usr/src/libm/j1.c
 @@ -42,0 +43 @@
-+static void asympt(double);
-@@ -131 +132 @@
--j1(arg) double arg;{
-+j1(double arg){
-@@ -133 +134 @@
--	double sin(), cos(), sqrt();
-+	double sin(double), cos(double), sqrt(double);
-@@ -154 +155 @@
--y1(arg) double arg;{
-+y1(double arg){
-@@ -156 +157 @@
--	double sin(), cos(), sqrt(), log(), j1();
-+	double sin(double), cos(double), sqrt(double), log(double), j1(double);
-@@ -178,2 +179,2 @@
++static void asympt();
+@@ -178 +179 @@
 -static
--asympt(arg) double arg;{
 +static void
-+asympt(double arg){
 
 % usr/src/libm/jn.c
-@@ -39 +39 @@
--jn(n,x) int n; double x;{
-+jn(int n, double x){
-@@ -43 +43 @@
--	double j0(), j1();
-+	double j0(double), j1(double);
-@@ -81 +81 @@
--yn(n,x) int n; double x;{
-+yn(int n, double x){
-@@ -85 +85 @@
--	double y0(), y1();
-+	double y0(double), y1(double);
 
 % usr/src/libm/log.c
-@@ -14 +14 @@
--double	frexp();
-+double	frexp(double, int *);
-@@ -27,2 +27 @@
--log(arg)
--double arg;
-+log(double arg)
-@@ -57,2 +56 @@
--log10(arg)
--double arg;
-+log10(double arg)
 
 % usr/src/libm/pow.c
-@@ -8 +8 @@
--double log(), exp();
-+double log(double), exp(double);
-@@ -11,2 +11 @@
--pow(arg1,arg2)
--double arg1, arg2;
-+pow(double arg1, double arg2)
 
 % usr/src/libm/sin.c
 @@ -18,0 +19 @@
-+static double sinus(double, int);
-@@ -20,2 +21 @@
--cos(arg)
--double arg;
-+cos(double arg)
-@@ -23 +22,0 @@
--	double sinus();
-@@ -30,2 +29 @@
--sin(arg)
--double arg;
-+sin(double arg)
-@@ -33 +30,0 @@
--	double sinus();
-@@ -38,3 +35 @@
--sinus(arg, quad)
--double arg;
--int quad;
-+sinus(double arg, int quad)
-@@ -42 +37 @@
--	double modf();
-+	double modf(double, double *);
++static double sinus();
 
 % usr/src/libm/sinh.c
-@@ -15 +15 @@
--double	exp();
-+double	exp(double);
-@@ -26,2 +26 @@
--sinh(arg)
--double arg;
-+sinh(double arg)
-@@ -30 +29 @@
+@@ -30 +30 @@
 -	register sign;
 +	register int sign;
-@@ -57,2 +56 @@
--cosh(arg)
--double arg;
-+cosh(double arg)
 
 % usr/src/libm/sqrt.c
-@@ -11 +11 @@
--double frexp();
-+double frexp(double, int *);
-@@ -14,2 +14 @@
--sqrt(arg)
--double arg;
-+sqrt(double arg)
 
 % usr/src/libm/tan.c
-@@ -23,2 +23 @@
--tan(arg)
--double arg;
-+tan(double arg)
-@@ -26 +25 @@
--	double modf();
-+	double modf(double, double *);
 
 % usr/src/libm/tanh.c
-@@ -9 +9 @@
--double sinh(), cosh();
-+double sinh(double), cosh(double);
-@@ -12,2 +12 @@
--tanh(arg)
--double arg;
-+tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
 @@ -1,72 +1,249 @@
