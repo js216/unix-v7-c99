@@ -35,11 +35,12 @@ struct	tab
 int	fi;
 char	tty[20];
 jmp_buf	sjbuf;
-void	shutdown(), single(), runcom(), merge(), multiple(), term(), maktty(), dfork(), rmut(), reset();
-int	rline(), get();
+void	shutdown(void), single(void), runcom(void), merge(int sig), multiple(void);
+void	term(struct tab *p), maktty(char *lin), dfork(struct tab *p), rmut(struct tab *p), reset(int sig);
+int	rline(void), get(void);
 
 int
-main()
+main(void)
 {
 
 	setjmp(sjbuf);
@@ -48,13 +49,13 @@ main()
 		shutdown();
 		single();
 		runcom();
-		merge();
+		merge(0);
 		multiple();
 	}
 }
 
 void
-shutdown()
+shutdown(void)
 {
 	register int i;
 	register struct tab *p;
@@ -75,7 +76,7 @@ shutdown()
 }
 
 void
-single()
+single(void)
 {
 	register int pid;
 
@@ -98,7 +99,7 @@ single()
 }
 
 void
-runcom()
+runcom(void)
 {
 	register int pid;
 
@@ -115,7 +116,7 @@ runcom()
 }
 
 void
-multiple()
+multiple(void)
 {
 	register struct tab *p;
 	register int pid;
@@ -133,8 +134,7 @@ multiple()
 }
 
 void
-term(p)
-register struct tab *p;
+term(register struct tab *p)
 {
 
 	if(p->pid != 0) {
@@ -146,7 +146,7 @@ register struct tab *p;
 }
 
 int
-rline()
+rline(void)
 {
 	register int c, i;
 
@@ -181,8 +181,7 @@ bad:
 }
 
 void
-maktty(lin)
-char *lin;
+maktty(char *lin)
 {
 	register int i, j;
 
@@ -196,7 +195,7 @@ char *lin;
 }
 
 int
-get()
+get(void)
 {
 	char b;
 
@@ -208,10 +207,11 @@ get()
 }
 
 void
-merge()
+merge(int sig)
 {
 	register struct tab *p, *q;
 	register int i;
+	(void)sig;
 
 	close(creat(utmp, 0644));
 	signal(SIGINT, merge);
@@ -253,8 +253,7 @@ merge()
 }
 
 void
-dfork(p)
-struct tab *p;
+dfork(struct tab *p)
 {
 	register int pid;
 
@@ -277,8 +276,7 @@ struct tab *p;
 }
 
 void
-rmut(p)
-register struct tab *p;
+rmut(register struct tab *p)
 {
 	register int i, f;
 
@@ -311,7 +309,8 @@ register struct tab *p;
 }
 
 void
-reset()
+reset(int sig)
 {
+	(void)sig;
 	longjmp(sjbuf, 1);
 }
