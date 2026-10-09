@@ -8,11 +8,9 @@
 extern int errno;
 extern char *sys_errlist[];
 
-void printt();
+void printt(char *s, long a);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	struct tms buffer, obuffer;
 	int status;
@@ -54,9 +52,7 @@ char *sep  = "\0\0.\0:\0:\0\0";
 char *nsep = "\0\0.\0 \0 \0\0";
 
 void
-printt(s, a)
-char *s;
-long a;
+printt(char *s, long a)
 {
 	char digit[9];
 	register int i;
