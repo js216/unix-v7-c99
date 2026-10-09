@@ -5,10 +5,9 @@ int	delim	= 0;
 they must be explicitly set
 */
 
-void check(FILE *f);
+void check();
 int
-main(int argc, char **argv)
-{
+main(argc, argv) int argc; char **argv; {
 
 	while (argc > 1 && argv[1][0] == '-') {
 		switch (argv[1][1]) {
@@ -34,7 +33,8 @@ main(int argc, char **argv)
 }
 
 void
-check(FILE *f)
+check(f)
+FILE	*f;
 {
 	int start, line, eq, ndel, totdel;
 	char in[600], *p;
