@@ -52,24 +52,21 @@ int	aflg;
 int	vflg;
 int	lflg;
 long	symoff;
-int	min(), max(); void done();
+int	min(unsigned a, unsigned b), max(unsigned a, unsigned b);
+int	timcmp(char *a, char *b), valcmp(char *a, char *b);
+void	done(void);
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	char *namfil;
-	int timcmp(), valcmp();
 	int i, overlap;
 #ifdef plot
 	long pfpos;
 	double lastsx;
-#endif
-	struct cnt *cp;
-#ifdef plot
 	double tx, ty;
 #endif
+	struct cnt *cp;
 	struct exec xbuf;
 	struct hdr h;
 
@@ -271,8 +268,7 @@ print:
 }
 
 int
-min(a, b)
-unsigned a, b;
+min(unsigned a, unsigned b)
 {
 	if (a<b)
 		return(a);
@@ -280,8 +276,7 @@ unsigned a, b;
 }
 
 int
-max(a, b)
-unsigned a, b;
+max(unsigned a, unsigned b)
 {
 	if (a>b)
 		return(a);
@@ -289,16 +284,16 @@ unsigned a, b;
 }
 
 int
-valcmp(p1, p2)
-struct nl *p1, *p2;
+valcmp(char *a, char *b)
 {
+	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
 	return(p1->value - p2->value);
 }
 
 int
-timcmp(p1, p2)
-struct nl *p1, *p2;
+timcmp(char *a, char *b)
 {
+	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
 	float d;
 
 	d = p2->time - p1->time;
@@ -310,7 +305,7 @@ struct nl *p1, *p2;
 }
 
 void
-done()
+done(void)
 {
 
 #ifdef plot
