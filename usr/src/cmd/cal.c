@@ -7,14 +7,13 @@ char	*smon[]= {
 	"September", "October", "November", "December",
 };
 char	string[432];
-int printf(char *fmt, ...);
-void exit(int n);
-int number(char *str);
-void pstr(char *str, int n);
-void cal(int m, int y, char *p, int w);
-int jan1(int yr);
+#include <stdio.h>
+int number(), jan1();
+void pstr(), cal();
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register int y, i, j;
 	int m;
@@ -75,7 +74,8 @@ badarg:
 }
 
 int
-number(char *str)
+number(str)
+char *str;
 {
 	register int n, c;
 	register char *s;
@@ -91,7 +91,9 @@ number(char *str)
 }
 
 void
-pstr(char *str, int n)
+pstr(str, n)
+char *str;
+int n;
 {
 	register int i;
 	register char *s;
@@ -117,7 +119,9 @@ char	mon[] = {
 };
 
 void
-cal(int m, int y, char *p, int w)
+cal(m, y, p, w)
+int m, y, w;
+char *p;
 {
 	register int d, i;
 	register char *s;
@@ -177,7 +181,8 @@ cal(int m, int y, char *p, int w)
  */
 
 int
-jan1(int yr)
+jan1(yr)
+int yr;
 {
 	register int y, d;
 
