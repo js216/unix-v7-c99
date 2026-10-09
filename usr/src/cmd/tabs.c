@@ -43,10 +43,10 @@ struct sysnod tty[] = {
 };
 int	margset = 1;
 
-void delay(), escape(), nl(), dasi450(), tty37(), dasi300(), tn300(), hp2645(), misc();
-int
-syslook(w)
-char *w;
+void delay(int n), escape(int c), nl(void);
+void dasi450(void), tty37(void), dasi300(void), tn300(void), hp2645(void), misc(void);
+static int
+syslook(char *w)
 {
 	register struct sysnod *sp;
 
@@ -57,8 +57,7 @@ char *w;
 }
 
 int
-main(argc,argv)
-int argc; char **argv;
+main(int argc,char **argv)
 {
 	struct sgttyb tb;
 	int type;
@@ -99,9 +98,8 @@ int argc; char **argv;
 	}
 }
 
-void
-clear(n)
-int n;
+static void
+clear(int n)
 {
 	escape(CLR); 
 	delay(n);
@@ -109,15 +107,13 @@ int n;
 }
 
 void
-delay(n)
-int n;
+delay(int n)
 {
 	while (n--) putchar(DEL);
 }
 
-void
-tabs(n)
-int n;
+static void
+tabs(int n)
 {
 	int i,j;
 
@@ -131,9 +127,8 @@ int n;
 	}
 }
 
-void
-margin(n)
-int n;
+static void
+margin(int n)
 {
 	int i;
 
@@ -143,21 +138,19 @@ int n;
 }
 
 void
-escape(c)
-int c;
+escape(int c)
 {
 	putchar(ESC); putchar(c);
 }
 
-void
-bs(n)
-int n;
+static void
+bs(int n)
 {
 	while (n--) putchar(BS);
 }
 
 void
-nl()
+nl(void)
 {
 	putchar(NL);
 }
@@ -167,7 +160,7 @@ nl()
 /* ======== terminal types ======== */
 
 void
-dasi450()
+dasi450(void)
 {
 	struct sgttyb t;
 	gtty(0,&t);
@@ -178,19 +171,19 @@ dasi450()
 }
 
 void
-tty37()
+tty37(void)
 {
 	putchar(SI); clear(40); bs(8); tabs(9); nl();
 }
 
 void
-dasi300()
+dasi300(void)
 {
 	clear(8); tabs(15); nl();
 }
 
 void
-tn300()
+tn300(void)
 {
 	struct sgttyb t;
 	gtty(0,&t);
@@ -201,7 +194,7 @@ tn300()
 }
 
 void
-hp2645()
+hp2645(void)
 {
 	escape('3'); /*clr*/
 	putchar(CR);
@@ -210,7 +203,7 @@ hp2645()
 }
 
 void
-misc()
+misc(void)
 {
 	tabs(14); nl();
 }
