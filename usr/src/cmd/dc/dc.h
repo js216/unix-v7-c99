@@ -19,22 +19,21 @@
 #define sfeof(p)	(((p)->rd==(p)->wt)?1:0)
 #define sfbeg(p)	(((p)->rd==(p)->beg)?1:0)
 #define sungetc(p,c)	*(--(p)->rd)=c
-#define DCSCHAR(c)	((signed char)(c))
-#ifdef interdata
+#ifndef pdp11
 #define NEGBYTE 0200
 #define MASK (-1 & ~0377)
 #define sgetc(p)	( ((p)->rd==(p)->wt) ? EOF :( ((*(p)->rd & NEGBYTE) != 0) ? ( *(p)->rd++ | MASK): *(p)->rd++ ))
 #define slookc(p)	( ((p)->rd==(p)->wt) ? EOF :( ((*(p)->rd & NEGBYTE) != 0) ? (*(p)->rd | MASK) : *(p)->rd ))
 #define sbackc(p)	( ((p)->rd==(p)->beg) ? EOF :( ((*(--(p)->rd) & NEGBYTE) != 0) ? (*(p)->rd | MASK): *(p)->rd ))
 #endif
-#ifndef interdata
-#define sgetc(p)	(((p)->rd==(p)->wt)?EOF:DCSCHAR(*(p)->rd++))
-#define slookc(p)	(((p)->rd==(p)->wt)?EOF:DCSCHAR(*(p)->rd))
-#define sbackc(p)	(((p)->rd==(p)->beg)?EOF:DCSCHAR(*(--(p)->rd)))
+#ifdef pdp11
+#define sgetc(p)	(((p)->rd==(p)->wt)?EOF:*(p)->rd++)
+#define slookc(p)	(((p)->rd==(p)->wt)?EOF:*(p)->rd)
+#define sbackc(p)	(((p)->rd==(p)->beg)?EOF:*(--(p)->rd))
 #endif
 #define sputc(p,c)	{if((p)->wt==(p)->last)more(p); *(p)->wt++ = c; }
 #define salterc(p,c)	{if((p)->rd==(p)->last)more(p); *(p)->rd++ = c; if((p)->rd>(p)->wt)(p)->wt=(p)->rd;}
-#define sunputc(p)	(DCSCHAR(*( (p)->rd = --(p)->wt)))
+#define sunputc(p)	(*( (p)->rd = --(p)->wt))
 #define zero(p)	for(pp=(p)->beg;pp<(p)->last;)*pp++='\0'
 #define OUTC(x) {printf("%c",x); if(--count == 0){printf("\\\n"); count=ll;} }
 #define TEST2	{if((count -= 2) <=0){printf("\\\n");count=ll;}}
@@ -104,13 +103,15 @@ long	all;
 long	headmor;
 long	obase;
 int	fw,fw1,ll;
-int	(*outdit)();
-int	bigot(),hexot();
+void	(*outdit)();
+void	bigot(),hexot();
 int	logo;
 int	log10;
 int	count;
 char	*pp;
 int	(*signal())();
-int	onintr();
+void	onintr();
+char	*malloc();
 char	*nalloc();
+char	*realloc();
 char	*dummy;
