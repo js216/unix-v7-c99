@@ -15,12 +15,11 @@ int	ac;
 char	**av;
 char	*tmp;
 
-int exp(), e1(), e2(), e3(), tio(), ftype(), fsizep(), length();
-void synbad();
+int exp(void), e1(void), e2(void), e3(void), tio(char *a, int f);
+int ftype(char *f), fsizep(char *f), length(char *s);
+void synbad(char *s1, char *s2);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 
 	ac = argc; av = argv; ap = 1;
@@ -33,7 +32,7 @@ char *argv[];
 	exit(exp()?0:1);
 }
 
-char *nxtarg(int mt) {
+static char *nxtarg(int mt) {
 
 	if (ap>=ac) {
 		if(mt) {
@@ -46,7 +45,7 @@ char *nxtarg(int mt) {
 }
 
 int
-exp() {
+exp(void) {
 	int p1;
 
 	p1 = e1();
@@ -56,7 +55,7 @@ exp() {
 }
 
 int
-e1() {
+e1(void) {
 	int p1;
 
 	p1 = e2();
@@ -66,7 +65,7 @@ e1() {
 }
 
 int
-e2() {
+e2(void) {
 	if (EQ(nxtarg(0), "!"))
 		return(!e3());
 	ap--;
@@ -74,7 +73,7 @@ e2() {
 }
 
 int
-e3() {
+e3(void) {
 	int p1;
 	register char *a;
 	char *p2;
@@ -147,9 +146,7 @@ e3() {
 }
 
 int
-tio(a, f)
-char *a;
-int f;
+tio(char *a, int f)
 {
 
 	f = open(a, f);
@@ -161,8 +158,7 @@ int f;
 }
 
 int
-ftype(f)
-char *f;
+ftype(char *f)
 {
 	struct stat statb;
 
@@ -174,8 +170,7 @@ char *f;
 }
 
 int
-fsizep(f)
-char *f;
+fsizep(char *f)
 {
 	struct stat statb;
 	if(stat(f,&statb)<0)
@@ -184,8 +179,7 @@ char *f;
 }
 
 void
-synbad(s1,s2)
-char *s1, *s2;
+synbad(char *s1,char *s2)
 {
 	write(2, "test: ", 6);
 	write(2, s1, strlen(s1));
@@ -195,8 +189,7 @@ char *s1, *s2;
 }
 
 int
-length(s)
-	char *s;
+length(char *s)
 {
 	char *es=s;
 	while(*es++);
