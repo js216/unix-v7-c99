@@ -7,7 +7,7 @@ LEX = flex
 
 W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
 	-Wold-style-definition -Wmissing-prototypes
-CFLAGS = $W -fcommon \
+CFLAGS = $W \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 \
 	-MMD -MP
 ASFLAGS = -mcpu=cortex-a7
