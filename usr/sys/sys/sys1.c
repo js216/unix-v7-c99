@@ -488,8 +488,7 @@ sbreak(void)
 	struct a {
 		char	*nsiz;
 	};
-	register int a, n, d;
-	int i;
+	register int n, d;
 
 	/*
 	 * set n to new data size
@@ -503,18 +502,8 @@ sbreak(void)
 	if(n < 0)
 		n = 0;
 	d = n - u.u_dsize;
+	n += USIZE+u.u_ssize;
 	if(estabur(u.u_tsize, u.u_dsize+d, u.u_ssize, u.u_sep, RO))
 		return;
-	if((unsigned)n > (USERSIZE >> 6) - u.u_ssize) {
-		u.u_error = ENOMEM;
-		return;
-	}
-
-	if(d > 0) {
-		a = u.u_procp->p_addr + USIZE + (int)u.u_dsize;
-		for(i = 0; i < d; i++)
-			clearseg(a + i);
-	}
 	u.u_dsize += d;
-	return;
 }
