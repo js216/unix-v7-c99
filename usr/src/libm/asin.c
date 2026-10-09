@@ -6,7 +6,6 @@
 */
 
 #include	<errno.h>
-int errno;
 #include <math.h>
 static double pio2	= 1.570796326794896619;
 

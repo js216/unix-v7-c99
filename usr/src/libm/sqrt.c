@@ -7,7 +7,6 @@
 
 #include <errno.h>
 
-int errno;
 #include <math.h>
 
 double

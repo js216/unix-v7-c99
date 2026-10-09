@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <math.h>
 
-int	errno;
 static double	log2	= 0.693147180559945309e0;
 static double	ln10	= 2.302585092994045684;
 static double	sqrto2	= 0.707106781186547524e0;

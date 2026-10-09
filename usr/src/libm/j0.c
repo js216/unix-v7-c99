@@ -41,7 +41,6 @@
 #include <errno.h>
 
 static void asympt(double arg);
-int	errno;
 static double pzero, qzero;
 static double tpi	= .6366197723675813430755350535e0;
 static double pio4	= .7853981633974483096156608458e0;

@@ -33,7 +33,6 @@
 #include <math.h>
 #include <errno.h>
 
-int	errno;
 
 double
 jn(int n, double x){
