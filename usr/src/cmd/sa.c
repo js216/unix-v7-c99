@@ -44,18 +44,18 @@ float	tsys;
 int	junkp = -1;
 char	*sname;
 float	ncom;
-time_t	expand();
-int	tcmp(), ncmp(), bcmp(), enter(), getpw();
-void	init(), doacct(), strip(), printmoney(), column(), col();
+time_t	expand(unsigned t);
+int	tcmp(char *q1, char *q2), ncmp(char *q1, char *q2), bcmp(char *q1, char *q2);
+int	enter(char *np);
+float	sum(struct tab *p);
+void	init(void), doacct(char *f), strip(void), printmoney(void);
+void	column(double n, double a, double b, double c), col(double n, double a, double m);
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	FILE *ff;
 	int i, j, k;
-	extern float sum();
 	float ft;
 
 	if (argc>1)
@@ -214,7 +214,7 @@ char **argv;
 }
 
 void
-printmoney()
+printmoney(void)
 {
 	register int i;
 	char buf[128];
@@ -238,8 +238,7 @@ printmoney()
 }
 
 void
-column(n, a, b, c)
-double n, a, b, c;
+column(double n, double a, double b, double c)
 {
 
 	printf("%6.0f", n);
@@ -261,8 +260,7 @@ double n, a, b, c;
 }
 
 void
-col(n, a, m)
-double n, a, m;
+col(double n, double a, double m)
 {
 
 	if(jflg)
@@ -276,8 +274,7 @@ double n, a, m;
 }
 
 void
-doacct(f)
-char *f;
+doacct(char *f)
 {
 	int i;
 	FILE *ff;
@@ -339,23 +336,22 @@ char *f;
 }
 
 int
-ncmp(p1, p2)
-struct tab *p1, *p2;
+ncmp(char *q1, char *q2)
 {
+	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
 
 	if(p1->count == p2->count)
-		return(tcmp(p1, p2));
+		return(tcmp(q1, q2));
 	if(rflg)
 		return(p1->count - p2->count);
 	return(p2->count - p1->count);
 }
 
 int
-bcmp(p1, p2)
-struct tab *p1, *p2;
+bcmp(char *q1, char *q2)
 {
+	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
 	float f1, f2;
-	float sum();
 
 	f1 = sum(p1)/p1->count;
 	f2 = sum(p2)/p2->count;
@@ -372,10 +368,9 @@ struct tab *p1, *p2;
 	return(0);
 }
 int
-tcmp(p1, p2)
-struct tab *p1, *p2;
+tcmp(char *q1, char *q2)
 {
-	extern float sum();
+	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
 	float f1, f2;
 
 	f1 = sum(p1);
@@ -393,8 +388,7 @@ struct tab *p1, *p2;
 	return(0);
 }
 
-float sum(p)
-struct tab *p;
+float sum(struct tab *p)
 {
 
 	if(p->name[0] == 0)
@@ -405,7 +399,7 @@ struct tab *p;
 }
 
 void
-init()
+init(void)
 {
 	struct tab tbuf;
 	int i;
@@ -433,8 +427,7 @@ init()
 }
 
 int
-enter(np)
-char *np;
+enter(char *np)
 {
 	int i, j;
 
@@ -463,7 +456,7 @@ yes:
 }
 
 void
-strip()
+strip(void)
 {
 	int i, j, c;
 
@@ -485,8 +478,7 @@ strip()
 }
 
 time_t
-expand(t)
-unsigned t;
+expand(unsigned t)
 {
 	register time_t nt;
 
