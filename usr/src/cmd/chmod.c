@@ -20,12 +20,10 @@
 char	*ms;
 int	um;
 struct	stat st;
-int newmode(), abs(), who(), what(), where();
+int newmode(unsigned nm), abs(void), who(void), what(void), where(int om);
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i;
 	register char *p;
@@ -56,8 +54,7 @@ char **argv;
 }
 
 int
-newmode(nm)
-unsigned nm;
+newmode(unsigned nm)
 {
 	register int o, m, b;
 
@@ -90,7 +87,7 @@ unsigned nm;
 }
 
 int
-abs()
+abs(void)
 {
 	register int c, i;
 
@@ -102,7 +99,7 @@ abs()
 }
 
 int
-who()
+who(void)
 {
 	register int m;
 
@@ -129,7 +126,7 @@ who()
 }
 
 int
-what()
+what(void)
 {
 	switch (*ms) {
 	case '+':
@@ -141,8 +138,7 @@ what()
 }
 
 int
-where(om)
-register int om;
+where(register int om)
 {
 	register int m;
 
