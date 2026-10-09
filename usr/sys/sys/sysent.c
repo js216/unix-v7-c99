@@ -19,7 +19,7 @@ void utime(), saccess(), nice(), ftime(), sync();
 void kill(), dup(), pipe(), times(), profil();
 void setgid(), getgid(), ssig(), sysacct(), syslock();
 void umask(), chroot(), stty(), gtty(), ioctl();
-void sigreturn();
+void sigreturn(), sysphys();
 
 /*
  * This table is the switch used to transfer
@@ -82,7 +82,7 @@ struct sysent sysent[64] =
 	{0, 0, nosys},			/* 49 = reserved for USG */
 	{0, 0, nosys},			/* 50 = reserved for USG */
 	{1, 1, sysacct},		/* 51 = turn acct off/on */
-	{0, 0, nosys},			/* 52 = set user physical addresses */
+	{3, 3, sysphys},		/* 52 = set user physical addresses */
 	{1, 1, syslock},		/* 53 = lock user in core */
 	{3, 3, ioctl},			/* 54 = ioctl */
 	{0, 0, nosys},			/* 55 = readwrite (in abeyance) */

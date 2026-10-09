@@ -61,6 +61,53 @@ startup()
 }
 
 /*
+ * set up a physical address
+ * into users virtual address space.
+ */
+void
+sysphys()
+{
+	register int i, s, d;
+	register struct a {
+		int	segno;
+		int	size;
+		int	phys;
+	} *uap;
+
+	if(!suser())
+		return;
+	uap = (struct a *)u.u_ap;
+	i = uap->segno;
+	if(i < 0 || i >= 8)
+		goto bad;
+	s = uap->size;
+	if(s < 0 || s > 128)
+		goto bad;
+	d = u.u_uisd[i+8];
+	if(d != 0 && (d&ABS) == 0)
+		goto bad;
+	u.u_uisd[i+8] = 0;
+	u.u_uisa[i+8] = 0;
+	if(!u.u_sep) {
+		u.u_uisd[i] = 0;
+		u.u_uisa[i] = 0;
+	}
+	if(s) {
+		u.u_uisd[i+8] = ((s-1)<<8) | RW|ABS;
+		u.u_uisa[i+8] = uap->phys;
+		if(!u.u_sep) {
+			u.u_uisa[i] = u.u_uisa[i+8];
+			u.u_uisd[i] = u.u_uisd[i+8];
+		}
+	}
+	sureg();
+	return;
+
+bad:
+	u.u_error = EINVAL;
+}
+
+/*
  * Determine which clock is attached, and start it.
  * panic: no clock found
  */
