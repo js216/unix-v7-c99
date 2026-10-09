@@ -9,12 +9,10 @@ long	chr	= 0;
 long	skip1;
 long	skip2;
 
-long	otoi();
+long	otoi(char *s);
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int c1, c2;
 	char *arg;
@@ -107,8 +105,7 @@ earg:
 	exit(1);
 }
 
-long otoi(s)
-char *s;
+long otoi(char *s)
 {
 	long v;
 	int base;
