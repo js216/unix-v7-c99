@@ -52,7 +52,7 @@ struct	inode
 
 
 extern struct inode inode[];	/* The inode table itself */
-struct inode *mpxip;		/* mpx virtual inode */
+extern struct inode *mpxip;		/* mpx virtual inode */
 
 /* flags */
 #define	ILOCK	01		/* inode is locked */
