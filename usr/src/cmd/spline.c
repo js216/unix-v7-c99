@@ -137,9 +137,8 @@ where
 	x9-8 = x-x9i8
 */
 
-float
-rhs(i)
-	int i;{
+static float
+rhs(int i){
 	int i_;
 	double zz;
 	i_ = i==n-1?0:i;
@@ -147,8 +146,8 @@ rhs(i)
 	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i+1]-x.val[i]) - zz));
 }
 
-int
-spline(){
+static int
+spline(void){
 	float d,s,u,v,hi,hi1;
 	float h;
 	float D2yi,D2yi1,D2yn1,x0,x1,yy,a;
@@ -215,21 +214,19 @@ spline(){
 		}
 	return(1);
 	}
-int	getfloat(), numb();
-void
-readin() {
+int	getfloat(float *p), numb(float *np, int *argcp, char ***argvp);
+static void
+readin(void) {
 	for(n=0;n<NP;n++){
 		if(auta) x.val[n] = n*dx+x.lb;
 		else if(!getfloat(&x.val[n])) break;
 		if(!getfloat(&y.val[n])) break; } }
 
 int
-getfloat(p)
-	float *p;{
+getfloat(float *p){
 	char buf[30];
 	register int c;
 	int i;
-	extern double atof();
 	for(;;){
 		c = getchar();
 		if (c==EOF) {
@@ -263,9 +260,8 @@ getfloat(p)
 	*p = atof(buf);
 	return(1); }
 
-void
-getlim(p)
-	struct proj *p; {
+static void
+getlim(struct proj *p) {
 	int i;
 	for(i=0;i<n;i++) {
 		if(!p->lbf && p->lb>(p->val[i])) p->lb = p->val[i];
@@ -274,10 +270,7 @@ getlim(p)
 
 
 int
-main(argc,argv)
-	int argc;
-	char *argv[];{
-	extern char *malloc();
+main(int argc, char *argv[]){
 	int i;
 	x.lbf = x.ubf = y.lbf = y.ubf = 0;
 	x.lb = INF;
@@ -326,11 +319,7 @@ again:		switch(argv[0][0]) {
 		printf("%f\n",y.val[i]); }
 }
 int
-numb(np,argcp,argvp)
-	int *argcp;
-	float *np;
-	char ***argvp;{
-	double atof();
+numb(float *np, int *argcp, char ***argvp){
 	char c;
 	if(*argcp<=1) return(0);
 	c = (*argvp)[1][0];
