@@ -1000,7 +1000,7 @@ checktype(struct	spcl *b, int t)
 int
 checksum(int *b)
 {
-	register int i, j;
+	register unsigned i, j;
 
 	j = BSIZE/sizeof(int);
 	i = 0;

@@ -49,8 +49,6 @@ void	dmpspc(daddr_t *dp, int n);
 void	dsrch(daddr_t d);
 void	nullf(daddr_t *dp, int n);
 void	pass(void (*fn)(struct dinode *ip), short *map);
-void	icat(struct dinode *ip, void (*fn1)(daddr_t d),
-	void (*fn2)(daddr_t *dp, int n));
 void	indir(daddr_t d, void (*fn1)(daddr_t d),
 	void (*fn2)(daddr_t *dp, int n), int n);
 void	bitmap(short *map, int typ), spclrec(void);
@@ -216,7 +214,7 @@ pass(void (*fn)(struct dinode *ip), short *map)
 	}
 }
 
-void
+static void
 icat(struct dinode *ip, void (*fn1)(daddr_t d),
 	void (*fn2)(daddr_t *dp, int n))
 {
@@ -238,21 +236,21 @@ void
 indir(daddr_t d, void (*fn1)(daddr_t d),
 	void (*fn2)(daddr_t *dp, int n), int n)
 {
-	register int i;
+	register unsigned i;
 	daddr_t	idblk[NINDIR];
 
 	bread(d, (char *)idblk, sizeof(idblk));
 	if(n <= 0) {
 		spcl.c_type = TS_ADDR;
 		(*fn2)(idblk, NINDIR);
-		for(i=0; i<(int)NINDIR; i++) {
+		for(i=0; i<NINDIR; i++) {
 			d = idblk[i];
 			if(d != 0)
 				(*fn1)(d);
 		}
 	} else {
 		n--;
-		for(i=0; i<(int)NINDIR; i++) {
+		for(i=0; i<NINDIR; i++) {
 			d = idblk[i];
 			if(d != 0)
 				indir(d, fn1, fn2, n);
@@ -360,14 +358,14 @@ bitmap(short *map, int typ)
 void
 spclrec(void)
 {
-	register int i, *ip, s;
+	register unsigned i, *ip, s;
 
 	spcl.c_inumber = ino;
 	spcl.c_magic = MAGIC;
 	spcl.c_checksum = 0;
-	ip = (int *)&spcl;
+	ip = (unsigned *)&spcl;
 	s = 0;
-	for(i=0; i<(int)(BSIZE/sizeof(*ip)); i++)
+	for(i=0; i<BSIZE/sizeof(*ip); i++)
 		s += *ip++;
 	spcl.c_checksum = CHECKSUM - s;
 	taprec((char *)&spcl);
@@ -377,14 +375,14 @@ void
 dsrch(daddr_t d)
 {
 	register char *cp;
-	register int i;
+	register unsigned i;
 	register ino_t in;
 	struct direct dblk[DIRPB];
 
 	if(dadded)
 		return;
 	bread(d, (char *)dblk, sizeof(dblk));
-	for(i=0; i<(int)DIRPB; i++) {
+	for(i=0; i<DIRPB; i++) {
 		in = dblk[i].d_ino;
 		if(in == 0)
 			continue;
