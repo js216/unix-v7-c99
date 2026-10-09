@@ -10,18 +10,15 @@
 #include	"defs.h"
 #include	"sym.h"
 
-LOCAL INT	getch(CHAR endch);
-LOCAL INT	skipto(CHAR endch);
-LOCAL INT	comsubst(void);
-LOCAL INT	flush(INT ot);
-extern int close(int fd);
-extern int write(int fd, char *buf, int n);
 LOCAL CHAR	quote;	/* used locally */
 LOCAL CHAR	quoted;	/* used locally */
+LOCAL INT	getch();
+LOCAL VOID	comsubst(), flush();
 
 
 
-LOCAL STRING	copyto(INT endch)
+LOCAL STRING	copyto(endch)
+	REG CHAR	endch;
 {
 	REG CHAR	c;
 
@@ -32,7 +29,8 @@ LOCAL STRING	copyto(INT endch)
 	return(0);
 }
 
-LOCAL INT skipto(CHAR endch)
+LOCAL VOID	skipto(endch)
+	REG CHAR	endch;
 {
 	/* skip chars up to } */
 	REG CHAR	c;
@@ -49,10 +47,10 @@ LOCAL INT skipto(CHAR endch)
 		ENDSW
 	OD
 	IF c!=endch THEN error(badsub) FI
-	return(0);
 }
 
-LOCAL INT getch(CHAR endch)
+LOCAL INT	getch(endch)
+	CHAR		endch;
 {
 	REG CHAR	d;
 
@@ -73,7 +71,7 @@ retry:
 
 			IF (bra=(c==BRACE)) THEN c=readc() FI
 			IF letter(c)
-			THEN	argp=(STRING)(long)relstak();
+			THEN	argp=(STRING)relstak();
 				WHILE alphanum(c) DO pushstak(c); c=readc() OD
 				zerostak();
 				n=lookup(absstak(argp)); setstak(argp);
@@ -85,7 +83,7 @@ retry:
 				THEN	dolg=1; c='1';
 				FI
 				c -= '0';
-				v=((c==0) ? cmdadr : (c<=dolc) ? dolv[c] : (STRING)(long)(dolg=0));
+				v=((c==0) ? cmdadr : (c<=dolc) ? dolv[c] : (STRING)(dolg=0));
 			ELIF c=='$'
 			THEN	v=pidadr;
 			ELIF c=='!'
@@ -106,7 +104,7 @@ retry:
 			argp=0;
 			IF bra
 			THEN	IF c!='}'
-				THEN	argp=(STRING)(long)relstak();
+				THEN	argp=(STRING)relstak();
 					IF (v==0)NEQ(setchar(c))
 					THEN	copyto('}');
 					ELSE	skipto('}');
@@ -150,7 +148,8 @@ retry:
 	return(d);
 }
 
-STRING	macro(STRING as)
+STRING	macro(as)
+	STRING		as;
 {
 	/* Strip "" and do $ substitution
 	 * Leaves result on top of stack
@@ -159,7 +158,7 @@ STRING	macro(STRING as)
 	REG CHAR	savq = quote;
 	FILEHDR		fb;
 
-	push((FILE)&fb); estabf(as);
+	push(&fb); estabf(as);
 	usestak();
 	quote=0; quoted=0;
 	copyto(0);
@@ -169,7 +168,7 @@ STRING	macro(STRING as)
 	return(fixstak());
 }
 
-LOCAL INT comsubst(void)
+LOCAL VOID	comsubst()
 {
 	/* command substn */
 	FILEBLK		cb;
@@ -206,12 +205,13 @@ LOCAL INT comsubst(void)
 		FI
 	OD
 	pop();
-	return(0);
 }
 
 #define CPYSIZ	512
 
-INT subst(INT in, INT ot)
+VOID
+subst(in,ot)
+	INT		in, ot;
 {
 	REG CHAR	c;
 	FILEBLK		fb;
@@ -227,13 +227,12 @@ INT subst(INT in, INT ot)
 	OD
 	flush(ot);
 	pop();
-	return(0);
 }
 
-LOCAL INT flush(INT ot)
+LOCAL VOID	flush(ot)
+	INT		ot;
 {
 	write(ot,stakbot,staktop-stakbot);
 	IF flags&execpr THEN write(output,stakbot,staktop-stakbot) FI
 	staktop=stakbot;
-	return(0);
 }

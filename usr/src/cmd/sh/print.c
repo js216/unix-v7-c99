@@ -9,48 +9,50 @@
 
 #include	"defs.h"
 
-extern int write(int fd, char *buf, int n);
 CHAR		numbuf[6];
 
 
 /* printing and io conversion */
 
-INT newline(void)
-{	prc(NL); return(0);
+VOID
+newline()
+{	prc(NL);
 }
 
-INT blank(void)
-{	prc(SP); return(0);
+VOID
+blank()
+{	prc(SP);
 }
 
-INT prp(void)
+VOID
+prp()
 {
 	IF (flags&prompt)==0 ANDF cmdadr
 	THEN	prs(cmdadr); prs(colon);
 	FI
-	return(0);
 }
 
-VOID	prs(STRING as)
+VOID	prs(as)
+	STRING		as;
 {
 	REG STRING	s;
 
 	IF (s=as)
 	THEN	write(output,s,length(s)-1);
 	FI
-	return(0);
 }
 
-VOID	prc(INT cc)
+VOID	prc(c)
+	CHAR		c;
 {
-	CHAR c = cc;
 	IF c
 	THEN	write(output,&c,1);
 	FI
-	return(0);
 }
 
-INT prt(L_INT t)
+VOID
+prt(t)
+	L_INT		t;
 {
 	REG INT	hr, min, sec;
 
@@ -62,16 +64,18 @@ INT prt(L_INT t)
 	FI
 	prn(min); prc('m');
 	prn(sec); prc('s');
-	return(0);
 }
 
-INT prn(INT n)
+VOID
+prn(n)
+	INT		n;
 {
 	itos(n); prs(numbuf);
-	return(0);
 }
 
-INT itos(INT n)
+VOID
+itos(n)
+	INT		n;
 {
 	REG char *abuf; REG POS a, i; INT pr, d;
 	abuf=numbuf; pr=FALSE; a=n;
@@ -81,11 +85,11 @@ INT itos(INT n)
 	OD
 	*abuf++=a+'0';
 	*abuf++=0;
-	return(0);
 }
 
 INT
-stoi(STRING icp)
+stoi(icp)
+STRING	icp;
 {
 	REG CHAR	*cp = icp;
 	REG INT		r = 0;

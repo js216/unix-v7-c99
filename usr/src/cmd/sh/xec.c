@@ -10,15 +10,6 @@
 #include	"defs.h"
 #include	"sym.h"
 
-extern int chdir(char *p);
-extern int signal();
-extern int times(long *t);
-extern int umask(int m);
-extern int fork(void);
-extern int alarm(unsigned sec);
-extern int pause(void);
-extern int close(int fd);
-extern int dup();
 LOCAL INT	parent;
 
 extern SYSTAB	commands;
@@ -28,7 +19,11 @@ extern SYSTAB	commands;
 /* ========	command execution	========*/
 
 
-INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
+INT
+execute(argt, execflg, pf1, pf2)
+	TREPTR		argt;
+	INT		*pf1, *pf2;
+	INT		execflg;
 {
 	/* `stakbot' is preserved by this routine */
 	REG TREPTR	t;
@@ -94,6 +89,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				case SYSEXIT:
 					exitsh(a1?stoi(a1):oldexit);
 					/* fallthrough */
+	
 				case SYSNULL:
 					io=0;
 					break;
@@ -142,10 +138,12 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 					initio(io); ioset=0; io=0;
 					IF a1==0 THEN break FI
 					/* fallthrough */
+	
 				case SYSLOGIN:
 					flags |= forked;
 					oldsigs(); execa(com); done();
 					/* fallthrough */
+	
 				case SYSCD:
 					IF flags&rshflg
 					THEN	failed(com[0],restricted);
@@ -205,7 +203,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 	
 				case SYSEVAL:
 					IF a1
-					THEN	execexp(a1,(UFD)(long)&com[2]);
+					THEN	execexp(a1,&com[2]);
 					FI
 					break;
 
@@ -228,7 +226,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
                                         break;
 	
 				default:
-					internal=builtin(); (void)argn;
+					internal=builtin(argn,com);
 	
 				ENDSW
 
@@ -242,6 +240,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			FI
 			END
 			/* fallthrough */
+	
 		case TFORK:
 			IF execflg ANDF (treeflgs&(FAMP|FPOU))==0
 			THEN	parent=0;
@@ -298,7 +297,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				/* io redirection */
 				initio(t->treio);
 				IF type!=TCOM
-				THEN	execute(((FORKPTR)t)->forktre,1,(INT *)0,(INT *)0);
+				THEN	execute(((FORKPTR)t)->forktre,1,0,0);
 				ELIF com[0]!=ENDARGS
 				THEN	setlist(((COMPTR)t)->comset,N_EXPORT);
 					execa(com);
@@ -309,7 +308,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 
 		case TPAR:
 			rename(dup(2),output);
-			execute(((PARPTR)t)->partre,execflg,(INT *)0,(INT *)0);
+			execute(((PARPTR)t)->partre,execflg,0,0);
 			done();
 			/* fallthrough */
 
@@ -325,19 +324,19 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			break;
 
 		case TLST:
-			execute(((LSTPTR)t)->lstlef,0,(INT *)0,(INT *)0);
-			execute(((LSTPTR)t)->lstrit,execflg,(INT *)0,(INT *)0);
+			execute(((LSTPTR)t)->lstlef,0,0,0);
+			execute(((LSTPTR)t)->lstrit,execflg,0,0);
 			break;
 
 		case TAND:
-			IF execute(((LSTPTR)t)->lstlef,0,(INT *)0,(INT *)0)==0
-			THEN	execute(((LSTPTR)t)->lstrit,execflg,(INT *)0,(INT *)0);
+			IF execute(((LSTPTR)t)->lstlef,0,0,0)==0
+			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,0);
 			FI
 			break;
 
 		case TORF:
-			IF execute(((LSTPTR)t)->lstlef,0,(INT *)0,(INT *)0)!=0
-			THEN	execute(((LSTPTR)t)->lstrit,execflg,(INT *)0,(INT *)0);
+			IF execute(((LSTPTR)t)->lstlef,0,0,0)!=0
+			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,0);
 			FI
 			break;
 
@@ -359,8 +358,8 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			   loopcnt++;
 			   WHILE *args!=ENDARGS ANDF execbrk==0
 			   DO	assign(n,*args++);
-				execute(f->fortre,0,(INT *)0,(INT *)0);
-				IF (signed char)execbrk<0 THEN execbrk=0 FI
+				execute(f->fortre,0,0,0);
+				IF execbrk<0 THEN execbrk=0 FI
 			   OD
 			   IF breakcnt THEN breakcnt-- FI
 			   execbrk=breakcnt; loopcnt--;
@@ -375,9 +374,9 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			   INT		i=0;
 
 			   loopcnt++;
-			   WHILE execbrk==0 ANDF (execute(w->whtre,0,(INT *)0,(INT *)0)==0)==(type==TWH)
-			   DO i=execute(w->dotre,0,(INT *)0,(INT *)0);
-			      IF (signed char)execbrk<0 THEN execbrk=0 FI
+			   WHILE execbrk==0 ANDF (execute(w->whtre,0,0,0)==0)==(type==TWH)
+			   DO i=execute(w->dotre,0,0,0);
+			      IF execbrk<0 THEN execbrk=0 FI
 			   OD
 			   IF breakcnt THEN breakcnt-- FI
 			   execbrk=breakcnt; loopcnt--; exitval=i;
@@ -385,9 +384,9 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			break;
 
 		case TIF:
-			IF execute(((IFPTR)t)->iftre,0,(INT *)0,(INT *)0)==0
-			THEN	execute(((IFPTR)t)->thtre,execflg,(INT *)0,(INT *)0);
-			ELSE	execute(((IFPTR)t)->eltre,execflg,(INT *)0,(INT *)0);
+			IF execute(((IFPTR)t)->iftre,0,0,0)==0
+			THEN	execute(((IFPTR)t)->thtre,execflg,0,0);
+			ELSE	execute(((IFPTR)t)->eltre,execflg,0,0);
 			FI
 			break;
 
@@ -402,7 +401,7 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				WHILE rex
 				DO	REG STRING	s;
 					IF gmatch(r,s=macro(rex->argval)) ORF (trim(s), eq(r,s))
-					THEN	execute(re->regcom,0,(INT *)0,(INT *)0);
+					THEN	execute(re->regcom,0,0,0);
 						t=0; break;
 					ELSE	rex=rex->argnxt;
 					FI
@@ -421,16 +420,18 @@ INT execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 }
 
 
-void
-execexp(STRING s, UFD f)
+VOID
+execexp(s,f)
+	STRING		s;
+	UFD		f;
 {
 	FILEBLK		fb;
 	push(&fb);
 	IF s
-	THEN	estabf(s); fb.feval=(STRING *)(long)f;
+	THEN	estabf(s); fb.feval=(STRING *)f;
 	ELIF f>=0
 	THEN	initf(f);
 	FI
-	execute(cmd(NL, NLFLG|MTFLG),0,(INT *)0,(INT *)0);
+	execute(cmd(NL, NLFLG|MTFLG),0,0,0);
 	pop();
 }

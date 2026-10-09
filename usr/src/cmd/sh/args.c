@@ -9,7 +9,7 @@
 
 #include	"defs.h"
 
-LOCAL DOLPTR	copyargs(STRING from[], INT n);
+LOCAL STRING *copyargs();
 LOCAL DOLPTR	dolh;
 
 CHAR	flagadr[10];
@@ -24,7 +24,9 @@ INT	flagval[]  = {
 /* ========	option handling	======== */
 
 
-INT	options(INT argc, STRING *argv)
+INT	options(argc,argv)
+	STRING		*argv;
+	INT		argc;
 {
 	REG STRING	cp;
 	REG STRING	*argp=argv;
@@ -63,7 +65,8 @@ INT	options(INT argc, STRING *argv)
 	return(argc);
 }
 
-VOID	setargs(STRING argi[])
+VOID	setargs(argi)
+	STRING		argi[];
 {
 	/* count args */
 	REG STRING	*argp=argi;
@@ -73,12 +76,13 @@ VOID	setargs(STRING argi[])
 
 	/* free old ones unless on for loop chain */
 	freeargs(dolh);
-	dolh=copyargs(argi,argn);	/* sets dolv */
+	dolh=(DOLPTR)copyargs(argi,argn);	/* sets dolv */
 	assnum(&dolladr,dolc=argn-1);
-	return(0);
 }
 
-DOLPTR freeargs(DOLPTR blk)
+DOLPTR
+freeargs(blk)
+	DOLPTR		blk;
 {
 	REG STRING	*argp;
 	REG DOLPTR	argr=0;
@@ -95,33 +99,35 @@ DOLPTR freeargs(DOLPTR blk)
 	return(argr);
 }
 
-LOCAL DOLPTR	copyargs(STRING from[], INT n)
+LOCAL STRING *	copyargs(from, n)
+	STRING		from[];
+	INT		n;
 {
-	REG DOLPTR	np=(DOLPTR)alloc(sizeof(STRING*)*n+3*BYTESPERWORD);
+	REG STRING *	np=(STRING *)alloc(sizeof(STRING*)*n+3*BYTESPERWORD);
 	REG STRING *	fp=from;
-	REG STRING *	pp;
+	REG STRING *	pp=np;
 
-	np->doluse=1;	/* use count */
-	pp=(STRING *)np->dolarg;
-	dolv=pp;
+	((DOLPTR)np)->doluse=1;	/* use count */
+	np=(STRING *)((DOLPTR)np)->dolarg;
+	dolv=np;
 
 	WHILE n--
-	DO *pp++ = make(*fp++) OD
-	*pp++ = ENDARGS;
-	return(np);
+	DO *np++ = make(*fp++) OD
+	*np++ = ENDARGS;
+	return(pp);
 }
 
-INT clearup(void)
+VOID
+clearup()
 {
 	/* force `for' $* lists to go away */
 	WHILE (argfor=freeargs(argfor)) DONE
 
 	/* clean up io files */
 	WHILE pop() DONE
-	return(0);
 }
 
-DOLPTR	useargs(void)
+DOLPTR	useargs()
 {
 	IF dolh
 	THEN	dolh->doluse++;

@@ -9,8 +9,9 @@
 
 #include	"defs.h"
 
-extern char *sbrk(int incr);
-BYTPTR setbrk(INT incr)
+BYTPTR
+setbrk(incr)
+	INT		incr;
 {
 	REG BYTPTR	a=sbrk(incr);
 	brkend=a+incr;

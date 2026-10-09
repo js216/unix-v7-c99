@@ -10,16 +10,9 @@
 #include	"defs.h"
 
 
-LOCAL VOID	gsort(STRING from[], STRING to[]);
-LOCAL STRING	execs(STRING ap, REG STRING t[]);
-LOCAL INT	split(REG STRING s);
-extern int close(int fd);
-extern int unlink(char *p);
-extern int dup();
-extern int open(char *p, int f);
-extern long lseek(int fd, long off, int whence);
-extern int execve(char *p, char **argv, char **env);
-extern int wait(int *st);
+LOCAL VOID	gsort();
+LOCAL STRING	execs();
+LOCAL INT	split();
 
 #define ARGMK	01
 
@@ -37,7 +30,8 @@ extern STRING	sysmsg[];
 
 /* service routines for `execute' */
 
-VOID	initio(IOPTR iop)
+VOID	initio(iop)
+	IOPTR		iop;
 {
 	REG STRING	ion;
 	REG INT		iof, fd = -1;
@@ -71,35 +65,10 @@ VOID	initio(IOPTR iop)
 		FI
 		initio(iop->ionxt);
 	FI
-	return(0);
 }
 
-VOID	nullio(IOPTR iop)
-{
-	REG STRING	ion;
-	REG INT		iof, fd;
-	IF iop
-	THEN	iof=iop->iofile;
-		ion=mactrim(iop->ioname);
-		IF *ion ANDF (flags&noexec)==0
-		THEN	IF iof&IODOC
-			THEN	fd=tmpfil(); close(fd); unlink(tmpout);
-			ELIF iof&IOMOV
-			THEN	;
-			ELIF (iof&IOPUT)==0
-			THEN	close(chkopen(ion));
-			ELIF flags&rshflg
-			THEN	failed(ion,restricted);
-			ELIF iof&IOAPP ANDF (fd=open(ion,1))>=0
-			THEN	lseek(fd, 0L, 2); close(fd);
-			ELSE	fd=create(ion); close(fd);
-			FI
-		FI
-		nullio(iop->ionxt);
-	FI
-	return(0);
-}
-STRING	getpath(STRING s)
+STRING	getpath(s)
+	STRING		s;
 {
 	REG STRING	path;
 	IF any('/',s)
@@ -114,7 +83,8 @@ STRING	getpath(STRING s)
 	return(0);
 }
 
-INT	pathopen(REG STRING path, REG STRING name)
+INT	pathopen(path, name)
+	REG STRING	path, name;
 {
 	REG UFD		f;
 
@@ -123,7 +93,9 @@ INT	pathopen(REG STRING path, REG STRING name)
 	return(f);
 }
 
-STRING	catpath(REG STRING path, STRING name)
+STRING	catpath(path,name)
+	REG STRING	path;
+	STRING		name;
 {
 	/* leaves result on top of stack */
 	REG STRING	scanp = path,
@@ -140,7 +112,8 @@ STRING	catpath(REG STRING path, STRING name)
 LOCAL STRING	xecmsg;
 LOCAL STRING	*xecenv;
 
-VOID	execa(STRING at[])
+VOID	execa(at)
+	STRING		at[];
 {
 	REG STRING	path;
 	REG STRING	*t = at;
@@ -152,10 +125,11 @@ VOID	execa(STRING at[])
 		WHILE (path=execs(path,t)) DONE
 		failed(*t,xecmsg);
 	FI
-	return(0);
 }
 
-LOCAL STRING	execs(STRING ap, REG STRING t[])
+LOCAL STRING	execs(ap,t)
+	STRING		ap;
+	REG STRING	t[];
 {
 	REG STRING	p, prefix;
 
@@ -197,7 +171,6 @@ LOCAL STRING	execs(STRING ap, REG STRING t[])
 	    case ENOENT:
 		return(prefix);
 	ENDSW
-	return(prefix);
 }
 
 /* for processes to be waited for */
@@ -205,17 +178,18 @@ LOCAL STRING	execs(STRING ap, REG STRING t[])
 LOCAL INT	pwlist[MAXP];
 LOCAL INT	pwc;
 
-INT postclr(void)
+VOID
+postclr()
 {
 	REG INT		*pw = pwlist;
 
 	WHILE pw <= &pwlist[pwc]
 	DO *pw++ = 0 OD
 	pwc=0;
-	return(0);
 }
 
-VOID	post(INT pcsid)
+VOID	post(pcsid)
+	INT		pcsid;
 {
 	REG INT		*pw = pwlist;
 
@@ -227,10 +201,10 @@ VOID	post(INT pcsid)
 		FI
 		*pw = pcsid;
 	FI
-	return(0);
 }
 
-VOID	await(INT i)
+VOID	await(i)
+	INT		i;
 {
 	INT		rc=0, wx=0;
 	INT		w;
@@ -280,12 +254,13 @@ VOID	await(INT i)
 	THEN	exitsh(rc);
 	FI
 	exitval=rc; exitset();
-	return(0);
 }
 
 BOOL		nosubst;
 
-INT trim(STRING at)
+VOID
+trim(at)
+	STRING		at;
 {
 	REG STRING	p;
 	REG CHAR	c;
@@ -296,19 +271,20 @@ INT trim(STRING at)
 		DO *p++=c&STRIP; q |= c OD
 	FI
 	nosubst=q&QUOTE;
-	return(0);
 }
 
-STRING	mactrim(STRING s)
+STRING	mactrim(s)
+	STRING		s;
 {
 	REG STRING	t=macro(s);
 	trim(t);
 	return(t);
 }
 
-STRING	*scan(INT argn)
+STRING	*scan(argn)
+	INT		argn;
 {
-	REG ARGPTR	argp = (ARGPTR)(long)(Rcheat(gchain)&~ARGMK);
+	REG ARGPTR	argp = (ARGPTR)(Rcheat(gchain)&~ARGMK);
 	REG STRING	*comargn, *comargm;
 
 	comargn=(STRING *)getstak(BYTESPERWORD*argn+BYTESPERWORD); comargm = comargn += argn; *comargn = ENDARGS;
@@ -323,17 +299,18 @@ STRING	*scan(INT argn)
 			comargm = comargn;
 		FI
 		/* Lcheat(argp) &= ~ARGMK; */
-		argp = (ARGPTR)(long)(Rcheat(argp)&~ARGMK);
+		argp = (ARGPTR)(Rcheat(argp)&~ARGMK);
 	OD
 	return(comargn);
 }
 
-LOCAL VOID	gsort(STRING from[], STRING to[])
+LOCAL VOID	gsort(from,to)
+	STRING		from[], to[];
 {
 	INT		k, m, n;
 	REG INT		i, j;
 
-	IF (n=to-from)<=1 THEN return(0) FI
+	IF (n=to-from)<=1 THEN return FI
 
 	FOR j=1; j<=n; j*=2 DONE
 
@@ -349,12 +326,12 @@ LOCAL VOID	gsort(STRING from[], STRING to[])
 		OD
 	    OD
 	OD
-	return(0);
 }
 
 /* Argument list generation */
 
-INT	getarg(COMPTR ac)
+INT	getarg(ac)
+	COMPTR		ac;
 {
 	REG ARGPTR	argp;
 	REG INT		count=0;
@@ -370,10 +347,10 @@ INT	getarg(COMPTR ac)
 	return(count);
 }
 
-LOCAL INT	split(REG STRING s)
+LOCAL INT	split(s)
+	REG STRING	s;
 {
 	REG STRING	argp;
-	REG ARGPTR	arg;
 	REG INT		c;
 	INT		count=0;
 
@@ -388,12 +365,11 @@ LOCAL INT	split(REG STRING s)
 		ELIF c==0
 		THEN	s--;
 		FI
-		arg=(ARGPTR)endstak(argp);
-		IF (c=expand(arg->argval,0))
+		IF (c=expand(((ARGPTR)(argp=endstak(argp)))->argval,0))
 		THEN	count += c;
 		ELSE	/* assign(&fngnod, argp->argval); */
-			makearg(arg); count++;
+			makearg(argp); count++;
 		FI
-		gchain=(ARGPTR)(long)(Rcheat(gchain)|ARGMK);
+		gchain=(ARGPTR)(Rcheat(gchain)|ARGMK);
 	POOL
 }

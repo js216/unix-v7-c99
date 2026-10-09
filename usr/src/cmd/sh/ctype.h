@@ -69,22 +69,22 @@
 extern char	_ctype1[];
 
 /* nb these args are not call by value !!!! */
-#define	space(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_SPC))
-#define eofmeta(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(_META|T_EOF))
-#define qotchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_QOT))
-#define eolchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_EOR|T_EOF))
-#define dipchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_DIP))
-#define subchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_SUB|T_QOT))
-#define escchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(unsigned char)(c)]&(T_ESC))
+#define	space(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_SPC))
+#define eofmeta(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(_META|T_EOF))
+#define qotchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_QOT))
+#define eolchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_EOR|T_EOF))
+#define dipchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_DIP))
+#define subchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_SUB|T_QOT))
+#define escchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[(int)(c)]&(T_ESC))
 
 extern char	_ctype2[];
 
-#define	digit(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_DIG))
-#define fngchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_FNG))
-#define dolchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_AST|T_BRC|T_DIG|T_IDC|T_SHN))
-#define defchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_DEF))
-#define setchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_SET))
-#define digchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_AST|T_DIG))
-#define	letter(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_IDC))
-#define alphanum(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(_IDCH))
-#define astchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(unsigned char)(c)]&(T_AST))
+#define	digit(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_DIG))
+#define fngchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_FNG))
+#define dolchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_AST|T_BRC|T_DIG|T_IDC|T_SHN))
+#define defchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_DEF))
+#define setchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_SET))
+#define digchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_AST|T_DIG))
+#define	letter(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_IDC))
+#define alphanum(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(_IDCH))
+#define astchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[(int)(c)]&(T_AST))

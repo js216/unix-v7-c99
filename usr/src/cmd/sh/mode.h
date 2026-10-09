@@ -13,7 +13,7 @@ TYPE int	INT;
 TYPE float	REAL;
 TYPE char	*ADDRESS;
 TYPE long int	L_INT;
-TYPE int	VOID;
+TYPE void	VOID;
 TYPE unsigned	POS;
 TYPE char	*STRING;
 TYPE char	MSG[];
@@ -51,7 +51,7 @@ STRUCT sysnod	*SYSPTR;
  * into an Rvalue so two cheats
  * are necessary, one for each context.
  */
-#define Lcheat(a)	(*(int *)&(a))
+#define Lcheat(a)	((a)._cheat)
 #define Rcheat(a)	((int)(a))
 
 

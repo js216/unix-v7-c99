@@ -7,7 +7,6 @@
  *
  */
 
-int	signal();
 #include	"defs.h"
 
 
@@ -17,8 +16,8 @@ BOOL		trapflg[MAXTRAP];
 /* ========	fault handling routines	   ======== */
 
 
-VOID
-fault(INT sig)
+VOID	fault(sig)
+	REG INT		sig;
 {
 	REG INT		flag;
 
@@ -35,21 +34,20 @@ fault(INT sig)
 		trapnote |= flag;
 		trapflg[sig] |= flag;
 	FI
-	return(0);
 }
 
 VOID
-stdsigs(void)
+stdsigs()
 {
 	ignsig(QUIT);
 	getsig(INTR);
 	getsig(MEMF);
 	getsig(ALARM);
-	return(0);
 }
 
 INT
-ignsig(INT n)
+ignsig(n)
+	INT		n;
 {
 	REG INT		s, i;
 
@@ -60,18 +58,18 @@ ignsig(INT n)
 }
 
 VOID
-getsig(INT n)
+getsig(n)
+	INT		n;
 {
 	REG INT		i;
 
 	IF trapflg[i=n]&SIGMOD ORF ignsig(i)==0
 	THEN	signal(i,fault);
 	FI
-	return(0);
 }
 
 VOID
-oldsigs(void)
+oldsigs()
 {
 	REG INT		i;
 	REG STRING	t;
@@ -85,22 +83,21 @@ oldsigs(void)
 	    trapflg[i]=0;
 	OD
 	trapnote=0;
-	return(0);
 }
 
 VOID
-clrsig(INT i)
+clrsig(i)
+	INT		i;
 {
 	free(trapcom[i]); trapcom[i]=0;
 	IF trapflg[i]&SIGMOD
 	THEN	signal(i,fault);
 		trapflg[i] &= ~SIGMOD;
 	FI
-	return(0);
 }
 
 VOID
-chktrap(void)
+chktrap()
 {
 	/* check for traps */
 	REG INT		i=MAXTRAP;
@@ -117,5 +114,4 @@ chktrap(void)
 		FI
 	   FI
 	OD
-	return(0);
 }

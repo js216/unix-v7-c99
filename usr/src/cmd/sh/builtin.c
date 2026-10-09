@@ -1,2 +1,3 @@
-int builtin(void)
+int
+builtin()
 {return(0);}

@@ -9,15 +9,14 @@
 
 #include	"defs.h"
 #include	"sym.h"
+LOCAL INT	readb();
 
-extern int read(int fd, char *buf, int n);
-extern int close(int fd);
-LOCAL	INT readb(void);
 
 /* ========	character handling for command lines	========*/
 
 
-INT word(void)
+INT
+word()
 {
 	REG CHAR	c, d;
 	REG CHAR	*argp=locstak()+BYTESPERWORD;
@@ -71,8 +70,9 @@ INT word(void)
 	return(wdval);
 }
 
-int
-nextc(int quote)
+INT
+nextc(quote)
+	CHAR		quote;
 {
 	REG CHAR	c, d;
 	IF (d=readc())==ESCAPE
@@ -86,7 +86,8 @@ nextc(int quote)
 	return(d);
 }
 
-INT readc(void)
+INT
+readc()
 {
 	REG CHAR	c;
 	REG INT		len;
@@ -117,7 +118,7 @@ retry:
 	return(c);
 }
 
-LOCAL	INT readb(void)
+LOCAL INT	readb()
 {
 	REG FILE	f=standin;
 	REG INT		len;

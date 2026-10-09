@@ -22,21 +22,15 @@ FILEBLK		stdfile;
 FILE		standin = &stdfile;
 #include	<execargs.h>
 
-LOCAL VOID	exfile(BOOL prof);
-extern int getpid(void);
-extern int getuid(void);
-extern int gtty();
-extern int alarm(unsigned sec);
-extern int stat(char *p, struct stat *s);
-extern int close(int fd);
-extern int dup();
-extern int ioctl(int fd, int cmd, ...);
+LOCAL VOID	exfile();
 
 
 
 
 int
-main(INT c, STRING v[])
+main(c, v)
+	INT		c;
+	STRING		v[];
 {
 	REG INT		rflag=ttyflg;
 
@@ -94,10 +88,10 @@ main(INT c, STRING v[])
 
 	exfile(0);
 	done();
-	return(0);
 }
 
-LOCAL VOID	exfile(BOOL prof)
+LOCAL VOID	exfile(prof)
+BOOL		prof;
 {
 	volatile L_INT	mailtime = 0;
 	REG INT		userid;
@@ -126,7 +120,7 @@ LOCAL VOID	exfile(BOOL prof)
 	FI
 
 	IF setjmp(errshell) ANDF prof
-	THEN	close(input); return(0);
+	THEN	close(input); return;
 	FI
 
 	/* error return here */
@@ -150,34 +144,35 @@ LOCAL VOID	exfile(BOOL prof)
 
 		trapnote=0; peekc=readc();
 		IF eof
-		THEN	return(0);
+		THEN	return;
 		FI
 		alarm(0); flags &= ~waiting;
-		execute(cmd(NL,MTFLG),0,(INT *)0,(INT *)0);
+		execute(cmd(NL,MTFLG),0,0,0);
 		eof |= (flags&oneflg);
 	POOL
 }
 
 VOID
-chkpr(INT eor)
+chkpr(eor)
+char eor;
 {
 	IF (flags&prompt) ANDF standin->fstak==0 ANDF eor==NL
 	THEN	prs(ps2nod.namval);
 	FI
-	return(0);
 }
 
-INT settmp(void)
+VOID
+settmp()
 {
 	itos(getpid()); serial=0;
 	tmpnam=movstr(numbuf,&tmpout[TMPNAM]);
-	return(0);
 }
 
-INT Ldup(REG INT fa, REG INT fb)
+VOID
+Ldup(fa, fb)
+	REG INT		fa, fb;
 {
 	dup(fa|DUPFLG, fb);
 	close(fa);
 	ioctl(fb, FIOCLEX, 0);
-	return(0);
 }

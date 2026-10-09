@@ -9,18 +9,17 @@
 
 #include	"defs.h"
 
-extern void exit(int n) __attribute__((__noreturn__));
-extern int unlink(char *p);
 
 /* ========	error handling	======== */
 
-INT exitset(void)
+VOID
+exitset()
 {
 	assnum(&exitadr,exitval);
-	return(0);
 }
 
-INT sigchk(void)
+VOID
+sigchk()
 {
 	/* Find out if it is time to go away.
 	 * `trapnote' is set to SIGSET when fault is seen and
@@ -29,27 +28,29 @@ INT sigchk(void)
 	IF trapnote&SIGSET
 	THEN	exitsh(SIGFAIL);
 	FI
-	return(0);
 }
 
-INT failed(STRING s1, STRING s2)
+VOID
+failed(s1,s2)
+	STRING	s1, s2;
 {
 	prp(); prs(s1); 
 	IF s2
 	THEN	prs(colon); prs(s2);
 	FI
 	newline(); exitsh(ERROR);
-	return(0);
 }
 
-INT error(STRING s)
+VOID
+error(s)
+	STRING	s;
 {
 	failed(s,NIL);
-	return(0);
 }
 
-void
-exitsh(INT xno)
+VOID
+exitsh(xno)
+	INT	xno;
 {
 	/* Arrive here from `FATAL' errors
 	 *  a) exit command,
@@ -66,7 +67,8 @@ exitsh(INT xno)
 	FI
 }
 
-void done(void)
+VOID
+done()
 {
 	REG STRING	t;
 	IF (t=trapcom[0])
@@ -77,8 +79,9 @@ void done(void)
 	exit(exitval);
 }
 
-void
-rmtemp(IOPTR base)
+VOID
+rmtemp(base)
+	IOPTR		base;
 {
 	WHILE iotemp>base
 	DO  unlink(iotemp->ioname);

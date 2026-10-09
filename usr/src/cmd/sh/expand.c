@@ -24,14 +24,12 @@
  *
  */
 
-LOCAL VOID	addg(STRING as1, STRING as2, STRING as3);
-extern int stat(char *p, STATBUF *s);
-extern int open(char *p, int f);
-extern int read(int fd, char *buf, int n);
-extern int close(int fd);
+LOCAL VOID	addg();
 
 
-INT	expand(STRING as, INT rflg)
+INT	expand(as,rflg)
+	STRING		as;
+	INT		rflg;
 {
 	INT		count, dirf;
 	BOOL		dir=0;
@@ -80,7 +78,7 @@ INT	expand(STRING as, INT rflg)
 		REP	IF *rs=='/' THEN rescan=rs; *rs=0; gchain=0 FI
 		PER	*rs++ DONE
 
-		WHILE read(dirf, (char *)&entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
+		WHILE read(dirf, &entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
 		DO	IF entry.d_ino==0 ORF
 			    (*entry.d_name=='.' ANDF *cs!='.')
 			THEN	continue;
@@ -115,7 +113,8 @@ INT	expand(STRING as, INT rflg)
 }
 
 INT
-gmatch(REG STRING s, REG STRING p)
+gmatch(s, p)
+	REG STRING	s, p;
 {
 	REG INT		scc;
 	CHAR		c;
@@ -125,7 +124,7 @@ gmatch(REG STRING s, REG STRING p)
 		THEN	scc=0200;
 		FI
 	FI
-	SWITCH (c = *p++) IN
+	SWITCH c = *p++ IN
 
 	    case '[':
 		{BOOL ok; INT lc;
@@ -158,10 +157,10 @@ gmatch(REG STRING s, REG STRING p)
 	    case 0:
 		return(scc==0);
 	ENDSW
-	return(0);
 }
 
-LOCAL VOID	addg(STRING as1, STRING as2, STRING as3)
+LOCAL VOID	addg(as1,as2,as3)
+	STRING		as1, as2, as3;
 {
 	REG STRING	s1, s2;
 	REG INT		c;
@@ -182,14 +181,14 @@ LOCAL VOID	addg(STRING as1, STRING as2, STRING as3)
 	THEN	*s2++='/';
 		WHILE (*s2++ = *++s1) DONE
 	FI
-	makearg((ARGPTR)endstak(s2));
-	return(0);
+	makearg(endstak(s2));
 }
 
-INT makearg(REG ARGPTR args)
+VOID
+makearg(args)
+	REG ARGPTR	args;
 {
 	args->argnxt=gchain;
 	gchain=args;
-	return(0);
 }
 

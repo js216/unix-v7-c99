@@ -10,27 +10,23 @@
 #include	"defs.h"
 #include	"dup.h"
 
-extern int close(int fd);
-extern int open(char *p, int f);
-extern int creat(char *p, int m);
-extern int pipe(int *pv);
-extern int dup(int f1, int f2);
-extern int write(int fd, char *buf, int n);
 
 /* ========	input output and file copying ======== */
 
-INT initf(UFD fd)
+VOID
+initf(fd)
+	UFD		fd;
 {
 	REG FILE	f=standin;
 
-	f->fdes=fd; f->fsiz=(fd > 2 ? BUFSIZ :
-	    ((flags&(oneflg|ttyflg))==0 ? BUFSIZ : 1));
+	f->fdes=fd; f->fsiz=((flags&(oneflg|ttyflg))==0 ? BUFSIZ : 1);
 	f->fnxt=f->fend=f->fbuf; f->feval=0; f->flin=1;
 	f->feof=FALSE;
-	return(0);
 }
 
-INT estabf(REG STRING s)
+INT
+estabf(s)
+	REG STRING	s;
 {
 	REG FILE	f;
 
@@ -40,17 +36,19 @@ INT estabf(REG STRING s)
 	return(f->feof=(s==0));
 }
 
-INT push(FILE af)
+VOID
+push(af)
+	FILE		af;
 {
 	REG FILE	f;
 
 	(f=af)->fstak=standin;
 	f->feof=0; f->feval=0;
 	standin=f;
-	return(0);
 }
 
-INT pop(void)
+INT
+pop()
 {
 	REG FILE	f;
 
@@ -62,16 +60,18 @@ INT pop(void)
 	FI
 }
 
-INT chkpipe(INT *pv)
+VOID
+chkpipe(pv)
+	INT		*pv;
 {
 	IF pipe(pv)<0 ORF pv[INPIPE]<0 ORF pv[OTPIPE]<0
 	THEN	error(piperr);
 	FI
-	return(0);
 }
 
 INT
-chkopen(STRING idf)
+chkopen(idf)
+	STRING		idf;
 {
 	REG INT		rc;
 
@@ -82,18 +82,20 @@ chkopen(STRING idf)
 	return(0);
 }
 
-INT rename(REG INT f1, REG INT f2)
+VOID
+rename(f1,f2)
+	REG INT		f1, f2;
 {
 	IF f1!=f2
 	THEN	dup(f1|DUPFLG, f2);
 		close(f1);
 		IF f2==0 THEN ioset|=1 FI
 	FI
-	return(0);
 }
 
 INT
-create(STRING s)
+create(s)
+	STRING		s;
 {
 	REG INT		rc;
 
@@ -104,7 +106,8 @@ create(STRING s)
 	return(0);
 }
 
-INT tmpfil(void)
+INT
+tmpfil()
 {
 	itos(serial++); movstr(numbuf,tmpnam);
 	return(create(tmpout));
@@ -113,7 +116,9 @@ INT tmpfil(void)
 /* set by trim */
 BOOL		nosubst;
 
-INT copy(IOPTR ioparg)
+VOID
+copy(ioparg)
+	IOPTR		ioparg;
 {
 	CHAR		c, *ends;
 	REG CHAR	*cline, *clinep;
@@ -137,5 +142,4 @@ INT copy(IOPTR ioparg)
 		POOL
 		close(fd);
 	FI
-	return(0);
 }
