@@ -4,6 +4,7 @@
 
 #define mask(x) (x&0377)
 #include <stdio.h>
+#include <a.out.h>
 #include <sys/param.h>
 #include "../../sys/h/tty.h"
 #include "../../sys/h/inode.h"
@@ -48,12 +49,11 @@ long	ubase;
 int	filf;
 int	allflg;
 
-int nlist(), oatoi();
-void doinode(), dotext(), doproc(), dotty(), dousr(), dofil(), putf(), ttyprt();
+int oatoi(char *s);
+void doinode(void), dotext(void), doproc(void), dotty(void), dousr(void), dofil(void);
+void putf(int v, int n), ttyprt(int n, struct tty *atp);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 
 	while (--argc && **++argv == '-') {
@@ -99,7 +99,7 @@ char **argv;
 	}
 	if (argc>1)
 		fnlist = argv[1];
-	nlist(fnlist, setup);
+	nlist(fnlist, (struct nlist *)setup);
 	if (setup[SINODE].type == -1) {
 		printf("no namelist\n");
 		exit(1);
@@ -119,7 +119,7 @@ char **argv;
 }
 
 void
-doinode()
+doinode(void)
 {
 	register struct inode *ip;
 	struct inode xinode[NINODE];
@@ -159,8 +159,7 @@ doinode()
 }
 
 void
-putf(v, n)
-int v, n;
+putf(int v, int n)
 {
 	if (v)
 		printf("%c", n);
@@ -169,7 +168,7 @@ int v, n;
 }
 
 void
-dotext()
+dotext(void)
 {
 	register struct text *xp;
 	struct text xtext[NTEXT];
@@ -206,7 +205,7 @@ dotext()
 }
 
 void
-doproc()
+doproc(void)
 {
 	struct proc xproc[NPROC];
 	register struct proc *pp;
@@ -246,7 +245,7 @@ doproc()
 }
 
 void
-dotty()
+dotty(void)
 {
 	struct tty dh11[48];
 	int ndh;
@@ -271,9 +270,7 @@ dotty()
 }
 
 void
-ttyprt(n, atp)
-int n;
-struct tty *atp;
+ttyprt(int n, struct tty *atp)
 {
 	register struct tty *tp;
 
@@ -299,7 +296,7 @@ struct tty *atp;
 }
 
 void
-dousr()
+dousr(void)
 {
 	union {
 		struct	user rxu;
@@ -367,8 +364,7 @@ dousr()
 }
 
 int
-oatoi(s)
-char *s;
+oatoi(char *s)
 {
 	register int v;
 
@@ -379,7 +375,7 @@ char *s;
 }
 
 void
-dofil()
+dofil(void)
 {
 	struct file xfile[NFILE];
 	register struct file *fp;
