@@ -146,7 +146,7 @@ check(char *file)
 		sflg = 0;
 	}
 	if(!dflg)
-	for(i=0; i<(int)(unsigned)n; i++)
+	for(i=0; i<n; i++)
 		bmap[i] = 0;
 	for(i=2;; i+=NI) {
 		if(ino >= mino)

@@ -124,7 +124,7 @@ static char *talloc(int n)
 	if(p!=NULL)
 		return(p);
 	noroom();
-	return(NULL);
+	return(p);
 }
 
 static char *ralloc(char *p,int n)	/*compacting reallocation */
