@@ -6,9 +6,7 @@
 #include <stdio.h>
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int signo, pid, res;
 	int errlev;
