@@ -149,7 +149,8 @@ struct anode *e2(void) { /* parse NOT (!) */
 struct anode *e3(void) { /* parse parens and predicates */
 	struct anode *p1;
 	int i;
-	register char *a, *b, s;
+	register char *a, *b;
+	register int s;
 
 	a = nxtarg();
 	if(EQ(a, "(")) {
@@ -168,45 +169,45 @@ struct anode *e3(void) { /* parse parens and predicates */
 	if(EQ(a, "-name"))
 		return(mk(glob, (struct anode *)b, (struct anode *)0));
 	else if(EQ(a, "-mtime"))
-		return(mk(mtime, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(mtime, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-atime"))
-		return(mk(atime, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(atime, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-ctime"))
-		return(mk(ctime, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(ctime, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-user")) {
 		if((i=getunum("/etc/passwd", b)) == -1) {
 			if(gmatch(b, "[0-9][0-9][0-9]*")
 			|| gmatch(b, "[0-9][0-9]")
 			|| gmatch(b, "[0-9]"))
-				return mk(user, (struct anode *)atoi(b), (struct anode *)(int)s);
+				return mk(user, (struct anode *)atoi(b), (struct anode *)s);
 			pr("find: cannot find -user name\n");
 			exit(1);
 		}
-		return(mk(user, (struct anode *)i, (struct anode *)(int)s));
+		return(mk(user, (struct anode *)i, (struct anode *)s));
 	}
 	else if(EQ(a, "-inum"))
-		return(mk(ino, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(ino, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-group")) {
 		if((i=getunum("/etc/group", b)) == -1) {
 			if(gmatch(b, "[0-9][0-9][0-9]*")
 			|| gmatch(b, "[0-9][0-9]")
 			|| gmatch(b, "[0-9]"))
-				return mk(group, (struct anode *)atoi(b), (struct anode *)(int)s);
+				return mk(group, (struct anode *)atoi(b), (struct anode *)s);
 			pr("find: cannot find -group name\n");
 			exit(1);
 		}
-		return(mk(group, (struct anode *)i, (struct anode *)(int)s));
+		return(mk(group, (struct anode *)i, (struct anode *)s));
 	} else if(EQ(a, "-size"))
-		return(mk(size, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(size, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-links"))
-		return(mk(links, (struct anode *)atoi(b), (struct anode *)(int)s));
+		return(mk(links, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-perm")) {
 		for(i=0; *b ; ++b) {
 			if(*b=='-') continue;
 			i <<= 3;
 			i = i + (*b - '0');
 		}
-		return(mk(perm, (struct anode *)i, (struct anode *)(int)s));
+		return(mk(perm, (struct anode *)i, (struct anode *)s));
 	}
 	else if(EQ(a, "-type")) {
 		i = s=='d' ? S_IFDIR :
@@ -287,10 +288,9 @@ not(register struct anode *p)
 	return( !((*p->L->F)(p->L)));
 }
 int
-glob(struct anode *a)
+glob(register struct anode *p)
 {
-	register struct { int f; char *pat; } *p = (void *)a;
-	return(gmatch(Fname, p->pat));
+	return(gmatch(Fname, (char *)p->L));
 }
 int
 print(struct anode *p)
@@ -300,82 +300,70 @@ print(struct anode *p)
 	return(1);
 }
 int
-mtime(struct anode *a)
+mtime(register struct anode *p)
 {
-	register struct { int f, t, s; } *p = (void *)a;
-	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), p->t, p->s));
+	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), (int)p->L, (int)p->R));
 }
 int
-atime(struct anode *a)
+atime(register struct anode *p)
 {
-	register struct { int f, t, s; } *p = (void *)a;
-	return(scomp((int)((Now - Statb.st_atime) / A_DAY), p->t, p->s));
+	return(scomp((int)((Now - Statb.st_atime) / A_DAY), (int)p->L, (int)p->R));
 }
 int
-ctime(struct anode *a)
+ctime(register struct anode *p)
 {
-	register struct { int f, t, s; } *p = (void *)a;
-	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), p->t, p->s));
+	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), (int)p->L, (int)p->R));
 }
 int
-user(struct anode *a)
+user(register struct anode *p)
 {
-	register struct { int f, u, s; } *p = (void *)a;
-	return(scomp(Statb.st_uid, p->u, p->s));
+	return(scomp(Statb.st_uid, (int)p->L, (int)p->R));
 }
 int
-ino(struct anode *a)
+ino(register struct anode *p)
 {
-	register struct { int f, u, s; } *p = (void *)a;
-	return(scomp((int)Statb.st_ino, p->u, p->s));
+	return(scomp((int)Statb.st_ino, (int)p->L, (int)p->R));
 }
 int
-group(struct anode *a)
+group(register struct anode *p)
 {
-	register struct { int f, u; } *p = (void *)a;
-	return(p->u == Statb.st_gid);
+	return((int)p->L == Statb.st_gid);
 }
 int
-links(struct anode *a)
+links(register struct anode *p)
 {
-	register struct { int f, link, s; } *p = (void *)a;
-	return(scomp(Statb.st_nlink, p->link, p->s));
+	return(scomp(Statb.st_nlink, (int)p->L, (int)p->R));
 }
 int
-size(struct anode *a)
+size(register struct anode *p)
 {
-	register struct { int f, sz, s; } *p = (void *)a;
-	return(scomp((int)((Statb.st_size+511)>>9), p->sz, p->s));
+	return(scomp((int)((Statb.st_size+511)>>9), (int)p->L, (int)p->R));
 }
 int
-perm(struct anode *a)
+perm(register struct anode *p)
 {
-	register struct { int f, per, s; } *p = (void *)a;
 	register int i;
-	i = (p->s=='-') ? p->per : 07777; /* '-' means only arg bits */
-	return((Statb.st_mode & i & 07777) == p->per);
+	i = ((int)p->R=='-') ? (int)p->L : 07777; /* '-' means only arg bits */
+	return((Statb.st_mode & i & 07777) == (int)p->L);
 }
 int
-type(struct anode *a)
+type(register struct anode *p)
 {
-	register struct { int f, per, s; } *p = (void *)a;
-	return((Statb.st_mode&S_IFMT)==p->per);
+	return((Statb.st_mode&S_IFMT)==(int)p->L);
 }
 int
-exeq(struct anode *a)
+exeq(register struct anode *p)
 {
-	register struct { int f, com; } *p = (void *)a;
 	fflush(stdout); /* to flush possible `-print' */
-	return(doex(p->com));
+	return(doex((int)p->L));
 }
 int
-ok(struct anode *a)
+ok(struct anode *p)
 {
-	struct { int f, com; } *p = (void *)a;
 	int c;  int yes;
 	yes = 0;
 	fflush(stdout); /* to flush possible `-print' */
-	pr("< "), pr(Argv[p->com]), pr(" ... "), pr(Pathname), pr(" >?   ");
+	pr("< "), pr(Argv[(int)p->L]), pr(" ... "), pr(Pathname), pr(" >?   ");
 	fflush(stderr);
 	if((c=getchar())=='y') yes = 1;
 	while(c!='\n')
@@ -383,7 +371,7 @@ ok(struct anode *a)
 			exit(2);
 		else
 			c = getchar();
-	if(yes) return(doex(p->com));
+	if(yes) return(doex((int)p->L));
 	return(0);
 }
 
@@ -525,7 +513,7 @@ getunum(char *f, char *s) { /* find user/group name and return number */
 				while((c=getc(pin)) != ':')
 					if(c == EOF) goto RET;
 				sp = str;
-				while((*sp = getc(pin)) != ':') sp++;
+				while((*sp = c = getc(pin)) != ':' && c != EOF && sp < &str[19]) sp++;
 				*sp = '\0';
 				i = atoi(str);
 				goto RET;
