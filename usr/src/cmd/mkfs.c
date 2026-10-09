@@ -22,13 +22,12 @@
 #include <sys/filsys.h>
 #include <sys/fblk.h>
 #include <sys/dir.h>
-int ltol3(cp, lp, n) char *cp; long *lp; int n; {
+void ltol3(cp, lp, n) char *cp; long *lp; int n; {
 	int i; long v;
 	for(i=0; i<n; i++) {
 		v = lp[i];
 		*cp++ = v; *cp++ = v >> 8; *cp++ = v >> 16;
 	}
-	return(0);
 }
 time_t	utime;
 #ifndef STANDALONE
@@ -40,13 +39,13 @@ int	fsi;
 int	fso;
 char	*charp;
 char	buf[BSIZE];
-union fbuf_u {
+union {
 	struct fblk fb;
 	char pad1[BSIZE];
 } fbuf_storage;
 #define fbuf fbuf_storage.fb
 char	string[50];
-union filsys_u {
+union {
 	struct filsys fs;
 	char pad2[BSIZE];
 } filsys_storage;
@@ -57,24 +56,15 @@ int	f_n	= MAXFN;
 int	f_m	= 3;
 int	error;
 ino_t	ino;
-struct	inode;
-long	getnum(void);
-daddr_t	alloc(void);
-void	cfile(struct inode *par);
-void	getstr(void);
-int	gmode(int c, char *s, int m0, int m1, int m2, int m3);
-void	rdfs(daddr_t bno, char *bf);
-void	wtfs(daddr_t bno, char *bf);
-void	bfree(daddr_t bno);
-void	entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib);
-void	newblk(int *adbc, char *db, int *aibc, daddr_t *ib);
-int	getch(void);
-void	bflist(void);
-void	iput(struct inode *ip, int *aibc, daddr_t *ib);
-int	badblk(daddr_t bno);
+long	getnum();
+daddr_t	alloc();
+void	cfile(), getstr(), wtfs(), entry(), newblk(), bflist(), iput();
+int	gmode(), getch(), badblk();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char *argv[];
 {
 	int f, c;
 	long n;
@@ -138,7 +128,7 @@ main(int argc, char *argv[])
 		n = n/25;
 		if(n <= 0)
 			n = 1;
-		if((unsigned long)n > 65500/NIPB)
+		if((unsigned)n > 65500/NIPB)
 			n = 65500/NIPB;
 		filsys.s_isize = n + 2;
 		printf("isize = %ld\n", n*NIPB);
@@ -154,7 +144,7 @@ main(int argc, char *argv[])
 	getstr();
 	f = open(string, 0);
 	if(f < 0)
-		printf("%s: cannot open init\n", string);
+		printf("%s: cannot  open init\n", string);
 	else
 
 	close(f);
@@ -206,7 +196,8 @@ f3:
 }
 
 void
-cfile(struct inode *par)
+cfile(par)
+struct inode *par;
 {
 	struct inode in;
 	int dbc, ibc;
@@ -318,7 +309,9 @@ cfile(struct inode *par)
 }
 
 int
-gmode(int c, char *s, int m0, int m1, int m2, int m3)
+gmode(c, s, m0, m1, m2, m3)
+char c, *s;
+int	m0, m1, m2, m3;
 {
 	int i;
 	int m[4] = {m0, m1, m2, m3};
@@ -332,7 +325,7 @@ gmode(int c, char *s, int m0, int m1, int m2, int m3)
 }
 
 long
-getnum(void)
+getnum()
 {
 	int i, c;
 	long n;
@@ -352,7 +345,7 @@ getnum(void)
 }
 
 void
-getstr(void)
+getstr()
 {
 	int i, c;
 
@@ -383,7 +376,9 @@ loop:
 }
 
 void
-rdfs(daddr_t bno, char *bf)
+rdfs(bno, bf)
+daddr_t bno;
+char *bf;
 {
 	int n;
 
@@ -396,7 +391,9 @@ rdfs(daddr_t bno, char *bf)
 }
 
 void
-wtfs(daddr_t bno, char *bf)
+wtfs(bno, bf)
+daddr_t bno;
+char *bf;
 {
 	int n;
 
@@ -409,7 +406,7 @@ wtfs(daddr_t bno, char *bf)
 }
 
 daddr_t
-alloc(void)
+alloc()
 {
 	int i;
 	daddr_t bno;
@@ -430,7 +427,8 @@ alloc(void)
 }
 
 void
-bfree(daddr_t bno)
+bfree(bno)
+daddr_t bno;
 {
 	int i;
 
@@ -446,7 +444,12 @@ bfree(daddr_t bno)
 }
 
 void
-entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib)
+entry(inum, str, adbc, db, aibc, ib)
+ino_t inum;
+char *str;
+int *adbc, *aibc;
+char *db;
+daddr_t *ib;
 {
 	struct direct *dp;
 	int i;
@@ -465,16 +468,14 @@ entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib)
 }
 
 void
-newblk(int *adbc, char *db, int *aibc, daddr_t *ib)
+newblk(adbc, db, aibc, ib)
+int *adbc, *aibc;
+char *db;
+daddr_t *ib;
 {
 	int i;
 	daddr_t bno;
 
-	if((unsigned)*aibc >= MAXFILEBLK) {
-		printf("indirect block full\n");
-		error = 1;
-		return;
-	}
 	bno = alloc();
 	wtfs(bno, db);
 	for(i=0; i<BSIZE; i++)
@@ -482,10 +483,15 @@ newblk(int *adbc, char *db, int *aibc, daddr_t *ib)
 	*adbc = 0;
 	ib[*aibc] = bno;
 	(*aibc)++;
+	if((unsigned)*aibc >= MAXFILEBLK) {
+		printf("indirect block full\n");
+		error = 1;
+		*aibc = 0;
+	}
 }
 
 int
-getch(void)
+getch()
 {
 
 #ifndef STANDALONE
@@ -498,7 +504,7 @@ getch(void)
 }
 
 void
-bflist(void)
+bflist()
 {
 	struct inode in;
 	daddr_t ib[NINDIR];
@@ -556,11 +562,14 @@ bflist(void)
 }
 
 void
-iput(struct inode *ip, int *aibc, daddr_t *ib)
+iput(ip, aibc, ib)
+struct inode *ip;
+int *aibc;
+daddr_t *ib;
 {
 	struct dinode *dp;
-	daddr_t d, single[NINDIR], dbl[NINDIR];
-	int i, j, k, n;
+	daddr_t d, dbl[NINDIR];
+	int i;
 
 	filsys.s_tinode--;
 	d = itod(ip->i_number);
@@ -587,43 +596,27 @@ iput(struct inode *ip, int *aibc, daddr_t *ib)
 
 	case IFDIR:
 	case IFREG:
-		for(i=0; (unsigned)i<NINDIR; i++) {
-			single[i] = (daddr_t)0;
-			dbl[i] = (daddr_t)0;
-		}
-		for(i=0; i<*aibc && i<LADDR; i++)
+		for(i=0; i<*aibc; i++) {
+			if(i >= LADDR)
+				break;
 			ip->i_un.i_addr[i] = ib[i];
-		if((unsigned)*aibc > LADDR) {
-			n = *aibc - LADDR;
-			if((unsigned)n > NINDIR)
-				n = (int)NINDIR;
-			for(i=0; i<n; i++)
-				single[i] = ib[LADDR+i];
+		}
+		if(*aibc >= LADDR) {
 			ip->i_un.i_addr[LADDR] = alloc();
-			wtfs(ip->i_un.i_addr[LADDR], (char *)single);
+			wtfs(ip->i_un.i_addr[LADDR], (char *)&ib[LADDR]);
 		}
 		if((unsigned)*aibc > LADDR+NINDIR) {
-			n = *aibc - LADDR - NINDIR;
-			if((unsigned)n > NINDIR*NINDIR) {
-				printf("indirect block full\n");
-				error = 1;
-				n = (int)(NINDIR*NINDIR);
-			}
 			ip->i_un.i_addr[LADDR+1] = alloc();
-			k = LADDR + NINDIR;
-			for(i=0; (unsigned)i<NINDIR && n>0; i++) {
-				for(j=0; (unsigned)j<NINDIR; j++)
-					single[j] = (daddr_t)0;
-				for(j=0; (unsigned)j<NINDIR && n>0; j++) {
-					single[j] = ib[k++];
-					n--;
+			for(i=0; (unsigned)i<NINDIR; i++) {
+				dbl[i] = 0;
+				if((unsigned)*aibc > LADDR+NINDIR+i*NINDIR) {
+					dbl[i] = alloc();
+					wtfs(dbl[i], (char *)&ib[LADDR+NINDIR+i*NINDIR]);
 				}
-				dbl[i] = alloc();
-				wtfs(dbl[i], (char *)single);
 			}
 			wtfs(ip->i_un.i_addr[LADDR+1], (char *)dbl);
 		}
-		/* fall through */
+		/* fallthrough */
 
 	case IFBLK:
 	case IFCHR:
@@ -638,7 +631,8 @@ iput(struct inode *ip, int *aibc, daddr_t *ib)
 }
 
 int
-badblk(daddr_t bno)
+badblk(bno)
+daddr_t bno;
 {
 
 	(void)bno;
