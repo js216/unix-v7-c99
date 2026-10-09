@@ -161,7 +161,7 @@ input(void)
 	extern char *lexprog;
 
 	if (lexprog != NULL)
-		c = *lexprog++;
+		c = *lexprog++&0377;
 	else
 		c = getc(yyin);
 	if (c == '\n')
