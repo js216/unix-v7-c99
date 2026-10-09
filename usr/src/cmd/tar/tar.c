@@ -706,7 +706,7 @@ response(void)
 
 	c = getchar();
 	if (c != '\n')
-		while (getchar() != '\n');
+		while (getchar() != '\n' && !feof(stdin));
 	else c = 'n';
 	return(c);
 }

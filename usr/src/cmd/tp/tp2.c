@@ -232,13 +232,13 @@ repeat:	printf("%c %s ", key, name);
 		return(0);
 	}
 	c = getchar();
-	if (c == 'n' && getchar() == '\n')
+	if (c == EOF || (c == 'n' && getchar() == '\n'))
 		done();
 	if (c == '\n')
 		return(-1);
 	if (c == 'y' && getchar() == '\n')
 		return(0);
-	while (getchar() != '\n');
+	while (getchar() != '\n' && !feof(stdin));
 	goto repeat;
 }
 
