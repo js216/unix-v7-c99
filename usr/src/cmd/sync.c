@@ -1,6 +1,6 @@
-void sync(void);
+void sync();
 int
-main(void)
+main()
 {
 
 	sync();
