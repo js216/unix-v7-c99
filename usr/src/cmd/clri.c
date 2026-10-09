@@ -15,11 +15,9 @@ struct	ino
 struct	ino	buf[NI];
 int	status;
 
-int isnumber();
+int isnumber(char *s);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i, f;
 	unsigned n;
@@ -73,8 +71,7 @@ char *argv[];
 }
 
 int
-isnumber(s)
-char *s;
+isnumber(char *s)
 {
 	register int c;
 

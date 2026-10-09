@@ -20,12 +20,10 @@ char *as[] = {
 	"globl","byte","even","text","data","bss","comm",0};
 int	ifile;
 
-void type();
-int ccom(), ascom(), english(), lookup();
+void type(char *file);
+int ccom(void), ascom(void), english(char *bp, int n), lookup(char *tab[]);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	FILE *fl;
 	register char *p;
@@ -58,8 +56,7 @@ char **argv;
 }
 
 void
-type(file)
-char *file;
+type(char *file)
 {
 	int j,nl;
 	char ch;
@@ -246,8 +243,7 @@ outa:
 out:;
 }
 int
-lookup(tab)
-char *tab[];
+lookup(char *tab[])
 {
 	char r;
 	int k,j,l;
@@ -265,7 +261,7 @@ char *tab[];
 	return(0);
 }
 int
-ccom(){
+ccom(void){
 	char cc;
 	while((cc = buf[i]) == ' ' || cc == '\t' || cc == '\n')if(i++ >= in)return(0);
 	if(buf[i] == '/' && buf[i+1] == '*'){
@@ -281,7 +277,7 @@ ccom(){
 	return(1);
 }
 int
-ascom(){
+ascom(void){
 	while(buf[i] == '/'){
 		i++;
 		while(buf[i++] != '\n')if(i >= in)return(0);
@@ -291,9 +287,7 @@ ascom(){
 }
 
 int
-english (bp, n)
-char *bp;
-int n;
+english (char *bp, int n)
 {
 # define NASC 128
 	int ct[NASC], j, vow, freq, rare;

@@ -8,16 +8,14 @@
 #include <sys/stat.h>
 #include <pwd.h>
 
-struct	passwd	*pwd,*getpwnam();
+struct	passwd	*pwd;
 struct	stat	stbuf;
 int	uid;
 int	status;
 
-int isnumber();
+int isnumber(char *s);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int c;
 
@@ -47,8 +45,7 @@ cho:
 }
 
 int
-isnumber(s)
-char *s;
+isnumber(char *s)
 {
 	register int c;
 

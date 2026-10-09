@@ -10,11 +10,9 @@
 char	t1[ROTORSZ];
 char	t2[ROTORSZ];
 char	t3[ROTORSZ];
-char	*getpass();
 
-void
-setup(pw)
-char *pw;
+static void
+setup(char *pw)
 {
 	int ic, i, k, temp, pf[2];
 	unsigned random;
@@ -67,9 +65,7 @@ char *pw;
 }
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i, n1, n2;
 

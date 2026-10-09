@@ -21,11 +21,9 @@ struct nlist nl[3] = {
 	{"_msgbufp",0,0}
 };
 
-void done(), pdate();
+void done(char *s), pdate(void);
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	int mem;
 	register char *mp, *omp, *mstart;
@@ -85,8 +83,7 @@ char **argv;
 }
 
 void
-done(s)
-char *s;
+done(char *s)
 {
 	register char *p, *q;
 
@@ -104,9 +101,8 @@ char *s;
 }
 
 void
-pdate()
+pdate(void)
 {
-	extern char *ctime();
 	static int firstime;
 	time_t tbuf;
 

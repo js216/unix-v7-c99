@@ -132,12 +132,10 @@ struct
 char	*arg;
 struct sgttyb mode;
 
-int	eq();
-void	prmodes(), delay(), prspeed();
+int	eq(char *string);
+void	prmodes(void), delay(int m, char *s), prspeed(char *c, int s);
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 	int i;
 
@@ -189,8 +187,7 @@ char	*argv[];
 }
 
 int
-eq(string)
-char *string;
+eq(char *string)
 {
 	int i;
 
@@ -207,7 +204,7 @@ loop:
 }
 
 void
-prmodes()
+prmodes(void)
 {
 	register int m;
 
@@ -243,9 +240,7 @@ prmodes()
 }
 
 void
-delay(m, s)
-int m;
-char *s;
+delay(int m, char *s)
 {
 
 	if(m)
@@ -257,9 +252,7 @@ int	speed[] = {
 };
 
 void
-prspeed(c, s)
-int s;
-char *c;
+prspeed(char *c, int s)
 {
 
 	fprintf(stderr,"%s%d baud\n", c, speed[s]);

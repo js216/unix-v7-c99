@@ -8,14 +8,12 @@ int	letters;
 int	linec;
 char	mode;
 int	uniq;
-char	*skip();
-int	gline(), equal();
-void	pline(), printe();
+char	*skip(char *s);
+int	gline(char buf[]), equal(char b1[], char b2[]);
+void	pline(char buf[]), printe(char *p, char *s);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	static char b1[1000], b2[1000];
 
@@ -66,8 +64,7 @@ char *argv[];
 }
 
 int
-gline(buf)
-register char buf[];
+gline(register char buf[])
 {
 	register int c;
 
@@ -81,8 +78,7 @@ register char buf[];
 }
 
 void
-pline(buf)
-register char buf[];
+pline(register char buf[])
 {
 
 	switch(mode) {
@@ -107,8 +103,7 @@ register char buf[];
 }
 
 int
-equal(b1, b2)
-register char b1[], b2[];
+equal(register char b1[], register char b2[])
 {
 	register char c;
 
@@ -123,8 +118,7 @@ register char b1[], b2[];
 }
 
 char *
-skip(s)
-register char *s;
+skip(register char *s)
 {
 	register int nf, nl;
 
@@ -141,8 +135,7 @@ register char *s;
 }
 
 void
-printe(p,s)
-char *p,*s;
+printe(char *p, char *s)
 {
 	fprintf(stderr, p, s);
 	exit(1);
