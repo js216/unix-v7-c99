@@ -6,7 +6,7 @@
 #undef getchar
 
 int
-getchar(void)
+getchar()
 {
 	return(getc(stdin));
 }

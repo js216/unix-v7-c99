@@ -4,7 +4,9 @@
  */
 
 void
-swab(register short *pf, register short *pt, register int n)
+swab(pf, pt, n)
+register short *pf, *pt;
+register int n;
 {
 
 	n /= 2;

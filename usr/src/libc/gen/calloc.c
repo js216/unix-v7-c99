@@ -1,12 +1,15 @@
 /*	calloc - allocate and clear memory block
 */
-#include <stdio.h>
 #define CHARPERINT (sizeof(int)/sizeof(char))
+#define NULL 0
+#include <stdio.h>
 
 char *
-calloc(unsigned num, unsigned size)
+calloc(num, size)
+unsigned num, size;
 {
 	register char *mp;
+	char *malloc();
 	register int *q;
 	register int m;
 
@@ -22,7 +25,9 @@ calloc(unsigned num, unsigned size)
 }
 
 void
-cfree(char *p, unsigned num, unsigned size)
+cfree(p, num, size)
+char *p;
+unsigned num, size;
 {
 	(void)num;
 	(void)size;

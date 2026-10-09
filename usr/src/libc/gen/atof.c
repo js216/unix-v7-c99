@@ -6,12 +6,13 @@
 #include <ctype.h>
 
 double
-atof(register char *p)
+atof(p)
+register char *p;
 {
 	register int c;
 	double fl, flexp, exp5;
-	double ldexp(double value, int n);
 	double big = 72057594037927936.;  /*2^56*/
+	double ldexp();
 	int nd;
 	register int eexp, exp, neg, negexp, bexp;
 

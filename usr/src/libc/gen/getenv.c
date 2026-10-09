@@ -4,10 +4,11 @@
  */
 #define NULL	0
 extern	char **environ;
-static char	*nvmatch(register char *s1, register char *s2);
+static char	*nvmatch();
 
 char *
-getenv(register char *name)
+getenv(name)
+register char *name;
 {
 	register char **p = environ;
 	register char *v;
@@ -26,7 +27,8 @@ getenv(register char *name)
  */
 
 static char *
-nvmatch(register char *s1, register char *s2)
+nvmatch(s1, s2)
+register char *s1, *s2;
 {
 
 	while (*s1 == *s2++)

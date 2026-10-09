@@ -1,5 +1,6 @@
 int
-atoi(register char *p)
+atoi(p)
+register char *p;
 {
 	register int n;
 	register int f;

@@ -6,13 +6,14 @@
 #define NULL 0
 
 char *
-rindex(register char *sp, int c)
+rindex(sp, c)
+register char *sp, c;
 {
 	register char *r;
 
 	r = NULL;
 	do {
-		if (*sp == (char)c)
+		if (*sp == c)
 			r = sp;
 	} while (*sp++);
 	return(r);

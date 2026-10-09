@@ -2,11 +2,12 @@
  * Returns 1 iff file is a tty
  */
 
-#include <stdio.h>
 #include <sgtty.h>
+#include <stdio.h>
 
 int
-isatty(int f)
+isatty(f)
+int f;
 {
 	struct sgttyb ttyb;
 

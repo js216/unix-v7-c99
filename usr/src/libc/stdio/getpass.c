@@ -3,7 +3,8 @@
 #include <sgtty.h>
 
 char *
-getpass(char *prompt)
+getpass(prompt)
+char *prompt;
 {
 	struct sgttyb ttyb;
 	int flags;

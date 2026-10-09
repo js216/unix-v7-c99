@@ -1,7 +1,10 @@
 #include	<stdio.h>
 
 int
-fread(register char *ptr, unsigned size, unsigned count, register FILE *iop)
+fread(ptr, size, count, iop)
+unsigned size, count;
+register char *ptr;
+register FILE *iop;
 {
 	register int c;
 	unsigned ndone, s;
@@ -21,7 +24,10 @@ fread(register char *ptr, unsigned size, unsigned count, register FILE *iop)
 }
 
 int
-fwrite(register char *ptr, unsigned size, unsigned count, register FILE *iop)
+fwrite(ptr, size, count, iop)
+unsigned size, count;
+register char *ptr;
+register FILE *iop;
 {
 	register unsigned s;
 	unsigned ndone;

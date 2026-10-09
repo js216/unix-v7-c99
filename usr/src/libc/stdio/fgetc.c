@@ -1,7 +1,8 @@
 #include <stdio.h>
 
 int
-fgetc(FILE *fp)
+fgetc(fp)
+FILE *fp;
 {
 	return(getc(fp));
 }

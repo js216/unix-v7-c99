@@ -2,13 +2,14 @@
  * Print the error indicated
  * in the cerror cell.
  */
-#include <stdio.h>
 
-extern int	errno;
-extern int	sys_nerr;
+#include <stdio.h>
+int	errno;
+int	sys_nerr;
 extern char	*sys_errlist[];
 void
-perror(char *s)
+perror(s)
+char *s;
 {
 	register char *c;
 	register int n;

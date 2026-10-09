@@ -1,9 +1,11 @@
 #include	<stdio.h>
 #include	<errno.h>
-static int create(register char *file, int rw);
+static int create();
 
 FILE *
-_endopen(char *file, char *mode, register FILE *iop)
+_endopen(file, mode, iop)
+	char *file, *mode;
+	register FILE *iop;
 {
 	extern int errno;
 	register int rw, f;
@@ -52,7 +54,9 @@ _endopen(char *file, char *mode, register FILE *iop)
 }
 
 static int
-create(register char *file, int rw)
+create(file, rw)
+	register char *file;
+	int rw;
 {
 	register int f;
 

@@ -2,7 +2,8 @@
 #include <pwd.h>
 
 struct passwd *
-getpwnam(char *name)
+getpwnam(name)
+char *name;
 {
 	register struct passwd *p;
 	struct passwd *getpwent();

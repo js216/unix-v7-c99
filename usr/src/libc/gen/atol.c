@@ -1,5 +1,6 @@
 long
-atol(register char *p)
+atol(p)
+register char *p;
 {
 	long n;
 	register int f;

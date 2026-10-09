@@ -1,7 +1,8 @@
 #include <pwd.h>
 
 struct passwd *
-getpwuid(register int uid)
+getpwuid(uid)
+register int uid;
 {
 	register struct passwd *p;
 	struct passwd *getpwent();

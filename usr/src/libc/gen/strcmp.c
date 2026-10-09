@@ -3,7 +3,8 @@
  */
 
 int
-strcmp(register char *s1, register char *s2)
+strcmp(s1, s2)
+register char *s1, *s2;
 {
 
 	while (*s1 == *s2++)

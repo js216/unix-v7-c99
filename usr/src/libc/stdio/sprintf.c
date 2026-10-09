@@ -1,19 +1,18 @@
 #include	<stdio.h>
 #include	<stdarg.h>
-extern void _doprnt(char *fmt, va_list *adx, FILE *file);
+void	_doprnt();
 
-char *
-sprintf(char *str, char *fmt, ...)
+char *sprintf(char *str, char *fmt, ...)
 {
+	va_list args;
 	struct _iobuf _strbuf;
-	va_list ap;
 
 	_strbuf._flag = _IOWRT+_IOSTRG;
 	_strbuf._ptr = str;
 	_strbuf._cnt = 32767;
-	va_start(ap, fmt);
-	_doprnt(fmt, &ap, &_strbuf);
-	va_end(ap);
+	va_start(args, fmt);
+	_doprnt(fmt, &args, &_strbuf);
+	va_end(args);
 	putc('\0', &_strbuf);
 	return(str);
 }

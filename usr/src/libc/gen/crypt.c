@@ -95,7 +95,8 @@ static	char	KS[16][48];
  */
 
 void
-setkey(char *key)
+setkey(key)
+char *key;
 {
 	register int i, j, k;
 	int t;
@@ -234,7 +235,9 @@ static	char	preS[48];
  */
 
 void
-encrypt(char *block, int edflag)
+encrypt(block, edflag)
+char *block;
+int edflag;
 {
 	int i, ii;
 	register int t, j, k;
@@ -322,7 +325,9 @@ encrypt(char *block, int edflag)
 }
 
 char *
-crypt(char *pw, char *salt)
+crypt(pw,salt)
+char *pw;
+char *salt;
 {
 	register int i, j, c;
 	int temp;

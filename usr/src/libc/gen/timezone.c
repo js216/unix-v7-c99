@@ -6,23 +6,24 @@
  *
  * Sorry, I don't know all the names.
  */
-#include <stdio.h>
 
+#include <stdio.h>
 static struct zone {
 	int	offset;
 	char	*stdzone;
 	char	*dlzone;
 } zonetab[] = {
-	{ 4*60, "AST", "ADT" },		/* Atlantic */
-	{ 5*60, "EST", "EDT" },		/* Eastern */
-	{ 6*60, "CST", "CDT" },		/* Central */
-	{ 7*60, "MST", "MDT" },		/* Mountain */
-	{ 8*60, "PST", "PDT" },		/* Pacific */
-	{ 0,    "GMT", 0 },		/* Greenwich */
-	{ -1,   0,     0 }
+	{4*60, "AST", "ADT"},		/* Atlantic */
+	{5*60, "EST", "EDT"},		/* Eastern */
+	{6*60, "CST", "CDT"},		/* Central */
+	{7*60, "MST", "MDT"},		/* Mountain */
+	{8*60, "PST", "PDT"},		/* Pacific */
+	{0, "GMT", 0},			/* Greenwich */
+	{-1, 0, 0}
 };
 
-char *timezone(int zone, int dst)
+char *timezone(zone, dst)
+int zone, dst;
 {
 	register struct zone *zp;
 	static char czone[10];

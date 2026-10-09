@@ -27,7 +27,7 @@
  * where tvec is produced by localtime
  * returns a ptr to a character string
  * that has the ascii time in the form
- *	Thu Jan 01 00:00:00 1970n0\\
+ *	Thu Jan 01 00:00:00 1970n0\\
  *	01234567890123456789012345
  *	0	  1	    2
  *
@@ -64,28 +64,29 @@ static struct {
 	int	daylb;
 	int	dayle;
 } daytab[] = {
-	{ 5,  333 },	/* 1974: Jan 6 - last Sun. in Nov */
-	{ 58, 303 },	/* 1975: Last Sun. in Feb - last Sun in Oct */
+	{5,	333},	/* 1974: Jan 6 - last Sun. in Nov */
+	{58,	303},	/* 1975: Last Sun. in Feb - last Sun in Oct */
 };
 
 struct tm	*gmtime();
 static char	*ct_numb();
+static int	sunday();
+int	ftime(), dysize();
 struct tm	*localtime();
 char	*ctime();
 char	*ct_num();
 char	*asctime();
-static int	sunday(register struct tm *t, register int d);
-int	dysize(int y);
-int	ftime(struct timeb *tp);
 
 char *
-ctime(long *t)
+ctime(t)
+long *t;
 {
 	return(asctime(localtime(t)));
 }
 
 struct tm *
-localtime(long *tim)
+localtime(tim)
+long *tim;
 {
 	register int dayno;
 	register struct tm *ct;
@@ -121,7 +122,9 @@ localtime(long *tim)
  * Sunday on or after the day.
  */
 static int
-sunday(register struct tm *t, register int d)
+sunday(t, d)
+register struct tm *t;
+register int d;
 {
 	if (d >= 58)
 		d += dysize(t->tm_year) - 365;
@@ -129,7 +132,8 @@ sunday(register struct tm *t, register int d)
 }
 
 struct tm *
-gmtime(long *tim)
+gmtime(tim)
+long *tim;
 {
 	register int d0, d1;
 	long hms, day;
@@ -190,14 +194,14 @@ gmtime(long *tim)
 }
 
 char *
-asctime(struct tm *t)
+asctime(t)
+struct tm *t;
 {
 	register char *cp, *ncp;
 	register int *tp;
 
 	cp = cbuf;
-	for (ncp = "Day Mon 00 00:00:00 1900\n"; (*cp++ = *ncp++);)
-		;
+	for (ncp = "Day Mon 00 00:00:00 1900\n"; (*cp++ = *ncp++););
 	ncp = &"SunMonTueWedThuFriSat"[3*t->tm_wday];
 	cp = cbuf;
 	*cp++ = *ncp++;
@@ -223,7 +227,8 @@ asctime(struct tm *t)
 }
 
 int
-dysize(int y)
+dysize(y)
+int y;
 {
 	if((y%4) == 0)
 		return(366);
@@ -231,7 +236,9 @@ dysize(int y)
 }
 
 static char *
-ct_numb(register char *cp, int n)
+ct_numb(cp, n)
+register char *cp;
+int n;
 {
 	cp++;
 	if (n>=10)

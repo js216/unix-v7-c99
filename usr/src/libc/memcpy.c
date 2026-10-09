@@ -1,23 +1,27 @@
 char *
-memcpy(char *d, char *s, unsigned n)
+memcpy(d, s, n)
+char *d;
+register char *s;
+register unsigned n;
 {
 	register char *p;
-	register unsigned i;
 
 	p = d;
-	for (i = 0; i < n; i++)
+	while (n--)
 		*p++ = *s++;
 	return(d);
 }
 
 char *
-memset(char *d, int c, unsigned n)
+memset(d, c, n)
+char *d;
+int c;
+register unsigned n;
 {
 	register char *p;
-	register unsigned i;
 
 	p = d;
-	for (i = 0; i < n; i++)
-		*p++ = (char)c;
+	while (n--)
+		*p++ = c;
 	return(d);
 }

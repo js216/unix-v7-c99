@@ -8,7 +8,7 @@ static char line[BUFSIZ+1];
 static struct passwd passwd;
 
 void
-setpwent(void)
+setpwent()
 {
 	if( pwf == NULL )
 		pwf = fopen( PASSWD, "r" );
@@ -17,7 +17,7 @@ setpwent(void)
 }
 
 void
-endpwent(void)
+endpwent()
 {
 	if( pwf != NULL ){
 		fclose( pwf );
@@ -26,7 +26,8 @@ endpwent(void)
 }
 
 static char *
-pwskip(register char *p)
+pwskip(p)
+register char *p;
 {
 	while( *p && *p != ':' )
 		++p;
@@ -35,7 +36,7 @@ pwskip(register char *p)
 }
 
 struct passwd *
-getpwent(void)
+getpwent()
 {
 	register char *p;
 

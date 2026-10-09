@@ -1,7 +1,8 @@
 #include <grp.h>
 
 struct group *
-getgrgid(register int gid)
+getgrgid(gid)
+register int gid;
 {
 	register struct group *p;
 	struct group *getgrent();

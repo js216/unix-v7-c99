@@ -1,13 +1,13 @@
 #include	<stdio.h>
 #include	<stdarg.h>
-extern void _doprnt(char *fmt, va_list *adx, FILE *file);
+void	_doprnt();
 
 int
 fprintf(FILE *iop, char *fmt, ...)
 {
-	va_list ap;
-	va_start(ap, fmt);
-	_doprnt(fmt, &ap, iop);
-	va_end(ap);
+	va_list args;
+	va_start(args, fmt);
+	_doprnt(fmt, &args, iop);
+	va_end(args);
 	return(ferror(iop)? EOF: 0);
 }

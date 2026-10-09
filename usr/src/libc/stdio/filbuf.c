@@ -1,10 +1,11 @@
 #include	<stdio.h>
 
-char	*malloc(unsigned n);
+char	*malloc();
 
 
 int
-_filbuf(register FILE *iop)
+_filbuf(iop)
+	register FILE *iop;
 {
 	static char smallbuf[_NFILE];
 

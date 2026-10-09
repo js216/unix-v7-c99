@@ -2,7 +2,8 @@
 #include <grp.h>
 
 struct group *
-getgrnam(register char *name)
+getgrnam(name)
+register char *name;
 {
 	register struct group *p;
 	struct group *getgrent();

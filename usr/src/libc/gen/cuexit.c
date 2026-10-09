@@ -1,7 +1,9 @@
-extern void _exit(int n);
-extern void _cleanup(void);
+#include <stdio.h>
+void	_cleanup();
+
 void
-exit(int n)
+exit(n)
+int n;
 {
 	_cleanup();
 	_exit(n);

@@ -6,7 +6,8 @@
 #undef putchar
 
 int
-putchar(register int c)
+putchar(c)
+register int c;
 {
 	return(putc(c, stdout));
 }

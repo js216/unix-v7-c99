@@ -1,13 +1,13 @@
 #include <signal.h>
 #include <setjmp.h>
+#include <stdio.h>
 
 static jmp_buf jmp;
-static void sleepx(int signo);
-extern int alarm(int n);
-extern int pause(void);
+static void sleepx();
 
 unsigned
-sleep(volatile unsigned n)
+sleep(n)
+volatile unsigned n;
 {
 	volatile unsigned altime;
 	int (*volatile alsig)() = SIG_DFL;
@@ -36,8 +36,7 @@ sleep(volatile unsigned n)
 }
 
 static void
-sleepx(int signo)
+sleepx()
 {
-	(void)signo;
 	longjmp(jmp, 1);
 }

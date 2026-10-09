@@ -1,6 +1,7 @@
 #include <stdio.h>
 char *
-mktemp(char *as)
+mktemp(as)
+char *as;
 {
 	register char *s;
 	register unsigned pid;

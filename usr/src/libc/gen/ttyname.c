@@ -5,17 +5,18 @@
  */
 
 #define	NULL	0
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/dir.h>
 #include <sys/stat.h>
+#include <stdio.h>
 
 static	char	dev[]	= "/dev/";
-char	*strcpy(char *a, char *b);
-char	*strcat(char *a, char *b);
+char	*strcpy();
+char	*strcat();
 
 char *
-ttyname(int f)
+ttyname(f)
+int f;
 {
 	struct stat fsb;
 	struct stat tsb;

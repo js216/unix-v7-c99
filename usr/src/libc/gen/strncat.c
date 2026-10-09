@@ -5,7 +5,9 @@
  */
 
 char *
-strncat(register char *s1, register char *s2, register int n)
+strncat(s1, s2, n)
+register char *s1, *s2;
+register int n;
 {
 	register char *os1;
 

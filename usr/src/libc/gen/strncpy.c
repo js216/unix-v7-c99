@@ -4,7 +4,9 @@
  */
 
 char *
-strncpy(register char *s1, register char *s2, int n)
+strncpy(s1, s2, n)
+register char *s1, *s2;
+int n;
 {
 	register int i;
 	register char *os1;

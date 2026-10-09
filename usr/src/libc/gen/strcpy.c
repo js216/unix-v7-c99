@@ -4,7 +4,8 @@
  */
 
 char *
-strcpy(register char *s1, register char *s2)
+strcpy(s1, s2)
+register char *s1, *s2;
 {
 	register char *os1;
 

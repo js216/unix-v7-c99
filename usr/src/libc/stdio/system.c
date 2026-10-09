@@ -2,7 +2,8 @@
 #include	<signal.h>
 
 int
-system(char *s)
+system(s)
+char *s;
 {
 	int status, pid, w;
 	register int (*istat)(), (*qstat)();
