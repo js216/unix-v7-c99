@@ -13,7 +13,7 @@
 
 int	_doscan(FILE *iop, char *fmt, va_list *argp);
 char	*_getccl(char *s);
-int	_innum(int **ptr, int type, int len, int size, FILE *iop, int *eofptr);
+int	_innum(char *ptr, int type, int len, int size, FILE *iop, int *eofptr);
 int	_instr(char *ptr, int type, int len, FILE *iop, int *eofptr);
 
 char	_sctab[256] = {
@@ -32,8 +32,8 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 {
 	register int ch;
 	int nmatch, len, ch1;
-	int **ptr, fileended, size;
-	int *slot;
+	char *ptr;
+	int fileended, size;
 
 	nmatch = 0;
 	fileended = 0;
@@ -44,10 +44,9 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 		if ((ch = *fmt++) == '%')
 			goto def;
 		ptr = 0;
-		if (ch != '*') {
-			slot = va_arg(*argp, int *);
-			ptr = &slot;
-		} else
+		if (ch != '*')
+			ptr = fmt;
+		else
 			ch = *fmt++;
 		len = 0;
 		size = REGULAR;
@@ -71,6 +70,19 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 		}
 		if (ch == '\0')
 			return(-1);
+		if (ptr) {
+			if (ch=='c' || ch=='s' || ch=='[')
+				ptr = va_arg(*argp, char *);
+			else if (ch=='e' || ch=='f')
+				ptr = size==LONG? (char *)va_arg(*argp, double *):
+				    (char *)va_arg(*argp, float *);
+			else if (size==LONG)
+				ptr = (char *)va_arg(*argp, long *);
+			else if (size==SHORT)
+				ptr = (char *)va_arg(*argp, short *);
+			else
+				ptr = (char *)va_arg(*argp, int *);
+		}
 		if (_innum(ptr, ch, len, size, iop, &fileended) && ptr)
 			nmatch++;
 		if (fileended)
@@ -99,7 +111,7 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 }
 
 int
-_innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
+_innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 {
 	register char *np;
 	char numbuf[64];
@@ -108,7 +120,7 @@ _innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 	long lcval;
 
 	if (type=='c' || type=='s' || type=='[')
-		return(_instr(ptr? *(char **)ptr: (char *)NULL, type, len, iop, eofptr));
+		return(_instr(ptr, type, len, iop, eofptr));
 	if (len > 62)
 		len = 62;
 	lcval = 0;
@@ -184,23 +196,23 @@ _innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 
 	case (FLOAT<<4) | SHORT:
 	case (FLOAT<<4) | REGULAR:
-		**(float **)ptr = atof(numbuf);
+		*(float *)ptr = atof(numbuf);
 		break;
 
 	case (FLOAT<<4) | LONG:
-		**(double **)ptr = atof(numbuf);
+		*(double *)ptr = atof(numbuf);
 		break;
 
 	case (INT<<4) | SHORT:
-		**(short **)ptr = lcval;
+		*(short *)ptr = lcval;
 		break;
 
 	case (INT<<4) | REGULAR:
-		**(int **)ptr = lcval;
+		*(int *)ptr = lcval;
 		break;
 
 	case (INT<<4) | LONG:
-		**(long **)ptr = lcval;
+		*(long *)ptr = lcval;
 		break;
 	}
 	return(1);
