@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include "sed.h"
 
-void	fcomp(), dechain(), execute();
-int	rline(), cmp();
+void	fcomp(void), dechain(void);
+int	rline(char *lbuf), cmp(char *a, char *b);
 struct label	*labtab = ltab;
 char	CGMES[]	= "command garbled: %s\n";
 char	TMMES[]	= "Too much text: %s\n";
@@ -21,9 +21,7 @@ char	bittab[]  = {
 	};
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char *argv[])
 {
 
 	eargc = argc;
@@ -117,11 +115,10 @@ char	*argv[];
 	exit(0);
 }
 void
-fcomp()
+fcomp(void)
 {
 
 	register char	*p, *op, *tp;
-	char	*address();
 	struct reptr	*pt, *pt1;
 	int	i;
 	struct label	*lpt;
@@ -564,8 +561,7 @@ done:
 	rep->command = 0;
 	lastre = op;
 }
-char	*compsub(rhsbuf)
-char	*rhsbuf;
+char	*compsub(char *rhsbuf)
 {
 	register char	*p, *q;
 
@@ -591,8 +587,7 @@ char	*rhsbuf;
 	}
 }
 
-char *compile(expbuf)
-char	*expbuf;
+char *compile(char *expbuf)
 {
 	register int c;
 	register char *ep, *sp;
@@ -753,8 +748,7 @@ char	*expbuf;
 	}
 }
 int
-rline(lbuf)
-char	*lbuf;
+rline(char *lbuf)
 {
 	register char	*p, *q;
 	register int	t;
@@ -820,8 +814,7 @@ char	*lbuf;
 	return(-1);
 }
 
-char	*address(expbuf)
-char	*expbuf;
+char	*address(char *expbuf)
 {
 	register char	*rcp;
 	long	lno;
@@ -860,8 +853,7 @@ char	*expbuf;
 	return(0);
 }
 int
-cmp(a, b)
-char	*a,*b;
+cmp(char *a, char *b)
 {
 	register char	*ra, *rb;
 
@@ -873,8 +865,7 @@ char	*a,*b;
 	return(1);
 }
 
-char	*text(textbuf)
-char	*textbuf;
+char	*text(char *textbuf)
 {
 	register char	*p, *q;
 
@@ -897,8 +888,7 @@ char	*textbuf;
 }
 
 
-struct label	*search(ptr)
-struct label	*ptr;
+struct label	*search(struct label *ptr)
 {
 	struct label	*rp;
 
@@ -914,7 +904,7 @@ struct label	*ptr;
 
 
 void
-dechain()
+dechain(void)
 {
 	struct label	*lptr;
 	struct reptr	*rptr, *trptr;
@@ -937,8 +927,7 @@ dechain()
 	}
 }
 
-char *ycomp(expbuf)
-char	*expbuf;
+char *ycomp(char *expbuf)
 {
 	register int	c;
 	register char	*ep, *tsp;

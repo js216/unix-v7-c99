@@ -1,8 +1,9 @@
 #include	<stdio.h>
 #include "sed.h"
 
-void	command(), arout(), dosub();
-int	match(), advance(), ecmp();
+void	command(struct reptr *ipc), arout(void), dosub(char *rhsbuf);
+int	match(char *expbuf, int gf), advance(char *alp, char *aep),
+	ecmp(char *a, char *b, int count);
 char	*trans[040]  = {
 	"\\01",
 	"\\02",
@@ -39,8 +40,7 @@ char	*trans[040]  = {
 char	rub[] = {"\177"};
 
 void
-execute(file)
-char *file;
+execute(char *file)
 {
 	register char *p1, *p2;
 	register struct reptr	*ipc;
@@ -159,9 +159,7 @@ char *file;
 	}
 }
 int
-match(expbuf, gf)
-char	*expbuf;
-int	gf;
+match(char *expbuf, int gf)
 {
 	register char	*p1, *p2, c;
 
@@ -208,8 +206,7 @@ int	gf;
 	return(0);
 }
 int
-advance(alp, aep)
-char	*alp, *aep;
+advance(char *alp, char *aep)
 {
 	register char *lp, *ep, *curlp;
 	char	c;
@@ -339,9 +336,8 @@ char	*alp, *aep;
 		fprintf(stderr, "RE botch, %o\n", *--ep);
 	}
 }
-int
-substitute(ipc)
-struct reptr	*ipc;
+static int
+substitute(struct reptr *ipc)
 {
 	if(match(ipc->re1, 0) == 0)	return(0);
 
@@ -358,8 +354,7 @@ struct reptr	*ipc;
 }
 
 void
-dosub(rhsbuf)
-char	*rhsbuf;
+dosub(char *rhsbuf)
 {
 	register char *lp, *sp, *rp;
 	int c;
@@ -392,8 +387,7 @@ char	*rhsbuf;
 	while ((*lp++ = *sp++));
 	spend = lp-1;
 }
-char	*place(asp, al1, al2)
-char	*asp, *al1, *al2;
+char	*place(char *asp, char *al1, char *al2)
 {
 	register char *sp, *l1, *l2;
 
@@ -409,8 +403,7 @@ char	*asp, *al1, *al2;
 }
 
 void
-command(ipc)
-struct reptr	*ipc;
+command(struct reptr *ipc)
 {
 	register int	i;
 	register char	*p1, *p2, *p3;
@@ -653,8 +646,7 @@ struct reptr	*ipc;
 }
 
 char	*
-gline(addr)
-char	*addr;
+gline(char *addr)
 {
 	register char	*p1, *p2;
 	register int	c;
@@ -692,9 +684,7 @@ char	*addr;
 	return(p1);
 }
 int
-ecmp(a, b, count)
-char	*a, *b;
-int	count;
+ecmp(char *a, char *b, int count)
 {
 	while(count--)
 		if(*a++ != *b++)	return(0);
@@ -702,7 +692,7 @@ int	count;
 }
 
 void
-arout()
+arout(void)
 {
 	register char	*p1;
 	FILE	*fi;
