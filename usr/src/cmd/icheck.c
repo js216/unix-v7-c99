@@ -38,23 +38,17 @@ daddr_t	ndup;
 
 int	nerror;
 
-long	atol(register char *p);
-daddr_t	alloc(void);
-int	check(char *file);
-int	pass1(struct dinode *ip);
-int	chk(daddr_t bno, char *s);
-int	duped(daddr_t bno);
-int	bfree(daddr_t bno);
-int	bread(daddr_t bno, char *buf, int cnt);
-int	bwrite(daddr_t bno, char *buf);
-int	makefree(void);
-int	l3tol(long *lp, char *cp, int n);
+long	atol();
+daddr_t	alloc();
+int	l3tol(), chk(), duped(); void check(), pass1(), bread(), bwrite(), makefree();
 #ifndef STANDALONE
-char	*malloc(unsigned n);
+char	*malloc();
 #endif
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	register int i;
 	long n;
@@ -107,8 +101,9 @@ main(int argc, char *argv[])
 	return(nerror);
 }
 
-int
-check(char *file)
+void
+check(file)
+char *file;
 {
 	register int i, j;
 	ino_t mino;
@@ -119,7 +114,7 @@ check(char *file)
 	if (fi < 0) {
 		printf("cannot open %s\n", file);
 		nerror |= 04;
-		return(0);
+		return;
 	}
 	printf("%s:\n", file);
 	nrfile = 0;
@@ -180,7 +175,7 @@ check(char *file)
 		if (bmap)
 			free(bmap);
 #endif
-		return(0);
+		return;
 	}
 	nfree = 0;
 	while((n = alloc())) {
@@ -222,11 +217,11 @@ check(char *file)
 			}
 		printf("missing%5ld\n", n);
 	}
-	return(0);
 }
 
-int
-pass1(register struct dinode *ip)
+void
+pass1(ip)
+register struct dinode *ip;
 {
 	daddr_t ind1[NINDIR];
 	daddr_t ind2[NINDIR];
@@ -237,15 +232,15 @@ pass1(register struct dinode *ip)
 	i = ip->di_mode & IFMT;
 	if(i == 0) {
 		sblock.s_tinode++;
-		return(0);
+		return;
 	}
 	if(i == IFCHR) {
 		ncfile++;
-		return(0);
+		return;
 	}
 	if(i == IFBLK) {
 		nbfile++;
-		return(0);
+		return;
 	}
 	if(i == IFDIR)
 		ndfile++; else
@@ -253,7 +248,7 @@ pass1(register struct dinode *ip)
 		nrfile++;
 	else {
 		printf("bad mode %u\n", ino);
-		return(0);
+		return;
 	}
 	l3tol(iaddr, ip->di_addr, NADDR);
 	for(i=0; i<NADDR; i++) {
@@ -300,11 +295,12 @@ pass1(register struct dinode *ip)
 			}
 		}
 	}
-	return(0);
 }
 
 int
-chk(daddr_t bno, char *s)
+chk(bno, s)
+daddr_t bno;
+char *s;
 {
 	register int n;
 
@@ -323,7 +319,8 @@ chk(daddr_t bno, char *s)
 }
 
 int
-duped(daddr_t bno)
+duped(bno)
+daddr_t bno;
 {
 	daddr_t d;
 	register int m, n;
@@ -340,7 +337,7 @@ duped(daddr_t bno)
 }
 
 daddr_t
-alloc(void)
+alloc()
 {
 	int i;
 	daddr_t bno;
@@ -375,8 +372,9 @@ alloc(void)
 	return(bno);
 }
 
-int
-bfree(daddr_t bno)
+void
+bfree(bno)
+daddr_t bno;
 {
 	union {
 		char	data[BSIZE];
@@ -396,11 +394,13 @@ bfree(daddr_t bno)
 	}
 	sblock.s_free[sblock.s_nfree] = bno;
 	sblock.s_nfree++;
-	return(0);
 }
 
-int
-bread(daddr_t bno, char *buf, int cnt)
+void
+bread(bno, buf, cnt)
+daddr_t bno;
+char *buf;
+int cnt;
 {
 	register int i;
 
@@ -414,21 +414,21 @@ bread(daddr_t bno, char *buf, int cnt)
 		for(i=0; i<BSIZE; i++)
 			buf[i] = 0;
 	}
-	return(0);
 }
 
-int
-bwrite(daddr_t bno, char *buf)
+void
+bwrite(bno, buf)
+daddr_t bno;
+char	*buf;
 {
 
 	lseek(fi, bno*BSIZE, 0);
 	if (write(fi, buf, BSIZE) != BSIZE)
 		printf("write error %ld\n", bno);
-	return(0);
 }
 
-int
-makefree(void)
+void
+makefree()
 {
 	char flg[MAXFN];
 	int adr[MAXFN];
@@ -483,5 +483,5 @@ makefree(void)
 #ifndef STANDALONE
 	sync();
 #endif
-	return(0);
+	return;
 }
