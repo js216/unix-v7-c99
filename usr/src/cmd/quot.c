@@ -39,15 +39,17 @@ int	fi;
 unsigned	ino;
 unsigned	nfiles;
 
-char	*malloc(unsigned n);
-char	*copy(char *s);
+struct	passwd	*getpwent();
+char	*malloc();
+char	*copy();
 int	scanf(char *fmt, ...);
-int	check(char *file), acct(register struct dinode *ip);
-int	bread(unsigned bno, char *buf, int cnt);
-int	qcmp(const void *vp1, const void *vp2), report(void);
+void	check(), acct(), bread(), report();
+int	qcmp();
 
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register int n;
 	register struct passwd *lp;
@@ -87,8 +89,9 @@ main(int argc, char **argv)
 	return(0);
 }
 
-int
-check(char *file)
+void
+check(file)
+char *file;
 {
 	register unsigned i, j;
 	register int c;
@@ -96,7 +99,7 @@ check(char *file)
 	fi = open(file, 0);
 	if (fi < 0) {
 		printf("cannot open %s\n", file);
-		return(0);
+		return;
 	}
 	printf("%s:\n", file);
 	sync();
@@ -116,40 +119,40 @@ check(char *file)
 			acct(&itab[j]);
 		}
 	}
-	return(0);
 }
 
-int
-acct(register struct dinode *ip)
+void
+acct(ip)
+register struct dinode *ip;
 {
 	register int n;
 	register char *np;
 	static int fino;
 
 	if ((ip->di_mode&IFMT) == 0)
-		return(0);
+		return;
 	if (cflg) {
 		if ((ip->di_mode&IFMT)!=IFDIR && (ip->di_mode&IFMT)!=IFREG)
-			return(0);
+			return;
 		n = (ip->di_size+BSIZE-1)/BSIZE;
 		if (n >= TSIZE) {
 			overflow += n;
 			n = TSIZE-1;
 		}
 		sizes[n]++;
-		return(0);
+		return;
 	}
 	if (ip->di_uid >= NUID)
-		return(0);
+		return;
 	du[ip->di_uid].blocks += (ip->di_size+BSIZE-1)/BSIZE;
 	du[ip->di_uid].nfiles++;
 	if (nflg) {
 	tryagain:
 		if (fino==0)
 			if (scanf("%d", &fino)<=0)
-				return(0);
+				return;
 		if (fino > (int)ino)
-			return(0);
+			return;
 		if (fino<(int)ino) {
 			while ((n=getchar())!='\n' && n!=EOF)
 				;
@@ -169,11 +172,13 @@ acct(register struct dinode *ip)
 		}
 		fino = 0;
 	}
-	return(0);
 }
 
-int
-bread(unsigned bno, char *buf, int cnt)
+void
+bread(bno, buf, cnt)
+int cnt;
+unsigned bno;
+char *buf;
 {
 
 	lseek(fi, (long)bno*BSIZE, 0);
@@ -181,13 +186,12 @@ bread(unsigned bno, char *buf, int cnt)
 		printf("read error %u\n", bno);
 		exit(1);
 	}
-	return(0);
 }
 
 int
-qcmp(const void *vp1, const void *vp2)
+qcmp(p1, p2)
+register struct du *p1, *p2;
 {
-	register const struct du *p1 = vp1, *p2 = vp2;
 	if (p1->blocks > p2->blocks)
 		return(-1);
 	if (p1->blocks < p2->blocks)
@@ -195,13 +199,13 @@ qcmp(const void *vp1, const void *vp2)
 	return(strcmp(p1->name, p2->name));
 }
 
-int
-report(void)
+void
+report()
 {
 	register int i;
 
 	if (nflg)
-		return(0);
+		return;
 	if (cflg) {
 		long t = 0;
 		for (i=0; i<TSIZE-1; i++)
@@ -210,12 +214,12 @@ report(void)
 				printf("%d	%d	%D\n", i, sizes[i], t);
 			}
 		printf("%d	%d	%D\n", TSIZE-1, sizes[TSIZE-1], overflow+t);
-		return(0);
+		return;
 	}
 	qsort(du, NUID, sizeof(du[0]), qcmp);
 	for (i=0; i<NUID; i++) {
 		if (du[i].blocks==0)
-			return(0);
+			return;
 		printf("%5D\t", du[i].blocks);
 		if (fflg)
 			printf("%5D\t", du[i].nfiles);
@@ -224,11 +228,11 @@ report(void)
 		else
 			printf("#%d\n", du[i].uid);
 	}
-	return(0);
 }
 
 char *
-copy(char *s)
+copy(s)
+char *s;
 {
 	register char *p;
 	register int n;
