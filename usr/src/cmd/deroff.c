@@ -48,31 +48,21 @@ FILE *files[15];
 FILE **filesp;
 FILE *infile;
 
-char *calloc(unsigned num, unsigned size);
+char *calloc();
+int skeqn(), eof();
+void getfname(), backsl(), fatal(), work(), regline(), putmac(), putwords(), comline(), macro(), tbl(), eqn();
 
-FILE *opn(register char *p);
-int skeqn(void);
-int eof(void);
-void getfname(void);
-void backsl(void);
-char *copys(register char *s);
-void fatal(char *s, char *p);
-void work(void);
-void regline(int macline);
-void putmac(register char *s);
-void putwords(int macline);
-void comline(void);
-void macro(void);
-void tbl(void);
-void eqn(void);
 
 
 int
-main(int ac, char **av)
+main(ac, av)
+int ac;
+char **av;
 {
 register int i;
 register char *p;
 static char onechar[2] = "X";
+FILE *opn();
 
 argc = ac - 1;
 argv = av + 1;
@@ -118,28 +108,25 @@ work();
 
 
 int
-skeqn(void)
+skeqn()
 {
-while((c = getc(infile)) != rdelim) {
+while((c = getc(infile)) != rdelim)
 	if(c == EOF)
 		c = eof();
 	else if(c == '"') {
-		while( (c = getc(infile)) != '"') {
+		while( (c = getc(infile)) != '"')
 			if(c == EOF)
 				c = eof();
-			else if(c == '\\') {
+			else if(c == '\\')
 				if((c = getc(infile)) == EOF)
 					c = eof();
-			}
-		}
 	}
-}
 return(c = ' ');
 }
 
 
-FILE *
-opn(register char *p)
+FILE *opn(p)
+register char *p;
 {
 FILE *fd;
 
@@ -154,7 +141,7 @@ return(fd);
 
 
 int
-eof(void)
+eof()
 {
 if(infile != stdin)
 	fclose(infile);
@@ -175,12 +162,13 @@ return(C);
 
 
 void
-getfname(void)
+getfname()
 {
 register char *p;
 struct chain { struct chain *nextp; char *datap; } *chainblock;
 register struct chain *q;
 static struct chain *namechain	= NULL;
+char *copys();
 
 while(C == ' ') ;
 
@@ -209,7 +197,8 @@ namechain = q;
 
 
 void
-fatal(char *s, char *p)
+fatal(s,p)
+char *s, *p;
 {
 fprintf(stderr, "Deroff: ");
 fprintf(stderr, s, p);
@@ -217,7 +206,7 @@ exit(1);
 }
 
 void
-work(void)
+work()
 {
 
 for( ;; )
@@ -233,7 +222,8 @@ for( ;; )
 
 
 void
-regline(int macline)
+regline(macline)
+int macline;
 {
 line[0] = c;
 lp = line;
@@ -273,7 +263,8 @@ if(line[0] != '\0') {
 
 
 void
-putmac(register char *s)
+putmac(s)
+register char *s;
 {
 register char *t;
 
@@ -283,7 +274,7 @@ while(*s)
 		putchar(*s++);
 	for(t = s ; *t!=' ' && *t!='\t' && *t!='\0' ; ++t)
 		;
-	if(t>s+2 && chars[(unsigned char)s[0]]==LETTER && chars[(unsigned char)s[1]]==LETTER)
+	if(t>s+2 && chars[ s[0]&0377 ]==LETTER && chars[ s[1]&0377 ]==LETTER)
 		while(s < t)
 			putchar(*s++);
 	else
@@ -295,7 +286,8 @@ putchar('\n');
 
 
 void
-putwords(int macline)	/* break into words for -w option */
+putwords(macline)	/* break into words for -w option */
+int macline;
 {
 register char *p, *p1;
 int i, nlet;
@@ -304,14 +296,14 @@ int i, nlet;
 for(p1 = line ; ;)
 	{
 	/* skip initial specials ampersands and apostrophes */
-	while( chars[(unsigned char)*p1] < DIGIT)
+	while( chars[*p1&0377] < DIGIT)
 		if(*p1++ == '\0') return;
 	nlet = 0;
-	for(p = p1 ; (i=chars[(unsigned char)*p]) != SPECIAL ; ++p)
+	for(p = p1 ; (i=chars[*p&0377]) != SPECIAL ; ++p)
 		if(i == LETTER) ++nlet;
 
 	if( (!macline && nlet>1)   /* MDM definition of word */
-	   || (macline && nlet>2 && chars[(unsigned char)p1[0]]==LETTER && chars[(unsigned char)p1[1]]==LETTER) )
+	   || (macline && nlet>2 && chars[ p1[0]&0377 ]==LETTER && chars[ p1[1]&0377 ]==LETTER) )
 		{
 		/* delete trailing ampersands and apostrophes */
 		while(p[-1]=='\'' || p[-1]=='&')
@@ -327,7 +319,7 @@ for(p1 = line ; ;)
 
 
 void
-comline(void)
+comline()
 {
 register int c1, c2;
 
@@ -383,7 +375,7 @@ else
 
 
 void
-macro(void)
+macro()
 {
 /*
 do { SKIP; }
@@ -396,7 +388,7 @@ inmacro = YES;
 
 
 void
-tbl(void)
+tbl()
 {
 while(C != '.');
 SKIP;
@@ -404,7 +396,7 @@ intable = YES;
 }
 
 void
-eqn(void)
+eqn()
 {
 register int c1, c2;
 
@@ -448,7 +440,7 @@ for( ;;)
 
 
 void
-backsl(void)	/* skip over a complete backslash construction */
+backsl()	/* skip over a complete backslash construction */
 {
 int bdelim;
 
@@ -472,8 +464,8 @@ sw:  switch(C)
 	case '*':
 		if(C != '(')
 			return;
-
 		/* fallthrough */
+
 	case '(':
 		if(C != '\n') C;
 		return;
@@ -507,8 +499,8 @@ sw:  switch(C)
 
 
 
-char *
-copys(register char *s)
+char *copys(s)
+register char *s;
 {
 register char *t, *t0;
 
