@@ -4,7 +4,6 @@
 
 void	puke(), subst();
 int	input(), equal(), badline();
-char	*repl();
 
 #define CHAR	01
 #define BLOCK	02
@@ -658,12 +657,12 @@ main()
 	printf("struct\tintr\tintrtab[] =\n{\n");
 	printf("\t{&%sirq, %sintr},\n\t{&%sirq, %sintr},\n", con, con, dsk, dsk);
 	printf("\t{0, 0}\n};\n");
-	printf("\nvoid\t%sinit(void), %sinit(void), %sputchar(char);\n", con, dsk, con);
-	printf("void\tcninit(void) { %sinit(); }\n", con);
-	printf("void\tbdinit(void) { %sinit(); }\n", dsk);
+	printf("\nvoid\t%sinit(), %sinit(), %sputchar(char);\n", con, dsk, con);
+	printf("void\tcninit() { %sinit(); }\n", con);
+	printf("void\tbdinit() { %sinit(); }\n", dsk);
 	printf("void\tputchar(int c) { %sputchar(c); }\n", con);
-	printf("\nvoid\tddrinit(void);\n");
-	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
+	printf("\nvoid\tddrinit();\n");
+	printf("void\tclock_ddr_init() { %s}\n", ddr ? "ddrinit(); " : "");
 }
 
 void
@@ -694,12 +693,12 @@ input()
 	n = sscanf(line, "%d%s%s%ld", &count, keyw, dev, &num);
 	if (count == -1) {
 		count = 1;
-		n = sscanf(line, "%31s%31s%ld", keyw, dev, &num) + 1;
+		n = sscanf(line, "%s%s%ld", keyw, dev, &num) + 1;
 	}
 	if (n<2)
 		goto badl;
 	if (equal(keyw, "map") && nmap < NMAP) {
-		if (sscanf(line, "%*s%lx%lx%31s", &mapb[nmap], &mape[nmap], mapa[nmap]) != 3)
+		if (sscanf(line, "%*s%lx%lx%s", &mapb[nmap], &mape[nmap], mapa[nmap]) != 3)
 			goto badl;
 		if (equal(mapa[nmap], "kern") || equal(mapa[nmap], "dev"))
 			sprintf(mapa[nmap], "SEC_%s", equal(mapa[nmap], "kern") ? "KERN" : "DEV");
