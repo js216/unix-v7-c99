@@ -1,10 +1,22 @@
+/*
+ * Writearound to old stty and gtty system calls
+ */
 
+#include <stdio.h>
 #include <sgtty.h>
 
-int ioctl(int, int, char *);
+int
+stty(fd, ap)
+int fd;
+struct sgtty *ap;
+{
+	return(ioctl(fd, TIOCSETP, ap));
+}
 
 int
-stty(int fd, struct sgttyb *ap)
+gtty(fd, ap)
+int fd;
+struct sgtty *ap;
 {
-	return(ioctl(fd, TIOCSETP, (char *)ap));
+	return(ioctl(fd, TIOCGETP, ap));
 }
