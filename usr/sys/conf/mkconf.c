@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void	puke(), subst();
-int	input(), equal(), badline();
+struct tab;
+void	puke(char **s), subst(struct tab *q, char *n);
+int	input(void), equal(char *a, char *b), badline(char *line);
 
 #define CHAR	01
 #define BLOCK	02
@@ -543,7 +544,7 @@ char	mapa[NMAP][32];
 int	nmap;
 
 int
-main()
+main(void)
 {
 	register struct tab *p;
 	register char *q;
@@ -666,20 +667,18 @@ main()
 }
 
 void
-puke(s, a)
-char **s;
-int a;
+puke(char **s)
 {
 	char *c;
 
 	while((c = *s++)) {
-		printf(c, a);
+		printf(c);
 		printf("\n");
 	}
 }
 
 int
-input()
+input(void)
 {
 	char line[100];
 	register struct tab *q;
@@ -810,16 +809,14 @@ badl:
 }
 
 int
-badline(line)
-char *line;
+badline(char *line)
 {
 	fprintf(stderr, "Bad line: %s", line);
 	return(1);
 }
 
-char *
-repl(s, o, n)
-char *s, *o, *n;
+static char *
+repl(char *s, char *o, char *n)
 {
 	char *t, *d;
 	size_t lo = strlen(o), ln = strlen(n);
@@ -837,9 +834,7 @@ char *s, *o, *n;
 }
 
 void
-subst(q, n)
-struct tab *q;
-char *n;
+subst(struct tab *q, char *n)
 {
 	char *o = equal(q->name, "console") ? con : q->name;
 
@@ -855,8 +850,7 @@ char *n;
 }
 
 int
-equal(a, b)
-char *a, *b;
+equal(char *a, char *b)
 {
 	return(!strcmp(a, b));
 }
