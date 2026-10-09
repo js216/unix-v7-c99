@@ -47,4 +47,4 @@ $C/awk/proc: $C/awk/proc.c $C/awk/token.c $C/awk/awk.h
 $C/awk/proctab.c: $C/awk/proc
 	$(call T,GEN)$< >$@
 $C/awk/awk.lx.c: $C/awk/awk.lx.l
-	$(call T,LEX)$(LEX) -t $< | sed 's/void yynoreturn/void/' >$@
+	$(call T,LEX)$(LEX) -t $< | sed 's/void yynoreturn/void/;s/<string.h>/<stddef.h>/;/<stdlib.h>/d' >$@
