@@ -27,16 +27,15 @@ unsigned	nfiles;
 
 int	nerror;
 daddr_t	bmap();
-int	check(char *file);
-int	pass1(struct dinode *ip);
-int	pass2(struct dinode *ip);
-int	bread(daddr_t bno, char *buf, int cnt);
+void	check(), pass1(), pass2(), bread();
 long	atol();
 char	*malloc();
-int	l3tol(long *lp, char *cp, int n);
+int	l3tol();
 
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int	argc;
+char *argv[];
 {
 	register int i;
 	long n;
@@ -67,8 +66,9 @@ main(int argc, char *argv[])
 	return(nerror);
 }
 
-int
-check(char *file)
+void
+check(file)
+char *file;
 {
 	register int i;
 	register int j;
@@ -77,7 +77,7 @@ check(char *file)
 	if(fi < 0) {
 		printf("cannot open %s\n", file);
 		nerror++;
-			return(0);
+		return;
 	}
 	headpr = 0;
 	printf("%s:\n", file);
@@ -120,11 +120,11 @@ check(char *file)
 		}
 	}
 	free(ecount);
-	return(0);
 }
 
-int
-pass1(register struct dinode *ip)
+void
+pass1(ip)
+register struct dinode *ip;
 {
 	struct direct dbuf[NDIR];
 	long doff;
@@ -135,7 +135,7 @@ pass1(register struct dinode *ip)
 	ino_t kno;
 
 	if((ip->di_mode&IFMT) != IFDIR)
-		return(0);
+		return;
 	l3tol(iaddr, ip->di_addr, NADDR);
 	doff = 0;
 	for(i=0;; i++) {
@@ -168,32 +168,34 @@ pass1(register struct dinode *ip)
 				ecount[kno] = 0377;
 		}
 	}
-	return(0);
 }
 
-int
-pass2(register struct dinode *ip)
+void
+pass2(ip)
+register struct dinode *ip;
 {
 	register int i;
 
 	i = ino;
 	if ((ip->di_mode&IFMT)==0 && ecount[i]==0)
-		return(0);
+		return;
 	if (ip->di_nlink==((ecount[i])&0377) && ip->di_nlink!=0)
-		return(0);
+		return;
 	if (ino < ROOTINO && ip->di_nlink==0 && ecount[i]==0)
-		return(0);
+		return;
 	if (headpr==0) {
 		printf("     entries  link cnt\n");
 		headpr++;
 	}
 	printf("%u	%d	%d\n", ino,
 	    ecount[i]&0377, ip->di_nlink);
-	return(0);
 }
 
-int
-bread(daddr_t bno, char *buf, int cnt)
+void
+bread(bno, buf, cnt)
+int	cnt;
+daddr_t bno;
+char *buf;
 {
 	register int i;
 
@@ -203,12 +205,12 @@ bread(daddr_t bno, char *buf, int cnt)
 		for(i=0; i<BSIZE; i++)
 			buf[i] = 0;
 	}
-	return(0);
 }
 
 
 daddr_t
-bmap(int i)
+bmap(i)
+int	i;
 {
 	daddr_t ibuf[NINDIR];
 
