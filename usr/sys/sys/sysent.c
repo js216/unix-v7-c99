@@ -35,8 +35,6 @@ void bcopy(char *from, char *to, unsigned int n);
  * to the appropriate routine for processing a system call.
  * Each row contains the number of arguments expected
  * and a pointer to the routine.
- * On Armv7 all arguments arrive in registers, so
- * sy_nrarg == sy_narg for every entry.
  */
 
 struct sysent sysent[64] =
@@ -57,10 +55,10 @@ struct sysent sysent[64] =
 	{0, 0, gtime},			/* 13 = time */
 	{3, 3, mknod},			/* 14 = mknod */
 	{2, 2, chmod},			/* 15 = chmod */
-	{3, 3, chown},			/* 16 = chown */
+	{3, 3, chown},			/* 16 = chown; now 3 args */
 	{1, 1, sbreak},			/* 17 = break */
 	{2, 2, stat},			/* 18 = stat */
-	{3, 3, seek},			/* 19 = seek */
+	{3, 3, seek},			/* 19 = seek; now 3 args */
 	{0, 0, getpid},			/* 20 = getpid */
 	{3, 3, smount},			/* 21 = mount */
 	{1, 1, sumount},		/* 22 = umount */
@@ -76,7 +74,7 @@ struct sysent sysent[64] =
 	{2, 2, gtty},			/* 32 = gtty */
 	{2, 2, saccess},		/* 33 = access */
 	{1, 1, nice},			/* 34 = nice */
-	{1, 1, ftime},			/* 35 = ftime */
+	{1, 1, ftime},			/* 35 = ftime; formerly sleep */
 	{0, 0, sync},			/* 36 = sync */
 	{2, 2, kill},			/* 37 = kill */
 	{0, 0, nullsys},		/* 38 = switch; inoperative */
@@ -104,14 +102,9 @@ struct sysent sysent[64] =
 	{1, 1, umask},			/* 60 = umask */
 	{1, 1, chroot},			/* 61 = chroot */
 	{0, 0, nosys},			/* 62 = x */
-	{0, 0, sigreturn}		/* 63 = sigreturn (Armv7 signal trampoline) */
+	{0, 0, sigreturn}		/* 63 = sigreturn */
 };
 char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
-/*
- * Called from svc_entry (conf/low.s) on a system call.  r is the 17-int
- * trap frame; the syscall number is in r7 (Armv7 ABI), arguments in
- * r0..r5.  Adapted from v7 trap.c case 6+USER plus the out: tail.
- */
 void
 trap(int *r)
 {
@@ -120,17 +113,10 @@ trap(int *r)
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
 	u.u_error = 0;
-	callp = &sysent[r[7] & 077];	/* Armv7 syscall number is in r7 */
+	callp = &sysent[r[7] & 077];
 	for(i = 0; i < callp->sy_narg && i < 6; i++)
 		u.u_arg[i] = r[i];
 	u.u_dirp = (caddr_t)u.u_arg[0];
-	/*
-	 * Default the return registers to 0.  V7 seeded r_val1 from the
-	 * incoming r0 and relied on each libc stub to `clr r0` on the
-	 * success path; this port's libc returns the raw syscall register
-	 * via syscall3, so a call that leaves r_val1 unset (access, chdir,
-	 * close, ...) must yield 0 to mean success.
-	 */
 	u.u_r.r_val1 = 0;
 	u.u_r.r_val2 = 0;
 	u.u_ap = u.u_arg;
@@ -146,19 +132,12 @@ trap(int *r)
 		r[R0] = u.u_r.r_val1;
 		r[R1] = u.u_r.r_val2;
 	}
-	/* out: deliver signals and reschedule before returning to user */
 	if (issig())
 		psig();
 	(void)setpri(u.u_procp);
 	if (runrun)
 		qswtch();
 }
-/*
- * Called from the undef/abort entry stubs (conf/low.s) for a hardware
- * fault.  signo is the signal it maps to (0 from irq_entry, to give up
- * the cpu as v7's trap 12 did); r is the trap frame.  A fault taken
- * in kernel mode is fatal.
- */
 void
 user_trap_handler(int signo, int *r)
 {

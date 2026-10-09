@@ -821,10 +821,6 @@ char *line;
 	return(1);
 }
 
-/*
- * Configure the driver with the given prefix for entry q
- * (e.g. "console us", "rk sd"): rename its code strings.
- */
 char *
 repl(s, o, n)
 char *s, *o, *n;

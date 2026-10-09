@@ -185,7 +185,7 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 	p1->c_arg = arg;
 	intr_restore(s);
 }
-#define GICD_BASE	GIC_DIST_BASE	/* board-specific (param.h) */
+#define GICD_BASE	GIC_DIST_BASE
 #define GICC_BASE	GIC_CPU_BASE
 #define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
 #define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))
@@ -199,17 +199,11 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 extern unsigned int cntfrq_get(void);
 extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern void irq_enable(void);
-extern struct intr intrtab[];	/* configured device interrupts (c.c) */
+extern struct intr intrtab[];
 static unsigned int timer_reload;
 int irq_ready;
 caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
 void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
-/*
- * Real-time clock interrupt: acknowledge the GIC, reprime the timer, and
- * call the v7 clock() with the trapped pc/ps.  clock() runs with IRQs
- * masked (we are in the IRQ handler) and never lowers priority, so it is
- * not re-entrant; preemption happens on return to user via trap()'s tail.
- */
 void
 clock_irq_handler(int *tf)
 {

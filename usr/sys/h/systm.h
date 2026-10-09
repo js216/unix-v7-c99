@@ -104,5 +104,5 @@ long	tk_nout;
 extern struct sysent {
 	char	sy_narg;		/* total number of arguments */
 	char	sy_nrarg;		/* number of args in registers */
-	void	(*sy_call)(void);	/* handler (Armv7/C99: void(void)) */
+	void	(*sy_call)(void);	/* handler */
 } sysent[];

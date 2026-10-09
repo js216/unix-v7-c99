@@ -1,16 +1,5 @@
 /*
  *   STM32 SDMMC block driver (SDMMC1 on the MP135 board)
- *
- * The bulk-storage block device.  Same async, interrupt-driven, queued model
- * as rk.c / virtio_blk.c: sdstrategy() puts the buffer on sdtab and kicks the
- * controller via sdstart(); sdstart() programs one SD block transfer through
- * the SDMMC internal DMA and returns; the transfer-complete interrupt
- * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
- * sleeps on the buffer until then.
- *
- * Like v7's drivers it assumes working hardware: the boot ROM has just read
- * the kernel from this card, so clocks, pins and the card (selected, in
- * transfer state, SDHC block addressing) are used as the ROM left them.
  */
 #include "../h/param.h"
 #include "../h/buf.h"
@@ -79,11 +68,6 @@ static int sd_retry;
 
 #define	SD_RETRIES	10
 
-/*
- * Issue one command.  resp is 0 (none) or CMD_WAITRESP_SHORT; data!=0
- * marks a data-transfer command.  Returns RESP1, or -1 on command
- * timeout/CRC error.
- */
 static int
 sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
 {
@@ -107,10 +91,6 @@ sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
 	return(-1);
 }
 
-/*
- * The card is as the boot ROM left it; just make sure the controller is
- * powered and allow the longest data timeout.
- */
 void
 sdinit(void)
 {
@@ -119,10 +99,6 @@ sdinit(void)
 	dmbsy();
 }
 
-/*
- * Program one block transfer for the buffer at the head of the queue through
- * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
- */
 static void
 sdstart(void)
 {
@@ -141,11 +117,6 @@ sdstart(void)
 	blk = (unsigned int)bp->b_blkno;
 	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 	SD(ICR) = STA_STATIC;
-	/* Match the HAL IDMA single-buffer read/write order: program the data
-	 * path (DLEN + DCTRL block size/dir, DPSM left off) first, then point the
-	 * internal DMA at the buffer and enable it, then issue the command (which
-	 * sets CMDTRANS and starts the DPSM).  IDMABSIZE is double-buffer-only and
-	 * must not be written for single-buffer transfers. */
 	SD(DCTRL) = 0;
 	SD(DLEN) = bp->b_bcount;
 	SD(DCTRL) = DCTRL_BLK512 |
@@ -179,10 +150,6 @@ sdstrategy(struct buf *bp)
 	return(0);
 }
 
-/*
- * Transfer-complete interrupt: finish the active buffer and start the next.
- * (cf. rkintr.)
- */
 int
 sdintr(void)
 {

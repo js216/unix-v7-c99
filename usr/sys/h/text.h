@@ -7,7 +7,7 @@
 struct text
 {
 	int	x_daddr;	/* disk address of segment (relative to swplo) */
-	int	x_caddr;	/* core address, if loaded (Armv7: 32-bit click) */
+	int	x_caddr;	/* core address, if loaded */
 	int	x_size;		/* size (clicks) */
 	struct inode *x_iptr;	/* inode of prototype */
 	char	x_count;	/* reference count */

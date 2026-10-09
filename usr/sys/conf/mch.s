@@ -1,8 +1,3 @@
-@ Machine routines called by the C kernel (the v7 conf/mch.s role).
-@ Low-core vectors and trap/interrupt entry live in low.s; this file holds
-@ the assembly primitives the portable kernel invokes: the context switch
-@ (save/resume), MMU enable, interrupt control, and timer accessors.
-
 	.syntax unified
 	.arch armv7-a
 	.text
@@ -23,9 +18,6 @@
 
 mmu_on:
 	push {r4, r5, r6, r7, r8, r9}
-	@ Cortex-A7: set ACTLR.SMP (bit 6) before enabling the caches.  Without it
-	@ the core treats Shareable Normal memory (our cached DDR sections) as
-	@ non-coherent, so cached writes to DDR are silently dropped on eviction.
 	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
 	orr r1, r1, #(1 << 6)		@ SMP: join the inner-shareable coherency domain
 	mcr p15, 0, r1, c1, c0, 1
@@ -126,11 +118,6 @@ save:
 	bx	lr
 	.size	save, .-save
 
-@ resume(int p_addr, int *label): switch the UBASE u-area window to the
-@ new process's image (the KISA6 trick), then restore callee regs+sp+pc
-@ from label.  label is a UBASE-window VA, so after the window switch it
-@ reads the NEW process's saved context.  IRQs masked across the switch;
-@ no stack use between the remap and the sp reload.
 	.type	resume, %function
 resume:
 	cpsid	i
@@ -138,9 +125,7 @@ resume:
 	ldr	r3, =corebase		@ board COREBASE (resolved in machdep.c)
 	ldr	r3, [r3]
 	add	r3, r3, r0, lsl #6	@ CLKADDR(p_addr) = phys u-area base
-	orr	r3, r3, #0x12		@ kernel rw, UNCACHED: the window is remapped
-					@ to a new PA each switch; uncached avoids
-					@ stale cache lines aliasing the old VA
+	orr	r3, r3, #0x12		@ kernel rw, uncached
 	str	r3, [r2, #0]
 	add	r3, r3, #0x1000
 	str	r3, [r2, #4]
@@ -160,10 +145,6 @@ resume:
 	bx	lr
 	.size	resume, .-resume
 
-@ dcflush(addr, n): clean+invalidate the D-cache over [addr, addr+n) to the
-@ point of coherency, so a DMA buffer is consistent with main memory before a
-@ device reads it and after a device writes it.  Only the cache-incoherent
-@ board (SDMMC IDMA) calls this; QEMU's virtio path is coherent and never does.
 	.type	dcflush, %function
 dcflush:
 	mrc	p15, 0, r2, c0, c0, 1	@ CTR
@@ -182,9 +163,6 @@ dcflush:
 	bx	lr
 	.size	dcflush, .-dcflush
 
-@ dcclean(): clean the whole L1 D-cache by set/way, which on the Cortex-A7
-@ (LoUU = 1) is the point of unification: code the kernel wrote through the
-@ D-cache becomes visible to instruction fetch (arm_sync_icache).
 	.type	dcclean, %function
 dcclean:
 	push	{r4, r5, r6, r7}

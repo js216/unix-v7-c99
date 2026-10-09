@@ -80,8 +80,8 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
-#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
+#define	USIZE	128		/* size of user block (*64) */
+#define	UBASE	0x4F000000U	/* abs. addr of user block */
 #define	NULL	0
 #define	CMASK	0		/* default mask for file creation */
 #define	NODEV	(dev_t)(-1)
@@ -143,11 +143,6 @@ typedef	long		off_t;
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
 
-/*
- * Board memory map, set in c.c from the configuration file:
- * kernel RAM base, user core window, user page attributes, GIC.
- * The big tables go in .ddrbss, which the linker script places.
- */
 extern unsigned int kernbase, corebase, coretop, pguser, gicdbase, giccbase;
 #define	KERNBASE	kernbase
 #define	COREBASE	corebase

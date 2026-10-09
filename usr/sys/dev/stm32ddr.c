@@ -1,13 +1,5 @@
 /*
  *   STM32MP135 clock and DDR bring-up
- *
- * ddrinit(), configured as "ddr" in mp135conf, brings up the clocks and DDR
- * before machine_init() (machdep.c) enables the MMU.
- *
- * The ROM loads this kernel (FSBL) from SD into SYSRAM and jumps to _start
- * (conf/low.s).  Kernel runs in cached SYSRAM; user core + buffer cache live
- * in cached DDR; peripherals + GIC are Device.  DDR3-1066 register values are
- * verbatim from the board reference firmware (board.h).
  */
 #include "../h/param.h"
 #include "../h/seg.h"
@@ -15,7 +7,6 @@
 void ddrclk(void);
 void ddr_init(void);
 
-/* RCC + DDR controller/PHY + security blocks (board reference firmware) */
 #define RCC		0x50000000U
 #define PWR		0x50001000U
 #define DDRCTRL		0x5A003000U
@@ -24,7 +15,6 @@ void ddr_init(void);
 #define TZC		0x5C006000U
 #define R32(a)		(*(volatile unsigned int *)(a))
 
-/* RCC registers used here (offsets verified against the board headers) */
 #define RCC_OCENSETR	R32(RCC + 0x420)	/* oscillator enable (set-reg) */
 #define RCC_OCRDYR	R32(RCC + 0x428)	/* oscillator ready */
 #define HSEON		0x00000100U		/* OCENSETR/OCRDYR bit 8 */
@@ -41,7 +31,6 @@ void ddr_init(void);
 #define PLL2_DIVEN	0x00000070U		/* DIVP/Q/R output enables */
 #define PLL2_FRACLE	0x00010000U
 
-/* Bring up DRAM and its clock before machine_init() enables the MMU. */
 void
 ddrinit(void)
 {
@@ -49,54 +38,29 @@ ddrinit(void)
 	ddr_init();
 }
 
-/*
- * DDR clock: HSE (the 24 MHz crystal) feeds PLL2, whose R output clocks the
- * DDR PHY.  All other clocks are left as the boot ROM set them: the CPU and
- * buses, the console UART (HSI), the SD card, and the system counter, whose
- * frequency the ROM leaves in CNTFRQ for clkstart().
- */
 void
 ddrclk(void)
 {
 	int timo;
 
-	/* HSE on (24 MHz crystal); wait for it to stabilize. */
 	RCC_OCENSETR = HSEON;
 	for (timo = 100000; timo > 0 && !(RCC_OCRDYR & HSERDY); timo--)
 		;
 
-	/*
-	 * PLL2 -> 533 MHz on its R output, which clocks the DDR PHY (DDR3-1066);
-	 * ddr_init() needs this running first.  Coefficients are the board's
-	 * (bootloader setup.c, HSE source, fractional): DIVM2=3 (/3), DIVN=66
-	 * (x66), FRACV=0x1400, DIVP=DIVQ=2, DIVR=1 -> VCO 533 MHz, R = 533 MHz.
-	 * We only ENABLE PLL2 and leave the AXI source on the ROM default: DDR
-	 * takes PLL2_R directly, so there is no live bus-clock switch and a wrong
-	 * value just fails ddr_init() with the console still alive.
-	 * TODO(bench, #28): the AXI-on-PLL2 speedup (a live switch -- park AXI,
-	 * reconfigure, switch back, as HAL_RCC_ClockConfig does) and PLL1 (MPU)
-	 * remain; validate PLL2 lock on the PCB.
-	 */
-	RCC_PLL2CR &= ~PLL2_PLLON;		/* disable before reconfigure */
+	RCC_PLL2CR &= ~PLL2_PLLON;
 	for (timo = 10000; timo > 0 && (RCC_PLL2CR & PLL2_RDY); timo--)
 		;
 	RCC_RCK12SELR = (RCC_RCK12SELR & ~7U) | PLL12SRC_HSE;
 	RCC_PLL2CFGR1 = 0x00020041u;		/* DIVM2=2 (/3), DIVN=65 (x66) */
 	RCC_PLL2CFGR2 = 0x00000101u;		/* DIVP=1 (/2), DIVQ=1 (/2), DIVR=0 (/1) */
 	RCC_PLL2FRACR = 0x1400u << 3;		/* FRACV */
-	RCC_PLL2FRACR |= PLL2_FRACLE;		/* latch fractional value */
-	RCC_PLL2CR |= PLL2_DIVEN;		/* enable P/Q/R outputs */
-	RCC_PLL2CR |= PLL2_PLLON;		/* enable PLL2 */
+	RCC_PLL2FRACR |= PLL2_FRACLE;
+	RCC_PLL2CR |= PLL2_DIVEN;
+	RCC_PLL2CR |= PLL2_PLLON;
 	for (timo = 100000; timo > 0 && !(RCC_PLL2CR & PLL2_RDY); timo--)
 		;
 }
 
-/*
- * DDR controller (DDRCTRL @ DDRCTRL, register offset:value) and PHY (DDRPHYC)
- * settings for the board's DDR3-1066 (1x4Gb, 533 MHz) part.  Values are the
- * DDR_* defines from the reference bootloader's board.h; offsets are the
- * DDRCTRL_TypeDef/DDRPHYC_TypeDef member offsets.  Terminated by off==0xFFFF.
- */
 struct ddrreg { unsigned short off; unsigned int val; };
 
 /* DDRCTRL static + timing + address-map groups (programmed before INIT0). */
@@ -204,32 +168,17 @@ static const struct ddrreg ddrphy_regs[] = {
 #define DDR_PIR_TRAIN	0x00000081U	/* QSTRN|INIT: DQS gate (data-eye) training */
 #define RFSHCTL3_DISAUREF 0x00000001U	/* RFSHCTL3.dis_auto_refresh */
 
-/*
- * DDR3-1066 bring-up (533 MHz, 512 MB), translated from the reference
- * bootloader's HAL_DDR_Init.  Unverifiable in QEMU (no DDR-controller model),
- * so it is a bench candidate -- the register values/offsets above are exact,
- * but the analog parts (PHY DLL lock, ZQ calibration, DQS training triggered
- * by PIR and polled on PGSR.IDONE) only converge against real silicon.
- * TODO(bench, #28): requires PLL2_R = 533 MHz from ddrclk first.  Tune on
- * the PCB: if PGSR.IDONE or STAT.operating_mode never settles, add the SWCTL/
- * SWSTAT sw_done handshakes the HAL wraps around quasi-dynamic writes.
- */
 void
 ddr_init(void)
 {
 	const struct ddrreg *r;
 	int timo;
 
-	/* If the DDR I/O pads are in retention (PWR_CR3.DDRRETEN, e.g. left from a
-	 * prior low-power state), the PHY cannot drive the DRAM and init/training
-	 * fail.  Disable retention exactly as the bootloader does.  PWR_CR3 @ 0x5000100C. */
 	if (R32(0x5000100C) & (1U << 12)) {
 		R32(0x5000100C) |= (1U << 11);		/* DDRSRDIS = 1 */
 		R32(0x5000100C) &= ~(1U << 12);		/* DDRRETEN = 0 */
 	}
 
-	/* Enable the MCE + TZC peripheral clocks before touching TZC, else the
-	 * bus access to an unclocked peripheral stalls (as the bootloader does). */
 	R32(RCC + 0x780) = 0x00000002U;		/* AHB6ENSETR: MCE clock (bit 1) */
 	R32(RCC + 0x740) = 0x00000800U;		/* APB5ENSETR: TZC clock (bit 11) */
 	(void)R32(RCC + 0x740);			/* read-back: clocks live */
@@ -267,9 +216,7 @@ ddr_init(void)
 		DPHY(r->off) = r->val;
 	DPHY(0x044) &= ~0x1U;			/* DDR3: clear MR1.DE */
 
-	/* 4b. wait for the PHY's post-reset auto-init (PGSR.IDONE) BEFORE issuing
-	 * the PIR.  The reference does ddrphy_idone_wait() here; writing PIR while
-	 * the PHY is still auto-initializing corrupts the DRAM init. */
+	/* 4b. wait for the PHY's post-reset auto-init (PGSR.IDONE) */
 	for (timo = 1000000; timo > 0 && !(DPHY(0x00C) & 0x1U); timo--)
 		;
 
@@ -281,9 +228,7 @@ ddr_init(void)
 	     !(DPHY(0x00C) & 0x1U) && !(DPHY(0x00C) & 0x3E0U); timo--)
 		;				/* poll PGSR.IDONE or error (HAL waits on IDONE) */
 
-	/* 6. signal DFI init complete (quasi-dynamic -> sw_done handshake), wait NORMAL.
-	 * SWCTL.sw_done=0, change reg, sw_done=1, wait SWSTAT.sw_done_ack -- without
-	 * this the controller ignores the change. */
+	/* 6. signal DFI init complete via the sw_done handshake, wait NORMAL */
 	DDRC(0x320) &= ~0x1U;			/* SWCTL.sw_done = 0 */
 	DDRC(0x1B0) |= DFIMISC_COMPLETE;
 	DDRC(0x320) |= 0x1U;			/* SWCTL.sw_done = 1 */
@@ -292,10 +237,7 @@ ddr_init(void)
 	for (timo = 1000000; timo > 0 && (DDRC(0x004) & 0x7U) != 0x1U; timo--)
 		;				/* poll STAT.operating_mode == NORMAL */
 
-	/* 6b. DQS gate (data-eye) training -- without it the read data path is
-	 * uncalibrated and DDR reads stall.  Disable auto-refresh + dfi_init_complete
-	 * via the sw_done handshake (quasi-dynamic) so refresh does not corrupt the
-	 * training, run PIR=QSTRN, poll PGSR, then restore the same way. */
+	/* 6b. DQS gate training, with auto-refresh off */
 	DDRC(0x320) &= ~0x1U;
 	DDRC(0x1B0) &= ~DFIMISC_COMPLETE;	/* clear dfi_init_complete_en */
 	DDRC(0x060) |= RFSHCTL3_DISAUREF;	/* RFSHCTL3: disable auto-refresh */

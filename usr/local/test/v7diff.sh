@@ -21107,7 +21107,7 @@ usr/local
 % usr/src/libm/tanh.c
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,249 @@
+@@ -1,72 +1,241 @@
 -/ low core
 -
 -.data
@@ -21180,10 +21180,6 @@ usr/local
 -
 -.globl	_htintr
 -htio:	jsr	r0,call; jmp _htintr
-+@ Low core: exception vector table and the trap/interrupt entry stubs
-+@ that build the register frame and call into C (cf. v7 conf/l.s).
-+@ The machine routines the C kernel calls live in mch.s.
-+
 +.globl _start
 +.globl vectors
 +.globl run_user
@@ -21193,10 +21189,6 @@ usr/local
 +_start:
 +	cpsid if			@ mask IRQ/FIQ at reset
 +
-+	@ The ROM may hand off with the MMU + caches enabled; disable them so the
-+	@ early MMIO/console setup runs against physical addresses, then
-+	@ machine_init builds the page tables and re-enables them via mmu_on.  On
-+	@ qemu the MMU is already off so these clears are a no-op -- same code.
 +	mrc p15, 0, r0, c1, c0, 0	@ SCTLR
 +	bic r0, r0, #(1 << 12)		@ I: instruction cache off
 +	bic r0, r0, #(1 << 2)		@ C: data cache off
@@ -21431,18 +21423,11 @@ usr/local
 +irq_stack_top:
 
 % usr/sys/conf/mch.s
-@@ -1,2 +1,4 @@
+@@ -1,76 +1,3 @@
 -/ machine language assist
 -/ for 11/45 or 11/70 CPUs
-+@ Machine routines called by the C kernel (the v7 conf/mch.s role).
-+@ Low-core vectors and trap/interrupt entry live in low.s; this file holds
-+@ the assembly primitives the portable kernel invokes: the context switch
-+@ (save/resume), MMU enable, interrupt control, and timer accessors.
-@@ -3,0 +6,3 @@
-+	.syntax unified
-+	.arch armv7-a
-+	.text
-@@ -5,83 +10,198 @@
+-
+-
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
 -stst	= 170300^tst
@@ -21515,7 +21500,10 @@ usr/local
 -HTFC	= HT+6
 -HTCS2	= HT+10
 -HTTC	= HT+32
--
++	.syntax unified
++	.arch armv7-a
++	.text
+@@ -78,10 +5,181 @@
 -MTC = 172522
 -.if TUDUMP
 -	mov	$MTC,r0
@@ -21542,9 +21530,6 @@ usr/local
 +
 +mmu_on:
 +	push {r4, r5, r6, r7, r8, r9}
-+	@ Cortex-A7: set ACTLR.SMP (bit 6) before enabling the caches.  Without it
-+	@ the core treats Shareable Normal memory (our cached DDR sections) as
-+	@ non-coherent, so cached writes to DDR are silently dropped on eviction.
 +	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
 +	orr r1, r1, #(1 << 6)		@ SMP: join the inner-shareable coherency domain
 +	mcr p15, 0, r1, c1, c0, 1
@@ -21645,11 +21630,6 @@ usr/local
 +	bx	lr
 +	.size	save, .-save
 +
-+@ resume(int p_addr, int *label): switch the UBASE u-area window to the
-+@ new process's image (the KISA6 trick), then restore callee regs+sp+pc
-+@ from label.  label is a UBASE-window VA, so after the window switch it
-+@ reads the NEW process's saved context.  IRQs masked across the switch;
-+@ no stack use between the remap and the sp reload.
 +	.type	resume, %function
 +resume:
 +	cpsid	i
@@ -21657,9 +21637,7 @@ usr/local
 +	ldr	r3, =corebase		@ board COREBASE (resolved in machdep.c)
 +	ldr	r3, [r3]
 +	add	r3, r3, r0, lsl #6	@ CLKADDR(p_addr) = phys u-area base
-+	orr	r3, r3, #0x12		@ kernel rw, UNCACHED: the window is remapped
-+					@ to a new PA each switch; uncached avoids
-+					@ stale cache lines aliasing the old VA
++	orr	r3, r3, #0x12		@ kernel rw, uncached
 +	str	r3, [r2, #0]
 +	add	r3, r3, #0x1000
 +	str	r3, [r2, #4]
@@ -21679,10 +21657,6 @@ usr/local
 +	bx	lr
 +	.size	resume, .-resume
 +
-+@ dcflush(addr, n): clean+invalidate the D-cache over [addr, addr+n) to the
-+@ point of coherency, so a DMA buffer is consistent with main memory before a
-+@ device reads it and after a device writes it.  Only the cache-incoherent
-+@ board (SDMMC IDMA) calls this; QEMU's virtio path is coherent and never does.
 +	.type	dcflush, %function
 +dcflush:
 +	mrc	p15, 0, r2, c0, c0, 1	@ CTR
@@ -21701,9 +21675,6 @@ usr/local
 +	bx	lr
 +	.size	dcflush, .-dcflush
 +
-+@ dcclean(): clean the whole L1 D-cache by set/way, which on the Cortex-A7
-+@ (LoUU = 1) is the point of unification: code the kernel wrote through the
-+@ D-cache becomes visible to instruction fetch (arm_sync_icache).
 +	.type	dcclean, %function
 +dcclean:
 +	push	{r4, r5, r6, r7}
@@ -21724,10 +21695,10 @@ usr/local
 +	orr	r6, r6, r7		@ (way<<shift) | (set<<lineorder)
 +	mcr	p15, 0, r6, c7, c10, 2	@ DCCSW: clean D-cache line
 +	subs	r5, r5, #1
-@@ -89 +209 @@
+@@ -89 +187 @@
 -	tst	(r0)+
 +	subs	r4, r4, #1
-@@ -91,968 +211,5 @@
+@@ -91,968 +189,5 @@
 -	reset
 -
 -/ end of file and loop
@@ -23113,11 +23084,7 @@ usr/local
 +badline(line)
 +char *line;
 +{
-@@ -816,0 +824,42 @@
-+/*
-+ * Configure the driver with the given prefix for entry q
-+ * (e.g. "console us", "rk sd"): rename its code strings.
-+ */
+@@ -816,0 +824,38 @@
 +char *
 +repl(s, o, n)
 +char *s, *o, *n;
@@ -23464,22 +23431,13 @@ usr/local
 % usr/sys/dev/partab.c
 
 % usr/sys/dev/pl011.c usr/sys/dev/kl.c
-@@ -2 +2,10 @@
+@@ -2 +2 @@
 - *   KL/DL-11 driver
 + *   PL011 UART console driver
-+ *
-+ * The console is the QEMU virt PL011.  It is a normal Unix character
-+ * device: the cdevsw open/close/read/write/ioctl entries hang the line
-+ * discipline (tty.c) off it, output is paced by the transmit interrupt,
-+ * and input arrives on the receive interrupt -- the same model the v7
-+ * kl.c console driver follows, but for PL011 hardware.  The PL011 raises
-+ * a single GIC line (INTID 33); its receive and transmit causes are told
-+ * apart by the masked-interrupt-status register rather than by separate
-+ * PDP-11 vectors.
-@@ -6 +15 @@
+@@ -6 +6 @@
 -#include	"../h/dir.h"
 +#include "../h/dir.h"
-@@ -11,27 +19,0 @@
+@@ -11,27 +10,0 @@
 -/* base address */
 -#define	KLADDR	((struct device *)0177560)	/* console */
 -#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
@@ -23507,7 +23465,7 @@ usr/local
 -	int	tcsr;
 -	int	tbuf;
 -};
-@@ -39,2 +21,50 @@
+@@ -39,2 +12,44 @@
 -klopen(dev, flag)
 -dev_t dev;
 +#define	PL011_BASE	0x09000000	/* QEMU virt UART0 */
@@ -23547,12 +23505,6 @@ usr/local
 +int klrint(dev_t dev);
 +int klxint(dev_t dev);
 +
-+/*
-+ * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
-+ * the console needs no hardware setup; klinit() exists only to satisfy the
-+ * machine layer's board-agnostic early console-init hook (machine_init), which
-+ * the MP135 build uses to bring UART4 up from HSI.
-+ */
 +void
 +klinit(void)
 +{
@@ -23560,19 +23512,19 @@ usr/local
 +
 +int
 +klopen(dev_t dev, int flag)
-@@ -42 +71,0 @@
+@@ -42 +56,0 @@
 -	register struct device *addr;
-@@ -44 +72,0 @@
+@@ -44 +57,0 @@
 -	register d;
-@@ -46,2 +74,2 @@
+@@ -46,2 +59,2 @@
 -	d = minor(dev);
 -	if(d >= NKL11+NDL11) {
 +	(void)flag;
 +	if(minor(dev) >= NCONS) {
-@@ -49 +77 @@
+@@ -49 +62 @@
 -		return;
 +		return(0);
-@@ -51,13 +79,2 @@
+@@ -51,13 +64,2 @@
 -	tp = &kl11[d];
 -	/*
 -	 * set up minor 0 to address KLADDR
@@ -23588,23 +23540,23 @@ usr/local
 -	tp->t_addr = (caddr_t)addr;
 +	tp = &kl11[minor(dev)];
 +	tp->t_addr = (caddr_t)PL011_BASE;
-@@ -67 +84 @@
+@@ -67 +69 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
-@@ -70,2 +87,2 @@
+@@ -70,2 +72,2 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
-+	UARTLCRH &= ~FEN;		/* one transmit interrupt per character */
-+	UARTIMSC |= RXI|RTI;		/* enable receive interrupts */
-@@ -72,0 +90 @@
++	UARTLCRH &= ~FEN;
++	UARTIMSC |= RXI|RTI;
+@@ -72,0 +75 @@
 +	return(0);
-@@ -75,3 +93,2 @@
+@@ -75,3 +78,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +int
 +klclose(dev_t dev, int flag)
-@@ -79,4 +96,3 @@
+@@ -79,4 +81,3 @@
 -	register struct tty *tp;
 -
 -	tp = &kl11[minor(dev)];
@@ -23612,28 +23564,23 @@ usr/local
 +	(void)flag;
 +	ttyclose(&kl11[minor(dev)]);
 +	return(0);
-@@ -85,2 +101,2 @@
+@@ -85,2 +86,2 @@
 -klread(dev)
 -dev_t dev;
 +int
 +klread(dev_t dev)
-@@ -88,0 +105 @@
+@@ -88,0 +90 @@
 +	return(0);
-@@ -91,2 +108,2 @@
+@@ -91,2 +93,2 @@
 -klwrite(dev)
 -dev_t dev;
 +int
 +klwrite(dev_t dev)
-@@ -94,0 +112,31 @@
+@@ -94,0 +97 @@
 +	return(0);
-+}
-+
-+/*
-+ * Transmitter ready: hand the next queued character to the PL011.  Output
-+ * delays (characters above 0177, produced by ttyoutput for slow terminals)
-+ * are honored as in the v7 console driver.  The transmit interrupt is
-+ * level-sensitive, so it is masked whenever the output queue drains.
-+ */
+@@ -97,2 +100,26 @@
+-klxint(dev)
+-dev_t dev;
 +int
 +klstart(struct tty *tp)
 +{
@@ -23643,7 +23590,7 @@ usr/local
 +		return(0);
 +	if ((c=getc(&tp->t_outq)) >= 0) {
 +		if (tp->t_flags&RAW)
-+			UARTDR = c & 0177;	/* 8N1 glass tty: no parity bit */
++			UARTDR = c & 0177;
 +		else if (c<=0177)
 +			UARTDR = c;
 +		else {
@@ -23656,12 +23603,11 @@ usr/local
 +	} else
 +		UARTIMSC &= ~TXI;
 +	return(0);
-@@ -97,2 +145,2 @@
--klxint(dev)
--dev_t dev;
++}
++
 +int
 +klxint(dev_t dev)
-@@ -104,5 +152,3 @@
+@@ -104,5 +131,3 @@
 -	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
@@ -23670,14 +23616,14 @@ usr/local
 +	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
 +		wakeup((caddr_t)&tp->t_outq);
 +	return(0);
-@@ -111,2 +157,2 @@
+@@ -111,2 +136,2 @@
 -klrint(dev)
 -dev_t dev;
 +int
 +klrint(dev_t dev)
-@@ -115 +160,0 @@
+@@ -115 +139,0 @@
 -	register struct device *addr;
-@@ -119,4 +164,5 @@
+@@ -119,4 +143,5 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
@@ -23687,33 +23633,28 @@ usr/local
 +		ttyinput(c, tp);
 +	}
 +	return(0);
-@@ -125,3 +171,2 @@
+@@ -125,3 +150,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +int
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +174,2 @@
+@@ -129 +153,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -130,0 +177 @@
+@@ -130,0 +156 @@
 +	return(0);
-@@ -133,2 +180,7 @@
+@@ -133,2 +159,2 @@
 -klstart(tp)
 -register struct tty *tp;
-+/*
-+ * Console interrupt.  One GIC line serves the PL011; the masked-interrupt-
-+ * status register says whether the receiver, transmitter, or both need
-+ * service, demultiplexing into the receive/transmit halves above.
-+ */
 +int
 +klintr(void)
-@@ -136,2 +188 @@
+@@ -136,2 +162 @@
 -	register c;
 -	register struct device *addr;
 +	register unsigned int mis;
-@@ -139,12 +190,4 @@
+@@ -139,12 +164,8 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 -		return;
@@ -23730,15 +23671,15 @@ usr/local
 +	if (mis & (RXI|RTI)) {
 +		UARTICR = RXI|RTI;
 +		klrint(0);
-@@ -151,0 +195,5 @@
++	}
 +	if (mis & TXI) {
 +		UARTICR = TXI;
 +		klxint(0);
-+	}
+@@ -151,0 +173 @@
 +	return(0);
-@@ -154 +201,0 @@
+@@ -154,14 +176,2 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
-@@ -156,9 +203,7 @@
+-/*
 - * Print a character on console.
 - * Attempts to save and restore device
 - * status.
@@ -23748,32 +23689,25 @@ usr/local
 - * Whether or not printing is inhibited,
 - * the last MSGBUFS characters
 - * are saved in msgbuf for inspection later.
-+ * Print a character on the console (cf. kl.c).  The last MSGBUFS characters
-+ * are saved in msgbuf for inspection.  Polled with a bounded spin, and the
-+ * transmit interrupt is masked around the write -- the PL011 analog of kl.c
-+ * saving and clearing the DL11 control register -- so kernel printf does not
-+ * collide with interrupt-driven tty output and still works before the console
-+ * is open and from panic context.  The DL11's console-switch check and
-+ * inter-character rubout padding have no PL011 equivalent and are dropped.
-@@ -166,2 +211,2 @@
+- */
 -putchar(c)
 -register c;
 +void
 +klputchar(char c)
-@@ -169 +214,2 @@
+@@ -169 +179,2 @@
 -	register s, timo;
 +	register int timo;
 +	unsigned int s;
-@@ -173 +219 @@
+@@ -173 +184 @@
 -		if(msgbufp >= &msgbuf[MSGBUFS])
 +		if (msgbufp >= &msgbuf[MSGBUFS])
-@@ -176,5 +221,0 @@
+@@ -176,5 +186,0 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
 -	if ((KLADDR->rbuf&0177) == 0)
 -		return;
-@@ -182,6 +223,2 @@
+@@ -182,6 +188,2 @@
 -	/*
 -	 * Try waiting for the console tty to come ready,
 -	 * otherwise give up after a reasonable time.
@@ -23782,10 +23716,10 @@ usr/local
 -		if(--timo == 0)
 +	while (UARTFR & TXFF)
 +		if (--timo == 0)
-@@ -189 +226 @@
+@@ -189 +191 @@
 -	if(c == 0)
 +	if (c == 0)
-@@ -191,10 +228,6 @@
+@@ -191,10 +193,6 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
@@ -23802,21 +23736,13 @@ usr/local
 +	if (c == '\n')
 +		klputchar('\r');
 +	UARTIMSC = s;
-@@ -201,0 +235 @@
+@@ -201,0 +200 @@
 +
 
 % usr/sys/dev/stm32ddr.c /dev/null
-@@ -0,0 +1,321 @@
+@@ -0,0 +1,263 @@
 +/*
 + *   STM32MP135 clock and DDR bring-up
-+ *
-+ * ddrinit(), configured as "ddr" in mp135conf, brings up the clocks and DDR
-+ * before machine_init() (machdep.c) enables the MMU.
-+ *
-+ * The ROM loads this kernel (FSBL) from SD into SYSRAM and jumps to _start
-+ * (conf/low.s).  Kernel runs in cached SYSRAM; user core + buffer cache live
-+ * in cached DDR; peripherals + GIC are Device.  DDR3-1066 register values are
-+ * verbatim from the board reference firmware (board.h).
 + */
 +#include "../h/param.h"
 +#include "../h/seg.h"
@@ -23824,7 +23750,6 @@ usr/local
 +void ddrclk(void);
 +void ddr_init(void);
 +
-+/* RCC + DDR controller/PHY + security blocks (board reference firmware) */
 +#define RCC		0x50000000U
 +#define PWR		0x50001000U
 +#define DDRCTRL		0x5A003000U
@@ -23833,7 +23758,6 @@ usr/local
 +#define TZC		0x5C006000U
 +#define R32(a)		(*(volatile unsigned int *)(a))
 +
-+/* RCC registers used here (offsets verified against the board headers) */
 +#define RCC_OCENSETR	R32(RCC + 0x420)	/* oscillator enable (set-reg) */
 +#define RCC_OCRDYR	R32(RCC + 0x428)	/* oscillator ready */
 +#define HSEON		0x00000100U		/* OCENSETR/OCRDYR bit 8 */
@@ -23850,7 +23774,6 @@ usr/local
 +#define PLL2_DIVEN	0x00000070U		/* DIVP/Q/R output enables */
 +#define PLL2_FRACLE	0x00010000U
 +
-+/* Bring up DRAM and its clock before machine_init() enables the MMU. */
 +void
 +ddrinit(void)
 +{
@@ -23858,54 +23781,29 @@ usr/local
 +	ddr_init();
 +}
 +
-+/*
-+ * DDR clock: HSE (the 24 MHz crystal) feeds PLL2, whose R output clocks the
-+ * DDR PHY.  All other clocks are left as the boot ROM set them: the CPU and
-+ * buses, the console UART (HSI), the SD card, and the system counter, whose
-+ * frequency the ROM leaves in CNTFRQ for clkstart().
-+ */
 +void
 +ddrclk(void)
 +{
 +	int timo;
 +
-+	/* HSE on (24 MHz crystal); wait for it to stabilize. */
 +	RCC_OCENSETR = HSEON;
 +	for (timo = 100000; timo > 0 && !(RCC_OCRDYR & HSERDY); timo--)
 +		;
 +
-+	/*
-+	 * PLL2 -> 533 MHz on its R output, which clocks the DDR PHY (DDR3-1066);
-+	 * ddr_init() needs this running first.  Coefficients are the board's
-+	 * (bootloader setup.c, HSE source, fractional): DIVM2=3 (/3), DIVN=66
-+	 * (x66), FRACV=0x1400, DIVP=DIVQ=2, DIVR=1 -> VCO 533 MHz, R = 533 MHz.
-+	 * We only ENABLE PLL2 and leave the AXI source on the ROM default: DDR
-+	 * takes PLL2_R directly, so there is no live bus-clock switch and a wrong
-+	 * value just fails ddr_init() with the console still alive.
-+	 * TODO(bench, #28): the AXI-on-PLL2 speedup (a live switch -- park AXI,
-+	 * reconfigure, switch back, as HAL_RCC_ClockConfig does) and PLL1 (MPU)
-+	 * remain; validate PLL2 lock on the PCB.
-+	 */
-+	RCC_PLL2CR &= ~PLL2_PLLON;		/* disable before reconfigure */
++	RCC_PLL2CR &= ~PLL2_PLLON;
 +	for (timo = 10000; timo > 0 && (RCC_PLL2CR & PLL2_RDY); timo--)
 +		;
 +	RCC_RCK12SELR = (RCC_RCK12SELR & ~7U) | PLL12SRC_HSE;
 +	RCC_PLL2CFGR1 = 0x00020041u;		/* DIVM2=2 (/3), DIVN=65 (x66) */
 +	RCC_PLL2CFGR2 = 0x00000101u;		/* DIVP=1 (/2), DIVQ=1 (/2), DIVR=0 (/1) */
 +	RCC_PLL2FRACR = 0x1400u << 3;		/* FRACV */
-+	RCC_PLL2FRACR |= PLL2_FRACLE;		/* latch fractional value */
-+	RCC_PLL2CR |= PLL2_DIVEN;		/* enable P/Q/R outputs */
-+	RCC_PLL2CR |= PLL2_PLLON;		/* enable PLL2 */
++	RCC_PLL2FRACR |= PLL2_FRACLE;
++	RCC_PLL2CR |= PLL2_DIVEN;
++	RCC_PLL2CR |= PLL2_PLLON;
 +	for (timo = 100000; timo > 0 && !(RCC_PLL2CR & PLL2_RDY); timo--)
 +		;
 +}
 +
-+/*
-+ * DDR controller (DDRCTRL @ DDRCTRL, register offset:value) and PHY (DDRPHYC)
-+ * settings for the board's DDR3-1066 (1x4Gb, 533 MHz) part.  Values are the
-+ * DDR_* defines from the reference bootloader's board.h; offsets are the
-+ * DDRCTRL_TypeDef/DDRPHYC_TypeDef member offsets.  Terminated by off==0xFFFF.
-+ */
 +struct ddrreg { unsigned short off; unsigned int val; };
 +
 +/* DDRCTRL static + timing + address-map groups (programmed before INIT0). */
@@ -24013,32 +23911,17 @@ usr/local
 +#define DDR_PIR_TRAIN	0x00000081U	/* QSTRN|INIT: DQS gate (data-eye) training */
 +#define RFSHCTL3_DISAUREF 0x00000001U	/* RFSHCTL3.dis_auto_refresh */
 +
-+/*
-+ * DDR3-1066 bring-up (533 MHz, 512 MB), translated from the reference
-+ * bootloader's HAL_DDR_Init.  Unverifiable in QEMU (no DDR-controller model),
-+ * so it is a bench candidate -- the register values/offsets above are exact,
-+ * but the analog parts (PHY DLL lock, ZQ calibration, DQS training triggered
-+ * by PIR and polled on PGSR.IDONE) only converge against real silicon.
-+ * TODO(bench, #28): requires PLL2_R = 533 MHz from ddrclk first.  Tune on
-+ * the PCB: if PGSR.IDONE or STAT.operating_mode never settles, add the SWCTL/
-+ * SWSTAT sw_done handshakes the HAL wraps around quasi-dynamic writes.
-+ */
 +void
 +ddr_init(void)
 +{
 +	const struct ddrreg *r;
 +	int timo;
 +
-+	/* If the DDR I/O pads are in retention (PWR_CR3.DDRRETEN, e.g. left from a
-+	 * prior low-power state), the PHY cannot drive the DRAM and init/training
-+	 * fail.  Disable retention exactly as the bootloader does.  PWR_CR3 @ 0x5000100C. */
 +	if (R32(0x5000100C) & (1U << 12)) {
 +		R32(0x5000100C) |= (1U << 11);		/* DDRSRDIS = 1 */
 +		R32(0x5000100C) &= ~(1U << 12);		/* DDRRETEN = 0 */
 +	}
 +
-+	/* Enable the MCE + TZC peripheral clocks before touching TZC, else the
-+	 * bus access to an unclocked peripheral stalls (as the bootloader does). */
 +	R32(RCC + 0x780) = 0x00000002U;		/* AHB6ENSETR: MCE clock (bit 1) */
 +	R32(RCC + 0x740) = 0x00000800U;		/* APB5ENSETR: TZC clock (bit 11) */
 +	(void)R32(RCC + 0x740);			/* read-back: clocks live */
@@ -24076,9 +23959,7 @@ usr/local
 +		DPHY(r->off) = r->val;
 +	DPHY(0x044) &= ~0x1U;			/* DDR3: clear MR1.DE */
 +
-+	/* 4b. wait for the PHY's post-reset auto-init (PGSR.IDONE) BEFORE issuing
-+	 * the PIR.  The reference does ddrphy_idone_wait() here; writing PIR while
-+	 * the PHY is still auto-initializing corrupts the DRAM init. */
++	/* 4b. wait for the PHY's post-reset auto-init (PGSR.IDONE) */
 +	for (timo = 1000000; timo > 0 && !(DPHY(0x00C) & 0x1U); timo--)
 +		;
 +
@@ -24090,9 +23971,7 @@ usr/local
 +	     !(DPHY(0x00C) & 0x1U) && !(DPHY(0x00C) & 0x3E0U); timo--)
 +		;				/* poll PGSR.IDONE or error (HAL waits on IDONE) */
 +
-+	/* 6. signal DFI init complete (quasi-dynamic -> sw_done handshake), wait NORMAL.
-+	 * SWCTL.sw_done=0, change reg, sw_done=1, wait SWSTAT.sw_done_ack -- without
-+	 * this the controller ignores the change. */
++	/* 6. signal DFI init complete via the sw_done handshake, wait NORMAL */
 +	DDRC(0x320) &= ~0x1U;			/* SWCTL.sw_done = 0 */
 +	DDRC(0x1B0) |= DFIMISC_COMPLETE;
 +	DDRC(0x320) |= 0x1U;			/* SWCTL.sw_done = 1 */
@@ -24101,10 +23980,7 @@ usr/local
 +	for (timo = 1000000; timo > 0 && (DDRC(0x004) & 0x7U) != 0x1U; timo--)
 +		;				/* poll STAT.operating_mode == NORMAL */
 +
-+	/* 6b. DQS gate (data-eye) training -- without it the read data path is
-+	 * uncalibrated and DDR reads stall.  Disable auto-refresh + dfi_init_complete
-+	 * via the sw_done handshake (quasi-dynamic) so refresh does not corrupt the
-+	 * training, run PIR=QSTRN, poll PGSR, then restore the same way. */
++	/* 6b. DQS gate training, with auto-refresh off */
 +	DDRC(0x320) &= ~0x1U;
 +	DDRC(0x1B0) &= ~DFIMISC_COMPLETE;	/* clear dfi_init_complete_en */
 +	DDRC(0x060) |= RFSHCTL3_DISAUREF;	/* RFSHCTL3: disable auto-refresh */
@@ -24130,25 +24006,14 @@ usr/local
 +}
 
 % usr/sys/dev/stm32sd.c usr/sys/dev/rk.c
-@@ -2 +2,12 @@
+@@ -2 +2 @@
 - * RK disk driver
 + *   STM32 SDMMC block driver (SDMMC1 on the MP135 board)
-+ *
-+ * The bulk-storage block device.  Same async, interrupt-driven, queued model
-+ * as rk.c / virtio_blk.c: sdstrategy() puts the buffer on sdtab and kicks the
-+ * controller via sdstart(); sdstart() programs one SD block transfer through
-+ * the SDMMC internal DMA and returns; the transfer-complete interrupt
-+ * (sdintr) runs iodone() and starts the next queued buffer.  bio.c's iowait()
-+ * sleeps on the buffer until then.
-+ *
-+ * Like v7's drivers it assumes working hardware: the boot ROM has just read
-+ * the kernel from this card, so clocks, pins and the card (selected, in
-+ * transfer state, SDHC block addressing) are used as the ROM left them.
-@@ -4 +14,0 @@
+@@ -4 +3,0 @@
 -
-@@ -6 +15,0 @@
+@@ -6 +4,0 @@
 -#include "../h/systm.h"
-@@ -8,18 +17,64 @@
+@@ -8,18 +6 @@
 -#include "../h/conf.h"
 -#include	"../h/dir.h"
 -#include "../h/user.h"
@@ -24168,8 +24033,21 @@ usr/local
 -#define	WLO	020000
 -#define	CTLRDY	0200
 +#include "../h/seg.h"
-+
-+
+@@ -27,4 +7,0 @@
+-/*
+- * Monitoring device bit
+- */
+-#define	DK_N	1
+@@ -32,9 +9,84 @@
+-struct	device
+-{
+-	int	rkds;
+-	int	rker;
+-	int	rkcs;
+-	int	rkwc;
+-	caddr_t	rkba;
+-	int	rkda;
+-};
 +void dmbsy(void);
 +void iodone(struct buf *bp);
 +void deverror(struct buf *bp, int o1, int o2);
@@ -24231,29 +24109,12 @@ usr/local
 +static int sd_retry;
 +
 +#define	SD_RETRIES	10
-@@ -28 +83,3 @@
-- * Monitoring device bit
-+ * Issue one command.  resp is 0 (none) or CMD_WAITRESP_SHORT; data!=0
-+ * marks a data-transfer command.  Returns RESP1, or -1 on command
-+ * timeout/CRC error.
-@@ -30,3 +87,2 @@
--#define	DK_N	1
--
--struct	device
++
 +static int
 +sd_cmd(unsigned int idx, unsigned int arg, unsigned int resp, int data)
-@@ -34,7 +90 @@
--	int	rkds;
--	int	rker;
--	int	rkcs;
--	int	rkwc;
--	caddr_t	rkba;
--	int	rkda;
--};
++{
 +	register int timo;
-@@ -42,2 +92,17 @@
--struct	buf	rktab;
--struct	buf	rrkbuf;
++
 +	SD(ICR) = STA_STATIC;
 +	SD(ARG) = arg;
 +	SD(CMD) = idx | resp | CMD_CPSMEN | (data ? CMD_CMDTRANS : 0);
@@ -24271,44 +24132,38 @@ usr/local
 +	}
 +	return(-1);
 +}
-@@ -45,2 +110,6 @@
--rkstrategy(bp)
--register struct buf *bp;
-+/*
-+ * The card is as the boot ROM left it; just make sure the controller is
-+ * powered and allow the longest data timeout.
-+ */
+@@ -42,2 +94,7 @@
+-struct	buf	rktab;
+-struct	buf	rrkbuf;
 +void
 +sdinit(void)
-@@ -47,0 +117,4 @@
++{
 +	SD(POWER) = 0x03;
 +	SD(DTIMER) = 0xffffffffU;
 +	dmbsy();
 +}
-@@ -49,5 +122,13 @@
+@@ -45,2 +102,2 @@
+-rkstrategy(bp)
+-register struct buf *bp;
++static void
++sdstart(void)
+@@ -47,0 +105,2 @@
++	register struct buf *bp;
++	unsigned int blk;
+@@ -49,5 +108 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
 -		bp->b_flags |= B_ERROR;
 -		iodone(bp);
-+/*
-+ * Program one block transfer for the buffer at the head of the queue through
-+ * the SDMMC internal DMA, and enable the data-done interrupt.  (cf. rkstart.)
-+ */
-+static void
-+sdstart(void)
-+{
-+	register struct buf *bp;
-+	unsigned int blk;
-+
 +	if ((bp = sdtab.b_actf) == NULL)
-+		return;
+@@ -54,0 +110,5 @@
 +	if (sdtab.b_active)
-@@ -54,0 +136,3 @@
++		return;
 +	if (bp != sd_cur) {
 +		sd_cur = bp;
 +		sd_retry = 0;
-@@ -56,10 +140,21 @@
+@@ -56,10 +116,16 @@
 -	bp->av_forw = (struct buf *)NULL;
 -	spl5();
 -	if(rktab.b_actf == NULL)
@@ -24323,11 +24178,6 @@ usr/local
 +	blk = (unsigned int)bp->b_blkno;
 +	dcflush((unsigned int)bp->b_un.b_addr, bp->b_bcount);
 +	SD(ICR) = STA_STATIC;
-+	/* Match the HAL IDMA single-buffer read/write order: program the data
-+	 * path (DLEN + DCTRL block size/dir, DPSM left off) first, then point the
-+	 * internal DMA at the buffer and enable it, then issue the command (which
-+	 * sets CMDTRANS and starts the DPSM).  IDMABSIZE is double-buffer-only and
-+	 * must not be written for single-buffer transfers. */
 +	SD(DCTRL) = 0;
 +	SD(DLEN) = bp->b_bcount;
 +	SD(DCTRL) = DCTRL_BLK512 |
@@ -24340,17 +24190,17 @@ usr/local
 +	dk_busy |= 1;
 +	dk_numb[0]++;
 +	dk_wds[0] += bp->b_bcount>>6;
-@@ -68 +163,2 @@
+@@ -68 +134,2 @@
 -rkstart()
 +int
 +sdstrategy(struct buf *bp)
-@@ -70,4 +166 @@
+@@ -70,4 +137 @@
 -	register struct buf *bp;
 -	register com;
 -	daddr_t bn;
 -	int dn, cn, sn;
 +	int s, idle;
-@@ -75,19 +168,12 @@
+@@ -75,19 +139,12 @@
 -	if ((bp = rktab.b_actf) == NULL)
 -		return;
 -	rktab.b_active++;
@@ -24382,17 +24232,13 @@ usr/local
 +	if (idle)
 +		sdstart();
 +	return(0);
-@@ -96 +182,6 @@
+@@ -96 +153,2 @@
 -rkintr()
-+/*
-+ * Transfer-complete interrupt: finish the active buffer and start the next.
-+ * (cf. rkintr.)
-+ */
 +int
 +sdintr(void)
-@@ -98,0 +190 @@
+@@ -98,0 +157 @@
 +	unsigned int sta;
-@@ -100,13 +192,13 @@
+@@ -100,13 +159,13 @@
 -	if (rktab.b_active == NULL)
 -		return;
 -	dk_busy &= ~(1<<DK_N);
@@ -24419,9 +24265,9 @@ usr/local
 +		if (sd_retry++ < SD_RETRIES) {
 +			sdstart();
 +			return(0);
-@@ -113,0 +206 @@
+@@ -113,0 +173 @@
 +		deverror(bp, (int)sta, 0);
-@@ -115,3 +208,5 @@
+@@ -115,3 +175,5 @@
 -	}
 -	rktab.b_errcnt = 0;
 -	rktab.b_actf = bp->av_forw;
@@ -24430,47 +24276,37 @@ usr/local
 +	sd_cur = NULL;
 +	sd_retry = 0;
 +	sdtab.b_actf = bp->av_forw;
-@@ -120 +215,2 @@
+@@ -120 +182,2 @@
 -	rkstart();
 +	sdstart();
 +	return(0);
-@@ -123 +219,4 @@
+@@ -123 +186,4 @@
 -rkread(dev)
 +struct	buf	rsdbuf;
 +
 +int
 +sdread(dev)
-@@ -127 +226,2 @@
+@@ -127 +193,2 @@
 -	physio(rkstrategy, &rrkbuf, dev, B_READ);
 +	physio(sdstrategy, &rsdbuf, dev, B_READ);
 +	return(0);
-@@ -130 +230,2 @@
+@@ -130 +197,2 @@
 -rkwrite(dev)
 +int
 +sdwrite(dev)
-@@ -134 +235,2 @@
+@@ -134 +202,2 @@
 -	physio(rkstrategy, &rrkbuf, dev, B_WRITE);
 +	physio(sdstrategy, &rsdbuf, dev, B_WRITE);
 +	return(0);
 
 % usr/sys/dev/stm32usart.c usr/sys/dev/kl.c
-@@ -2 +2,11 @@
+@@ -2 +2 @@
 - *   KL/DL-11 driver
 + *   STM32 USART console driver (UART4 on the MP135 board)
-+ *
-+ * Same Unix character-device/tty model as kl.c/pl011.c -- the cdevsw
-+ * open/close/read/write/ioctl entries hang the line discipline (tty.c) off
-+ * the console, output is paced by the transmit interrupt and input arrives
-+ * on the receive interrupt.  Differs only in the hardware: an STM32 USART
-+ * (UART4) instead of a PL011, one GIC line (INTID 85) demultiplexed via the
-+ * interrupt/status register.  This file is built for both boards but is the
-+ * live console only on the MP135 (the QEMU build uses pl011.c); its register
-+ * pokes are never reached on QEMU because /dev/console there has a different
-+ * major.
-@@ -6 +16 @@
+@@ -6 +6 @@
 -#include	"../h/dir.h"
 +#include "../h/dir.h"
-@@ -11,27 +20,0 @@
+@@ -11,27 +10,0 @@
 -/* base address */
 -#define	KLADDR	((struct device *)0177560)	/* console */
 -#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
@@ -24498,7 +24334,7 @@ usr/local
 -	int	tcsr;
 -	int	tbuf;
 -};
-@@ -39,2 +22,85 @@
+@@ -39,2 +12,70 @@
 -klopen(dev, flag)
 -dev_t dev;
 +#define	UART4	0x40010000U		/* APB1 UART4 */
@@ -24550,55 +24386,40 @@ usr/local
 +int usstart(struct tty *tp);
 +int usrint(dev_t dev);
 +int usxint(dev_t dev);
-+void usputchar(char c);			/* defined below */
++void usputchar(char c);
 +
-+/*
-+ * Bring UART4 up for the console before the first kernel printf: enable its
-+ * APB1 bus clock and select HSI (64 MHz, running at reset) as the kernel
-+ * clock, then program 115200 8N1 -- BRR = 64e6/115200 = 556 (oversampling 16)
-+ * -- and enable the transmitter and receiver.  Because UART4 runs off HSI, the
-+ * console works at the ROM's default clocks, before clock_init() sets up the
-+ * PLLs -- so even early boot and panics are visible.  Called from machine_init
-+ * via the board-agnostic console hook.  Values imported from the reference
-+ * bootloader (UART4 TX=PD6, RX=PD8, AF8; 115200; HSI source).
-+ * GPIOD's clock is enabled through the non-secure AHB4ENSETR (RCC+0x770),
-+ * matching the reference bootloader's __HAL_RCC_GPIOD_CLK_ENABLE; the secure
-+ * register (0x768) leaves the port unclocked so the pin mux silently no-ops.
-+ */
 +void
 +usinit(void)
 +{
-+	/* Route UART4 to its pads: PD6 (TX) and PD8 (RX) -> alternate function 8.
-+	 * Without this the UART would transmit into a disconnected pin. */
-+	AHB4ENSETR = GPIODEN;			/* GPIOD bus clock (set-register) */
++	AHB4ENSETR = GPIODEN;
 +	(void)AHB4ENSETR;			/* read-back: clock live before access */
 +	GPIOD_MODER = (GPIOD_MODER & ~((3U<<12)|(3U<<16))) | (2U<<12) | (2U<<16);
 +	GPIOD_AFRL = (GPIOD_AFRL & ~(0xfU<<24)) | (8U<<24);	/* PD6 -> AF8 */
 +	GPIOD_AFRH = (GPIOD_AFRH & ~(0xfU<<0))  | (8U<<0);	/* PD8 -> AF8 */
 +
-+	APB1ENSETR = UART4EN;			/* UART4 bus clock (set-register) */
++	APB1ENSETR = UART4EN;
 +	(void)APB1ENSETR;			/* read-back: clock live before access */
 +	UART4CKSELR = (UART4CKSELR & ~7U) | UART4SRC_HSI;
-+	CR1 = 0;				/* disable before reconfigure */
-+	BRR = 556;				/* 64 MHz / 115200 */
-+	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE; /* 8N1, FIFOs, TX + RX */
++	CR1 = 0;
++	BRR = 556;
++	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE;
 +}
 +
 +int
 +usopen(dev_t dev, int flag)
-@@ -42 +107,0 @@
+@@ -42 +82,0 @@
 -	register struct device *addr;
-@@ -44 +108,0 @@
+@@ -44 +83,0 @@
 -	register d;
-@@ -46,2 +110,2 @@
+@@ -46,2 +85,2 @@
 -	d = minor(dev);
 -	if(d >= NKL11+NDL11) {
 +	(void)flag;
 +	if(minor(dev) >= NCONS) {
-@@ -49 +113 @@
+@@ -49 +88 @@
 -		return;
 +		return(0);
-@@ -51,14 +115,3 @@
+@@ -51,14 +90,3 @@
 -	tp = &kl11[d];
 -	/*
 -	 * set up minor 0 to address KLADDR
@@ -24616,28 +24437,28 @@ usr/local
 +	tp = &cons[minor(dev)];
 +	tp->t_addr = (caddr_t)UART4;
 +	tp->t_oproc = usstart;
-@@ -67 +120 @@
+@@ -67 +95 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
-@@ -70,2 +123 @@
+@@ -70,2 +98 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
-+	CR1 |= CR1_RXNEIE;		/* enable receive interrupts */
-@@ -72,0 +125 @@
++	CR1 |= CR1_RXNEIE;
+@@ -72,0 +100 @@
 +	return(0);
-@@ -75,3 +128,2 @@
+@@ -75,3 +103,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +int
 +usclose(dev_t dev, int flag)
-@@ -79 +131,4 @@
+@@ -79 +106,4 @@
 -	register struct tty *tp;
 +	(void)flag;
 +	ttyclose(&cons[minor(dev)]);
 +	return(0);
 +}
-@@ -81,2 +136,5 @@
+@@ -81,2 +111,5 @@
 -	tp = &kl11[minor(dev)];
 -	ttyclose(tp);
 +int
@@ -24645,27 +24466,21 @@ usr/local
 +{
 +	ttread(&cons[minor(dev)]);
 +	return(0);
-@@ -85,2 +143,2 @@
+@@ -85,2 +118,2 @@
 -klread(dev)
 -dev_t dev;
 +int
 +uswrite(dev_t dev)
-@@ -88 +146,2 @@
+@@ -88 +121,2 @@
 -	ttread(&kl11[minor(dev)]);
 +	ttwrite(&cons[minor(dev)]);
 +	return(0);
-@@ -91,2 +150,8 @@
+@@ -91,2 +125,2 @@
 -klwrite(dev)
 -dev_t dev;
-+/*
-+ * Transmitter ready: hand the next queued character to UART4.  Output
-+ * delays (characters above 0177) are honored as in the v7 console driver;
-+ * the transmit-empty interrupt is level-sensitive, so it is masked whenever
-+ * the output queue drains.
-+ */
 +int
 +usstart(struct tty *tp)
-@@ -94 +159,19 @@
+@@ -94 +128,19 @@
 -	ttwrite(&kl11[minor(dev)]);
 +	register int c;
 +
@@ -24673,7 +24488,7 @@ usr/local
 +		return(0);
 +	if ((c=getc(&tp->t_outq)) >= 0) {
 +		if (tp->t_flags&RAW)
-+			TDR = c & 0177;	/* 8N1 glass tty: no parity bit */
++			TDR = c & 0177;
 +		else if (c<=0177)
 +			TDR = c;
 +		else {
@@ -24686,15 +24501,15 @@ usr/local
 +	} else
 +		CR1 &= ~CR1_TXEIE;
 +	return(0);
-@@ -97,2 +180,2 @@
+@@ -97,2 +149,2 @@
 -klxint(dev)
 -dev_t dev;
 +int
 +usxint(dev_t dev)
-@@ -102 +185 @@
+@@ -102 +154 @@
 -	tp = &kl11[minor(dev)];
 +	tp = &cons[minor(dev)];
-@@ -104,5 +187,3 @@
+@@ -104,5 +156,3 @@
 -	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
@@ -24703,14 +24518,14 @@ usr/local
 +	if ((tp->t_state&ASLEEP) && tp->t_outq.c_cc<=TTLOWAT)
 +		wakeup((caddr_t)&tp->t_outq);
 +	return(0);
-@@ -111,2 +192,2 @@
+@@ -111,2 +161,2 @@
 -klrint(dev)
 -dev_t dev;
 +int
 +usrint(dev_t dev)
-@@ -115 +195,0 @@
+@@ -115 +164,0 @@
 -	register struct device *addr;
-@@ -118,5 +198,7 @@
+@@ -118,5 +167,7 @@
 -	tp = &kl11[minor(dev)];
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
@@ -24721,35 +24536,30 @@ usr/local
 +		c = RDR;
 +		ttyinput(c, tp);
 +	}
-+	ICR = ICR_ERR;			/* clear overrun/framing errors */
++	ICR = ICR_ERR;
 +	return(0);
-@@ -125,3 +207,2 @@
+@@ -125,3 +176,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +int
 +usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +210,2 @@
+@@ -129 +179,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &cons[minor(dev)], addr, dev)==0)
-@@ -130,0 +213 @@
+@@ -130,0 +182 @@
 +	return(0);
-@@ -133,2 +216,7 @@
+@@ -133,2 +185,2 @@
 -klstart(tp)
 -register struct tty *tp;
-+/*
-+ * Console interrupt.  One GIC line serves UART4; the interrupt/status
-+ * register says whether the receiver, transmitter, or both need service,
-+ * demultiplexing into the receive/transmit halves above.
-+ */
 +int
 +usintr(void)
-@@ -136,2 +224 @@
+@@ -136,2 +188 @@
 -	register c;
 -	register struct device *addr;
 +	unsigned int isr = ISR;
-@@ -139,13 +226,5 @@
+@@ -139,13 +190,5 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 -		return;
@@ -24768,10 +24578,9 @@ usr/local
 +	if ((isr & ISR_TXE) && (CR1 & CR1_TXEIE))
 +		usxint(0);
 +	return(0);
-@@ -154 +233 @@
+@@ -154,14 +197,3 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
-+
-@@ -156,9 +235,4 @@
+-/*
 - * Print a character on console.
 - * Attempts to save and restore device
 - * status.
@@ -24781,29 +24590,26 @@ usr/local
 - * Whether or not printing is inhibited,
 - * the last MSGBUFS characters
 - * are saved in msgbuf for inspection later.
-+ * Print a character on the console (cf. kl.c).  Polled with a bounded spin,
-+ * the transmit interrupt masked around the write so kernel printf does not
-+ * collide with interrupt-driven tty output; works before the console is open
-+ * and from panic context.  The last MSGBUFS characters are saved in msgbuf.
-@@ -166,2 +240,2 @@
+- */
 -putchar(c)
 -register c;
++
 +void
 +usputchar(char c)
-@@ -169 +243,2 @@
+@@ -169 +201,2 @@
 -	register s, timo;
 +	register int timo;
 +	unsigned int s;
-@@ -173 +248 @@
+@@ -173 +206 @@
 -		if(msgbufp >= &msgbuf[MSGBUFS])
 +		if (msgbufp >= &msgbuf[MSGBUFS])
-@@ -176,5 +250,0 @@
+@@ -176,5 +208,0 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
 -	if ((KLADDR->rbuf&0177) == 0)
 -		return;
-@@ -182,6 +252,2 @@
+@@ -182,6 +210,2 @@
 -	/*
 -	 * Try waiting for the console tty to come ready,
 -	 * otherwise give up after a reasonable time.
@@ -24812,10 +24618,10 @@ usr/local
 -		if(--timo == 0)
 +	while ((ISR & ISR_TXE) == 0)
 +		if (--timo == 0)
-@@ -189 +255 @@
+@@ -189 +213 @@
 -	if(c == 0)
 +	if (c == 0)
-@@ -191,10 +257,6 @@
+@@ -191,10 +215,6 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
@@ -24832,7 +24638,7 @@ usr/local
 +	if (c == '\n')
 +		usputchar('\r');
 +	CR1 = s;
-@@ -201,0 +264 @@
+@@ -201,0 +222 @@
 +
 
 % usr/sys/dev/sys.c
@@ -25100,7 +24906,7 @@ usr/local
 -
 @@ -6 +1,0 @@
 -#include "../h/systm.h"
-@@ -8,18 +2,0 @@
+@@ -8,32 +3,33 @@
 -#include "../h/conf.h"
 -#include	"../h/dir.h"
 -#include "../h/user.h"
@@ -25119,12 +24925,12 @@ usr/local
 -#define	ARDY	0100
 -#define	WLO	020000
 -#define	CTLRDY	0200
-@@ -27,4 +3,0 @@
+-
 -/*
 - * Monitoring device bit
 - */
 -#define	DK_N	1
-@@ -32,8 +5,31 @@
+-
 -struct	device
 -{
 -	int	rkds;
@@ -25133,6 +24939,8 @@ usr/local
 -	int	rkwc;
 -	caddr_t	rkba;
 -	int	rkda;
++
++
 +void panic(char *s);
 +void dmbsy(void);
 +void iodone(struct buf *bp);
@@ -25164,7 +24972,7 @@ usr/local
 +	unsigned int	len;
 +	unsigned short	flags;
 +	unsigned short	next;
-@@ -42,2 +38,10 @@
+@@ -42,2 +38,22 @@
 -struct	buf	rktab;
 -struct	buf	rrkbuf;
 +struct vqavail {
@@ -25177,9 +24985,7 @@ usr/local
 +	unsigned int	id;
 +	unsigned int	len;
 +};
-@@ -45,2 +49,29 @@
--rkstrategy(bp)
--register struct buf *bp;
++
 +struct vqused {
 +	unsigned short	flags;
 +	unsigned short	idx;
@@ -25191,7 +24997,9 @@ usr/local
 +	unsigned int	reserved;
 +	unsigned long long sector;
 +};
-+
+@@ -45,2 +61,17 @@
+-rkstrategy(bp)
+-register struct buf *bp;
 +struct buf rktab;
 +
 +static volatile unsigned char virtio_vq[512] __attribute__((aligned(4096)));
@@ -25209,7 +25017,7 @@ usr/local
 +
 +static unsigned int
 +vmmio(unsigned int off)
-@@ -49,17 +80,8 @@
+@@ -49,17 +80 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
@@ -25228,15 +25036,15 @@ usr/local
 -		rkstart();
 -	spl0();
 +	return(*(volatile unsigned int *)(virtio_vbase + off));
-+}
-+
+@@ -68 +83,44 @@
+-rkstart()
 +static void
 +vmmios(unsigned int off, unsigned int val)
 +{
 +
 +	*(volatile unsigned int *)(virtio_vbase + off) = val;
-@@ -68 +90,42 @@
--rkstart()
++}
++
 +void
 +rkinit(void)
 +{
@@ -25272,23 +25080,18 @@ usr/local
 +	rktab.b_active = 0;
 +}
 +
-+/*
-+ * Program the virtqueue for the buffer at the head of the queue and notify
-+ * the device.  Returns at once; completion arrives as an interrupt.
-+ * (cf. v7 rk.c rkstart.)
-+ */
 +static void
 +virtio_start(void)
-@@ -71,3 +134,2 @@
+@@ -71,3 +129,2 @@
 -	register com;
 -	daddr_t bn;
 -	int dn, cn, sn;
 +	unsigned short aidx;
 +	unsigned int type;
-@@ -75 +137 @@
+@@ -75 +132 @@
 -	if ((bp = rktab.b_actf) == NULL)
 +	if((bp = rktab.b_actf) == NULL)
-@@ -78,16 +140,31 @@
+@@ -78,16 +135,49 @@
 -	bn = bp->b_blkno;
 -	dn = minor(bp->b_dev);
 -	cn = bn/12;
@@ -25336,13 +25139,8 @@ usr/local
 +	dk_busy |= 1;
 +	dk_numb[0]++;
 +	dk_wds[0] += bp->b_bcount>>6;
-@@ -96 +173,30 @@
--rkintr()
-+/*
-+ * Block-device strategy: queue the buffer and, if the controller is idle,
-+ * start it.  Returns at once; bio.c's iowait() sleeps on the buffer until
-+ * the completion interrupt runs iodone().  (cf. v7 rk.c rkstrategy.)
-+ */
++}
++
 +int
 +rkstrategy(struct buf *bp)
 +{
@@ -25359,18 +25157,13 @@ usr/local
 +		virtio_start();
 +	intr_restore(s);
 +	return(0);
-+}
-+
-+/*
-+ * Completion interrupt (GIC INTID rkirq).  Acknowledge the device,
-+ * finish the active buffer, and start the next queued one.
-+ * (cf. v7 rk.c rkintr.)
-+ */
+@@ -96 +186,2 @@
+-rkintr()
 +int
 +rkintr(void)
-@@ -98,0 +205 @@
+@@ -98,0 +190 @@
 +	unsigned int is;
-@@ -100,3 +207,9 @@
+@@ -100,3 +192,9 @@
 -	if (rktab.b_active == NULL)
 -		return;
 -	dk_busy &= ~(1<<DK_N);
@@ -25383,7 +25176,7 @@ usr/local
 +	dmbsy();
 +	virtio_lastused++;
 +	dk_busy &= ~1;
-@@ -104,10 +217,3 @@
+@@ -104,10 +202,3 @@
 -	rktab.b_active = NULL;
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
@@ -25397,21 +25190,21 @@ usr/local
 +	rktab.b_active = 0;
 +	if(virtio_vstatus != 0) {
 +		deverror(bp, virtio_vstatus, 0);
-@@ -116 +221,0 @@
+@@ -116 +206,0 @@
 -	rktab.b_errcnt = 0;
-@@ -120 +225,2 @@
+@@ -120 +210,2 @@
 -	rkstart();
 +	virtio_start();
 +	return(0);
-@@ -122,0 +229,3 @@
+@@ -122,0 +214,3 @@
 +struct	buf	rrkbuf;
 +
 +int
-@@ -127,0 +237 @@
+@@ -127,0 +222 @@
 +	return(0);
-@@ -129,0 +240 @@
+@@ -129,0 +225 @@
 +int
-@@ -134,0 +246 @@
+@@ -134,0 +231 @@
 +	return(0);
 
 % usr/sys/h/acct.h
@@ -25421,11 +25214,8 @@ usr/local
 % usr/sys/h/callo.h
 
 % usr/sys/h/conf.h
-@@ -47,0 +48,9 @@
+@@ -47,0 +48,6 @@
 +
-+/*
-+ * Device interrupts: GIC interrupt number (set by the driver) and handler.
-+ */
 +struct intr
 +{
 +	int	*i_irq;
@@ -25459,7 +25249,7 @@ usr/local
 @@ -3,2 +3,2 @@
 -	short	m_size;
 -	unsigned short m_addr;
-+	int		m_size;		/* Armv7: 32-bit (clicks exceed 16 bits) */
++	int		m_size;
 +	unsigned int	m_addr;
 
 % usr/sys/h/mount.h
@@ -25468,8 +25258,8 @@ usr/local
 @@ -83,2 +83,2 @@
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
-+#define	USIZE	128		/* size of user block (*64): 8KB u-area+kstack */
-+#define	UBASE	0x4F000000U	/* kernel VA window mapping the current u-area */
++#define	USIZE	128		/* size of user block (*64) */
++#define	UBASE	0x4F000000U	/* abs. addr of user block */
 @@ -94 +94 @@
 -#define	CBSIZE	14		/* number of chars in a clist block */
 +#define	CBSIZE	12		/* number of chars in a clist block */
@@ -25482,13 +25272,8 @@ usr/local
 @@ -133 +133 @@
 -typedef	int		label_t[6];	/* regs 2-7 */
 +typedef	int		label_t[10];	/* regs 2-7 */
-@@ -144,0 +145,14 @@
+@@ -144,0 +145,9 @@
 +
-+/*
-+ * Board memory map, set in c.c from the configuration file:
-+ * kernel RAM base, user core window, user page attributes, GIC.
-+ * The big tables go in .ddrbss, which the linker script places.
-+ */
 +extern unsigned int kernbase, corebase, coretop, pguser, gicdbase, giccbase;
 +#define	KERNBASE	kernbase
 +#define	COREBASE	corebase
@@ -25502,21 +25287,11 @@ usr/local
 @@ -21,2 +21,2 @@
 -	short	p_addr;		/* address of swappable image */
 -	short	p_size;		/* size of swappable image (clicks) */
-+	int	p_addr;		/* address of swappable image (Armv7: 32-bit click index) */
++	int	p_addr;		/* address of swappable image */
 +	int	p_size;		/* size of swappable image (clicks) */
 
 % usr/sys/h/reg.h
-@@ -2,2 +2 @@
-- * Location of the users' stored
-- * registers relative to R0.
-+ * Location of the users' stored registers relative to R0.
-@@ -4,0 +4,5 @@
-+ *
-+ * Armv7: the trap frame built by svc_entry (conf/low.s) is 17 ints --
-+ * r0..r12, then sp=r[13], lr=r[14], pc=r[15], cpsr=r[16].  u.u_ar0
-+ * points at r[0].  PDP-11 register numbering does not apply, so these
-+ * indices are the Armv7 frame slots (required for Armv7).
-@@ -7,9 +11,9 @@
+@@ -7,9 +7,9 @@
 -#define	R1	(-2)
 -#define	R2	(-9)
 -#define	R3	(-8)
@@ -25535,7 +25310,7 @@ usr/local
 +#define	R7	(15)		/* user program counter */
 +#define	PC	(15)
 +#define	RPS	(16)		/* saved cpsr */
-@@ -17 +21 @@
+@@ -17 +17 @@
 -#define	TBIT	020		/* PS trace bit */
 +#define	TBIT	0		/* no PDP-11 trace bit on Arm */
 
@@ -25547,13 +25322,17 @@ usr/local
 -#define	UISD	((physadr)0177600)	/* first user I-space descriptor register */
 -#define	UISA	((physadr)0177640)	/* first user I-space address register */
 -#define	UDSA	((physadr)0177660)	/* first user D-space address register */
-@@ -15,2 +12 @@
+@@ -14,10 +11,18 @@
+-/*
 - * structure used to address
 - * a sequence of integers.
-+ * User virtual memory layout.
-@@ -18,2 +14,35 @@
+- */
 -physadr	ka6;		/* 11/40 KISA6; 11/45 KDSA6 */
 -
+-/*
+- * address to access 11/70 UNIBUS map
+- */
+-#define	UBMAP	((physadr)0170200)
 +#define USERBASE	0x00000000U
 +#define USERSIZE	0x00100000U	/* 1 MB user virtual window (VA 0..) */
 +#define UENTRY		0x00000010U
@@ -25561,26 +25340,8 @@ usr/local
 +#define UARGV		0x0000f000U
 +#define UARGLEN		3072
 +#define UENTRY_SIGTRAMP	0x00000008U	/* below UENTRY, never loaded */
-+/*
-+ * Physical core window.  The kernel maps KERNBASE..CORETOP as 1 MB
-+ * sections (PA==VA), so all of physical core below CORETOP is directly
-+ * addressable by the kernel.  Process images are allocated from coremap as
-+ * "clicks" (64 bytes) within [COREBASE, CORETOP); click c is at CLKADDR(c).
-+ * Click 0 is reserved (malloc returns 0 to mean "no core").
-+ */
 +#define NCLICK		((CORETOP-COREBASE)>>6)		/* clicks of user core */
 +#define CLKADDR(c)	((char *)(COREBASE + ((unsigned)(c) << 6)))
-+/*
-+ * Section/page attributes.  Normal memory (kernel, user, DDR) is Normal
-+ * Write-Back/Write-Allocate, shareable -- CACHED (TEX=001,C=1,B=1,S=1) -- so
-+ * the CPU runs at full speed instead of stalling on every uncached access.
-+ * Device memory (MMIO) stays strongly ordered.  mmu_on() enables the L1
-+ * I/D caches.  Code the kernel writes through the D-cache (exec, icode, and
-+ * the image copies of fork, expand and swap-in) is made visible to
-+ * instruction fetch by arm_sync_icache(), from exec and from sureg() on
-+ * every switch; DMA buffers are flushed by the block driver (dcflush) on
-+ * cache-incoherent hardware.
-+ */
 +#define SEC_KERN	0x0001140eU	/* L1 1 MB section, kernel rw, cached */
 +#define SEC_DEV		0x00000c02U	/* L1 1 MB section, device (uncached) */
 +#define PTE_PT		0x00000001U	/* L1 entry -> L2 coarse table */
@@ -25589,15 +25350,6 @@ usr/local
 +#define PG_KRW		0x0000045eU	/* L2 small page, kernel-only rw, cached */
 +#define PGSHIFT		12
 +#define PGSIZE		0x1000U
-@@ -21 +50,5 @@
-- * address to access 11/70 UNIBUS map
-+ * Physical memory map, one entry per [start,end) 1 MB-section range with its
-+ * L1 attribute (SEC_KERN cached, SEC_DEV device).  The board file supplies a
-+ * board_map[] terminated by a zero entry; machine_init() (machdep.c) walks it
-+ * to build the section table -- identical code on every board, so QEMU
-+ * exercises the same machine_init() the MP135 runs.
-@@ -23 +56 @@
--#define	UBMAP	((physadr)0170200)
 +struct memregion { unsigned int start, end, attr; };
 
 % usr/sys/h/stat.h
@@ -25666,7 +25418,7 @@ usr/local
 +int	copyout(caddr_t f, caddr_t t, unsigned int n);
 @@ -80 +107 @@
 -	int	(*sy_call)();		/* handler */
-+	void	(*sy_call)(void);	/* handler (Armv7/C99: void(void)) */
++	void	(*sy_call)(void);	/* handler */
 
 % usr/sys/h/text.h
 @@ -9,3 +9,3 @@
@@ -25674,7 +25426,7 @@ usr/local
 -	short	x_caddr;	/* core address, if loaded */
 -	short	x_size;		/* size (clicks) */
 +	int	x_daddr;	/* disk address of segment (relative to swplo) */
-+	int	x_caddr;	/* core address, if loaded (Armv7: 32-bit click) */
++	int	x_caddr;	/* core address, if loaded */
 +	int	x_size;		/* size (clicks) */
 
 % usr/sys/h/timeb.h
@@ -25694,12 +25446,8 @@ usr/local
 @@ -41,0 +42,2 @@
 +#define	r_val1	u_pair.r_val1
 +#define	r_val2	u_pair.r_val2
-@@ -99 +101,5 @@
+@@ -99 +101 @@
 -extern struct user u;
-+/*
-+ * The u-area lives at the base of each process's core image.  On Armv7,
-+ * resume() maps the current process there, so `u` names that window.
-+ */
 +#define	u	(*(struct user *)UBASE)
 
 % usr/sys/sys/acct.c
@@ -25824,11 +25572,11 @@ usr/local
 @@ -164 +166 @@
 -	s = spl7();
 +	s = intr_disable();
-@@ -184 +186,72 @@
+@@ -184 +186,66 @@
 -	splx(s);
 +	intr_restore(s);
 +}
-+#define GICD_BASE	GIC_DIST_BASE	/* board-specific (param.h) */
++#define GICD_BASE	GIC_DIST_BASE
 +#define GICC_BASE	GIC_CPU_BASE
 +#define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
 +#define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))
@@ -25842,17 +25590,11 @@ usr/local
 +extern unsigned int cntfrq_get(void);
 +extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 +extern void irq_enable(void);
-+extern struct intr intrtab[];	/* configured device interrupts (c.c) */
++extern struct intr intrtab[];
 +static unsigned int timer_reload;
 +int irq_ready;
 +caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
 +void addupc(caddr_t pc, void *prof, int inc) { (void)pc; (void)prof; (void)inc; }
-+/*
-+ * Real-time clock interrupt: acknowledge the GIC, reprime the timer, and
-+ * call the v7 clock() with the trapped pc/ps.  clock() runs with IRQs
-+ * masked (we are in the IRQ handler) and never lowers priority, so it is
-+ * not re-entrant; preemption happens on return to user via trap()'s tail.
-+ */
 +void
 +clock_irq_handler(int *tf)
 +{
@@ -26047,30 +25789,14 @@ usr/local
 -#include "../h/acct.h"
 @@ -6 +4,0 @@
 -#include "../h/inode.h"
-@@ -11 +9,12 @@
+@@ -11 +8,0 @@
 -#include "../h/buf.h"
-+
-+void printf(char *fmt, ...);
-+void panic(char *s);
-+void mmu_on(unsigned int ttb);
-+void dcclean(void);
-+void arm_sync_icache(void);
-+void cninit(void);			/* board console early init (cn driver) */
-+void bdinit(void);
-+void mfree(struct map *mp, int size, int a);
-+extern struct memregion board_map[];	/* per-board section map (conf/<board>.c) */
-+extern void clock_ddr_init(void);	/* per-board clocks + DRAM bring-up */
-+extern char __bss_start[], __bss_end[];
-@@ -14,3 +23,5 @@
+@@ -13,20 +10,17 @@
+-/*
 - * Icode is the octal bootstrap
 - * program executed in user mode
 - * to bring up the system.
-+ * Page tables.  One global L1 (TTBR0) maps the kernel and the physical
-+ * core window as 1 MB sections, plus two L2 tables:
-+ *   user_l2  -- user VA 0..1MB, (re)loaded by arm_sureg() per process
-+ *   uarea_l2 -- the UBASE u-area window, remapped by resume() per process
-+ * Only these two follow the current process; everything else is fixed.
-@@ -18,15 +29,15 @@
+- */
 -int	icode[] =
 -{
 -	0104413,	/* sys exec; init; initp */
@@ -26086,43 +25812,43 @@ usr/local
 -	0000164,
 -};
 -int	szicode = sizeof(icode);
-+/* l1 is large (16 KB) and goes to DDR on the MP135 (KTABLES_SECTION=.ddrbss);
-+ * on QEMU it stays in ordinary .bss.  The two small per-process L2 tables stay
-+ * in fast SYSRAM as they are rewritten on every context switch. */
++void printf(char *fmt, ...);
++void panic(char *s);
++void mmu_on(unsigned int ttb);
++void dcclean(void);
++void arm_sync_icache(void);
++void cninit(void);
++void bdinit(void);
++void mfree(struct map *mp, int size, int a);
++extern struct memregion board_map[];
++extern void clock_ddr_init(void);
++extern char __bss_start[], __bss_end[];
++
 +unsigned int l1[4096] __attribute__((aligned(16384), section(KTABLES_SECTION)));
-+/* The page-table walk is non-cacheable, so the two per-process L2 tables must
-+ * live in the same non-cacheable region as l1 (KTABLES_SECTION = DDR on the
-+ * MP135): if they were in cached SYSRAM, resume()/sureg() writes would sit in
-+ * the D-cache and the walk would read stale entries, leaving the u-area/user
-+ * windows pointing at the previous process's core. */
 +unsigned int user_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
 +unsigned int uarea_l2[256] __attribute__((aligned(1024), section(KTABLES_SECTION)));
-+extern char __ddrbss_start[], __ddrbss_end[];	/* zeroed in machine_init */
-+char	*msgbufp = msgbuf;	/* next saved printf character */
-+
-+#define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
-@@ -35 +46,6 @@
++extern char __ddrbss_start[], __ddrbss_end[];
++char	*msgbufp = msgbuf;
+@@ -34,4 +28,3 @@
+-/*
 - * Machine-dependent startup code
-+ * Called from _start (conf/low.s) before switching to the u-area stack.
-+ * Board-independent: bring up the board's clocks + DRAM, then build the L1
-+ * section table from the board's memory map (board_map[], conf/<board>.c) and
-+ * the two per-process L2 windows, and enable the MMU + caches.  The same code
-+ * runs on every board -- only board_map[] and clock_ddr_init() differ -- so a
-+ * QEMU run exercises the identical machine_init() the MP135 uses.
-@@ -37 +53 @@
+- */
 -startup()
++#define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
++
 +void machine_init(void)
-@@ -39 +55,2 @@
+@@ -39 +32,5 @@
 -	register i;
 +	struct memregion *m;
 +	unsigned int pa, i;
-@@ -41,3 +58,2 @@
++
++	cninit();
++	clock_ddr_init();
+@@ -41,14 +38,3 @@
 -	/*
 -	 * zero and free all of core
 -	 */
-+	cninit();			/* bring up the console (UART4 from HSI) early */
-+	clock_ddr_init();		/* clocks + DRAM (no-op where RAM is already up) */
-@@ -45,15 +61,5 @@
+-
 -	i = ka6->r[0] + USIZE;
 -	UISD->r[0] = 077406;
 -	for(;;) {
@@ -26133,106 +25859,51 @@ usr/local
 -		maxmem++;
 -		mfree(coremap, 1, i);
 -		i++;
--	}
++	{
++		char *p;
++		for(p = __ddrbss_start; p < __ddrbss_end; p++) *p = 0;
+@@ -56,4 +42,15 @@
 -	if(cputype == 70)
 -	for(i=0; i<62; i+=2) {
 -		UBMAP->r[i] = i<<12;
 -		UBMAP->r[i+1] = 0;
-+	/* DRAM is up now, so zero the DDR-resident table section (holds l1 and
-+	 * the big system tables); low.s already zeroed the SYSRAM .bss. */
++	for(i = 0; i < 256; i++) { user_l2[i] = 0; uarea_l2[i] = 0; }
++
++	for(m = board_map; m->end != 0; m++)
++		for(pa = m->start; pa < m->end; pa += 0x100000U)
++			l1[pa>>20] = (pa & 0xfff00000U) | m->attr;
++
++	l1[0] = ((unsigned int)user_l2 & 0xfffffc00U) | PTE_PT;
++	l1[UBASE>>20] = ((unsigned int)uarea_l2 & 0xfffffc00U) | PTE_PT;
++
++	for(i = 0; i < UPAGES; i++)
++		uarea_l2[i] = ((unsigned int)CLKADDR(64) + i*PGSIZE) | 0x12U;
++
 +	{
-+		char *p;
-+		for(p = __ddrbss_start; p < __ddrbss_end; p++) *p = 0;
-@@ -61,5 +67 @@
++		char *p, *e = (char *)CLKADDR(64 + USIZE);
++		for(p = (char *)CLKADDR(64); p < e; p++) *p = 0;
+@@ -61,5 +57,0 @@
 -	printf("mem = %D\n", ctob((long)maxmem));
 -	if(MAXMEM < maxmem)
 -		maxmem = MAXMEM;
 -	mfree(swapmap, nswap, 1);
 -	swplo--;
-+	for(i = 0; i < 256; i++) { user_l2[i] = 0; uarea_l2[i] = 0; }
-@@ -67,3 +69,24 @@
+@@ -67,3 +59,6 @@
 -	/*
 -	 * determine clock
 -	 */
-+	/* physical core + device sections, from the board's memory map */
-+	for(m = board_map; m->end != 0; m++)
-+		for(pa = m->start; pa < m->end; pa += 0x100000U)
-+			l1[pa>>20] = (pa & 0xfff00000U) | m->attr;
++	mmu_on((unsigned int)l1);
++}
 +
-+	/* user window (VA 0..1MB) and u-area window via L2 tables */
-+	l1[0] = ((unsigned int)user_l2 & 0xfffffc00U) | PTE_PT;
-+	l1[UBASE>>20] = ((unsigned int)uarea_l2 & 0xfffffc00U) | PTE_PT;
-+
-+	/* point the u-area window at proc[0]'s u-area (clicks 64..64+USIZE).
-+	 * Map it UNCACHED (0x12), the same attribute resume() uses: the window is
-+	 * remapped to a different PA on every context switch, and the same physical
-+	 * u-area is also visible (uncached) through the COREBASE core window, so a
-+	 * cached alias here would go incoherent the moment resume() switched it. */
-+	for(i = 0; i < UPAGES; i++)
-+		uarea_l2[i] = ((unsigned int)CLKADDR(64) + i*PGSIZE) | 0x12U;
-+
-+	/* proc[0]'s u-area lives in the user core (COREBASE), not in the zeroed
-+	 * .ddrbss, so clear it here: newproc() copies it to proc[1] and the kernel
-+	 * reads u_ofile[]/p_textp expecting a clean (zeroed) initial u-area. */
-+	{
-+		char *p, *e = (char *)CLKADDR(64 + USIZE);
-+		for(p = (char *)CLKADDR(64); p < e; p++) *p = 0;
-+	}
-@@ -71,2 +94 @@
++void arm_sureg(int *uisa, int *uisd, int nseg)
++{
++	unsigned int base, i, n;
+@@ -71,2 +66,74 @@
 -	UISA->r[7] = ka6->r[1]; /* io segment */
 -	UISD->r[7] = 077406;
-+	mmu_on((unsigned int)l1);
-@@ -76,2 +98,6 @@
-- * set up a physical address
-- * into users virtual address space.
-+ * Load the user-region page table (user_l2) for the current process.
-+ * The Armv7 user layout is flat (1 MB at VA 0; binaries link at UENTRY,
-+ * stack near USTACK), so the user window maps contiguously to the image
-+ * clicks just above the u-area: all of it for an exec'd program, only the
-+ * first page for icode.  Pages beyond the image stay unmapped.  Called
-+ * from sureg() (ureg.c).
-@@ -79 +105 @@
--sysphys()
-+void arm_sureg(int *uisa, int *uisd, int nseg)
-@@ -81,6 +107 @@
--	register i, s, d;
--	register struct a {
--		int	segno;
--		int	size;
--		int	phys;
--	} *uap;
-+	unsigned int base, i, n;
-@@ -88 +109,2 @@
--	if(!suser())
 +	(void)uisa; (void)uisd; (void)nseg;
 +	if(u.u_procp == NULL)
-@@ -90,26 +112,11 @@
--	uap = (struct a *)u.u_ap;
--	i = uap->segno;
--	if(i < 0 || i >= 8)
--		goto bad;
--	s = uap->size;
--	if(s < 0 || s > 128)
--		goto bad;
--	d = u.u_uisd[i+8];
--	if(d != 0 && (d&ABS) == 0)
--		goto bad;
--	u.u_uisd[i+8] = 0;
--	u.u_uisa[i+8] = 0;
--	if(!u.u_sep) {
--		u.u_uisd[i] = 0;
--		u.u_uisa[i] = 0;
--	}
--	if(s) {
--		u.u_uisd[i+8] = ((s-1)<<8) | RW|ABS;
--		u.u_uisa[i+8] = uap->phys;
--		if(!u.u_sep) {
--			u.u_uisa[i] = u.u_uisa[i+8];
--			u.u_uisd[i] = u.u_uisd[i+8];
--		}
--	}
--	sureg();
--	return;
++		return;
 +	base = (unsigned int)CLKADDR(u.u_procp->p_addr + USIZE);
 +	n = (unsigned int)(u.u_procp->p_size - USIZE) >> (PGSHIFT-6);
 +	for(i = 0; i < 256; i++)
@@ -26242,16 +25913,9 @@ usr/local
 +	    "mcr p15, 0, %0, c8, c7, 0\n\t"	/* TLBIALL */
 +	    "dsb ish\n\t"
 +	    "isb" :: "r"(0) : "memory");
-+	arm_sync_icache();	/* fork, expand or swap-in wrote its code */
++	arm_sync_icache();
 +}
-@@ -117,2 +124,16 @@
--bad:
--	u.u_error = EINVAL;
-+/*
-+ * Copy / clear one 64-byte click of physical core.  Core is directly
-+ * addressable through the PA==VA kernel window, so these are plain
-+ * memory operations (the v7 m40.s copyseg/clearseg role).
-+ */
++
 +void copyseg(int from, int to)
 +{
 +	int *s = (int *)CLKADDR(from), *d = (int *)CLKADDR(to), i;
@@ -26263,25 +25927,10 @@ usr/local
 +	int *d = (int *)CLKADDR(a), i;
 +	for(i = 0; i < 16; i++)
 +		d[i] = 0;
-@@ -122,2 +143,3 @@
-- * Determine which clock is attached, and start it.
-- * panic: no clock found
-+ * User-space access primitives (the v7 fubyte/subyte/... role).  User VAs
-+ * live in [0, USERSIZE); a bounds check keeps a bad user pointer from
-+ * faulting the kernel (Armv7 has no fault-recovery path here).
-@@ -125,3 +147 @@
--#define	CLOCK1	((physadr)0177546)
--#define	CLOCK2	((physadr)0172540)
--clkstart()
++}
++
 +static int user_range(caddr_t a, unsigned int n)
-@@ -129,7 +149,44 @@
--	lks = CLOCK1;
--	if(fuiword((caddr_t)lks) == -1) {
--		lks = CLOCK2;
--		if(fuiword((caddr_t)lks) == -1)
--			panic("no clock");
--	}
--	lks->r[0] = 0115;
++{
 +	unsigned int x = (unsigned int)a;
 +	return x < USERSIZE && n <= USERSIZE - x;
 +}
@@ -26326,98 +25975,97 @@ usr/local
 +	while(n--)
 +		*t++ = *f++;
 +	return(0);
-@@ -139 +196,4 @@
-- * Let a process handle a signal by simulating an interrupt
-+ * Let a process handle a signal by simulating an interrupt:
-+ * push the whole trap frame on the user stack (8-byte aligned,
-+ * as the ABI wants), and enter the handler with the signal
-+ * number in r0 and lr pointing at the sigreturn trampoline.
-@@ -141,2 +201,2 @@
--sendsig(p, signo)
--caddr_t p;
+@@ -76,2 +143 @@
+- * set up a physical address
+- * into users virtual address space.
++ * Let a process handle a signal by simulating an interrupt
+@@ -79 +145,2 @@
+-sysphys()
 +void
 +sendsig(caddr_t p, int signo)
-@@ -146,4 +206,6 @@
--	n = u.u_ar0[R6] - 4;
--	grow(n);
--	suword((caddr_t)n+2, u.u_ar0[RPS]);
--	suword((caddr_t)n, u.u_ar0[R7]);
+@@ -81,6 +148 @@
+-	register i, s, d;
+-	register struct a {
+-		int	segno;
+-		int	size;
+-		int	phys;
+-	} *uap;
++	register unsigned n;
+@@ -88 +150,4 @@
+-	if(!suser())
 +	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
 +	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-+		return;
-+	}
-@@ -151 +213 @@
--	u.u_ar0[RPS] &= ~TBIT;
+@@ -90,15 +154,0 @@
+-	uap = (struct a *)u.u_ap;
+-	i = uap->segno;
+-	if(i < 0 || i >= 8)
+-		goto bad;
+-	s = uap->size;
+-	if(s < 0 || s > 128)
+-		goto bad;
+-	d = u.u_uisd[i+8];
+-	if(d != 0 && (d&ABS) == 0)
+-		goto bad;
+-	u.u_uisd[i+8] = 0;
+-	u.u_uisa[i+8] = 0;
+-	if(!u.u_sep) {
+-		u.u_uisd[i] = 0;
+-		u.u_uisa[i] = 0;
+@@ -106,7 +156,16 @@
+-	if(s) {
+-		u.u_uisd[i+8] = ((s-1)<<8) | RW|ABS;
+-		u.u_uisa[i+8] = uap->phys;
+-		if(!u.u_sep) {
+-			u.u_uisa[i] = u.u_uisa[i+8];
+-			u.u_uisd[i] = u.u_uisd[i+8];
+-		}
++	u.u_ar0[R6] = n;
 +	u.u_ar0[14] = UENTRY_SIGTRAMP;	/* lr */
-@@ -152,0 +215 @@
++	u.u_ar0[R7] = (int)p;
 +	u.u_ar0[R0] = signo;
-@@ -156,6 +219,3 @@
-- * 11/70 routine to allocate the
-- * UNIBUS map and initialize for
-- * a unibus device.
-- * The code here and in
-- * rhstart assumes that an rh on an 11/70
-- * is an rh70 and contains 22 bit addressing.
-+ * The sigreturn call made by the trampoline: reload the frame
-+ * sendsig pushed.  Only the condition flags of the saved cpsr
-+ * are taken; trap() returns r0 and r1 from u_r.
-@@ -163,4 +223,2 @@
--int	maplock;
--
--mapalloc(bp)
--register struct buf *bp;
++}
++
 +void
 +sigreturn(void)
-@@ -168 +226,2 @@
--	register i, a;
++{
 +	int f[RPS+1];
 +	register int i;
-@@ -170 +229,3 @@
--	if(cputype != 70)
++
 +	if(copyin((caddr_t)u.u_ar0[R6], (caddr_t)f, sizeof(f)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-@@ -172,4 +232,0 @@
--	spl6();
--	while(maplock&B_BUSY) {
--		maplock |= B_WANTED;
--		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +234,162 @@
--	maplock |= B_BUSY;
--	spl0();
--	bp->b_flags |= B_MAP;
--	a = bp->b_xmem;
--	for(i=16; i<32; i+=2)
--		UBMAP->r[i+1] = a;
--	for(a++; i<48; i+=2)
--		UBMAP->r[i+1] = a;
--	bp->b_xmem = 1;
--}
--
--mapfree(bp)
--struct buf *bp;
--{
--
--	bp->b_flags &= ~B_MAP;
--	if(maplock&B_WANTED)
--		wakeup((caddr_t)&maplock);
--	maplock = 0;
++		return;
+@@ -114,2 +173,6 @@
+-	sureg();
+-	return;
 +	for(i = 0; i < RPS; i++)
 +		u.u_ar0[i] = f[i];
 +	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);
 +	u.u_r.r_val1 = f[R0];
 +	u.u_r.r_val2 = f[R1];
 +}
-+
-+/* Idle: allow interrupts, wait, then re-mask (the v7 idle() in swtch). */
+@@ -117,2 +180,3 @@
+-bad:
+-	u.u_error = EINVAL;
 +void idle(void)
 +{
 +	__asm__ volatile("cpsie i\n\twfi\n\tcpsid i" ::: "memory");
-+}
-+
-+/* No VFP context is carried for user programs (soft-float ABI). */
+@@ -121,13 +185,22 @@
+-/*
+- * Determine which clock is attached, and start it.
+- * panic: no clock found
+- */
+-#define	CLOCK1	((physadr)0177546)
+-#define	CLOCK2	((physadr)0172540)
+-clkstart()
+-{
+-	lks = CLOCK1;
+-	if(fuiword((caddr_t)lks) == -1) {
+-		lks = CLOCK2;
+-		if(fuiword((caddr_t)lks) == -1)
+-			panic("no clock");
 +void savfp(void *p)
 +{
 +	(void)p;
@@ -26427,15 +26075,6 @@ usr/local
 +	(void)p;
 +}
 +
-+/*
-+ * /dev/mem,/dev/kmem core access.  ps(1) and friends address two kinds of
-+ * thing through /dev/mem: kernel symbols resolved from the namelist (true
-+ * kernel virtual addresses, KERNBASE and up) and per-process u-areas as a
-+ * bare click offset `p_addr<<6` (V7 assumed core began at physical 0).
-+ * The kernel image and physical core window are identity-mapped, so a VA
-+ * at or above KERNBASE is used directly; a smaller value is a core-relative
-+ * click offset and is biased by COREBASE to reach the real backing page.
-+ */
 +#define KMSGBASE	0x7fff0000U
 +
 +static char *
@@ -26449,7 +26088,8 @@ usr/local
 +		if(off < sizeof(msgidx))
 +			return((char *)&msgidx + off);
 +		return(&msgbuf[off - sizeof(msgidx)]);
-+	}
+@@ -135 +208,29 @@
+-	lks->r[0] = 0115;
 +	if(off < KERNBASE)
 +		off += COREBASE;
 +	if((off >= KERNBASE && off < (unsigned int)__bss_end) ||
@@ -26459,7 +26099,6 @@ usr/local
 +	return(NULL);
 +}
 +
-+/* The v7 fuibyte/suibyte role for /dev/mem: -1 for a bad offset. */
 +int fumem(unsigned int off)
 +{
 +	char *a = memaddr(off);
@@ -26476,19 +26115,21 @@ usr/local
 +	return(0);
 +}
 +
-+/* No UNIBUS/buffer map on Armv7. */
 +struct buf;
 +void mapfree(struct buf *bp)
 +{
 +	(void)bp;
-+}
-+
-+/*
-+ * Icode is the bootstrap program executed in user mode to bring up the
-+ * system; it execs /etc/init.  Position-independent Armv7, runs at VA 0.
-+ */
+@@ -139 +240,3 @@
+- * Let a process handle a signal by simulating an interrupt
++ * Icode is the bootstrap
++ * program executed in user mode
++ * to bring up the system.
+@@ -141,2 +244 @@
+-sendsig(p, signo)
+-caddr_t p;
 +int	icode[] =
-+{
+@@ -144 +246,20 @@
+-	register unsigned n;
 +	0xe3a00024,	/* mov r0, #init */
 +	0xe3a01040,	/* mov r1, #initp */
 +	0xe3a02000,	/* mov r2, #0 */
@@ -26509,12 +26150,14 @@ usr/local
 +	0x00000000,
 +};
 +int	szicode = sizeof(icode);
-+
-+/*
-+ * Put the signal trampoline (UENTRY_SIGTRAMP, below the
-+ * program) in a newly exec'd image.  sendsig points the
-+ * handler's lr at it; it makes the sigreturn call.
-+ */
+@@ -146,7 +267,28 @@
+-	n = u.u_ar0[R6] - 4;
+-	grow(n);
+-	suword((caddr_t)n+2, u.u_ar0[RPS]);
+-	suword((caddr_t)n, u.u_ar0[R7]);
+-	u.u_ar0[R6] = n;
+-	u.u_ar0[RPS] &= ~TBIT;
+-	u.u_ar0[R7] = (int)p;
 +void
 +install_sigtramp(void)
 +{
@@ -26543,27 +26186,55 @@ usr/local
 +panictrap(void)
 +{
 +	panic("trap");
-+}
-+
-+/*
-+ * Machine-dependent startup, called from main() (on the u-area stack,
-+ * MMU already enabled by machine_init).  Free all user core to the
-+ * coremap and report it.  proc[0]'s u-area occupies clicks 64..64+USIZE;
-+ * click 0 is reserved.
-+ */
+@@ -156,6 +298 @@
+- * 11/70 routine to allocate the
+- * UNIBUS map and initialize for
+- * a unibus device.
+- * The code here and in
+- * rhstart assumes that an rh on an 11/70
+- * is an rh70 and contains 22 bit addressing.
++ * Machine-dependent startup code
+@@ -163,4 +300 @@
+-int	maplock;
+-
+-mapalloc(bp)
+-register struct buf *bp;
 +void startup(void)
-+{
+@@ -168 +302 @@
+-	register i, a;
 +	register int n;
-+
+@@ -170,26 +304,7 @@
+-	if(cputype != 70)
+-		return;
+-	spl6();
+-	while(maplock&B_BUSY) {
+-		maplock |= B_WANTED;
+-		sleep((caddr_t)&maplock, PSWP+1);
+-	}
+-	maplock |= B_BUSY;
+-	spl0();
+-	bp->b_flags |= B_MAP;
+-	a = bp->b_xmem;
+-	for(i=16; i<32; i+=2)
+-		UBMAP->r[i+1] = a;
+-	for(a++; i<48; i+=2)
+-		UBMAP->r[i+1] = a;
+-	bp->b_xmem = 1;
+-}
+-
+-mapfree(bp)
+-struct buf *bp;
+-{
+-
+-	bp->b_flags &= ~B_MAP;
+-	if(maplock&B_WANTED)
+-		wakeup((caddr_t)&maplock);
+-	maplock = 0;
 +	n = (int)(NCLICK - (64 + USIZE));
 +	mfree(coremap, n, 64 + USIZE);
 +	mfree(swapmap, nswap, 1);
 +	swplo--;
 +	printf("mem = %D\n", ctob((long)n));
-+	/*
-+	 * A process image is bounded by the 1 MB user MMU window, not by
-+	 * total core, so maxmem is the window size (estabur enforces it).
-+	 */
 +	maxmem = (int)(USERSIZE >> 6) + USIZE;
 +	bdinit();
 
@@ -26603,14 +26274,10 @@ usr/local
 -iinit()
 +void
 +iinit(void)
-@@ -119 +138,5 @@
+@@ -119 +138 @@
 -char	buffers[NBUF][BSIZE+BSLOP];
-+/* Each buffer must be word-aligned: the STM32 SDMMC internal DMA requires a
-+ * 32-bit-aligned IDMABASER, so the per-buffer stride is rounded up to a
-+ * multiple of 4 (BSIZE+BSLOP=514 would leave odd buffers 2-byte aligned and
-+ * the DMA would corrupt those transfers). */
 +char	buffers[NBUF][(BSIZE+BSLOP+3)&~3] __attribute__((aligned(4), section(KTABLES_SECTION)));
-@@ -125 +148 @@
+@@ -125 +144 @@
 -binit()
 +void binit(void)
 
@@ -27143,7 +26810,7 @@ usr/local
 +void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
 +void copyseg(int from, int to);
 @@ -13,0 +45 @@
-+#define ARM_FORK_STACK_COPY 1024	/* fallback high-stack band */
++#define ARM_FORK_STACK_COPY 1024
 @@ -27,2 +59,2 @@
 -sleep(chan, pri)
 -caddr_t chan;
@@ -27279,12 +26946,12 @@ usr/local
 @@ -447 +485 @@
 -		if(rpp->p_stat == NULL && p==NULL)
 +		if(rpp->p_stat == 0 && p==NULL)
-@@ -520 +558 @@
+@@ -519,3 +557 @@
+-		/*
 -		 * There is core, so just copy.
-+		 * Copy the u-area, live low image, and high stack.
-@@ -521,0 +560 @@
+-		 */
 +		register int low, stack;
-@@ -523,2 +562,22 @@
+@@ -523,2 +559,22 @@
 -		while(n--)
 -			copyseg(a1++, a2++);
 +		low = (int)u.u_dsize;
@@ -27309,23 +26976,17 @@ usr/local
 +			for(n = stack; n < rpp->p_size; n++)
 +				copyseg(a1 + n, a2 + n);
 +		}
-@@ -545 +604,2 @@
+@@ -545 +601,2 @@
 -expand(newsize)
 +void
 +expand(int newsize)
-@@ -547 +607 @@
+@@ -547 +604 @@
 -	register i, n;
 +	register int i, n;
-@@ -549 +609 @@
+@@ -549 +606 @@
 -	register a1, a2;
 +	register int a1, a2;
-@@ -550,0 +611,7 @@
-+	/*
-+	 * Armv7: a process image must start on a page boundary because the
-+	 * u-area is mapped as whole pages (UBASE window).  Round the image
-+	 * size up to a multiple of 64 clicks (one 4 KB page) so that coremap
-+	 * allocations stay page-aligned.
-+	 */
+@@ -550,0 +608 @@
 +	newsize = (newsize + 63) & ~63;
 
 % usr/sys/sys/subr.c
@@ -27452,46 +27113,35 @@ usr/local
 -exec()
 +void
 +exec(void)
-@@ -28 +71,13 @@
+@@ -28 +71,2 @@
 -exece()
-+/*
-+ * exece: load and run a new program image.
-+ *
-+ * Args/environment are collected (NUL-separated) into e_argbuf from the
-+ * old user image, then -- after getxfile() builds the new image -- written
-+ * as the initial stack frame (see below).  This Armv7 image has ample RAM,
-+ * so no swap round-trip is needed for the arg list.  e_argbuf is a per-
-+ * process kernel-stack local rather than a shared global: getxfile() sleeps
-+ * on its (interrupt-driven) disk read, so a global buffer would be clobbered
-+ * by a second process exec-ing concurrently (e.g. both ends of a pipe).
-+ */
 +void
 +exece(void)
-@@ -30,3 +84,0 @@
+@@ -30,3 +73,0 @@
 -	register nc;
 -	register char *cp;
 -	register struct buf *bp;
-@@ -34 +86 @@
+@@ -34 +75 @@
 -	int na, ne, bno, ucp, ap, c;
 +	register int nc, c, ap;
-@@ -35,0 +88,2 @@
+@@ -35,0 +77,2 @@
 +	int i;
 +	char e_argbuf[UARGLEN];
-@@ -39,2 +92,0 @@
+@@ -39,2 +81,0 @@
 -	bno = 0;
 -	bp = 0;
-@@ -48,6 +99,0 @@
+@@ -48,6 +88,0 @@
 -	/*
 -	 * Collect arguments on "file" in swap space.
 -	 */
 -	na = 0;
 -	ne = 0;
 -	nc = 0;
-@@ -55,2 +101 @@
+@@ -55,2 +90 @@
 -	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
 -		panic("Out of swap");
 +	nc = 0;
-@@ -58,13 +103,3 @@
+@@ -58,13 +92,3 @@
 -		ap = NULL;
 -		if (uap->argp) {
 -			ap = fuword((caddr_t)uap->argp);
@@ -27508,21 +27158,21 @@ usr/local
 +		ap = fuword((caddr_t)uap->argp);
 +		uap->argp++;
 +		if (ap == 0)
-@@ -72,2 +107 @@
+@@ -72,2 +96 @@
 -		na++;
 -		if(ap == -1)
 +		if (ap == -1) {
-@@ -74,0 +109,2 @@
+@@ -74,0 +98,2 @@
 +			goto bad;
 +		}
-@@ -76 +112,5 @@
+@@ -76 +101,5 @@
 -			if (nc >= NCARGS-1)
 +			if ((c = fubyte((caddr_t)ap++)) < 0) {
 +				u.u_error = EFAULT;
 +				goto bad;
 +			}
 +			if (nc >= UARGLEN-2) {
-@@ -78 +118,17 @@
+@@ -78 +107,17 @@
 -			if ((c = fubyte((caddr_t)ap++)) < 0)
 +				goto bad;
 +			}
@@ -27541,15 +27191,15 @@ usr/local
 +		}
 +		do {
 +			if ((c = fubyte((caddr_t)ap++)) < 0) {
-@@ -80 +135,0 @@
+@@ -80 +124,0 @@
 -			if (u.u_error)
-@@ -82,5 +136,0 @@
+@@ -82,5 +125,0 @@
 -			if ((nc&BMASK) == 0) {
 -				if (bp)
 -					bawrite(bp);
 -				bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));
 -				cp = bp->b_un.b_addr;
-@@ -88,8 +138,8 @@
+@@ -88,8 +127,8 @@
 -			nc++;
 -			*cp++ = c;
 -		} while (c>0);
@@ -27566,10 +27216,10 @@ usr/local
 +		} while (c);
 +	}
 +	e_argbuf[nc++] = 0;		/* empty string terminates env list */
-@@ -100 +150 @@
+@@ -100 +139 @@
 -	 * copy back arglist
 +	 * set SUID/SGID protections, if no tracing
-@@ -103,20 +153,5 @@
+@@ -103,20 +142,5 @@
 -	ucp = -nc - NBPW;
 -	ap = ucp - na*NBPW - 3*NBPW;
 -	u.u_ar0[R6] = ap;
@@ -27595,7 +27245,7 @@ usr/local
 +			if(u.u_uid != 0) {
 +				u.u_uid = ip->i_uid;
 +				u.u_procp->p_uid = ip->i_uid;
-@@ -124,7 +159,62 @@
+@@ -124,7 +148,53 @@
 -			subyte((caddr_t)ucp++, (c = *cp++));
 -			nc++;
 -		} while(c&0377);
@@ -27607,18 +27257,9 @@ usr/local
 +			u.u_gid = ip->i_gid;
 +	} else
 +		psignal(u.u_procp, SIGTRC);
-+	/*
-+	 * Build the initial user stack frame at the top of the address space
-+	 * (V7 layout): the NUL-separated string image sits at the very top,
-+	 * with the argc/argv[]/0/envp[]/0 vector just below it and sp pointing
-+	 * at argc.  crt0 reads the frame straight off sp.  Placing the strings
-+	 * at the top is also what lets ps(1) recover a process's command line.
-+	 */
 +	{
 +		unsigned int strbase, sp;
 +		int na, ne, j, k;
-+		/* leave the top word zero: ps(1) treats a non-zero top-of-stack
-+		 * word as an argv pointer, so a string there would mislead it. */
 +		strbase = (USERSIZE - 4U - (unsigned)nc) & ~3U;
 +		for (i = 0; i < nc; i++)
 +			subyte((caddr_t)(strbase + (unsigned)i), e_argbuf[i]);
@@ -27663,20 +27304,19 @@ usr/local
 +		}
 +		suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + ne)), 0);
 +		setregs();
-+		u.u_ar0[R6] = (int)sp;	/* user stack pointer */
++		u.u_ar0[R6] = (int)sp;
 +	}
-@@ -132,4 +221,0 @@
+@@ -132,4 +201,0 @@
 -	if (bp)
 -		brelse(bp);
 -	if(bno)
 -		mfree(swapmap, (NCARGS+BSIZE-1)/BSIZE, bno);
-@@ -140,3 +226,2 @@
+@@ -139,13 +205,16 @@
+-/*
 - * Read in and set up memory for executed file.
 - * Zero return is normal;
 - * non-zero means only the text is being replaced
-+ * ELF32 header / program-header subset (the Armv7 toolchain emits ELF;
-+ * this replaces the PDP-11 a.out reader).
-@@ -144,8 +229,16 @@
+- */
 -getxfile(ip, nargc)
 -register struct inode *ip;
 -{
@@ -27701,7 +27341,7 @@ usr/local
 +	unsigned short e_shnum;
 +	unsigned short e_shstrndx;
 +};
-@@ -153,10 +246,11 @@
+@@ -153,10 +222,11 @@
 -	/*
 -	 * read in first few bytes
 -	 * of file for segment
@@ -27723,7 +27363,7 @@ usr/local
 +	unsigned int p_align;
 +};
 +#define	PT_LOAD	1
-@@ -164,3 +258,6 @@
+@@ -164,3 +234,6 @@
 -	u.u_base = (caddr_t)&u.u_exdata;
 -	u.u_count = sizeof(u.u_exdata);
 -	u.u_offset = 0;
@@ -27733,15 +27373,8 @@ usr/local
 +	u.u_base = kbuf;
 +	u.u_count = n;
 +	u.u_offset = off;
-@@ -169,0 +267,18 @@
+@@ -169,0 +243,11 @@
 +}
-+/*
-+ * Read in and set up memory for an ELF executable.
-+ * The Armv7 user image is a flat 1 MB window; arm_sureg maps it, so we
-+ * allocate the image, zero it, then read each PT_LOAD segment to its
-+ * virtual address.  Entry goes through u_exdata.ux_entloc (used by
-+ * setregs).  Zero return is normal.
-+ */
 +int
 +getxfile(register struct inode *ip, int nargc)
 +{
@@ -27752,11 +27385,11 @@ usr/local
 +	unsigned int end, maxend;
 +	(void)nargc;
 +	readbytes(ip, (caddr_t)&eh, 0, sizeof(eh));
-@@ -172 +287,2 @@
+@@ -172 +256,2 @@
 -	if (u.u_count!=0) {
 +	if(eh.e_ident[0] != 0x7f || eh.e_ident[1] != 'E' ||
 +	   eh.e_ident[2] != 'L' || eh.e_ident[3] != 'F' || eh.e_type != 2) {
-@@ -176,6 +292,13 @@
+@@ -176,6 +261,13 @@
 -	sep = 0;
 -	overlay = 0;
 -	if(u.u_exdata.ux_mag == 0407) {
@@ -27776,7 +27409,7 @@ usr/local
 +			continue;
 +		if(ph.p_vaddr >= USERSIZE || ph.p_memsz > USERSIZE - ph.p_vaddr ||
 +		   ph.p_filesz > ph.p_memsz) {
-@@ -185,12 +308,3 @@
+@@ -185,12 +277,3 @@
 -		u.u_exdata.ux_tsize = 0;
 -	} else if (u.u_exdata.ux_mag == 0411)
 -		sep++;
@@ -27792,7 +27425,16 @@ usr/local
 +		end = ph.p_vaddr + ph.p_memsz;
 +		if(end > maxend)
 +			maxend = end;
-@@ -198,0 +313,16 @@
+@@ -199,9 +282,15 @@
+-	/*
+-	 * find text and data sizes
+-	 * try them out for possible
+-	 * overflow of max sizes
+-	 */
+-	ts = btoc(u.u_exdata.ux_tsize);
+-	lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_bsize;
+-	if (lsize != (unsigned)lsize) {
+-		u.u_error = ENOMEM;
 +	u.u_prof.pr_scale = 0;
 +	xfree();
 +	n = USIZE + (int)(USERSIZE >> 6);
@@ -27808,18 +27450,7 @@ usr/local
 +	u.u_ssize = SSIZE;
 +	u.u_sep = 0;
 +	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
-+		goto bad;
-@@ -200,3 +330 @@
--	 * find text and data sizes
--	 * try them out for possible
--	 * overflow of max sizes
-+	 * Load each PT_LOAD segment to its virtual address.
-@@ -204,21 +332,4 @@
--	ts = btoc(u.u_exdata.ux_tsize);
--	lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_bsize;
--	if (lsize != (unsigned)lsize) {
--		u.u_error = ENOMEM;
--		goto bad;
+@@ -209,16 +298,4 @@
 -	}
 -	ds = btoc(lsize);
 -	ss = SSIZE + btoc(nargc);
@@ -27840,7 +27471,7 @@ usr/local
 +		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
 +		    sizeof(ph));
 +		if(u.u_error)
-@@ -226,23 +337,6 @@
+@@ -226,23 +303,6 @@
 -	
 -		/*
 -		 * allocate and clear core
@@ -27870,7 +27501,7 @@ usr/local
 +		u.u_count = ph.p_filesz;
 +		u.u_offset = ph.p_offset;
 +		u.u_segflg = 0;
-@@ -250,19 +344,6 @@
+@@ -250,19 +310,6 @@
 -		/*
 -		 * set SUID/SGID protections, if no tracing
 -		 */
@@ -27896,65 +27527,64 @@ usr/local
 +	u.u_exdata.ux_entloc = eh.e_entry;
 +	install_sigtramp();
 +	arm_sync_icache();
-@@ -270 +351 @@
+@@ -270 +317 @@
 -	return(overlay);
 +	return(0);
-@@ -276 +357,2 @@
+@@ -276 +323,2 @@
 -setregs()
 +void
 +setregs(void)
-@@ -280 +362 @@
+@@ -280 +328 @@
 -	register i;
 +	register int i;
-@@ -286 +368 @@
+@@ -286 +334 @@
 -		u.u_ar0[*cp++] = 0;
 +		u.u_ar0[(int)*cp++] = 0;
-@@ -296,0 +379 @@
+@@ -296,0 +345 @@
 +	u.u_acflag &= ~AFORK;
-@@ -300 +382,0 @@
+@@ -300 +348,0 @@
 -	u.u_acflag &= ~AFORK;
-@@ -308 +390,2 @@
+@@ -308 +356,2 @@
 -rexit()
 +void
 +rexit(void)
-@@ -325 +408,2 @@
+@@ -325 +374,2 @@
 -exit(rv)
 +void
 +exit(int rv)
-@@ -377 +461,2 @@
+@@ -377 +427,2 @@
 -wait()
 +void
 +wait(void)
-@@ -379 +464 @@
+@@ -379 +430 @@
 -	register f;
 +	register int f;
-@@ -422 +507,2 @@
+@@ -422 +473,2 @@
 -fork()
 +void
 +fork(void)
-@@ -425 +511 @@
+@@ -425 +477 @@
 -	register a;
 +	register int a;
-@@ -456 +541,0 @@
+@@ -456 +507,0 @@
 -	p1 = u.u_procp;
-@@ -458 +543,2 @@
+@@ -458 +509 @@
 -		u.u_r.r_val1 = p1->p_pid;
-+		/* child: fork() returns 0 */
 +		u.u_r.r_val1 = 0;
-@@ -469,2 +555 @@
+@@ -469,2 +520 @@
 -out:
 -	u.u_ar0[R7] += NBPW;
 +out:	;
-@@ -477 +562,2 @@
+@@ -477 +527,2 @@
 -sbreak()
 +void
 +sbreak(void)
-@@ -482 +568 @@
+@@ -482 +533 @@
 -	register a, n, d;
 +	register int a, n, d;
-@@ -497 +582,0 @@
+@@ -497 +547,0 @@
 -	n += USIZE+u.u_ssize;
-@@ -500,9 +585,3 @@
+@@ -500,9 +550,3 @@
 -	u.u_dsize += d;
 -	if(d > 0)
 -		goto bigger;
@@ -27967,10 +27597,10 @@ usr/local
 +	if((unsigned)n > (USERSIZE >> 6) - u.u_ssize) {
 +		u.u_error = ENOMEM;
 +		return;
-@@ -510,2 +588,0 @@
+@@ -510,2 +553,0 @@
 -	expand(i);
 -	return;
-@@ -513,7 +590,4 @@
+@@ -513,7 +555,4 @@
 -bigger:
 -	expand(n);
 -	a = u.u_procp->p_addr + n;
@@ -27982,7 +27612,7 @@ usr/local
 +		a = u.u_procp->p_addr + USIZE + (int)u.u_dsize;
 +		for(i = 0; i < d; i++)
 +			clearseg(a + i);
-@@ -521,2 +595,2 @@
+@@ -521,2 +560,2 @@
 -	while(d--)
 -		clearseg(--a);
 +	u.u_dsize += d;
@@ -28288,10 +27918,7 @@ usr/local
 +void printf(char *fmt, ...);
 +int save(int *lp) __attribute__((returns_twice));
 +void bcopy(char *from, char *to, unsigned int n);
-@@ -8,0 +38,2 @@
-+ * On Armv7 all arguments arrive in registers, so
-+ * sy_nrarg == sy_narg for every entry.
-@@ -10,54 +40,0 @@
+@@ -10,54 +38,0 @@
 -int	alarm();
 -int	mpxchan();
 -int	chdir();
@@ -28346,7 +27973,7 @@ usr/local
 -int	utime();
 -int	wait();
 -int	write();
-@@ -67,64 +44,64 @@
+@@ -67,64 +42,64 @@
 -	0, 0, nullsys,			/*  0 = indir */
 -	1, 1, rexit,			/*  1 = exit */
 -	0, 0, fork,			/*  2 = fork */
@@ -28427,10 +28054,10 @@ usr/local
 +	{0, 0, gtime},			/* 13 = time */
 +	{3, 3, mknod},			/* 14 = mknod */
 +	{2, 2, chmod},			/* 15 = chmod */
-+	{3, 3, chown},			/* 16 = chown */
++	{3, 3, chown},			/* 16 = chown; now 3 args */
 +	{1, 1, sbreak},			/* 17 = break */
 +	{2, 2, stat},			/* 18 = stat */
-+	{3, 3, seek},			/* 19 = seek */
++	{3, 3, seek},			/* 19 = seek; now 3 args */
 +	{0, 0, getpid},			/* 20 = getpid */
 +	{3, 3, smount},			/* 21 = mount */
 +	{1, 1, sumount},		/* 22 = umount */
@@ -28446,7 +28073,7 @@ usr/local
 +	{2, 2, gtty},			/* 32 = gtty */
 +	{2, 2, saccess},		/* 33 = access */
 +	{1, 1, nice},			/* 34 = nice */
-+	{1, 1, ftime},			/* 35 = ftime */
++	{1, 1, ftime},			/* 35 = ftime; formerly sleep */
 +	{0, 0, sync},			/* 36 = sync */
 +	{2, 2, kill},			/* 37 = kill */
 +	{0, 0, nullsys},		/* 38 = switch; inoperative */
@@ -28474,14 +28101,9 @@ usr/local
 +	{1, 1, umask},			/* 60 = umask */
 +	{1, 1, chroot},			/* 61 = chroot */
 +	{0, 0, nosys},			/* 62 = x */
-+	{0, 0, sigreturn}		/* 63 = sigreturn (Armv7 signal trampoline) */
-@@ -131,0 +109,76 @@
++	{0, 0, sigreturn}		/* 63 = sigreturn */
+@@ -131,0 +107,57 @@
 +char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
-+/*
-+ * Called from svc_entry (conf/low.s) on a system call.  r is the 17-int
-+ * trap frame; the syscall number is in r7 (Armv7 ABI), arguments in
-+ * r0..r5.  Adapted from v7 trap.c case 6+USER plus the out: tail.
-+ */
 +void
 +trap(int *r)
 +{
@@ -28490,17 +28112,10 @@ usr/local
 +	u.u_fpsaved = 0;
 +	u.u_ar0 = r;
 +	u.u_error = 0;
-+	callp = &sysent[r[7] & 077];	/* Armv7 syscall number is in r7 */
++	callp = &sysent[r[7] & 077];
 +	for(i = 0; i < callp->sy_narg && i < 6; i++)
 +		u.u_arg[i] = r[i];
 +	u.u_dirp = (caddr_t)u.u_arg[0];
-+	/*
-+	 * Default the return registers to 0.  V7 seeded r_val1 from the
-+	 * incoming r0 and relied on each libc stub to `clr r0` on the
-+	 * success path; this port's libc returns the raw syscall register
-+	 * via syscall3, so a call that leaves r_val1 unset (access, chdir,
-+	 * close, ...) must yield 0 to mean success.
-+	 */
 +	u.u_r.r_val1 = 0;
 +	u.u_r.r_val2 = 0;
 +	u.u_ap = u.u_arg;
@@ -28516,19 +28131,12 @@ usr/local
 +		r[R0] = u.u_r.r_val1;
 +		r[R1] = u.u_r.r_val2;
 +	}
-+	/* out: deliver signals and reschedule before returning to user */
 +	if (issig())
 +		psig();
 +	(void)setpri(u.u_procp);
 +	if (runrun)
 +		qswtch();
 +}
-+/*
-+ * Called from the undef/abort entry stubs (conf/low.s) for a hardware
-+ * fault.  signo is the signal it maps to (0 from irq_entry, to give up
-+ * the cpu as v7's trap 12 did); r is the trap frame.  A fault taken
-+ * in kernel mode is fatal.
-+ */
 +void
 +user_trap_handler(int signo, int *r)
 +{
@@ -28666,16 +28274,10 @@ usr/local
 -unsigned nt, nd, ns;
 +int
 +estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
-@@ -51 +55,7 @@
+@@ -51 +55 @@
 -	register a, *ap, *dp;
 +	(void)sep; (void)xrw;
-+	/*
-+	 * Armv7: user memory is mapped by page tables (arm_sureg), not the
-+	 * PDP-11 8-segment scheme, so the per-segment limit checks and the
-+	 * u_uisa/u_uisd prototype build do not apply.  Validate the total
-+	 * image size against maxmem and (re)load the page tables via sureg().
-+	 */
-@@ -53,79 +63,3 @@
+@@ -53,79 +57,3 @@
 -	if(sep) {
 -		if(cputype == 40)
 -			goto err;
@@ -28758,7 +28360,7 @@ usr/local
 +	if((int)(nt+nd+ns+USIZE) > maxmem) {
 +		u.u_error = ENOMEM;
 +		return(-1);
-@@ -136,3 +69,0 @@
+@@ -136,3 +63,0 @@
 -err:
 -	u.u_error = ENOMEM;
 -	return(-1);

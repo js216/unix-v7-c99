@@ -53,12 +53,6 @@ int
 estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 {
 	(void)sep; (void)xrw;
-	/*
-	 * Armv7: user memory is mapped by page tables (arm_sureg), not the
-	 * PDP-11 8-segment scheme, so the per-segment limit checks and the
-	 * u_uisa/u_uisd prototype build do not apply.  Validate the total
-	 * image size against maxmem and (re)load the page tables via sureg().
-	 */
 
 	if((int)(nt+nd+ns+USIZE) > maxmem) {
 		u.u_error = ENOMEM;

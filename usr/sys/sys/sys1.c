@@ -68,17 +68,6 @@ exec(void)
 	exece();
 }
 
-/*
- * exece: load and run a new program image.
- *
- * Args/environment are collected (NUL-separated) into e_argbuf from the
- * old user image, then -- after getxfile() builds the new image -- written
- * as the initial stack frame (see below).  This Armv7 image has ample RAM,
- * so no swap round-trip is needed for the arg list.  e_argbuf is a per-
- * process kernel-stack local rather than a shared global: getxfile() sleeps
- * on its (interrupt-driven) disk read, so a global buffer would be clobbered
- * by a second process exec-ing concurrently (e.g. both ends of a pipe).
- */
 void
 exece(void)
 {
@@ -160,18 +149,9 @@ exece(void)
 			u.u_gid = ip->i_gid;
 	} else
 		psignal(u.u_procp, SIGTRC);
-	/*
-	 * Build the initial user stack frame at the top of the address space
-	 * (V7 layout): the NUL-separated string image sits at the very top,
-	 * with the argc/argv[]/0/envp[]/0 vector just below it and sp pointing
-	 * at argc.  crt0 reads the frame straight off sp.  Placing the strings
-	 * at the top is also what lets ps(1) recover a process's command line.
-	 */
 	{
 		unsigned int strbase, sp;
 		int na, ne, j, k;
-		/* leave the top word zero: ps(1) treats a non-zero top-of-stack
-		 * word as an argv pointer, so a string there would mislead it. */
 		strbase = (USERSIZE - 4U - (unsigned)nc) & ~3U;
 		for (i = 0; i < nc; i++)
 			subyte((caddr_t)(strbase + (unsigned)i), e_argbuf[i]);
@@ -216,16 +196,12 @@ exece(void)
 		}
 		suword((caddr_t)(sp + 4U*(unsigned)(1 + na + 1 + ne)), 0);
 		setregs();
-		u.u_ar0[R6] = (int)sp;	/* user stack pointer */
+		u.u_ar0[R6] = (int)sp;
 	}
 bad:
 	iput(ip);
 }
 
-/*
- * ELF32 header / program-header subset (the Armv7 toolchain emits ELF;
- * this replaces the PDP-11 a.out reader).
- */
 struct elf32_ehdr {
 	unsigned char e_ident[16];
 	unsigned short e_type;
@@ -265,13 +241,6 @@ readbytes(struct inode *ip, caddr_t kbuf, unsigned int off, unsigned int n)
 	readi(ip);
 	u.u_segflg = 0;
 }
-/*
- * Read in and set up memory for an ELF executable.
- * The Armv7 user image is a flat 1 MB window; arm_sureg maps it, so we
- * allocate the image, zero it, then read each PT_LOAD segment to its
- * virtual address.  Entry goes through u_exdata.ux_entloc (used by
- * setregs).  Zero return is normal.
- */
 int
 getxfile(register struct inode *ip, int nargc)
 {
@@ -326,9 +295,6 @@ getxfile(register struct inode *ip, int nargc)
 	u.u_sep = 0;
 	if(estabur(0, u.u_dsize, u.u_ssize, 0, RO))
 		goto bad;
-	/*
-	 * Load each PT_LOAD segment to its virtual address.
-	 */
 	for(i = 0; i < (int)eh.e_phnum; i++) {
 		readbytes(ip, (caddr_t)&ph, eh.e_phoff + i*eh.e_phentsize,
 		    sizeof(ph));
@@ -540,7 +506,6 @@ fork(void)
 		goto out;
 	}
 	if(newproc()) {
-		/* child: fork() returns 0 */
 		u.u_r.r_val1 = 0;
 		u.u_start = time;
 		u.u_cstime = 0;

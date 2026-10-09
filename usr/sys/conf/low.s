@@ -1,7 +1,3 @@
-@ Low core: exception vector table and the trap/interrupt entry stubs
-@ that build the register frame and call into C (cf. v7 conf/l.s).
-@ The machine routines the C kernel calls live in mch.s.
-
 .globl _start
 .globl vectors
 .globl run_user
@@ -11,10 +7,6 @@ USTACK = 0x000f0000
 _start:
 	cpsid if			@ mask IRQ/FIQ at reset
 
-	@ The ROM may hand off with the MMU + caches enabled; disable them so the
-	@ early MMIO/console setup runs against physical addresses, then
-	@ machine_init builds the page tables and re-enables them via mmu_on.  On
-	@ qemu the MMU is already off so these clears are a no-op -- same code.
 	mrc p15, 0, r0, c1, c0, 0	@ SCTLR
 	bic r0, r0, #(1 << 12)		@ I: instruction cache off
 	bic r0, r0, #(1 << 2)		@ C: data cache off

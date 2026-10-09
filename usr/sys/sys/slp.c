@@ -42,7 +42,7 @@ void copyseg(int from, int to);
 
 #define SQSIZE 0100	/* Must be power of 2 */
 #define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
-#define ARM_FORK_STACK_COPY 1024	/* fallback high-stack band */
+#define ARM_FORK_STACK_COPY 1024
 struct proc *slpque[SQSIZE];
 
 /*
@@ -554,9 +554,6 @@ retry:
 		xswap(rpp, 0, 0);
 		rip->p_stat = SRUN;
 	} else {
-		/*
-		 * Copy the u-area, live low image, and high stack.
-		 */
 		register int low, stack;
 		rpp->p_addr = a2;
 		low = (int)u.u_dsize;
@@ -608,12 +605,6 @@ expand(int newsize)
 	register struct proc *p;
 	register int a1, a2;
 
-	/*
-	 * Armv7: a process image must start on a page boundary because the
-	 * u-area is mapped as whole pages (UBASE window).  Round the image
-	 * size up to a multiple of 64 clicks (one 4 KB page) so that coremap
-	 * allocations stay page-aligned.
-	 */
 	newsize = (newsize + 63) & ~63;
 	p = u.u_procp;
 	n = p->p_size;

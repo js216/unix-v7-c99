@@ -18,7 +18,7 @@ struct	proc {
 	short	p_pgrp;		/* name of process group leader */
 	short	p_pid;		/* unique process id */
 	short	p_ppid;		/* process id of parent */
-	int	p_addr;		/* address of swappable image (Armv7: 32-bit click index) */
+	int	p_addr;		/* address of swappable image */
 	int	p_size;		/* size of swappable image (clicks) */
 	caddr_t p_wchan;	/* event process is awaiting */
 	struct text *p_textp;	/* pointer to text structure */

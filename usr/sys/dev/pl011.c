@@ -1,14 +1,5 @@
 /*
  *   PL011 UART console driver
- *
- * The console is the QEMU virt PL011.  It is a normal Unix character
- * device: the cdevsw open/close/read/write/ioctl entries hang the line
- * discipline (tty.c) off it, output is paced by the transmit interrupt,
- * and input arrives on the receive interrupt -- the same model the v7
- * kl.c console driver follows, but for PL011 hardware.  The PL011 raises
- * a single GIC line (INTID 33); its receive and transmit causes are told
- * apart by the masked-interrupt-status register rather than by separate
- * PDP-11 vectors.
  */
 #include "../h/param.h"
 #include "../h/conf.h"
@@ -55,12 +46,6 @@ int klstart(struct tty *tp);
 int klrint(dev_t dev);
 int klxint(dev_t dev);
 
-/*
- * QEMU configures the PL011 (clock, baud, enable) before the kernel runs, so
- * the console needs no hardware setup; klinit() exists only to satisfy the
- * machine layer's board-agnostic early console-init hook (machine_init), which
- * the MP135 build uses to bring UART4 up from HSI.
- */
 void
 klinit(void)
 {
@@ -84,8 +69,8 @@ klopen(dev_t dev, int flag)
 		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
 		ttychars(tp);
 	}
-	UARTLCRH &= ~FEN;		/* one transmit interrupt per character */
-	UARTIMSC |= RXI|RTI;		/* enable receive interrupts */
+	UARTLCRH &= ~FEN;
+	UARTIMSC |= RXI|RTI;
 	ttyopen(dev, tp);
 	return(0);
 }
@@ -112,12 +97,6 @@ klwrite(dev_t dev)
 	return(0);
 }
 
-/*
- * Transmitter ready: hand the next queued character to the PL011.  Output
- * delays (characters above 0177, produced by ttyoutput for slow terminals)
- * are honored as in the v7 console driver.  The transmit interrupt is
- * level-sensitive, so it is masked whenever the output queue drains.
- */
 int
 klstart(struct tty *tp)
 {
@@ -127,7 +106,7 @@ klstart(struct tty *tp)
 		return(0);
 	if ((c=getc(&tp->t_outq)) >= 0) {
 		if (tp->t_flags&RAW)
-			UARTDR = c & 0177;	/* 8N1 glass tty: no parity bit */
+			UARTDR = c & 0177;
 		else if (c<=0177)
 			UARTDR = c;
 		else {
@@ -177,11 +156,6 @@ klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 	return(0);
 }
 
-/*
- * Console interrupt.  One GIC line serves the PL011; the masked-interrupt-
- * status register says whether the receiver, transmitter, or both need
- * service, demultiplexing into the receive/transmit halves above.
- */
 int
 klintr(void)
 {
@@ -199,15 +173,6 @@ klintr(void)
 	return(0);
 }
 
-/*
- * Print a character on the console (cf. kl.c).  The last MSGBUFS characters
- * are saved in msgbuf for inspection.  Polled with a bounded spin, and the
- * transmit interrupt is masked around the write -- the PL011 analog of kl.c
- * saving and clearing the DL11 control register -- so kernel printf does not
- * collide with interrupt-driven tty output and still works before the console
- * is open and from panic context.  The DL11's console-switch check and
- * inter-character rubout padding have no PL011 equivalent and are dropped.
- */
 void
 klputchar(char c)
 {

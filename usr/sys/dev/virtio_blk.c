@@ -122,11 +122,6 @@ rkinit(void)
 	rktab.b_active = 0;
 }
 
-/*
- * Program the virtqueue for the buffer at the head of the queue and notify
- * the device.  Returns at once; completion arrives as an interrupt.
- * (cf. v7 rk.c rkstart.)
- */
 static void
 virtio_start(void)
 {
@@ -170,11 +165,6 @@ virtio_start(void)
 	dk_wds[0] += bp->b_bcount>>6;
 }
 
-/*
- * Block-device strategy: queue the buffer and, if the controller is idle,
- * start it.  Returns at once; bio.c's iowait() sleeps on the buffer until
- * the completion interrupt runs iodone().  (cf. v7 rk.c rkstrategy.)
- */
 int
 rkstrategy(struct buf *bp)
 {
@@ -193,11 +183,6 @@ rkstrategy(struct buf *bp)
 	return(0);
 }
 
-/*
- * Completion interrupt (GIC INTID rkirq).  Acknowledge the device,
- * finish the active buffer, and start the next queued one.
- * (cf. v7 rk.c rkintr.)
- */
 int
 rkintr(void)
 {

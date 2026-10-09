@@ -98,10 +98,6 @@ struct	user
 					 */
 };
 
-/*
- * The u-area lives at the base of each process's core image.  On Armv7,
- * resume() maps the current process there, so `u` names that window.
- */
 #define	u	(*(struct user *)UBASE)
 
 /* u_error codes */

@@ -1,15 +1,5 @@
 /*
  *   STM32 USART console driver (UART4 on the MP135 board)
- *
- * Same Unix character-device/tty model as kl.c/pl011.c -- the cdevsw
- * open/close/read/write/ioctl entries hang the line discipline (tty.c) off
- * the console, output is paced by the transmit interrupt and input arrives
- * on the receive interrupt.  Differs only in the hardware: an STM32 USART
- * (UART4) instead of a PL011, one GIC line (INTID 85) demultiplexed via the
- * interrupt/status register.  This file is built for both boards but is the
- * live console only on the MP135 (the QEMU build uses pl011.c); its register
- * pokes are never reached on QEMU because /dev/console there has a different
- * major.
  */
 #include "../h/param.h"
 #include "../h/conf.h"
@@ -68,38 +58,23 @@ int getc(struct clist *p);
 int usstart(struct tty *tp);
 int usrint(dev_t dev);
 int usxint(dev_t dev);
-void usputchar(char c);			/* defined below */
+void usputchar(char c);
 
-/*
- * Bring UART4 up for the console before the first kernel printf: enable its
- * APB1 bus clock and select HSI (64 MHz, running at reset) as the kernel
- * clock, then program 115200 8N1 -- BRR = 64e6/115200 = 556 (oversampling 16)
- * -- and enable the transmitter and receiver.  Because UART4 runs off HSI, the
- * console works at the ROM's default clocks, before clock_init() sets up the
- * PLLs -- so even early boot and panics are visible.  Called from machine_init
- * via the board-agnostic console hook.  Values imported from the reference
- * bootloader (UART4 TX=PD6, RX=PD8, AF8; 115200; HSI source).
- * GPIOD's clock is enabled through the non-secure AHB4ENSETR (RCC+0x770),
- * matching the reference bootloader's __HAL_RCC_GPIOD_CLK_ENABLE; the secure
- * register (0x768) leaves the port unclocked so the pin mux silently no-ops.
- */
 void
 usinit(void)
 {
-	/* Route UART4 to its pads: PD6 (TX) and PD8 (RX) -> alternate function 8.
-	 * Without this the UART would transmit into a disconnected pin. */
-	AHB4ENSETR = GPIODEN;			/* GPIOD bus clock (set-register) */
+	AHB4ENSETR = GPIODEN;
 	(void)AHB4ENSETR;			/* read-back: clock live before access */
 	GPIOD_MODER = (GPIOD_MODER & ~((3U<<12)|(3U<<16))) | (2U<<12) | (2U<<16);
 	GPIOD_AFRL = (GPIOD_AFRL & ~(0xfU<<24)) | (8U<<24);	/* PD6 -> AF8 */
 	GPIOD_AFRH = (GPIOD_AFRH & ~(0xfU<<0))  | (8U<<0);	/* PD8 -> AF8 */
 
-	APB1ENSETR = UART4EN;			/* UART4 bus clock (set-register) */
+	APB1ENSETR = UART4EN;
 	(void)APB1ENSETR;			/* read-back: clock live before access */
 	UART4CKSELR = (UART4CKSELR & ~7U) | UART4SRC_HSI;
-	CR1 = 0;				/* disable before reconfigure */
-	BRR = 556;				/* 64 MHz / 115200 */
-	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE; /* 8N1, FIFOs, TX + RX */
+	CR1 = 0;
+	BRR = 556;
+	CR1 = CR1_FIFOEN | CR1_UE | CR1_TE | CR1_RE;
 }
 
 int
@@ -120,7 +95,7 @@ usopen(dev_t dev, int flag)
 		tp->t_flags = EVENP|ODDP|ECHO|XTABS|CRMOD;
 		ttychars(tp);
 	}
-	CR1 |= CR1_RXNEIE;		/* enable receive interrupts */
+	CR1 |= CR1_RXNEIE;
 	ttyopen(dev, tp);
 	return(0);
 }
@@ -147,12 +122,6 @@ uswrite(dev_t dev)
 	return(0);
 }
 
-/*
- * Transmitter ready: hand the next queued character to UART4.  Output
- * delays (characters above 0177) are honored as in the v7 console driver;
- * the transmit-empty interrupt is level-sensitive, so it is masked whenever
- * the output queue drains.
- */
 int
 usstart(struct tty *tp)
 {
@@ -162,7 +131,7 @@ usstart(struct tty *tp)
 		return(0);
 	if ((c=getc(&tp->t_outq)) >= 0) {
 		if (tp->t_flags&RAW)
-			TDR = c & 0177;	/* 8N1 glass tty: no parity bit */
+			TDR = c & 0177;
 		else if (c<=0177)
 			TDR = c;
 		else {
@@ -200,7 +169,7 @@ usrint(dev_t dev)
 		c = RDR;
 		ttyinput(c, tp);
 	}
-	ICR = ICR_ERR;			/* clear overrun/framing errors */
+	ICR = ICR_ERR;
 	return(0);
 }
 
@@ -213,11 +182,6 @@ usioctl(dev_t dev, int cmd, caddr_t addr, int flag)
 	return(0);
 }
 
-/*
- * Console interrupt.  One GIC line serves UART4; the interrupt/status
- * register says whether the receiver, transmitter, or both need service,
- * demultiplexing into the receive/transmit halves above.
- */
 int
 usintr(void)
 {
@@ -231,12 +195,6 @@ usintr(void)
 }
 
 
-/*
- * Print a character on the console (cf. kl.c).  Polled with a bounded spin,
- * the transmit interrupt masked around the write so kernel printf does not
- * collide with interrupt-driven tty output; works before the console is open
- * and from panic context.  The last MSGBUFS characters are saved in msgbuf.
- */
 void
 usputchar(char c)
 {
