@@ -86,6 +86,9 @@ trap(int *r)
 {
 	register int i;
 	register struct sysent *callp;
+	time_t syst;
+
+	syst = u.u_stime;
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
 	u.u_error = 0;
@@ -113,6 +116,8 @@ trap(int *r)
 	curpri = setpri(u.u_procp);
 	if (runrun)
 		qswtch();
+	if(u.u_prof.pr_scale)
+		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
 }
 void
 user_trap_handler(int signo, int *r)
