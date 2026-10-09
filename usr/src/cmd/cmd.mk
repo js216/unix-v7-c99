@@ -42,7 +42,7 @@ bin/tp: $(CRT) $(call dirobj,tp) $(LIBC) | bin
 $(AWK_OBJ): $C/awk/awk.h $C/awk/awk.def
 $C/awk/awk.g.c $C/awk/awk.h &: $C/awk/awk.g.y
 	$(call T,YACC)bison --defines=$C/awk/awk.h -o $C/awk/awk.g.c $<
-$C/awk/proc: $C/awk/proc.c $C/awk/token.c $C/awk/awk.h
+$C/awk/proc: $C/awk/proc.c $C/awk/token.c $C/awk/awk.h $C/awk/awk.def
 	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $C/awk/proc.c $C/awk/token.c
 $C/awk/proctab.c: $C/awk/proc
 	$(call T,GEN)$< >$@
