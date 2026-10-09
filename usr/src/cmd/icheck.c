@@ -38,17 +38,14 @@ daddr_t	ndup;
 
 int	nerror;
 
-long	atol();
-daddr_t	alloc();
-int	chk(), duped(); void check(), pass1(), bread(), bwrite(), makefree();
-#ifndef STANDALONE
-char	*malloc();
-#endif
+daddr_t	alloc(void);
+int	chk(daddr_t bno, char *s), duped(daddr_t bno);
+void	check(char *file), pass1(struct dinode *ip);
+void	bread(daddr_t bno, char *buf, int cnt), bwrite(daddr_t bno, char *buf);
+void	makefree(void);
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 	long n;
@@ -102,8 +99,7 @@ char *argv[];
 }
 
 void
-check(file)
-char *file;
+check(char *file)
 {
 	register int i, j;
 	ino_t mino;
@@ -220,8 +216,7 @@ char *file;
 }
 
 void
-pass1(ip)
-register struct dinode *ip;
+pass1(register struct dinode *ip)
 {
 	daddr_t ind1[NINDIR];
 	daddr_t ind2[NINDIR];
@@ -298,9 +293,7 @@ register struct dinode *ip;
 }
 
 int
-chk(bno, s)
-daddr_t bno;
-char *s;
+chk(daddr_t bno, char *s)
 {
 	register int n;
 
@@ -319,8 +312,7 @@ char *s;
 }
 
 int
-duped(bno)
-daddr_t bno;
+duped(daddr_t bno)
 {
 	daddr_t d;
 	register int m, n;
@@ -337,7 +329,7 @@ daddr_t bno;
 }
 
 daddr_t
-alloc()
+alloc(void)
 {
 	int i;
 	daddr_t bno;
@@ -372,9 +364,8 @@ alloc()
 	return(bno);
 }
 
-void
-bfree(bno)
-daddr_t bno;
+static void
+bfree(daddr_t bno)
 {
 	union {
 		char	data[BSIZE];
@@ -397,10 +388,7 @@ daddr_t bno;
 }
 
 void
-bread(bno, buf, cnt)
-daddr_t bno;
-char *buf;
-int cnt;
+bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
@@ -417,9 +405,7 @@ int cnt;
 }
 
 void
-bwrite(bno, buf)
-daddr_t bno;
-char	*buf;
+bwrite(daddr_t bno, char *buf)
 {
 
 	lseek(fi, bno*BSIZE, 0);
@@ -428,7 +414,7 @@ char	*buf;
 }
 
 void
-makefree()
+makefree(void)
 {
 	char flg[MAXFN];
 	int adr[MAXFN];
