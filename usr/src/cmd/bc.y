@@ -73,7 +73,7 @@ dlist	:  tail
 	| dlist _AUTO dlets tail
 	;
 
-stat	:  e 
+stat	:  ex 
 		{ bundle(2, $1, "ps." ); }
 	| 
 		{ bundle(1, "" ); }
@@ -179,7 +179,7 @@ re	:  e EQ e
 		{ bundle(2, $1, " 0!=" ); }
 	;
 
-e	:  e '+' e
+ex	:  e '+' e
 		{ bundle(3, $1, $3, "+" ); }
 	|  e '-' e
 		{ bundle(3, $1, $3, "-" ); }
@@ -251,14 +251,6 @@ e	:  e '+' e
 		{ $$ = "l."; }
 	|  LETTER
 		{ bundle(2, "l", $1 ); }
-	|  LETTER '=' e
-		{ bundle(3, $3, "ds", $1 ); }
-	|  LETTER EQOP e	%prec '='
-		{ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
-	| LETTER '[' e ']' '=' e
-		{ bundle(5,$6,"d",$3,":",geta($1)); }
-	| LETTER '[' e ']' EQOP e
-		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
 	| LENGTH '(' e ')'
 		{ bundle(2,$3,"Z"); }
 	| SCALE '(' e ')'
@@ -271,6 +263,23 @@ e	:  e '+' e
 		{ bundle(2, $3, "v" ); }
 	| '~' LETTER
 		{ bundle(2,"L",$2); }
+	| SCALE
+		{ bundle(1,"K"); }
+	| BASE
+		{ bundle(1,"I"); }
+	| OBASE
+		{ bundle(1,"O"); }
+	;
+
+e	:  ex
+	|  LETTER '=' e
+		{ bundle(3, $3, "ds", $1 ); }
+	|  LETTER EQOP e	%prec '='
+		{ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
+	| LETTER '[' e ']' '=' e
+		{ bundle(5,$6,"d",$3,":",geta($1)); }
+	| LETTER '[' e ']' EQOP e	%prec '='
+		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
 	| SCALE '=' e
 		{ bundle(2,$3,"dk"); }
 	| SCALE EQOP e		%prec '='
@@ -283,12 +292,6 @@ e	:  e '+' e
 		{ bundle(2,$3,"do"); }
 	| OBASE EQOP e		%prec '='
 		{ bundle(4,"O",$3,$2,"do"); }
-	| SCALE
-		{ bundle(1,"K"); }
-	| BASE
-		{ bundle(1,"I"); }
-	| OBASE
-		{ bundle(1,"O"); }
 	;
 
 cargs	:  eora

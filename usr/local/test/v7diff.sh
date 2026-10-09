@@ -2111,8 +2111,10 @@ usr/local
 @@ -40 +64 @@
 -		={	bundle( 6,pre, $7, post ,"0",numb[lev],"Q");
 +		{	bundle( 6,pre, $7, post ,"0",numb[lev],"Q");
-@@ -53 +77 @@
+@@ -52,2 +76,2 @@
+-stat	:  e 
 -		={ bundle(2, $1, "ps." ); }
++stat	:  ex 
 +		{ bundle(2, $1, "ps." ); }
 @@ -55 +79 @@
 -		={ bundle(1, "" ); }
@@ -2234,8 +2236,10 @@ usr/local
 @@ -155 +179 @@
 -		= bundle(2, $1, " 0!=" );
 +		{ bundle(2, $1, " 0!=" ); }
-@@ -159 +183 @@
+@@ -158,2 +182,2 @@
+-e	:  e '+' e
 -		= bundle(3, $1, $3, "+" );
++ex	:  e '+' e
 +		{ bundle(3, $1, $3, "+" ); }
 @@ -161 +185 @@
 -		= bundle(3, $1, $3, "-" );
@@ -2339,213 +2343,223 @@ usr/local
 @@ -227 +251 @@
 -		={ $$ = "l."; }
 +		{ $$ = "l."; }
-@@ -229 +253 @@
+@@ -229,9 +253 @@
 -		= { bundle(2, "l", $1 ); }
-+		{ bundle(2, "l", $1 ); }
-@@ -231 +255 @@
+-	|  LETTER '=' e
 -		={ bundle(3, $3, "ds", $1 ); }
-+		{ bundle(3, $3, "ds", $1 ); }
-@@ -233 +257 @@
+-	|  LETTER EQOP e	%prec '='
 -		={ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
-+		{ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
-@@ -235 +259 @@
+-	| LETTER '[' e ']' '=' e
 -		= { bundle(5,$6,"d",$3,":",geta($1)); }
-+		{ bundle(5,$6,"d",$3,":",geta($1)); }
-@@ -237 +261 @@
+-	| LETTER '[' e ']' EQOP e
 -		= { bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
-+		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
-@@ -239 +263 @@
++		{ bundle(2, "l", $1 ); }
+@@ -239 +255 @@
 -		= bundle(2,$3,"Z");
 +		{ bundle(2,$3,"Z"); }
-@@ -241 +265 @@
+@@ -241 +257 @@
 -		= bundle(2,$3,"X");	/* must be before '(' e ')' */
 +		{ bundle(2,$3,"X"); }	/* must be before '(' e ')' */
-@@ -243 +267 @@
+@@ -243 +259 @@
 -		= { $$ = $2; }
 +		{ $$ = $2; }
-@@ -245 +269 @@
+@@ -245 +261 @@
 -		={ bundle(1, "?" ); }
 +		{ bundle(1, "?" ); }
-@@ -247 +271 @@
+@@ -247 +263 @@
 -		={ bundle(2, $3, "v" ); }
 +		{ bundle(2, $3, "v" ); }
-@@ -249 +273 @@
+@@ -249 +265,18 @@
 -		={ bundle(2,"L",$2); }
 +		{ bundle(2,"L",$2); }
-@@ -251 +275 @@
++	| SCALE
++		{ bundle(1,"K"); }
++	| BASE
++		{ bundle(1,"I"); }
++	| OBASE
++		{ bundle(1,"O"); }
++	;
++
++e	:  ex
++	|  LETTER '=' e
++		{ bundle(3, $3, "ds", $1 ); }
++	|  LETTER EQOP e	%prec '='
++		{ bundle(6, "l", $1, $3, $2, "ds", $1 ); }
++	| LETTER '[' e ']' '=' e
++		{ bundle(5,$6,"d",$3,":",geta($1)); }
++	| LETTER '[' e ']' EQOP e	%prec '='
++		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
+@@ -251 +284 @@
 -		= bundle(2,$3,"dk");
 +		{ bundle(2,$3,"dk"); }
-@@ -253 +277 @@
+@@ -253 +286 @@
 -		= bundle(4,"K",$3,$2,"dk");
 +		{ bundle(4,"K",$3,$2,"dk"); }
-@@ -255 +279 @@
+@@ -255 +288 @@
 -		= bundle(2,$3,"di");
 +		{ bundle(2,$3,"di"); }
-@@ -257 +281 @@
+@@ -257 +290 @@
 -		= bundle(4,"I",$3,$2,"di");
 +		{ bundle(4,"I",$3,$2,"di"); }
-@@ -259 +283 @@
+@@ -259 +292 @@
 -		= bundle(2,$3,"do");
 +		{ bundle(2,$3,"do"); }
-@@ -261 +285 @@
+@@ -261,7 +294 @@
 -		= bundle(4,"O",$3,$2,"do");
-+		{ bundle(4,"O",$3,$2,"do"); }
-@@ -263 +287 @@
+-	| SCALE
 -		= bundle(1,"K");
-+		{ bundle(1,"K"); }
-@@ -265 +289 @@
+-	| BASE
 -		= bundle(1,"I");
-+		{ bundle(1,"I"); }
-@@ -267 +291 @@
+-	| OBASE
 -		= bundle(1,"O");
-+		{ bundle(1,"O"); }
-@@ -272 +296 @@
++		{ bundle(4,"O",$3,$2,"do"); }
+@@ -272 +299 @@
 -		= bundle(2, $1, $3 );
 +		{ bundle(2, $1, $3 ); }
-@@ -276 +300 @@
+@@ -276 +303 @@
 -		=bundle(2,"l",geta($1));
 +		{ bundle(2,"l",geta($1)); }
-@@ -280 +304 @@
+@@ -280 +307 @@
 -		={ *cp++ = '\0'; }
 +		{ *cp++ = '\0'; }
-@@ -284 +308 @@
+@@ -284 +311 @@
 -		={ $$ = cp; *cp++ = '_'; }
 +		{ $$ = cp; *cp++ = '_'; }
-@@ -286 +310 @@
+@@ -286 +313 @@
 -		={ $$ = cp; *cp++ = $1; }
 +		{ $$ = cp; *cp++ = *$1; }
-@@ -288 +312 @@
+@@ -288 +315 @@
 -		={ *cp++ = $2; }
 +		{ *cp++ = *$2; }
-@@ -292,2 +316,2 @@
+@@ -292,2 +319,2 @@
 -		={ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 -			if(crs == '[')crs=+3;
 +		{ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 +			if(crs == '[')crs+=3;
-@@ -302 +326 @@
+@@ -302 +329 @@
 -		={	$$ = getf($2);
 +		{	$$ = getf($2);
-@@ -312 +336 @@
+@@ -312 +339 @@
 -		={ pp( $1 ); }
 +		{ pp( $1 ); }
-@@ -314 +338 @@
+@@ -314 +341 @@
 -		={ pp( $3 ); }
 +		{ pp( $3 ); }
-@@ -318 +342 @@
+@@ -318 +345 @@
 -		={ tp($1); }
 +		{ tp($1); }
-@@ -320 +344 @@
+@@ -320 +347 @@
 -		={ tp($3); }
 +		{ tp($3); }
-@@ -324 +348 @@
+@@ -324 +351 @@
 -		={ $$ = geta($1); }
 +		{ $$ = geta($1); }
-@@ -347 +371 @@
+@@ -347 +374 @@
 -yylex(){
 +int yylex(void){
-@@ -390,2 +414,2 @@
+@@ -390,2 +417,2 @@
 -	if( c>= '0' && c <= '9' || c>= 'A' && c<= 'F' ){
 -		yylval = c;
 +	if( (c>= '0' && c <= '9') || (c>= 'A' && c<= 'F') ){
 +		yylval = index("0123456789ABCDEF", c);
-@@ -434 +458 @@
+@@ -434 +461 @@
 -cpeek( c, yes, no ){
 +int cpeek( int c, int yes, int no ){
-@@ -442 +466 @@
+@@ -442 +469 @@
 -getch(){
 +int getch(void){
-@@ -460,0 +485 @@
+@@ -460,0 +488 @@
 +	goto loop;
-@@ -463,2 +488,2 @@
+@@ -463,2 +491,2 @@
 -int b_space [ b_sp_max ];
 -int * b_sp_nxt = { b_space };
 +char *b_space [ b_sp_max ];
 +char ** b_sp_nxt = { b_space };
-@@ -467,2 +492,3 @@
+@@ -467,2 +495,3 @@
 -bundle(a){
 -	int i, *p, *q;
 +char *(bundle)(int i, ...){
 +	va_list p;
 +	char **q;
-@@ -470,2 +496 @@
+@@ -470,2 +499 @@
 -	p = &a;
 -	i = *p++;
 +	va_start(p, i);
-@@ -473 +498 @@
+@@ -473 +501 @@
 -	if( bdebug ) printf("bundle %d elements at %o\n",i,  q );
 +	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)(uintptr_t)q );
-@@ -476 +501 @@
+@@ -476 +504 @@
 -		* b_sp_nxt++ = *p++;
 +		* b_sp_nxt++ = va_arg(p, char *);
-@@ -477,0 +503 @@
+@@ -477,0 +506 @@
 +	va_end(p);
-@@ -479,2 +505,2 @@
+@@ -479,2 +508,2 @@
 -	yyval = q;
 -	return( q );
 +	yyval = (char *)q;
 +	return( yyval );
-@@ -483,3 +509,3 @@
+@@ -483,3 +512,3 @@
 -routput(p) int *p; {
 -	if( bdebug ) printf("routput(%o)\n", p );
 -	if( p >= &b_space[0] && p < &b_space[b_sp_max]){
 +void routput(char *p) {
 +	if( bdebug ) printf("routput(%o)\n", (unsigned)(uintptr_t)p );
 +	if( (uintptr_t)p - (uintptr_t)b_space < sizeof b_space ){
-@@ -487 +513,2 @@
+@@ -487 +516,2 @@
 -		while( *p != 0 ) routput( *p++ );
 +		char **q = (char **)p;
 +		while( *q != 0 ) routput( *q++ );
-@@ -492 +519 @@
+@@ -492 +522 @@
 -output( p ) int *p; {
 +void output( char *p ) {
-@@ -501 +528 @@
+@@ -501 +531 @@
 -conout( p, s ) int *p; char *s; {
 +void conout( char *p, char *s ) {
-@@ -509 +536 @@
+@@ -509 +539 @@
 -yyerror( s ) char *s; {
 +void yyerror( char *s ) {
-@@ -520 +547 @@
+@@ -520 +550 @@
 -pp( s ) char *s; {
 +void pp( char *s ) {
-@@ -529 +556 @@
+@@ -529 +559 @@
 -tp( s ) char *s; { /* same as pp, but for temps */
 +void tp( char *s ) { /* same as pp, but for temps */
-@@ -536,2 +563,2 @@
+@@ -536,2 +566,2 @@
 -yyinit(argc,argv) int argc; char *argv[];{
 -	signal( 2, (int(*)())1 );	/* ignore all interrupts */
 +void yyinit(int argc, char *argv[]){
 +	signal( 2, 1 );	/* ignore all interrupts */
-@@ -547 +574 @@
+@@ -547 +577 @@
 -int *getout(){
 +void getout(void){
-@@ -550 +577 @@
+@@ -550 +580 @@
 -	exit();
 +	exit(0);
-@@ -553,2 +580,2 @@
+@@ -553,2 +583,2 @@
 -int *
 -getf(p) char *p;{
 +char *
 +getf(char *p){
-@@ -557,2 +584,2 @@
+@@ -557,2 +587,2 @@
 -int *
 -geta(p) char *p;{
 +char *
 +geta(char *p){
-@@ -562,2 +589,2 @@
+@@ -562,2 +592,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(int argc, char **argv)
-@@ -572 +599 @@
+@@ -572 +602 @@
 -			exit();
 +			exit(0);
-@@ -577 +604 @@
+@@ -577 +607 @@
 -			exit();
 +			exit(0);
-@@ -589 +616 @@
+@@ -589 +619 @@
 -		exit();
 +		exit(0);
-@@ -595,2 +622,2 @@
+@@ -595,2 +625,2 @@
 -	execl("/bin/dc", "dc", "-", 0);
 -	execl("/usr/bin/dc", "dc", "-", 0);
 +	execl("/bin/dc", "dc", "-", (char *)0);
