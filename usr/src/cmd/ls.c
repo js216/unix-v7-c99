@@ -39,20 +39,17 @@ struct	lbuf	**lastp = flist;
 struct	lbuf	**firstp = flist;
 char	*dotp	= ".";
 
-char	*makename();
-struct	lbuf *gstat();
-char	*ctime();
-long	nblock();
-void	pentry();
-int	getname();
-void	pmode(), select(), readdir();
+char	*makename(char *dir, char *file);
+struct	lbuf *gstat(char *file, int argfl);
+long	nblock(long size);
+void	pentry(struct lbuf *ap);
+int	getname(int uid, char buf[]), compar(char *pp1, char *pp2);
+void	pmode(int aflag), select(int *pairp), readdir(char *dir);
 
 #define	ISARG	0100000
 
 int
-main(argc, argv)
-int	argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	int i;
 	register struct lbuf *ep, **ep1;
@@ -60,7 +57,6 @@ char *argv[];
 	struct lbuf **epp;
 	struct lbuf lb;
 	char *t;
-	int compar();
 
 	setbuf(stdout, stdbuf);
 	time(&lb.lmtime);
@@ -166,8 +162,7 @@ char *argv[];
 }
 
 void
-pentry(ap)
-struct lbuf *ap;
+pentry(struct lbuf *ap)
 {
 	register int t;
 	register struct lbuf *p;
@@ -207,9 +202,7 @@ struct lbuf *ap;
 }
 
 int
-getname(uid, buf)
-int uid;
-char buf[];
+getname(int uid, char buf[])
 {
 	int j, c, n, i;
 
@@ -242,8 +235,7 @@ char buf[];
 }
 
 long
-nblock(size)
-long size;
+nblock(long size)
 {
 	return((size+511)>>9);
 }
@@ -261,8 +253,7 @@ int	m9[] = { 2, S_ISVTX, 't', S_IEXEC>>6, 'x', '-' };
 int	*m[] = { m1, m2, m3, m4, m5, m6, m7, m8, m9};
 
 void
-pmode(aflag)
-int	aflag;
+pmode(int aflag)
 {
 	register int **mp;
 
@@ -272,8 +263,7 @@ int	aflag;
 }
 
 void
-select(pairp)
-register int *pairp;
+select(register int *pairp)
 {
 	register int n;
 
@@ -284,8 +274,7 @@ register int *pairp;
 }
 
 char *
-makename(dir, file)
-char *dir, *file;
+makename(char *dir, char *file)
 {
 	static char dfile[100];
 	register char *dp, *fp;
@@ -304,8 +293,7 @@ char *dir, *file;
 }
 
 void
-readdir(dir)
-char *dir;
+readdir(char *dir)
 {
 	static struct direct dentry;
 	register int j;
@@ -335,11 +323,8 @@ char *dir;
 }
 
 struct lbuf *
-gstat(file, argfl)
-char *file;
-int	argfl;
+gstat(char *file, int argfl)
 {
-	extern char *malloc();
 	struct stat statb;
 	register struct lbuf *rep;
 	static int nomocore;
@@ -409,13 +394,12 @@ int	argfl;
 }
 
 int
-compar(pp1, pp2)
-struct lbuf **pp1, **pp2;
+compar(char *pp1, char *pp2)
 {
 	register struct lbuf *p1, *p2;
 
-	p1 = *pp1;
-	p2 = *pp2;
+	p1 = *(struct lbuf **)pp1;
+	p2 = *(struct lbuf **)pp2;
 	if (dflg==0) {
 		if (p1->lflags&ISARG && p1->ltype=='d') {
 			if (!(p2->lflags&ISARG && p2->ltype=='d'))
