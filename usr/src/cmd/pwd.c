@@ -14,10 +14,9 @@ int	off	= -1;
 struct	stat	d, dd;
 struct	direct	dir;
 
-void prname(void);
-void cat(void);
+void prname(), cat();
 int
-main(void)
+main()
 {
 	int rdev, rino;
 
@@ -57,7 +56,7 @@ main(void)
 }
 
 void
-prname(void)
+prname()
 {
 	write(1, "/", 1);
 	if (off<0)
@@ -68,7 +67,7 @@ prname(void)
 }
 
 void
-cat(void)
+cat()
 {
 	register int i, j;
 
