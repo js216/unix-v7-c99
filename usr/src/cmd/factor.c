@@ -10,8 +10,8 @@ char	tab[] = {
 char	*arg;
 long long n;
 
-int
-getch()
+static int
+getch(void)
 {
 	int c;
 
@@ -22,9 +22,8 @@ getch()
 	return(c);
 }
 
-void
-put(d)
-long long d;
+static void
+put(long long d)
 {
 	char b[20], *s;
 
@@ -39,9 +38,7 @@ long long d;
 }
 
 int
-main(argc, argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int c, i;
 	long long d;
