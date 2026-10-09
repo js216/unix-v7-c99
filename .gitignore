@@ -18,7 +18,6 @@ boot/unix.bin
 boot/unix.stm32
 boot/unix.tsv
 boot/rootfs.img
-boot/rootfs.img.tmp
 bin/
 usr/adm/
 usr/spool/
