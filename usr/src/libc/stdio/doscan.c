@@ -16,7 +16,7 @@ char	*_getccl(char *s);
 int	_innum(int **ptr, int type, int len, int size, FILE *iop, int *eofptr);
 int	_instr(char *ptr, int type, int len, FILE *iop, int *eofptr);
 
-char	_sctab[128] = {
+char	_sctab[256] = {
 	0,0,0,0,0,0,0,0,
 	0,SPC,SPC,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,
@@ -219,7 +219,7 @@ _instr(register char *ptr, int type, int len, register struct _iobuf *iop,
 	ignstp = 0;
 	if (type=='s')
 		ignstp = SPC;
-	while (_sctab[ch = getc(iop)] & ignstp)
+	while (_sctab[(ch = getc(iop))&0377] & ignstp)
 		if (ch==EOF)
 			break;
 	ignstp = SPC;
@@ -258,18 +258,18 @@ _getccl(register char *s)
 		t++;
 		s++;
 	}
-	for (c = 0; c < 128; c++)
+	for (c = 0; c < 256; c++)
 		if (t)
 			_sctab[c] &= ~STP;
 		else
 			_sctab[c] |= STP;
-	while (((c = *s++)&0177) != ']') {
-		if (t)
-			_sctab[c++] |= STP;
-		else
-			_sctab[c++] &= ~STP;
+	while ((c = *s++&0377) != ']') {
 		if (c==0)
 			return(--s);
+		if (t)
+			_sctab[c] |= STP;
+		else
+			_sctab[c] &= ~STP;
 	}
 	return(s);
 }
