@@ -4,6 +4,7 @@
 #define	RDR	0
 #define	WTR	1
 static	int	popen_pid[20];
+int	dup2();
 
 FILE *
 popen(cmd,mode)
@@ -12,7 +13,6 @@ char	*mode;
 {
 	int p[2];
 	register int myside, hisside, pid;
-	int stdside;
 
 	if(pipe(p) < 0)
 		return NULL;
@@ -21,9 +21,7 @@ char	*mode;
 	if((pid = fork()) == 0) {
 		/* myside and hisside reverse roles in child */
 		close(myside);
-		stdside = tst(0, 1);
-		close(stdside);
-		dup(hisside);
+		dup2(hisside, tst(0, 1));
 		close(hisside);
 		execl("/bin/sh", "sh", "-c", cmd, 0);
 		_exit(1);
