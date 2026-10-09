@@ -48,21 +48,20 @@ FILE *files[15];
 FILE **filesp;
 FILE *infile;
 
-char *calloc();
-int skeqn(), eof();
-void getfname(), backsl(), fatal(), work(), regline(), putmac(), putwords(), comline(), macro(), tbl(), eqn();
+FILE *opn(char *p);
+char *copys(char *s);
+int skeqn(void), eof(void);
+void backsl(void), fatal(char *s, char *p), work(void), regline(int macline);
+void putmac(char *s), putwords(int macline), comline(void), macro(void), tbl(void), eqn(void);
 
 
 
 int
-main(ac, av)
-int ac;
-char **av;
+main(int ac, char **av)
 {
 register int i;
 register char *p;
 static char onechar[2] = "X";
-FILE *opn();
 
 argc = ac - 1;
 argv = av + 1;
@@ -108,7 +107,7 @@ work();
 
 
 int
-skeqn()
+skeqn(void)
 {
 while((c = getc(infile)) != rdelim)
 	if(c == EOF)
@@ -125,8 +124,7 @@ return(c = ' ');
 }
 
 
-FILE *opn(p)
-register char *p;
+FILE *opn(register char *p)
 {
 FILE *fd;
 
@@ -141,7 +139,7 @@ return(fd);
 
 
 int
-eof()
+eof(void)
 {
 if(infile != stdin)
 	fclose(infile);
@@ -161,14 +159,13 @@ return(C);
 
 
 
-void
-getfname()
+static void
+getfname(void)
 {
 register char *p;
 struct chain { struct chain *nextp; char *datap; } *chainblock;
 register struct chain *q;
 static struct chain *namechain	= NULL;
-char *copys();
 
 while(C == ' ') ;
 
@@ -197,8 +194,7 @@ namechain = q;
 
 
 void
-fatal(s,p)
-char *s, *p;
+fatal(char *s,char *p)
 {
 fprintf(stderr, "Deroff: ");
 fprintf(stderr, s, p);
@@ -206,7 +202,7 @@ exit(1);
 }
 
 void
-work()
+work(void)
 {
 
 for( ;; )
@@ -222,8 +218,7 @@ for( ;; )
 
 
 void
-regline(macline)
-int macline;
+regline(int macline)
 {
 line[0] = c;
 lp = line;
@@ -263,8 +258,7 @@ if(line[0] != '\0') {
 
 
 void
-putmac(s)
-register char *s;
+putmac(register char *s)
 {
 register char *t;
 
@@ -286,8 +280,7 @@ putchar('\n');
 
 
 void
-putwords(macline)	/* break into words for -w option */
-int macline;
+putwords(int macline)	/* break into words for -w option */
 {
 register char *p, *p1;
 int i, nlet;
@@ -319,7 +312,7 @@ for(p1 = line ; ;)
 
 
 void
-comline()
+comline(void)
 {
 register int c1, c2;
 
@@ -375,7 +368,7 @@ else
 
 
 void
-macro()
+macro(void)
 {
 /*
 do { SKIP; }
@@ -388,7 +381,7 @@ inmacro = YES;
 
 
 void
-tbl()
+tbl(void)
 {
 while(C != '.');
 SKIP;
@@ -396,7 +389,7 @@ intable = YES;
 }
 
 void
-eqn()
+eqn(void)
 {
 register int c1, c2;
 
@@ -440,7 +433,7 @@ for( ;;)
 
 
 void
-backsl()	/* skip over a complete backslash construction */
+backsl(void)	/* skip over a complete backslash construction */
 {
 int bdelim;
 
@@ -499,8 +492,7 @@ sw:  switch(C)
 
 
 
-char *copys(s)
-register char *s;
+char *copys(register char *s)
 {
 register char *t, *t0;
 
