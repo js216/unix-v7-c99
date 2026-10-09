@@ -18,6 +18,7 @@
 #define	RDRENB	01
 #define	UARTDR	(*(volatile int *)(KLADDR+0x00))
 #define	UARTFR	(*(volatile int *)(KLADDR+0x18))
+#define	UARTCR	(*(volatile int *)(KLADDR+0x30))
 #define	UARTIMSC	(*(volatile int *)(KLADDR+0x38))
 #define	UARTMIS	(*(volatile int *)(KLADDR+0x40))
 #define	UARTICR	(*(volatile int *)(KLADDR+0x44))
@@ -140,6 +141,7 @@ klstart(register struct tty *tp)
 void
 klinit(void)
 {
+	UARTCR = 0x301;
 }
 
 void
