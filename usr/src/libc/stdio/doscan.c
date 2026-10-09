@@ -109,6 +109,8 @@ _innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 
 	if (type=='c' || type=='s' || type=='[')
 		return(_instr(ptr? *(char **)ptr: (char *)NULL, type, len, iop, eofptr));
+	if (len > 62)
+		len = 62;
 	lcval = 0;
 	ndigit = 0;
 	scale = INT;
