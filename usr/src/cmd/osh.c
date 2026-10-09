@@ -75,40 +75,15 @@ char	line[LINSIZ];
 char	*args[ARGSIZ];
 int	trebuf[TRESIZ];
 
-int *syntax(char **p1, char **p2);
-int execute(int *t, int *pf1, int *pf2);
-int main1(void);
-int word(void);
-int readc(void);
-int prs(char *as);
-int prn(int n);
-int prc(char ac);
-int putc(int c);
-int err(char *s, int code);
-int getc(void);
-int any(int c, char *as);
-int equal(char *s1, char *s2);
-int texec(char *f, int *at);
-int pwait(int pid, int *t);
-int *blkcpy(int **p);
-extern int read(int fd, char *buf, int n);
-extern int write(int fd, char *buf, int n);
-extern int close(int fd);
-extern int open(char *p, int f);
-extern int creat(char *p, int m);
-extern int pipe(int *pv);
-extern int dup();
-extern int fork(void);
-extern int wait(int *st);
-extern int execv(char *p, char **av);
-extern long lseek(int fd, long off, int whence);
-extern int getpid(void);
-extern int getuid(void);
-extern int chdir(char *p);
-extern int signal();
-extern void exit(int n) __attribute__((__noreturn__));
+int	*syntax(), *syn1(), *syn2(), *syn3(), readc(), getc(), any(), equal();
+void	main1(), word(), prs(), prn(), putc(), err(), texec(), pwait(), execute(), exit();
+int	read(), write(), close(), open(), creat(), pipe(), dup(), fork(), wait(), execv();
+int	getpid(), getuid(), chdir(), signal();
+long	lseek();
 int
-main(int c, char **av)
+main(c, av)
+int c;
+char **av;
 {
 	register int f;
 	register char **v;
@@ -164,8 +139,8 @@ loop:
 	goto loop;
 }
 
-int
-main1(void)
+void
+main1()
 {
 	register char  *cp;
 	register int *t;
@@ -186,18 +161,17 @@ main1(void)
 		if(error == 0) {
 			setjmp(jmpbuf);
 			if (error)
-				return(0);
+				return;
 			t = syntax(args, argp);
 		}
 		if(error != 0)
 			err("syntax error",255); else
 			execute(t, 0, 0);
 	}
-	return(0);
 }
 
-int
-word(void)
+void
+word()
 {
 	register char c, c1;
 
@@ -217,7 +191,7 @@ loop:
 			if(c == '\n') {
 				error++;
 				peekc = c;
-				return(0);
+				return;
 			}
 			*linep++ = c|QUOTE;
 		}
@@ -234,7 +208,7 @@ loop:
 	case '\n':
 		*linep++ = c;
 		*linep++ = '\0';
-		return(0);
+		return;
 	}
 
 	peekc = c;
@@ -247,14 +221,15 @@ pack:
 			if(any(c, "\"'"))
 				goto loop;
 			*linep++ = '\0';
-			return(0);
+			return;
 		}
 		*linep++ = c;
 	}
 }
 
 int *
-tree(int n)
+tree(n)
+int n;
 {
 	register int *t;
 
@@ -269,7 +244,7 @@ tree(int n)
 }
 
 int
-getc(void)
+getc()
 {
 	register char c;
 
@@ -324,7 +299,7 @@ getd:
 }
 
 int
-readc(void)
+readc()
 {
 	int rdstat;
 	char cc;
@@ -356,12 +331,9 @@ readc(void)
  *	syn1
  */
 
-int *syn1(char **p1, char **p2);
-int *syn2(char **p1, char **p2);
-int *syn3(char **p1, char **p2);
-int *syntax(char **p1, char **p2);
 int *
-syntax(char **p1, char **p2)
+syntax(p1, p2)
+char **p1, **p2;
 {
 
 	while(p1 != p2) {
@@ -380,7 +352,8 @@ syntax(char **p1, char **p2)
  */
 
 int *
-syn1(char **p1, char **p2)
+syn1(p1, p2)
+char **p1, **p2;
 {
 	register char **p;
 	register int *t, *t1;
@@ -407,13 +380,13 @@ syn1(char **p1, char **p2)
 			l = **p;
 			t = tree(4);
 			t[DTYP] = TLST;
-			t[DLEF] = (int)(long)syn2(p1, p);
+			t[DLEF] = (int)syn2(p1, p);
 			t[DFLG] = 0;
 			if(l == '&') {
-				t1 = (int *)(long)t[DLEF];
+				t1 = (int *)t[DLEF];
 				t1[DFLG] |= FAND|FPRS|FINT;
 			}
-			t[DRIT] = (int)(long)syntax(p+1, p2);
+			t[DRIT] = (int)syntax(p+1, p2);
 			return(t);
 		}
 	}
@@ -430,7 +403,8 @@ syn1(char **p1, char **p2)
  */
 
 int *
-syn2(char **p1, char **p2)
+syn2(p1, p2)
+char **p1, **p2;
 {
 	register char **p;
 	register int l, *t;
@@ -452,8 +426,8 @@ syn2(char **p1, char **p2)
 		if(l == 0) {
 			t = tree(4);
 			t[DTYP] = TFIL;
-			t[DLEF] = (int)(long)syn3(p1, p);
-			t[DRIT] = (int)(long)syn2(p+1, p2);
+			t[DLEF] = (int)syn3(p1, p);
+			t[DRIT] = (int)syn2(p+1, p2);
 			t[DFLG] = 0;
 			return(t);
 		}
@@ -468,7 +442,8 @@ syn2(char **p1, char **p2)
  */
 
 int *
-syn3(char **p1, char **p2)
+syn3(p1, p2)
+char **p1, **p2;
 {
 	register char **p;
 	char **lp, **rp;
@@ -521,12 +496,12 @@ syn3(char **p1, char **p2)
 			if(c == '<') {
 				if(i != 0)
 					error++;
-				i = (int)(long)*p;
+				i = (int)*p;
 				continue;
 			}
 			if(o != 0)
 				error++;
-			o = (int)(long)*p;
+			o = (int)*p;
 		}
 		continue;
 
@@ -539,7 +514,7 @@ syn3(char **p1, char **p2)
 			error++;
 		t = tree(5);
 		t[DTYP] = TPAR;
-		t[DSPR] = (int)(long)syn1(lp, rp);
+		t[DSPR] = (int)syn1(lp, rp);
 		goto out;
 	}
 	if(n == 0)
@@ -548,7 +523,7 @@ syn3(char **p1, char **p2)
 	t = tree(n+5);
 	t[DTYP] = TCOM;
 	for(l=0; l<n; l++)
-		t[l+DCOM] = (int)(long)p1[l];
+		t[l+DCOM] = (int)p1[l];
 out:
 	t[DFLG] = flg;
 	t[DLEF] = i;
@@ -556,21 +531,23 @@ out:
 	return(t);
 }
 
-int
-scan(int *at, int (*f)())
+void
+scan(at, f)
+int *at;
+int (*f)();
 {
 	register char *p, c;
 	register int *t;
 
 	t = at+DCOM;
-	while((p = (char *)(long)*t++))
+	while((p = (char *)*t++))
 		while((c = *p))
 			*p++ = (*f)(c);
-	return(0);
 }
 
 int
-tglob(int c)
+tglob(c)
+int c;
 {
 
 	if(any(c, "[?*"))
@@ -579,14 +556,16 @@ tglob(int c)
 }
 
 int
-trim(int c)
+trim(c)
+int c;
 {
 
 	return(c&0177);
 }
 
-int
-execute(int *t, int *pf1, int *pf2)
+void
+execute(t, pf1, pf2)
+int *t, *pf1, *pf2;
 {
 	int i, f, pv[2];
 	register int *t1;
@@ -596,45 +575,45 @@ execute(int *t, int *pf1, int *pf2)
 	switch(t[DTYP]) {
 
 	case TCOM:
-		cp1 = (char *)(long)t[DCOM];
+		cp1 = (char *)t[DCOM];
 		if(equal(cp1, "chdir")) {
 			if(t[DCOM+1] != 0) {
-				if(chdir((char *)(long)t[DCOM+1]) < 0)
+				if(chdir((char *)t[DCOM+1]) < 0)
 					err("chdir: bad directory",255);
 			} else
 				err("chdir: arg count",255);
-			return(0);
+			return;
 		}
 		if(equal(cp1, "shift")) {
 			if(dolc < 1) {
 				prs("shift: no args\n");
-				return(0);
+				return;
 			}
 			dolv[1] = dolv[0];
 			dolv++;
 			dolc--;
-			return(0);
+			return;
 		}
 		if(equal(cp1, "login")) {
 			if(promp != 0) {
 				execv("/bin/login", (char **)(t+DCOM));
 			}
 			prs("login: cannot execute\n");
-			return(0);
+			return;
 		}
 		if(equal(cp1, "newgrp")) {
 			if(promp != 0) {
 				execv("/bin/newgrp", (char **)(t+DCOM));
 			}
 			prs("newgrp: cannot execute\n");
-			return(0);
+			return;
 		}
 		if(equal(cp1, "wait")) {
 			pwait(-1, 0);
-			return(0);
+			return;
 		}
 		if(equal(cp1, ":"))
-			return(0);
+			return;
 		/* fallthrough */
 
 	case TPAR:
@@ -644,7 +623,7 @@ execute(int *t, int *pf1, int *pf2)
 			i = fork();
 		if(i == -1) {
 			err("try again",255);
-			return(0);
+			return;
 		}
 		if(i != 0) {
 			if((f&FPIN) != 0) {
@@ -656,31 +635,31 @@ execute(int *t, int *pf1, int *pf2)
 				prs("\n");
 			}
 			if((f&FAND) != 0)
-				return(0);
+				return;
 			if((f&FPOU) == 0)
 				pwait(i, t);
-			return(0);
+			return;
 		}
 		if(t[DLEF] != 0) {
 			close(0);
-			i = open((char *)(long)t[DLEF], 0);
+			i = open((char *)t[DLEF], 0);
 			if(i < 0) {
-				prs((char *)(long)t[DLEF]);
+				prs((char *)t[DLEF]);
 				err(": cannot open",255);
 				exit(255);
 			}
 		}
 		if(t[DRIT] != 0) {
 			if((f&FCAT) != 0) {
-				i = open((char *)(long)t[DRIT], 1);
+				i = open((char *)t[DRIT], 1);
 				if(i >= 0) {
 					lseek(i, 0L, 2);
 					goto f1;
 				}
 			}
-			i = creat((char *)(long)t[DRIT], 0666);
+			i = creat((char *)t[DRIT], 0666);
 			if(i < 0) {
-				prs((char *)(long)t[DRIT]);
+				prs((char *)t[DRIT]);
 				err(": cannot create",255);
 				exit(255);
 			}
@@ -710,7 +689,7 @@ execute(int *t, int *pf1, int *pf2)
 			signal(QUIT, 0);
 		}
 		if(t[DTYP] == TPAR) {
-			if((t1 = (int *)(long)t[DSPR]))
+			if((t1 = (int *)t[DSPR]))
 				t1[DFLG] |= f&FINT;
 			execute(t1, 0, 0);
 			exit(255);
@@ -718,53 +697,55 @@ execute(int *t, int *pf1, int *pf2)
 		gflg = 0;
 		scan(t, tglob);
 		if(gflg) {
-			t[DSPR] = (int)(long)"/etc/glob";
-			execv((char *)(long)t[DSPR], (char **)(t+DSPR));
+			t[DSPR] = (int)"/etc/glob";
+			execv((char *)t[DSPR], (char **)(t+DSPR));
 			prs("glob: cannot execute\n");
 			exit(255);
 		}
 		scan(t, trim);
 		*linep = 0;
-		texec((char *)(long)t[DCOM], t);
+		texec((char *)t[DCOM], t);
 		cp1 = linep;
 		cp2 = "/usr/bin/";
 		while((*cp1 = *cp2++))
 			cp1++;
-		cp2 = (char *)(long)t[DCOM];
+		cp2 = (char *)t[DCOM];
 		while((*cp1++ = *cp2++));
 		texec(linep+4, t);
 		texec(linep, t);
-		prs((char *)(long)t[DCOM]);
+		prs((char *)t[DCOM]);
 		err(": not found",255);
 		exit(255);
+		/* fallthrough */
 
 	case TFIL:
 		f = t[DFLG];
 		pipe(pv);
-		t1 = (int *)(long)t[DLEF];
+		t1 = (int *)t[DLEF];
 		t1[DFLG] |= FPOU | (f&(FPIN|FINT|FPRS));
 		execute(t1, pf1, pv);
-		t1 = (int *)(long)t[DRIT];
+		t1 = (int *)t[DRIT];
 		t1[DFLG] |= FPIN | (f&(FPOU|FINT|FAND|FPRS));
 		execute(t1, pv, pf2);
-		return(0);
+		return;
 
 	case TLST:
 		f = t[DFLG]&FINT;
-		if((t1 = (int *)(long)t[DLEF]))
+		if((t1 = (int *)t[DLEF]))
 			t1[DFLG] |= f;
 		execute(t1, 0, 0);
-		if((t1 = (int *)(long)t[DRIT]))
+		if((t1 = (int *)t[DRIT]))
 			t1[DFLG] |= f;
 		execute(t1, 0, 0);
-		return(0);
+		return;
 
 	}
-	return(0);
 }
 
-int
-texec(char *f, int *at)
+void
+texec(f, at)
+int	f;
+int *at;
 {
 	extern int errno;
 	register int *t;
@@ -773,22 +754,23 @@ texec(char *f, int *at)
 	execv(f, (char **)(t+DCOM));
 	if (errno==ENOEXEC) {
 		if (*linep)
-			t[DCOM] = (int)(long)linep;
-		t[DSPR] = (int)(long)"/usr/bin/osh";
-		execv((char *)(long)t[DSPR], (char **)(t+DSPR));
+			t[DCOM] = (int)linep;
+		t[DSPR] = (int)"/usr/bin/osh";
+		execv((char *)t[DSPR], (char **)(t+DSPR));
 		prs("No shell!\n");
 		exit(255);
 	}
 	if (errno==ENOMEM) {
-		prs((char *)(long)t[DCOM]);
+		prs((char *)t[DCOM]);
 		err(": too large",255);
 		exit(255);
 	}
-	return(0);
 }
 
-int
-err(char *s, int exitno)
+void
+err(s, exitno)
+char *s;
+int exitno;
 {
 
 	prs(s);
@@ -797,43 +779,44 @@ err(char *s, int exitno)
 		lseek(0, 0L, 2);
 		exit(exitno);
 	}
-	return(0);
 }
 
-int
-prs(char *as)
+void
+prs(as)
+char *as;
 {
 	register char *s;
 
 	s = as;
 	while(*s)
 		putc(*s++);
-	return(0);
 }
 
-int
-putc(int c)
+void
+putc(c)
+int	c;
 {
 	char cc;
 
 	cc = c;
 	write(2, &cc, 1);
-	return(0);
 }
 
-int
-prn(int n)
+void
+prn(n)
+int n;
 {
 	register int a;
 
 	if ((a = n/10))
 		prn(a);
 	putc(n%10 + '0');
-	return(0);
 }
 
 int
-any(int c, char *as)
+any(c, as)
+int c;
+char *as;
 {
 	register char *s;
 
@@ -845,7 +828,8 @@ any(int c, char *as)
 }
 
 int
-equal(char *as1, char *as2)
+equal(as1, as2)
+char *as1, *as2;
 {
 	register char *s1, *s2;
 
@@ -857,8 +841,9 @@ equal(char *as1, char *as2)
 	return(0);
 }
 
-int
-pwait(int i, int *t)
+void
+pwait(i, t)
+int i, *t;
 {
 	register int p, e;
 	int s;
@@ -888,5 +873,4 @@ pwait(int i, int *t)
 			err("", (s>>8)|e );
 		errval |= (s>>8);
 	}
-	return(0);
 }
