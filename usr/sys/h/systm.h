@@ -64,9 +64,9 @@ struct file *falloc();
 int	uchar();
 void	acct(), addupc(), arm_sureg(), arm_sync_icache(), bawrite(),
 	bcopy(), bdinit(), bdwrite(), bflush(), binit(), brelse(), bwrite(),
-	chdirec(), cinit(), clearseg(), clkstart(), clock(), clock_ddr_init(), closef(),
-	clrbuf(), cninit(), cntv_ctl_set(), cntv_tval_set(), copyseg(),
-	deverror(), exece(), exit(), expand(), flushtty(), free(),
+	chdirec(), cinit(), clearseg(), clkstart(), clock(), clock_ddr_init(),
+	closef(), clrbuf(), cninit(), cntv_ctl_set(), cntv_tval_set(),
+	copyseg(), deverror(), exece(), exit(), expand(), flushtty(), free(),
 	geterror(), idle(), iexpand(), ifree(), iinit(), install_sigtramp(),
 	ioctl(), iodone(), iomove(), iowait(), iput(), itrunc(), iupdat(),
 	mapfree(), mfree(), mmu_on(), notavail(), open1(), openi(), panic(),
@@ -75,16 +75,16 @@ void	acct(), addupc(), arm_sureg(), arm_sync_icache(), bawrite(),
 	sched(), sendsig(), setregs(), setrun(), signal(), sleep(), startup(),
 	stat1(), sureg(), swap(), swtch(), timeout(), tloop(), ttstart(),
 	ttyblock(), ttychars(), ttyclose(), ttyinput(), ttyopen(), ttyoutput(),
-	update(), wakeup(), wdir(), wflushtty(), writei(), writep(), xccdec(),
-	xalloc(), xexpand(), xfree(), xlock(), xrele(), xswap(), xumount(),
+	update(), wakeup(), wdir(), wflushtty(), writei(), writep(), xalloc(),
+	xccdec(), xexpand(), xfree(), xlock(), xrele(), xswap(), xumount(),
 	xunlock(), xuntext();
 int	access(), b_to_q(), badblock(), cntfrq_get(), compress(), copyin(),
-	dfar(), dfsr(),
-	copyout(), core(), cpass(), estabur(), fsig(), fubyte(), fumem(),
-	fuword(), getc(), getxfile(), incore(), issig(), malloc(), max(),
-	min(), newproc(), passc(), procxmt(), putc(), save(), setpri(), spl0(),
-	spl1(), spl5(), spl6(), spl7(), splx(), subyte(), sumem(), suser(),
-	suword(), swapin(), ttioccomm(), ttread(), ttrstrt(), ufalloc();
+	copyout(), core(), cpass(), dfar(), dfsr(), estabur(), fsig(),
+	fubyte(), fumem(), fuword(), getc(), getxfile(), incore(), issig(),
+	malloc(), max(), min(), newproc(), passc(), procxmt(), putc(), save(),
+	setpri(), spl0(), spl1(), spl5(), spl6(), spl7(), splx(), subyte(),
+	sumem(), suser(), suword(), swapin(), ttioccomm(), ttread(), ttrstrt(),
+	ufalloc();
 caddr_t	ttwrite();
 void	printf(char *, ...);
 #define	fuibyte	fubyte
