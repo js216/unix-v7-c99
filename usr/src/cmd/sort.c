@@ -22,9 +22,9 @@ unsigned	nlines;
 unsigned	ntext;
 int	*lspace;
 char	*tspace;
-int	cmp(), cmpa();
-int	(*compare)() = cmpa;
-char	*eol();
+int	cmp(char *i, char *j), cmpa(char *pa, char *pb);
+int	(*compare)(char *a, char *b) = cmpa;
+char	*eol(char *p);
 int 	mflg;
 int	cflg;
 int	uflg;
@@ -163,16 +163,17 @@ struct field proto = {
 };
 int	nfields;
 int 	error = 1;
-char	*setfil();
-char	*sbrk();
-char	*brk();
-void	copyproto(), field(), diag(), safeoutfil(), sort(), newfile(), merge(), oldfile(), disorder(), cant(), term(), qsort();
-int	rline(), blank(), number();
+char	*setfil(int i);
+char	*brk(char *addr);
+void	copyproto(void), field(char *s, int k), diag(char *s, char *t);
+void	safeoutfil(void), sort(void), newfile(void), merge(int a, int b);
+void	oldfile(void), disorder(char *s, char *t), cant(char *f), term(int sig);
+void	qsort(char **a, char **l);
+int	blank(int c), number(char **ppa);
+char	*skip(char *pp, struct field *fp, int j);
 
 int
-main(argc, argv)
-int	argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int a;
 	extern char end[1];
@@ -286,11 +287,11 @@ char **argv;
 		merge(a, nfiles);
 	}
 	error = 0;
-	term();
+	term(0);
 }
 
 void
-sort()
+sort(void)
 {
 	register char *cp;
 	register char **lp;
@@ -352,10 +353,10 @@ struct merg
 	char	l[L];
 	FILE	*b;
 } *ibuf[256];
+int	rline(struct merg *mp);
 
 void
-merge(a,b)
-int	a, b;
+merge(int a, int b)
 {
 	struct	merg	*p;
 	register char	*cp, *dp;
@@ -450,8 +451,7 @@ int	a, b;
 }
 
 int
-rline(mp)
-struct merg *mp;
+rline(struct merg *mp)
 {
 	register char *cp;
 	register char *ce;
@@ -473,32 +473,30 @@ struct merg *mp;
 }
 
 void
-disorder(s,t)
-char *s, *t;
+disorder(char *s, char *t)
 {
 	register char *u;
 	for(u=t; *u!='\n';u++) ;
 	*u = 0;
 	diag(s,t);
-	term();
+	term(0);
 }
 
 void
-newfile()
+newfile(void)
 {
 	register char *f;
 
 	f = setfil(nfiles);
 	if((os=fopen(f, "w")) == NULL) {
 		diag("can't create ",f);
-		term();
+		term(0);
 	}
 	nfiles++;
 }
 
 char *
-setfil(i)
-int	i;
+setfil(int i)
 {
 
 	if(i < eargc) {
@@ -514,20 +512,20 @@ int	i;
 }
 
 void
-oldfile()
+oldfile(void)
 {
 
 	if(outfil) {
 		if((os=fopen(outfil, "w")) == NULL) {
 			diag("can't create ",outfil);
-			term();
+			term(0);
 		}
 	} else
 		os = stdout;
 }
 
 void
-safeoutfil()
+safeoutfil(void)
 {
 	register int i;
 	struct stat obuf,ibuf;
@@ -546,17 +544,15 @@ safeoutfil()
 }
 
 void
-cant(f)
-char *f;
+cant(char *f)
 {
 
 	diag("can't open ",f);
-	term();
+	term(0);
 }
 
 void
-diag(s,t)
-char *s, *t;
+diag(char *s, char *t)
 {
 	fputs("sort: ",stderr);
 	fputs(s,stderr);
@@ -565,9 +561,10 @@ char *s, *t;
 }
 
 void
-term()
+term(int sig)
 {
 	register int i;
+	(void)sig;
 
 	signal(SIGINT, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
@@ -581,11 +578,9 @@ term()
 }
 
 int
-cmp(i, j)
-char *i, *j;
+cmp(char *i, char *j)
 {
 	register char *pa, *pb;
-	char *skip();
 	char *code, *ignore;
 	int a, b;
 	int k;
@@ -679,8 +674,7 @@ loop:
 }
 
 int
-cmpa(pa, pb)
-register char *pa, *pb;
+cmpa(register char *pa, register char *pb)
 {
 	while(*pa == *pb) {
 		if(*pa++ == '\n')
@@ -696,10 +690,7 @@ register char *pa, *pb;
 }
 
 char *
-skip(pp, fp, j)
-struct field *fp;
-char *pp;
-int	j;
+skip(char *pp, struct field *fp, int j)
 {
 	register int i;
 	register char *p;
@@ -737,15 +728,14 @@ ret:
 }
 
 char *
-eol(p)
-register char *p;
+eol(register char *p)
 {
 	while(*p != '\n') p++;
 	return(p);
 }
 
 void
-copyproto()
+copyproto(void)
 {
 	register int i;
 	register int *p, *q;
@@ -757,9 +747,7 @@ copyproto()
 }
 
 void
-field(s,k)
-int	k;
-char *s;
+field(char *s, int k)
 {
 	register struct field *p;
 	register int d;
@@ -822,8 +810,7 @@ char *s;
 }
 
 int
-number(ppa)
-char **ppa;
+number(char **ppa)
 {
 	int n;
 	register char *pa;
@@ -837,8 +824,7 @@ char **ppa;
 }
 
 int
-blank(c)
-int	c;
+blank(int c)
 {
 	if(c==' ' || c=='\t')
 		return(1);
@@ -849,8 +835,7 @@ int	c;
 #define qstexc(p,q,r) t= *p;*p= *r;*r= *q;*q=t
 
 void
-qsort(a,l)
-char **a, **l;
+qsort(char **a, char **l)
 {
 	register char **i, **j;
 	char **k;
