@@ -123,7 +123,7 @@ irq_entry:
 	str r3, [sp, #52]
 	str r4, [sp, #56]
 	mov r0, sp
-	bl clock_irq_handler
+	bl irq
 	ldr r0, [sp, #64]		@ back to user mode with runrun set:
 	and r0, r0, #0x1f		@ give up the cpu (v7's trap 12)
 	cmp r0, #0x10

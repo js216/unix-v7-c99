@@ -134,11 +134,8 @@ user_trap_handler(int signo, int *r)
 {
 	int mode = r[RPS] & 0x1f;
 	if(mode != 0x10 && mode != 0x1f) {
-		unsigned int dfar, dfsr;
-		__asm__ volatile("mrc p15,0,%0,c6,c0,0":"=r"(dfar));
-		__asm__ volatile("mrc p15,0,%0,c5,c0,0":"=r"(dfsr));
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
-		    signo, r[15], r[RPS], dfar, dfsr);
+		    signo, r[15], r[RPS], dfar(), dfsr());
 		panic("kernel trap");
 	}
 	u.u_fpsaved = 0;

@@ -16,7 +16,15 @@
 	.globl save
 	.globl resume
 	.globl dcflush
-	.globl dcclean
+	.globl arm_sync_icache
+	.globl idle
+	.globl waitloc
+	.globl savfp
+	.globl dfar
+	.globl dfsr
+	.globl l1
+	.globl user_l2
+	.globl uarea_l2
 
 mmu_on:
 	push {r4, r5, r6, r7, r8, r9}
@@ -164,8 +172,13 @@ dcflush:
 	bx	lr
 	.size	dcflush, .-dcflush
 
-	.type	dcclean, %function
-dcclean:
+	.type	arm_sync_icache, %function
+arm_sync_icache:
+	mov	r0, #0
+	dsb	ish
+	mcr	p15, 0, r0, c8, c7, 0	@ TLBIALL
+	dsb	ish
+	isb
 	push	{r4, r5, r6, r7}
 	mov	r0, #0
 	mcr	p15, 2, r0, c0, c0, 0	@ CSSELR = 0 (L1 data)
@@ -189,6 +202,40 @@ dcclean:
 	bge	1b
 	dsb
 	pop	{r4, r5, r6, r7}
+	mov	r0, #0
+	dsb	ish
+	mcr	p15, 0, r0, c7, c5, 0	@ ICIALLU
+	mcr	p15, 0, r0, c7, c5, 6	@ BPIALL
+	dsb	ish
+	isb
 	bx	lr
-	.size	dcclean, .-dcclean
+	.size	arm_sync_icache, .-arm_sync_icache
+
+idle:
+	cpsie	i
+	wfi
+1:	cpsid	i
+savfp:
+	bx	lr
+
+dfar:
+	mrc	p15, 0, r0, c6, c0, 0
+	bx	lr
+
+dfsr:
+	mrc	p15, 0, r0, c5, c0, 0
+	bx	lr
 	.ltorg
+
+	.data
+waitloc:
+	.word	1b
+
+	.section .ddrbss,"aw",%nobits
+	.balign	16384
+l1:
+	.space	16384
+user_l2:
+	.space	1024
+uarea_l2:
+	.space	1024

@@ -439,7 +439,6 @@ char	*stre[] =
 	"int	nulldev();",
 	"int	nodev();",
 	"#include \"../h/seg.h\"",
-	"#define	DDRBSS	__attribute__((section(KTABLES_SECTION)))",
 	0
 };
 
@@ -481,15 +480,15 @@ int	nswap	= %d;\n\
 char	strg1[] =
 {
 "	\n\
-struct	buf	buf[NBUF] DDRBSS;\n\
-struct	file	file[NFILE] DDRBSS;\n\
-struct	inode	inode[NINODE] DDRBSS;\n"
+struct	buf	buf[NBUF];\n\
+struct	file	file[NFILE];\n\
+struct	inode	inode[NINODE];\n"
 };
 
 char	strg2[] =
 {
-"struct	proc	proc[NPROC] DDRBSS;\n\
-struct	text	text[NTEXT] DDRBSS;\n\
+"struct	proc	proc[NPROC];\n\
+struct	text	text[NTEXT];\n\
 struct	buf	bfreelist;\n\
 struct	acct	acctbuf;\n\
 struct	inode	*acctp;\n"

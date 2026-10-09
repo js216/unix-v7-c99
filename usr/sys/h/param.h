@@ -143,11 +143,4 @@ typedef	long		off_t;
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
 
-extern unsigned int kernbase, corebase, coretop, pguser, gicdbase, giccbase;
-#define	KERNBASE	kernbase
-#define	COREBASE	corebase
-#define	CORETOP		coretop
-#define	PG_USER		pguser
-#define	GIC_DIST_BASE	gicdbase
-#define	GIC_CPU_BASE	giccbase
-#define	KTABLES_SECTION	".ddrbss"
+extern unsigned kernbase, corebase, coretop, pguser, gicdbase, giccbase;

@@ -119,7 +119,7 @@ iinit()
  * I/O to be done-- e.g. swbuf for
  * swapping.
  */
-char	buffers[NBUF][(BSIZE+BSLOP+3)&~3] __attribute__((aligned(4), section(KTABLES_SECTION)));
+char	buffers[NBUF][(BSIZE+BSLOP+3)&~3];
 
 /*
  * Initialize the buffer I/O system by freeing

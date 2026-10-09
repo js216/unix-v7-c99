@@ -186,21 +186,6 @@ int	tim;
 	p1->c_arg = arg;
 	splx(s);
 }
-#define GICD_BASE	GIC_DIST_BASE
-#define GICC_BASE	GIC_CPU_BASE
-#define GICD_CTLR	(*(volatile unsigned int *)(GICD_BASE + 0x000))
-#define GICD_ISENABLER(n) (*(volatile unsigned int *)(GICD_BASE + 0x100 + 4*(n)))
-#define GICD_IPRIORITYR(n) (*(volatile unsigned int *)(GICD_BASE + 0x400 + 4*(n)))
-#define GICC_CTLR	(*(volatile unsigned int *)(GICC_BASE + 0x000))
-#define GICC_PMR	(*(volatile unsigned int *)(GICC_BASE + 0x004))
-#define GICC_IAR	(*(volatile unsigned int *)(GICC_BASE + 0x00c))
-#define GICC_EOIR	(*(volatile unsigned int *)(GICC_BASE + 0x010))
-#define TIMER_IRQ	27
-#define TIMER_HZ	HZ
-extern struct intr intrtab[];
-static unsigned int timer_reload;
-int irq_ready;
-caddr_t waitloc;	/* pc of the idle wait, for cpu-time accounting */
 void
 addupc(pc, p, t)
 caddr_t pc;
@@ -219,50 +204,4 @@ int t;
 	}
 	c += t;
 	copyout((caddr_t)&c, (caddr_t)p[0]+i, 2);
-}
-void
-clock_irq_handler(int *tf)
-{
-	unsigned int iar = GICC_IAR;
-	unsigned int intid = iar & 0x3ff;
-	if(intid == 1023) return;
-	if(intid == TIMER_IRQ) {
-		int mode = tf[16] & 0x1f;
-		int usermode = (mode == 0x10) || (mode == 0x1f);
-		cntv_tval_set(timer_reload);
-		if(u.u_procp != NULL)
-			clock(0, 0, 0, 0, 0, (caddr_t)tf[15],
-			    usermode ? 0xf000 : 0);
-	} else {
-		register struct intr *ip;
-		for(ip = intrtab; ip->i_irq; ip++)
-			if(*ip->i_irq && intid == (unsigned int)*ip->i_irq)
-				(*ip->i_fn)();
-	}
-	GICC_EOIR = iar;
-}
-static void
-gicen(int irq)
-{
-	unsigned int r = irq / 4, o = (irq % 4) * 8;
-	GICD_IPRIORITYR(r) = (GICD_IPRIORITYR(r) & ~(0xffU << o)) | (0x80U << o);
-	GICD_ISENABLER(irq / 32) = 1U << (irq % 32);
-}
-void
-clkstart()
-{
-	register struct intr *ip;
-	if((timer_reload = cntfrq_get() / TIMER_HZ) == 0)
-		panic("no clock");
-	gicen(TIMER_IRQ);
-	for(ip = intrtab; ip->i_irq; ip++)
-		if(*ip->i_irq)
-			gicen(*ip->i_irq);
-	GICD_CTLR = 1;
-	GICC_PMR  = 0xff;
-	GICC_CTLR = 1;
-	cntv_tval_set(timer_reload);
-	cntv_ctl_set(1);
-	irq_ready = 1;
-	spl0();
 }
