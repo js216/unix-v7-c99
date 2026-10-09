@@ -11,6 +11,33 @@
 #include "../h/conf.h"
 #include "../h/buf.h"
 void	iinit(void), binit(void);
+char	canonb[CANBSIZ];
+struct inode *rootdir;
+struct proc *runq;
+int	cputype;
+int	lbolt;
+time_t	time;
+int	nblkdev;
+int	nchrdev;
+int	mpid;
+char	runin;
+char	runout;
+char	runrun;
+char	curpri;
+int	maxmem;
+int	updlock;
+daddr_t	rablock;
+char	msgbuf[MSGBUFS];
+int	dk_busy;
+long	dk_time[32];
+long	dk_numb[3];
+long	dk_wds[3];
+long	tk_nin;
+long	tk_nout;
+struct map coremap[CMAPSIZ];
+struct map swapmap[SMAPSIZ];
+struct mount mount[NMOUNT];
+struct inode *mpxip;
 
 /*
  * Initialization code.

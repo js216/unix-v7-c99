@@ -3,7 +3,7 @@
  * One allocated on every mount.
  * Used to find the super block.
  */
-struct	mount
+extern struct	mount
 {
 	dev_t	m_dev;		/* device mounted */
 	struct buf *m_bufp;	/* pointer to superblock */
