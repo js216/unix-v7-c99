@@ -16,7 +16,7 @@ _filbuf(register FILE *iop)
 tryagain:
 	if (iop->_base == NULL) {
 		if (iop->_flag & _IONBF) {
-			iop->_base = &smallbuf[(unsigned char)fileno(iop)];
+			iop->_base = &smallbuf[fileno(iop)&0377];
 			goto tryagain;
 		}
 		if ((iop->_base = malloc(BUFSIZ)) == NULL) {
