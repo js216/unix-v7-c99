@@ -5,5 +5,4 @@ void
 abort(void)
 {
 	kill(getpid(), SIGIOT);
-	_exit(1);
 }
