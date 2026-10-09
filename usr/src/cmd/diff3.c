@@ -42,12 +42,16 @@ int last[4];
 int eflag;
 int debug  = 0;
 
-int readin(), number(), digit(), getchange(), getline(), skip(), duplicate(), edit();
-void merge(), separate(), change(), prange(), keep(), repos(), trouble(), edscript();
+int readin(char *name, struct diff *dd), number(char **lc), digit(int c);
+int getchange(FILE *b), getline(FILE *b), skip(int i, int from, char *pr);
+int duplicate(struct range *r1, struct range *r2);
+int edit(struct diff *diff, int dup, int j);
+void merge(int m1, int m2), separate(char *s), prange(struct range *rold);
+void change(int i, struct range *rold, int dup), repos(int nchar);
+void keep(int i, struct range *rold, struct range *rnew);
+void trouble(void), edscript(int n);
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	register int i,m,n;
 	if(*argv[1]=='-') {
@@ -87,9 +91,7 @@ char **argv;
 */
 
 int
-readin(name,dd)
-char *name;
-struct diff *dd;
+readin(char *name, struct diff *dd)
 {
 	register int i;
 	int a,b,c,d;
@@ -131,8 +133,7 @@ struct diff *dd;
 }
 
 int
-number(lc)
-char **lc;
+number(char **lc)
 {
 	register int nn;
 	nn = 0;
@@ -142,15 +143,13 @@ char **lc;
 }
 
 int
-digit(c)
-int c;
+digit(int c)
 {
 	return(c>='0'&&c<='9');
 }
 
 int
-getchange(b)
-FILE *b;
+getchange(FILE *b)
 {
 	while(getline(b))
 		if(digit(line[0]))
@@ -159,8 +158,7 @@ FILE *b;
 }
 
 int
-getline(b)
-FILE *b;
+getline(FILE *b)
 {
 	register int i, c;
 	for(i=0;i<(int)sizeof(line)-1;i++) {
@@ -177,8 +175,7 @@ FILE *b;
 }
 
 void
-merge(m1,m2)
-int m1, m2;
+merge(int m1, int m2)
 {
 	register struct diff *d1, *d2, *d3;
 	int dup;
@@ -278,8 +275,7 @@ int m1, m2;
 }
 
 void
-separate(s)
-char *s;
+separate(char *s)
 {
 	printf("====%s\n",s);
 }
@@ -289,9 +285,7 @@ char *s;
  *	it does not duplicate something to be printed later
 */
 void
-change(i,rold,dup)
-int i, dup;
-struct range *rold;
+change(int i, struct range *rold, int dup)
 {
 	printf("%d:",i);
 	last[i] = rold->to;
@@ -309,8 +303,7 @@ struct range *rold;
  *	as n1,n2 or n1
 */
 void
-prange(rold)
-struct range *rold;
+prange(struct range *rold)
 {
 	if(rold->to<=rold->from)
 		printf("%da\n",rold->from-1);
@@ -328,9 +321,7 @@ struct range *rold;
  *	in the other file
 */
 void
-keep(i,rold,rnew)
-int i;
-struct range *rold, *rnew;
+keep(int i, struct range *rold, struct range *rnew)
 {
 	register int delta;
 	(void)rold;
@@ -346,9 +337,7 @@ struct range *rold, *rnew;
  * w	with string pr as a prefix
 */
 int
-skip(i,from,pr)
-int i, from;
-char *pr;
+skip(int i, int from, char *pr)
 {
 	register int j,n;
 	for(n=0;cline[i]<from-1;n+=j) {
@@ -366,8 +355,7 @@ char *pr;
  *	as the new range (in file 2)
 */
 int
-duplicate(r1,r2)
-struct range *r1, *r2;
+duplicate(struct range *r1, struct range *r2)
 {
 	register int c,d;
 	register int nchar;
@@ -395,8 +383,7 @@ struct range *r1, *r2;
 }
 
 void
-repos(nchar)
-int nchar;
+repos(int nchar)
 {
 	register int i;
 	for(i=0;i<2;i++) 
@@ -404,7 +391,7 @@ int nchar;
 }
 
 void
-trouble()
+trouble(void)
 {
 	fprintf(stderr,"diff3: logic error\n");
 	abort();
@@ -413,9 +400,7 @@ trouble()
 /*	collect an editing script for later regurgitation
 */
 int
-edit(diff,dup,j)
-int dup, j;
-struct diff *diff;
+edit(struct diff *diff, int dup, int j)
 {
 	if(((dup+1)&eflag)==0)
 		return(j);
@@ -431,8 +416,7 @@ struct diff *diff;
 
 /*		regurgitate */
 void
-edscript(n)
-int n;
+edscript(int n)
 {
 	register int j,k;
 	char block[512];

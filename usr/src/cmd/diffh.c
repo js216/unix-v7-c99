@@ -15,16 +15,15 @@ long n0,n1;		/*scan pointer in each*/
 int bflag;
 int debug = 0;
 FILE *file[2];
-int	hardsynch(), easysynch(), output(), cmp();
-void	progerr(), movstr(), error(), change(), range();
+int	hardsynch(void), easysynch(void), output(int a, int b), cmp(char *s, char *t);
+void	progerr(char *s), movstr(char *s, char *t), error(char *s, char *t);
+void	change(long a, int b, long c, int d, char *s), range(long a, int b);
+FILE	*dopen(char *f1, char *f2);
 
 	/* return pointer to line n of file f*/
-char *getl(f,n)
-int f;
-long n;
+static char *getl(int f, long n)
 {
 	register char *t;
-	char *malloc();
 	register int delta, nt;
 again:
 	delta = n - lineno[f];
@@ -56,10 +55,8 @@ again:
 }
 
 	/*remove thru line n of file f from storage*/
-void
-clrl(f,n)
-int f;
-long n;
+static void
+clrl(int f, long n)
 {
 	register int i,j;
 	j = n-lineno[f]+1;
@@ -70,20 +67,16 @@ long n;
 }
 
 void
-movstr(s,t)
-register char *s, *t;
+movstr(register char *s, register char *t)
 {
 	while((*t++= *s++))
 		continue;
 }
 
 int
-main(argc,argv)
-int argc;
-char **argv;
+main(int argc, char **argv)
 {
 	char *s0,*s1;
-	FILE *dopen();
 	if(*argv[1]=='-') {
 		argc--;
 		argv++;
@@ -118,7 +111,7 @@ char **argv;
 
 	/* synch on C successive matches*/
 int
-easysynch()
+easysynch(void)
 {
 	int i,j;
 	register int k,m;
@@ -151,8 +144,7 @@ cont2:			;
 }
 
 int
-output(a,b)
-int a, b;
+output(int a, int b)
 {
 	register int i;
 	char *s;
@@ -184,10 +176,7 @@ int a, b;
 }
 
 void
-change(a,b,c,d,s)
-int b, d;
-long a,c;
-char *s;
+change(long a, int b, long c, int d, char *s)
 {
 	range(a,b);
 	printf("%s",s);
@@ -196,9 +185,7 @@ char *s;
 }
 
 void
-range(a,b)
-int b;
-long a;
+range(long a, int b)
 {
 	if(b==INF)
 		printf("%ld,$",a);
@@ -209,8 +196,7 @@ long a;
 }
 
 int
-cmp(s,t)
-char *s,*t;
+cmp(char *s, char *t)
 {
 	if(debug)
 		printf("%s:%s\n",s,t);
@@ -227,8 +213,7 @@ char *s,*t;
 	return(*s-*t);
 }
 
-FILE *dopen(f1,f2)
-char *f1,*f2;
+FILE *dopen(char *f1, char *f2)
 {
 	FILE *f;
 	char b[100],*bptr,*eptr;
@@ -258,15 +243,13 @@ char *f1,*f2;
 
 
 void
-progerr(s)
-char *s;
+progerr(char *s)
 {
 	error("program error ",s);
 }
 
 void
-error(s,t)
-char *s,*t;
+error(char *s, char *t)
 {
 	fprintf(stderr,"diffh: %s%s\n",s,t);
 	exit(1);
@@ -274,7 +257,7 @@ char *s,*t;
 
 	/*stub for resychronization beyond limits of text buf*/
 int
-hardsynch()
+hardsynch(void)
 {
 	change(n0,INF,n1,INF,"c");
 	printf("---change record omitted\n");
