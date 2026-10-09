@@ -13,9 +13,9 @@ char *fillst[] = {
 	0,
 };
 
-void dosync();
+void dosync(int sig);
 int
-main()
+main(void)
 {
 	char **f;
 
@@ -26,14 +26,15 @@ main()
 	close(2);
 	for(f = fillst; *f; f++)
 		open(*f, 0);
-	dosync();
+	dosync(0);
 	for(;;)
 		pause();
 }
 
 void
-dosync()
+dosync(int sig)
 {
+	(void)sig;
 	sync();
 	signal(SIGALRM, dosync);
 	alarm(30);
