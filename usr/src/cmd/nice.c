@@ -2,12 +2,14 @@
 
 #include <stdio.h>
 
-extern char *sys_errlist[];
 int
-main(int argc, char *argv[])
+main(argc, argv)
+int argc;
+char *argv[];
 {
 	int nicarg = 10;
 	extern int errno;
+	extern char *sys_errlist[];
 
 	if(argc > 1 && argv[1][0] == '-') {
 		nicarg = atoi(&argv[1][1]);
