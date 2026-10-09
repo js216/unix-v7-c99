@@ -107,10 +107,6 @@ resume:
 	str r3, [r2, #0]
 	add r3, r3, #0x1000
 	str r3, [r2, #4]
-	add r3, r3, #0x1000
-	str r3, [r2, #8]
-	add r3, r3, #0x1000
-	str r3, [r2, #12]
 	dsb ish
 	mov r3, #0
 	mcr p15, 0, r3, c8, c7, 0
