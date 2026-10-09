@@ -19,19 +19,16 @@ struct
 } oh;
 
 char	*tmp;
-char	*mktemp();
 int	f;
 int	tf;
-void	conv();
+void	conv(char *fil);
 union {
 	char	buf[512];
 	int	magic;
 } b;
 
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int i;
 
@@ -44,8 +41,7 @@ char *argv[];
 }
 
 void
-conv(fil)
-char *fil;
+conv(char *fil)
 {
 	register unsigned i, n;
 
