@@ -50,10 +50,10 @@ struct blk {
 	char	*last;
 };
 struct	blk *hfree;
-struct	blk *getwd();
-struct	blk *lookwd();
-struct	blk *getdec();
-struct	blk *morehd();
+struct	blk *getwd(struct blk *p);
+struct	blk *lookwd(struct blk *p);
+struct	blk *getdec(struct blk *p, int sc);
+struct	blk *morehd(void);
 
 struct	blk *arg1, *arg2;
 int	svargc;
@@ -75,14 +75,16 @@ struct	blk *rem;
 int	k;
 struct	blk *irem;
 int	skd,skr;
-struct	blk *pop(),*readin(),*add0(),*mult();
-struct	blk *scalint();
-struct	blk *removc();
-struct	blk *add(),*div(),*removr();
-struct	blk *exp();
-struct	blk *sqrt();
-struct	blk *salloc(),*copy();
-struct	blk *scale();
+struct	blk *pop(void),*readin(void),*add0(struct blk *p, int ct),
+	*mult(struct blk *p, struct blk *q);
+struct	blk *scalint(struct blk *p);
+struct	blk *removc(struct blk *p, int n);
+struct	blk *add(struct blk *a1, struct blk *a2),
+	*div(struct blk *ddivd, struct blk *ddivr),*removr(struct blk *p, int n);
+struct	blk *exp(struct blk *base, struct blk *ex);
+struct	blk *sqrt(struct blk *p);
+struct	blk *salloc(int size),*copy(struct blk *hptr, int size);
+struct	blk *scale(struct blk *p, int n);
 int	neg;
 struct	sym {
 	struct	sym *next;
@@ -103,14 +105,12 @@ long	all;
 long	headmor;
 long	obase;
 int	fw,fw1,ll;
-void	(*outdit)();
-void	bigot(),hexot();
+void	(*outdit)(struct blk *p, int flg);
+void	bigot(struct blk *p, int flg),hexot(struct blk *p, int flg);
 int	logo;
 int	log10;
 int	count;
 char	*pp;
-void	onintr();
-char	*malloc();
-char	*nalloc();
-char	*realloc();
+void	onintr(int sig);
+char	*nalloc(char *p, unsigned nbytes);
 char	*dummy;

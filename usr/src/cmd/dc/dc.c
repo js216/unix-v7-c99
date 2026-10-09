@@ -1,20 +1,24 @@
 #include <stdio.h>
 #include <signal.h>
 #include "dc.h"
-void init(), commnds(), unreadc(), pushp(), sdump(), chsign(), binop(),
-    release(), print(), load(), seekc(), salterwd(), putwd(), more(),
-    garbage(), ospace(), redef(), tenot(), oneot();
-int readc(), subt(), eqk(), dscale(), log2(), command(), cond();
+void init(int argc, char *argv[]), commnds(void), unreadc(char c),
+    pushp(struct blk *p), sdump(char *s1, struct blk *hptr),
+    chsign(struct blk *p), binop(char c), release(struct blk *p),
+    print(struct blk *hptr), load(void), seekc(struct blk *hptr, int n),
+    salterwd(struct wblk *hptr, struct blk *n), putwd(struct blk *p, struct blk *c),
+    more(struct blk *hptr), garbage(char *s), ospace(char *s),
+    redef(struct blk *p), tenot(struct blk *p, int sc),
+    oneot(struct blk *p, int sc, char ch);
+int readc(void), subt(void), eqk(void), dscale(void), log2(long n),
+    command(void), cond(char c);
 int
-main(argc,argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	init(argc,argv);
 	commnds();
 }
 void
-commnds(){
+commnds(void){
 	register int c;
 	register struct blk *p,*q;
 	long l;
@@ -491,7 +495,7 @@ sempty:
 			if (q!=NULL) release(q);
 			s = pop();
 			EMPTY;
-			salterwd(p,s);
+			salterwd((struct wblk *)p,s);
 			sptr->val = p;
 			continue;
 		case ';':
@@ -580,8 +584,7 @@ execute:
 	}
 }
 struct blk *
-div(ddivd,ddivr)
-struct blk *ddivd,*ddivr;
+div(struct blk *ddivd, struct blk *ddivr)
 {
 	int divsign,remsign,offset,divcarry;
 	int carry, dig,magic,d,dd;
@@ -701,7 +704,7 @@ ddone:
 	return(p);
 }
 int
-dscale(){
+dscale(void){
 	register struct blk *dd,*dr;
 	register struct blk *r;
 	int c;
@@ -731,9 +734,7 @@ dscale(){
 	return(0);
 }
 struct blk *
-removr(p,n)
-struct blk *p;
-int n;
+removr(struct blk *p, int n)
 {
 	int nn;
 	register struct blk *q,*s,*r;
@@ -761,8 +762,7 @@ int n;
 	return(r);
 }
 struct blk *
-sqrt(p)
-struct blk *p;
+sqrt(struct blk *p)
 {
 	struct blk *t;
 	struct blk *r,*q,*s;
@@ -812,8 +812,7 @@ struct blk *p;
 	return(r);
 }
 struct blk *
-exp(base,ex)
-struct blk *base,*ex;
+exp(struct blk *base, struct blk *ex)
 {
 	register struct blk *r,*e,*p;
 	struct blk *e1,*t,*cp;
@@ -867,9 +866,7 @@ edone:
 	return(r);
 }
 void
-init(argc,argv)
-int argc;
-char *argv[];
+init(int argc, char *argv[])
 {
 	register struct sym *sp;
 
@@ -927,7 +924,8 @@ char *argv[];
 	return;
 }
 void
-onintr(){
+onintr(int sig){
+	(void)sig;
 
 	signal(SIGINT,onintr);
 	while(readptr != &readstk[0]){
@@ -938,8 +936,7 @@ onintr(){
 	commnds();
 }
 void
-pushp(p)
-struct blk *p;
+pushp(struct blk *p)
 {
 	if(stkptr == stkend){
 		printf("out of stack space\n");
@@ -950,7 +947,7 @@ struct blk *p;
 	return;
 }
 struct blk *
-pop(){
+pop(void){
 	if(stkptr == stack){
 		stkerr=1;
 		return(0);
@@ -958,7 +955,7 @@ pop(){
 	return(*stkptr--);
 }
 struct blk *
-readin(){
+readin(void){
 	register struct blk *p,*q;
 	int dp,dpct;
 	register int c;
@@ -1006,9 +1003,7 @@ gotnum:
 	}
 }
 struct blk *
-add0(p,ct)
-int ct;
-struct blk *p;
+add0(struct blk *p, int ct)
 {
 		/* returns pointer to struct with ct 0's & p */
 	register struct blk *q,*t;
@@ -1031,8 +1026,7 @@ struct blk *p;
 	return(q);
 }
 struct blk *
-mult(p,q)
-struct blk *p,*q;
+mult(struct blk *p, struct blk *q)
 {
 	register struct blk *mp,*mq,*mr;
 	int sign,offset,carry;
@@ -1087,8 +1081,7 @@ struct blk *p,*q;
 	return(mr);
 }
 void
-chsign(p)
-struct blk *p;
+chsign(struct blk *p)
 {
 	register int carry;
 	register char ct;
@@ -1122,7 +1115,7 @@ struct blk *p;
 	return;
 }
 int
-readc(){
+readc(void){
 loop:
 	if((readptr != &readstk[0]) && (*readptr != 0)){
 		if(sfeof(*readptr) == 0)return(lastchar = sgetc(*readptr));
@@ -1146,8 +1139,7 @@ loop:
 	return(0);
 }
 void
-unreadc(c)
-char c;
+unreadc(char c)
 {
 
 	if((readptr != &readstk[0]) && (*readptr != 0)){
@@ -1157,8 +1149,7 @@ char c;
 	return;
 }
 void
-binop(c)
-char c;
+binop(char c)
 {
 	register struct blk *r = 0;
 
@@ -1180,8 +1171,7 @@ char c;
 	return;
 }
 void
-print(hptr)
-struct blk *hptr;
+print(struct blk *hptr)
 {
 	int sc;
 	register struct blk *p,*q,*dec;
@@ -1261,9 +1251,7 @@ struct blk *hptr;
 }
 
 struct blk *
-getdec(p,sc)
-struct blk *p;
-int sc;
+getdec(struct blk *p, int sc)
 {
 	int cc;
 	register struct blk *q,*t,*s;
@@ -1294,9 +1282,7 @@ int sc;
 	return(q);
 }
 void
-tenot(p,sc)
-struct blk *p;
-int sc;
+tenot(struct blk *p, int sc)
 {
 	register int c,f;
 
@@ -1345,10 +1331,7 @@ int sc;
 	return;
 }
 void
-oneot(p,sc,ch)
-struct blk *p;
-int sc;
-char ch;
+oneot(struct blk *p, int sc, char ch)
 {
 	register struct blk *q;
 
@@ -1366,9 +1349,7 @@ char ch;
 	return;
 }
 void
-hexot(p,flg)
-struct blk *p;
-int flg;
+hexot(struct blk *p, int flg)
 {
 	(void)flg;
 	register int c;
@@ -1388,9 +1369,7 @@ int flg;
 	return;
 }
 void
-bigot(p,flg)
-struct blk *p;
-int flg;
+bigot(struct blk *p, int flg)
 {
 	register struct blk *t,*q;
 	register int l;
@@ -1441,8 +1420,7 @@ int flg;
 	return;
 }
 struct blk *
-add(a1,a2)
-struct blk *a1,*a2;
+add(struct blk *a1, struct blk *a2)
 {
 	register struct blk *p;
 	register int carry,n;
@@ -1488,7 +1466,7 @@ struct blk *a1,*a2;
 	return(p);
 }
 int
-eqk(){
+eqk(void){
 	register struct blk *p,*q;
 	register int skp;
 	int skq;
@@ -1518,9 +1496,7 @@ eqk(){
 	return(0);
 }
 struct blk *
-removc(p,n)
-struct blk *p;
-int n;
+removc(struct blk *p, int n)
 {
 	register struct blk *q,*r;
 
@@ -1541,8 +1517,7 @@ int n;
 	return(q);
 }
 struct blk *
-scalint(p)
-struct blk *p;
+scalint(struct blk *p)
 {
 	register int n;
 	n = sunputc(p);
@@ -1550,9 +1525,7 @@ struct blk *p;
 	return(p);
 }
 struct blk *
-scale(p,n)
-struct blk *p;
-int n;
+scale(struct blk *p, int n)
 {
 	register struct blk *q,*s,*t;
 
@@ -1569,7 +1542,7 @@ int n;
 	return(q);
 }
 int
-subt(){
+subt(void){
 	arg1=pop();
 	EMPTYS;
 	savk = sunputc(arg1);
@@ -1581,7 +1554,7 @@ subt(){
 	return(0);
 }
 int
-command(){
+command(void){
 	int c;
 	char line[100],*sl;
 	register void (*savint)(int sig);
@@ -1612,8 +1585,7 @@ command(){
 	}
 }
 int
-cond(c)
-char c;
+cond(char c)
 {
 	register struct blk *p;
 	register signed char cc;
@@ -1654,7 +1626,7 @@ char c;
 	return(1);
 }
 void
-load(){
+load(void){
 	register int c;
 	register struct blk *p,*q;
 	struct blk *t,*s;
@@ -1688,8 +1660,7 @@ load(){
 	return;
 }
 int
-log2(n)
-long n;
+log2(long n)
 {
 	register int i;
 
@@ -1701,8 +1672,7 @@ long n;
 }
 
 struct blk *
-salloc(size)
-int size;
+salloc(int size)
 {
 	register struct blk *hdr;
 	register char *ptr;
@@ -1721,7 +1691,7 @@ int size;
 	return(hdr);
 }
 struct blk *
-morehd(){
+morehd(void){
 	register struct blk *h,*kk;
 	headmor++;
 	nbytes += HEADSZ;
@@ -1746,9 +1716,7 @@ struct blk *hptr;
 }
 */
 struct blk *
-copy(hptr,size)
-struct blk *hptr;
-int size;
+copy(struct blk *hptr, int size)
 {
 	register struct blk *hdr;
 	register unsigned sz;
@@ -1775,9 +1743,7 @@ int size;
 	return(hdr);
 }
 void
-sdump(s1,hptr)
-char *s1;
-struct blk *hptr;
+sdump(char *s1, struct blk *hptr)
 {
 	char *p;
 	printf("%s %o rd %o wt %o beg %o last %o\n",s1,hptr,hptr->rd,hptr->wt,hptr->beg,hptr->last);
@@ -1786,9 +1752,7 @@ struct blk *hptr;
 	printf("\n");
 }
 void
-seekc(hptr,n)
-struct blk *hptr;
-int n;
+seekc(struct blk *hptr, int n)
 {
 	register char *nn,*p;
 
@@ -1812,18 +1776,15 @@ int n;
 	return;
 }
 void
-salterwd(hptr,n)
-struct wblk *hptr;
-struct blk *n;
+salterwd(struct wblk *hptr, struct blk *n)
 {
-	if(hptr->rdw == hptr->lastw)more(hptr);
+	if(hptr->rdw == hptr->lastw)more((struct blk *)hptr);
 	*hptr->rdw++ = n;
 	if(hptr->rdw > hptr->wtw)hptr->wtw = hptr->rdw;
 	return;
 }
 void
-more(hptr)
-struct blk *hptr;
+more(struct blk *hptr)
 {
 	register unsigned size;
 	register char *p;
@@ -1845,8 +1806,7 @@ struct blk *hptr;
 	return;
 }
 void
-ospace(s)
-char *s;
+ospace(char *s)
 {
 	printf("out of space: %s\n",s);
 	printf("all %ld rel %ld headmor %ld\n",all,rel,headmor);
@@ -1855,8 +1815,7 @@ char *s;
 	abort();
 }
 void
-garbage(s)
-char *s;
+garbage(char *s)
 {
 	(void)s;
 	int i;
@@ -1903,8 +1862,7 @@ printf("tmps %o p %o\n",tmps,p);
 	}
 }
 void
-redef(p)
-struct blk *p;
+redef(struct blk *p)
 {
 	register int offset;
 	register char *newp;
@@ -1927,8 +1885,7 @@ struct blk *p;
 }
 
 void
-release(p)
-register struct blk *p;
+release(register struct blk *p)
 {
 	rel++;
 	nbytes -= p->last - p->beg;
@@ -1938,8 +1895,7 @@ register struct blk *p;
 }
 
 struct blk *
-getwd(p)
-struct blk *p;
+getwd(struct blk *p)
 {
 	register struct wblk *wp;
 
@@ -1950,8 +1906,7 @@ struct blk *p;
 }
 
 void
-putwd(p, c)
-struct blk *p, *c;
+putwd(struct blk *p, struct blk *c)
 {
 	register struct wblk *wp;
 
@@ -1962,8 +1917,7 @@ struct blk *p, *c;
 }
 
 struct blk *
-lookwd(p)
-struct blk *p;
+lookwd(struct blk *p)
 {
 	register struct wblk *wp;
 
@@ -1973,11 +1927,8 @@ struct blk *p;
 	return(*wp->rdw);
 }
 char *
-nalloc(p,nbytes)
-register char *p;
-unsigned nbytes;
+nalloc(register char *p, unsigned nbytes)
 {
-	char *malloc();
 	register char *q, *r;
 	q = r = malloc(nbytes);
 	if(q==0)
