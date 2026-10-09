@@ -56,7 +56,8 @@ atof(register char *p)
 			--p;
 
 		while ((c = *p++), isdigit(c)) {
-			eexp = 10*eexp+(c-'0');
+			if (eexp < 10000)
+				eexp = 10*eexp+(c-'0');
 		}
 		if (negexp<0)
 			eexp = -eexp;
@@ -70,7 +71,7 @@ atof(register char *p)
 	}
 
 
-	if((nd+exp*negexp) < -LOGHUGE){
+	if(fl == 0 || (nd+exp*negexp) < -LOGHUGE){
 		fl = 0;
 		exp = 0;
 	}
