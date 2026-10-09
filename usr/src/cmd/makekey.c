@@ -5,12 +5,11 @@
  * (a significant part of a second).
  */
 
-char	*crypt(char *pw, char *salt);
-int	read(int fd, char *buf, int n);
-int	write(int fd, char *buf, int n);
+char	*crypt();
+int	read(), write();
 
 int
-main(void)
+main()
 {
 	char key[8];
 	char salt[2];
