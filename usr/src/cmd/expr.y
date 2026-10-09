@@ -1,6 +1,5 @@
 /* Yacc productions for "expr" command: */
 
-%define api.value.type {char *}
 %token OR AND ADD SUBT MULT DIV REM EQ GT GEQ LT LEQ NEQ
 %token A_STRING SUBSTR LENGTH INDEX NOARG MATCH
 
@@ -16,6 +15,7 @@
 %left LENGTH INDEX
 %{
 #include <stdio.h>
+#define YYSTYPE char *
 #define index expr_index
 int yylex(void), ematch(char *s, char *p), step(char *p1, char *p2);
 int advance(char *lp, char *ep), ecmp(char *a, char *b, int count);
@@ -227,7 +227,7 @@ char *match(char *s, char *p)
 #define PEEKC()		(*sp)
 #define UNGETC(c)	(--sp)
 #define RETURN(c)	return(c)
-#define ERROR(c)	do { errxx(c); return(0); } while (0)
+#define ERROR(c)	return(errxx(c), (char *)0)
 
 
 int
@@ -329,6 +329,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 		if((c = GETC()) != '*' && ((c != '\\') || (PEEKC() != '{')))
 			lastep = ep;
 		if (c == eof) {
+			if (bracketp != bracket)
+				ERROR(42);
 			*ep++ = CEOF;
 			RETURN(ep);
 		}
@@ -463,7 +465,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 					continue;
 				}
 			}
-			/* fallthrough - to default to use \ to turn off special chars */
+			/* Drop through to default to use \ to turn off special chars */
+			/* fallthrough */
 
 		defchar:
 		default:
