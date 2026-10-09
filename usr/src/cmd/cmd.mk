@@ -46,3 +46,5 @@ $C/awk/proc: $C/awk/proc.c $C/awk/token.c $C/awk/awk.h
 	$(HOSTCC) $(HOSTCFLAGS) -o $@ $C/awk/proc.c $C/awk/token.c
 $C/awk/proctab.c: $C/awk/proc
 	$< >$@
+$C/awk/awk.lx.c: $C/awk/awk.lx.l
+	$(LEX) -t $< | sed 's/void yynoreturn/void/' >$@
