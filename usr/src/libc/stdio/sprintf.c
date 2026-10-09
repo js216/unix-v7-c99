@@ -1,6 +1,6 @@
 #include	<stdio.h>
 #include	<stdarg.h>
-void	_doprnt();
+void	_doprnt(char *fmt, va_list *argp, FILE *iop);
 
 char *sprintf(char *str, char *fmt, ...)
 {

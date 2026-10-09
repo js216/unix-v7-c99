@@ -6,17 +6,13 @@
 #include <sgtty.h>
 
 int
-stty(fd, ap)
-int fd;
-struct sgtty *ap;
+stty(int fd, struct sgttyb *ap)
 {
 	return(ioctl(fd, TIOCSETP, ap));
 }
 
 int
-gtty(fd, ap)
-int fd;
-struct sgtty *ap;
+gtty(int fd, struct sgttyb *ap)
 {
 	return(ioctl(fd, TIOCGETP, ap));
 }

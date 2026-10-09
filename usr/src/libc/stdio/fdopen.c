@@ -8,12 +8,9 @@
 #include	<errno.h>
 
 FILE *
-fdopen(fd, mode)
-	int fd;
-	register char *mode;
+fdopen(int fd, register char *mode)
 {
 	register FILE *iop;
-	FILE *_findiop();
 
 	if ((iop = _findiop()) == NULL)
 		return(NULL);

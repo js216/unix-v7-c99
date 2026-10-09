@@ -1,8 +1,7 @@
 #include	<stdio.h>
 
 void
-rewind(iop)
-	register struct _iobuf *iop;
+rewind(register struct _iobuf *iop)
 {
 	fflush(iop);
 	lseek(fileno(iop), 0L, 0);

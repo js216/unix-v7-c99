@@ -8,8 +8,7 @@ int	errno;
 int	sys_nerr;
 extern char	*sys_errlist[];
 void
-perror(s)
-char *s;
+perror(char *s)
 {
 	register char *c;
 	register int n;

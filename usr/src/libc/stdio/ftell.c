@@ -4,11 +4,9 @@
  */
 
 #include	<stdio.h>
-long	lseek();
 
 
-long ftell(iop)
-FILE *iop;
+long ftell(FILE *iop)
 {
 	long tres;
 	register int adjust;

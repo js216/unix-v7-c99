@@ -1,11 +1,11 @@
+#include <stdio.h>
 /*
  * Copy string s2 to s1.  s1 must be large enough.
  * return s1
  */
 
 char *
-strcpy(s1, s2)
-register char *s1, *s2;
+strcpy(register char *s1, register char *s2)
 {
 	register char *os1;
 

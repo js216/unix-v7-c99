@@ -4,9 +4,10 @@
 #include <stdio.h>
 
 #undef getchar
+int	getchar(void);
 
 int
-getchar()
+getchar(void)
 {
 	return(getc(stdin));
 }

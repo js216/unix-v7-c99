@@ -1,9 +1,8 @@
 #include <errno.h>
+#include <math.h>
 
 double
-ldexp(value, n)
-double value;
-int n;
+ldexp(double value, int n)
 {
 	union { double d; unsigned u[2]; } x;
 	register int k;

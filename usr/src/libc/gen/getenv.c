@@ -1,14 +1,14 @@
+#include <stdio.h>
 /*
  *	getenv(name)
  *	returns ptr to value associated with name, if any, else NULL
  */
 #define NULL	0
 extern	char **environ;
-static char	*nvmatch();
+static char	*nvmatch(char *s1, char *s2);
 
 char *
-getenv(name)
-register char *name;
+getenv(register char *name)
 {
 	register char **p = environ;
 	register char *v;
@@ -27,8 +27,7 @@ register char *name;
  */
 
 static char *
-nvmatch(s1, s2)
-register char *s1, *s2;
+nvmatch(register char *s1, register char *s2)
 {
 
 	while (*s1 == *s2++)

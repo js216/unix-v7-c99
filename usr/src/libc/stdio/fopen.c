@@ -1,10 +1,7 @@
 #include	<stdio.h>
 
 FILE *
-fopen(file, mode)
-	char *file, *mode;
+fopen(char *file, char *mode)
 {
-	FILE *_findiop(), *_endopen();
-
 	return(_endopen(file, mode, _findiop()));
 }

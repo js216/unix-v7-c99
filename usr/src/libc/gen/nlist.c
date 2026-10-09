@@ -3,9 +3,7 @@
 #define SPACE 100		/* number of symbols read at a time */
 
 int
-nlist(name, list)
-char *name;
-struct nlist *list;
+nlist(char *name, struct nlist *list)
 {
 	register struct nlist *p;
 	register unsigned *q;

@@ -1,9 +1,7 @@
 #include <stdio.h>
 
 int
-ungetc(c, iop)
-int c;
-register FILE *iop;
+ungetc(int c, register FILE *iop)
 {
 	if (c == EOF)
 		return(-1);

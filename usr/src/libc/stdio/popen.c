@@ -4,12 +4,9 @@
 #define	RDR	0
 #define	WTR	1
 static	int	popen_pid[20];
-int	dup2();
 
 FILE *
-popen(cmd,mode)
-char	*cmd;
-char	*mode;
+popen(char *cmd, char *mode)
 {
 	int p[2];
 	register int myside, hisside, pid;
@@ -34,10 +31,10 @@ char	*mode;
 }
 
 int
-pclose(ptr)
-FILE *ptr;
+pclose(FILE *ptr)
 {
-	register int f, r, (*hstat)(), (*istat)(), (*qstat)();
+	register int f, r;
+	register void (*hstat)(int sig), (*istat)(int sig), (*qstat)(int sig);
 	int status;
 
 	f = fileno(ptr);

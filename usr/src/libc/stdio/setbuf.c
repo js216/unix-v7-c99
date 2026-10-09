@@ -1,9 +1,7 @@
 #include	<stdio.h>
 
 void
-setbuf(iop, buf)
-register struct _iobuf *iop;
-char *buf;
+setbuf(register struct _iobuf *iop, char *buf)
 {
 	if (iop->_base != NULL && iop->_flag&_IOMYBUF)
 		free(iop->_base);

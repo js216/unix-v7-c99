@@ -2,11 +2,10 @@
 #include	<signal.h>
 
 int
-system(s)
-char *s;
+system(char *s)
 {
 	int status, pid, w;
-	register int (*istat)(), (*qstat)();
+	register void (*istat)(int sig), (*qstat)(int sig);
 
 	if ((pid = fork()) == 0) {
 		execl("/bin/sh", "sh", "-c", s, 0);

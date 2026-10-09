@@ -1,3 +1,4 @@
+#include <stdio.h>
 /*
  * Return the ptr in sp at which the character c appears;
  * NULL if not found
@@ -6,8 +7,7 @@
 #define	NULL	0
 
 char *
-index(sp, c)
-register char *sp, c;
+index(register char *sp, register char c)
 {
 	do {
 		if (*sp == c)

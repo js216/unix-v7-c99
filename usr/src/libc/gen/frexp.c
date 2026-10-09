@@ -1,7 +1,6 @@
+#include <math.h>
 double
-frexp(value, eptr)
-double value;
-int *eptr;
+frexp(double value, int *eptr)
 {
 	union { double d; unsigned u[2]; } x;
 

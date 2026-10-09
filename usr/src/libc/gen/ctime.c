@@ -37,6 +37,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/timeb.h>
+#include <stdio.h>
 
 static	char	cbuf[26];
 static	int	dmsize[12] =
@@ -68,25 +69,17 @@ static struct {
 	{58,	303},	/* 1975: Last Sun. in Feb - last Sun in Oct */
 };
 
-struct tm	*gmtime();
-static char	*ct_numb();
-static int	sunday();
-int	ftime(), dysize();
-struct tm	*localtime();
-char	*ctime();
-char	*ct_num();
-char	*asctime();
+static char	*ct_numb(char *cp, int n);
+static int	sunday(struct tm *t, int d);
 
 char *
-ctime(t)
-long *t;
+ctime(long *t)
 {
 	return(asctime(localtime(t)));
 }
 
 struct tm *
-localtime(tim)
-long *tim;
+localtime(long *tim)
 {
 	register int dayno;
 	register struct tm *ct;
@@ -122,9 +115,7 @@ long *tim;
  * Sunday on or after the day.
  */
 static int
-sunday(t, d)
-register struct tm *t;
-register int d;
+sunday(register struct tm *t, register int d)
 {
 	if (d >= 58)
 		d += dysize(t->tm_year) - 365;
@@ -132,8 +123,7 @@ register int d;
 }
 
 struct tm *
-gmtime(tim)
-long *tim;
+gmtime(long *tim)
 {
 	register int d0, d1;
 	long hms, day;
@@ -194,8 +184,7 @@ long *tim;
 }
 
 char *
-asctime(t)
-struct tm *t;
+asctime(struct tm *t)
 {
 	register char *cp, *ncp;
 	register int *tp;
@@ -227,8 +216,7 @@ struct tm *t;
 }
 
 int
-dysize(y)
-int y;
+dysize(int y)
 {
 	if((y%4) == 0)
 		return(366);
@@ -236,9 +224,7 @@ int y;
 }
 
 static char *
-ct_numb(cp, n)
-register char *cp;
-int n;
+ct_numb(register char *cp, int n)
 {
 	cp++;
 	if (n>=10)

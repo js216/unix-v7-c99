@@ -1,12 +1,11 @@
+#include <stdio.h>
 /*
  * Copy s2 to s1, truncating or null-padding to always copy n bytes
  * return s1
  */
 
 char *
-strncpy(s1, s2, n)
-register char *s1, *s2;
-int n;
+strncpy(register char *s1, register char *s2, int n)
 {
 	register int i;
 	register char *os1;

@@ -1,8 +1,7 @@
 #include	<stdio.h>
 
 int
-getw(iop)
-register struct _iobuf *iop;
+getw(register struct _iobuf *iop)
 {
 	register unsigned i;
 

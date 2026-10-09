@@ -13,7 +13,7 @@ static struct group group;
 static char *gr_mem[MAXGRP];
 
 void
-setgrent()
+setgrent(void)
 {
 	if( !grf )
 		grf = fopen( GROUP, "r" );
@@ -22,7 +22,7 @@ setgrent()
 }
 
 void
-endgrent()
+endgrent(void)
 {
 	if( grf ){
 		fclose( grf );
@@ -31,9 +31,7 @@ endgrent()
 }
 
 static char *
-grskip(p,c)
-register char *p;
-register int c;
+grskip(register char *p, register int c)
 {
 	while( *p && *p != c ) ++p;
 	if( *p ) *p++ = 0;
@@ -41,7 +39,7 @@ register int c;
 }
 
 struct group *
-getgrent()
+getgrent(void)
 {
 	register char *p, **q;
 

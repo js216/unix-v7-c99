@@ -2,10 +2,9 @@
  * return offset in file.
  */
 
-long	lseek();
+#include <stdio.h>
 
-long tell(f)
-int f;
+long tell(int f)
 {
 	return(lseek(f, 0L, 1));
 }

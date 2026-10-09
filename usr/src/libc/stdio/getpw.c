@@ -1,9 +1,7 @@
 #include	<stdio.h>
 
 int
-getpw(uid, buf)
-int uid;
-char buf[];
+getpw(int uid, char buf[])
 {
 	static FILE *pwf;
 	register int n, c;

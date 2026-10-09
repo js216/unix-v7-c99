@@ -3,13 +3,10 @@
  * minimal length string
  */
 
-char	*ecvt();
+#include <stdio.h>
 
 char *
-gcvt(number, ndigit, buf)
-double number;
-int ndigit;
-char *buf;
+gcvt(double number, int ndigit, char *buf)
 {
 	int sign, decpt;
 	register char *p1, *p2;

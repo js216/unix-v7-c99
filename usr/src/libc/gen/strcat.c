@@ -1,11 +1,11 @@
+#include <stdio.h>
 /*
  * Concatenate s2 on the end of s1.  S1's space must be large enough.
  * Return s1.
  */
 
 char *
-strcat(s1, s2)
-register char *s1, *s2;
+strcat(register char *s1, register char *s2)
 {
 	register char *os1;
 

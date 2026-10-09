@@ -1,13 +1,13 @@
+#include <stdio.h>
 /*
  * Swap bytes in 16-bit [half-]words
  * for going between the 11 and the interdata
  */
 
 void
-swab(pf, pt, n)
-register short *pf, *pt;
-register int n;
+swab(char *from, char *to, register int n)
 {
+	register short *pf = (short *)from, *pt = (short *)to;
 
 	n /= 2;
 	while (--n >= 0) {

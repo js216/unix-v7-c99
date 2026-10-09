@@ -2,7 +2,7 @@
 #include <signal.h>
 
 void
-abort()
+abort(void)
 {
 	kill(getpid(), SIGIOT);
 	_exit(1);

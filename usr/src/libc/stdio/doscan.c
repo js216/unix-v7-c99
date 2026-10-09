@@ -11,8 +11,10 @@
 #define	INT	0
 #define	FLOAT	1
 
-char	*_getccl();
-int	_innum(), _instr();
+int	_doscan(FILE *iop, char *fmt, va_list *argp);
+char	*_getccl(char *s);
+int	_innum(int **ptr, int type, int len, int size, FILE *iop, int *eofptr);
+int	_instr(char *ptr, int type, int len, FILE *iop, int *eofptr);
 
 char	_sctab[128] = {
 	0,0,0,0,0,0,0,0,
@@ -26,10 +28,7 @@ char	_sctab[128] = {
 };
 
 int
-_doscan(iop, fmt, argp)
-FILE *iop;
-register char *fmt;
-va_list *argp;
+_doscan(FILE *iop, register char *fmt, va_list *argp)
 {
 	register int ch;
 	int nmatch, len, ch1;
@@ -100,12 +99,8 @@ va_list *argp;
 }
 
 int
-_innum(ptr, type, len, size, iop, eofptr)
-int type, len, size;
-int **ptr, *eofptr;
-struct _iobuf *iop;
+_innum(int **ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 {
-	extern double atof();
 	register char *np;
 	char numbuf[64];
 	register int c, base;
@@ -210,11 +205,8 @@ struct _iobuf *iop;
 }
 
 int
-_instr(ptr, type, len, iop, eofptr)
-int type, len;
-register char *ptr;
-register struct _iobuf *iop;
-int *eofptr;
+_instr(register char *ptr, int type, int len, register struct _iobuf *iop,
+    int *eofptr)
 {
 	register int ch;
 	register char *optr;
@@ -257,8 +249,7 @@ int *eofptr;
 }
 
 char *
-_getccl(s)
-register char *s;
+_getccl(register char *s)
 {
 	register int c, t;
 

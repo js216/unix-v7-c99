@@ -3,8 +3,7 @@
 #include <sgtty.h>
 
 char *
-getpass(prompt)
-char *prompt;
+getpass(char *prompt)
 {
 	struct sgttyb ttyb;
 	int flags;
@@ -12,8 +11,7 @@ char *prompt;
 	register int c;
 	FILE *fi;
 	static char pbuf[9];
-	int (*signal())();
-	int (*sig)();
+	void (*sig)(int sig);
 
 	if ((fi = fopen("/dev/tty", "r")) == NULL)
 		fi = stdin;

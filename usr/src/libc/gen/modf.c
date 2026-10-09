@@ -1,6 +1,6 @@
+#include <math.h>
 double
-modf(value, iptr)
-double value, *iptr;
+modf(double value, double *iptr)
 {
 	union { double d; unsigned u[2]; } x;
 	register int e;

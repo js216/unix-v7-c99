@@ -8,7 +8,7 @@
 #include <stdarg.h>
 
 static	char shell[] =	"/bin/sh";
-static char	*execat();
+static char	*execat(char *s1, char *s2, char *si);
 extern	int errno;
 
 int
@@ -35,8 +35,7 @@ execlp(char *name, char *arg0, ...)
 }
 
 int
-execvp(name, argv)
-char *name, **argv;
+execvp(char *name, char **argv)
 {
 	char *pathstr;
 	register char *cp;
@@ -85,9 +84,7 @@ char *name, **argv;
 }
 
 static char *
-execat(s1, s2, si)
-register char *s1, *s2;
-char *si;
+execat(register char *s1, register char *s2, char *si)
 {
 	register char *s;
 

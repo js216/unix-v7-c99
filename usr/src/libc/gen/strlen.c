@@ -1,11 +1,11 @@
+#include <stdio.h>
 /*
  * Returns the number of
  * non-NULL bytes in string argument.
  */
 
 int
-strlen(s)
-register char *s;
+strlen(register char *s)
 {
 	register int n;
 

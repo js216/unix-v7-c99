@@ -1,3 +1,4 @@
+#include <stdio.h>
 /*
  * Concatenate s2 on the end of s1.  S1's space must be large enough.
  * At most n characters are moved.
@@ -5,9 +6,7 @@
  */
 
 char *
-strncat(s1, s2, n)
-register char *s1, *s2;
-register int n;
+strncat(register char *s1, register char *s2, register int n)
 {
 	register char *os1;
 

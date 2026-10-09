@@ -5,35 +5,30 @@
  *	sign is set to 0 for positive, 1 for negative
  */
 
-static char	*cvt();
+#include <stdio.h>
+#include <math.h>
+static char	*cvt(double arg, int ndigits, int *decpt, int *sign, int eflag);
 
 #define	NDIG	80
 char*
-ecvt(arg, ndigits, decpt, sign)
-double arg;
-int ndigits, *decpt, *sign;
+ecvt(double arg, int ndigits, int *decpt, int *sign)
 {
 	return(cvt(arg, ndigits, decpt, sign, 1));
 }
 
 char*
-fcvt(arg, ndigits, decpt, sign)
-double arg;
-int ndigits, *decpt, *sign;
+fcvt(double arg, int ndigits, int *decpt, int *sign)
 {
 	return(cvt(arg, ndigits, decpt, sign, 0));
 }
 
 static char*
-cvt(arg, ndigits, decpt, sign, eflag)
-double arg;
-int ndigits, *decpt, *sign, eflag;
+cvt(double arg, int ndigits, int *decpt, int *sign, int eflag)
 {
 	register int r2;
 	double fi, fj;
 	register char *p, *p1;
 	static char buf[NDIG];
-	double modf();
 
 	if (ndigits<0)
 		ndigits = 0;

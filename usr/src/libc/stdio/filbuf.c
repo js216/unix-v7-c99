@@ -1,11 +1,9 @@
 #include	<stdio.h>
 
-char	*malloc();
 
 
 int
-_filbuf(iop)
-	register FILE *iop;
+_filbuf(register FILE *iop)
 {
 	static char smallbuf[_NFILE];
 

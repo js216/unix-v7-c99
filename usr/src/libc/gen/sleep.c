@@ -3,14 +3,13 @@
 #include <stdio.h>
 
 static jmp_buf jmp;
-static void sleepx();
+static void sleepx(int sig);
 
 unsigned
-sleep(n)
-volatile unsigned n;
+sleep(volatile unsigned n)
 {
 	volatile unsigned altime;
-	int (*volatile alsig)() = SIG_DFL;
+	void (*volatile alsig)(int sig) = SIG_DFL;
 
 	if (n==0)
 		return(0);
@@ -36,7 +35,8 @@ volatile unsigned n;
 }
 
 static void
-sleepx()
+sleepx(int sig)
 {
+	(void)sig;
 	longjmp(jmp, 1);
 }

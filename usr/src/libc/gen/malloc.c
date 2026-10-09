@@ -1,3 +1,4 @@
+#include <stdio.h>
 #ifdef debug
 #define ASSERT(p) if(!(p))botch("p");else
 botch(s)
@@ -54,11 +55,9 @@ static	union store allocs[2];	/*initial arena*/
 static	union store *allocp;	/*search ptr*/
 static	union store *alloct;	/*arena top*/
 static	union store *allocx;	/*for benefit of realloc*/
-char	*sbrk();
 
 char *
-malloc(nbytes)
-unsigned nbytes;
+malloc(unsigned nbytes)
 {
 	register union store *p, *q;
 	register int nw;
@@ -123,8 +122,7 @@ found:
 /*	freeing strategy tuned for LIFO allocation
 */
 void
-free(ap)
-register char *ap;
+free(register char *ap)
 {
 	register union store *p = (union store *)ap;
 
@@ -143,10 +141,9 @@ register char *ap;
 */
 
 char *
-realloc(p, nbytes)
-register union store *p;
-unsigned nbytes;
+realloc(char *ap, unsigned nbytes)
 {
+	register union store *p = (union store *)ap;
 	register union store *q;
 	union store *s, *t;
 	register unsigned nw;

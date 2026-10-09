@@ -1,10 +1,7 @@
 #include	<stdio.h>
 
 char *
-fgets(s, n, iop)
-char *s;
-int n;
-register FILE *iop;
+fgets(char *s, int n, register FILE *iop)
 {
 	register int c = 0;
 	register char *cs;

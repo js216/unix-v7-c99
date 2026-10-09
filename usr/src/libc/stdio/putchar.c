@@ -4,10 +4,10 @@
 #include <stdio.h>
 
 #undef putchar
+int	putchar(int c);
 
 int
-putchar(c)
-register int c;
+putchar(register int c)
 {
 	return(putc(c, stdout));
 }

@@ -1,8 +1,7 @@
+char	*memcpy(char *d, char *s, unsigned n);
+char	*memset(char *d, int c, unsigned n);
 char *
-memcpy(d, s, n)
-char *d;
-register char *s;
-register unsigned n;
+memcpy(char *d, register char *s, register unsigned n)
 {
 	register char *p;
 
@@ -13,10 +12,7 @@ register unsigned n;
 }
 
 char *
-memset(d, c, n)
-char *d;
-int c;
-register unsigned n;
+memset(char *d, int c, register unsigned n)
 {
 	register char *p;
 

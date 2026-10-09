@@ -5,11 +5,9 @@
 #include <stdio.h>
 
 char *
-calloc(num, size)
-unsigned num, size;
+calloc(unsigned num, unsigned size)
 {
 	register char *mp;
-	char *malloc();
 	register int *q;
 	register int m;
 
@@ -25,9 +23,7 @@ unsigned num, size;
 }
 
 void
-cfree(p, num, size)
-char *p;
-unsigned num, size;
+cfree(char *p, unsigned num, unsigned size)
 {
 	(void)num;
 	(void)size;

@@ -1,3 +1,4 @@
+#include <stdio.h>
 /*
  * This program implements the
  * Proposed Federal Information Processing
@@ -95,8 +96,7 @@ static	char	KS[16][48];
  */
 
 void
-setkey(key)
-char *key;
+setkey(char *key)
 {
 	register int i, j, k;
 	int t;
@@ -235,9 +235,7 @@ static	char	preS[48];
  */
 
 void
-encrypt(block, edflag)
-char *block;
-int edflag;
+encrypt(char *block, int edflag)
 {
 	int i, ii;
 	register int t, j, k;
@@ -325,9 +323,7 @@ int edflag;
 }
 
 char *
-crypt(pw,salt)
-char *pw;
-char *salt;
+crypt(char *pw, char *salt)
 {
 	register int i, j, c;
 	int temp;

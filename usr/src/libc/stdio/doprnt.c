@@ -1,13 +1,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-char	*ecvt(), *fcvt(), *gcvt();
-void	_strout();
+void	_doprnt(char *fmt, va_list *argp, FILE *iop);
 
 static int
-gnum(fmtp, argp)
-register char **fmtp;
-va_list *argp;
+gnum(register char **fmtp, va_list *argp)
 {
 	register int n;
 
@@ -21,10 +18,7 @@ va_list *argp;
 }
 
 void
-_doprnt(fmt, argp, iop)
-char *fmt;
-va_list *argp;
-FILE *iop;
+_doprnt(char *fmt, va_list *argp, FILE *iop)
 {
 	char buf[400];
 	register char *p, *s;

@@ -1,11 +1,9 @@
+#include <stdio.h>
 /*
  * Convert longs to and from 3-byte disk addresses
  */
-int
-ltol3(cp, lp, n)
-char	*cp;
-long	*lp;
-int	n;
+void
+ltol3(char *cp, long *lp, int n)
 {
 	register int i;
 	register char *a, *b;
@@ -25,14 +23,10 @@ int	n;
 		b++;
 #endif
 	}
-	return(0);
 }
 
-int
-l3tol(lp, cp, n)
-long	*lp;
-char	*cp;
-int	n;
+void
+l3tol(long *lp, char *cp, int n)
 {
 	register int i;
 	register char *a, *b;
@@ -52,5 +46,4 @@ int	n;
 		*a++ = 0;
 #endif
 	}
-	return(0);
 }

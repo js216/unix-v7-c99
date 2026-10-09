@@ -22,8 +22,7 @@ static struct zone {
 	{-1, 0, 0}
 };
 
-char *timezone(zone, dst)
-int zone, dst;
+char *timezone(int zone, int dst)
 {
 	register struct zone *zp;
 	static char czone[10];
