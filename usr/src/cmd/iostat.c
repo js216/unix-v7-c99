@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <a.out.h>
 int	bflg;
 int	dflg;
 int	tflg;
@@ -42,20 +43,16 @@ double	etime;
 
 int	mf;
 
-int nlist();
-void stats(), stat1(), stats2(), stats3(), biostats();
+void stats(int dn), stat1(int o), stats2(double t), stats3(double t), biostats(void);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
-	extern char *ctime();
 	register  int i;
 	int iter;
 	double f1, f2;
 	long t;
 
-	nlist("/unix", nl);
+	nlist("/unix", (struct nlist *)nl);
 	if(nl[0].type == 0) {
 		printf("dk_busy not found in /unix namelist\n");
 		exit(1);
@@ -191,8 +188,7 @@ double	xf[] = {
 };
 
 void
-stats(dn)
-int dn;
+stats(int dn)
 {
 	register int i;
 	double f1, f2, f3;
@@ -222,8 +218,7 @@ int dn;
 }
 
 void
-stat1(o)
-int o;
+stat1(int o)
 {
 	register int i;
 	long t;
@@ -243,8 +238,7 @@ int o;
 }
 
 void
-stats2(t)
-double t;
+stats2(double t)
 {
 	register int i, j;
 
@@ -256,8 +250,7 @@ double t;
 }
 
 void
-stats3(t)
-double t;
+stats3(double t)
 {
 	register int i;
 	double sum;
@@ -302,7 +295,7 @@ double t;
 }
 
 void
-biostats()
+biostats(void)
 {
 register int i;
 
