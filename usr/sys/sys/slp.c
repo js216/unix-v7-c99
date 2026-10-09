@@ -10,32 +10,6 @@
 #include "../h/buf.h"
 #include "../h/seg.h"
 #include "../h/reg.h"
-void sleep(caddr_t chan, int pri);
-void wakeup(caddr_t chan);
-void setrq(struct proc *p);
-void setrun(struct proc *p);
-int setpri(struct proc *pp);
-void sched(void);
-int swapin(struct proc *p);
-void qswtch(void);
-void swtch(void);
-int newproc(void);
-void expand(int newsize);
-int issig(void);
-void panic(char *s);
-void printf(char *fmt, ...);
-int save(int *lp) __attribute__((returns_twice));
-void resume(int addr, int *lp);
-void sureg(void);
-void savfp(void *p);
-void idle(void);
-int malloc(struct map *mp, int size);
-void mfree(struct map *mp, int size, int a);
-void xswap(struct proc *p, int ff, int os);
-void xlock(struct text *xp);
-void xunlock(struct text *xp);
-void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-void copyseg(int from, int to);
 
 #define SQSIZE 0100	/* Must be power of 2 */
 #define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
@@ -54,7 +28,9 @@ struct proc *slpque[SQSIZE];
  * sleeping has gone away.
  */
 void
-sleep(caddr_t chan, int pri)
+sleep(chan, pri)
+caddr_t chan;
+int	pri;
 {
 	register struct proc *rp;
 	register int s, h;
@@ -109,7 +85,8 @@ psig:
  * Wake up all processes sleeping on chan.
  */
 void
-wakeup(caddr_t chan)
+wakeup(chan)
+register caddr_t chan;
 {
 	register struct proc *p, *q;
 	register int i;
@@ -145,7 +122,8 @@ wakeup(caddr_t chan)
  * diagnostic loop can be removed.
  */
 void
-setrq(struct proc *p)
+setrq(p)
+struct proc *p;
 {
 	register struct proc *q;
 	register int s;
@@ -167,7 +145,8 @@ out:
  * arrange for it to be swapped in if necessary.
  */
 void
-setrun(struct proc *p)
+setrun(p)
+register struct proc *p;
 {
 	register caddr_t w;
 
@@ -198,7 +177,8 @@ setrun(struct proc *p)
  * than the currently running process.
  */
 int
-setpri(struct proc *pp)
+setpri(pp)
+register struct proc *pp;
 {
 	register int p;
 
@@ -229,7 +209,7 @@ setpri(struct proc *pp)
  * core situation changes and in any case once per second.
  */
 void
-sched(void)
+sched()
 {
 	register struct proc *rp, *p;
 	register int outage, inage;
@@ -321,7 +301,8 @@ loop:
  * It would be better to do largest first.
  */
 int
-swapin(struct proc *p)
+swapin(p)
+register struct proc *p;
 {
 	register struct text *xp;
 	register int a;
@@ -358,7 +339,7 @@ swapin(struct proc *p)
  * call the scheduler.
  */
 void
-qswtch(void)
+qswtch()
 {
 
 	setrq(u.u_procp);
@@ -377,7 +358,7 @@ qswtch(void)
  * i.e. its not worth putting an spl() in.
  */
 void
-swtch(void)
+swtch()
 {
 	register int n;
 	register struct proc *p, *q, *pp, *pq;
@@ -458,7 +439,7 @@ loop:
  * It returns 1 in the new process, 0 in the old.
  */
 int
-newproc(void)
+newproc()
 {
 	int a1, a2;
 	struct proc *volatile p, *up;
@@ -596,7 +577,8 @@ retry:
  * the user's stack towards or away from the data area.
  */
 void
-expand(int newsize)
+expand(newsize)
+int	newsize;
 {
 	register int i, n;
 	register struct proc *p;

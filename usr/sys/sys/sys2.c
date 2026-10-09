@@ -5,21 +5,11 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 
-extern void readp(struct file *);
-extern void writep(struct file *);
-extern void wdir(struct inode *);
-extern void itrunc(struct inode *);
-extern void openi(struct inode *, int);
-void rdwr(int mode);
-void write(void);
-void open(void);
-void creat(void);
-void open1(struct inode *ip, int mode, int trf);
 /*
  * read system call
  */
 void
-read(void)
+read()
 {
 	rdwr(FREAD);
 }
@@ -28,7 +18,7 @@ read(void)
  * write system call
  */
 void
-write(void)
+write()
 {
 	rdwr(FWRITE);
 }
@@ -39,7 +29,8 @@ write(void)
  * and switch out to readi, writei, or pipe code.
  */
 void
-rdwr(register int mode)
+rdwr(mode)
+register int mode;
 {
 	register struct file *fp;
 	register struct inode *ip;
@@ -89,7 +80,7 @@ rdwr(register int mode)
  * open system call
  */
 void
-open(void)
+open()
 {
 	register struct inode *ip;
 	register struct a {
@@ -108,7 +99,7 @@ open(void)
  * creat system call
  */
 void
-creat(void)
+creat()
 {
 	register struct inode *ip;
 	register struct a {
@@ -135,7 +126,10 @@ creat(void)
  * and call the device open routine if any.
  */
 void
-open1(register struct inode *ip, register int mode, int trf)
+open1(ip, mode, trf)
+register struct inode *ip;
+register int mode;
+int	trf;
 {
 	register struct file *fp;
 	int i;
@@ -173,7 +167,7 @@ out:
  * close system call
  */
 void
-close(void)
+close()
 {
 	register struct file *fp;
 	register struct a {
@@ -192,7 +186,7 @@ close(void)
  * seek system call
  */
 void
-seek(void)
+seek()
 {
 	register struct file *fp;
 	register struct a {
@@ -221,7 +215,7 @@ seek(void)
  * link system call
  */
 void
-link(void)
+link()
 {
 	register struct inode *ip, *xp;
 	register struct a {
@@ -272,7 +266,7 @@ out:
  * mknod system call
  */
 void
-mknod(void)
+mknod()
 {
 	register struct inode *ip;
 	register struct a {
@@ -304,7 +298,7 @@ out:
  * access system call
  */
 void
-saccess(void)
+saccess()
 {
 	register int svuid, svgid;
 	register struct inode *ip;

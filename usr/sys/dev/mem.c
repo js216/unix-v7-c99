@@ -10,17 +10,15 @@
  */
 
 #include "../h/param.h"
+#include "../h/systm.h"
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/conf.h"
 #include "../h/seg.h"
-int passc(int c);
-int cpass(void);
-int fumem(unsigned int off);
-int sumem(unsigned int off, int c);
 
 int
-mmread(dev_t dev)
+mmread(dev)
+int	dev;
 {
 	register int c;
 
@@ -34,7 +32,8 @@ mmread(dev_t dev)
 }
 
 int
-mmwrite(dev_t dev)
+mmwrite(dev)
+int	dev;
 {
 	register int c;
 	unsigned int off;

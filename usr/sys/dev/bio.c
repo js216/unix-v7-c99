@@ -6,16 +6,6 @@
 #include "../h/conf.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
-void brelse(struct buf *bp);
-void bawrite(register struct buf *bp);
-void iowait(struct buf *bp);
-void notavail(struct buf *bp);
-void geterror(struct buf *bp);
-int incore(dev_t dev, daddr_t blkno);
-void wakeup(caddr_t chan);
-void sleep(caddr_t chan, int pri);
-void panic(char *s);
-void mapfree(struct buf *bp);
 
 #define	DISKMON	1
 
@@ -63,7 +53,9 @@ struct	buf	swbuf2;
  * Read in (if necessary) the block and return a buffer pointer.
  */
 struct buf *
-bread(dev_t dev, daddr_t blkno)
+bread(dev, blkno)
+dev_t dev;
+daddr_t blkno;
 {
 	register struct buf *bp;
 
@@ -89,7 +81,9 @@ bread(dev_t dev, daddr_t blkno)
  * read-ahead block (which is not allocated to the caller)
  */
 struct buf *
-breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
+breada(dev, blkno, rablkno)
+dev_t dev;
+daddr_t blkno, rablkno;
 {
 	register struct buf *bp, *rabp;
 
@@ -129,7 +123,8 @@ breada(dev_t dev, daddr_t blkno, daddr_t rablkno)
  * Then release the buffer.
  */
 void
-bwrite(struct buf *bp)
+bwrite(bp)
+register struct buf *bp;
 {
 	register int flag;
 
@@ -158,7 +153,8 @@ bwrite(struct buf *bp)
  * in the same order as requested.
  */
 void
-bdwrite(struct buf *bp)
+bdwrite(bp)
+register struct buf *bp;
 {
 	register struct buf *dp;
 
@@ -175,7 +171,8 @@ bdwrite(struct buf *bp)
  * Release the buffer, start I/O on it, but don't wait for completion.
  */
 void
-bawrite(register struct buf *bp)
+bawrite(bp)
+register struct buf *bp;
 {
 
 	bp->b_flags |= B_ASYNC;
@@ -186,7 +183,8 @@ bawrite(register struct buf *bp)
  * release the buffer, with no I/O implied.
  */
 void
-brelse(struct buf *bp)
+brelse(bp)
+register struct buf *bp;
 {
 	register struct buf **backp;
 	register int s;
@@ -222,7 +220,9 @@ brelse(struct buf *bp)
  * (mainly to avoid getting hung up on a wait in breada)
  */
 int
-incore(dev_t dev, daddr_t blkno)
+incore(dev, blkno)
+dev_t dev;
+daddr_t blkno;
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -240,7 +240,9 @@ incore(dev_t dev, daddr_t blkno)
  * for the oldest non-busy buffer and reassign it.
  */
 struct buf *
-getblk(dev_t dev, daddr_t blkno)
+getblk(dev, blkno)
+dev_t dev;
+daddr_t blkno;
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -310,7 +312,7 @@ getblk(dev_t dev, daddr_t blkno)
  * not assigned to any particular device
  */
 struct buf *
-geteblk(void)
+geteblk()
 {
 	register struct buf *bp;
 	register struct buf *dp;
@@ -346,7 +348,8 @@ loop:
  * to the user.
  */
 void
-iowait(struct buf *bp)
+iowait(bp)
+register struct buf *bp;
 {
 
 	spl6();
@@ -361,7 +364,8 @@ iowait(struct buf *bp)
  * (internal interface)
  */
 void
-notavail(struct buf *bp)
+notavail(bp)
+register struct buf *bp;
 {
 	register int s;
 
@@ -377,7 +381,8 @@ notavail(struct buf *bp)
  * and wake up anyone waiting for it.
  */
 void
-iodone(struct buf *bp)
+iodone(bp)
+register struct buf *bp;
 {
 
 	if(bp->b_flags&B_MAP)
@@ -395,7 +400,8 @@ iodone(struct buf *bp)
  * Zero the core associated with a buffer.
  */
 void
-clrbuf(struct buf *bp)
+clrbuf(bp)
+struct buf *bp;
 {
 	register int *p;
 	register int c;
@@ -412,7 +418,9 @@ clrbuf(struct buf *bp)
  * swap I/O
  */
 void
-swap(daddr_t blkno, int coreaddr, int count, int rdflg)
+swap(blkno, coreaddr, count, rdflg)
+register int count;
+int	blkno, coreaddr, rdflg;
 {
 	register struct buf *bp;
 	register int tcount;
@@ -459,7 +467,8 @@ swap(daddr_t blkno, int coreaddr, int count, int rdflg)
  * (from umount and update)
  */
 void
-bflush(dev_t dev)
+bflush(dev)
+dev_t dev;
 {
 	register struct buf *bp;
 
@@ -487,7 +496,10 @@ loop:
  * validating them.
  */
 void
-physio(int (*strat)(), register struct buf *bp, dev_t dev, int rw)
+physio(strat, bp, dev, rw)
+register struct buf *bp;
+int (*strat)();
+int	dev, rw;
 {
 	register unsigned base;
 	register int nb;
@@ -559,7 +571,8 @@ physio(int (*strat)(), register struct buf *bp, dev_t dev, int rw)
  * don't yet return specific errors.
  */
 void
-geterror(struct buf *bp)
+geterror(bp)
+register struct buf *bp;
 {
 
 	if (bp->b_flags&B_ERROR)

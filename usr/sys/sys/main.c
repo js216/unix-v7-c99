@@ -11,19 +11,6 @@
 #include "../h/conf.h"
 #include "../h/buf.h"
 
-void startup(void);
-void brelse(struct buf *bp);
-void binit(void);
-void iinit(void);
-void panic(char *s);
-void printf(char *fmt, ...);
-void clkstart(void);
-void cinit(void);
-int newproc(void);
-void expand(int newsize);
-int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-void sched(void);
-void arm_sync_icache(void);
 /*
  * Initialization code.
  * Called from cold start routine as
@@ -41,7 +28,7 @@ void arm_sync_icache(void);
  *	cannot be executed.
  */
 void
-main(void)
+main()
 {
 
 	startup();
@@ -79,11 +66,8 @@ main(void)
 	 */
 
 	if(newproc()) {
-		int dclicks = ((int)btoc(szicode) + 63) & ~63;
-		expand(USIZE + dclicks);
-		u.u_dsize = dclicks;
-		u.u_ssize = 0;
-		estabur((unsigned)0, (unsigned)dclicks, (unsigned)0, 0, RO);
+		expand(USIZE + (int)btoc(szicode));
+		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
 		arm_sync_icache();
 		/*
@@ -106,7 +90,7 @@ main(void)
  * block. Usually because of an IO error.
  */
 void
-iinit(void)
+iinit()
 {
 	register struct buf *cp, *bp;
 	register struct filsys *fp;
@@ -141,7 +125,8 @@ char	buffers[NBUF][(BSIZE+BSLOP+3)&~3] __attribute__((aligned(4), section(KTABLE
  * Initialize the buffer I/O system by freeing
  * all buffers and setting all device buffer lists to empty.
  */
-void binit(void)
+void
+binit()
 {
 	register struct buf *bp;
 	register struct buf *dp;

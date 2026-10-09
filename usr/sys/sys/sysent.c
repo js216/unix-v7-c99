@@ -8,27 +8,18 @@
 #include "../h/file.h"
 #include "../h/tty.h"
 #include "../h/seg.h"
-void nullsys(void), nosys(void);
-void rexit(void), fork(void), read(void), write(void), open(void);
-void close(void), wait(void), creat(void), link(void), unlink(void);
-void exec(void), exece(void), chdir(void), gtime(void), mknod(void);
-void chmod(void), chown(void), sbreak(void), stat(void), seek(void);
-void getpid(void), smount(void), sumount(void), setuid(void), getuid(void);
-void stime(void), ptrace(void), alarm(void), fstat(void), pause(void);
-void utime(void), saccess(void), nice(void), ftime(void), sync(void);
-void kill(void), dup(void), pipe(void), times(void), profil(void);
-void setgid(void), getgid(void), ssig(void), sysacct(void), syslock(void);
-void umask(void), chroot(void), stty(void), gtty(void), ioctl(void);
-void sigreturn(void);
-int issig(void);
-void psig(void);
-void psignal(struct proc *p, int sig);
-int setpri(struct proc *pp);
-void qswtch(void);
-void panic(char *s);
-void printf(char *fmt, ...);
-int save(int *lp) __attribute__((returns_twice));
-void bcopy(char *from, char *to, unsigned int n);
+void nullsys(), nosys();
+void rexit(), fork(), read(), write(), open();
+void close(), wait(), creat(), link(), unlink();
+void exec(), exece(), chdir(), gtime(), mknod();
+void chmod(), chown(), sbreak(), stat(), seek();
+void getpid(), smount(), sumount(), setuid(), getuid();
+void stime(), ptrace(), alarm(), fstat(), pause();
+void utime(), saccess(), nice(), ftime(), sync();
+void kill(), dup(), pipe(), times(), profil();
+void setgid(), getgid(), ssig(), sysacct(), syslock();
+void umask(), chroot(), stty(), gtty(), ioctl();
+void sigreturn();
 
 /*
  * This table is the switch used to transfer
@@ -159,5 +150,5 @@ user_trap_handler(int signo, int *r)
 	if (runrun)
 		qswtch();
 }
-void nosys(void)   { u.u_error = EINVAL; }
-void nullsys(void) { }
+void nosys()   { u.u_error = EINVAL; }
+void nullsys() { }

@@ -5,7 +5,6 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/buf.h"
-void brelse(struct buf *bp);
 
 /*
  * Convert a pathname into a pointer to
@@ -19,7 +18,9 @@ void brelse(struct buf *bp);
  *	2 if name is to be deleted
  */
 struct inode *
-namei(int (*func)(void), int flag)
+namei(func, flag)
+int (*func)();
+int	flag;
 {
 	register struct inode *dp;
 	register int c;
@@ -204,7 +205,7 @@ out:
  * kernel string pointed at by dirp.
  */
 int
-schar(void)
+schar()
 {
 
 	return(*u.u_dirp++ & 0377);
@@ -215,7 +216,7 @@ schar(void)
  * user string pointed at by dirp.
  */
 int
-uchar(void)
+uchar()
 {
 	register int c;
 

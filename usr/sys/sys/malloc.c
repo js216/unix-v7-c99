@@ -1,7 +1,6 @@
 #include "../h/param.h"
 #include "../h/systm.h"
 #include "../h/map.h"
-void wakeup(caddr_t chan);
 
 /*
  * Allocate 'size' units from the given
@@ -14,7 +13,9 @@ void wakeup(caddr_t chan);
  * Algorithm is first-fit.
  */
 int
-malloc(struct map *mp, int size)
+malloc(mp, size)
+struct map *mp;
+int	size;
 {
 	register unsigned int a;
 	register struct map *bp;
@@ -42,7 +43,10 @@ malloc(struct map *mp, int size)
  * one or both ends if possible.
  */
 void
-mfree(struct map *mp, int size, int a)
+mfree(mp, size, a)
+struct map *mp;
+register int a;
+int	size;
 {
 	register struct map *bp;
 	register unsigned int t;

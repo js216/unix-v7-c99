@@ -8,13 +8,6 @@
 #include "../h/inode.h"
 #include "../h/mount.h"
 #include "../h/acct.h"
-void wakeup(caddr_t chan);
-void printf(char *fmt, ...);
-void fstat(void);
-void close(void);
-void dup(void);
-void seek(void);
-void read(void);
 
 /*
  * Convert a user supplied
@@ -24,7 +17,8 @@ void read(void);
  * of the descriptor.
  */
 struct file *
-getf(register int f)
+getf(f)
+register int f;
 {
 	register struct file *fp;
 
@@ -49,7 +43,8 @@ getf(register int f)
  * Call device handler on last close.
  */
 void
-closef(register struct file *fp)
+closef(fp)
+register struct file *fp;
 {
 	register struct inode *ip;
 	int flag, mode;
@@ -106,7 +101,9 @@ closef(register struct file *fp)
  * validate before actual IO.
  */
 void
-openi(register struct inode *ip, int rw)
+openi(ip, rw)
+register struct inode *ip;
+int	rw;
 {
 	dev_t dev;
 	register unsigned int maj;
@@ -117,14 +114,14 @@ openi(register struct inode *ip, int rw)
 
 	case IFCHR:
 	case IFMPC:
-		if(maj >= (unsigned int)nchrdev)
+		if(maj >= (unsigned)nchrdev)
 			goto bad;
 		(*cdevsw[maj].d_open)(dev, rw);
 		break;
 
 	case IFBLK:
 	case IFMPB:
-		if(maj >= (unsigned int)nblkdev)
+		if(maj >= (unsigned)nblkdev)
 			goto bad;
 		(*bdevsw[maj].d_open)(dev, rw);
 	}
@@ -148,7 +145,9 @@ bad:
  * permissions.
  */
 int
-access(register struct inode *ip, int mode)
+access(ip, mode)
+register struct inode *ip;
+int	mode;
 {
 	register int m;
 
@@ -188,7 +187,7 @@ access(register struct inode *ip, int mode)
  * return inode pointer.
  */
 struct inode *
-owner(void)
+owner()
 {
 	register struct inode *ip;
 
@@ -208,7 +207,7 @@ owner(void)
  * super user.
  */
 int
-suser(void)
+suser()
 {
 
 	if(u.u_uid == 0) {
@@ -223,7 +222,7 @@ suser(void)
  * Allocate a user file descriptor.
  */
 int
-ufalloc(void)
+ufalloc()
 {
 	register int i;
 
@@ -247,7 +246,7 @@ ufalloc(void)
  * 	file structures.
  */
 struct file *
-falloc(void)
+falloc()
 {
 	register struct file *fp;
 	register int i;

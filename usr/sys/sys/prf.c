@@ -1,7 +1,9 @@
 #include "../h/param.h"
+#include "../h/systm.h"
+#include "../h/seg.h"
 #include "../h/buf.h"
+#include "../h/conf.h"
 #include <stdarg.h>
-void putchar(char c);
 
 /*
  * In case console is off,
@@ -11,7 +13,6 @@ void putchar(char c);
 
 char	*panicstr;
 
-void printn(long n, int b);
 /*
  * Scaled down version of C Library printf.
  * Only %s %u %d (==%u) %o %x %D are recognized.
@@ -56,7 +57,9 @@ loop:
  * Print an unsigned integer in base b.
  */
 void
-printn(long n, int b)
+printn(n, b)
+long n;
+int	b;
 {
 	register long a;
 
@@ -76,7 +79,8 @@ printn(long n, int b)
  * then loops.
  */
 void
-panic(char *s)
+panic(s)
+char *s;
 {
 	panicstr = s;
 	printf("panic: %s\n", s);
@@ -91,7 +95,9 @@ panic(char *s)
  * the device argument.
  */
 void
-prdev(char *str, dev_t dev)
+prdev(str, dev)
+char *str;
+dev_t dev;
 {
 
 	printf("%s on dev %u/%u\n", str, major(dev), minor(dev));
@@ -105,7 +111,9 @@ prdev(char *str, dev_t dev)
  * status register) passed as argument.
  */
 void
-deverror(register struct buf *bp, int o1, int o2)
+deverror(bp, o1, o2)
+register struct buf *bp;
+int	o1, o2;
 {
 
 	prdev("err", bp->b_dev);

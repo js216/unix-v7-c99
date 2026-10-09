@@ -5,8 +5,6 @@
 #include "../h/proc.h"
 #include "../h/text.h"
 #include "../h/seg.h"
-int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-void arm_sureg(int *uisa, int *uisd, int nseg);
 
 /*
  * Load the user hardware segmentation
@@ -15,7 +13,7 @@ void arm_sureg(int *uisa, int *uisd, int nseg);
  * been setup prior by estabur.
  */
 void
-sureg(void)
+sureg()
 {
 	register int *udp, *uap, *rap;
 	int auisa[16];
@@ -50,7 +48,9 @@ sureg(void)
  * segment is read-write or read-only.
  */
 int
-estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
+estabur(nt, nd, ns, sep, xrw)
+unsigned nt, nd, ns;
+int	sep, xrw;
 {
 	(void)sep; (void)xrw;
 

@@ -4,8 +4,6 @@
 #include "../h/user.h"
 #include "../h/inode.h"
 #include "../h/file.h"
-void sleep(caddr_t chan, int pri);
-void wakeup(caddr_t chan);
 
 /*
  * Max allowable buffering per pipe.
@@ -24,7 +22,7 @@ void wakeup(caddr_t chan);
  * Put it all together with flags.
  */
 void
-pipe(void)
+pipe()
 {
 	register struct inode *ip;
 	register struct file *rf, *wf;
@@ -61,7 +59,8 @@ pipe(void)
  * Read call directed to a pipe.
  */
 void
-readp(register struct file *fp)
+readp(fp)
+register struct file *fp;
 {
 	register struct inode *ip;
 
@@ -116,7 +115,8 @@ loop:
  * Write call directed to a pipe.
  */
 void
-writep(register struct file *fp)
+writep(fp)
+register struct file *fp;
 {
 	register int c;
 	register struct inode *ip;
@@ -189,7 +189,8 @@ loop:
  * set the WANT bit and sleep.
  */
 void
-plock(register struct inode *ip)
+plock(ip)
+register struct inode *ip;
 {
 
 	while(ip->i_flag&ILOCK) {
@@ -207,7 +208,8 @@ plock(register struct inode *ip)
  * to unlock inodes in general.
  */
 void
-prele(register struct inode *ip)
+prele(ip)
+register struct inode *ip;
 {
 
 	ip->i_flag &= ~ILOCK;

@@ -5,11 +5,6 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
-void clrbuf(struct buf *bp);
-void brelse(struct buf *bp);
-void bdwrite(struct buf *bp);
-void bwrite(struct buf *bp);
-extern void iomove(register caddr_t cp, register int n, int flag);
 
 /*
  * Read the file corresponding to
@@ -22,7 +17,8 @@ extern void iomove(register caddr_t cp, register int n, int flag);
  *	u_segflg	read to kernel/user/user I
  */
 void
-readi(register struct inode *ip)
+readi(ip)
+register struct inode *ip;
 {
 	struct buf *bp;
 	dev_t dev;
@@ -87,7 +83,8 @@ readi(register struct inode *ip)
  *	u_segflg	write to kernel/user/user I
  */
 void
-writei(register struct inode *ip)
+writei(ip)
+register struct inode *ip;
 {
 	struct buf *bp;
 	dev_t dev;
@@ -139,8 +136,9 @@ writei(register struct inode *ip)
  * Return the logical maximum
  * of the 2 arguments.
  */
-unsigned
-max(unsigned a, unsigned b)
+int
+max(a, b)
+unsigned a, b;
 {
 
 	if(a > b)
@@ -152,8 +150,9 @@ max(unsigned a, unsigned b)
  * Return the logical minimum
  * of the 2 arguments.
  */
-unsigned
-min(unsigned a, unsigned b)
+int
+min(a, b)
+unsigned a, b;
 {
 
 	if(a < b)
@@ -177,7 +176,10 @@ min(unsigned a, unsigned b)
  * cpass and passc.
  */
 void
-iomove(register caddr_t cp, register int n, int flag)
+iomove(cp, n, flag)
+register caddr_t cp;
+register int n;
+int	flag;
 {
 	register int t;
 

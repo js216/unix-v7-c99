@@ -4,8 +4,6 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/buf.h"
-void bdwrite(struct buf *bp);
-void brelse(struct buf *bp);
 
 /*
  * Bmap defines the structure of file system storage
@@ -16,7 +14,10 @@ void brelse(struct buf *bp);
  * for use in read-ahead.
  */
 daddr_t
-bmap(register struct inode *ip, daddr_t bn, int rwflg)
+bmap(ip, bn, rwflg)
+register struct inode *ip;
+daddr_t bn;
+int	rwflg;
 {
 	register int i;
 	struct buf *bp, *nbp;
@@ -125,7 +126,8 @@ bmap(register struct inode *ip, daddr_t bn, int rwflg)
  * u_base is in the user address space unless u_segflg is set.
  */
 int
-passc(register int c)
+passc(c)
+register int c;
 {
 
 	if(u.u_segflg == 1)
@@ -148,7 +150,7 @@ passc(register int c)
  * address space unless u_segflg is set.
  */
 int
-cpass(void)
+cpass()
 {
 	register int c;
 
@@ -171,7 +173,7 @@ cpass(void)
  * illegal entries in the bdevsw and cdevsw tables.
  */
 int
-nodev(void)
+nodev()
 {
 
 	u.u_error = ENODEV;
@@ -183,7 +185,7 @@ nodev(void)
  * in the bdevsw and cdevsw tables.
  */
 int
-nulldev(void)
+nulldev()
 {
 	return(0);
 }
@@ -192,7 +194,9 @@ nulldev(void)
  * copy count bytes from from to to.
  */
 void
-bcopy(caddr_t from, caddr_t to, register unsigned int count)
+bcopy(from, to, count)
+caddr_t from, to;
+register int count;
 {
 	register char *f, *t;
 

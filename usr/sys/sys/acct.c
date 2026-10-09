@@ -11,7 +11,7 @@
  */
 
 void
-sysacct(void)
+sysacct()
 {
 	register struct inode *ip;
 	register struct a {
@@ -45,12 +45,11 @@ sysacct(void)
 	}
 }
 
-int compress(time_t t);
 /*
  * On exit, write a record on the accounting file.
  */
 void
-acct(void)
+acct()
 {
 	register int i;
 	register struct inode *ip;
@@ -88,7 +87,8 @@ acct(void)
  * with 3 bits base-8 exponent, 13 bits fraction.
  */
 int
-compress(time_t t)
+compress(t)
+register time_t t;
 {
 	register int exp = 0, round = 0;
 
@@ -113,7 +113,7 @@ compress(time_t t)
  * occur if core grows.
  */
 void
-syslock(void)
+syslock()
 {
 	register struct proc *p;
 	register struct a {

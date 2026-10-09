@@ -10,48 +10,6 @@
 #include "../h/seg.h"
 #include "../h/acct.h"
 
-void exec(void);
-void exece(void);
-int getxfile(struct inode *ip, int nargc);
-void setregs(void);
-void rexit(void);
-void exit(int rv);
-void wait(void);
-void fork(void);
-void sbreak(void);
-int malloc(struct map *mp, int size);
-void mfree(struct map *mp, int size, int a);
-void panic(char *s);
-void printf(char *fmt, ...);
-int fuword(caddr_t addr);
-int fubyte(caddr_t addr);
-int subyte(caddr_t addr, char c);
-int suword(caddr_t addr, int v);
-int copyout(caddr_t f, caddr_t t, unsigned int n);
-void bcopy(char *from, char *to, unsigned int n);
-void xfree(void);
-void xalloc(struct inode *ip);
-int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-void expand(int newsize);
-void clearseg(int a);
-void acct(void);
-void wakeup(caddr_t chan);
-void setrun(struct proc *p);
-void swtch(void);
-void closef(struct file *fp);
-int fsig(struct proc *p);
-void sleep(caddr_t chan, int pri);
-void psignal(struct proc *p, int sig);
-int newproc(void);
-void copyseg(int from, int to);
-void arm_sync_icache(void);
-void install_sigtramp(void);
-void readi(struct inode *ip);
-void iput(struct inode *ip);
-int access(struct inode *ip, int mode);
-void plock(struct inode *ip);
-struct inode *namei(int (*func)(void), int flag);
-int uchar(void);
 /*
  * exec system call, with and without environments.
  */
@@ -62,14 +20,14 @@ struct execa {
 };
 
 void
-exec(void)
+exec()
 {
 	((struct execa *)u.u_ap)->envp = NULL;
 	exece();
 }
 
 void
-exece(void)
+exece()
 {
 	register struct execa *uap;
 	register int nc, c, ap;
@@ -242,7 +200,9 @@ readbytes(struct inode *ip, caddr_t kbuf, unsigned int off, unsigned int n)
 	u.u_segflg = 0;
 }
 int
-getxfile(register struct inode *ip, int nargc)
+getxfile(ip, nargc)
+register struct inode *ip;
+int	nargc;
 {
 	struct elf32_ehdr eh;
 	struct elf32_phdr ph;
@@ -321,7 +281,7 @@ bad:
  * Clear registers on exec
  */
 void
-setregs(void)
+setregs()
 {
 	register int *rp;
 	register char *cp;
@@ -354,7 +314,7 @@ setregs(void)
  * pass back caller's arg
  */
 void
-rexit(void)
+rexit()
 {
 	register struct a {
 		int	rval;
@@ -372,7 +332,8 @@ rexit(void)
  * and dispose of children.
  */
 void
-exit(int rv)
+exit(rv)
+int	rv;
 {
 	register int i;
 	register struct proc *p, *q;
@@ -425,7 +386,7 @@ exit(int rv)
  * and pass back status from them.
  */
 void
-wait(void)
+wait()
 {
 	register int f;
 	register struct proc *p;
@@ -471,7 +432,7 @@ loop:
  * fork system call.
  */
 void
-fork(void)
+fork()
 {
 	register struct proc *p1, *p2;
 	register int a;
@@ -525,7 +486,7 @@ out:	;
  *  -- bad planning: "break" is a dirty word in C.
  */
 void
-sbreak(void)
+sbreak()
 {
 	struct a {
 		char	*nsiz;

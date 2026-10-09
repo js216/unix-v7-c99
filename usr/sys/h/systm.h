@@ -46,49 +46,46 @@ dev_t	pipedev;		/* pipe device */
 extern	int	icode[];	/* user init code */
 extern	int	szicode;	/* its size */
 
-dev_t	getmdev(void);
-daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
-void	setrun(struct proc *p);
-int	setpri(struct proc *pp);
-int	issig(void);
-unsigned min(unsigned a, unsigned b);
-int	fubyte(caddr_t addr);
-int	subyte(caddr_t addr, char c);
-struct inode *ialloc(dev_t dev);
-struct inode *iget(dev_t dev, ino_t ino);
-struct inode *owner(void);
-struct inode *maknode(int mode);
-struct inode *namei(int (*func)(void), int flag);
-struct buf *alloc(dev_t dev);
-struct buf *getblk(dev_t dev, daddr_t blkno);
-struct buf *geteblk(void);
-struct buf *bread(dev_t dev, daddr_t blkno);
-struct buf *breada(dev_t dev, daddr_t blkno, daddr_t rablkno);
-struct filsys *getfs(dev_t dev);
-struct file *getf(int fdes);
-struct file *falloc(void);
-int	uchar(void);
-void	free(dev_t dev, daddr_t bno);
-void	ifree(dev_t dev, ino_t ino);
-void	update(void);
-int	passc(int c);
-int	cpass(void);
-void	closef(struct file *fp);
-int	access(struct inode *ip, int mode);
-void	iput(struct inode *ip);
-void	plock(struct inode *ip);
-void	prele(struct inode *ip);
-void	readi(struct inode *ip);
-void	writei(struct inode *ip);
-int	iupdat(struct inode *ip, time_t *ta, time_t *tm);
-int	suser(void);
-int	ufalloc(void);
-void	xrele(struct inode *ip);
-void	psignal(struct proc *p, int sig);
-void	bcopy(char *f, char *t, unsigned int n);
-int	copyin(caddr_t f, caddr_t t, unsigned int n);
-int	copyout(caddr_t f, caddr_t t, unsigned int n);
-int	spl0(), spl1(), spl5(), spl6(), spl7(), splx();
+dev_t getmdev();
+daddr_t	bmap();
+struct inode *ialloc();
+struct inode *iget();
+struct inode *owner();
+struct inode *maknode();
+struct inode *namei();
+struct buf *alloc();
+struct buf *getblk();
+struct buf *geteblk();
+struct buf *bread();
+struct buf *breada();
+struct filsys *getfs();
+struct file *getf();
+struct file *falloc();
+int	uchar();
+void	acct(), addupc(), arm_sureg(), arm_sync_icache(), bawrite(),
+	bcopy(), bdinit(), bdwrite(), bflush(), binit(), brelse(), bwrite(),
+	chdirec(), cinit(), clearseg(), clkstart(), clock_ddr_init(), closef(),
+	clrbuf(), cninit(), cntv_ctl_set(), cntv_tval_set(), copyseg(),
+	dcclean(), deverror(), exece(), exit(), expand(), flushtty(), free(),
+	geterror(), idle(), iexpand(), ifree(), iinit(), install_sigtramp(),
+	ioctl(), iodone(), iomove(), iowait(), iput(), itrunc(), iupdat(),
+	mapfree(), mfree(), mmu_on(), notavail(), open1(), openi(), panic(),
+	physio(), plock(), prdev(), prele(), printn(), psig(), psignal(),
+	putchar(), qswtch(), rdwr(), readi(), readp(), resume(), savfp(),
+	sched(), sendsig(), setregs(), setrun(), signal(), sleep(), startup(),
+	stat1(), sureg(), swap(), swtch(), timeout(), tloop(), ttstart(),
+	ttyblock(), ttychars(), ttyclose(), ttyinput(), ttyopen(), ttyoutput(),
+	update(), wakeup(), wdir(), wflushtty(), writei(), writep(), xccdec(),
+	xexpand(), xfree(), xlock(), xrele(), xswap(), xumount(), xunlock(),
+	xuntext();
+int	access(), b_to_q(), badblock(), cntfrq_get(), compress(), copyin(),
+	copyout(), core(), cpass(), estabur(), fsig(), fubyte(), fumem(),
+	fuword(), getc(), getxfile(), incore(), issig(), malloc(), max(),
+	min(), newproc(), passc(), procxmt(), putc(), save(), setpri(), spl0(),
+	spl1(), spl5(), spl6(), spl7(), splx(), subyte(), sumem(), suser(),
+	suword(), swapin(), ttioccomm(), ttread(), ttrstrt(), ufalloc();
+caddr_t	ttwrite();
+void	printf(char *, ...);
 /*
  * Instrumentation
  */
@@ -105,5 +102,5 @@ long	tk_nout;
 extern struct sysent {
 	char	sy_narg;		/* total number of arguments */
 	char	sy_nrarg;		/* number of args in registers */
-	void	(*sy_call)(void);	/* handler */
+	void	(*sy_call)();		/* handler */
 } sysent[];

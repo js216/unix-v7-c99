@@ -5,33 +5,6 @@
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/timeb.h"
-void chdirec(struct inode **ipp);
-void sleep(caddr_t chan, int pri);
-void sysacct(void);
-void stat(void);
-void saccess(void);
-void link(void);
-void mknod(void);
-void smount(void);
-void sumount(void);
-struct inode *iget(dev_t dev, ino_t ino);
-void iput(struct inode *ip);
-void umask(void);
-void getuid(void);
-void getgid(void);
-void getpid(void);
-void setuid(void);
-void setgid(void);
-void sync(void);
-void nice(void);
-void gtime(void);
-void stime(void);
-void alarm(void);
-void ftime(void);
-void times(void);
-void profil(void);
-void syslock(void);
-extern struct inode *rootdir;
 
 /*
  * Everything in this file is a routine implementing a system call.
@@ -41,7 +14,7 @@ extern struct inode *rootdir;
  * return the current time (old-style entry)
  */
 void
-gtime(void)
+gtime()
 {
 	u.u_r.r_time = time;
 }
@@ -51,7 +24,7 @@ gtime(void)
  * DST flag
  */
 void
-ftime(void)
+ftime()
 {
 	register struct a {
 		struct	timeb	*tp;
@@ -79,7 +52,7 @@ ftime(void)
  * Set the time
  */
 void
-stime(void)
+stime()
 {
 	register struct a {
 		time_t	time;
@@ -91,7 +64,7 @@ stime(void)
 }
 
 void
-setuid(void)
+setuid()
 {
 	register int uid;
 	register struct a {
@@ -108,7 +81,7 @@ setuid(void)
 }
 
 void
-getuid(void)
+getuid()
 {
 
 	u.u_r.r_val1 = u.u_ruid;
@@ -116,7 +89,7 @@ getuid(void)
 }
 
 void
-setgid(void)
+setgid()
 {
 	register int gid;
 	register struct a {
@@ -132,7 +105,7 @@ setgid(void)
 }
 
 void
-getgid(void)
+getgid()
 {
 
 	u.u_r.r_val1 = u.u_rgid;
@@ -140,21 +113,21 @@ getgid(void)
 }
 
 void
-getpid(void)
+getpid()
 {
 	u.u_r.r_val1 = u.u_procp->p_pid;
 	u.u_r.r_val2 = u.u_procp->p_ppid;
 }
 
 void
-sync(void)
+sync()
 {
 
 	update();
 }
 
 void
-nice(void)
+nice()
 {
 	register int n;
 	register struct a {
@@ -179,7 +152,7 @@ nice(void)
  * in unlinking directories.
  */
 void
-unlink(void)
+unlink()
 {
 	register struct inode *ip, *pp;
 	struct a {
@@ -229,20 +202,21 @@ out1:
 	iput(pp);
 }
 void
-chdir(void)
+chdir()
 {
 	chdirec(&u.u_cdir);
 }
 
 void
-chroot(void)
+chroot()
 {
 	if (suser())
 		chdirec(&u.u_rdir);
 }
 
 void
-chdirec(register struct inode **ipp)
+chdirec(ipp)
+register struct inode **ipp;
 {
 	register struct inode *ip;
 	struct a {
@@ -271,7 +245,7 @@ bad:
 }
 
 void
-chmod(void)
+chmod()
 {
 	register struct inode *ip;
 	register struct a {
@@ -293,7 +267,7 @@ chmod(void)
 }
 
 void
-chown(void)
+chown()
 {
 	register struct inode *ip;
 	register struct a {
@@ -312,7 +286,7 @@ chown(void)
 }
 
 void
-ssig(void)
+ssig()
 {
 	register int a;
 	struct a {
@@ -332,7 +306,7 @@ ssig(void)
 }
 
 void
-kill(void)
+kill()
 {
 	register struct proc *p, *q;
 	register int a;
@@ -368,7 +342,7 @@ kill(void)
 }
 
 void
-times(void)
+times()
 {
 	register struct a {
 		time_t	(*times)[4];
@@ -380,7 +354,7 @@ times(void)
 }
 
 void
-profil(void)
+profil()
 {
 	register struct a {
 		short	*bufbase;
@@ -400,7 +374,7 @@ profil(void)
  * alarm clock signal
  */
 void
-alarm(void)
+alarm()
 {
 	register struct proc *p;
 	register int c;
@@ -420,7 +394,7 @@ alarm(void)
  * no one should wakeup(&u)
  */
 void
-pause(void)
+pause()
 {
 
 	for(;;)
@@ -431,7 +405,7 @@ pause(void)
  * mode mask for creation of files
  */
 void
-umask(void)
+umask()
 {
 	register struct a {
 		int	mask;
@@ -449,7 +423,7 @@ umask(void)
  * Can't set ICHG.
  */
 void
-utime(void)
+utime()
 {
 	register struct a {
 		char	*fname;

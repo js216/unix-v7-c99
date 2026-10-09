@@ -500,8 +500,6 @@ char	*strh[] =
 	"	{0}",
 	"};",
 	"",
-	"int	ttyopen(), ttyclose(), ttread(), ttyinput(), ttstart();",
-	"char	*ttwrite();",
 	0
 };
 
@@ -664,7 +662,7 @@ main()
 	printf("\nvoid\t%sinit(void), %sinit(void), %sputchar(char);\n", con, dsk, con);
 	printf("void\tcninit(void) { %sinit(); }\n", con);
 	printf("void\tbdinit(void) { %sinit(); }\n", dsk);
-	printf("void\tputchar(char c) { %sputchar(c); }\n", con);
+	printf("void\tputchar(int c) { %sputchar(c); }\n", con);
 	printf("\nvoid\tddrinit(void);\n");
 	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
 }

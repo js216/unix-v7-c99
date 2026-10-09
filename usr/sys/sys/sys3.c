@@ -10,16 +10,12 @@
 #include "../h/file.h"
 #include "../h/conf.h"
 #include "../h/stat.h"
-extern void xumount(dev_t);
-void brelse(struct buf *bp);
-void stat1(struct inode *ip, struct stat *ub, off_t pipeadj);
-dev_t getmdev(void);
 
 /*
  * the fstat system call.
  */
 void
-fstat(void)
+fstat()
 {
 	register struct file *fp;
 	register struct a {
@@ -38,7 +34,7 @@ fstat(void)
  * the stat system call.
  */
 void
-stat(void)
+stat()
 {
 	register struct inode *ip;
 	register struct a {
@@ -59,7 +55,10 @@ stat(void)
  * get the inode and pass appropriate parts back.
  */
 void
-stat1(register struct inode *ip, struct stat *ub, off_t pipeadj)
+stat1(ip, ub, pipeadj)
+register struct inode *ip;
+struct stat *ub;
+off_t pipeadj;
 {
 	register struct dinode *dp;
 	register struct buf *bp;
@@ -95,7 +94,7 @@ stat1(register struct inode *ip, struct stat *ub, off_t pipeadj)
  * the dup system call.
  */
 void
-dup(void)
+dup()
 {
 	register struct file *fp;
 	register struct a {
@@ -133,7 +132,7 @@ dup(void)
  * the mount system call.
  */
 void
-smount(void)
+smount()
 {
 	dev_t dev;
 	register struct inode *ip;
@@ -200,7 +199,7 @@ out1:
  * the umount system call.
  */
 void
-sumount(void)
+sumount()
 {
 	dev_t dev;
 	register struct inode *ip;
@@ -240,7 +239,7 @@ found:
  * thing on which to mount, and return the device number if so.
  */
 dev_t
-getmdev(void)
+getmdev()
 {
 	dev_t dev;
 	register struct inode *ip;

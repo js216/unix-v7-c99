@@ -9,28 +9,6 @@
 #include "../h/map.h"
 #include "../h/seg.h"
 struct map;
-int malloc(struct map *mp, int size);
-void mfree(struct map *mp, int size, int a);
-void panic(char *s);
-void swap(daddr_t blkno, int coreaddr, int count, int rdflg);
-void wakeup(caddr_t chan);
-void sleep(caddr_t chan, int pri);
-extern void xlock(struct text *);
-extern void xunlock(struct text *);
-extern void xccdec(struct text *);
-extern void xuntext(struct text *);
-void xswap(register struct proc *p, int ff, int os);
-extern void xexpand(struct text *);
-extern void xfree(void);
-extern void xalloc(struct inode *);
-void readi(struct inode *ip);
-void psignal(struct proc *p, int sig);
-void printf(char *fmt, ...);
-void iput(struct inode *ip);
-void sureg(void);
-void qswtch(void);
-int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-int save(int *lp);
 
 /*
  * Swap out process p.
@@ -43,7 +21,9 @@ int save(int *lp);
  * panic: out of swap space
  */
 void
-xswap(register struct proc *p, int ff, int os)
+xswap(p, ff, os)
+register struct proc *p;
+int	ff, os;
 {
 	register int a;
 
@@ -71,7 +51,7 @@ xswap(register struct proc *p, int ff, int os)
  * of a process.
  */
 void
-xfree(void)
+xfree()
 {
 	register struct text *xp;
 	register struct inode *ip;
@@ -106,7 +86,8 @@ xfree(void)
  * a swap has to be done to get it back.
  */
 void
-xalloc(register struct inode *ip)
+xalloc(ip)
+register struct inode *ip;
 {
 	register struct text *xp;
 	register unsigned ts;
@@ -169,7 +150,8 @@ xalloc(register struct inode *ip)
  * x_ccount must be 0.
  */
 void
-xexpand(register struct text *xp)
+xexpand(xp)
+register struct text *xp;
 {
 	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
 		if ((xp->x_flag&XLOAD)==0)
@@ -193,7 +175,8 @@ xexpand(register struct text *xp)
  * Lock and unlock a text segment from swapping
  */
 void
-xlock(register struct text *xp)
+xlock(xp)
+register struct text *xp;
 {
 
 	while(xp->x_flag&XLOCK) {
@@ -204,7 +187,8 @@ xlock(register struct text *xp)
 }
 
 void
-xunlock(register struct text *xp)
+xunlock(xp)
+register struct text *xp;
 {
 
 	if (xp->x_flag&XWANT)
@@ -217,7 +201,8 @@ xunlock(register struct text *xp)
  * When it drops to zero, free the core space.
  */
 void
-xccdec(register struct text *xp)
+xccdec(xp)
+register struct text *xp;
 {
 
 	if (xp==NULL || xp->x_ccount==0)
@@ -238,7 +223,8 @@ xccdec(register struct text *xp)
  * which are from device dev (used by umount system call).
  */
 void
-xumount(register dev_t dev)
+xumount(dev)
+register int dev;
 {
 	register struct text *xp;
 
@@ -251,7 +237,8 @@ xumount(register dev_t dev)
  * remove a shared text segment from the text table, if possible.
  */
 void
-xrele(register struct inode *ip)
+xrele(ip)
+register struct inode *ip;
 {
 	register struct text *xp;
 
@@ -267,7 +254,8 @@ xrele(register struct inode *ip)
  * the use count must be zero.
  */
 void
-xuntext(register struct text *xp)
+xuntext(xp)
+register struct text *xp;
 {
 	register struct inode *ip;
 

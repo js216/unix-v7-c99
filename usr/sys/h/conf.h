@@ -34,13 +34,13 @@ extern struct cdevsw
  */
 extern struct linesw
 {
-	int	(*l_open)();
+	void	(*l_open)();
 	int	(*l_close)();
 	int	(*l_read)();
 	char	*(*l_write)();
 	int	(*l_ioctl)();
-	int	(*l_rint)();
-	int	(*l_rend)();
+	void	(*l_rint)();
+	void	(*l_rend)();
 	int	(*l_meta)();
 	int	(*l_start)();
 	int	(*l_modem)();

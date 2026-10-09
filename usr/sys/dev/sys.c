@@ -9,7 +9,8 @@
 #include "../h/proc.h"
 
 int
-syopen(dev_t dev, int flag)
+syopen(dev, flag)
+int	dev, flag;
 {
 
 	(void)dev;
@@ -22,7 +23,8 @@ syopen(dev_t dev, int flag)
 }
 
 int
-syread(dev_t dev)
+syread(dev)
+int	dev;
 {
 
 	(void)dev;
@@ -31,7 +33,8 @@ syread(dev_t dev)
 }
 
 int
-sywrite(dev_t dev)
+sywrite(dev)
+int	dev;
 {
 
 	(void)dev;
@@ -40,7 +43,9 @@ sywrite(dev_t dev)
 }
 
 int
-sysioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+sysioctl(dev, cmd, addr, flag)
+caddr_t addr;
+int	dev, cmd, flag;
 {
 
 	(void)dev;

@@ -6,9 +6,6 @@
 #include "../h/proc.h"
 #include "../h/seg.h"
 #include "../h/conf.h"
-extern void addupc(caddr_t pc, void *prof, int inc);
-void wakeup(caddr_t chan);
-void panic(char *s);
 
 #define	SCHMAG	8/10
 
@@ -29,7 +26,10 @@ void panic(char *s);
  */
 
 void
-clock(dev_t dev, int sp, int r1, int nps, int r0, caddr_t pc, int ps)
+clock(dev, sp, r1, nps, r0, pc, ps)
+dev_t dev;
+caddr_t pc;
+int	sp, r1, nps, r0, ps;
 {
 	register struct callo *p1, *p2;
 	register struct proc *pp;
@@ -153,7 +153,10 @@ out:
  * intelligent to be done if an entry won't fit.
  */
 void
-timeout(int (*fun)(), caddr_t arg, int tim)
+timeout(fun, arg, tim)
+int (*fun)();
+caddr_t arg;
+int	tim;
 {
 	register struct callo *p1, *p2;
 	register int t;
@@ -194,8 +197,6 @@ timeout(int (*fun)(), caddr_t arg, int tim)
 #define GICC_EOIR	(*(volatile unsigned int *)(GICC_BASE + 0x010))
 #define TIMER_IRQ	27
 #define TIMER_HZ	HZ
-extern unsigned int cntfrq_get(void);
-extern void cntv_tval_set(unsigned int v), cntv_ctl_set(unsigned int v);
 extern struct intr intrtab[];
 static unsigned int timer_reload;
 int irq_ready;
@@ -230,7 +231,7 @@ gicen(int irq)
 	GICD_ISENABLER(irq / 32) = 1U << (irq % 32);
 }
 void
-clkstart(void)
+clkstart()
 {
 	register struct intr *ip;
 	if((timer_reload = cntfrq_get() / TIMER_HZ) == 0)

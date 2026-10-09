@@ -7,32 +7,6 @@
 #include "../h/reg.h"
 #include "../h/text.h"
 #include "../h/seg.h"
-void sleep(caddr_t chan, int pri);
-void wakeup(caddr_t chan);
-void setrun(struct proc *p);
-int fsig(struct proc *p);
-void psignal(struct proc *p, int sig);
-int issig(void);
-int procxmt(void);
-int core(void);
-void swtch(void);
-void exit(int rv);
-void itrunc(struct inode *ip);
-void expand(int newsize);
-void copyseg(int from, int to);
-void clearseg(int a);
-int estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
-int fubyte(caddr_t addr);
-int fuword(caddr_t addr);
-int suword(caddr_t addr, int v);
-struct inode *namei(int (*func)(void), int flag);
-struct inode *maknode(int mode);
-int access(struct inode *ip, int mode);
-void writei(struct inode *ip);
-void iput(struct inode *ip);
-int save(int *lp);
-void bcopy(char *from, char *to, unsigned int n);
-void sendsig(caddr_t p, int signo);
 #define	SINCR	20
 
 /*
@@ -64,7 +38,9 @@ struct
  * interrupts.
  */
 void
-signal(register int pgrp, int sig)
+signal(pgrp, sig)
+register int pgrp;
+int	sig;
 {
 	register struct proc *p;
 
@@ -80,7 +56,9 @@ signal(register int pgrp, int sig)
  * the specified process.
  */
 void
-psignal(register struct proc *p, register int sig)
+psignal(p, sig)
+register struct proc *p;
+register int sig;
 {
 
 	if((unsigned)sig >= NSIG)
@@ -105,7 +83,7 @@ psignal(register struct proc *p, register int sig)
  * do something to itself.
  */
 int
-issig(void)
+issig()
 {
 	register int n;
 	register struct proc *p;
@@ -127,7 +105,7 @@ issig(void)
  * receive commands from the parent.
  */
 void
-stop(void)
+stop()
 {
 	register struct proc *pp, *cp;
 
@@ -153,7 +131,7 @@ loop:
  *		psig();
  */
 void
-psig(void)
+psig()
 {
 	register int n, p;
 	register struct proc *rp;
@@ -194,7 +172,8 @@ psig(void)
  * representation in p_sig.
  */
 int
-fsig(struct proc *p)
+fsig(p)
+struct proc *p;
 {
 	register int n, i;
 
@@ -218,11 +197,11 @@ fsig(struct proc *p)
  * data+stack segments.
  */
 int
-core(void)
+core()
 {
 	register struct inode *ip;
 	register unsigned s;
-	extern int schar(void);
+	extern int schar();
 
 	u.u_error = 0;
 	u.u_dirp = "core";
@@ -260,7 +239,8 @@ core(void)
  */
 
 int
-grow(unsigned sp)
+grow(sp)
+unsigned sp;
 {
 	register int si, i;
 	register struct proc *p;
@@ -290,7 +270,7 @@ grow(unsigned sp)
  * sys-trace system call.
  */
 void
-ptrace(void)
+ptrace()
 {
 	register struct proc *p;
 	register struct a {
@@ -337,7 +317,7 @@ ptrace(void)
  * of the parent process in tracing.
  */
 int
-procxmt(void)
+procxmt()
 {
 	register int i;
 	register int *p;

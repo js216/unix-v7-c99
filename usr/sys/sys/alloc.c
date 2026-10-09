@@ -9,17 +9,8 @@
 #include "../h/ino.h"
 #include "../h/dir.h"
 #include "../h/user.h"
-void sleep(caddr_t chan, int pri);
-void wakeup(caddr_t chan);
-void prdev(char *str, dev_t dev);
-void panic(char *s);
-void brelse(struct buf *bp);
-void bwrite(struct buf *bp);
-void bflush(dev_t dev);
-void clrbuf(struct buf *bp);
 typedef	struct fblk *FBLKP;
 
-int badblock(register struct filsys *fp, daddr_t bn, dev_t dev);
 /*
  * alloc will obtain the next available
  * free disk block from the free list of
@@ -32,7 +23,8 @@ int badblock(register struct filsys *fp, daddr_t bn, dev_t dev);
  * the free list is exhausted.
  */
 struct buf *
-alloc(dev_t dev)
+alloc(dev)
+dev_t dev;
 {
 	daddr_t bno;
 	register struct filsys *fp;
@@ -84,7 +76,9 @@ nospace:
  * specified device.
  */
 void
-free(dev_t dev, daddr_t bno)
+free(dev, bno)
+dev_t dev;
+daddr_t bno;
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -125,7 +119,10 @@ free(dev_t dev, daddr_t bno)
  * bad block on dev x/y -- not in range
  */
 int
-badblock(register struct filsys *fp, daddr_t bn, dev_t dev)
+badblock(fp, bn, dev)
+register struct filsys *fp;
+daddr_t bn;
+dev_t dev;
 {
 
 	if (bn < fp->s_isize || bn >= fp->s_fsize) {
@@ -147,7 +144,8 @@ badblock(register struct filsys *fp, daddr_t bn, dev_t dev)
  * up NICINOD more.
  */
 struct inode *
-ialloc(dev_t dev)
+ialloc(dev)
+dev_t dev;
 {
 	register struct filsys *fp;
 	register struct buf *bp;
@@ -225,7 +223,9 @@ loop:
  * block and throws away any more.
  */
 void
-ifree(dev_t dev, ino_t ino)
+ifree(dev, ino)
+dev_t dev;
+ino_t ino;
 {
 	register struct filsys *fp;
 
@@ -257,7 +257,8 @@ ifree(dev_t dev, ino_t ino)
  *	this "cannot happen"
  */
 struct filsys *
-getfs(dev_t dev)
+getfs(dev)
+dev_t dev;
 {
 	register struct mount *mp;
 	register struct filsys *fp;
@@ -286,7 +287,7 @@ getfs(dev_t dev)
  * super blocks.
  */
 void
-update(void)
+update()
 {
 	register struct inode *ip;
 	register struct mount *mp;

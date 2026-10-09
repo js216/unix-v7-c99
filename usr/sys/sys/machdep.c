@@ -7,16 +7,7 @@
 #include "../h/map.h"
 #include "../h/reg.h"
 
-void printf(char *fmt, ...);
-void panic(char *s);
-void mmu_on(unsigned int ttb);
-void dcclean(void);
-void arm_sync_icache(void);
-void cninit(void);
-void bdinit(void);
-void mfree(struct map *mp, int size, int a);
 extern struct memregion board_map[];
-extern void clock_ddr_init(void);
 extern char __bss_start[], __bss_end[];
 
 unsigned int l1[4096] __attribute__((aligned(16384), section(KTABLES_SECTION)));
@@ -27,7 +18,7 @@ char	*msgbufp = msgbuf;
 
 #define	UPAGES	((USIZE*64)/PGSIZE)	/* pages in the u-area window */
 
-void machine_init(void)
+void machine_init()
 {
 	struct memregion *m;
 	unsigned int pa, i;
@@ -102,7 +93,7 @@ int fubyte(caddr_t addr)
 		return(-1);
 	return *(unsigned char *)addr;
 }
-int subyte(caddr_t addr, char c)
+int subyte(caddr_t addr, int c)
 {
 	if(!user_range(addr, 1))
 		return(-1);
@@ -143,7 +134,9 @@ int copyout(caddr_t f, caddr_t t, unsigned int n)
  * Let a process handle a signal by simulating an interrupt
  */
 void
-sendsig(caddr_t p, int signo)
+sendsig(p, signo)
+caddr_t p;
+int	signo;
 {
 	register unsigned n;
 
@@ -160,7 +153,7 @@ sendsig(caddr_t p, int signo)
 }
 
 void
-sigreturn(void)
+sigreturn()
 {
 	int f[RPS+1];
 	register int i;
@@ -177,7 +170,7 @@ sigreturn(void)
 	u.u_r.r_val2 = f[R1];
 }
 
-void idle(void)
+void idle()
 {
 	__asm__ volatile("cpsie i\n\twfi\n\tcpsid i" ::: "memory");
 }
@@ -265,14 +258,14 @@ int	icode[] =
 int	szicode = sizeof(icode);
 
 void
-install_sigtramp(void)
+install_sigtramp()
 {
 	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
 	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
 }
 
 void
-arm_sync_icache(void)
+arm_sync_icache()
 {
 	unsigned int zero = 0;
 
@@ -289,7 +282,7 @@ arm_sync_icache(void)
 }
 
 void
-panictrap(void)
+panictrap()
 {
 	panic("trap");
 }
@@ -297,7 +290,7 @@ panictrap(void)
 /*
  * Machine-dependent startup code
  */
-void startup(void)
+void startup()
 {
 	register int n;
 
