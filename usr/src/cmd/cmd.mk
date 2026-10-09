@@ -18,9 +18,8 @@ GEN += $(patsubst %.y,%.c,$(wildcard $C/*.y)) $C/awk/awk.g.c $C/awk/awk.h \
 $(CMD_OBJ): CPPFLAGS = -Iusr/include -Iusr/src
 $(CMD_OBJ): $C/cmd.mk
 $C/bc.o $C/egrep.o $C/expr.o $(AWK_OBJ): CPPFLAGS += -DYYSTACK_USE_ALLOCA=1
-$(AWK_OBJ): CPPFLAGS += -Dmalloc=malloc -Dfree=free
 
-$(CMD_BIN:%=bin/%): bin/%: $(CRT) $C/%.o $(LIBC) | bin
+$(CMD_BIN:%=bin/%): bin/%: $(CRT) $C/%.o $(LIBM) $(LIBC) | bin
 	$(LINK)
 $(CMD_ETC:%=etc/%): etc/%: $(CRT) $C/%.o $(LIBC) | etc
 	$(LINK)
