@@ -26,7 +26,7 @@ physadr	ka6;		/* 11/40 KISA6; 11/45 KDSA6 */
 #define	NCLICK	((coretop-corebase)>>6)
 #define	CLKADDR(c)	((char *)(corebase+((unsigned)(c)<<6)))
 #define	SEC_KERN	0x1140e
-#define	SEC_DEV	0xc02
+#define	SEC_DEV	0x412
 #define	PTE_PT	1
 #define	PGSHIFT	12
 #define	PGSIZE	4096
