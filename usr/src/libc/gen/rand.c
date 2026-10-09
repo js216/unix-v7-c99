@@ -1,5 +1,5 @@
 #include <stdio.h>
-static	long	randx = 1;
+static	unsigned long	randx = 1;
 
 void
 srand(unsigned x)
