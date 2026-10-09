@@ -8,12 +8,10 @@ char	*smon[]= {
 };
 char	string[432];
 #include <stdio.h>
-int number(), jan1();
-void pstr(), cal();
+int number(char *str), jan1(int yr);
+void pstr(char *str, int n), cal(int m, int y, char *p, int w);
 int
-main(argc, argv)
-int argc;
-char *argv[];
+main(int argc, char *argv[])
 {
 	register int y, i, j;
 	int m;
@@ -74,8 +72,7 @@ badarg:
 }
 
 int
-number(str)
-char *str;
+number(char *str)
 {
 	register int n, c;
 	register char *s;
@@ -91,9 +88,7 @@ char *str;
 }
 
 void
-pstr(str, n)
-char *str;
-int n;
+pstr(char *str, int n)
 {
 	register int i;
 	register char *s;
@@ -119,9 +114,7 @@ char	mon[] = {
 };
 
 void
-cal(m, y, p, w)
-int m, y, w;
-char *p;
+cal(int m, int y, char *p, int w)
 {
 	register int d, i;
 	register char *s;
@@ -181,8 +174,7 @@ char *p;
  */
 
 int
-jan1(yr)
-int yr;
+jan1(int yr)
 {
 	register int y, d;
 
