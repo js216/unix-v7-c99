@@ -12,7 +12,6 @@
 #include <sys/dir.h>
 #include "../../sys/h/user.h"
 #include "../../sys/h/file.h"
-#include <a.out.h>
 
 char	*fcore	= "/dev/mem";
 char	*fnlist	= "/unix";
@@ -49,17 +48,12 @@ long	ubase;
 int	filf;
 int	allflg;
 
-int doinode(void);
-int dotext(void);
-int doproc(void);
-int dotty(void);
-int dousr(void);
-int dofil(void);
-int putf(int v, int n);
-int ttyprt(int n, struct tty *atp);
-int oatoi(char *s);
+int nlist(), oatoi();
+void doinode(), dotext(), doproc(), dotty(), dousr(), dofil(), putf(), ttyprt();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 
 	while (--argc && **++argv == '-') {
@@ -105,7 +99,7 @@ main(int argc, char **argv)
 	}
 	if (argc>1)
 		fnlist = argv[1];
-	nlist(fnlist, (struct nlist *)setup);
+	nlist(fnlist, setup);
 	if (setup[SINODE].type == -1) {
 		printf("no namelist\n");
 		exit(1);
@@ -122,11 +116,10 @@ main(int argc, char **argv)
 		dousr();
 	if (filf)
 		dofil();
-	return(0);
 }
 
-int
-doinode(void)
+void
+doinode()
 {
 	register struct inode *ip;
 	struct inode xinode[NINODE];
@@ -163,21 +156,20 @@ doinode(void)
 			printf("%10ld", ip->i_size);
 		printf("\n");
 	}
-	return(0);
 }
 
-int
-putf(int v, int n)
+void
+putf(v, n)
+int v, n;
 {
 	if (v)
 		printf("%c", n);
 	else
 		printf(" ");
-	return(0);
 }
 
-int
-dotext(void)
+void
+dotext()
 {
 	register struct text *xp;
 	struct text xtext[NTEXT];
@@ -211,11 +203,10 @@ dotext(void)
 		printf("%4d", xp->x_ccount);
 		printf("\n");
 	}
-	return(0);
 }
 
-int
-doproc(void)
+void
+doproc()
 {
 	struct proc xproc[NPROC];
 	register struct proc *pp;
@@ -252,11 +243,10 @@ doproc(void)
 		printf(" %u", pp->p_clktim);
 		printf("\n");
 	}
-	return(0);
 }
 
-int
-dotty(void)
+void
+dotty()
 {
 	struct tty dh11[48];
 	int ndh;
@@ -270,7 +260,7 @@ dotty(void)
 	printf(mesg);
 	ttyprt(0, &dh11[0]);
 	if (setup[SNDH].type == -1)
-		return(0);
+		return;
 	lseek(fc, (long)setup[SNDH].value, 0);
 	read(fc, (char *)&ndh, sizeof(ndh));
 	printf("%d dh lines\n", ndh);
@@ -278,11 +268,12 @@ dotty(void)
 	read(fc, (char *)dh11, sizeof(dh11));
 	for (tp = dh11; tp < &dh11[ndh]; tp++)
 		ttyprt(tp-dh11, tp);
-	return(0);
 }
 
-int
-ttyprt(int n, struct tty *atp)
+void
+ttyprt(n, atp)
+int n;
+struct tty *atp;
 {
 	register struct tty *tp;
 
@@ -305,11 +296,10 @@ ttyprt(int n, struct tty *atp)
 	putf(tp->t_state&HUPCLS, 'H');
 	printf("%6d", tp->t_pgrp);
 	printf("\n");
-	return(0);
 }
 
-int
-dousr(void)
+void
+dousr()
 {
 	union {
 		struct	user rxu;
@@ -374,11 +364,11 @@ dousr(void)
 	printf("ttyp %.1o\n", up->u_ttyp);
 	printf("ttydev %d,%d\n", major(up->u_ttyd), minor(up->u_ttyd));
 	printf("comm %.14s\n", up->u_comm);
-	return(0);
 }
 
 int
-oatoi(char *s)
+oatoi(s)
+char *s;
 {
 	register int v;
 
@@ -388,8 +378,8 @@ oatoi(char *s)
 	return(v);
 }
 
-int
-dofil(void)
+void
+dofil()
 {
 	struct file xfile[NFILE];
 	register struct file *fp;
@@ -415,5 +405,4 @@ dofil(void)
 		printf("%8.1o", fp->f_inode);
 		printf(" %ld\n", fp->f_un.f_offset);
 	}
-	return(0);
 }
