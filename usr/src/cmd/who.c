@@ -10,9 +10,11 @@ struct passwd *pw;
 struct passwd *getpwuid();
 
 char *ttyname(), *rindex(), *ctime(), *strcpy(), *index();
-void putline(void);
+void putline();
 int
-main(int argc, char **argv)
+main(argc, argv)
+int argc;
+char **argv;
 {
 	register char *tp = 0, *s;
 	register FILE *fi;
@@ -54,7 +56,7 @@ main(int argc, char **argv)
 }
 
 void
-putline(void)
+putline()
 {
 	register char *cbuf;
 
