@@ -101,20 +101,18 @@ char	*cp;
 char	*reend;
 char	*lbend;
 
-struct reptr {
-	char	*ad1;
-	char	*ad2;
-	union {
+struct	reptr {
+		char	*ad1;
+		char	*ad2;
 		char	*re1;
 		struct reptr	*lb1;
-	} u;
-	char	*rhs;
-	FILE	*fcode;
-	char	command;
-	char	gfl;
-	char	pfl;
-	char	inar;
-	char	negfl;
+		char	*rhs;
+		FILE	*fcode;
+		char	command;
+		char	gfl;
+		char	pfl;
+		char	inar;
+		char	negfl;
 } ptrspace[PTRSIZE], *rep;
 
 

@@ -1,12 +1,8 @@
 #include	<stdio.h>
 #include "sed.h"
 
-void	dosub(char *rhsbuf);
-void	command(struct reptr *ipc);
-void	arout(void);
-int	match(char *expbuf, int gf);
-int	advance(char *alp, char *aep);
-int	ecmp(char *a, char *b, int count);
+void	command(), arout(), dosub();
+int	match(), advance(), ecmp();
 char	*trans[040]  = {
 	"\\01",
 	"\\02",
@@ -43,7 +39,8 @@ char	*trans[040]  = {
 char	rub[] = {"\177"};
 
 void
-execute(char *file)
+execute(file)
+char *file;
 {
 	register char *p1, *p2;
 	register struct reptr	*ipc;
@@ -139,7 +136,7 @@ execute(char *file)
 
 			if(jflag) {
 				jflag = 0;
-				if((ipc = ipc->u.lb1) == 0) {
+				if((ipc = ipc->lb1) == 0) {
 					ipc = ptrspace;
 					break;
 				}
@@ -162,7 +159,9 @@ execute(char *file)
 	}
 }
 int
-match(char *expbuf, int gf)
+match(expbuf, gf)
+char	*expbuf;
+int	gf;
 {
 	register char	*p1, *p2, c;
 
@@ -209,14 +208,15 @@ match(char *expbuf, int gf)
 	return(0);
 }
 int
-advance(char *alp, char *aep)
+advance(alp, aep)
+char	*alp, *aep;
 {
 	register char *lp, *ep, *curlp;
 	char	c;
 	char *bbeg;
 	int	ct;
 
-/*fprintf(stderr, "*lp = %c, %o\n*ep = %c, %o\n", *lp, *lp, *ep, *ep);	DEBUG */
+/*fprintf(stderr, "*lp = %c, %o\n*ep = %c, %o\n", *lp, *lp, *ep, *ep);	*DEBUG*/
 
 	lp = alp;
 	ep = aep;
@@ -289,7 +289,7 @@ advance(char *alp, char *aep)
 
 	case CCHR|STAR:
 		curlp = lp;
-		while ((*lp++ == *ep));
+		while (*lp++ == *ep);
 		ep++;
 		goto star;
 
@@ -340,16 +340,17 @@ advance(char *alp, char *aep)
 	}
 }
 int
-substitute(struct reptr *ipc)
+substitute(ipc)
+struct reptr	*ipc;
 {
-	if(match(ipc->u.re1, 0) == 0)	return(0);
+	if(match(ipc->re1, 0) == 0)	return(0);
 
 	sflag = 1;
 	dosub(ipc->rhs);
 
 	if(ipc->gfl) {
 		while(*loc2) {
-			if(match(ipc->u.re1, 1) == 0) break;
+			if(match(ipc->re1, 1) == 0) break;
 			dosub(ipc->rhs);
 		}
 	}
@@ -357,7 +358,8 @@ substitute(struct reptr *ipc)
 }
 
 void
-dosub(char *rhsbuf)
+dosub(rhsbuf)
+char	*rhsbuf;
 {
 	register char *lp, *sp, *rp;
 	int c;
@@ -390,8 +392,8 @@ dosub(char *rhsbuf)
 	while ((*lp++ = *sp++));
 	spend = lp-1;
 }
-char	*
-place(char *asp, char *al1, char *al2)
+char	*place(asp, al1, al2)
+char	*asp, *al1, *al2;
 {
 	register char *sp, *l1, *l2;
 
@@ -407,7 +409,8 @@ place(char *asp, char *al1, char *al2)
 }
 
 void
-command(struct reptr *ipc)
+command(ipc)
+struct reptr	*ipc;
 {
 	register int	i;
 	register char	*p1, *p2, *p3;
@@ -428,7 +431,7 @@ command(struct reptr *ipc)
 		case CCOM:
 			delflag = 1;
 			if(!ipc->inar || dolflag) {
-				for(p1 = ipc->u.re1; *p1; )
+				for(p1 = ipc->re1; *p1; )
 					putc(*p1++, stdout);
 				putc('\n', stdout);
 			}
@@ -491,7 +494,7 @@ command(struct reptr *ipc)
 			break;
 
 		case ICOM:
-			for(p1 = ipc->u.re1; *p1; )
+			for(p1 = ipc->re1; *p1; )
 				putc(*p1++, stdout);
 			putc('\n', stdout);
 			break;
@@ -589,6 +592,7 @@ command(struct reptr *ipc)
 			if(aptr > abuf)	arout();
 			fclose(stdout);
 			exit(0);
+			/* fallthrough */
 		case RCOM:
 
 			*aptr++ = ipc;
@@ -641,7 +645,7 @@ command(struct reptr *ipc)
 
 		case YCOM:
 			p1 = linebuf;
-			p2 = ipc->u.re1;
+			p2 = ipc->re1;
 			while((*p1 = *p1 & 0200 ? *p1 : p2[(unsigned char)*p1]))	p1++;
 			break;
 	}
@@ -649,7 +653,8 @@ command(struct reptr *ipc)
 }
 
 char	*
-gline(char *addr)
+gline(addr)
+char	*addr;
 {
 	register char	*p1, *p2;
 	register int	c;
@@ -687,7 +692,9 @@ gline(char *addr)
 	return(p1);
 }
 int
-ecmp(char *a, char *b, int count)
+ecmp(a, b, count)
+char	*a, *b;
+int	count;
 {
 	while(count--)
 		if(*a++ != *b++)	return(0);
@@ -695,7 +702,7 @@ ecmp(char *a, char *b, int count)
 }
 
 void
-arout(void)
+arout()
 {
 	register char	*p1;
 	FILE	*fi;
@@ -704,11 +711,11 @@ arout(void)
 
 	for(aptr = abuf; *aptr; aptr++) {
 		if((*aptr)->command == ACOM) {
-			for(p1 = (*aptr)->u.re1; *p1; )
+			for(p1 = (*aptr)->re1; *p1; )
 				putc(*p1++, stdout);
 			putc('\n', stdout);
 		} else {
-			if((fi = fopen((*aptr)->u.re1, "r")) == NULL)
+			if((fi = fopen((*aptr)->re1, "r")) == NULL)
 				continue;
 			while((t = getc(fi)) != EOF) {
 				c = t;
