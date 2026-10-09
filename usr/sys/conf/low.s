@@ -86,21 +86,24 @@ badtrap:
 
 undef_entry:
 	sub lr, lr, #4
-	mov ip, #4
-	b 1f
-pabort_entry:
-	sub lr, lr, #4
-	mov ip, #11
-	b 1f
-dabort_entry:
-	sub lr, lr, #8
-	mov ip, #11
-1:
 	srsdb sp!, #0x13
 	cpsid if, #0x13
 	sub sp, sp, #60
 	stmia sp, {r0-r14}^
-	mov r0, ip
+	mov r0, #4
+	b 1f
+pabort_entry:
+	sub lr, lr, #4
+	b 3f
+dabort_entry:
+	sub lr, lr, #8
+3:
+	srsdb sp!, #0x13
+	cpsid if, #0x13
+	sub sp, sp, #60
+	stmia sp, {r0-r14}^
+	mov r0, #11
+1:
 	mov r1, sp
 	bl user_trap_handler
 2:
