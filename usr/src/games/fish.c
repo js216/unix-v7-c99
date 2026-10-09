@@ -445,7 +445,7 @@ guess(void){
 /*	the program's strategy appears from here to the end */
 
 char try[100];
-char ntry;
+int ntry;
 char haveguessed[CTSIZ];
 
 char hehas[CTSIZ];
@@ -480,7 +480,7 @@ myguess(void){
 	ntry = 0;
 	for( i=1; i<=CTYPE; ++i ){
 		if( myhand[i] == 0 || myhand[i] == 4 ) continue;
-		try[ntry++&0377] = i;
+		try[ntry++] = i;
 		}
 
 	if( !proflag ) goto random;
