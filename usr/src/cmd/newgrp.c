@@ -2,15 +2,12 @@
 #include <grp.h>
 #include <pwd.h>
 
-struct	group	*getgrnam(), *grp;
-struct	passwd	*getpwuid(), *pwd;
-char	*getpass(), *crypt();
+struct	group	*grp;
+struct	passwd	*pwd;
 
-void done();
+void done(void);
 int
-main(argc,argv)
-int	argc;
-char	**argv;
+main(int argc, char **argv)
 {
 	register int i;
 	if(argc != 2) {
@@ -45,7 +42,7 @@ char	**argv;
 }
 
 void
-done()
+done(void)
 {
 	register int i;
 
