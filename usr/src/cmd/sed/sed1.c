@@ -250,16 +250,16 @@ advance(char *alp, char *aep)
 		return(0);
 
 	case CBRA:
-		braslist[(unsigned char)*ep++] = lp;
+		braslist[*ep++&0377] = lp;
 		continue;
 
 	case CKET:
-		braelist[(unsigned char)*ep++] = lp;
+		braelist[*ep++&0377] = lp;
 		continue;
 
 	case CBACK:
-		bbeg = braslist[(unsigned char)*ep];
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		bbeg = braslist[*ep&0377];
+		ct = braelist[*ep++&0377] - bbeg;
 
 		if(ecmp(bbeg, lp, ct)) {
 			lp += ct;
@@ -268,8 +268,8 @@ advance(char *alp, char *aep)
 		return(0);
 
 	case CBACK|STAR:
-		bbeg = braslist[(unsigned char)*ep];
-		ct = braelist[(unsigned char)*ep++] - bbeg;
+		bbeg = braslist[*ep&0377];
+		ct = braelist[*ep++&0377] - bbeg;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -317,7 +317,7 @@ advance(char *alp, char *aep)
 		}
 
 		if(*ep == CBACK) {
-			c = *(braslist[(unsigned char)ep[1]]);
+			c = *(braslist[ep[1]&0377]);
 			do {
 				if(*lp != c)
 					continue;
@@ -646,7 +646,7 @@ command(struct reptr *ipc)
 		case YCOM:
 			p1 = linebuf;
 			p2 = ipc->re1;
-			while((*p1 = *p1 & 0200 ? *p1 : p2[(unsigned char)*p1]))	p1++;
+			while((*p1 = *p1 & 0200 ? *p1 : p2[*p1&0377]))	p1++;
 			break;
 	}
 
