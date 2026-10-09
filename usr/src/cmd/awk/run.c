@@ -366,7 +366,7 @@ char *format(s,a) char *s; node *a;
 			*t = 'd';
 			*++t = '\0';
 			break;
-		case 'o': case 'x':
+		case 'o': case 'x': case 'c':
 			flag = *(s-1)=='l' ? 2 : 3;
 			break;
 		case 's':
