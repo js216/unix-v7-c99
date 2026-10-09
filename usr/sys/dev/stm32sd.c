@@ -57,18 +57,19 @@ rkinit(void)
 void
 rkstrategy(register struct buf *bp)
 {
-	int s;
 
-	bp->av_forw = NULL;
-	s = spl5();
-	if (rktab.b_actf == NULL)
+	if(bp->b_flags&B_PHYS)
+		mapalloc(bp);
+	bp->av_forw = (struct buf *)NULL;
+	spl5();
+	if(rktab.b_actf == NULL)
 		rktab.b_actf = bp;
 	else
 		rktab.b_actl->av_forw = bp;
 	rktab.b_actl = bp;
 	if(rktab.b_active == NULL)
 		rkstart();
-	splx(s);
+	spl0();
 }
 
 void
