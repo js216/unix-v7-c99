@@ -6,7 +6,7 @@ modf(double value, double *iptr)
 	register int e;
 
 	x.d = value;
-	e = (x.u[1]>>20 & 03777) - 1023;
+	e = (int)(x.u[1]>>20 & 03777) - 1023;
 	if (e < 0) {
 		x.u[1] &= 0x80000000;
 		x.u[0] = 0;
