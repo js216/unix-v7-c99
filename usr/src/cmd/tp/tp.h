@@ -69,7 +69,9 @@ struct	dent *lastd;		/* for improvement */
 char	*sbrk();
 char	*strcpy();
 long	lseek();
-int	(*command)();
+void	(*command)();
+void	optap(), setcom(), useerr(), check(), done(), encode(), decode(), clrdir(), clrent(), rddir(), wrdir(), tread(), twrite(), rseek(), wseek(), seekerr(), getfiles(), expand(), fserr(), callout(), swabdir(), gettape(), delete(), update(), update1(), phserr(), bitmap(), setmap(), maperr(), usage(), taboc(), extract();
+int	verify();
 
 char	*nameblk;
 char	*top;

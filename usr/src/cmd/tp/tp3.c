@@ -1,11 +1,9 @@
 #include "tp.h"
 #include <stdio.h>
 
-int	decode(), verify(), clrent(), bitmap(), maperr(), setmap(),
-	wrdir(), update1(), wseek(), twrite(), phserr(), done(),
-	rseek(), tread(), usage();
-int
-gettape(int (*how)(struct dent *))
+void
+gettape(how)
+void (*how)();
 {
 	register char *ptr0, *ptr1;
 	register struct dent *d;
@@ -32,20 +30,19 @@ cont:			continue;
 			printf("%s  not found\n", *parg);
 		++parg;
 	} while (--narg > 2);
-	return(0);
 }
 
-int
-delete(struct dent *dd)
+void
+delete(dd)
+struct dent *dd;
 {
 	if (verify('d') >= 0)
 		clrent(dd);
-	return(0);
 }
 
 
-int
-update(void)
+void
+update()
 {
 	register struct dent *d;
 	register int b, last;
@@ -72,12 +69,11 @@ toosmall:	++first;
 	}  while (++d <= lastd);
 	wrdir();
 	update1();
-	return(0);
 }
 
 
-int
-update1(void)
+void
+update1()
 {
 	register struct dent *d, *id;
 	register int index;
@@ -94,7 +90,7 @@ update1(void)
 				id = d;
 			}
 		} while (++d <= lastd);
-		if ((d = id) == 0)	return(0);
+		if ((d = id) == 0)	return;
 		d->d_mode &= ~OK;  /* change from new to old */
 		if (d->d_size == 0)  continue;
 		decode(name,d);
@@ -116,12 +112,12 @@ update1(void)
 	}
 }
 
-int
-phserr(void)
-{	printf("%s -- Phase error \n", name); return(0);  }
+void
+phserr()
+{	printf("%s -- Phase error \n", name);  }
 
 
-int
+void
 bitmap()	/* place old files in the map */
 {
 	register char *m;
@@ -136,11 +132,11 @@ bitmap()	/* place old files in the map */
 		   && d->d_size != 0) setmap(d);
 		d++;
 	}  while (--count);
-	return(0);
 }
 
-int
-setmap(register struct dent *d)
+void
+setmap(d)
+register struct dent *d;
 {
 	unsigned c, block;
 	char bit;
@@ -156,20 +152,18 @@ setmap(register struct dent *d)
 		if (bit & map[i])		maperr();
 		map[i] |= bit;
 	} while (++block < c);
-	return(0);
 }
 
-int
-maperr(void)
+void
+maperr()
 {
 	printf("Tape overflow\n");
 	done();
-	return(0);
 }
 
 
-int
-usage(void)
+void
+usage()
 {
 	register int reg,count;
 	int	nused, nentr, nfree;
@@ -200,14 +194,14 @@ usage(void)
 	if ((flags & flm)==0)
 		printf("%4d free\n", nfree);
 	printf("%4d last\n", lused);
-	return(0);
 }
 
 
-int
-taboc(struct dent *dd)
+void
+taboc(dd)
+struct dent *dd;
 {
-	register int mode;
+	register int  mode;
 	register int *m;
 	register char *s;
 	int count;
@@ -233,17 +227,17 @@ taboc(struct dent *dd)
 		printf("%2d/%2d/%2d %2d:%2d ",m[5],m[4]+1,m[3],m[2],m[1]);
 	}
 	printf("%s\n", name);
-	return(0);
 }
 
 
-int
-extract(register struct dent *d)
+void
+extract(d)
+register struct dent *d;
 {
 	register int count, id;
 
-	if (d->d_size==0)	return(0);
-	if (verify('x') < 0)			return(0);
+	if (d->d_size==0)	return;
+	if (verify('x') < 0)			return;
 	rseek(d->d_tapea);
 	unlink(name);
 	if ((id = creat(name,d->d_mode)) < 0)
@@ -258,10 +252,9 @@ extract(register struct dent *d)
 		if (write(id, (char *)tapeb, count) != count) {
 ng:			printf("%s -- write error\n", name);
 			close(id);
-			return(0);
+			return;
 		}
 	}
 	close(id);
 	chown(name,d->d_uid & 0377, d->d_gid&0377);
-	return(0);
 }

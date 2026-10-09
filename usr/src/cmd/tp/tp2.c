@@ -4,14 +4,11 @@
 #include <sys/stat.h>
 #include <sys/dir.h>
 
-int	rseek(), wseek(), tread(), twrite(), seekerr(), swabdir(),
-	encode(), decode(), done(), bitmap(), fserr(), callout(),
-	expand(), clrent();
 struct direct	direct;
 struct stat	statb;
 
-int
-clrdir(void)
+void
+clrdir()
 {
 	register int j, *p;
 
@@ -19,11 +16,11 @@ clrdir(void)
 	p = (int *)dir;
 	do (*p++ = 0);  while (--j);
 	lastd = 0;
-	return(0);
 }
 
-int
-clrent(struct dent *ptr)
+void
+clrent(ptr)
+struct	dent *ptr;
 {
 	register int *p, j;
 
@@ -34,15 +31,14 @@ clrent(struct dent *ptr)
 	if (++ptr == lastd) do {
 		if (--lastd < dir) {
 			lastd = 0;
-			return(0);
+			return;
 		}
 	} while (lastd->d_namep == 0);
-	return(0);
 }
 
 
-int
-rddir(void)
+void
+rddir()
 {
 	register struct tent *tp;
 	register struct dent *p1;
@@ -104,16 +100,15 @@ rddir(void)
 			flags |= fls;
 			rddir();
 			printf("Warning: swabbing required\n");
-			return(0);
+			return;
 		}
 	}
 	bitmap();
-	return(0);
 }
 
 
-int
-wrdir(void)
+void
+wrdir()
 {
 	register struct tent *tp;
 	register struct dent *dp;
@@ -137,7 +132,7 @@ wrdir(void)
 	count = ndirent;
 	for (;;) {
 		twrite();
-		if (count == 0)  return(0);
+		if (count == 0)  return;
 		tp = &tpentry[0];
 		do {
 			dp = dptr++;	/* dptr set to next entry */
@@ -171,8 +166,8 @@ wrdir(void)
 	}
 }
 
-int
-tread(void)
+void
+tread()
 {
 	register int j, *ptr;
 
@@ -184,30 +179,29 @@ tread(void)
 		while(j--) *ptr++ = 0;
 	}
 	rseeka++;
-	return(0);
 }
 
-int
-twrite(void)
+void
+twrite()
 {
 	if (write(fio, (char *)tapeb,BSIZE) != BSIZE) {
 		printf("Tape write error\n");
 		done();
 	}
 	++wseeka;
-	return(0);
 }
 
-int
-rseek(int blk)
+void
+rseek(blk)
+int blk;
 {
 	rseeka = blk;
 	if (lseek(fio,(long)blk*BSIZE,0) < 0)	seekerr();
-	return(0);
 }
 
-int
-wseek(int blk)
+void
+wseek(blk)
+int blk;
 {
 	register int amt, b;
 
@@ -219,19 +213,18 @@ wseek(int blk)
 	}
 	wseeka = b;
 	if (lseek(fio, (long)b*BSIZE, 0) < 0)	seekerr();
-	return(0);
 }
 
-int
-seekerr(void)
+void
+seekerr()
 {
 	printf("Tape seek error\n");
 	done();
-	return(0);
 }
 
 int
-verify(int key)
+verify(key)
+int key;
 {
 	register int c;
 
@@ -253,8 +246,8 @@ repeat:	printf("%c %s ", key, name);
 	goto repeat;
 }
 
-int
-getfiles(void)
+void
+getfiles()
 {
 
 	if ((narg -= 2) == 0) {
@@ -264,12 +257,11 @@ getfiles(void)
 		strcpy(name, *parg++);
 		callout();
 	}
-	return(0);
 }
 
 
-int
-expand(void)
+void
+expand()
 {
 	register  char *p0, *save0;
 	int n, fid;
@@ -279,7 +271,7 @@ expand(void)
 		if ((n = read(fid, (char *)&direct, sizeof(direct))) != sizeof(direct)) {
 			if (n == 0) {
 				close(fid);
-				return(0);
+				return;
 			}
 			fserr();
 		}
@@ -298,15 +290,14 @@ expand(void)
 	}
 }
 
-int
+void
 fserr()
 {
 	printf("%s -- Cannot open file\n", name);
 	done();
-	return(0);
 }
 
-int
+void
 callout()
 {
 	register struct dent *d;
@@ -319,7 +310,7 @@ callout()
 	if ((mode &= S_IFMT) != 0) {
 		if (mode == S_IFDIR)  /* directory */
 			expand();
-		if(mode != S_IFREG) return(0);
+		if(mode != S_IFREG) return;
 	}
 	/* when we reach here we have recursed until we found 
 	 * an ordinary file.  Now we look for it in "dir".
@@ -340,9 +331,9 @@ callout()
 		/* veritably the same name */
 		if (flags & flu) {  /* check the times */
 			if (d->d_time >= statb.st_mtime)
-				return(0);
+				return;
 		}
-		if (verify('r') < 0)	return(0);
+		if (verify('r') < 0)	return;
 		goto copydir;
 cont:		continue;
 	}  while (++d <= lastd);
@@ -354,7 +345,7 @@ cont:		continue;
 			done();
 		}
 	}
-	if (verify('a') < 0)		return(0);
+	if (verify('a') < 0)		return;
 	if (d > lastd)		lastd = d;
 	encode(name,d);
 copydir:
@@ -363,14 +354,13 @@ copydir:
 	d->d_gid = statb.st_gid;
 	d->d_size = statb.st_size;
 	d->d_time = statb.st_mtime;
-	return(0);
 }
 
-int
-swabdir(register struct tent *tp)
+void
+swabdir(tp)
+register struct tent *tp;
 {
 	swab((char *)tp, (char *)tp, sizeof(*tp));
 	swab(tp->pathnam, tp->pathnam, NAMELEN);
 	swab((char *)&tp->uid, (char *)&tp->uid, 4); /* uid,gid,spare,size0 */
-	return(0);
 }

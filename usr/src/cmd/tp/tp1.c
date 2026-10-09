@@ -1,16 +1,13 @@
 #include "tp.h"
 #include <stdio.h>
 
-int	optap(), setcom(), useerr(), check(), done(), encode(),
-	decode(), cmd(), cmr(), cmt(), cmx(),
-	clrdir(), clrent(), rddir(), gettape(), wrdir(), getfiles(),
-	update(), delete(), taboc(), extract(), usage();
 int
-main(int argc, char **argv)
+main(argc,argv)
+int argc;
+char **argv;
 {
 	register char c,*ptr;
-	extern int cmd(), cmr(),cmx(), cmt();
-	(void)argc;
+	extern void cmd(), cmr(),cmx(), cmt();
 
 	tname = tc;
 	command = cmr;
@@ -66,13 +63,12 @@ main(int argc, char **argv)
 	optap();
 	top = nptr = nameblk = sbrk(0);
 	(*command)();
-	return(0);
 }
 
-int
-optap(void)
+void
+optap()
 {
-	extern int cmr();
+	extern void cmr();
 
 	if ((flags & flm) == 0) {	/*  DECTAPE */
 		tapsiz = TCSIZ;
@@ -92,33 +88,31 @@ optap(void)
 	}
 	ndentb = ndirent/TPB;
 	edir = &dir[ndirent];
-	return(0);
 }
 
-int
-setcom(int (*newcom)(void))
+void
+setcom(newcom)
+void (*newcom)();
 {
-	extern int cmr();
+	extern void cmr();
 
 	if (command != cmr)  	useerr();
 	command = newcom;
-	return(0);
 }
 
-int
-useerr(void)
+void
+useerr()
 {
 	printf("Bad usage\n");
 	done();
-	return(0);
 }
 
 /* COMMANDS */
 
-int
-cmd(void)
+void
+cmd()
 {
-	extern int delete(void);
+	extern void delete();
 
 	if (flags & (flm|flc))	useerr();
 	if (narg <= 2)			useerr();
@@ -126,24 +120,22 @@ cmd(void)
 	gettape(delete);
 	wrdir();
 	check();
-	return(0);
 }
 
-int
-cmr(void)
+void
+cmr()
 {
 	if (flags & (flc|flm))		clrdir();
 	else				rddir();
 	getfiles();
 	update();
 	check();
-	return(0);
 }
 
-int
-cmt(void)
+void
+cmt()
 {
-	extern int taboc(struct dent *);
+	extern void taboc();
 
 	if (flags & (flc|flw))	useerr();
 	rddir();
@@ -151,38 +143,34 @@ cmt(void)
 		printf("   mode    uid gid tapa    size   date    time name\n");
 	gettape(taboc);
 	check();
-	return(0);
 }
 
-int
-cmx(void)
+void
+cmx()
 {
-	extern int extract(struct dent *);
+	extern void extract();
 
 	if (flags & (flc))		useerr();
 	rddir();
 	gettape(extract);
 	done();
-	return(0);
 }
 
-int
+void
 check()
 {
 	usage();
 	done();
-	return(0);
 }
 
-int
+void
 done()
 {
 	printf("End\n");
 	exit(0);
-	return(0);
 }
 
-int
+void
 encode(pname,dptr)	/* pname points to the pathname
 			 * nptr points to next location in nameblk
 			 * dptr points to the dir entry		   */
@@ -208,10 +196,9 @@ struct	dent *dptr;
 		nptr += n+1;
 		strcpy(np, pname);
 	}
-	return(0);
 }
 
-int
+void
 decode(pname,dptr)	/* dptr points to the dir entry
 			 * name is placed in pname[] */
 char	*pname;
@@ -219,5 +206,4 @@ struct	dent *dptr;
 {
 
 	strcpy(pname, dptr->d_namep);
-	return(0);
 }
