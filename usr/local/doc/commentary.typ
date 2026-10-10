@@ -2703,8 +2703,8 @@ returned from a handler with the `rtt` instruction, which reloads both
 #lines(10, 83)
 
 `regloc` maps the PDP-11 register numbers 0 to 7, and the status word,
-onto indices in the saved frame (#f("reg.h")). `ptrace` and `setregs`
-use it. It comes from v7's `trap.c`.
+onto indices in the saved frame (#f("reg.h")). `ptrace` uses it. It
+comes from v7's `trap.c`.
 
 #lines(84, 84)
 
@@ -2949,24 +2949,28 @@ addresses. The PDP-11 had no caches to worry about.
 #lines(267, 276)
 
 `setregs` first resets to the default the signals that were caught
-(288--290), since the handlers no longer exist; signals that were ignored
-(value 1) stay ignored. The registers `regloc` names as
-`r0` to `r5` are cleared (291, 292); the stack pointer is already set. On the ARM
-the registers `r6` to `r12` and `lr` are not named in `regloc` and keep
-whatever the previous program left in them; `crt0` does not rely on
-them. The cast to `int` (292) avoids indexing an array with a `char`,
-of which the compiler warns. The `pc` is set to the entry point
-with bit 0 cleared (293); on the PDP-11 this ensured an even address. On the
+(287--289), since the handlers no longer exist; signals that were ignored
+(value 1) stay ignored. Then the registers are cleared (290--292). v7
+cleared those which `regloc` names as `r0` to `r5`: on the PDP-11 every
+general register but the stack pointer `r6` and the `pc` `r7`. The port
+clears every general register of the ARM in the same way, `r0` to `r12`
+and `lr`, all but the stack pointer, which is already set for the new
+program, and the `pc`, which is set next; the new program inherits
+nothing from the old. When the call returns, `trap` (#f("sysent.c"))
+puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
+zero, but the second is the caller's `r1`, the old program's argument
+pointer, so it is cleared too (293). The `pc` is set to the entry point
+with bit 0 cleared (294); on the PDP-11 this ensured an even address. On the
 ARM bit 0 of an entry point would select Thumb state, which no program
 here uses.
 
-#lines(277, 293)
+#lines(277, 294)
 
 The floating point save area is cleared, files marked close-on-exec are
 closed, and the last component of the name of the file (left in
 `u.u_dbuf` by `namei`) is kept for accounting.
 
-#lines(294, 308)
+#lines(295, 309)
 
 `rexit` is the system call; `exit` is also called by the kernel, from
 `psig` and `stop` (#f("sig.c")), with a signal number. The user's code
@@ -2976,7 +2980,7 @@ goes in the high byte of the status and the signal in the low, as
 `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit; files, current and root
 directories, text, and finally core are released. Note that after
-`mfree` (357) the process goes on running on the stack within the
+`mfree` (358) the process goes on running on the stack within the
 per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
@@ -2988,17 +2992,17 @@ which is woken in case it is waiting; stopped children are set running
 so that they can die. Finally the parent is woken, and `swtch` is
 called, never to return.
 
-#lines(309, 376)
+#lines(310, 377)
 
 `wait` looks for a child which is a zombie. If it finds one, it
 collects the status and times, frees the `proc` entry, and returns the
 child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
-`exit` (371) and `stop` wake, and looks again. If there are none,
+`exit` (372) and `stop` wake, and looks again. If there are none,
 `ECHILD`.
 
-#lines(377, 426)
+#lines(378, 427)
 
 `fork` checks that the swap area could hold a process of the maximum
 size, finds a free `proc` entry, and counts the caller's processes. The
@@ -3011,16 +3015,16 @@ of the PDP-11 library. In the child `fork` returned the parent's pid;
 in the parent it advanced the saved `pc` by one word, so that the
 parent skipped the instruction after the `sys fork`, a branch which only
 the child therefore took. The port gives the ordinary convention
-instead: the child receives 0 (468), the parent the child's pid, and the
-`pc` is left alone (479). The library stub returns `r0` unchanged, and
+instead: the child receives 0 (469), the parent the child's pid, and the
+`pc` is left alone (480). The library stub returns `r0` unchanged, and
 the child no longer learns its parent's pid. The assignment of
-`u.u_procp` to `p1` (466), which served only the old return value, is
+`u.u_procp` to `p1` (467), which served only the old return value, is
 kept from v7 as a harmless dead store.
 
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(427, 480)
+#lines(428, 481)
 
 `sbreak` sets the size of the data area. In v7 it went on to change the
 size of the process image with `expand`, and since the stack lay above
@@ -3040,7 +3044,7 @@ fault; an earlier version of the port which cleared the added clicks
 destroyed data the shell was already using, and the shell hung on long
 words.
 
-#lines(481, 510)
+#lines(482, 511)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned

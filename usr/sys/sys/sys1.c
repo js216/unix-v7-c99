@@ -282,14 +282,15 @@ void
 setregs(void)
 {
 	register int *rp;
-	register char *cp;
 	register int i;
 
 	for(rp = &u.u_signal[0]; rp < &u.u_signal[NSIG]; rp++)
 		if((*rp & 1) == 0)
 			*rp = 0;
-	for(cp = &regloc[0]; cp < &regloc[6];)
-		u.u_ar0[(int)*cp++] = 0;
+	for(i = 0; i < PC; i++)
+		if(i != R6)
+			u.u_ar0[i] = 0;
+	u.u_r.r_val2 = 0;
 	u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
 	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[6];)
 		*rp++ = 0;
