@@ -2,9 +2,9 @@
 #include "../h/systm.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
-#define	RCC(o)	R(0x50000000+(o))
-#define	DDRC(o)	R(0x5A003000+(o))
-#define	DPHY(o)	R(0x5A004000+(o))
+#define	RCC(o)	R(0xF0200000+(o))
+#define	DDRC(o)	R(0xF0603000+(o))
+#define	DPHY(o)	R(0xF0604000+(o))
 #define	DDRITFCR	RCC(0x5C0)
 
 static unsigned int ddrc[] = {
@@ -127,17 +127,17 @@ ddrinit(void)
 	while ((RCC(0x4D0) & 2) == 0)
 		;
 
-	if (R(0x5000100C) & 0x1000) {
-		R(0x5000100C) |= 0x800;
-		R(0x5000100C) &= ~0x1000;
+	if (R(0xF020100C) & 0x1000) {
+		R(0xF020100C) |= 0x800;
+		R(0xF020100C) &= ~0x1000;
 	}
 	RCC(0x780) = 2;
 	RCC(0x740) = 0x800;
 	(void)RCC(0x740);
-	R(0x5C006008) = 0;
-	R(0x5C006114) = 0xFFFFFFFF;
-	R(0x5C006110) = 0xC0000001;
-	R(0x5C006008) = 1;
+	R(0xF0A06008) = 0;
+	R(0xF0A06114) = 0xFFFFFFFF;
+	R(0xF0A06110) = 0xC0000001;
+	R(0xF0A06008) = 1;
 
 	DDRITFCR &= ~0x100;
 	DDRITFCR |= 0xFC000;

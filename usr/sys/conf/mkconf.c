@@ -531,9 +531,9 @@ int	nswap = 872;
 int	pack;
 int	nldisp = 1;
 int	ddr;
-unsigned long	ramb, ramn, tabb, tabn, coret, pguser, gicd, gicc;
+unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, pguser, gicd, gicc;
 #define	NMAP	8
-unsigned long	mapb[NMAP], mape[NMAP];
+unsigned long	mapv[NMAP], mapb[NMAP], mape[NMAP];
 char	mapa[NMAP][100];
 int	nmap;
 
@@ -551,16 +551,18 @@ main(void)
  */
 	freopen("unix.ld", "w", stdout);
 	printf("MEMORY\n{\n");
-	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramb, ramn);
+	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramv, ramn);
 	if (tabn)
-		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabb, tabn);
-	printf("}\nu = 0xFFF00000;\nSECTIONS\n{\n");
-	printf("\t.text : { *(.text*) } > RAM\n");
-	printf("\t.rodata : { *(.rodata*) } > RAM\n");
-	printf("\t.data : { *(.data*) } > RAM\n");
-	printf("\t. = ALIGN(4);\n\t__bss_start = .;\n\t.bss : { *(.bss*) *(COMMON) } > RAM\n");
+		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabv, tabn);
+	printf("}\nu = 0xFFF00000;\nENTRY(start)\n");
+	printf("start = _start - 0x%lx;\nSECTIONS\n{\n", ramv-ramb);
+	printf("\t.text : AT(ADDR(.text) - 0x%lx) { *(.text*) } > RAM\n", ramv-ramb);
+	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) { *(.rodata*) } > RAM\n", ramv-ramb);
+	printf("\t.data : AT(ADDR(.data) - 0x%lx) { *(.data*) } > RAM\n", ramv-ramb);
+	printf("\t. = ALIGN(4);\n\t__bss_start = .;\n");
+	printf("\t.bss : AT(ADDR(.bss) - 0x%lx) { *(.bss*) *(COMMON) } > RAM\n", ramv-ramb);
 	printf("\t__bss_end = .;\n");
-	printf("\t.ddrbss (NOLOAD) : ALIGN(16384) {\n");
+	printf("\t.ddrbss (NOLOAD) : ALIGN(4096) {\n");
 	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
 	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n", tabn ? "TAB" : "RAM");
 
@@ -639,14 +641,13 @@ main(void)
 	printf(strg2);
 	if(rootmaj < 0)
 		fprintf(stderr, "No root device given\n");
-	printf("\nunsigned int\tkernbase = 0x%lx;\n", ramb);
-	printf("unsigned int\tcorebase, coretop = 0x%lx;\n", coret);
+	printf("\nunsigned int\tcorebase, coreoff, coretop = 0x%lx;\n", coret);
 	printf("unsigned int\tpguser = 0x%lx;\n", pguser);
 	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n", gicd, gicc);
 	printf("\nstruct\tmemregion\tboard_map[] =\n{\n");
 	for (i=0; i<nmap; i++)
-		printf("\t{0x%lx, 0x%lx, %s},\n", mapb[i], mape[i], mapa[i]);
-	printf("\t{0, 0, 0}\n};\n");
+		printf("\t{0x%lx, 0x%lx, 0x%lx, %s},\n", mapv[i], mapb[i], mape[i], mapa[i]);
+	printf("\t{0, 0, 0, 0}\n};\n");
 	printf("\nextern int\tklirq, rkirq;\n");
 	printf("struct\tintr\tintrtab[] =\n{\n");
 	printf("\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
@@ -687,15 +688,15 @@ input(void)
 	if (n<2)
 		goto badl;
 	if (equal(keyw, "map") && nmap < NMAP) {
-		if (sscanf(line, "%*s%lx%lx%s", &mapb[nmap], &mape[nmap], mapa[nmap]) != 3)
+		if (sscanf(line, "%*s%lx%lx%lx%s", &mapv[nmap], &mapb[nmap], &mape[nmap], mapa[nmap]) != 4)
 			goto badl;
 		nmap++;
 		return(1);
 	}
 	if (equal(keyw, "ram"))
-		return(sscanf(line, "%*s%lx%lx", &ramb, &ramn) == 2 || badline(line));
+		return(sscanf(line, "%*s%lx%lx%lx", &ramv, &ramb, &ramn) == 3 || badline(line));
 	if (equal(keyw, "tables"))
-		return(sscanf(line, "%*s%lx%lx", &tabb, &tabn) == 2 || badline(line));
+		return(sscanf(line, "%*s%lx%lx%lx", &tabv, &tabb, &tabn) == 3 || badline(line));
 	if (equal(keyw, "core"))
 		return(sscanf(line, "%*s%lx", &coret) == 1 || badline(line));
 	if (equal(keyw, "gic"))

@@ -354,6 +354,7 @@ exit(int rv)
 	}
 	xfree();
 	acct();
+	ptfree(p);
 	mfree(coremap, p->p_size, p->p_addr);
 	p->p_stat = SZOMB;
 	((struct xproc *)p)->xp_xstat = rv;

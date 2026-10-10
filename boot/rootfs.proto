@@ -112,7 +112,7 @@ d--755 0 0
 	dev	d--755 0 0
 		console	c--644 0 0 0 0
 		mem	c--644 0 0 8 0
-		kmem	c--640 0 0 8 1
+		kmem	c--644 0 0 8 1
 		null	c--666 0 0 8 2
 		root	b--644 0 0 0 0
 		rrk0	c--644 0 0 9 0
@@ -262,6 +262,7 @@ d--755 0 0
 					argt	---755 0 0 usr/local/test/obj/argt
 					asm	---644 0 0 usr/local/test/utils/asm
 					bcf	---644 0 0 usr/local/test/utils/bcf
+					bigm	---755 0 0 usr/local/test/obj/bigm
 					bigx	---755 0 0 usr/local/test/obj/bigx
 					clock	---755 0 0 usr/local/test/obj/clock
 					ctxt	---644 0 0 usr/local/test/utils/ctxt
@@ -269,6 +270,7 @@ d--755 0 0
 					edscr	---644 0 0 usr/local/test/utils/edscr
 					forkt	---755 0 0 usr/local/test/obj/forkt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img
+					kmt	---755 0 0 usr/local/test/obj/kmt
 					long	---644 0 0 usr/local/test/utils/long
 					memt	---755 0 0 usr/local/test/obj/memt
 					monout	---644 0 0 usr/local/test/utils/monout

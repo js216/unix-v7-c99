@@ -59,16 +59,16 @@ struct {
 	long long	sector;
 } vreq;
 volatile char	vstatus;
-int	vbase;
+unsigned	vbase;
 int	rkirq;
 
 void
 rkinit(void)
 {
-	for(vbase=0x0a000000; vbase<0x0a004000; vbase+=0x200)
+	for(vbase=0xF0400000; vbase<0xF0404000; vbase+=0x200)
 		if(RKADDR(0) == 0x74726976 && RKADDR(8) == 2)
 			break;
-	if(vbase == 0x0a004000)
+	if(vbase == 0xF0404000)
 		panic("virtio");
 	RKADDR(0x70) = 1;
 	RKADDR(0x70) = 3;
@@ -76,9 +76,9 @@ rkinit(void)
 	RKADDR(0x38) = NVQ;
 	RKADDR(0x3c) = 4096;
 	vq = (struct vring *)(((int)vqbuf+4095) & ~4095);
-	RKADDR(0x40) = (int)vq >> 12;
+	RKADDR(0x40) = vtop((caddr_t)vq) >> 12;
 	RKADDR(0x70) = 7;
-	rkirq = 48 + (vbase-0x0a000000)/0x200;
+	rkirq = 48 + (vbase-0xF0400000)/0x200;
 }
 
 void
@@ -113,15 +113,15 @@ rkstart(void)
 	rktab.b_active++;
 	vreq.type = bp->b_flags&B_READ ? 0 : 1;
 	vreq.sector = bp->b_blkno;
-	vq->desc[0].addr = (int)&vreq;
+	vq->desc[0].addr = vtop((caddr_t)&vreq);
 	vq->desc[0].len = sizeof(vreq);
 	vq->desc[0].flags = 1;
 	vq->desc[0].next = 1;
-	vq->desc[1].addr = (int)bp->b_un.b_addr;
+	vq->desc[1].addr = vtop(bp->b_un.b_addr);
 	vq->desc[1].len = bp->b_bcount;
 	vq->desc[1].flags = bp->b_flags&B_READ ? 3 : 1;
 	vq->desc[1].next = 2;
-	vq->desc[2].addr = (int)&vstatus;
+	vq->desc[2].addr = vtop((caddr_t)&vstatus);
 	vq->desc[2].len = 1;
 	vq->desc[2].flags = 2;
 	dmbsy();

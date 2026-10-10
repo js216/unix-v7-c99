@@ -32,6 +32,7 @@ xswap(register struct proc *p, int ff, int os)
 	if(a == NULL)
 		panic("out of swap space");
 	p->p_flag |= SLOCK;
+	ptfree(p);
 	xccdec(p->p_textp);
 	swap(a, p->p_addr, os, B_WRITE);
 	if(ff)

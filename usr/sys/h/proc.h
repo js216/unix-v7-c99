@@ -19,7 +19,9 @@ struct	proc {
 	short	p_pid;		/* unique process id */
 	short	p_ppid;		/* process id of parent */
 	int	p_addr;		/* address of swappable image */
-	short	p_size;		/* size of swappable image (clicks) */
+	int	p_size;		/* size of swappable image (clicks) */
+	int	p_ptab;		/* user page tables (click) */
+	int	p_nptab;	/* their number, 0 if none */
 	caddr_t p_wchan;	/* event process is awaiting */
 	struct text *p_textp;	/* pointer to text structure */
 	struct proc *p_link;	/* linked list of running processes */

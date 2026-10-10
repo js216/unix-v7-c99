@@ -6,7 +6,7 @@
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
-#define	MAXMEM	(USERSIZE/4096+USIZE)	/* max core per process */
+#define	MAXMEM	32768		/* max core per process */
 #define	MAXUPRC	25		/* max processes per user */
 #define	SSIZE	2		/* initial stack size (*4096 bytes) */
 #define	SINCR	2		/* increment of stack (*4096 bytes) */
@@ -14,6 +14,8 @@
 #define	CANBSIZ	256		/* max size of typewriter line */
 #define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
 #define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
+#define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
+#define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
 #define	NCALL	20		/* max simultaneous time callouts */
 #define	NPROC	150		/* max number of processes */
 #define	NTEXT	40		/* max number of pure texts */
@@ -82,7 +84,7 @@
 #define	NSHIFT	7		/* LOG2(NINDIR) */
 #define	USIZE	2		/* size of user block (*4096) */
 #define	UBASE	0xFFF00000U	/* abs. addr of user block */
-#define	USERSIZE	0x100000	/* size of user address space */
+#define	USERSIZE	0xC0000000U	/* size of user address space */
 #ifndef NULL
 #define	NULL	0
 #endif
@@ -144,4 +146,4 @@ typedef	long		off_t;
 #define	USERMODE(ps)	((ps & UMODE)==UMODE)
 
 
-extern unsigned kernbase, corebase, coretop, pguser, gicdbase, giccbase;
+extern unsigned corebase, coretop, coreoff, pguser, gicdbase, giccbase;

@@ -9,7 +9,7 @@
 #include "../h/systm.h"
 
 /* base address */
-#define	KLADDR	0x09000000
+#define	KLADDR	0xF0200000
 #define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
 #define	DLBASE	((struct device *)0175610)	/* dl-e */
 #define	NKL11	1

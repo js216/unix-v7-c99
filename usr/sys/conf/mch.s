@@ -1,48 +1,8 @@
-.globl mmu_on, dmbsy, spl0, spl1, spl5, spl6, spl7, splx
+.globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-.globl arm_sync_icache, tlbflush, idle, waitloc, savfp, dfar, dfsr
+.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, dfar, dfsr
 .globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
-.globl l1, user_l2, uarea_l2
-
-mmu_on:
-	push {r4, r5, r6, r7, r8, r9}
-	mrc p15, 0, r1, c1, c0, 1
-	orr r1, r1, #(1 << 6)
-	mcr p15, 0, r1, c1, c0, 1
-	isb
-	orr r0, r0, #0x4a
-	mcr p15, 0, r0, c2, c0, 0
-	mov r1, #1
-	mcr p15, 0, r1, c3, c0, 0
-	mov r1, #0
-	mcr p15, 2, r1, c0, c0, 0
-	isb
-	mrc p15, 1, r2, c0, c0, 0
-	and r3, r2, #7
-	add r3, r3, #4
-	movw r4, #0x3ff
-	and r4, r4, r2, lsr #3
-	clz r5, r4
-	movw r6, #0x7fff
-	and r6, r6, r2, lsr #13
-1:	mov r7, r4
-2:	lsl r8, r7, r5
-	lsl r9, r6, r3
-	orr r8, r8, r9
-	mcr p15, 0, r8, c7, c6, 2
-	subs r7, r7, #1
-	bge 2b
-	subs r6, r6, #1
-	bge 1b
-	dsb
-	mrc p15, 0, r1, c1, c0, 0
-	orr r1, r1, #1
-	orr r1, r1, #(1 << 2)
-	orr r1, r1, #(1 << 12)
-	mcr p15, 0, r1, c1, c0, 0
-	isb
-	pop {r4, r5, r6, r7, r8, r9}
-	bx lr
+.globl kl3u
 
 dmbsy:
 	dmb sy
@@ -106,16 +66,18 @@ save:
 
 resume:
 	cpsid i
-	ldr r2, =uarea_l2
+	ldr r2, =kl3u+256*8
 	lsl r3, r0, #12
-	movw ip, #0x45e
+	movw ip, #0x703
 	orr r3, r3, ip
 	str r3, [r2, #0]
 	add r3, r3, #0x1000
-	str r3, [r2, #4]
+	str r3, [r2, #8]
 	dsb ish
-	mov r3, #0
-	mcr p15, 0, r3, c8, c7, 0
+	ldr r3, =u
+	mcr p15, 0, r3, c8, c7, 3
+	add r3, r3, #0x1000
+	mcr p15, 0, r3, c8, c7, 3
 	dsb ish
 	isb
 	ldmia r1, {r4-r11}
@@ -168,6 +130,17 @@ tlbflush:
 	dsb ish
 	mcr p15, 0, r0, c8, c7, 0
 	mcr p15, 0, r0, c7, c5, 6
+	dsb ish
+	isb
+	bx lr
+
+ttbset:
+	mov r1, #0
+	dsb ish
+	mcrr p15, 0, r0, r1, c2
+	isb
+	mcr p15, 0, r1, c8, c7, 2
+	mcr p15, 0, r1, c7, c5, 6
 	dsb ish
 	isb
 	bx lr
@@ -277,10 +250,6 @@ nofault:
 	.space 4
 
 .section .ddrbss,"aw",%nobits
-.balign 16384
-l1:
-	.space 16384
-user_l2:
-	.space 1024
-uarea_l2:
-	.space 1024
+.balign 4096
+kl3u:
+	.space 4096

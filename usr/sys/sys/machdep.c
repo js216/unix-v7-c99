@@ -37,13 +37,20 @@ int	szicode = sizeof(icode);
 void
 startup(void)
 {
-	register int i;
+	register int i, a;
 
 	/*
 	 * zero and free all of core
 	 */
 
 	i = btoc(corebase) + USIZE;
+	l1tab = (unsigned long long *)CLKADDR(i);
+	l1pa = ctob(i);
+	for(a = 0; a < 4*NPROC; a++)
+		l1tab[a] = 0;
+	i += btoc(32*NPROC);
+	mfree(ptmap, NPTAB, i);
+	i += NPTAB;
 	maxmem = btoc(coretop) - i;
 	mfree(coremap, maxmem, i);
 	printf("mem = %D\n", ctob((long)maxmem));
@@ -145,32 +152,58 @@ sendsig(caddr_t p, int signo)
 }
 
 extern struct memregion board_map[];
-extern char __bss_end[], __ddrbss_start[], __ddrbss_end[];
-extern unsigned l1[], user_l2[], uarea_l2[];
+extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];
+extern unsigned long long kl2[], kl3u[], bootl1[];
 char	*msgbufp = msgbuf;
+
+static void
+kmap(int dev)
+{
+	register struct memregion *m;
+	register unsigned a;
+
+	for(m = board_map; m->end != 0; m++)
+		if((m->attr == BLK_DEV) == dev)
+			for(a = m->start; a < m->end; a += 0x200000)
+				kl2[((m->va+a-m->start)>>21) & 0x1ff] = a | m->attr;
+	tlbflush();
+}
+
+unsigned
+vtop(caddr_t va)
+{
+	register struct memregion *m;
+	register unsigned a;
+
+	a = (unsigned)va;
+	for(m = board_map; m->end != 0; m++)
+		if(m->attr != BLK_DEV && a - m->va < m->end - m->start)
+			return(a - m->va + m->start);
+	panic("vtop");
+	return(0);
+}
 
 caddr_t
 machine_init(void)
 {
-	register struct memregion *m;
 	register unsigned a;
 	register char *p;
 
+	kmap(1);
 	cninit();
 	clock_ddr_init();
+	kmap(0);
 	for(p = __ddrbss_start; p < __ddrbss_end; p++)
 		*p = 0;
-	for(m = board_map; m->end != 0; m++)
-		for(a = m->start; a < m->end; a += 0x100000)
-			l1[a>>20] = (a&0xfff00000) | m->attr;
-	l1[0] = (unsigned)user_l2 | PTE_PT;
-	l1[UBASE>>20] = (unsigned)uarea_l2 | PTE_PT;
-	corebase = ctob(btoc(__ddrbss_end));
+	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
+	corebase = ctob(btoc(vtop(__ddrbss_end)));
 	for(a = 0; a < USIZE; a++)
-		uarea_l2[a] = (corebase + ctob(a)) | 0x45e;
-	for(p = (char *)corebase; p < (char *)corebase + ctob(USIZE); p++)
+		kl3u[256+a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
+	kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;
+	bootl1[vtop(_start)>>30] = 0;
+	tlbflush();
+	for(p = (char *)UBASE; p < (char *)UBASE + ctob(USIZE); p++)
 		*p = 0;
-	mmu_on(l1);
 	return((caddr_t)UBASE + ctob(USIZE));
 }
 
@@ -214,36 +247,41 @@ sigreturn(void)
 }
 
 static char *
-memaddr(off_t off)
+memaddr(int dev, off_t off)
 {
-	register unsigned a;
+	register unsigned a, b, e;
+	register int i;
 
-	a = off;
-	if(a < kernbase)
-		a += corebase;
-	if((a >= kernbase && a < (unsigned)__bss_end) ||
-	   (a >= (unsigned)__ddrbss_start && a < (unsigned)__ddrbss_end) ||
-	   (a >= corebase && a < coretop))
-		return((char *)a);
+	if(minor(dev) == 1 && (unsigned)off - UBASE < ctob(USIZE))
+		return((char *)off);
+	for(i = 0; i < 2; i++) {
+		b = (unsigned)(i ? __ddrbss_start : _start);
+		e = i ? (unsigned)CLKADDR(btoc(coretop)) : (unsigned)__bss_end;
+		a = off;
+		if(minor(dev) == 0)
+			a += b - vtop((caddr_t)b);
+		if(a - b < e - b)
+			return((char *)a);
+	}
 	return(NULL);
 }
 
 int
-fumem(off_t off)
+fumem(int dev, off_t off)
 {
 	register char *a;
 
-	if((a = memaddr(off)) == NULL)
+	if((a = memaddr(dev, off)) == NULL)
 		return(-1);
 	return(*a & 0377);
 }
 
 int
-sumem(off_t off, int c)
+sumem(int dev, off_t off, int c)
 {
 	register char *a;
 
-	if((a = memaddr(off)) == NULL)
+	if((a = memaddr(dev, off)) == NULL)
 		return(-1);
 	*a = c;
 	return(0);

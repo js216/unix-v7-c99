@@ -24,7 +24,7 @@ mmread(int dev)
 	if(minor(dev) == 2)
 		return;
 	do {
-		if ((c = fumem(u.u_offset)) < 0)
+		if ((c = fumem(dev, u.u_offset)) < 0)
 			u.u_error = ENXIO;
 	} while(u.u_error==0 && passc(c)>=0);
 }
@@ -41,7 +41,7 @@ mmwrite(int dev)
 	for(;;) {
 		if ((c=cpass())<0 || u.u_error!=0)
 			break;
-		if (sumem(u.u_offset-1, c) < 0)
+		if (sumem(dev, u.u_offset-1, c) < 0)
 			u.u_error = ENXIO;
 	}
 }

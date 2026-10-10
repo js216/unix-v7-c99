@@ -34,3 +34,14 @@ before e3a00001
 w e3a00002 e12fff1e
 after e3a00002
 exit 12
+proc above USERSIZE 1
+found self 1
+kmem u 1
+mem u 1
+comm kmt kmt procp same 1
+mem at UBASE -1
+kmem at physical -1
+stack pages 768
+bss pages 2048, end above 8 MB 1
+sbrk pages 4096
+beyond MAXMEM 1

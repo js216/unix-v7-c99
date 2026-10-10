@@ -35,6 +35,7 @@ long	tk_nin;
 long	tk_nout;
 struct map coremap[CMAPSIZ];
 struct map swapmap[SMAPSIZ];
+struct map ptmap[PMAPSIZ];
 struct mount mount[NMOUNT];
 struct inode *mpxip;
 

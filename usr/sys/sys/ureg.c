@@ -4,10 +4,84 @@
 #include "../h/user.h"
 #include "../h/proc.h"
 #include "../h/text.h"
+#include "../h/map.h"
 #include "../h/seg.h"
 
-extern unsigned user_l2[];
-static unsigned	ulo, uhi = USERSIZE/PGSIZE;
+unsigned long long *l1tab;
+unsigned l1pa;
+
+/*
+ * Build the page tables of the current
+ * process from the software prototype.
+ */
+static void
+ptbuild(register struct proc *p)
+{
+	register unsigned long long *t;
+	register unsigned i, a;
+	unsigned long long *l1;
+	unsigned n, b, n2, n3lo, n3hi;
+	int taddr, daddr;
+
+	taddr = daddr = p->p_addr;
+	if (p->p_textp != NULL)
+		taddr = p->p_textp->x_caddr;
+	n = u.u_ptsize + u.u_pdsize;
+	n2 = (n+PTPGB-1) / PTPGB;
+	n3lo = (n+511) / 512;
+	n3hi = (u.u_pssize+511) / 512;
+	n = n2 + n3lo + (n3hi != 0) + n3hi;
+	if(n == 0)
+		return;
+	if((a = malloc(ptmap, n)) == 0) {
+		printf("out of page tables\n");
+		psignal(p, SIGKIL);
+		return;
+	}
+	p->p_ptab = a;
+	p->p_nptab = n;
+	t = (unsigned long long *)CLKADDR(a);
+	for(i = 0; i < 512*n; i++)
+		t[i] = 0;
+	l1 = &l1tab[4*(p-proc)];
+	a = ctob(a);
+	for(i = 0; i < n2; i++, a += PGSIZE)
+		l1[i] = a | PTE_TAB;
+	for(i = 0; i < n3lo; i++, a += PGSIZE)
+		t[i] = a | PTE_TAB;
+	t += 512*n2;
+	b = ctob((unsigned)taddr);
+	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
+		*t++ = b | pguser | u.u_pxrw;
+	b = ctob((unsigned)daddr) + ctob(USIZE);
+	for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)
+		*t++ = b | pguser | RW;
+	if(n3hi == 0)
+		return;
+	t = (unsigned long long *)CLKADDR(p->p_ptab) + 512*(n2+n3lo);
+	l1[2] = a | PTE_TAB;
+	for(i = 0; i < n3hi; i++)
+		t[512-n3hi+i] = (a += PGSIZE) | PTE_TAB;
+	t += 512 + 512*n3hi - u.u_pssize;
+	for(i = 0; i < u.u_pssize; i++, b += PGSIZE)
+		*t++ = b | pguser | RW;
+}
+
+/*
+ * Release the page tables of a process.
+ */
+void
+ptfree(register struct proc *p)
+{
+	register unsigned long long *l1;
+
+	if(p->p_nptab) {
+		mfree(ptmap, p->p_nptab, p->p_ptab);
+		p->p_nptab = 0;
+	}
+	l1 = &l1tab[4*(p-proc)];
+	l1[0] = l1[1] = l1[2] = 0;
+}
 
 /*
  * Load the user hardware segmentation
@@ -18,27 +92,12 @@ static unsigned	ulo, uhi = USERSIZE/PGSIZE;
 void
 sureg(void)
 {
-	register unsigned i, a;
-	int taddr, daddr;
-	struct text *tp;
+	register struct proc *p;
 
-	taddr = daddr = u.u_procp->p_addr;
-	if ((tp=u.u_procp->p_textp) != NULL)
-		taddr = tp->x_caddr;
-	while(ulo > 0)
-		user_l2[--ulo] = 0;
-	while(uhi < USERSIZE/PGSIZE)
-		user_l2[uhi++] = 0;
-	a = (unsigned)CLKADDR(taddr);
-	for(i = 0; i < u.u_ptsize; i++, a += PGSIZE)
-		user_l2[ulo++] = a | pguser | u.u_pxrw;
-	a = (unsigned)CLKADDR(daddr+USIZE);
-	for(i = 0; i < u.u_pdsize; i++, a += PGSIZE)
-		user_l2[ulo++] = a | pguser | RW;
-	a = (unsigned)CLKADDR(daddr+USIZE+u.u_pdsize+u.u_pssize);
-	for(i = 0; i < u.u_pssize; i++)
-		user_l2[--uhi] = (a -= PGSIZE) | pguser | RW;
-	tlbflush();
+	p = u.u_procp;
+	if(p->p_nptab == 0)
+		ptbuild(p);
+	ttbset(l1pa + 32*(p-proc));
 }
 
 /*
@@ -58,7 +117,7 @@ estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 
 	if(sep)
 		goto err;
-	if(ctos(nt)+ctos(nd)+ctos(ns) > USERSIZE/PGSIZE)
+	if(ctos(nt)+ctos(nd) > 2*PTPGB || ctos(ns) > PTPGB)
 		goto err;
 	if((int)(nt+nd+ns+USIZE) > maxmem)
 		goto err;
@@ -66,6 +125,7 @@ estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 	u.u_pdsize = nd;
 	u.u_pssize = ns;
 	u.u_pxrw = xrw;
+	ptfree(u.u_procp);
 	sureg();
 	return(0);
 

@@ -1,4 +1,4 @@
-.globl _start
+.globl _start, kl2, bootl1
 _start:
 	cpsid if
 	mrc p15, 0, r0, c1, c0, 0
@@ -15,17 +15,85 @@ _start:
 	mcr p15, 0, r0, c7, c5, 6
 	dsb
 	isb
-	ldr sp, =stack_top
-	ldr r0, =vectors
-	mcr p15, 0, r0, c12, c0, 0
-	isb
-	ldr r1, =__bss_end
+	adr r4, _start
+	ldr r0, =_start
+	sub r4, r4, r0
 	ldr r0, =__bss_start
+	ldr r1, =__bss_end
+	add r0, r0, r4
+	add r1, r1, r4
 	mov r2, #0
 1:
 	cmp r0, r1
 	strlo r2, [r0], #4
 	blo 1b
+	ldr r5, =kl2
+	add r5, r5, r4
+	ldr r0, =_start
+	lsr r0, r0, #21
+	ldr r1, =__bss_end
+	sub r1, r1, #1
+	lsr r1, r1, #21
+	movw r3, #0x701
+1:
+	add ip, r4, r0, lsl #21
+	orr ip, ip, r3
+	ubfx r6, r0, #0, #9
+	add r6, r5, r6, lsl #3
+	str ip, [r6]
+	add r0, r0, #1
+	cmp r0, r1
+	bls 1b
+	ldr r6, =bootl1
+	add r6, r6, r4
+	adr r0, _start
+	lsr r1, r0, #30
+	lsl ip, r1, #30
+	orr ip, ip, r3
+	str ip, [r6, r1, lsl #3]
+	mrc p15, 0, r1, c1, c0, 1
+	orr r1, r1, #(1 << 6)
+	mcr p15, 0, r1, c1, c0, 1
+	isb
+	mcr p15, 2, r2, c0, c0, 0
+	isb
+	mrc p15, 1, r0, c0, c0, 0
+	and r1, r0, #7
+	add r1, r1, #4
+	movw r3, #0x3ff
+	and r3, r3, r0, lsr #3
+	clz ip, r3
+	movw r7, #0x7fff
+	and r7, r7, r0, lsr #13
+1:	mov r8, r3
+2:	lsl r9, r8, ip
+	lsl r10, r7, r1
+	orr r9, r9, r10
+	mcr p15, 0, r9, c7, c6, 2
+	subs r8, r8, #1
+	bge 2b
+	subs r7, r7, #1
+	bge 1b
+	dsb
+	ldr r0, =0x4ff
+	mcr p15, 0, r0, c10, c2, 0
+	ldr r0, =0xb5023500
+	mcr p15, 0, r0, c2, c0, 2
+	mcrr p15, 0, r6, r2, c2
+	mcrr p15, 1, r5, r2, c2
+	isb
+	mrc p15, 0, r0, c1, c0, 0
+	orr r0, r0, #1
+	orr r0, r0, #(1 << 2)
+	orr r0, r0, #(1 << 12)
+	mcr p15, 0, r0, c1, c0, 0
+	isb
+	ldr pc, =1f
+1:
+	ldr sp, =stack_top
+	ldr r0, =vectors
+	mcr p15, 0, r0, c12, c0, 0
+	isb
 	bl machine_init
 	mov sp, r0
 	bl main
@@ -126,3 +194,8 @@ dabort_entry:
 .balign 8
 	.space 8192
 stack_top:
+.balign 4096
+kl2:
+	.space 4096
+bootl1:
+	.space 32

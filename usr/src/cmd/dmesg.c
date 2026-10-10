@@ -42,7 +42,7 @@ main(int argc, char **argv)
 	nlist(argc>2? argv[2]:"/unix", nl);
 	if (nl[0].n_type==0)
 		done("No namelist\n");
-	if ((mem = open((argc>1? argv[1]: "/dev/mem"), 0)) < 0)
+	if ((mem = open((argc>1? argv[1]: "/dev/kmem"), 0)) < 0)
 		done("No mem\n");
 	lseek(mem, (long)nl[0].n_value, 0);
 	read(mem, msgbuf, MSGBUFS);

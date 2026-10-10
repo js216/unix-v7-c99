@@ -576,6 +576,7 @@ expand(int newsize)
 		qswtch();
 		/* no return */
 	}
+	ptfree(p);
 	p->p_addr = a2;
 	for(i=0; i<n; i++)
 		copyseg(a1+i, a2+i);

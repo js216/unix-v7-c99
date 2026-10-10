@@ -9,9 +9,9 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-#define	SD(off)	(*(volatile int *)(0x58005000+(off)))
+#define	SD(off)	(*(volatile int *)(0xF0405000+(off)))
 #define	NRK	4
-#define	NRKBLK	76184
+#define	NRKBLK	338328
 
 #define	RESET	0
 #define	WCOM	24
@@ -90,7 +90,7 @@ rkstart(void)
 	SD(DCTRL) = 0;
 	SD(DLEN) = BSIZE;
 	SD(DCTRL) = bp->b_flags&B_READ ? BLK512|DTDIR : BLK512;
-	SD(IDMABASER) = (int)bp->b_un.b_addr+rkoff;
+	SD(IDMABASER) = vtop(bp->b_un.b_addr+rkoff);
 	SD(IDMACTRL) = 1;
 	SD(MASK) = IENABLE;
 	SD(ARG) = bp->b_blkno+(rkoff>>BSHIFT);

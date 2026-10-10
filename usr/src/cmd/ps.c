@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <a.out.h>
 #define TXTRNDSIZ 4096L
-#define stacktop(siz) (0x100000L)
-#define stackbas(siz) (0x100000L-siz)
+#define stacktop(siz) (0xC0000000L)
+#define stackbas(siz) (0xC0000000L-siz)
 #include <sys/param.h>
 #include "../../sys/h/proc.h"
 #include <sys/dir.h>
@@ -32,7 +32,8 @@ int	xflg;
 char	*tptr;
 char	*gettty(void);
 char	*getptr(char **adr);
-int	prcom(int puid), getbyte(char *adr), within(char *adr, long lbd, long ubd);
+int	prcom(int puid), getbyte(char *adr);
+int	within(char *adr, unsigned long lbd, unsigned long ubd);
 void	getdev(void);
 int	aflg;
 int	mem;
@@ -107,14 +108,14 @@ bbreak:
 		fprintf(stderr, "No namelist\n");
 		exit(1);
 	}
-	coref = "/dev/mem";
+	coref = "/dev/kmem";
 	if(kflg)
 		coref = "/usr/sys/core";
 	if ((mem = open(coref, 0)) < 0) {
 		fprintf(stderr, "No mem\n");
 		exit(1);
 	}
-	swmem = open(coref, 0);
+	swmem = open(kflg? coref: "/dev/mem", 0);
 	/*
 	 * read mem to find swap dev.
 	 */
@@ -192,8 +193,8 @@ round(long a, long b)
 }
 
 struct map {
-	long	b1, e1; long f1;
-	long	b2, e2; long f2;
+	unsigned long	b1, e1; unsigned long f1;
+	unsigned long	b2, e2; unsigned long f2;
 };
 struct map datmap;
 int	file;
@@ -201,7 +202,7 @@ int
 prcom(int puid)
 {
 	int abuf[128];
-	long addr;
+	unsigned long addr;
 	register int *ip;
 	register char *cp, *cp1;
 	long tm;
@@ -213,7 +214,7 @@ prcom(int puid)
 	char **ap;
 
 	if (mproc.p_flag&SLOAD) {
-		addr = ctob((long)mproc.p_addr);
+		addr = ctob((unsigned long)mproc.p_addr);
 		file = swmem;
 	} else {
 		addr = (mproc.p_addr+swplo)<<9;
@@ -276,7 +277,7 @@ prcom(int puid)
 		printf(" swapper");
 		return(1);
 	}
-	addr += ctob((long)mproc.p_size) - 512;
+	addr += ctob((unsigned long)mproc.p_size) - 512;
 
 	/* look for sh special */
 	lseek(file, addr+512-sizeof(char **), 0);
@@ -394,7 +395,7 @@ getbyte(char *adr)
 
 
 int
-within(char *adr, long lbd, long ubd)
+within(char *adr, unsigned long lbd, unsigned long ubd)
 {
-	return((long)adr>=lbd && (long)adr<ubd);
+	return((unsigned long)adr>=lbd && (unsigned long)adr<ubd);
 }

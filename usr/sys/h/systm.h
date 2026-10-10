@@ -45,6 +45,8 @@ extern	int	icode[];	/* user init code */
 extern	int	szicode;	/* its size */
 extern	unsigned long long clkcval;	/* when the clock is next due */
 extern	unsigned clkreload, clkrem, clkfrac;
+extern	unsigned long long *l1tab;	/* user first-level tables */
+extern	unsigned l1pa;		/* their physical address */
 
 dev_t getmdev(void);
 daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
@@ -89,7 +91,7 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	klopen(dev_t dev, int flag), klread(dev_t dev),
 	klwrite(dev_t dev), link(void),
 	mfree(struct map *mp, int size, int a), mknod(void), mmread(int dev),
-	mmu_on(unsigned *l1), mmwrite(int dev),
+	mmwrite(int dev),
 	ndflush(struct clist *q, int cc), nice(void),
 	nodev(dev_t dev, int flag),
 	nolioctl(int cmd, struct tty *tp, caddr_t addr),
@@ -100,7 +102,8 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	physio(void (*strat)(struct buf *bp), struct buf *bp, int dev, int rw),
 	pipe(void), plock(struct inode *ip), prdev(char *str, dev_t dev),
 	prele(struct inode *ip), profil(void), psig(void),
-	psignal(struct proc *p, int sig), ptrace(void), putchar(int c),
+	psignal(struct proc *p, int sig), ptfree(struct proc *p), ptrace(void),
+	putchar(int c),
 	qswtch(void), read(void), readi(struct inode *ip),
 	readp(struct file *fp), resume(int a, label_t lab), rexit(void),
 	rkinit(void), rkintr(void), rkread(dev_t dev),
@@ -116,7 +119,8 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	sysioctl(int dev, int cmd, caddr_t addr, int flag), syslock(void),
 	sysphys(void), sywrite(int dev),
 	timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim), times(void),
-	tlbflush(void), trap(int *r), ttrstrt(caddr_t arg), ttstart(struct tty *tp),
+	tlbflush(void), trap(int *r), ttbset(unsigned a), ttrstrt(caddr_t arg),
+	ttstart(struct tty *tp),
 	ttychars(struct tty *tp), ttyclose(struct tty *tp),
 	ttyinput(int c, struct tty *tp), ttyopen(dev_t dev, struct tty *tp),
 	ttyrend(struct tty *tp, char *pb, char *pe), umask(void), unlink(void),
@@ -133,7 +137,7 @@ int	access(struct inode *ip, int mode),
 	copyout(caddr_t f, caddr_t t, unsigned n), cpass(void), dfar(void),
 	dfsr(void),
 	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw),
-	fsig(struct proc *p), fubyte(caddr_t a), fumem(off_t off),
+	fsig(struct proc *p), fubyte(caddr_t a), fumem(int dev, off_t off),
 	fuword(caddr_t a), getc(struct clist *p), getw(struct clist *p),
 	grow(unsigned sp), issig(void), malloc(struct map *mp, int size),
 	max(unsigned a, unsigned b), min(unsigned a, unsigned b),
@@ -141,12 +145,13 @@ int	access(struct inode *ip, int mode),
 	putc(int c, struct clist *p), putw(int c, struct clist *p),
 	q_to_b(struct clist *q, char *cp, int cc), save(label_t lab),
 	schar(void), setpri(struct proc *pp), spl5(void), spl6(void),
-	spl7(void), subyte(caddr_t a, int c), sumem(off_t off, int c),
+	spl7(void), subyte(caddr_t a, int c), sumem(int dev, off_t off, int c),
 	suser(void), suword(caddr_t a, int v),
 	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
 	ttread(struct tty *tp), ufalloc(void);
 caddr_t	machine_init(void), ttwrite(struct tty *tp);
 unsigned long long cntvct_get(void);
+unsigned	vtop(caddr_t va);
 void	printf(char *fmt, ...);
 #define	fuibyte	fubyte
 #define	fuiword	fuword

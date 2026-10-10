@@ -14,9 +14,11 @@
 #include "../../sys/h/user.h"
 #include "../../sys/h/file.h"
 
-char	*fcore	= "/dev/mem";
+char	*fcore	= "/dev/kmem";
+char	*fmem	= "/dev/mem";
 char	*fnlist	= "/unix";
 int	fc;
+int	fm;
 
 struct setup {
 	char	name[8];
@@ -45,7 +47,7 @@ int	txtf;
 int	prcf;
 int	ttyf;
 int	usrf;
-long	ubase;
+unsigned long	ubase;
 int	filf;
 int	allflg;
 
@@ -92,9 +94,9 @@ main(int argc, char **argv)
 		}
 	}
 	if (argc>0)
-		fcore = argv[0];
-	if ((fc = open(fcore, 0)) < 0) {
-		printf("Can't find %s\n", fcore);
+		fcore = fmem = argv[0];
+	if ((fc = open(fcore, 0)) < 0 || (fm = open(fmem, 0)) < 0) {
+		printf("Can't find %s\n", fc < 0 ? fcore : fmem);
 		exit(1);
 	}
 	if (argc>1)
@@ -305,8 +307,8 @@ dousr(void)
 	register struct user *up;
 	register int i;
 
-	lseek(fc, ctob(ubase), 0);
-	read(fc, (char *)&xu, sizeof(xu));
+	lseek(fm, ctob(ubase), 0);
+	read(fm, (char *)&xu, sizeof(xu));
 	up = &xu.rxu;
 	printf("rsav %.1o %.1o\n", up->u_rsav[0], up->u_rsav[1]);
 	printf("segflg, error %d, %d\n", up->u_segflg, up->u_error);
