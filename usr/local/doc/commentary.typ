@@ -9763,10 +9763,15 @@ error at line 100002 of a command file was reported at line `:0002`.
 `stoi` converts a string of digits, for `exit`, `break`, and `trap`,
 and for the descriptor in a redirection such as `>&2`
 (#f("sh/service.c")). A string that does not begin with a digit is reported as a bad
-number. The test `r>=0` is meant to stop the conversion when the
-number overflows; it relies on the overflow wrapping to a negative
-value, as it did on the PDP-11. In C99 the overflow of a signed
-integer is undefined, and the test cannot be counted on.
+number. The test `r>=0` stops the conversion when the number
+overflows. v7 relied on the overflow wrapping to a negative value, as
+it did on the PDP-11; in C99 the overflow of a signed integer is
+undefined, and the test could not be counted on. The step (93) now
+asks first whether one more digit fits: `(INT)(~0u>>1)` is the largest
+`INT`, and a value `r` may take the digit if `r*10` plus it does not
+exceed that, that is, if `r` is at most the largest less the digit,
+divided by ten. If not, `r` is set to -1, which ends the loop and
+reports the bad number as before; nothing ever overflows.
 
 `return(0)` (98) is new. `failed` never returns, but nothing tells the
 compiler so (the port does not use GNU's `noreturn` attribute), and
