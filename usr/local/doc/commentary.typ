@@ -5271,9 +5271,9 @@ lays it out for the ARM: a `long` is stored least significant byte
 first, where the PDP-11 put its high word first, and it is aligned on a
 four-byte boundary, so that two bytes of padding follow `s_isize`,
 `s_nfree`, and the four flags. The super-block is 448 bytes here, against
-440 on the PDP-11. Since `mkfs` (#f("cmd/mkfs.c")) is compiled by the ARM
-cross-compiler from these same headers (#f("Makefile")), and run on the
-host under emulation, the file systems it builds agree with the
+440 on the PDP-11. Since `mkfs` (#f("cmd/mkfs.c")) is compiled from these same
+headers, with their `long` types made `int` for the build machine
+(#f("Makefile")), the file systems it builds agree with the
 kernel; a disk written by a PDP-11 could not be mounted without
 conversion.
 
@@ -11514,13 +11514,10 @@ The tools. `CROSS_COMPILE` is the prefix, in the manner of Linux's makefiles, of
 the cross compiler for the target, a bare-metal ARM toolchain. `HOSTCC` compiles
 the three programs which run during the build rather than on the
 target: `mkconf` (#f("mkconf.c")), `mkfs` (#f("cmd/mkfs.c")), and the
-`proc` of `awk` (#f("cmd/cmd.mk")). It too is an ARM compiler, for ARM
-Linux; its programs are run on the build machine by user-mode
-emulation. The reason is `mkfs`: compiled for the same processor as the
-kernel, from the same headers, it lays out super-blocks, inodes, and
-free lists exactly as the kernel will read them, with four-byte `long`s
-stored least significant byte first, and no conversion is needed.
-`flex` takes the place of v7's `lex`.
+`proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
+compiler, `cc`, and the programs it makes run there directly, so the
+build needs no more than a cross compiler for the target and the
+host's ordinary tools. `flex` takes the place of v7's `lex`.
 
 #lines(1, 6)
 
@@ -11563,12 +11560,10 @@ loads the text (`xalloc`, #f("text.c")). `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
 (85).
 
-`HOSTCFLAGS` link the host programs statically, so that the emulator
-needs no ARM shared libraries, and keep the host library's `off_t` and
-`time_t` at four bytes, the size of the port's own types, which
-`mkfs` takes from the port's `<sys/types.h>`.
+`HOSTCFLAGS` are the warnings alone: the host programs are compiled
+as any other program of the build machine.
 
-#lines(7, 15)
+#lines(7, 14)
 
 `T` and `Q` shorten the output. `T` prints the name of a tool and the
 target in place of the whole command, and `Q` silences commands which
@@ -11584,7 +11579,7 @@ v7's `cc -s` did. `-lgcc` brings in the compiler's helper routines;
 the programs are compiled for soft floating point, so every operation
 on a `double` is such a call.
 
-#lines(16, 21)
+#lines(15, 20)
 
 `all` is the default goal: the QEMU kernel and the root file system
 image, and, after the fragments are read (32), the kernels of both
@@ -11604,7 +11599,7 @@ and makes the small file system on which the tests run the file system
 checkers; the tests themselves run on the target, from
 `/usr/local/test`.
 
-#lines(22, 37)
+#lines(21, 36)
 
 `bison` replaces v7's `yacc`. It is run as itself, not in its POSIX
 mode, since the grammars use both v7's `%term` and some of `bison`'s
@@ -11617,7 +11612,7 @@ device (#f("virtio_blk.c")), and the console is the board's UART on the
 standard input and output. `-m 512M` gives the machine the 512 MB of
 memory which #f("qemuconf") describes; QEMU's default is 128 MB.
 
-#lines(38, 48)
+#lines(37, 47)
 
 The tree is built in place, and the programs are made where they will
 lie in the target's file system: `bin/cat`, `etc/init`,
@@ -11649,28 +11644,40 @@ the end of the file. The swap area is 160 MB, but `truncate` only sets
 the length of the file, and the host stores no blocks for the part
 never written.
 
-#lines(49, 62)
+#lines(48, 61)
 
 `mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
 the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
 `-Iusr/include` would also bring in v7's `<stdio.h>`. Instead a
-temporary directory is made, holding only a link named `sys` to
-`usr/include/sys`, and put on the search path; `$$$$`, which reaches
-the shell as `$$`, makes its name unique, and the `trap` removes it
-however the compile ends.
+temporary directory is made, holding copies of the six headers `mkfs`
+needs, and put on the search path; `$$$$`, which reaches the shell as
+`$$`, makes its name unique, and the `trap` removes it however the
+compile ends.
+
+The copies are not exact. `mkfs` writes super-blocks, inodes, and free
+lists as structures, which the kernel must read as the ARM lays them
+out: least significant byte first, `int` and `long` four bytes, `long
+long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
+everything but `long`, which there is eight bytes, so `sed` turns each
+`typedef long` into `typedef int`, the same four bytes on every host;
+`daddr_t` and `off_t` are the types it changes. The host's own headers
+also define an `off_t` and a `time_t`, of other sizes, and C forbids
+two different definitions of one name, so the port's two are renamed
+in the copies. `mkfs` itself keeps the host's `time_t`, which `time`
+fills, and assigns it to the port's in the inodes and the super-block.
 Since `mkfs` is not one of the objects whose dependencies the compiler
 records, its headers and the `Makefile` are named as prerequisites
 explicitly: a `mkfs` built from stale headers would write a file system
 which the kernel misreads.
 
-#lines(63, 69)
+#lines(62, 72)
 
 The directories of the image which hold built programs or copied files,
 and the copying of the files from the v7 tree. `etc` is left out: its
 files are kept in the repository, where the image expects them. `cp -f`
 replaces a previous copy, which is read-only like its original.
 
-#lines(70, 75)
+#lines(73, 78)
 
 `.DELETE_ON_ERROR` removes a target whose command fails, so that a
 half-written image or object is never taken for a finished one; `mkfs`
@@ -11681,7 +11688,7 @@ When a file in C is replaced by one in assembler, its old `.d` file
 still names the `.c` file as a prerequisite of the object, and `make`
 would otherwise stop for want of a rule to make it.
 
-#lines(76, 85)
+#lines(79, 88)
 #source("/usr/sys/sys.mk")
 
 #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
@@ -11953,8 +11960,9 @@ tree in which the system was built.
 
 Since the image must be read by the ARM kernel, `mkfs` must lay out
 every structure exactly as the kernel does. It does so by being compiled
-by an ARM compiler, from the port's own headers, and run under
-emulation: the super-block (#f("filsys.h")), the inodes (#f("ino.h")),
+from the port's own headers, copied with every `long` type made an
+`int` (#f("Makefile")), so that on a 64-bit build machine
+the super-block (#f("filsys.h")), the inodes (#f("ino.h")),
 the free-list blocks (#f("fblk.h")), the directory entries
 (#f("dir.h")), and the indirect blocks all come out with the ARM's
 sizes, alignment, and byte order, without a line of conversion. The
@@ -11977,7 +11985,7 @@ to be found without v7's `<stdio.h>`.
 
 #lines(1, 24)
 
-`ltol3` packs `n` block addresses, each held in a `long`, into three
+`ltol3` packs `n` block addresses, each held in a `daddr_t`, into three
 bytes apiece, the form they take in an inode on the disk
 (#f("ino.h")). v7 took it from the C library. That library is not
 available to a program of the host, and v7's version was in any case
@@ -12049,7 +12057,9 @@ is cleared, the free list built, the files made by `cfile`, and the
 super-block written last, since `alloc` and `bfree` keep it up to date
 as they go. In the message for a bad ratio, `s_isize - 2` is an `int`,
 since `s_isize` is an `unsigned short`, and the format is corrected to
-`%d`.
+`%d`. `s_fsize` is a `daddr_t`, an `int` in the copied headers, and is
+cast to the `long` which `%ld` expects; so is `bno` in the messages of
+`rdfs` and `wtfs`.
 
 #lines(168, 201)
 

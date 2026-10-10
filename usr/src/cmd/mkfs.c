@@ -23,7 +23,7 @@
 #include <sys/fblk.h>
 #include <sys/dir.h>
 static void
-ltol3(char *cp, long *lp, int n)
+ltol3(char *cp, daddr_t *lp, int n)
 {
 	int i;
 	long v;
@@ -178,7 +178,7 @@ f3:
 	filsys.s_n = f_n;
 	printf("m/n = %d %d\n", f_m, f_n);
 	if(filsys.s_isize >= filsys.s_fsize) {
-		printf("%ld/%d: bad ratio\n", filsys.s_fsize, filsys.s_isize-2);
+		printf("%ld/%d: bad ratio\n", (long)filsys.s_fsize, filsys.s_isize-2);
 		exit(1);
 	}
 	filsys.s_tfree = 0;
@@ -385,7 +385,7 @@ rdfs(daddr_t bno, char *bf)
 	lseek(fsi, bno*BSIZE, 0);
 	n = read(fsi, bf, BSIZE);
 	if(n != BSIZE) {
-		printf("read error: %ld\n", bno);
+		printf("read error: %ld\n", (long)bno);
 		exit(1);
 	}
 }
@@ -398,7 +398,7 @@ wtfs(daddr_t bno, char *bf)
 	lseek(fso, bno*BSIZE, 0);
 	n = write(fso, bf, BSIZE);
 	if(n != BSIZE) {
-		printf("write error: %ld\n", bno);
+		printf("write error: %ld\n", (long)bno);
 		exit(1);
 	}
 }

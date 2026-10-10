@@ -2,7 +2,7 @@ CROSS_COMPILE ?= arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 AS = $(CROSS_COMPILE)as
 AR = $(CROSS_COMPILE)ar
-HOSTCC = arm-linux-gnueabihf-gcc
+HOSTCC = cc
 LEX = flex
 
 W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
@@ -11,8 +11,7 @@ CFLAGS = $W \
 	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-z,max-page-size=4096,-Ttext=0x80 \
 	-MMD -MP
 ASFLAGS = -mcpu=cortex-a7
-HOSTCFLAGS = $W -static \
-	-D_FILE_OFFSET_BITS=32 -D_TIME_BITS=32
+HOSTCFLAGS = $W
 
 T = $(if $V,,@printf '  %-7s %s\n' $1 $@;)
 Q = $(if $V,,@)
@@ -64,8 +63,12 @@ boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
 etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
-	    mkdir -p "$$tmpinc"; \
-	    ln -s "$(CURDIR)/usr/include/sys" "$$tmpinc/sys"; \
+	    mkdir -p "$$tmpinc/sys"; \
+	    for h in param ino inode filsys fblk dir; do \
+		sed -e 's/^typedef\([[:space:]]*\)long\([[:space:]]*[a-z]*_t;\)/typedef\1int\2/' \
+		    -e 's/off_t/v7_off_t/g' -e 's/time_t/v7_time_t/g' \
+		    usr/include/sys/$$h.h >"$$tmpinc/sys/$$h.h"; \
+	    done; \
 	    $(HOSTCC) $(HOSTCFLAGS) -I"$$tmpinc" -o $@ $<
 
 $(DIRS):
