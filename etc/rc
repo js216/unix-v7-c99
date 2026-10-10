@@ -2,7 +2,7 @@ PATH=/bin:/usr/bin
 echo "Restricted rights: Use, duplication, or disclosure
 is subject to restrictions stated in your contract with
 Western Electric Company, Inc." >/dev/console
-rm -f /etc/mtab
+rm /etc/mtab
 cat /dev/null >/etc/utmp
 rm -f /usr/spool/lpd/lock
 : /etc/accton /usr/adm/acct
