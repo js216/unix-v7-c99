@@ -3011,20 +3011,20 @@ still log in and kill something when the table is full.
 
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
 the user program must also be told which it is. v7 did it with a trick
-of the PDP-11 library. In the child `fork` returned the parent's pid;
-in the parent it advanced the saved `pc` by one word, so that the
-parent skipped the instruction after the `sys fork`, a branch which only
-the child therefore took. The port gives the ordinary convention
-instead: the child receives 0 (469), the parent the child's pid, and the
-`pc` is left alone (480). The library stub returns `r0` unchanged, and
-the child no longer learns its parent's pid. The assignment of
-`u.u_procp` to `p1` (467), which served only the old return value, is
-kept from v7 as a harmless dead store.
+which the port keeps. In the child `fork` returns the parent's pid
+(469); in the parent it advances the saved `pc` by one word (481), so
+that the parent skips the instruction after the `svc`, a branch which
+only the child therefore takes. `R7` is the PDP-11's name for the `pc`
+(#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
+instruction, as it was two, the size of a PDP-11 one. The library stub
+(`fork.s`) is built on it as v7's was: the parent returns the child's
+pid, or -1 with `errno` set if the call failed, and the child, at the
+branch, stores the parent's pid in `par_uid` and returns 0.
 
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(428, 481)
+#lines(428, 482)
 
 `sbreak` sets the size of the data area. In v7 it went on to change the
 size of the process image with `expand`, and since the stack lay above
@@ -3044,7 +3044,7 @@ fault; an earlier version of the port which cleared the added clicks
 destroyed data the shell was already using, and the shell hung on long
 words.
 
-#lines(482, 511)
+#lines(483, 512)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned
@@ -6917,7 +6917,9 @@ This short routine is where every system call made by a C program
 enters the kernel. Each library stub, such as `read` in
 #f("sys/read.s"), loads its call number into `ip` and branches here;
 `cerror` makes the call and turns the kernel's reply into the C
-convention, a result or -1 with the error number in `errno`.
+convention, a result or -1 with the error number in `errno`. Only
+`fork` makes its call itself, since the kernel returns to its parent
+and its child at different places (#f("sys1.c")).
 
 The file corresponds to nothing in v7 of the same name and content.
 v7's `syscall.s`, a compatibility routine of its library, was a

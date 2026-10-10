@@ -466,7 +466,7 @@ fork(void)
 	}
 	p1 = u.u_procp;
 	if(newproc()) {
-		u.u_r.r_val1 = 0;
+		u.u_r.r_val1 = p1->p_pid;
 		u.u_start = time;
 		u.u_cstime = 0;
 		u.u_stime = 0;
@@ -477,7 +477,8 @@ fork(void)
 	}
 	u.u_r.r_val1 = p2->p_pid;
 
-out:	;
+out:
+	u.u_ar0[R7] += NBPW;
 }
 
 /*
