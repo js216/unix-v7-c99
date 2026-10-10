@@ -1,5 +1,5 @@
 mem = 67096576
-# ls -l /bin/su /bin/mkdir /bin/login /bin/mv /usr/lib/atrun /dev/mem | awk '{ print $1, $3, $NF }'; ls -l /usr/adm
+# ls -l /bin/su /bin/mkdir /bin/login /bin/mv /usr/lib/atrun /dev/mem | awk '{ print $1, $3, $NF }'; ls -l /usr/adm
 -rwsr-xr-x root /bin/login
 -rwsr-xr-x root /bin/mkdir
 -rwsr-xr-x root /bin/mv

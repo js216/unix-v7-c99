@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /bin; /t/argt * | wc
+# cd /bin; /t/argt * | wc
       1      6      28
 # /t/argt /bin/* /bin/* /bin/* /bin/*
 argc 425 chars 3735 last /bin/yes

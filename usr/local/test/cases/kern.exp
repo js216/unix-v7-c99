@@ -1,5 +1,5 @@
 mem = 67096576
-# /t/r12
+# /t/r12
 undef: sig=4 r12=5a5a1234
 dabort: sig=11 r12=1234a5a5
 # sh -c 'trap "echo caught; exit 3" 2; echo rea""dy; yes >/dev/null'

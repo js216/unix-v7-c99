@@ -145,6 +145,7 @@ int	access(struct inode *ip, int mode),
 	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
 	ttread(struct tty *tp), ufalloc(void);
 caddr_t	ttwrite(struct tty *tp);
+unsigned long long cntvct_get(void);
 void	printf(char *fmt, ...);
 #define	fuibyte	fubyte
 #define	fuiword	fuword

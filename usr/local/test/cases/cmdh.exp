@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /tmp; echo one two three >a; echo four five >>a; echo six >>a
+# cd /tmp; echo one two three >a; echo four five >>a; echo six >>a
 # echo 'scale=10; s(1); c(1); a(1); l(10); e(1); sqrt(2); j(2,1.5)' | bc -l
 .8414709848
 .5403023058

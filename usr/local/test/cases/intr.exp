@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /tmp; echo 'ONE two three' >a; echo 'four five' >>a
+# cd /tmp; echo 'ONE two three' >a; echo 'four five' >>a
 # ed a
 24
 

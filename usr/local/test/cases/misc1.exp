@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /tmp; echo one two three >a; echo four five >>a; echo one two three >>a; echo zz >>a
+# cd /tmp; echo one two three >a; echo four five >>a; echo one two three >>a; echo zz >>a
 # cat a; cat -u a - a </dev/null | wc -l; cat nosuch; echo st$?
 one two three
 four five

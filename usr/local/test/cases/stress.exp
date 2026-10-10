@@ -1,5 +1,5 @@
 mem = 67096576
-# for i in 1 2 3 4 5 6 7 8; do (yes | sed 200q | wc >/tmp/w$i) & done; wait; cat /tmp/w*
+# for i in 1 2 3 4 5 6 7 8; do (yes | sed 200q | wc >/tmp/w$i) & done; wait; cat /tmp/w*
 3
 4
 5

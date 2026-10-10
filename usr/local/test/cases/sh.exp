@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /tmp; HOME=/usr; cat >s1 <<\!
+# cd /tmp; HOME=/usr; cat >s1 <<\!
 > echo 0=$0 n=$\# all=$* first=$1
 > for a in "$\@
 "; do echo arg:$a; done

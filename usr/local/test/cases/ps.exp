@@ -1,5 +1,5 @@
 mem = 67096576
-# ps ax
+# ps ax
    PID TTY TIME CMD
      0 ?   M:SS swapper
      1 ?   0:00 /etc/init

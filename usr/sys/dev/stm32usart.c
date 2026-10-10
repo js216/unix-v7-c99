@@ -191,20 +191,21 @@ klintr(void)
 void
 putchar(register int c)
 {
-	register int s, timo;
+	register int s;
+	unsigned long long timo;
 
 	if (c != '\0' && c != '\r' && c != 0177) {
 		*msgbufp++ = c;
 		if(msgbufp >= &msgbuf[MSGBUFS])
 			msgbufp = msgbuf;
 	}
-	timo = 30000;
+	timo = cntvct_get() + cntfrq_get()/HZ;
 	/*
 	 * Try waiting for the console tty to come ready,
 	 * otherwise give up after a reasonable time.
 	 */
 	while((ISR&TXE) == 0)
-		if(--timo == 0)
+		if(cntvct_get() >= timo)
 			break;
 	if(c == 0)
 		return;
@@ -213,8 +214,6 @@ putchar(register int c)
 	TDR = c;
 	if(c == '\n') {
 		putchar('\r');
-		putchar(0177);
-		putchar(0177);
 	}
 	putchar(0);
 	CR1 = s;

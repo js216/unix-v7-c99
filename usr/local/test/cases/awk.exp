@@ -1,5 +1,5 @@
 mem = 67096576
-# cd /tmp; echo one two three >a; echo four five >>a; echo six one seven eight >>a; echo nine >>a
+# cd /tmp; echo one two three >a; echo four five >>a; echo six one seven eight >>a; echo nine >>a
 # awk '/one/' a; awk '$1 == "four"' a; awk 'NR==2 || NF==1' a; awk '!/o/' a
 one two three
 six one seven eight

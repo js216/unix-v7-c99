@@ -1,5 +1,5 @@
 mem = 67096576
-# /t/tt; echo r""c=$?
+# /t/tt; echo r""c=$?
 PASS 8bit %s
 PASS 8bit %[
 PASS 0377 %s

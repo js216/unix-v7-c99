@@ -287,7 +287,7 @@ defined in #f("pl011.c") under QEMU, and in `stm32usart.c` on the
 STM32MP135; each board's kernel links only its own driver. Either waits,
 with a time limit, for the transmitter to have room, writes the
 character with the transmitter interrupt masked, and follows a newline
-with a carriage return and two DEL fill characters, as v7 did. It also keeps a copy of everything printed in `msgbuf`.
+with a carriage return, as v7 did. It also keeps a copy of everything printed in `msgbuf`.
 
 Of the included files, #f("param.h") provides `dev_t` and the macros
 `major` and `minor`, #f("systm.h") the declarations of `update`,
@@ -627,14 +627,16 @@ the saved PC and the mode (#f("param.h")).
 The routines which return a value. `save` (141) returns twice, like
 `setjmp`: zero when it saves, one when `resume` later returns through
 the saved label. `max` and `min` keep v7's `int` result, although
-their arguments are `unsigned`.
+their arguments are `unsigned`. `cntvct_get` (148), which reads the
+generic timer's counter (#f("mch.s")), returns all 64 bits of it as an
+`unsigned long long`.
 
-`printf` (148) has a true variable argument list. v7's `printf`
+`printf` (149) has a true variable argument list. v7's `printf`
 walked up the PDP-11 stack from the address of its first argument.
 Under the ARM calling convention the first four arguments arrive in
 registers, so the port's #f("prf.c") uses `<stdarg.h>` instead.
 
-#lines(129, 148)
+#lines(129, 149)
 
 On a PDP-11 with separate instruction and data spaces, reading a
 program's text required different instructions (`mfpi`, `mtpi`) from
@@ -643,21 +645,21 @@ and so on. The ARM has one address space, so the I-space forms are
 simply aliases, and their callers (`passc`, `cpass`, `iomove`,
 `procxmt`) keep v7's text.
 
-#lines(149, 154)
+#lines(150, 155)
 
 Counters for `iostat`, kept by the clock and by the drivers, which
 set and clear their bit of `dk_busy` around each transfer. Like the
 variables above, they are now `extern`, and defined in #f("main.c").
 
-#lines(155, 163)
+#lines(156, 164)
 
 The table of system calls, defined in #f("sysent.c") and indexed by
-`trap` with the number of the call. The handler (171) was declared in
+`trap` with the number of the call. The handler (172) was declared in
 v7 as returning `int`, by default. The handlers return nothing; their
 results go back to the user through `u.u_r`. It is now a pointer to a
 `void` function of no arguments, and every handler is defined so.
 
-#lines(164, 172)
+#lines(165, 173)
 #source("/usr/sys/h/seg.h")
 
 In v7, #f("seg.h") held the addresses of the PDP-11 memory management
@@ -1119,10 +1121,14 @@ or the emulator has set. `cntv_tval_set` loads the down counter of the
 virtual timer, which interrupts when it reaches zero, and
 `cntv_ctl_set` writes its control register (1 enables it, with the
 interrupt unmasked). `isb` makes the new setting take effect before the
-routine returns. `clkstart` and `irq` (#f("machdep.c")) use them to
+routine returns. `cntvct_get` reads `CNTVCT`, the 64-bit count itself,
+in `r0` and `r1`, the registers in which a C procedure returns an
+`unsigned long long`; the `isb` before it keeps the processor from
+reading the counter ahead of the instructions which precede the call.
+The console's `putchar` (#f("pl011.c")) uses it to time its wait. `clkstart` and `irq` (#f("machdep.c")) use them to
 produce an interrupt every `1/HZ` second.
 
-#lines(78, 91)
+#lines(78, 96)
 
 `save(lab)`
 records in the array `lab` (a `label_t`, #f("param.h")) the registers
@@ -1131,11 +1137,11 @@ pointer and the return address, and returns 0. On the PDP-11 these were
 `r2` to `r5`, `sp`, and the PC; here they are `r4` to `r11`, `sp`, and
 `lr`: ten words.
 
-#lines(92, 98)
+#lines(97, 103)
 
 `resume(p_addr, lab)` switches the u-area window to process `p_addr` and
 returns, with the value 1, from the `save` which stored `lab`.
-Interrupts are masked first (101), as v7 raised the priority to 7.
+Interrupts are masked first (106), as v7 raised the priority to 7.
 
 The physical address of the new u-area,
 `corebase + p_addr*64` (`CLKADDR`, #f("seg.h")), is or'ed with
@@ -1155,14 +1161,14 @@ pages, a relic of a larger u-area; the last two then aliased the first
 top of the u-area silently read or wrote user memory instead of
 faulting.
 
-#lines(99, 109)
+#lines(104, 114)
 
 `dsb` makes the table writes visible to the hardware table
 walker; the TLB is then invalidated entirely (`TLBIALL`), so that no
 translation of `UBASE` to the old u-area remains, and `dsb` and `isb`
 wait for that to take effect.
 
-#lines(110, 114)
+#lines(115, 119)
 
 The registers are reloaded from `lab`. The reader should
 observe that `lab` is always one of `u.u_rsav`, `u.u_qsav`, or `u.u_ssav`,
@@ -1172,20 +1178,20 @@ saved `lr` held in `r2`, the routine returns into the new process, at
 the point where it called `save`, which now appears to return 1.
 
 Two points deserve notice. From the moment the entries are rewritten
-(107) until `sp` is reloaded (116), the stack of the old process may
+(112) until `sp` is reloaded (121), the stack of the old process may
 already have vanished from `UBASE`, and the stack pointer addresses the
 new process's u-area at a meaningless position; the routine therefore
 uses no stack at all, and an interrupt, which would push a frame there,
-must be masked. Once the new stack is in place, `spl0` (118) unmasks
+must be masked. Once the new stack is in place, `spl0` (123) unmasks
 them, as v7's `resume` ended with `spl 0`. `spl0` is a call, which
 overwrites `lr`; that is why the saved `lr` is loaded into `r2`, which
-`spl0` leaves alone, and the return is through it (120). An earlier
+`spl0` leaves alone, and the return is through it (125). An earlier
 version omitted the call and left interrupts masked until the process
 next called `spl0` or `splx` or returned to user mode; after `expand`
 had moved a process, for instance, interrupts were held off for the
 rest of the system call.
 
-#lines(115, 120)
+#lines(120, 125)
 
 `dcflush(addr, n)` cleans and invalidates the data cache over a range of
 memory. The cache type register `CTR` gives in bits 16 to 19 the log of
@@ -1199,7 +1205,7 @@ does not see the cache: memory must hold what the processor wrote before
 the device reads it, and the processor must not find stale lines after
 the device has written. The PDP-11 had no cache, and so no such routine.
 
-#lines(121, 136)
+#lines(126, 141)
 
 `arm_sync_icache` is called whenever the user's instructions may have
 changed: by `sureg` (`arm_sureg`, #f("machdep.c")) after it rewrites the
@@ -1210,7 +1216,7 @@ and by `main` (#f("main.c")) after it copies out `icode`.
 First the TLB is invalidated, which disposes of the old process's
 user translations after `arm_sureg` has changed `user_l2`.
 
-#lines(137, 143)
+#lines(142, 148)
 
 The level 1 data cache is cleaned by set and way (`DCCSW`,
 `c7, c10, 2`), with the same loop as in `mmu_on`. The instructions which
@@ -1218,20 +1224,20 @@ The level 1 data cache is cleaned by set and way (`DCCSW`,
 cache fetches from memory; cleaning writes them out. On the Cortex-A7
 level 1 is the point at which the two caches meet, so it suffices.
 
-#lines(144, 164)
+#lines(149, 169)
 
 Then the instruction cache (`ICIALLU`) and the branch
 predictor (`BPIALL`) are invalidated, so that the new program is fetched
 afresh. `r0` must be reloaded with zero at 165, having been overwritten
 at 147.
 
-#lines(165, 171)
+#lines(170, 176)
 
 `idle` is v7's, in ARM form. Interrupts are enabled, and `wfi` ("wait for
 interrupt") halts the processor until one arrives, as the PDP-11's
 `wait` did. The interrupt is taken at once, and the PC it saves is that
-of the instruction after `wfi`, labelled `1` (176). Its address is
-stored in `waitloc` (189, 190), which `clock` (#f("clock.c")) compares
+of the instruction after `wfi`, labelled `1` (181). Its address is
+stored in `waitloc` (194, 195), which `clock` (#f("clock.c")) compares
 with the interrupted PC to count the time spent idle. v7's `idle`
 restored the previous PS on the way out; this one simply masks
 interrupts again, which suits both callers, `swtch` and `panic`:
@@ -1242,7 +1248,7 @@ floating point registers into `u.u_fps`. This kernel never enables the
 ARM's floating point unit, so there is no state to save, but the calls
 in `swtch` (#f("slp.c")) and `psig` (#f("sig.c")) are kept.
 
-#lines(172, 178)
+#lines(177, 183)
 
 `dfar` and `dfsr` return the data fault address and status registers,
 which describe the last data abort. `user_trap_handler` (#f("sysent.c"))
@@ -1250,18 +1256,18 @@ prints them before it panics on a fault in kernel mode, much as v7's
 `trap` printed the memory management status registers it had copied into
 `ssr`.
 
-#lines(179, 186)
+#lines(184, 191)
 
 `waitloc` is a word of initialised data holding the address of the
 label in `idle`, as `_waitloc` was in v7.
 
-#lines(187, 190)
+#lines(192, 195)
 
 The translation tables. `l1` is the first-level table: 4096 words, each
 describing one megabyte of the address space, either directly (a
 "section") or by pointing to a second-level table of 256 words, each
 describing a 4 KB page. The hardware requires the first-level table to be
-aligned on 16 KB (193). `user_l2` maps the first megabyte, the user's
+aligned on 16 KB (198). `user_l2` maps the first megabyte, the user's
 address space, and `uarea_l2` the megabyte at `UBASE`; both are
 rewritten as processes come and go, by `arm_sureg` and `resume`
 respectively. Everything else is mapped by sections which
@@ -1273,7 +1279,7 @@ kernel itself lives in a 128 KB on-chip RAM, and this section is put in
 the external DDR memory, which cannot be used until `machine_init` has
 initialised its controller; that routine clears the section afterwards.
 
-#lines(191, 199)
+#lines(196, 204)
 #source("/usr/sys/sys/main.c")
 
 #f("main.c") holds the procedure through which the kernel passes exactly
@@ -5808,12 +5814,22 @@ the circular buffer `msgbuf`. The pointer `msgbufp`, which v7 defined
 in `kl.c` just above `putchar`, is now defined in #f("machdep.c").
 
 The procedure waits a bounded time for the transmitter to have room.
+v7 bounded the wait by counting 30000 turns of its loop, some thirty
+character times on the PDP-11. A count of turns means nothing on a
+processor many times faster: a Cortex-A7 at 1 GHz makes them in about
+one character time at 115200 baud, and the end of a panic message was
+lost. The port bounds the wait by time instead. `timo` is set to the
+value which the generic timer's counter, read by `cntvct_get`
+(#f("mch.s")), will reach one clock tick later, `1/HZ` second or some
+190 character times, and the loop gives up when the counter gets there.
+
 The console's interrupts are masked while the character is written, as
 v7 cleared the transmitter status register, and the old mask is
-restored at the end. A newline is followed by a carriage return and two deletes,
-which gave a mechanical terminal time to return its carriage and which a
-modern terminal ignores. The final call with 0 only waits for the last
-character to leave.
+restored at the end. A newline is followed by a carriage return. v7
+then sent two deletes, which gave a mechanical terminal time to return
+its carriage; they are gone, since no terminal of today needs the time,
+and they arrived among the output. The final call with 0 only waits for
+the last character to leave.
 
 v7 also gave up printing if the last character
 received was a null or a break. That test has gone: on the PL011 it
@@ -5821,7 +5837,7 @@ could not be made without reading `UARTDR`, which would remove a
 character from the receive queue and so steal it from the input. The comment
 about the console switches was already stale in v7.
 
-#lines(157, 199)
+#lines(157, 198)
 #source("/usr/sys/dev/tty.c")
 
 #f("tty.c") holds the code common to all terminals: what a driver such
@@ -6515,9 +6531,11 @@ and with it the interrupt enable, this clears `TXEIE` alone, since the
 receiver's enable lives in the same register and must be kept; the
 whole of `CR1` is restored at the end. If output was in progress,
 `TXEIE` comes back set and the transmit register is empty, and the
-interrupt which follows restarts it.
+interrupt which follows restarts it. The wait for the transmitter is
+bounded by time, and a newline is followed by a carriage return alone,
+as in #f("pl011.c").
 
-#lines(180, 221)
+#lines(180, 220)
 #source("/usr/sys/dev/stm32sd.c")
 
 The disk of the STM32MP135 board is its SD card, and this is its

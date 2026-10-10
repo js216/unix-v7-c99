@@ -1,5 +1,5 @@
 mem = 67096576
-# mkdir /tmp/w; cd /tmp/w; cat >sx <<\!
+# mkdir /tmp/w; cd /tmp/w; cat >sx <<\!
 > echo ==sed
 > printf=x
 > echo 'hello world
