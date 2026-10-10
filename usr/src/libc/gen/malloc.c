@@ -36,7 +36,7 @@ char *s;
  *	where INT is integer type to which a pointer can be cast
 */
 #define INT int
-#define ALIGN int
+#define ALIGN double
 #define NALIGN 1
 #define WORD sizeof(union store)
 #define BLOCK 1024	/* a multiple of WORD*/

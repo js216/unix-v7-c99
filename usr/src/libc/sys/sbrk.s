@@ -2,6 +2,8 @@
 sbrk:
 	ldr	r2, =nd
 	ldr	r1, [r2]
+	add	r1, r1, #7
+	bic	r1, r1, #7
 	push	{r1, lr}
 	add	r0, r1, r0
 	bl	brk

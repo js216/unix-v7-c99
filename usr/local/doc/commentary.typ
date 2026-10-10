@@ -10422,23 +10422,21 @@ is as wide as a pointer. Any gap in the arena, memory which `sbrk`
 returned but which did not adjoin the arena's previous top, is made a
 block permanently marked busy.
 
-The arena is measured in units of `union store`, whose size `WORD` is
-that of its largest member. On the PDP-11 this was two bytes; here it is
-four, since the pointer and the `int` both take four. Every block
-therefore starts on a four byte boundary, provided the arena does: the
-static `allocs` is aligned for its pointer member, and the break, which
-`sbrk` (`sbrk.s`) starts at the symbol `end`, lies on a word boundary
-because the linker's script aligns `end` to four bytes. Since the two
-low bits of every block's address are zero, the lowest is free to serve
-as `BUSY`.
-
 `ALIGN` and `NALIGN` exist so that an implementation may make `WORD`
-larger, for the sake of a type with stricter alignment. The port leaves
-them at `int` and 1, so a block returned by `malloc` is aligned to four
-bytes only. The ARM procedure call standard asks for eight for a
-`double`; but the instructions with which soft floating point code
-loads and stores a `double` (`ldrd`, `strd`, `ldm`, and `stm`) require
-only word alignment on the Cortex-A7, so a block of `double`s works.
+larger, for the sake of a type with stricter alignment, and the port
+uses them so. The ARM procedure call standard requires eight-byte
+alignment for a `double` and a `long long`, and code compiled to the
+standard may rely on it, so v7's `int` is replaced by `double` (39).
+
+The arena is measured in units of `union store`, whose size `WORD` is
+that of its largest member: two bytes on the PDP-11, and now eight,
+the size of the `double`. Every block therefore starts on an eight byte
+boundary, provided the arena does. The static `allocs` is aligned for
+its `double` member; the break begins at the symbol `end`, which the
+linker aligns to four bytes only, so `sbrk` (`sbrk.s`) rounds the break
+up to a multiple of eight before it extends it. Since the low bits of
+every block's address are zero, the lowest is free to serve as `BUSY`.
+The cost of the alignment is at most four bytes a block.
 
 `allocs` (54) is the initial arena of two words, `allocp` is the point
 at which the next search starts, `alloct` is the last block, an empty
