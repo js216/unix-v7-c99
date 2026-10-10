@@ -9,3 +9,4 @@ cerror:
 	str	r0, [r2]
 	mvn	r0, #0
 	bx	lr
+.comm	errno, 4

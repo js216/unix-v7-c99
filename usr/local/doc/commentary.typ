@@ -6858,8 +6858,8 @@ point which the linker writes into the ELF header and `exece`
 (#f("sys1.c")) loads into the saved `pc`. The routine has three jobs: to
 find the arguments and the environment which `exece` left on the stack,
 to call `main` with them, and to pass the value which `main` returns to
-`exit`. It also holds the definitions of the two variables which the
-library shares with every program, `environ` and `errno`.
+`exit`. It also holds the definition of `environ`, the environment
+which the library shares with every program.
 
 The file is a rewrite of v7's PDP-11 `crt0.s`. Even the names have
 changed. The PDP-11 C compiler
@@ -6909,16 +6909,9 @@ and `svc` traps, as in `cerror` (#f("libc/syscall.s")).
 
 #lines(1, 12)
 
-`.comm` reserves a word of `bss` under each name. `environ` was in v7's
-`crt0.s` too, as a two byte word in `.bss`. `errno` was not: v7 declared
-it in `cerror.s`, the routine which sets it. In the port it moved here
-when the start-up was briefly written partly in C, with both variables
-defined in that C file, and it stayed when the start-up became
-assembler again. Since every program links `crt0.o`, this is the one
-definition of `errno`; the C files of the library declare it `extern`.
-That matters: when `perror.c` also defined `errno`, the linker resolved
-the common symbol by pulling `perror.o`, and `sys_errlist` with it, into
-every program which made a system call.
+`.comm` reserves a word of `bss` for `environ`, as v7's `crt0.s` did
+with a two byte word in `.bss`. `errno` is defined, as in v7, with the
+routine which sets it (#f("libc/syscall.s")).
 
 v7's file ended by reserving two bytes at the start of `.data`. In a
 program with separate instruction and data spaces, data location 0
@@ -6927,7 +6920,7 @@ equal to a null pointer. The port's programs are linked at `0x10`, with
 the signal trampoline at 8 (#f("seg.h")), so no object of the program can
 lie at address 0, and the padding is gone.
 
-#lines(13, 14)
+#lines(13, 13)
 #source("/usr/src/libc/syscall.s")
 
 This short routine is where every system call made by a C program
@@ -7006,6 +6999,15 @@ result, an offset from `lseek` beyond 2 GB or a `time` after January
 2038 among them.
 
 #lines(7, 11)
+
+`errno` (12) is reserved here, a word of `bss`, as v7's `cerror.s`
+reserved `_errno`. Every program which makes a system call links this
+file, and the C files of the library declare `errno` `extern`, so this
+is its one definition. That matters: when `perror.c` also defined
+`errno`, the linker resolved the common symbol by pulling `perror.o`,
+and `sys_errlist` with it, into every program which made a system call.
+
+#lines(12, 12)
 #source("/usr/src/libc/sys/read.s")
 
 `read` stands for the fifty or so stubs in the library's `sys`

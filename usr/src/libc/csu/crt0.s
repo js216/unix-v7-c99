@@ -11,4 +11,3 @@ _start:
 	mov	r7, #1
 	svc	#0
 .comm	environ, 4
-.comm	errno, 4
