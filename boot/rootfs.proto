@@ -111,7 +111,7 @@ d--755 0 0
 		$
 	dev	d--755 0 0
 		console	c--644 0 0 0 0
-		mem	c--640 0 0 8 0
+		mem	c--644 0 0 8 0
 		kmem	c--640 0 0 8 1
 		null	c--666 0 0 8 2
 		root	b--640 0 0 0 0
@@ -139,6 +139,8 @@ d--755 0 0
 		$
 	usr	d--755 0 0
 		adm	d--755 0 0
+			messages	---644 1 1 /dev/null
+			msgbuf	---644 1 1 /dev/null
 			wtmp	---644 0 0 /dev/null
 			$
 		dict	d--755 0 0
