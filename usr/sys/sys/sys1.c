@@ -235,7 +235,7 @@ getxfile(register struct inode *ip, int nargc)
 	
 		u.u_prof.pr_scale = 0;
 		xfree();
-		i = USIZE+(USERSIZE>>6);
+		i = USIZE+btoc(USERSIZE);
 		expand(i);
 		while(--i >= USIZE)
 			clearseg(u.u_procp->p_addr+i);

@@ -43,10 +43,12 @@ startup(void)
 	 * zero and free all of core
 	 */
 
-	i = NCLICK - (64+USIZE);
-	mfree(coremap, i, 64+USIZE);
-	maxmem = (USERSIZE>>6) + USIZE;
-	printf("mem = %D\n", ctob((long)i));
+	i = btoc(corebase) + USIZE;
+	maxmem = btoc(coretop) - i;
+	mfree(coremap, maxmem, i);
+	printf("mem = %D\n", ctob((long)maxmem));
+	if(MAXMEM < maxmem)
+		maxmem = MAXMEM;
 	mfree(swapmap, nswap, 1);
 	swplo--;
 	bdinit();
@@ -189,7 +191,7 @@ extern char __bss_end[], __ddrbss_start[], __ddrbss_end[];
 extern unsigned l1[], user_l2[], uarea_l2[];
 char	*msgbufp = msgbuf;
 
-void
+caddr_t
 machine_init(void)
 {
 	register struct memregion *m;
@@ -205,11 +207,13 @@ machine_init(void)
 			l1[a>>20] = (a&0xfff00000) | m->attr;
 	l1[0] = (unsigned)user_l2 | PTE_PT;
 	l1[UBASE>>20] = (unsigned)uarea_l2 | PTE_PT;
-	for(a = 0; a < USIZE*64/PGSIZE; a++)
-		uarea_l2[a] = ((unsigned)CLKADDR(64) + a*PGSIZE) | 0x12;
-	for(p = CLKADDR(64); p < CLKADDR(64+USIZE); p++)
+	corebase = ctob(btoc(__ddrbss_end));
+	for(a = 0; a < USIZE; a++)
+		uarea_l2[a] = (corebase + ctob(a)) | 0x12;
+	for(p = (char *)corebase; p < (char *)corebase + ctob(USIZE); p++)
 		*p = 0;
 	mmu_on(l1);
+	return((caddr_t)UBASE + ctob(USIZE));
 }
 
 void
@@ -220,7 +224,7 @@ arm_sureg(void)
 	if(u.u_procp == NULL)
 		return;
 	base = (unsigned)CLKADDR(u.u_procp->p_addr + USIZE);
-	n = (u.u_procp->p_size - USIZE) >> (PGSHIFT-6);
+	n = u.u_procp->p_size - USIZE;
 	for(i = 0; i < 256; i++)
 		user_l2[i] = i < n ? (base + i*PGSIZE) | pguser : 0;
 	arm_sync_icache();
@@ -233,7 +237,7 @@ copyseg(int from, int to)
 
 	s = (int *)CLKADDR(from);
 	d = (int *)CLKADDR(to);
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < PGSIZE/4; i++)
 		d[i] = s[i];
 }
 
@@ -243,7 +247,7 @@ clearseg(int a)
 	register int *d, i;
 
 	d = (int *)CLKADDR(a);
-	for(i = 0; i < 16; i++)
+	for(i = 0; i < PGSIZE/4; i++)
 		d[i] = 0;
 }
 

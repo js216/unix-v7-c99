@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; basename /a/b/c.c .c; basename x/y; basename; echo abcabc | tr a-c A-C; echo hello | tr -d l; echo aabbccdd | tr -s abc; echo abc | tr -c a x; echo
 c
 y

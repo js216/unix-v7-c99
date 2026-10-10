@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
 0000000   i   j   F   Y   N   c   S   N   c   t   B   Y   g  \0
 0000015

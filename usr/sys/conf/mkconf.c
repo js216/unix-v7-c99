@@ -531,7 +531,7 @@ int	nswap = 872;
 int	pack;
 int	nldisp = 1;
 int	ddr;
-unsigned long	ramb, ramn, tabb, tabn, coreb, coret, pguser, gicd, gicc;
+unsigned long	ramb, ramn, tabb, tabn, coret, pguser, gicd, gicc;
 #define	NMAP	8
 unsigned long	mapb[NMAP], mape[NMAP];
 char	mapa[NMAP][100];
@@ -554,7 +554,7 @@ main(void)
 	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramb, ramn);
 	if (tabn)
 		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabb, tabn);
-	printf("}\nu = 0x4F000000;\nSECTIONS\n{\n");
+	printf("}\nu = 0xFFF00000;\nSECTIONS\n{\n");
 	printf("\t.text : { *(.text*) } > RAM\n");
 	printf("\t.rodata : { *(.rodata*) } > RAM\n");
 	printf("\t.data : { *(.data*) } > RAM\n");
@@ -640,7 +640,7 @@ main(void)
 	if(rootmaj < 0)
 		fprintf(stderr, "No root device given\n");
 	printf("\nunsigned int\tkernbase = 0x%lx;\n", ramb);
-	printf("unsigned int\tcorebase = 0x%lx, coretop = 0x%lx;\n", coreb, coret);
+	printf("unsigned int\tcorebase, coretop = 0x%lx;\n", coret);
 	printf("unsigned int\tpguser = 0x%lx;\n", pguser);
 	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n", gicd, gicc);
 	printf("\nstruct\tmemregion\tboard_map[] =\n{\n");
@@ -697,7 +697,7 @@ input(void)
 	if (equal(keyw, "tables"))
 		return(sscanf(line, "%*s%lx%lx", &tabb, &tabn) == 2 || badline(line));
 	if (equal(keyw, "core"))
-		return(sscanf(line, "%*s%lx%lx", &coreb, &coret) == 2 || badline(line));
+		return(sscanf(line, "%*s%lx", &coret) == 1 || badline(line));
 	if (equal(keyw, "gic"))
 		return(sscanf(line, "%*s%lx%lx", &gicd, &gicc) == 2 || badline(line));
 	if (equal(keyw, "pguser"))

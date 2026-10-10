@@ -8,7 +8,7 @@
  * space.
  * In a map, the addresses are increasing and the
  * list is terminated by a 0 size.
- * The core map unit is 64 bytes; the swap map unit
+ * The core map unit is 4096 bytes; the swap map unit
  * is 512 bytes.
  * Algorithm is first-fit.
  */

@@ -105,9 +105,7 @@ save:
 resume:
 	cpsid i
 	ldr r2, =uarea_l2
-	ldr r3, =corebase
-	ldr r3, [r3]
-	add r3, r3, r0, lsl #6
+	lsl r3, r0, #12
 	orr r3, r3, #0x12
 	str r3, [r2, #0]
 	add r3, r3, #0x1000

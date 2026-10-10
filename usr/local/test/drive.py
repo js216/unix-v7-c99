@@ -28,7 +28,7 @@ for l in lines:
 if not lines[-1].startswith('@'):
     steps += [('# ', 'echo TEST""DONE\n', ''), ('TESTDONE', '', '')]
 
-p = subprocess.Popen(['qemu-system-arm', '-machine', 'virt', '-cpu', 'cortex-a7',
+p = subprocess.Popen(['qemu-system-arm', '-machine', 'virt', '-cpu', 'cortex-a7', '-m', '512M',
     '-nographic', '-kernel', kernel,
     '-drive', 'if=none,file=%s,format=raw,id=hd0' % img,
     '-device', 'virtio-blk-device,drive=hd0'],

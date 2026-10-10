@@ -89,7 +89,7 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	klclose(dev_t dev, int flag), klinit(void), klintr(void),
 	klioctl(dev_t dev, int cmd, caddr_t addr, int flag),
 	klopen(dev_t dev, int flag), klread(dev_t dev),
-	klwrite(dev_t dev), link(void), machine_init(void),
+	klwrite(dev_t dev), link(void),
 	mapalloc(struct buf *bp), mapfree(struct buf *bp),
 	mfree(struct map *mp, int size, int a), mknod(void), mmread(int dev),
 	mmu_on(unsigned *l1), mmwrite(int dev),
@@ -147,7 +147,7 @@ int	access(struct inode *ip, int mode),
 	suser(void), suword(caddr_t a, int v),
 	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
 	ttread(struct tty *tp), ufalloc(void);
-caddr_t	ttwrite(struct tty *tp);
+caddr_t	machine_init(void), ttwrite(struct tty *tp);
 unsigned long long cntvct_get(void);
 void	printf(char *fmt, ...);
 #define	fuibyte	fubyte

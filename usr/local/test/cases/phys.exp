@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; ls -l /dev/rrk0
 crw-r--r-- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
 # dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
@@ -51,10 +51,10 @@ read: Bad address
 1+0 records in
 1+0 records out
 same3
-# dd if=/dev/root of=/dev/null bs=512 skip=11518 count=4; echo dd$?
+# dd if=/dev/root of=/dev/null bs=4096 skip=9522 count=2; echo dd$?
 read: I/O error
-2+0 records in
-2+0 records out
+1+0 records in
+1+0 records out
 dd0
 # ls /bin | wc
     106    106     508

@@ -64,7 +64,7 @@ main(void)
 	 * set up system process
 	 */
 
-	proc[0].p_addr = 64;
+	proc[0].p_addr = btoc(corebase);
 	proc[0].p_size = USIZE;
 	proc[0].p_stat = SRUN;
 	proc[0].p_flag |= SLOAD|SSYS;

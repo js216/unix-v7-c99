@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; echo one two three >a; echo four five >>a; cat a | wc; for i in 1 2 3; do echo i$i; done | tr i I
       2      5      24
 I1

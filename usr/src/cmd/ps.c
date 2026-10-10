@@ -247,7 +247,7 @@ prcom(int puid)
 		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid, mproc.p_cpu&0377,
 			mproc.p_pri,
 			mproc.p_nice,
-			mproc.p_addr, (mproc.p_size+7)>>3);
+			mproc.p_addr, ctod(mproc.p_size));
 		if (mproc.p_wchan)
 			printf("%12o", mproc.p_wchan);
 		else

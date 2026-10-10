@@ -6,14 +6,14 @@
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
-#define	MAXMEM	(64*32)		/* max core per process - first # is Kw */
+#define	MAXMEM	(USERSIZE/4096+USIZE)	/* max core per process */
 #define	MAXUPRC	25		/* max processes per user */
-#define	SSIZE	20		/* initial stack size (*64 bytes) */
-#define	SINCR	20		/* increment of stack (*64 bytes) */
+#define	SSIZE	2		/* initial stack size (*4096 bytes) */
+#define	SINCR	2		/* increment of stack (*4096 bytes) */
 #define	NOFILE	20		/* max open files per process */
 #define	CANBSIZ	256		/* max size of typewriter line */
-#define	CMAPSIZ	50		/* size of core allocation area */
-#define	SMAPSIZ	50		/* size of swap allocation area */
+#define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
+#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
 #define	NCALL	20		/* max simultaneous time callouts */
 #define	NPROC	150		/* max number of processes */
 #define	NTEXT	40		/* max number of pure texts */
@@ -80,8 +80,9 @@
 #define	BSHIFT	9		/* LOG2(BSIZE) */
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
-#define	USIZE	128		/* size of user block (*64) */
-#define	UBASE	0x4F000000U	/* abs. addr of user block */
+#define	USIZE	2		/* size of user block (*4096) */
+#define	UBASE	0xFFF00000U	/* abs. addr of user block */
+#define	USERSIZE	0x100000	/* size of user address space */
 #define	NULL	0
 #define	CMASK	0		/* default mask for file creation */
 #define	NODEV	(dev_t)(-1)
@@ -97,12 +98,12 @@
 /*
  * Some macros for units conversion
  */
-/* Core clicks (64 bytes) to segments and vice versa */
-#define	ctos(x)	((x+127)/128)
-#define stoc(x) ((x)*128)
+/* Core clicks (4096 bytes) to segments and vice versa */
+#define	ctos(x)	(x)
+#define stoc(x) (x)
 
-/* Core clicks (64 bytes) to disk blocks */
-#define	ctod(x)	((x+7)>>3)
+/* Core clicks (4096 bytes) to disk blocks */
+#define	ctod(x)	((x)<<3)
 
 /* inumber to disk address */
 #define	itod(x)	(daddr_t)((((unsigned)x+15)>>3))
@@ -111,10 +112,10 @@
 #define	itoo(x)	(int)((x+15)&07)
 
 /* clicks to bytes */
-#define	ctob(x)	(x<<6)
+#define	ctob(x)	(x<<12)
 
 /* bytes to clicks */
-#define	btoc(x)	((((unsigned)x+63)>>6))
+#define	btoc(x)	((((unsigned)x+4095)>>12))
 
 /* major part of a device */
 #define	major(x)	(int)(((unsigned)x>>8))

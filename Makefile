@@ -42,7 +42,7 @@ boot/unix: usr/sys/conf/qemu/unix
 	$(call T,CP)cp $< $@
 
 qemu: boot/unix boot/rootfs.img
-	qemu-system-arm -machine virt -cpu cortex-a7 -nographic \
+	qemu-system-arm -machine virt -cpu cortex-a7 -m 512M -nographic \
 	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0
 

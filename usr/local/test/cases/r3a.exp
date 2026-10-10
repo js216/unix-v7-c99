@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; echo T-SED
 T-SED
 # echo axb | sed 's/x*/-/g'; echo xx | sed 's/o*x/-/g'; echo aaa | sed 's/a*/X/g'

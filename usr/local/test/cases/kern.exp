@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # /t/r12
 undef: sig=4 r12=5a5a1234
 dabort: sig=11 r12=1234a5a5

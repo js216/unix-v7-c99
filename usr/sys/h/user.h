@@ -4,9 +4,9 @@
  * Contains all per process data
  * that doesn't need to be referenced
  * while the process is swapped.
- * The user block is USIZE*64 bytes
+ * The user block is USIZE*4096 bytes
  * long; resides at virtual kernel
- * loc 0x4F000000; contains the system
+ * loc 0xFFF00000; contains the system
  * stack per user; is cross referenced
  * with the proc structure for the
  * same process.
@@ -95,7 +95,7 @@ struct	user
 	short	u_cmask;		/* mask for file creation */
 	int	u_stack[1];
 					/* kernel stack per user
-					 * extends from u + USIZE*64
+					 * extends from u + USIZE*4096
 					 * backward not to reach here
 					 */
 };

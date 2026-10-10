@@ -491,13 +491,13 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
 	    base+u.u_count > USERSIZE)
 		goto bad;
-	ts = (u.u_tsize+127) & ~0177;
+	ts = u.u_tsize;
 	if (u.u_sep)
 		ts = 0;
-	nb = base>>6;
+	nb = base>>12;
 	/*
 	 * Check overlap with text. (ts and nb now
-	 * in 64-byte clicks)
+	 * in 4096-byte clicks)
 	 */
 	if (nb < ts)
 		goto bad;
@@ -513,7 +513,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * the segmentation hardware.
 	 */
 	ts = u.u_procp->p_addr + USIZE + nb;
-	bp->b_un.b_addr = CLKADDR(ts) + (base&077);
+	bp->b_un.b_addr = CLKADDR(ts) + (base&07777);
 	bp->b_xmem = (ts>>10) & 077;
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;

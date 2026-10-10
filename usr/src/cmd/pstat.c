@@ -305,7 +305,7 @@ dousr(void)
 	register struct user *up;
 	register int i;
 
-	lseek(fc, ubase<<6, 0);
+	lseek(fc, ctob(ubase), 0);
 	read(fc, (char *)&xu, sizeof(xu));
 	up = &xu.rxu;
 	printf("rsav %.1o %.1o\n", up->u_rsav[0], up->u_rsav[1]);

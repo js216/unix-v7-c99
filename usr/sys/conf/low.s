@@ -27,7 +27,7 @@ _start:
 	strlo r2, [r0], #4
 	blo 1b
 	bl machine_init
-	ldr sp, =0x4F002000
+	mov sp, r0
 	bl main
 	mov r0, #0x10
 	msr spsr_cxsf, r0

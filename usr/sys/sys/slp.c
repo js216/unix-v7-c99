@@ -554,7 +554,6 @@ expand(int newsize)
 	register struct proc *p;
 	register int a1, a2;
 
-	newsize = (newsize + 63) & ~63;
 	p = u.u_procp;
 	n = p->p_size;
 	p->p_size = newsize;

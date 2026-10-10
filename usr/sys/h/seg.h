@@ -21,10 +21,8 @@ extern physadr	ka6;		/* 11/40 KISA6; 11/45 KDSA6 */
  * address to access 11/70 UNIBUS map
  */
 #define	UBMAP	((physadr)0170200)
-#define	USERSIZE	0x100000
 #define	UENTRY_SIGTRAMP	8
-#define	NCLICK	((coretop-corebase)>>6)
-#define	CLKADDR(c)	((char *)(corebase+((unsigned)(c)<<6)))
+#define	CLKADDR(c)	((char *)((unsigned)(c)<<12))
 #define	SEC_KERN	0x1140e
 #define	SEC_DEV	0x412
 #define	PTE_PT	1

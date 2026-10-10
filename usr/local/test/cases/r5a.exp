@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # /t/forkt
 raw: child sees parent pid yes, parent skipped branch yes
 libc: child par_uid ok yes, parent got pid yes

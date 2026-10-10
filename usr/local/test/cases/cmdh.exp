@@ -1,4 +1,4 @@
-mem = 67096576
+mem = 536727552
 # cd /tmp; echo one two three >a; echo four five >>a; echo six >>a
 # echo 'scale=10; s(1); c(1); a(1); l(10); e(1); sqrt(2); j(2,1.5)' | bc -l
 .8414709848
@@ -280,15 +280,15 @@ ADDR  UA      1  0,  0   111  20644   1   0     0,  0
  0   0   0 MODEADDR       0  0   0 T OC A       2
 4 processes
    LOC S  F  PRI SIGNAL UID TIM CPU NI  PGRP   PID  PPID ADDR SIZE  WCHAN   LINK  TEXTP  CLKT
-ADDR 1  3    0      0   0 TIM CPU 20     0     0     0  100  ADDR      0      0 0
-ADDR 1  1   30      0   0 TIM CPU 20     0     1     0 ADDR      0      0 0
+ADDR 1  3    0      0   0 TIM CPU 20     0     0     01000041    ADDR      0      0 0
+ADDR 1  1   30      0   0 TIM CPU 20     0     1     01000050  ADDR      0      0 0
 3 open files
   LOC   FLG CNT   INO    OFFS
-ADDR RW    ADDR 10295
+ADDR RW    ADDR 10299
 ADDR  W    ADDR 0
 0 text segments
    LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT
-rsav 0 0
+rsav ADDR ADDR
 segflg, error 0, 0
 uids 0,0,0,0
 # iostat >ios; wc -l ios; iostat -b >ios; wc -l ios; iostat -i >ios; wc -l ios
