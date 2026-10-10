@@ -1,43 +1,27 @@
-mem = 536727552
-# cd /tmp; echo one two three >a; echo four five >>a; cat a | wc; for i in 1 2 3; do echo i$i; done | tr i I
       2      5      24
 I1
 I2
 I3
-# if test -f a; then echo isfile; fi; case abc in a*) echo matched;; esac; x=`echo back`; echo $x; false; echo st$?
 isfile
 matched
 back
 st1
-# cat <<EOF | sed s/here/HERE/
-> heredoc here
-> EOF
 HEREdoc here
-# sort -r a; echo b a c b | tr ' ' '\012' | sort | uniq -c
 one two three
 four five
    1 a
    2 b
    1 c
-# grep five a; egrep 'one|four' a | wc -l; fgrep two a
 four five
       2
 one two three
-# awk '{ print $2, NF }' a; awk 'BEGIN { x = 3 * 4; print x }' </dev/null
 two 3
 five 2
 12
-# echo 'scale=5; 22/7' | bc; echo '2 3 ^ p' | dc; expr 6 \* 7; expr abc : 'a\(.\)'
 3.14285
 8
 42
 b
-# ed - a <<EOF
-> 1s/one/ONE/
-> w
-> q
-> EOF
-# cat a; cp a b; cmp a b && echo same; echo x >>b; cmp a b; diff a b; mv b c; ls; rm c
 ONE two three
 four five
 same
@@ -46,32 +30,27 @@ cmp: EOF on a
 > x
 a
 c
-# mkdir d; ln a d/l; ls -l d; rm -r d; chmod 600 a; ls -l a
 total 1
 -rw-rw-rw- 2 root       24 Jan  9 HH:MM l
 -rw------- 1 root       24 Jan  9 HH:MM a
-# od -c a | sed 2q; dd if=a of=e bs=4 count=2 2>/dev/null; cat e; echo; tail -1 a; sum a
 0000000   O   N   E       t   w   o       t   h   r   e   e  \n   f   o
 0000020   u   r       f   i   v   e  \n
 ONE two 
 four five
 44675     1
-# tar cf t.tar a e; rm a e; tar xf t.tar; ls; tee f <a | wc -c; comm a f | wc -l
 Tar: blocksize = 7
 a
 e
 t.tar
      24
       2
-# find /etc -name 'pass*' -print; du -s /bin; df; date; cal 1 2026 | sed 3q
 /etc/passwd
-N    /bin
-/dev/root N
+11	/tmp/smoke
+fs 366
 Tue Jan  9 HH:MM EST 1979
    January 2026
  S  M Tu  W Th  F  S
              1  2  3
-# factor 360; primes 1 | sed 8q | wc -l; echo 'meters' | units | sed 2q; /usr/games/fortune | sed 1q | wc -l
 
      2
      2
@@ -84,17 +63,10 @@ Tue Jan  9 HH:MM EST 1979
 437 units; 3191 bytes
 
       1
-# sleep 1 & wait; ps | wc -l; echo crypttest | crypt key | crypt key; look zebr | sed 2q
-91
-      4
+1
 crypttest
 zebra
-# echo pr test | pr -l20 | wc -l; echo b a | tsort 2>&1 | wc -l; split -2 a; ls x*
      20
       2
 xaa
-# echo 'join1 x' >j1; echo 'join1 y' >j2; join j1 j2
 join1 x y
-# echo TEST""DONE
-TESTDONE
-# 

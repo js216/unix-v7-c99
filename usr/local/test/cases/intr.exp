@@ -1,17 +1,9 @@
-mem = 536727552
-# cd /tmp; echo 'ONE two three' >a; echo 'four five' >>a
-# ed a
 24
 
 ?
-q
-# sleep 100 | sort; echo sortst$?
 
-# yes | sed 2q; ls /tmp
+sortst1
 y
 y
 
 a
-# echo TEST""DONE
-TESTDONE
-# 

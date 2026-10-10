@@ -84,8 +84,8 @@ throughout as follows.
 
 *The QEMU machine* is the `virt` machine of the QEMU emulator (version
 10.0), configured with a single ARM Cortex-A7 processor and, by the `-m 512M`
-option which both `make qemu` (#f("Makefile")) and the test driver give
-it, 512 MB of memory at address 0x40000000, a GIC version 2 interrupt controller at
+option which `make qemu` (#f("Makefile")) gives it, 512 MB of memory at
+address 0x40000000, a GIC version 2 interrupt controller at
 0x08000000, the ARM generic timer, a PL011 serial line at 0x09000000 as
 the console, and a virtio block device, found among the virtio
 "MMIO" slots at 0x0a000000, as the disk. QEMU loads the kernel into
@@ -11327,7 +11327,7 @@ same offset in its page in the file as in memory, and every program
 file would carry a page of padding; the kernel skips the headers when it
 loads the text (`xalloc`, #f("text.c")). `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
-(84).
+(85).
 
 `HOSTCFLAGS` link the host programs statically, so that the emulator
 needs no ARM shared libraries, and keep the host library's `off_t` and
@@ -11353,17 +11353,24 @@ on a `double` is such a call.
 #lines(16, 21)
 
 `all` is the default goal: the QEMU kernel and the root file system
-image, and, after the fragments are read (31), the kernels of both
+image, and, after the fragments are read (32), the kernels of both
 boards, whose names `KERNELS` only #f("sys.mk") supplies.
 
 `GEN` collects the generated sources, among them the `c.c` and
 `unix.ld` of each board and the output of `bison`. `.SECONDARY` keeps
 `make` from deleting them as intermediate files once the objects are
 made. Every object and generated file depends on the `Makefile`
-itself (36), and on its own fragment as well, so that a change of flags
+itself (37), and on its own fragment as well, so that a change of flags
 or of a rule remakes everything it could affect.
 
-#lines(22, 36)
+The fragments (25--30) build the parts of the system: the kernels
+(#f("sys.mk")), the two libraries, the commands, the games, and the
+regression tests, whose fragment `test.mk` compiles the test programs
+and makes the small file system on which the tests run the file system
+checkers; the tests themselves run on the target, from
+`/usr/local/test`.
+
+#lines(22, 37)
 
 `bison` replaces v7's `yacc`. It is run as itself, not in its POSIX
 mode, since the grammars use both v7's `%term` and some of `bison`'s
@@ -11376,7 +11383,7 @@ device (#f("virtio_blk.c")), and the console is the board's UART on the
 standard input and output. `-m 512M` gives the machine the 512 MB of
 memory which #f("qemuconf") describes; QEMU's default is 128 MB.
 
-#lines(37, 47)
+#lines(38, 48)
 
 The tree is built in place, and the programs are made where they will
 lie in the target's file system: `bin/cat`, `etc/init`,
@@ -11386,7 +11393,10 @@ of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
 the shell scripts `1`, `true`, `false`, and `nohup`, the files of
 #f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
 the dictionary, the fortunes, and `bc`'s library, all of which come
-from the v7 tree (73).
+from the v7 tree (74). The image also holds the regression tests, in
+`/usr/local/test`: the test scripts and the data files from the
+repository, and the programs and the file system image which
+`test.mk` makes.
 
 The image is rebuilt whenever the kernel, `mkfs`, the prototype, or any
 file in it changes. `V7_MKFS_TIME` gives `mkfs` the time to stamp on
@@ -11405,7 +11415,7 @@ the end of the file. The swap area is 32 MB, but `truncate` only sets
 the length of the file, and the host stores no blocks for the part
 never written.
 
-#lines(48, 61)
+#lines(49, 62)
 
 `mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
 the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
@@ -11419,25 +11429,25 @@ records, its headers and the `Makefile` are named as prerequisites
 explicitly: a `mkfs` built from stale headers would write a file system
 which the kernel misreads.
 
-#lines(62, 68)
+#lines(63, 69)
 
 The directories of the image which hold built programs or copied files,
 and the copying of the files from the v7 tree. `etc` is left out: its
 files are kept in the repository, where the image expects them. `cp -f`
 replaces a previous copy, which is read-only like its original.
 
-#lines(69, 74)
+#lines(70, 75)
 
 `.DELETE_ON_ERROR` removes a target whose command fails, so that a
 half-written image or object is never taken for a finished one; `mkfs`
 can therefore write the image in place.
 
-The dependency files are read only for sources which still exist (84).
+The dependency files are read only for sources which still exist (85).
 When a file in C is replaced by one in assembler, its old `.d` file
 still names the `.c` file as a prerequisite of the object, and `make`
 would otherwise stop for want of a rule to make it.
 
-#lines(75, 84)
+#lines(76, 85)
 #source("/usr/sys/sys.mk")
 
 #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
@@ -11996,6 +12006,11 @@ programs and data of `/usr/lib`, among them `bc`'s library `lib.b` and
 the table of `units`; and the spool directory of `at`, with the file in
 which `atrun` keeps the time of its last run and the directory `past`
 into which it moves each job while it runs. There is no `/usr/bin`.
+`/usr/local/test` holds the regression tests, which are run on the
+system itself: `run.sh`, the test scripts in `cases`, each with its
+expected output, and in `utils` the programs and data files which the
+tests use, and `fs.img`, a small file system on which they run the file
+system checkers.
 
 `dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
 directories which #f("passwd") gives those users, owned by each user
@@ -12003,13 +12018,13 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 185)
+#lines(139, 294)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(186, 187)
+#lines(295, 296)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

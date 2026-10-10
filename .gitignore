@@ -8,6 +8,7 @@
 # plus usr/lib/lib.b, lost from that tarball; identical in 32V, 3BSD, 2.9BSD:
 # https://www.tuhs.org/cgi-bin/utree.pl?file=32V/usr/lib/lib.b
 usr/local/test/v7
+usr/local/test/obj/
 
 conf/test_malloc
 sys/unix

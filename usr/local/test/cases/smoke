@@ -1,0 +1,26 @@
+T=/tmp/smoke U=/usr/local/test/utils
+mkdir $T; cd $T
+echo one two three >a; echo four five >>a; cat a | wc; for i in 1 2 3; do echo i$i; done | tr i I
+if test -f a; then echo isfile; fi; case abc in a*) echo matched;; esac; x=`echo back`; echo $x; false; echo st$?
+cat <<EOF | sed s/here/HERE/
+heredoc here
+EOF
+sort -r a; echo b a c b | tr ' ' '\012' | sort | uniq -c
+grep five a; egrep 'one|four' a | wc -l; fgrep two a
+awk '{ print $2, NF }' a; awk 'BEGIN { x = 3 * 4; print x }' </dev/null
+echo 'scale=5; 22/7' | bc; echo '2 3 ^ p' | dc; expr 6 \* 7; expr abc : 'a\(.\)'
+ed - a <<EOF
+1s/one/ONE/
+w
+q
+EOF
+cat a; cp a b; cmp a b && echo same; echo x >>b; cmp a b; diff a b; mv b c; ls; rm c
+mkdir d; ln a d/l; ls -l d; rm -r d; chmod 600 a; ls -l a
+od -c a | sed 2q; dd if=a of=e bs=4 count=2 2>/dev/null; cat e; echo; tail -1 a; sum a
+tar cf t.tar a e; rm a e; tar xf t.tar; ls; tee f <a | wc -c; comm a f | wc -l
+find /etc -name 'pass*' -print; du -s $T; cp $U/fs.img fs; df fs; rm fs; date; cal 1 2026 | sed 3q
+factor 360; primes 1 | sed 8q | wc -l; echo 'meters' | units | sed 2q; /usr/games/fortune | sed 1q | wc -l
+sleep 1 & wait; ps | grep -c ' ps$'; echo crypttest | crypt key | crypt key; look zebr | sed 2q
+echo pr test | pr -l20 | wc -l; echo b a | tsort 2>&1 | wc -l; split -2 a; ls x*
+echo 'join1 x' >j1; echo 'join1 y' >j2; join j1 j2
+cd /; rm -rf $T

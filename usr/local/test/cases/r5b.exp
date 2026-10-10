@@ -1,11 +1,6 @@
-mem = 536727552
-# cd /tmp
-# /t/szt & sleep 1; ps -l | grep '/t/sz[t]' | awk '{print $10}'; wait
-3
 48
 48
-3 Alarm call
-# /t/memt; /t/memt x; echo st$?; wc -c core
+r5b: PID Alarm call
 read gap: -1 errno 14
 read kernel: -1 errno 14
 write gap: -1 errno 14
@@ -16,37 +11,20 @@ read kernel: -1 errno 14
 write gap: -1 errno 14
 read stack: 16
 read data: 16
-Memory fault - core dumped
+r5b: PID Memory fault - core dumped
 st139
   28672 core
-# /t/stkt
 sum 49271 caught 401
-# /t/physt
 data 512 stack 512 same
 gap: -1 errno 14
 across end of data: -1 errno 14
-# ps -l | awk '$NF == "-" {print $10}'
 64
-# x=`cat /usr/dict/words`; case $x in *Zurich) echo found;; esac
 found
-# ps -l | awk '$NF == "-" {print $10}'
 1216
-# /t/txtt
 read into text: -1 errno 14, text text
 store into text: signal 11
-# cp /bin/sleep /tmp/sl; /tmp/sl 4 & /tmp/sl 4 & sleep 1; pstat -x >x; sed 1q x; awk 'NR > 2 {print $(NF-1), $NF}' x | sort
-23
-24
-4 text segments
-1 1
-1 1
-1 1
 2 2
-# echo x >/tmp/sl; echo st$?; cp /bin/echo /tmp/sl; wait; cp /bin/echo /tmp/sl; /tmp/sl replaced
-/tmp/sl: cannot create
+r5b: /tmp/r5b/sl: cannot create
 st1
-cp: cannot create /tmp/sl
+cp: cannot create /tmp/r5b/sl
 replaced
-# echo TEST""DONE
-TESTDONE
-# 

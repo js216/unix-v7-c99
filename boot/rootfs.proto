@@ -180,6 +180,115 @@ d--755 0 0
 					$
 				$
 			$
+		local	d--755 0 0
+			test	d--755 0 0
+				run.sh	---755 0 0 usr/local/test/run.sh
+				cases	d--755 0 0
+					awk	---644 0 0 usr/local/test/cases/awk
+					awk.exp	---644 0 0 usr/local/test/cases/awk.exp
+					awk.sed	---644 0 0 usr/local/test/cases/awk.sed
+					cmdg	---644 0 0 usr/local/test/cases/cmdg
+					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
+					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
+					cmdh	---644 0 0 usr/local/test/cases/cmdh
+					cmdh.exp	---644 0 0 usr/local/test/cases/cmdh.exp
+					cmdh.sed	---644 0 0 usr/local/test/cases/cmdh.sed
+					cmdi	---644 0 0 usr/local/test/cases/cmdi
+					cmdi.exp	---644 0 0 usr/local/test/cases/cmdi.exp
+					cmdi.sed	---644 0 0 usr/local/test/cases/cmdi.sed
+					cmdi2	---644 0 0 usr/local/test/cases/cmdi2
+					cmdi2.exp	---644 0 0 usr/local/test/cases/cmdi2.exp
+					cmdi2.sed	---644 0 0 usr/local/test/cases/cmdi2.sed
+					cmdi3	---644 0 0 usr/local/test/cases/cmdi3
+					cmdi3.exp	---644 0 0 usr/local/test/cases/cmdi3.exp
+					cmdi3.sed	---644 0 0 usr/local/test/cases/cmdi3.sed
+					exec	---644 0 0 usr/local/test/cases/exec
+					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
+					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
+					intr	---644 0 0 usr/local/test/cases/intr
+					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
+					kern	---644 0 0 usr/local/test/cases/kern
+					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
+					kern.sed	---644 0 0 usr/local/test/cases/kern.sed
+					libc	---644 0 0 usr/local/test/cases/libc
+					libc.exp	---644 0 0 usr/local/test/cases/libc.exp
+					login	---644 0 0 usr/local/test/cases/login
+					login.exp	---644 0 0 usr/local/test/cases/login.exp
+					login.sed	---644 0 0 usr/local/test/cases/login.sed
+					misc1	---644 0 0 usr/local/test/cases/misc1
+					misc1.exp	---644 0 0 usr/local/test/cases/misc1.exp
+					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
+					misc2	---644 0 0 usr/local/test/cases/misc2
+					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
+					phys	---644 0 0 usr/local/test/cases/phys
+					phys.exp	---644 0 0 usr/local/test/cases/phys.exp
+					phys.sed	---644 0 0 usr/local/test/cases/phys.sed
+					prog	---644 0 0 usr/local/test/cases/prog
+					prog.exp	---644 0 0 usr/local/test/cases/prog.exp
+					ps	---644 0 0 usr/local/test/cases/ps
+					ps.exp	---644 0 0 usr/local/test/cases/ps.exp
+					ps.sed	---644 0 0 usr/local/test/cases/ps.sed
+					r3a	---644 0 0 usr/local/test/cases/r3a
+					r3a.exp	---644 0 0 usr/local/test/cases/r3a.exp
+					r3c	---644 0 0 usr/local/test/cases/r3c
+					r3c.exp	---644 0 0 usr/local/test/cases/r3c.exp
+					r3c.sed	---644 0 0 usr/local/test/cases/r3c.sed
+					r4a	---644 0 0 usr/local/test/cases/r4a
+					r4a.exp	---644 0 0 usr/local/test/cases/r4a.exp
+					r4a.sed	---644 0 0 usr/local/test/cases/r4a.sed
+					r5a	---644 0 0 usr/local/test/cases/r5a
+					r5a.exp	---644 0 0 usr/local/test/cases/r5a.exp
+					r5b	---644 0 0 usr/local/test/cases/r5b
+					r5b.exp	---644 0 0 usr/local/test/cases/r5b.exp
+					r5b.sed	---644 0 0 usr/local/test/cases/r5b.sed
+					sh	---644 0 0 usr/local/test/cases/sh
+					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
+					sig	---644 0 0 usr/local/test/cases/sig
+					sig.exp	---644 0 0 usr/local/test/cases/sig.exp
+					sig.sed	---644 0 0 usr/local/test/cases/sig.sed
+					smoke	---644 0 0 usr/local/test/cases/smoke
+					smoke.exp	---644 0 0 usr/local/test/cases/smoke.exp
+					smoke.sed	---644 0 0 usr/local/test/cases/smoke.sed
+					stress	---644 0 0 usr/local/test/cases/stress
+					stress.exp	---644 0 0 usr/local/test/cases/stress.exp
+					stress.sed	---644 0 0 usr/local/test/cases/stress.sed
+					util	---644 0 0 usr/local/test/cases/util
+					util.exp	---644 0 0 usr/local/test/cases/util.exp
+					$
+				utils	d--755 0 0
+					argt	---755 0 0 usr/local/test/obj/argt
+					asm	---644 0 0 usr/local/test/utils/asm
+					bcf	---644 0 0 usr/local/test/utils/bcf
+					bigx	---755 0 0 usr/local/test/obj/bigx
+					clock	---755 0 0 usr/local/test/obj/clock
+					ctxt	---644 0 0 usr/local/test/utils/ctxt
+					devt	---755 0 0 usr/local/test/obj/devt
+					edscr	---644 0 0 usr/local/test/utils/edscr
+					forkt	---755 0 0 usr/local/test/obj/forkt
+					fs.img	---644 0 0 usr/local/test/obj/fs.img
+					long	---644 0 0 usr/local/test/utils/long
+					memt	---755 0 0 usr/local/test/obj/memt
+					monout	---644 0 0 usr/local/test/utils/monout
+					olda	---644 0 0 usr/local/test/utils/olda
+					physt	---755 0 0 usr/local/test/obj/physt
+					prs	---755 0 0 usr/local/test/obj/prs
+					prt	---755 0 0 usr/local/test/obj/prt
+					ptt	---755 0 0 usr/local/test/obj/ptt
+					r12	---755 0 0 usr/local/test/obj/r12
+					r5t	---755 0 0 usr/local/test/obj/r5t
+					regs	---755 0 0 usr/local/test/obj/regs
+					roff	---644 0 0 usr/local/test/utils/roff
+					sortin	---644 0 0 usr/local/test/utils/sortin
+					stkt	---755 0 0 usr/local/test/obj/stkt
+					szt	---755 0 0 usr/local/test/obj/szt
+					tt	---755 0 0 usr/local/test/obj/tt
+					txtt	---755 0 0 usr/local/test/obj/txtt
+					u2	---644 0 0 usr/local/test/utils/u2
+					words	---644 0 0 usr/local/test/utils/words
+					xout	---644 0 0 usr/local/test/utils/xout
+					$
+				$
+			$
 		sys	d--755 2 2
 			$
 		$

@@ -1,5 +1,3 @@
-mem = 536727552
-# /t/tt; echo r""c=$?
 PASS 8bit %s
 PASS 8bit %[
 PASS 0377 %s
@@ -27,6 +25,3 @@ rand 16838 5758 10113
 PASS sleep
 EXECVP-OK child
 rc=0
-# echo TEST""DONE
-TESTDONE
-# 

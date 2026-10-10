@@ -1,0 +1,14 @@
+T=/tmp/misc2 U=/usr/local/test/utils
+mkdir $T; cd $T
+echo a >1; echo b >>1; echo c >>1; echo d >>1; sed s/b/B/ 1 >2; sed s/d/D/ 1 >3; sed s/b/B/ 3 >4
+diff 1 3 >d13; diff 2 3 >d23; /usr/lib/diff3 d13 d23 1 2 3; /usr/lib/diff3 -e d13 d23 1 2 3; /usr/lib/diff3 -x d13 d23 1 2 3
+diff 1 4 >d14; diff 2 4 >d24; /usr/lib/diff3 d14 d24 1 2 4; /usr/lib/diff3 -e d14 d24 1 2 4; diff3 1 2 3
+/usr/lib/diffh 1 3; /usr/lib/diffh /etc/passwd /etc/group | sed 10q; sed 1d /etc/passwd >p2; echo new >>p2; /usr/lib/diffh /etc/passwd p2; /usr/lib/diffh -b 1 2
+dd if=/etc/passwd conv=ucase >o 2>&1; sed 3q o; dd if=/etc/passwd conv=lcase,swab >o 2>&1; sed 2q o
+dd if=/etc/passwd of=x conv=ebcdic; dd if=x conv=ascii 2>/dev/null | sed 2q; dd if=/etc/passwd conv=ibm 2>/dev/null | od -c | sed 2q
+dd if=/etc/passwd ibs=1b obs=7 count=2 skip=1 | wc -c; dd if=/etc/passwd bs=2x3 cbs=10 conv=noerror,sync | wc -c; dd if=/etc/passwd bs=1k count=1 | wc -c; dd bogus=1; echo st$?
+(echo inch; echo cm; echo mile/hour; echo km/hour; echo acre; echo ft2; echo furlong; echo nosuch; echo 3 kg; echo lb; echo 'm/s'; echo 'kg') | units
+echo 'main(){if(a){b;}else{c;}/* x */ s="{";while(x)y++;}' >c.c; cb <c.c; echo 'int f(x) { switch(x){case 1: return 2; default: break;} }' | cb
+file /bin/ls /etc/passwd $T/1 /bin /dev/tty /etc/ttys x c.c
+echo '.globl _x' >s.s; echo 'mov r0,r1' >>s.s; echo 'The cat is on the mat and it is a fine day for the people of the town who are' >e; file s.s e
+cd /; rm -rf $T

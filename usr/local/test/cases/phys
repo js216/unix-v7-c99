@@ -1,0 +1,16 @@
+T=/tmp/phys U=/usr/local/test/utils
+mkdir $T; cd $T
+ls -l /dev/rrk0; sync
+dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
+dd if=/dev/rrk0 bs=4096 skip=300 count=6 >r1; dd if=/dev/root bs=4096 skip=300 count=6 >r2; cmp r1 r2 && echo same4096
+dd if=/dev/rrk0 bs=16384 skip=100 count=3 >r1; dd if=/dev/root bs=16384 skip=100 count=3 >r2; cmp r1 r2 && echo same16384
+echo hello raw world | dd of=/dev/rrk0 bs=4096 seek=9500 conv=sync
+dd if=/dev/rrk0 bs=4096 skip=9500 count=1 | od -c | sed 2q
+dd if=/dev/swap bs=4096 skip=9500 count=1 | od -c | sed 2q
+echo second | dd of=/dev/swap bs=4096 seek=9501 conv=sync; sync
+dd if=/dev/rrk0 bs=4096 skip=9501 count=1 | od -c | sed 2q
+dd if=/dev/rrk0 bs=511 count=1 | wc -c
+sync; dd if=/dev/rrk0 bs=512 skip=3 count=1 >b3; dd if=/dev/root bs=512 skip=3 count=1 | cmp - b3 && echo same3
+dd if=/dev/root of=/dev/null bs=4096 skip=9522 count=2; echo dd$?
+ls /bin | wc
+cd /; rm -rf $T

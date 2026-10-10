@@ -1,5 +1,3 @@
-mem = 536727552
-# cd /tmp; osh -c 'echo a; echo b >x; cat x; ls x | wc -l'; osh -c 'false; echo c; echo d >>x; cat <x'
 a
 b
       1
@@ -7,23 +5,19 @@ No shell!
 c
 b
 d
-# echo 'echo in osh script; echo $1 arg; nonexistcmd' >o.sh; echo '(echo sub; echo shell) | wc -l; chdir /etc; pwd; shift; echo $1' >>o.sh; osh o.sh one two
 in osh script
 one arg
 nonexistcmd: not found
-# osh -c 'echo x* ; echo "q*"; sleep 1 & wait; echo waited'; osh -c 'chdir; shift; login' ; echo st$?
 glob: cannot execute
 q*
-23
+PID
 waited
 chdir: arg count
 st255
-# echo 'echo in osh script; date >/dev/null; echo $1 arg' >o2.sh; osh o2.sh one; osh -c 'echo hi; echo $0 there'
 in osh script
 one arg
 hi
 -c there
-# for i in 1 2 3 4 5; do echo crypttest | crypt key | crypt key; done; echo abcdefghij | /usr/lib/makekey | wc -c; echo crypttest | crypt key | od -c | sed 2q
 crypttest
 crypttest
 crypttest
@@ -32,92 +26,67 @@ crypttest
      13
 0000000 215 026   = 024 335 357   t   d 270   *
 0000012
-# echo one two three four five six seven | sp; echo hi there | tc -t | od -c | sed 4q
 one two three four five six seven
 0000000 035   8   l   o       @ 035   d   @ 037   - 035   7   d 177   @
 0000020 035   l   s   @ 035   f   @ 035   d   `   @ 035   6   s   @ 037
 0000040   b 035   7   l 177   @ 033   ; 037  \0
 0000051
-# >/usr/adm/acct; /etc/accton /usr/adm/acct; ls /bin >/dev/null; date >/dev/null; ls >/dev/null; cat /etc/passwd >/dev/null; /etc/accton
-# for f in -a -b -c -j -l -m -n -r -t; do sa $f | sed 's/[0-9]*\.[0-9][0-9]*%*/T/g; s/  */ /g' | sort; done; sa -u | sed 3q
- 1 T T accton
- 1 T T cat
- 1 T T date
- 2 T T ls
- 5 T T
- 2 T T ls
- 5 T T
- 2 T T T T ls
- 5 T T 
- 2 T T ls
- 5 T T
- 2 T T T ls
- 5 T T T
-root 5 T
- 2 T T ls
- 5 T T
- 2 T T ls
- 5 T T
- 2 T T T ls
- 5 T T T
-  0   T accton
-  0   T ls
-  0   T date
-# dcheck /dev/root; ncheck /dev/root | sed 6q; ncheck -i 1 /dev/root; ncheck -s /dev/root
-/dev/root:
-/dev/root:
-3       /bin/.
-110     /dev/.
-119     /etc/.
-135     /tmp/.
-136     /usr/.
-
-/dev/root:
-/dev/root:
-51      /bin/login
-55      /bin/mkdir
-56      /bin/mv
-58      /bin/newgrp
-63      /bin/passwd
-76      /bin/rmdir
-86      /bin/su
-111     /dev/console
-112     /dev/mem
-113     /dev/kmem
-114     /dev/null
-115     /dev/root
-116     /dev/rrk0
-117     /dev/swap
-118     /dev/tty
-162     /usr/lib/atrun
-# echo 'tst::5:3::/tmp:' >>/etc/passwd; tail -1 /etc/passwd; cat /etc/group
-tst::5:3::/tmp:
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+1 accton
+1 cat
+1 date
+2 ls
+0 accton
+0 cat
+0 date
+0 ls
+0 ls
+fs:
+fs:
+3	/etc/.
+8	/words
+9	/long
+10	/sub/.
+13	/empty/.
+fs:
+fs:
+6	/etc/null
+7	/etc/su
 other::1:
 sys::2:bin,sys
 bin::3:sys,bin
 uucp::4:
-# Restricted rights: Use, duplication, or disclosure
-is subject to restrictions stated in your contract with
-Western Electric Company, Inc.
-Tue Jan  9 HH:MM EST 1979
-
-login: tst
-$ tty; mesg n; mesg; mesg y; mesg
 /dev/console
 is n
 is y
-$ who; who am i; ac; ac -p; ac -d; ac -w /usr/adm/wtmp tst
-tst      console Jan  9 HH:MM
-tst      console Jan  9 HH:MM
-        total     T
-        tst       T
-        total     T
-Jan  9  total     T
-        total     T
-$ newgrp nosuch
-nosuch: no such group
-$ newgrp sys
-Sorry
-$ echo TEST""DONE
-TESTDONE
-$ 
+who: cannot open utmp
+who: cannot open utmp
+st0
+st0

@@ -1,0 +1,13 @@
+T=/tmp/r5b U=/usr/local/test/utils
+mkdir $T; cd $T
+$U/szt & sleep 1; ps -l | grep '/usr/local/test/utils/sz[t]' | awk '{print $10}'; wait
+$U/memt; $U/memt x; echo st$?; wc -c core
+$U/stkt
+$U/physt
+ps -l | awk '$NF == "r5b" {print $10}'
+x=`cat /usr/dict/words`; case $x in *Zurich) echo found;; esac
+ps -l | awk '$NF == "r5b" {print $10}'
+$U/txtt
+cp /bin/sleep $T/sl; $T/sl 4 & $T/sl 4 & sleep 1; pstat -x >x; awk 'NR > 2 && $(NF-1) == 2 {print $(NF-1), $NF}' x
+echo x >$T/sl; echo st$?; cp /bin/echo $T/sl; wait; cp /bin/echo $T/sl; $T/sl replaced
+cd /; rm -rf $T

@@ -27,12 +27,13 @@ include usr/src/libc/lib.mk
 include usr/src/libm/lib.mk
 include usr/src/cmd/cmd.mk
 include usr/src/games/games.mk
+include usr/local/test/test.mk
 
 all: $(KERNELS)
 
 .SECONDARY: $(GEN)
 
-OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ)
+OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
 $(OBJ) $(GEN): Makefile
 
 %.c: %.y
@@ -51,7 +52,7 @@ ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
 	usr/lib/lib.b
 
-ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC)
+ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) $(TEST_DATA)
 
 DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
@@ -74,7 +75,7 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 	$(call T,CP)cp -f $< $@
 
 clean:
-	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES)
+	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
 	rm -f etc/mkfs boot/unix boot/rootfs.img
 

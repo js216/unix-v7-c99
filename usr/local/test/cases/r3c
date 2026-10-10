@@ -1,0 +1,31 @@
+T=/tmp/r3c U=/usr/local/test/utils
+mkdir $T; cd $T
+od -cbdox $U/words >o; sed 4q o
+echo hello world | crypt secret | od -b | sed 2q; echo hello | crypt k1 | crypt k1
+echo abcdefghijkl | dd bs=1w count=1 2>/dev/null; echo
+sp <$U/words; sp 20 <$U/long | wc
+uniq -c $U/sortin; uniq -c $U/long | wc
+file $U/asm $U/bcf $U/ctxt $U/long $U/roff $U/sortin $U/u2 $U/words $U/edscr
+find /etc -user root -print | wc -l; find $U -size -2 -print; find /bin -name 'c?' -perm 755 -print
+find $U -type f -links 1 -name 'w*' -exec echo found {} \; ; find /etc -group 0 -mtime -100000 -print | wc -l; find / -inum 2 -print
+find $U ! -type d -ctime -100000 -atime -100000 -print | wc -l
+ps ax | grep -c 'ps ax$'; ps | sed 1q; ps alx | sed 1q
+pstat -t >o; sed 2q o; pstat -p >o; sed -n 2p o; pstat -i >o; sed -n 2p o
+pstat -f >o; sed -n 2p o; pstat -x >o; sed -n 2p o
+cp $U/fs.img fs; dcheck fs; dcheck -i 2 fs; icheck -b 5 fs
+echo '2^40; scale=3; 1/3; 7%3' | bc
+cp $U/words w; ed - w <$U/edscr; cat w; cp $U/words w2; ed w2 <$U/edscr; echo st$?; cat w2
+expr 1 + 2; expr abc : 'a\(.\)'; expr 'a\b' : 'a\\b'; expr abc : 'a\('; echo st$?
+echo hi | tee t1 t2; echo ho | tee -a t1 >/dev/null; cat t1 t2
+look -f ban $U/words; echo hello | tr a-z A-Z; sort -u $U/sortin; sort -m $U/sortin $U/words | wc
+sort -c $U/sortin; echo $?; sort -n +1 $U/sortin
+ptx $U/words | sed 2q; ptx -i /dev/null $U/words
+factor 360 1000000007 4294967297; echo x | tc | od -b | sed 2q; diff $U/words $U/sortin | wc; who
+iostat | sed 2q; iostat | wc -l; prof /bin/ls; arcv $U/words
+units <$U/u2 | sed 3q
+osh -c 'echo hi; echo $0 there'; echo 'echo $$ x; date >/dev/null' | osh >o 2>&1; sed 's/[0-9]/N/g; s/#/P/g' o
+dump 0f d fs 2>&1 | wc -l; dumpdir f d | sed -n '1,3p;/words/p'; restor tf d | sed 3q
+mkdir rx; cd rx; echo 1 | restor xf ../d words; ls; cmp * $U/words; echo cmp$?; cd $T; rm -r rx d
+echo 1+1 | bc /nonexist $U/bcf; echo bcst$?
+cp /etc/passwd passwd; echo 'zz:x:123\c' >>/etc/passwd; find $U -user zz -print; echo findst$?; cp passwd /etc/passwd
+cd /; rm -rf $T

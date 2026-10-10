@@ -1,26 +1,18 @@
-mem = 536727552
-# cd /tmp; echo one two three >a; echo four five >>a; echo six one seven eight >>a; echo nine >>a
-# awk '/one/' a; awk '$1 == "four"' a; awk 'NR==2 || NF==1' a; awk '!/o/' a
 one two three
 six one seven eight
 four five
 four five
 nine
 nine
-# awk '/two/,/six/ { print NR ": " $0 }' a; awk 'NR==2,NR==3' a
 1: one two three
 2: four five
 3: six one seven eight
 four five
 six one seven eight
-# awk 'BEGIN { printf "%d %5.2f %s %o %x %ld %e %g|", 42, 3.14159, "str", 8, 255, 123456789, 1234.5, 0.0001; print "" }' </dev/null
 42  3.14 str 10 ff 123456789 1.234500e+03 .0001|
-# awk 'BEGIN { printf "%c%c%c", 200, 233, 65 }' </dev/null | od -c
 0000000 310 351   A  \0
 0000003
-# awk 'BEGIN { printf "%-5s|%5s|%.2s|", "ab", "cd", "efgh"; print "" }' </dev/null
 ab   |   cd|ef|
-# awk '{ for (i=1;i<=NF;i++) c[$i]++ } END { for (w in c) print w, c[w] }' a | sort
 eight 1
 five 1
 four 1
@@ -30,7 +22,6 @@ seven 1
 six 1
 three 1
 two 1
-# awk 'BEGIN { print sqrt(16), exp(0), log(1), int(3.7), int(-3.7), length("abcd"); print 2^10, 7%3, -7%3, 1/3 }' </dev/null
 awk: syntax error near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
@@ -47,39 +38,30 @@ awk: illegal statement near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
-# awk 'BEGIN { print substr("hello",2,3), index("hello","ll"); n = split("a:b:c", x, ":"); print n, x[3]; s = sprintf("%03d", 7); print s }' </dev/null
 ell 3
 3 c
 007
-# awk -F: '{ print $1, NF }' /etc/passwd | sed 3q
 root 7
 daemon 7
 sys 7
-# awk '{ if (NR==1) next; print NR, NF, length; if (NR==3) exit }' a
 2 2 9
 3 4 19
-# awk 'BEGIN { x = "a" "b"; if (x < "b") print x; else print "no"; y = 1e3 + 0.5; print y; z = "10"; if (z > 9) print "numcmp" }' </dev/null
 ab
 1000.5
-# awk '$1 ~ /^[a-f][a-z]*$/ { print "m", $1 } $2 !~ /e/ { print "nm", $2 }' a
 nm two
 m four
 nm 
-# awk '{ n += NF; $2 = "X"; print } END { print n, NR }' a
 one X three
 four X
 six X seven eight
 nine
 10 4
-# awk 'BEGIN { i = 0; while (i < 3) { i++; s = s i }; print s; for (;;) { if (++j > 4) break }; print j }' </dev/null
 123
 5
-# awk 'BEGIN { x = }' </dev/null; echo st$?
 awk: syntax error near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
 st0
-# awk '{ print $1 > "out" }' a; cat out; awk '{ print $1 | "sort -r" }' a; sleep 1
 one
 four
 six
@@ -88,25 +70,20 @@ six
 one
 nine
 four
-# echo '{ print NR, $NF }' >p.awk; awk -f p.awk a
 1 three
 2 five
 3 eight
 4 nine
-# awk 'length > 10' a; awk '{ $3 = ""; print NF ":" $0 }' a
 one two three
 six one seven eight
 3:one two 
 2:four five
 4:six one  eight
 1:nine
-# awk 'BEGIN { OFS = "-"; ORS = "|" } { $1 = $1; print }' </dev/null a; echo
 one-two-three|four-five|six-one-seven-eight|nine|
-# echo 'a b' | awk '{ print; print $0; print $1$2 }'
 a b
 a b
 ab
-# awk 'BEGIN { print 1==1.0, "a" == "a", 3 " " -3, 1e6, 1e7 * 10, 100000 * 100000 }' </dev/null
 awk: syntax error near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
@@ -127,40 +104,29 @@ awk: illegal statement near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
-# awk 'BEGIN { printf "%s %d|", "x"; print "" }' </dev/null
 awk: not enough arguments in printf(%s %d|)
-# echo 3 4 | awk '{ print $1 * $2, $1 / $2, $1 - $2, $1 + $2; $5 = "e"; print; print NF }'
 12 .75 -1 7
 3 4
 2
-# awk 'END { print NR, $0 }' a
 4 
-# awk 'BEGIN { getline; print "g" }' </dev/null
 awk: illegal statement ADDR
-# awk '{ print $100 }' a; echo st$?
 awk: trying to access field 100
 st2
-# awk 'BEGIN { x = 1/0 }' </dev/null; echo st$?
 awk: division by zero
 st2
-# awk 'BEGIN { print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }' </dev/null; echo st$?
 awk: string too long near line 1
 awk: syntax error near line 1
 awk: illegal statement near line 1
 st0
-# awk '/[a-f]+e/ { print "cc", $0 } /^[^o]*$/ { print "nc", $0 } /(on|ni)e$/ { print "alt", $0 }' a
 cc one two three
 nc nine
-# awk '/t.o|fi?ve/ { print "re", NR }' a
 re 1
 re 2
-# echo 'x=5' | awk '{ print x }' x=7 -; awk '{ print x, $1 }' x=3 a
 7
 3 one
 3 four
 3 six
 3 nine
-# awk 'BEGIN { a["x"] = 1; a["y"] = 2; for (k in a) n++; print n; if ("x" in a) print "in" }' </dev/null; echo st$?
 awk: syntax error near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
@@ -168,13 +134,10 @@ awk: illegal statement near line 1
 awk: illegal statement near line 1
 awk: illegal statement near line 1
 st0
-# awk 'BEGIN { printf "%d %d\n", 3 }' </dev/null; echo st$?
 awk: not enough arguments in printf(%d %d
 )
 st2
-# awk 'BEGIN { print length() }' </dev/null
 0
-# awk '{ $7 = "z"; print NF; print }' a
 3
 one two three
 2
@@ -183,33 +146,22 @@ four five
 six one seven eight
 1
 nine
-# awk -f nosuch a; echo st$?
 awk: can't open nosuch
 st2
-# awk 'BEGIN { s = substr("hello", 0); t = substr("hello", 3, 100); print s, t; print index("abc", "z") }' </dev/null
 hello llo
 0
-# awk '{ print > "o2" } END { print NR }' a; cat o2
 4
 one two three
 four five
 six one seven eight
 nine
-# awk 'BEGIN { print 1,2 > "/dev/null"; x["a"]; print 7 }' </dev/null
 7
-# echo 'C) C<' | awk '{ print $2, length($1) }'
 C< 2
-# awk '{ print NR ": " $1 ; next; print "no" }' a
 1: one
 2: four
 3: six
 4: nine
-# awk 'BEGIN { while (i++ < 3) { if (i == 2) continue; print i } }' </dev/null
 1
 3
-# awk 'BEGIN { x["a"] = 1; delete; print }' </dev/null; echo st$?
 awk: illegal statement ADDR
 st2
-# echo TEST""DONE
-TESTDONE
-# 

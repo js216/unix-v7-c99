@@ -1,6 +1,3 @@
-mem = 536727552
-# cd /tmp; echo one two three >a; echo four five >>a; echo one two three >>a; echo zz >>a
-# cat a; cat -u a - a </dev/null | wc -l; cat nosuch; echo st$?
 one two three
 four five
 one two three
@@ -8,7 +5,6 @@ zz
       8
 cat: can't open nosuch
 st0
-# uniq a; uniq -c a; uniq -d a; uniq -u a; uniq -1 a; uniq +2 a; sort a | uniq -c
 one two three
 four five
 one two three
@@ -32,54 +28,43 @@ zz
    1 four five
    2 one two three
    1 zz
-# look abac | sed 3q; look -df Zebra | sed 2q; echo st$?
 aback
 zebra
 st0
-# split -2 a sp; ls sp*; cat spab; split a; ls x*; rm sp* x*
 spaa
 spab
 one two three
 zz
 xaa
-# ln a b; ls -l b; ln a b; echo st$?; ln -f a b; echo st$?; mkdir d; ln a d; ls d; rm -r d b
 -rw-rw-rw- 2 root       41 Jan  9 HH:MM b
 ln: File exists
 st1
 ln: File exists
 st1
 a
-# mkdir e; mkdir e/f; rmdir e; echo st$?; rmdir e/f e; ls e; rmdir nosuch; rmdir; echo st$?
 rmdir: e not empty
 st1
 e not found
 rmdir: nosuch non-existent
 rmdir: arg count
 st1
-# touch t1; ls -l t1; touch -c t2; ls t2; echo x >t3; touch t3; cat t3
 -rw-rw-rw- 1 root        0 Jan  9 HH:MM t1
 touch: file t2 does not exist.
 t2 not found
 x
-# chown bin a; ls -l a; chown 3 a; ls -l a; chown nosuchuser a; echo st$?; chown; echo st$?
 -rw-rw-rw- 1 bin        41 Jan  9 HH:MM a
 -rw-rw-rw- 1 bin        41 Jan  9 HH:MM a
 unknown user id: nosuchuser
 st4
 usage: chown uid file ...
 st4
-# echo hello world | crypt sekrit | od -c | sed 2q; echo hello world | crypt sekrit | crypt sekrit
 0000000   5 242 220 305 272 207   1   } 315   Q 210   K
 0000014
 hello world
-# random 1 <a | wc -l; random -e 1; echo st$?
       4
 st0
-# df; df /dev/root; dmesg | sed 3q
-/dev/root N
-/dev/root N
-dmesg: not found
-# stty; stty -echo; stty; stty echo; stty even; stty; stty -even; stty 9600 nl0 cr1; stty; stty -a; stty bogus; echo st$?
+fs 366
+misc1: dmesg: not found
 speed 0 baud
 erase = '#'; kill = '@'
 even -nl echo -tabs 
@@ -95,7 +80,6 @@ erase = '#'; kill = '@'
 unknown mode: -a
 unknown mode: bogus
 st0
-# at 2300 jan 3 </dev/null; echo st$?; at; echo st$?; at 9x; echo st$?; ls /usr/spool/at
 st0
 at: arg count
 st1
@@ -104,16 +88,10 @@ st1
 79.002.2300.PID
 lasttimedone
 past
-# accton; echo st$?; accton /nosuch; echo st$?
-accton: not found
+misc1: accton: not found
 st1
-accton: not found
+misc1: accton: not found
 st1
-# /usr/lib/atrun; echo st$?
 st0
-# clri; echo st$?
 usage: clri filsys inumber ...
 st4
-# echo TEST""DONE
-TESTDONE
-# 

@@ -1,0 +1,16 @@
+T=/tmp/cmdi3 U=/usr/local/test/utils
+mkdir $T; cd $T
+osh -c 'echo a; echo b >x; cat x; ls x | wc -l'; osh -c 'false; echo c; echo d >>x; cat <x'
+echo 'echo in osh script; echo $1 arg; nonexistcmd' >o.sh; echo '(echo sub; echo shell) | wc -l; chdir /etc; pwd; shift; echo $1' >>o.sh; osh o.sh one two
+osh -c 'echo x* ; echo "q*"; sleep 1 & wait; echo waited'; osh -c 'chdir; shift; login' ; echo st$?
+echo 'echo in osh script; date >/dev/null; echo $1 arg' >o2.sh; osh o2.sh one; osh -c 'echo hi; echo $0 there'
+for i in 1 2 3 4 5; do echo crypttest | crypt key | crypt key; done; echo abcdefghij | /usr/lib/makekey | wc -c; echo crypttest | crypt key | od -c | sed 2q
+echo one two three four five six seven | sp; echo hi there | tc -t | od -c | sed 4q
+>/usr/adm/acct; /etc/accton /usr/adm/acct; ls /bin >/dev/null; date >/dev/null; ls >/dev/null; cat /etc/passwd >/dev/null; /etc/accton
+for f in -a -ab -ac -aj -al -an -ar -at -u; do sa $f | sed -n '/ accton$/p; / ls$/p; / date$/p; / cat$/p' | awk '{ print $1, $NF }' | sort; done
+rm /usr/adm/acct
+cp $U/fs.img fs; dcheck fs; ncheck fs | sed 6q; ncheck -i 1 fs; ncheck -s fs; cat /etc/group
+tty; mesg n; mesg; mesg y; mesg
+who; who am i; ac; ac -p; ac -d; ac -w /usr/adm/wtmp tst
+sh -c 'newgrp nosuch' </dev/null; echo st$?; sh -c 'newgrp sys' </dev/null; echo st$?
+cd /; rm -rf $T

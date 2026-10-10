@@ -1,0 +1,4 @@
+T=/tmp/libc U=/usr/local/test/utils
+mkdir $T; cd $T
+$U/tt; echo r""c=$?
+cd /; rm -rf $T

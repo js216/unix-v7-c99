@@ -1,0 +1,9 @@
+T=/tmp/intr U=/usr/local/test/utils
+mkdir $T; cd $T
+echo 'ONE two three' >a; echo 'four five' >>a
+(sleep 2; kill -2 `cat p`) &
+(sleep 4; echo q) | sh -c 'echo $$ >p; exec ed a'; wait
+(sleep 2; kill -2 `cat p2`; sleep 2; kill -2 `cat p1`) &
+sh -c 'echo $$ >p1; exec sleep 100' | sh -c 'echo $$ >p2; exec sort'; echo sortst$?; wait
+yes | sed 2q; rm p p1 p2; ls $T
+cd /; rm -rf $T

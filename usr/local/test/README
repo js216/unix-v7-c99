@@ -1,20 +1,32 @@
-Regression tests, run on the QEMU target.
+Regression tests, run on the system itself.
 
-Build the tree with make first, then run
+The root file system holds the suite in /usr/local/test. Boot it and type
 
-	usr/local/test/run		all tests
-	usr/local/test/run sh awk	only the named tests
+	/usr/local/test/run.sh		all tests
+	/usr/local/test/run.sh sh awk	only the named tests
 
-Each test boots boot/unix on a fresh copy of the root file system, with
-the programs compiled from t/*.c and the data files from t/ installed in
-/t. The script prints one PASS or FAIL line per test and exits non-zero
-if any test failed, keeping the outputs in the directory it names.
+run.sh prints PASS or FAIL for each test, and finally a line
+"run.sh: N passed, M failed".
 
-A test is cases/NAME.steps, the session to type; cases/NAME.exp, the
-expected output; and optionally cases/NAME.sed, which normalises output
-that legitimately varies, such as dates, clock ticks, and addresses.
+A test is cases/NAME, a shell script; cases/NAME.exp, its expected
+output, standard output and standard error together; and optionally
+cases/NAME.sed, which normalises output that legitimately varies, such
+as times, clock ticks, process ids, and kernel addresses. run.sh runs
+the script with sh, from the cases directory, passes its output through
+the .sed, and compares the result with the .exp. To see why a test
+fails, run it by hand:
 
-A plain line of a steps file is typed at the shell prompt, or at the
-here-document prompt. A line @expect|send waits for expect, then types
-send, in which \n is a newline, ^C is DEL, and ^D is EOT; expect may
-contain \xNN. Type the erase and kill characters # and @ as \# and \@.
+	cd /usr/local/test/cases; sh NAME
+
+utils holds the programs the tests use, compiled from utils/*.c by the
+Makefile (test.mk), the data files, and fs.img, a small file system made
+from utils/fs.proto, on which the tests run the file system checkers.
+
+Each test works in a directory of its own, /tmp/NAME, which it removes
+at the end. A test which changes anything else (the date, accounting,
+the crontab, the at spool, a file in /etc or /usr/adm) puts it back
+before it ends, and kills every process it started, so that no test
+depends on which tests ran before it. Its output must not depend on
+timing: a test which interrupts a command sends the signal from a
+background process (kill -2) to a process whose id the command itself
+has written to a file.

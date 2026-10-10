@@ -1,6 +1,3 @@
-mem = 536727552
-# cd /tmp; echo one two three >a; echo four five >>a; echo six >>a
-# echo 'scale=10; s(1); c(1); a(1); l(10); e(1); sqrt(2); j(2,1.5)' | bc -l
 .8414709848
 .5403023058
 .7853981633
@@ -8,13 +5,11 @@ mem = 536727552
 2.7182818284
 1.4142135623
 .2320876721
-# echo 'define f(n) {' >b.b; echo 'if(n<2) return(1)' >>b.b; echo 'return(n*f(n-1))' >>b.b; echo '}' >>b.b; echo 'f(20); for(i=0;i<3;i++) i^3; obase=16; 255' >>b.b; bc b.b </dev/null
 2432902008176640000
 0
 1
 8
 FF
-# echo '2^100; 7%3; x=5; x=+3; x; -3/2; length(123.45); scale(1.234); ibase=2; 1011; a[3]=7; a[3]; "str"' | bc
 1267650600228229401496703205376
 1
 8
@@ -23,20 +18,17 @@ FF
 3
 11
 7
-str# echo 'scale=3; 1/3; if(1==1) 4; while(x<3) x=x+1; x' | bc -c
- 3k
+str 3k
  1 3/ps.
 [ 4ps.]s0
  1 1=0 
 [lx 1+sxlx 3>0]s0
 lx 3>0 
 lxps.
-q# echo 'define f(n) {' >c.b; echo 'auto i' >>c.b; echo 'for(i=0;i<n;i++) { i }' >>c.b; echo '}' >>c.b; echo 'f(3)' >>c.b; bc -l c.b </dev/null
-0
+q0
 1
 2
 0
-# expr 6 \* 7; expr 7 - 10; expr 100 / 7; expr 100 % 7; expr 3 \< 4; expr abc = abc; expr abc != abc; echo st$?
 42
 -3
 14
@@ -45,7 +37,6 @@ q# echo 'define f(n) {' >c.b; echo 'auto i' >>c.b; echo 'for(i=0;i<n;i++) { i }'
 1
 0
 st1
-# expr abc : 'a\(.\)'; expr abcabc : '\(abc\)\1'; expr aaaa : 'a\{2,3\}'; expr xyz : '.*'; expr length hello; expr substr hello 2 3; expr index hello l
 b
 abc
 3
@@ -53,7 +44,6 @@ abc
 5
 ell
 3
-# expr 0 \| 5; expr 3 \& 0; expr '' \| x; expr 1 + 2 \* 3; expr \( 1 + 2 \) \* 3; expr 12345678 \* 10; expr a +; echo st$?
 5
 0
 x
@@ -62,7 +52,6 @@ x
 123456780
 syntax error
 st2
-# expr abc : 'x'; echo st$?; expr a.c : 'a\.c'; expr abbbc : 'ab*c'; expr 'a[b' : 'a\[b'; expr x : '\(\('; echo st$?; expr abc : '[a-b]*'; expr 3 \>= 3; expr 2 \<= 1; expr -5 + 2; expr zz \> aa
 0
 st1
 3
@@ -75,7 +64,6 @@ st2
 1
 non-numeric argument
 1
-# echo one >d1; echo two >>d1; echo three >>d1; echo one >d2; echo 2 >>d2; echo three >>d2; echo four >>d2; diff d1 d2; diff -e d1 d2; echo 'two  x' >d3; echo 'two x' >d4; diff -b d3 d4; echo st$?; diff d1 d1; echo st$?
 2c2
 < two
 ---
@@ -90,7 +78,6 @@ four
 .
 st0
 st0
-# mkdir dd; cp d1 dd/d1; diff dd d2; diff d1 dd; cat d2 | diff d1 -; diff -h d1 d2; diff nonexist d1; echo st$?; diff -f d1 d2
 diff: cannot open dd/d2
 2c2
 < two
@@ -113,46 +100,43 @@ c2
 a3
 four
 .
-# echo 'the quick brown fox jumps over Xthe lazy dog' | tr X '\351' >p8; echo 'Yalpha beta gamma' | tr Y '\352' >>p8; ptx -i /dev/null p8
-.xx "" "" "jalpha beta gamma" ""
-.xx "" "jalpha" "beta gamma" ""
-.xx "dog" "the quick" "brown fox jumps over ithe lazy" ""
-.xx "" "brown fox jumps over ithe lazy" "dog" "the quick"
-.xx "" "the quick brown" "fox jumps over ithe lazy dog" ""
-.xx "" "jalpha beta" "gamma" ""
-.xx "" "the quick brown fox" "jumps over ithe lazy dog" ""
-.xx "" "quick brown fox jumps over ithe" "lazy dog" "the"
-.xx "" "the quick brown fox jumps" "over ithe lazy dog" ""
-.xx "lazy dog" "the" "quick brown fox jumps over ithe" ""
-.xx "" "the quick brown fox jumps over" "ithe lazy dog" ""
-.xx "ithe lazy dog" "" "the quick brown fox jumps over" ""
-# echo 'xX' | tr X '\351' >br; ptx -i /dev/null -b br p8; ptx -r -i /dev/null p8 | wc -l; echo 'the' >ig; ptx -i ig -t p8; echo 'fox' >on; ptx -o on -w 40 p8 /tmp/po; cat /tmp/po
-.xx "" "" "jalpha beta gamma" ""
-.xx "" "jalpha" "beta gamma" ""
-.xx "dog" "the quick" "brown fox jumps over ithe lazy" ""
-.xx "" "brown fox jumps over ithe lazy" "dog" "the quick"
-.xx "" "the quick brown" "fox jumps over ithe lazy dog" ""
-.xx "" "jalpha beta" "gamma" ""
-.xx "" "the quick brown fox" "jumps over ithe lazy dog" ""
-.xx "" "quick brown fox jumps over ithe" "lazy dog" "the"
-.xx "" "the quick brown fox jumps" "over ithe lazy dog" ""
-.xx "lazy dog" "the" "quick brown fox jumps over ithe" ""
-.xx "" "the quick brown fox jumps over i" "the lazy dog" ""
-.xx "ithe lazy dog" "" "the quick brown fox jumps over" ""
+.xx "" "" "êalpha beta gamma" ""
+.xx "" "êalpha" "beta gamma" ""
+.xx "dog" "the quick" "brown fox jumps over éthe lazy" ""
+.xx "" "brown fox jumps over éthe lazy" "dog" "the quick"
+.xx "" "the quick brown" "fox jumps over éthe lazy dog" ""
+.xx "" "êalpha beta" "gamma" ""
+.xx "" "the quick brown fox" "jumps over éthe lazy dog" ""
+.xx "" "quick brown fox jumps over éthe" "lazy dog" "the"
+.xx "" "the quick brown fox jumps" "over éthe lazy dog" ""
+.xx "lazy dog" "the" "quick brown fox jumps over éthe" ""
+.xx "" "the quick brown fox jumps over" "éthe lazy dog" ""
+.xx "éthe lazy dog" "" "the quick brown fox jumps over" ""
+.xx "" "" "êalpha beta gamma" ""
+.xx "" "êalpha" "beta gamma" ""
+.xx "dog" "the quick" "brown fox jumps over éthe lazy" ""
+.xx "" "brown fox jumps over éthe lazy" "dog" "the quick"
+.xx "" "the quick brown" "fox jumps over éthe lazy dog" ""
+.xx "" "êalpha beta" "gamma" ""
+.xx "" "the quick brown fox" "jumps over éthe lazy dog" ""
+.xx "" "quick brown fox jumps over éthe" "lazy dog" "the"
+.xx "" "the quick brown fox jumps" "over éthe lazy dog" ""
+.xx "lazy dog" "the" "quick brown fox jumps over éthe" ""
+.xx "" "the quick brown fox jumps over é" "the lazy dog" ""
+.xx "éthe lazy dog" "" "the quick brown fox jumps over" ""
      10
-.xx "" "" "jalpha beta gamma" ""
-.xx "" "jalpha" "beta gamma" ""
-.xx "" "the quick" "brown fox jumps over ithe lazy dog" ""
-.xx "" "the quick brown fox jumps over ithe lazy" "dog" ""
-.xx "" "the quick brown" "fox jumps over ithe lazy dog" ""
-.xx "" "jalpha beta" "gamma" ""
-.xx "" "the quick brown fox" "jumps over ithe lazy dog" ""
-.xx "" "the quick brown fox jumps over ithe" "lazy dog" ""
-.xx "" "the quick brown fox jumps" "over ithe lazy dog" ""
-.xx "" "the" "quick brown fox jumps over ithe lazy dog" ""
-.xx "" "the quick brown fox jumps over" "ithe lazy dog" ""
+.xx "" "" "êalpha beta gamma" ""
+.xx "" "êalpha" "beta gamma" ""
+.xx "" "the quick" "brown fox jumps over éthe lazy dog" ""
+.xx "" "the quick brown fox jumps over éthe lazy" "dog" ""
+.xx "" "the quick brown" "fox jumps over éthe lazy dog" ""
+.xx "" "êalpha beta" "gamma" ""
+.xx "" "the quick brown fox" "jumps over éthe lazy dog" ""
+.xx "" "the quick brown fox jumps over éthe" "lazy dog" ""
+.xx "" "the quick brown fox jumps" "over éthe lazy dog" ""
+.xx "" "the" "quick brown fox jumps over éthe lazy dog" ""
+.xx "" "the quick brown fox jumps over" "éthe lazy dog" ""
 .xx "" "the quick brown" "fox jumps over/" ""
-# test -f a; echo $?; test -d a; echo $?; test -s a -a -r a; echo $?; test ! -w /nonexist; echo $?; test 1 -eq 1 -o 2 -lt 1; echo $?; test -z ""; echo $?; test -n ""; echo $?
 0
 1
 0
@@ -160,10 +144,9 @@ four
 0
 0
 1
-# test abc = abc; echo $?; test 5 -ge 7; echo $?; test -t; echo $?; test -t 0; echo $?; test 1 -xx 2; echo $?; test; echo $?; test \( -f a \); echo $?; test -c /dev/null; echo $?
 0
 1
-0
+1
 0
 test: unknown operator -xx
 255
@@ -171,7 +154,6 @@ test: unknown operator -xx
 0
 test: argument expected
 255
-# tabs | od -c; tabs 37 | od -c; tabs hp | od -c; tabs xyz | od -c; tabs 300 | od -c; tabs 450 | od -c; tabs tn | od -c; tabs 300s | od -c; tabs -n | od -c
 0000000
 0000000 017 033   2 177 177 177 177 177 177 177 177 177 177 177 177 177
 0000020 177 177 177 177 177 177 177 177 177 177 177 177 177 177 177 177
@@ -238,7 +220,6 @@ test: argument expected
 0000220                         033   1  \n  \0
 0000231
 0000000
-# echo hi | tee t1 t2; cat t1 t2; echo there | tee -a t1 >/dev/null; cat t1; echo y | tee /nonexist/z; echo st$?; echo ii | tee -i t3; cat t3
 hi
 hi
 hi
@@ -249,55 +230,36 @@ y
 st0
 ii
 ii
-# who; who am i; echo st$?
 who: cannot open utmp
 who: cannot open utmp
 st1
-# quot /dev/root; quot -n /dev/root </dev/null; quot -c /dev/root | sed 5q; quot -f /dev/root
-/dev/root:
- N	root
-    1	dmr
+fs:
+   14	root
+    7	bin
+    1	daemon
     1	sys
-    1	uucp
-/dev/root:
-/dev/root:
-0	8	0
-1	53	53
-4	1	57
-5	3	72
-/dev/root:
- N	  210	root
-    1	    1	dmr
+fs:
+fs:
+0	1	0
+1	9	9
+7	2	23
+499	0	23
+fs:
+   14	   10	root
+    7	    1	bin
+    1	    1	daemon
     1	    1	sys
-    1	    1	uucp
-# pstat -i >u; sed 4q u; pstat -t >u; sed 's/\#/N/' u; pstat -p >u; sed 4q u; pstat -f >u; sed 4q u; pstat -x >u; sed 4q u; pstat -u 0 >u; sed 3q u
-8 active inodes
    LOC  FLAGS  CNT DEVICE   INO   MODE NLK UID  SIZE/DEV
-ADDR          3  0,  0     2  40755   8   0       144
-ADDR      T   1  0,  0   124 100755   1   0      4652
 1 kl11
- N RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP
- 0   0   0 MODEADDR       0  0   0 T OC A       2
-4 processes
+ # RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP
    LOC S  F  PRI SIGNAL UID TIM CPU NI  PGRP   PID  PPID ADDR SIZE  WCHAN   LINK  TEXTP  CLKT
-ADDR 1  3    0      0   0 TIM CPU 20     0     0     01000041    ADDR      0      0 0
-ADDR 1  1   30      0   0 TIM CPU 20     0     1     01000050    ADDR      ADDR 0
-3 open files
   LOC   FLG CNT   INO    OFFS
-ADDR RW    ADDR 10303
-ADDR  W    ADDR 0
-3 text segments
    LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT
-ADDR  W      ADDR    ADDR   1   1
-ADDR  W      ADDR    ADDR   1   1
-rsav ADDR ADDR
 segflg, error 0, 0
 uids 0,0,0,0
-# iostat >ios; wc -l ios; iostat -b >ios; wc -l ios; iostat -i >ios; wc -l ios
       3 ios
       4 ios
       9 ios
-# primes 100 | sed 5q; primes 7900 | sed 4q; primes 1000000000 | sed 3q; echo 3.9 | primes | sed 2q; echo 99999999999999999999 | primes; echo st$?
 101
 103
 107
@@ -317,14 +279,13 @@ uids 0,0,0,0
 5
 Ouch.
 st0
-# primes 4294967290 | sed 3q; primes 999999999999 | sed 3q; primes 72057594037927936; echo st$?; primes 0; echo st$?; primes 1 | sed 30q | tail -6
 4294967291
 4294967311
 4294967357
 
-ADDR
-ADDR
-ADDR
+1000000000039
+1000000000061
+1000000000063
 
 Ouch.
 st1
@@ -336,13 +297,11 @@ st0
 109
 113
 
-# dump 0f /tmp/dmp /dev/root >/dev/null 2>&1; restor tf /tmp/dmp | sed 1d; mkdir rx; cd rx; echo 1 | restor xf /tmp/dmp /etc/passwd; ls | wc -l; cmp * /etc/passwd && echo restored; cd /tmp; rm -f dmp
 Dumped from: Wed Dec 31 HH:MM 1969
-/etc/passwd: inode 125
-Mount desired tape volume: Specify volume #: extract file 125
+etc/passwd: inode 4
+Mount desired tape volume: Specify volume #: extract file 4
       1
 restored
-# cal 2 1980; cal 1752 | sed -n 20,30p; cal 13 1980; cal 9 1752; echo 'Jan 10 call' >calendar; echo 'Jan 11 tomorrow' >>calendar; echo 'Feb 1 no' >>calendar; /usr/lib/calendar
    February 1980
  S  M Tu  W Th  F  S
                 1  2
@@ -373,15 +332,12 @@ Bad argument
 
 (^|[ (,;])(([Jj]an[^ ]* *|1/)0*9)([^0123456789]|$)
 (^|[ (,;])(([Jj]an[^ ]* *|1/)0*10)([^0123456789]|$)
-# echo '.EQ' >eq; echo 'x' >>eq; echo '.EN' >>eq; echo '.EQ' >>eq; checkeq eq; echo '$x' >eq2; echo 'delim $$' >>eq2; checkeq eq2
 eq:
    Unfinished EQ
 eq2:
-# cp a ga; chgrp 3 ga; ls -lg ga; chgrp abc ga; echo st$?
 -rw-rw-rw- 1 bin        28 Jan  9 HH:MM ga
 unknown group: abc
 st4
-# comm d1 d2; comm -12 d1 d2; comm -3 d1 d2
 		one
 	2
 	three
@@ -394,29 +350,24 @@ one
 	four
 two
 three
-# echo '.TH x' >ro; echo 'hello \fBworld\fR it'"'"'s' >>ro; echo '.EQ' >>ro; echo 'a sup 2' >>ro; echo '.EN' >>ro
-# echo 'tail "q" \(em \*(xy' >>ro; echo '.TS' >>ro; echo 'tbl' >>ro; echo '.TE' >>ro; echo 'Xword' | tr X '\351' >>ro; deroff ro; deroff -w ro; deroff -mm ro
  
 hello  world  it's
 tail "q"    
-iword
+éword
 hello
 world
 it's
 tail
 word
 Deroff: Invalid flag m
-# du -a /tmp | sed 3q; du -s /etc; du /usr/lib | sed 2q
-1	/tmp/a
-1	/tmp/b.b
-1	/tmp/c.b
-N	/etc
-1	/usr/lib/uucp
-N	/usr/lib
-# echo -n abc; echo; echo a b   c
+1	/tmp/cmdh/a
+1	/tmp/cmdh/b.b
+1	/tmp/cmdh/c.b
+368	/tmp/cmdh
+2	/tmp/cmdh/dd
+2	/tmp/cmdh/rx
 abc
 a b c
-# echo 'k1 a' >j1; echo 'k2 b' >>j1; echo 'k1 x' >j2; echo 'k3 y' >>j2; join j1 j2; join -a1 j1 j2; join -o 1.1 2.2 1.2 j1 j2; join j1; echo st$?; join j1 nonexist; echo st$?
 k1 a x
 k1 a x
 k2 b
@@ -425,17 +376,14 @@ join: usage: join [-j1 x -j2 y] [-o list] file1 file2
 st1
 join: can't open nonexist
 st1
-# mkdir m1 m2/x; echo st$?; ls -d m1; mkdir; echo st$?
 mkdir: cannot access m2/.
 st1
 m1
 mkdir: arg count
 st1
-# mount; mount /dev/x /mnt; echo st$?
-mount: not found
-mount: not found
+cmdh: mount: not found
+cmdh: mount: not found
 st1
-# mv a a2; ls a2; mv a2 a; mkdir mvd; mv mvd mvd2; ls -d mvd2; mv a mvd2; ls mvd2; mv mvd2/a .; mv nonexist q; echo st$?; mv mvd2 mvd2/sub; mv a; echo st$?
 a2
 mvd2
 a
@@ -444,16 +392,12 @@ st1
 mv: cannot move a directory into itself
 usage: mv f1 f2; or mv d1 d2; or mv f1 ... fn d1
 st1
-# pwd; cd /usr/lib; pwd; cd /tmp/dd; pwd; cd /tmp
-/tmp
+/tmp/cmdh
 /usr/lib
-/tmp/dd
-# sleep 1; sleep x; echo st$?
+/tmp/cmdh/dd
 bad character
 st0
-# echo walltest >w; /etc/wall <w
 Cannot open /etc/utmp
-# cd /tmp; ls
 a
 b.b
 br
@@ -466,6 +410,7 @@ d4
 dd
 eq
 eq2
+fs
 ga
 ig
 ios
@@ -483,18 +428,12 @@ t2
 t3
 u
 w
-# primes 72057594037927934 | sed 2q
 72057594037928017
 72057594037928033
 
-# echo 2 | primes | sed 3q
 2
 3
 5
-# cd /tmp; echo '.TH x' >ro; echo 'hello world its' >>ro
-# echo '.EQ' >>ro; echo 'a sup 2' >>ro; echo '.EN' >>ro; echo 'tail "q" and' >>ro
-# echo '.TS' >>ro; echo 'tbl' >>ro; echo '.TE' >>ro; echo 'Xword ab' | tr X '\351' >>ro; echo 'x $a+b$ y' >>ro
-# cat ro; deroff ro; deroff -w ro | od -c; deroff -m ro
 .TH x
 hello world its
 .EQ
@@ -504,34 +443,15 @@ tail "q" and
 .TS
 tbl
 .TE
-iword ab
+éword ab
 x $a+b$ y
  
 hello world its
 tail "q" and
-iword ab
+éword ab
 x $a+b$ y
 0000000   h   e   l   l   o  \n   w   o   r   l   d  \n   i   t   s  \n
 0000020   t   a   i   l  \n   a   n   d  \n   w   o   r   d  \n   a   b
 0000040  \n  \0
 0000041
 Deroff: Invalid flag m
-# Restricted rights: Use, duplication, or disclosure
-is subject to restrictions stated in your contract with
-Western Electric Company, Inc.
-Tue Jan  9 HH:MM EST 1979
-
-login: bin
-$ who; who am i; ps ax | grep -c update; echo wall2 | /etc/wall; sleep 1; pstat -t | sed 3q
-bin      console Jan  9 HH:MM
-bin      console Jan  9 HH:MM
-2
-Broadcast Message ...
-
-wall2
-1 kl11
- # RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP
- 0   0   0   0   06330       0  0   0   OC       351
-$ echo TEST""DONE
-TESTDONE
-$ 

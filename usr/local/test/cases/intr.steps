@@ -1,7 +1,0 @@
-cd /tmp; echo 'ONE two three' >a; echo 'four five' >>a
-@# |ed a\n
-@24|^C
-@?|q\n
-@# |sleep 100 | sort; echo sortst$?\n
-@sortst$?|^C
-yes | sed 2q; ls /tmp
