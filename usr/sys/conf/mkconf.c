@@ -555,7 +555,7 @@ main(void)
 	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramb, ramn);
 	if (tabn)
 		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabb, tabn);
-	printf("}\nSECTIONS\n{\n");
+	printf("}\nu = 0x4F000000;\nSECTIONS\n{\n");
 	printf("\t.text : { *(.text*) } > RAM\n");
 	printf("\t.rodata : { *(.rodata*) } > RAM\n");
 	printf("\t.data : { *(.data*) } > RAM\n");

@@ -2040,18 +2040,14 @@ the size of the area guarantees that it does not reach the structure.
 
 #lines(91, 101)
 
-In v7, `u` was an external variable. Its address was fixed not by
-storage but by the assembler line `_u = 140000` in `mch.s`, which made
-`_u` an absolute symbol. The port makes `u` a macro (103): an object of
-type `struct user` at the constant address `UBASE`. The effect for
-every user of `u` is the same, and none of the hundreds of references
-to `u.` in the kernel needed to change. The commit history does not
-say why a macro was preferred to an absolute symbol.
-
-One consequence should be noted: since `u` is a macro, no file which
-includes #f("user.h") can use `u` for anything else. `ps`, which reads
-a `user` structure from memory or swap into a variable of its own
-named `u`, has to `#undef` it after the include.
+In v7, `u` was an external variable (103). Its address was fixed not
+by storage but by the assembler line `_u = 140000` in `mch.s`, which
+made `_u` an absolute symbol. The port does the same with one line of
+the linker script, `u = 0x4F000000`, which `mkconf` writes
+(#f("qemu/unix.ld")): `u` is the `struct user` at `UBASE`, and every
+reference to it is to that fixed address, as in v7. A program which
+includes #f("user.h") for the structure may still name a variable of
+its own `u`, as `ps` does.
 
 #lines(102, 104)
 
@@ -6334,7 +6330,11 @@ level table requires, is not loaded (`NOLOAD`), and is cleared by
 `machine_init` (#f("machdep.c")) once memory is ready. It is placed in
 the `tables` region if the configuration has one, as on the MP135, and
 otherwise in `RAM`. No entry point is named; the linker's default,
-`_start`, is the right one.
+`_start`, is the right one. Between the regions and the sections the
+symbol `u` is set to `0x4F000000`, the value of `UBASE` (#f("param.h")),
+as v7's `mch.s` set `_u`; `mkconf` is a program of the build machine
+and does not include the kernel's headers, so the address is written
+out here, and the two must agree.
 
 #lines(541, 567)
 
@@ -11437,7 +11437,12 @@ memory, which begins at `0x40000000`. The kernel takes only its start;
 process images are kept in the `core` above it (#f("qemuconf")), which
 the linker is not told about.
 
-#lines(1, 4)
+`u` (5) is the per process data area, at `UBASE` (#f("param.h")): the
+assignment defines the symbol which #f("user.h") declares, as v7's
+`_u = 140000` did in `mch.s`. Its address lies outside `RAM`, in the
+megabyte which `machine_init` (#f("machdep.c")) maps for it.
+
+#lines(1, 5)
 
 The kernel's text, read-only data, and initialised data follow one
 another from the origin of `RAM`. The first input file is `low.o`
@@ -11455,7 +11460,7 @@ asked with `-fcommon`, which the port no longer uses, so it collects
 nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
 kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
 
-#lines(5, 13)
+#lines(6, 14)
 
 `.ddrbss` holds the translation tables reserved in #f("mch.s"): the
 first level table, which the processor requires to lie on a 16 KB
@@ -11467,12 +11472,12 @@ serves nothing, and the section simply follows `.bss` in `RAM`; it
 exists for the MP135 (#f("mp135/unix.ld")), where the tables lie in a
 memory which cannot be written until `machine_init` has started it.
 
-#lines(14, 19)
+#lines(15, 20)
 #source("/usr/sys/conf/mp135/unix.ld")
 
 #f("mp135/unix.ld") is the MP135's linker script, written by `mkconf`
 from #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
-regions and in where it puts `.ddrbss`.
+regions and in where it puts `.ddrbss`; `u` is defined in the same way.
 
 `RAM` is the 128 KB of on-chip SYSRAM at `0x2ffe0000`, into which the
 boot ROM loads the kernel. The text,
@@ -11490,7 +11495,7 @@ until `ddrinit` (#f("stm32ddr.c")) has started it, so `_start`
 gives the section no contents in the file, so that nothing has to be
 loaded into DDR before it is running.
 
-#lines(1, 20)
+#lines(1, 21)
 #source("/usr/src/cmd/mkfs.c")
 
 `mkfs` makes an empty file system, or, given a prototype file, one
@@ -12608,24 +12613,22 @@ argument `siz` of `stacktop` was unused in v7 too.
 14), since the port installs neither in `/usr/include/sys`. v7 also
 included `<sys/tty.h>`, of which `ps` uses nothing; `u_ttyp` is only a
 pointer to a `struct tty`, which C permits without the structure's
-definition. The `#undef u` (15) is needed because the port's
-#f("user.h") defines `u` as a macro naming the structure at its fixed
-address `UBASE`, where v7 declared it as an external variable which the
-loader placed; without the `#undef` the program's own variable `u` (26)
-would be swallowed by the macro. The members of `nl` are initialized in
+definition. The program's own variable `u` (25), into which it reads a
+`user` structure from memory or swap, agrees with the `extern`
+declaration of #f("user.h"). The members of `nl` are initialized in
 full, since a partial initializer draws a warning from `-Wextra`.
 
-#lines(1, 22)
+#lines(1, 21)
 
 v7 declared `lseek` and, wrongly, `strncmp` returning `char *`; both are
 now declared in #f("stdio.h"), and these lines have gone. The procedures
-of the file are declared with prototypes instead (34--37).
+of the file are declared with prototypes instead (33--36).
 
-A device name is now `DIRSIZ+1` bytes (46), for the terminating null
+A device name is now `DIRSIZ+1` bytes (45), for the terminating null
 which a directory entry of the full `DIRSIZ` characters lacks (see
 `getdev` below).
 
-#lines(23, 51)
+#lines(22, 50)
 
 The options are letters in the first argument, in any combination: `a`
 for all users' processes, `x` for those without a terminal, `l` for
@@ -12634,7 +12637,7 @@ children's times, `k` to read a core image of memory from
 `/usr/sys/core` instead of the live system, and a number for a single
 process.
 
-#lines(52, 100)
+#lines(51, 99)
 
 `ps` first reads two kernel variables. `swapdev` is read into
 `nl[1].n_value` and never used, since the swap area is reached through
@@ -12648,7 +12651,7 @@ A slot with `p_stat` zero is unused. Processes of the super-user which
 have no process group, that is, which never opened a terminal, such
 as process 0, are shown only with `x`.
 
-#lines(101, 154)
+#lines(100, 153)
 
 `getdev` builds a table of the character special files in `/dev`, by
 name and device number, so that a terminal can later be named from the
@@ -12662,11 +12665,11 @@ it with `strncpy` into the larger `dname`, whose last byte remains
 zero, and passes the copy to `stat`; the copy is made before the type
 is known, and a slot which is not a character device is simply
 overwritten by the next. The loop also stops at the 256 entries the
-table holds (169), where v7 had no limit.
+table holds (168), where v7 had no limit.
 
-The `#include` of `<sys/stat.h>` inside the procedure (159) is v7's.
+The `#include` of `<sys/stat.h>` inside the procedure (158) is v7's.
 
-#lines(155, 185)
+#lines(154, 184)
 
 `round` is now `static`; it is used only after its definition, and a
 static procedure needs no separate prototype. `datmap` describes how
@@ -12674,7 +12677,7 @@ user addresses map onto the image, as a debugger's map would: addresses
 from `b1` to `e1` lie at file offset `f1` plus the distance from `b1`,
 and those from `b2` to `e2` at `f2` plus the distance from `b2`.
 
-#lines(186, 200)
+#lines(185, 199)
 
 `prcom` handles one process. If it is loaded (`SLOAD`), its image is at
 `p_addr` clicks in `/dev/mem`. In the port `p_addr` counts from
@@ -12692,15 +12695,15 @@ the top of the address space, followed the data in the image. v7 set
 `f2` accordingly to the end of the data, `datmap.e1-datmap.b1` past the
 `user` area. In the port, the image is the `user` area followed by the
 whole 1 MB window (#f("sys1.c")), so that every user address lies at
-its own offset from the end of the `user` area, and `f2` (237) is
+its own offset from the end of the `user` area, and `f2` (236) is
 `b2` past it. Until this was put right, `ps` sought the arguments in
 the wrong place and printed blanks. The data map
 is right unchanged, since the port's executables have no separate text
 (`u_tsize` is zero) and `b1` is therefore zero.
 
-#lines(201, 238)
+#lines(200, 237)
 
-The fields of the line. The mask `&0377` (244) is new. `p_stat` is a
+The fields of the line. The mask `&0377` (243) is new. `p_stat` is a
 `char`, and an array subscript of type `char` draws a warning from
 `-Wall`; the mask makes it an `int`, and on the PDP-11, where `char`
 was signed, it would also have kept the subscript positive. The
@@ -12716,7 +12719,7 @@ blocks of 512 bytes; since every user process has an image of the
 whole window, it is the same for all of them. The times assume `HZ`
 of 60, which holds (#f("param.h")).
 
-#lines(239, 281)
+#lines(238, 280)
 
 The arguments are sought in the last 512 bytes of the image, the top of
 the stack. First the last word of the window is examined: `exec` leaves
@@ -12726,7 +12729,7 @@ pointer to its own argument list (`execargs`, #f("sh/main.c")), so that
 and the strings are fetched one byte at a time through `getptr` and
 `getbyte`, which apply `datmap`.
 
-#lines(282, 304)
+#lines(281, 303)
 
 Otherwise the strings themselves are found. `exec` (#f("sys1.c")) puts
 the argument and environment strings at the top of the stack, preceded
@@ -12745,12 +12748,12 @@ for `int` accesses. The present compiler happens to place v7's array
 on a word boundary, but `-Wcast-align=strict` rejects both casts. An
 `int` array may be read as characters, as the rest of the loop does.
 
-#lines(305, 339)
+#lines(304, 338)
 
 `gettty` names the terminal by searching the table of `getdev` for the
 device number `u_ttyd`, dropping the prefix "tty".
 
-#lines(340, 358)
+#lines(339, 357)
 
 `getptr` assembles a pointer from the image byte by byte, through
 `getbyte`. Its counter is now `unsigned`, so that
@@ -12766,7 +12769,7 @@ warns of a comparison between signed and unsigned. Casting the address
 to `long` keeps the comparison signed, which is correct for user
 addresses, all of them below `0x100000`.
 
-#lines(359, 401)
+#lines(358, 400)
 #source("/usr/src/cmd/dmesg.c")
 
 Everything the kernel prints with `printf` (#f("prf.c")) passes through

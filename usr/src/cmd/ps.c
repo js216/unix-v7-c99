@@ -12,7 +12,6 @@
 #include "../../sys/h/proc.h"
 #include <sys/dir.h>
 #include "../../sys/h/user.h"
-#undef u
 
 struct nlist nl[] = {
 	{ "_proc", 0, 0 },

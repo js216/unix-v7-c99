@@ -100,7 +100,7 @@ struct	user
 					 */
 };
 
-#define	u	(*(struct user *)UBASE)
+extern struct user u;
 
 /* u_error codes */
 #define	EPERM	1
