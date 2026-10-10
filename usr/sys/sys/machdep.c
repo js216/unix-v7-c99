@@ -209,7 +209,7 @@ machine_init(void)
 	l1[UBASE>>20] = (unsigned)uarea_l2 | PTE_PT;
 	corebase = ctob(btoc(__ddrbss_end));
 	for(a = 0; a < USIZE; a++)
-		uarea_l2[a] = (corebase + ctob(a)) | 0x12;
+		uarea_l2[a] = (corebase + ctob(a)) | 0x45e;
 	for(p = (char *)corebase; p < (char *)corebase + ctob(USIZE); p++)
 		*p = 0;
 	mmu_on(l1);

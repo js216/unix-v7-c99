@@ -9,6 +9,7 @@ mmu_on:
 	orr r1, r1, #(1 << 6)
 	mcr p15, 0, r1, c1, c0, 1
 	isb
+	orr r0, r0, #0x4a
 	mcr p15, 0, r0, c2, c0, 0
 	mov r1, #1
 	mcr p15, 0, r1, c3, c0, 0
@@ -106,7 +107,8 @@ resume:
 	cpsid i
 	ldr r2, =uarea_l2
 	lsl r3, r0, #12
-	orr r3, r3, #0x12
+	movw ip, #0x45e
+	orr r3, r3, ip
 	str r3, [r2, #0]
 	add r3, r3, #0x1000
 	str r3, [r2, #4]

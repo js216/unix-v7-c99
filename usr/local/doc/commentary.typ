@@ -1097,21 +1097,29 @@ this bit is set, and an earlier version of the port found that cached
 writes to DDR were lost without it. It must be set before the caches are
 enabled.
 
-#lines(5, 11)
+#lines(5, 12)
 
-`TTBR0` receives the address of the first-level table `l1` (12). The
-translation table base control register is left at its reset value, so
-that this one table covers the whole 4 GB address space.
+`TTBR0` receives the address of the first-level table `l1` (13). The
+table is aligned on 16 KB, so its address leaves the low bits free,
+and `0x4a` (12) sets three of them: the hardware is to fetch table
+entries through the inner (bit 6) and outer (bits 3 and 4) write-back
+caches, and treat them as shareable (bit 1), as the kernel's own
+mapping of the tables is (#f("seg.h")). The tables live in cached
+memory, and the kernel writes them through the data cache; were the
+walks not cached, they could read a stale entry from memory while the
+new one still sat in a dirty cache line. The translation table base
+control register is left at its reset value, so that this one table
+covers the whole 4 GB address space.
 
-The domain access control register is set to 1 (13, 14): domain 0, the
+The domain access control register is set to 1 (14, 15): domain 0, the
 only one used, is a "client", so that every access is checked against
 the permission bits in the table entries. This is what keeps user mode
 out of kernel pages.
 
-The cache size selection register is set to 0 (15--17), the level 1
+The cache size selection register is set to 0 (16--18), the level 1
 data cache, so that the next read describes it.
 
-#lines(12, 17)
+#lines(13, 18)
 
 The cache size identification register `CCSIDR` describes the
 selected cache. From it are computed the logarithm of the line size in
@@ -1119,7 +1127,7 @@ bytes (`r3`), the number of ways less one (`r4`), and the number of sets
 less one (`r6`). `r5`, the count of leading zeros of `r4`, is the shift
 which puts a way number into the top bits of a word.
 
-#lines(18, 25)
+#lines(19, 26)
 
 Each line of the data cache is invalidated "by set and way"
 (`DCISW`, `c7, c6, 2`), the operand being the way shifted to the top,
@@ -1128,10 +1136,10 @@ sets down, the inner the ways. Invalidation, not cleaning, is wanted:
 the cache has been off since `_start` (#f("low.s")), and whatever it
 holds must not be written back over memory.
 
-#lines(26, 35)
+#lines(27, 36)
 
 In `SCTLR`, the MMU (bit 0), the data cache (2), and the
-instruction cache (12) are turned on together. The kernel's own addresses
+instruction cache (13) are turned on together. The kernel's own addresses
 map to themselves, so the instruction after the `mcr` is found at the
 same place; `isb` ensures that it is fetched under the new regime.
 
@@ -1139,7 +1147,7 @@ The PDP-11 counterpart is the single instruction at the end of v7's
 `start` which set bit 0 of `SSR0`, once the segmentation registers had
 been loaded.
 
-#lines(36, 43)
+#lines(37, 44)
 
 `dmbsy` is a data memory barrier: every memory access before it is
 observed before any after it. The virtio disk driver (#f("virtio_blk.c"))
@@ -1150,7 +1158,7 @@ reports it. The
 PDP-11 performed accesses in program order and needed nothing of this
 kind.
 
-#lines(44, 47)
+#lines(45, 48)
 
 The interrupt priority routines. The PDP-11 had eight priority levels in
 its PS, and a device interrupted only when its level exceeded the
@@ -1161,17 +1169,17 @@ clear the mask, `spl5`, `spl6`, and `spl7` set it, and every interrupt
 handler runs with all interrupts masked. v7's `spl4`, which nothing in
 this system calls, is omitted.
 
-Each routine returns the previous `cpsr` in `r0` (51, 62), as v7's
+Each routine returns the previous `cpsr` in `r0` (52, 63), as v7's
 returned the old PS, so that `s = spl6(); ... splx(s);` works.
-`splx` (66) looks only at the `I` bit of the value it is given.
+`splx` (67) looks only at the `I` bit of the value it is given.
 
 Neither `spl0` nor `splx` will unmask interrupts while
-`irq_ready` is zero (52--55, 69--72). `clkstart` (#f("machdep.c")) sets it once the
+`irq_ready` is zero (53--56, 70--73). `clkstart` (#f("machdep.c")) sets it once the
 interrupt controller and the timer have been programmed, and then calls
 `spl0` itself. Until then interrupts stay masked, whatever `spl0` calls
 the initialisation makes.
 
-#lines(48, 77)
+#lines(49, 78)
 
 Access to the ARM generic timer, which replaces the PDP-11's line clock.
 `cntfrq_get` reads `CNTFRQ`, the counter frequency, which the boot loader
@@ -1189,7 +1197,7 @@ routine returns. `clkstart` (#f("machdep.c")) and `clock`
 and the console's `putchar` (#f("pl011.c")) times its wait with
 `cntvct_get`.
 
-#lines(78, 96)
+#lines(79, 97)
 
 `save(lab)`
 records in the array `lab` (a `label_t`, #f("param.h")) the registers
@@ -1198,22 +1206,29 @@ pointer and the return address, and returns 0. On the PDP-11 these were
 `r2` to `r5`, `sp`, and the PC; here they are `r4` to `r11`, `sp`, and
 `lr`: ten words.
 
-#lines(97, 103)
+#lines(98, 104)
 
 `resume(p_addr, lab)` switches the u-area window to process `p_addr` and
 returns, with the value 1, from the `save` which stored `lab`.
-Interrupts are masked first (106), as v7 raised the priority to 7.
+Interrupts are masked first (107), as v7 raised the priority to 7.
 
 The physical address of the new u-area,
 `p_addr` shifted left by 12 (`CLKADDR`, #f("seg.h")), is or'ed with
-`0x12`, which in a small page entry means "kernel read and write, no
-user access, not cached", and stored in the first entries of the
-second-level table `uarea_l2`, a page apart. That table maps the
-megabyte at `UBASE`, so the u-area of the new process now appears at
-`UBASE`. This is the counterpart of v7's single store into `KDSA6`, the
-kernel segment register for the u-area. The window is left uncached, an
-earlier version of the file explained, because it points at different memory after each
-switch.
+`0x45e`, which in a small page entry means "kernel read and write, no
+user access, normal shareable memory, cached write-back", and stored in
+the first entries of the second-level table `uarea_l2`, a page apart.
+The constant does not fit an ARM immediate operand, and is loaded into
+`ip` (109) first. That table maps the megabyte at `UBASE`, so the
+u-area of the new process now appears at `UBASE`. This is the
+counterpart of v7's single store into `KDSA6`, the kernel segment
+register for the u-area.
+
+The window may be cached although it points at different memory after
+each switch. The Cortex-A7's data cache is indexed and tagged by
+physical address, so a line cached through the old mapping belongs to
+the old process's memory and can never be found through the new one;
+only the TLB, which holds the old translation, must be cleared, and
+is, below.
 
 Exactly `USIZE` pages, two, are mapped, as `machine_init`
 (#f("machdep.c")) maps them for process 0; the two stores are written
@@ -1221,14 +1236,14 @@ out because the assembler cannot read #f("param.h"). The other entries
 of `uarea_l2` stay invalid, so that a stray kernel reference beyond the
 top of the u-area faults.
 
-#lines(104, 112)
+#lines(105, 114)
 
 `dsb` makes the table writes visible to the hardware table
 walker; the TLB is then invalidated entirely (`TLBIALL`), so that no
 translation of `UBASE` to the old u-area remains, and `dsb` and `isb`
 wait for that to take effect.
 
-#lines(113, 117)
+#lines(115, 119)
 
 The registers are reloaded from `lab`. The reader should
 observe that `lab` is always one of `u.u_rsav`, `u.u_qsav`, or `u.u_ssav`,
@@ -1238,20 +1253,20 @@ saved `lr` held in `r2`, the routine returns into the new process, at
 the point where it called `save`, which now appears to return 1.
 
 Two points deserve notice. From the moment the entries are rewritten
-(110) until `sp` is reloaded (119), the stack of the old process may
+(112) until `sp` is reloaded (121), the stack of the old process may
 already have vanished from `UBASE`, and the stack pointer addresses the
 new process's u-area at a meaningless position; the routine therefore
 uses no stack at all, and an interrupt, which would push a frame there,
-must be masked. Once the new stack is in place, `spl0` (121) unmasks
+must be masked. Once the new stack is in place, `spl0` (123) unmasks
 them, as v7's `resume` ended with `spl 0`. `spl0` is a call, which
 overwrites `lr`; that is why the saved `lr` is loaded into `r2`, which
-`spl0` leaves alone, and the return is through it (123). An earlier
+`spl0` leaves alone, and the return is through it (125). An earlier
 version omitted the call and left interrupts masked until the process
 next called `spl0` or `splx` or returned to user mode; after `expand`
 had moved a process, for instance, interrupts were held off for the
 rest of the system call.
 
-#lines(118, 123)
+#lines(120, 125)
 
 `dcflush(addr, n)` cleans and invalidates the data cache over a range of
 memory. The cache type register `CTR` gives in bits 16 to 19 the log of
@@ -1265,7 +1280,7 @@ does not see the cache: memory must hold what the processor wrote before
 the device reads it, and the processor must not find stale lines after
 the device has written. The PDP-11 had no cache, and so no such routine.
 
-#lines(124, 139)
+#lines(126, 141)
 
 `arm_sync_icache` is called whenever the user's instructions may have
 changed: by `sureg` (`arm_sureg`, #f("machdep.c")) after it rewrites the
@@ -1276,7 +1291,7 @@ and by `main` (#f("main.c")) after it copies out `icode`.
 First the TLB is invalidated, which disposes of the old process's
 user translations after `arm_sureg` has changed `user_l2`.
 
-#lines(140, 146)
+#lines(142, 148)
 
 The level 1 data cache is cleaned by set and way (`DCCSW`,
 `c7, c10, 2`), with the same loop as in `mmu_on`. The instructions which
@@ -1284,20 +1299,20 @@ The level 1 data cache is cleaned by set and way (`DCCSW`,
 cache fetches from memory; cleaning writes them out. On the Cortex-A7
 level 1 is the point at which the two caches meet, so it suffices.
 
-#lines(147, 167)
+#lines(149, 169)
 
 Then the instruction cache (`ICIALLU`) and the branch
 predictor (`BPIALL`) are invalidated, so that the new program is fetched
 afresh. `r0` must be reloaded with zero at 168, having been overwritten
 at 150.
 
-#lines(168, 174)
+#lines(170, 176)
 
 `idle` is v7's, in ARM form. Interrupts are enabled, and `wfi` ("wait for
 interrupt") halts the processor until one arrives, as the PDP-11's
 `wait` did. The interrupt is taken at once, and the PC it saves is that
-of the instruction after `wfi`, labelled `1` (179). Its address is
-stored in `waitloc` (192, 193), which `clock` (#f("clock.c")) compares
+of the instruction after `wfi`, labelled `1` (181). Its address is
+stored in `waitloc` (194, 195), which `clock` (#f("clock.c")) compares
 with the interrupted PC to count the time spent idle. v7's `idle`
 restored the previous PS on the way out; this one simply masks
 interrupts again, which suits both callers, `swtch` and `panic`:
@@ -1308,7 +1323,7 @@ floating point registers into `u.u_fps`. This kernel never enables the
 ARM's floating point unit, so there is no state to save, but the calls
 in `swtch` (#f("slp.c")) and `psig` (#f("sig.c")) are kept.
 
-#lines(175, 181)
+#lines(177, 183)
 
 `dfar` and `dfsr` return the data fault address and status registers,
 which describe the last data abort. `user_trap_handler` (#f("sysent.c"))
@@ -1316,18 +1331,18 @@ prints them before it panics on a fault in kernel mode, much as v7's
 `trap` printed the memory management status registers it had copied into
 `ssr`.
 
-#lines(182, 189)
+#lines(184, 191)
 
 `waitloc` is a word of initialised data holding the address of the
 label in `idle`, as `_waitloc` was in v7.
 
-#lines(190, 193)
+#lines(192, 195)
 
 The translation tables. `l1` is the first-level table: 4096 words, each
 describing one megabyte of the address space, either directly (a
 "section") or by pointing to a second-level table of 256 words, each
 describing a 4 KB page. The hardware requires the first-level table to be
-aligned on 16 KB (196). `user_l2` maps the first megabyte, the user's
+aligned on 16 KB (198). `user_l2` maps the first megabyte, the user's
 address space, and `uarea_l2` the megabyte at `UBASE`; both are
 rewritten as processes come and go, by `arm_sureg` and `resume`
 respectively. Everything else is mapped by sections which
@@ -1339,7 +1354,7 @@ kernel itself lives in a 128 KB on-chip RAM, and this section is put in
 the external DDR memory, which cannot be used until `machine_init` has
 initialised its controller; that routine clears the section afterwards.
 
-#lines(194, 202)
+#lines(196, 204)
 #source("/usr/sys/sys/main.c")
 
 #f("main.c") holds the procedure through which the kernel passes exactly
@@ -1752,9 +1767,9 @@ needs to be stated in the configuration, which gives only the top of
 core.
 
 The `USIZE` pages of the per process data area of process 0, the first
-of core, are mapped at `UBASE` (211, 212). The attribute `0x12`
-describes a small page which the kernel may read and write and user
-mode may not touch. The area is then cleared (213, 214); v7's `start`
+of core, are mapped at `UBASE` (211, 212). The attribute `0x45e`
+describes a small page of cached memory which the kernel may read and
+write and user mode may not touch, as in `resume` (#f("mch.s")). The area is then cleared (213, 214); v7's `start`
 did the same for process 0.
 
 `mmu_on` (#f("mch.s")) loads the table base register, sets domain 0
@@ -6239,18 +6254,15 @@ reserved in #f("mch.s"), 18 KB which SYSRAM cannot spare. They take the
 start of DDR, and core, which `machine_init` (#f("machdep.c")) begins at
 the first page after them, the rest of it; `core` gives its end.
 
-`pguser` (10) is `0x472`, which differs from QEMU's `0x47e` in leaving
-out the cache bits: a user page is normal memory, but not cached. The
-`map` line for DDR (12) has the corresponding attributes, `0x11402`,
-where QEMU's memory is mapped `SEC_KERN`. The reason is the SD card's
-DMA controller, which does not see the processor's data cache. Process
-images are read and written by DMA, during swapping and raw I/O, and
-with the core uncached no cache maintenance is needed for them. The
-user mapping must then be uncached too, since the kernel writes a new
-image (in `fork` and `exec`) through its own mapping of DDR, and the
-process would otherwise read stale lines through a cached one. The
-kernel itself, in SYSRAM, is cached (11), and the disk driver cleans and
-invalidates the cache around each transfer to or from the buffer cache.
+`pguser` (10) and the attributes of DDR (12) are those of QEMU's:
+user pages and all of DDR are normal memory, cached write-back, like
+the kernel itself in SYSRAM (11). The one party which does not see the
+processor's data cache is the SD card's DMA controller, which moves
+process images during swapping and raw I/O, and the buffers of the
+buffer cache. The disk driver therefore cleans and invalidates the
+cache over every transfer, before and after it (`dcflush`,
+#f("stm32sd.c")), so that the device reads what the processor wrote
+and the processor does not afterwards find stale lines.
 
 The other maps are the peripherals (13) and the interrupt controller
 (14), which on this chip lies apart from them.
@@ -6507,12 +6519,12 @@ driver #f("stm32usart.c"), and `rk` the SD card driver #f("stm32sd.c").
 The kernel is linked at the start of SYSRAM, `0x2ffe0000` (76), and
 process images occupy DDR from the first page after the page tables to
 its end, `0xe0000000` (77). `pguser`
-(78) maps user pages uncached, for the reason given under #f("mp135conf").
+(78) maps user pages cached, as on QEMU (#f("mp135conf")).
 The interrupt controller is the Cortex-A7's own, at `0xa0021000` and
 `0xa0022000` (79).
 
 `board_map` maps four regions at their own addresses: the 1 MB which
-contains SYSRAM, cached, for the kernel; DDR, uncached; the 512 MB of
+contains SYSRAM, cached, for the kernel; DDR, cached likewise; the 512 MB of
 peripherals; and the 1 MB containing the interrupt controller.
 
 #lines(76, 88)
@@ -6737,9 +6749,9 @@ The cache is cleaned and invalidated over the block's buffer (90) by
 discards them. The IDMA reads and writes memory directly, without
 seeing the processor's data cache: before a write the data must be in
 memory, and before a read no modified line may be left to overwrite
-the incoming data later. For the core, which DDR holds uncached
-(#f("mp135conf")), this does nothing; it matters for the buffer cache in
-SYSRAM, which is cached.
+the incoming data later. Both the buffer cache in SYSRAM and the
+process images in DDR, which swapping and raw I/O transfer directly,
+are cached (#f("mp135conf")).
 
 The device is then programmed in the order the controller requires:
 the old flags are cleared, the data path is stopped and given the
