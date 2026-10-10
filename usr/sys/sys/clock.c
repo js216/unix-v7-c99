@@ -185,7 +185,7 @@ addupc(caddr_t pc, register struct uprof *p, int t)
 	register unsigned i;
 	short c;
 
-	i = ((unsigned long long)(((unsigned)pc-p->pr_off)>>1) * (p->pr_scale>>1) >> 14) & ~1;
+	i = (((unsigned long long)(((unsigned)pc-p->pr_off)>>1) * (p->pr_scale>>1) >> 14) + 1) & ~1;
 	if (i >= p->pr_size)
 		return;
 	if (copyin((caddr_t)p->pr_base+i, (caddr_t)&c, 2) < 0) {
