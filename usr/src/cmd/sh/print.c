@@ -9,7 +9,7 @@
 
 #include	"defs.h"
 
-CHAR		numbuf[6];
+CHAR		numbuf[11];
 
 
 /* printing and io conversion */
@@ -74,7 +74,7 @@ itos(INT n)
 {
 	REG char *abuf; REG POS a, i; INT pr, d;
 	abuf=numbuf; pr=FALSE; a=n;
-	FOR i=10000; i!=1; i/=10
+	FOR i=1000000000; i!=1; i/=10
 	DO	IF (pr |= (d=a/i)) THEN *abuf++=d+'0' FI
 		a %= i;
 	OD
