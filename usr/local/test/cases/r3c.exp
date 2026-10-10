@@ -50,7 +50,7 @@ found /t/words
      16
 /
 # find /t ! -type d -ctime -100000 -atime -100000 -print | wc -l
-     20
+     23
 # ps ax | wc -l; ps; ps alx | wc -l
       6
    PID TTY TIME CMD
@@ -77,12 +77,12 @@ found /t/words
     2 arg; 2/..
     2 arg; 3/..
     2 arg; 110/..
-    2 arg; 118/..
-    2 arg; 134/..
+    2 arg; 119/..
     2 arg; 135/..
-    2 arg; 166/..
+    2 arg; 136/..
+    2 arg; 170/..
 /dev/root:
-files    187 (r=165,d=15,b=2,c=5)
+files    194 (r=168,d=18,b=2,c=6)
 used    N (i=N,ii=N,iii=N,d=N)
 free N
 missing    0
@@ -168,14 +168,14 @@ P NNNNN x
 Dump   date: Tue Jan  9 HH:MM 1979
 Dumped from: Wed Dec 31 HH:MM 1969
     2   /.
-  141   /usr/dict/words
-  185   /t/words
+  142   /usr/dict/words
+  192   /t/words
 Dump   date: Tue Jan  9 HH:MM 1979
 Dumped from: Wed Dec 31 HH:MM 1969
 # mkdir rx; cd rx; echo 1 | restor xf /tmp/d t/words; ls; cmp * /t/words; echo cmp$?; cd /tmp; rm -r rx /tmp/d
-t/words: inode 185
-Mount desired tape volume: Specify volume #: extract file 185
-185
+t/words: inode 192
+Mount desired tape volume: Specify volume #: extract file 192
+192
 cmp0
 # echo 1+1 | bc /nonexist /t/bcf; echo bcst$?
 cannot open input file on line 1, (null)

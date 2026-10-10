@@ -63,5 +63,6 @@ mknod /tmp/nod c 0 0; ls -l /tmp/nod; rm /tmp/nod; mkdir rd; >rd/x; rm -r rd; ls
 ncheck /dev/root | sed 3q; dcheck /dev/root | sed 3q
 ac -p | sed 3q; sa | sed 3q; sa -m | sed 3q; mesg
 @# |^D
-@\x8dlo|sys\n
-@No directory|
+@login: |sys\n
+@$ |pwd; echo TEST""DONE\n
+@TESTDONE|

@@ -1,0 +1,45 @@
+mem = 67096576
+# /t/forkt
+raw: child sees parent pid yes, parent skipped branch yes
+libc: child par_uid ok yes, parent got pid yes
+# /t/regs
+stop 2577
+ptrace 9: -1 errno 5
+exit 7
+# /t/r5t
+phys: -1 errno 22
+malloc: 0 of 64 blocks misaligned
+signal 31: caught 31
+signal 32: -1 errno 22
+# cd /tmp; yes a | sed 40000q >big; ed big <<\EOF
+> $=
+> 30001,$d
+> w
+> q
+> EOF
+
+80000
+40000
+60000
+# wc -l big
+  30000 big
+# p=.; for i in 0 1 2 3 4 5 6 7 8 9 a b c d e; do p=$p/./././././././././.; done; echo $p/longdir | wc -c
+    310
+# mkdir $p/longdir; echo st$?; ls -d longdir; rmdir longdir
+st0
+longdir
+# awk 'BEGIN { for (i = 1; i <= 4; i++) { s = ""; for (j = 0; j < 40; j++) s = s "xxxxxxxxxx"; printf "* * * * * echo %d %s >/tmp/cron%d\n", i, s, i } }' </dev/null >/usr/lib/crontab; wc /usr/lib/crontab
+      4     36    1720 /usr/lib/crontab
+# /etc/cron; sleep 10; cat /tmp/cron? | wc
+      4      8    1612
+# mkdir /tmp/a-b; cp /bin/echo /tmp/a-b/zzz; PATH=/tmp/a-b:/bin nice zzz hello
+hello
+# sh -c 'exit 2147483647'; echo st$?; sh -c 'exit 2147483648'; echo st$?; sh -c 'exit 4294967297'; echo st$?
+st255
+sh: 2147483648: bad number
+st1
+sh: 4294967297: bad number
+st1
+# echo TEST""DONE
+TESTDONE
+# 

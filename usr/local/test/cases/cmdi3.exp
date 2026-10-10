@@ -68,9 +68,9 @@ root 5 T
 /dev/root:
 3       /bin/.
 110     /dev/.
-118     /etc/.
-134     /tmp/.
-135     /usr/.
+119     /etc/.
+135     /tmp/.
+136     /usr/.
 
 /dev/root:
 /dev/root:
@@ -86,9 +86,10 @@ root 5 T
 113     /dev/kmem
 114     /dev/null
 115     /dev/root
-116     /dev/swap
-117     /dev/tty
-160     /usr/lib/atrun
+116     /dev/rrk0
+117     /dev/swap
+118     /dev/tty
+162     /usr/lib/atrun
 # echo 'tst::5:3::/tmp:' >>/etc/passwd; tail -1 /etc/passwd; cat /etc/group
 tst::5:3::/tmp:
 other::1:
@@ -100,7 +101,7 @@ is subject to restrictions stated in your contract with
 Western Electric Company, Inc.
 Tue Jan  9 HH:MM EST 1979
 
-loçiî: tót
+login: tst
 $ tty; mesg n; mesg; mesg y; mesg
 /dev/console
 is n

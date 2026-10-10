@@ -1,0 +1,7 @@
+@# |^D
+@login: |dmr\n
+@$ |pwd; ls -ld /usr/dmr /usr/sys /usr/lib/uucp\n
+@$ |ls -l /dev/root /dev/swap /dev/rrk0\n
+@$ |ps >/tmp/p; echo ps$?; sort +3 /tmp/p\n
+@$ |echo TEST""DONE\n
+@TESTDONE|

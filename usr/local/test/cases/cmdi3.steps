@@ -9,7 +9,7 @@ for f in -a -b -c -j -l -m -n -r -t; do sa $f | sed 's/[0-9]*\.[0-9][0-9]*%*/T/g
 dcheck /dev/root; ncheck /dev/root | sed 6q; ncheck -i 1 /dev/root; ncheck -s /dev/root
 echo 'tst::5:3::/tmp:' >>/etc/passwd; tail -1 /etc/passwd; cat /etc/group
 @# |^D
-@\x8dlo|tst\n
+@login: |tst\n
 @$ |tty; mesg n; mesg; mesg y; mesg\n
 @$ |who; who am i; ac; ac -p; ac -d; ac -w /usr/adm/wtmp tst\n
 @$ |newgrp nosuch\n

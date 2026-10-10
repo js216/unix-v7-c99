@@ -1,4 +1,4 @@
-cd /tmp; /etc/mknod /dev/rrk0 c 9 0; ls -l /dev/rrk0
+cd /tmp; ls -l /dev/rrk0
 dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
 dd if=/dev/rrk0 bs=4096 skip=300 count=6 >r1; dd if=/dev/root bs=4096 skip=300 count=6 >r2; cmp r1 r2 && echo same4096
 dd if=/dev/rrk0 bs=16384 skip=100 count=3 >r1; dd if=/dev/root bs=16384 skip=100 count=3 >r2; cmp r1 r2 && echo same16384

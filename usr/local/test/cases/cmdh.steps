@@ -46,7 +46,7 @@ echo '.EQ' >>ro; echo 'a sup 2' >>ro; echo '.EN' >>ro; echo 'tail "q" and' >>ro
 echo '.TS' >>ro; echo 'tbl' >>ro; echo '.TE' >>ro; echo 'Xword ab' | tr X '\351' >>ro; echo 'x $a+b$ y' >>ro
 cat ro; deroff ro; deroff -w ro | od -c; deroff -m ro
 @# |^D
-@\x8dlo|bin\n
+@login: |bin\n
 @$ |who; who am i; ps ax | grep -c update; echo wall2 | /etc/wall; sleep 1; pstat -t | sed 3q\n
 @$ |echo TEST""DONE\n
 @TESTDONE|

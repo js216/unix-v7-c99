@@ -173,7 +173,7 @@ drwxr-xr-x 8 root      144 Jan  9 HH:MM ..
 total 0
 crw-r--r-- 1 root    0,  0 Jan  9 HH:MM console
 crw-r----- 1 root    8,  1 Jan  9 HH:MM kmem
-  165 /unix
+  169 /unix
    1 /etc/passwd
 drwxr-xr-x 2 root      272 Jan  9 HH:MM /etc
 crw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/console
@@ -238,10 +238,9 @@ k0
 /dev/root:
 3       /bin/.
 110     /dev/.
-
 /dev/root:
      entries  link cnt
-281     0       0
+N     0       0
 # ac -p | sed 3q; sa | sed 3q; sa -m | sed 3q; mesg
 Can't open /usr/adm/acct
      0     0.00     0.00
@@ -252,6 +251,8 @@ is subject to restrictions stated in your contract with
 Western Electric Company, Inc.
 Tue Jan  9 HH:MM EST 1979
 
-çloÁiÓ:†Û˘Û
-No directory
-login: 
+login: sys
+$ pwd; echo TEST""DONE
+/usr/sys
+TESTDONE
+$ 

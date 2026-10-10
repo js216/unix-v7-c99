@@ -256,14 +256,20 @@ st1
 # quot /dev/root; quot -n /dev/root </dev/null; quot -c /dev/root | sed 5q; quot -f /dev/root
 /dev/root:
  N	root
+    1	dmr
+    1	sys
+    1	uucp
 /dev/root:
 /dev/root:
 0	8	0
-1	50	50
-4	1	54
-5	2	64
+1	53	53
+4	1	57
+5	2	67
 /dev/root:
- N	  201	root
+ N	  205	root
+    1	    1	dmr
+    1	    1	sys
+    1	    1	uucp
 # pstat -i >u; sed 4q u; pstat -t >u; sed 's/\#/N/' u; pstat -p >u; sed 4q u; pstat -f >u; sed 4q u; pstat -x >u; sed 4q u; pstat -u 0 >u; sed 3q u
 5 active inodes
    LOC  FLAGS  CNT DEVICE   INO   MODE NLK UID  SIZE/DEV
@@ -278,7 +284,7 @@ ADDR 1  3    0      0   0 TIM CPU 20     0     0     0  100  ADDR      0      0 
 ADDR 1  1   30      0   0 TIM CPU 20     0     1     0 ADDR      0      0 0
 3 open files
   LOC   FLG CNT   INO    OFFS
-ADDR RW    ADDR 10215
+ADDR RW    ADDR 10295
 ADDR  W    ADDR 0
 0 text segments
    LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT
@@ -330,8 +336,8 @@ st0
 
 # dump 0f /tmp/dmp /dev/root >/dev/null 2>&1; restor tf /tmp/dmp | sed 1d; mkdir rx; cd rx; echo 1 | restor xf /tmp/dmp /etc/passwd; ls | wc -l; cmp * /etc/passwd && echo restored; cd /tmp; rm -f dmp
 Dumped from: Wed Dec 31 HH:MM 1969
-/etc/passwd: inode 124
-Mount desired tape volume: Specify volume #: extract file 124
+/etc/passwd: inode 125
+Mount desired tape volume: Specify volume #: extract file 125
       1
 restored
 # cal 2 1980; cal 1752 | sed -n 20,30p; cal 13 1980; cal 9 1752; echo 'Jan 10 call' >calendar; echo 'Jan 11 tomorrow' >>calendar; echo 'Feb 1 no' >>calendar; /usr/lib/calendar
@@ -403,6 +409,7 @@ Deroff: Invalid flag m
 1	/tmp/b.b
 1	/tmp/c.b
 N	/etc
+1	/usr/lib/uucp
 N	/usr/lib
 # echo -n abc; echo; echo a b   c
 abc
@@ -512,12 +519,11 @@ is subject to restrictions stated in your contract with
 Western Electric Company, Inc.
 Tue Jan  9 HH:MM EST 1979
 
-çloÁiÓ:†‚iÓ
+login: bin
 $ who; who am i; ps ax | grep -c update; echo wall2 | /etc/wall; sleep 1; pstat -t | sed 3q
 bin      console Jan  9 HH:MM
 bin      console Jan  9 HH:MM
-Can't open /dev/swap
-0
+2
 Broadcast Message ...
 
 wall2

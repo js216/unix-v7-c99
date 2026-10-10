@@ -1,6 +1,6 @@
 mem = 67096576
-# cd /tmp; /etc/mknod /dev/rrk0 c 9 0; ls -l /dev/rrk0
-crw-rw-rw- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
+# cd /tmp; ls -l /dev/rrk0
+crw-r--r-- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
 # dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
 8+0 records in
 8+0 records out
