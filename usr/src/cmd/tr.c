@@ -128,6 +128,6 @@ nextc(struct string *s)
 		if(i>0) c = n;
 		else c = *s->p++;
 	}
-	if(c==0) *--s->p = 0;
+	if(c==0) --s->p;
 	return(c&0377);
 }

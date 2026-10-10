@@ -16,10 +16,11 @@ main(int argc,char *argv[])
 {
 	int	l;
 	char	lb1[LB],lb2[LB];
+	static char t1[] = "\t", t2[] = "\t\t";
 
 	ldr[0] = "";
-	ldr[1] = "\t";
-	ldr[2] = "\t\t";
+	ldr[1] = t1;
+	ldr[2] = t2;
 	if(argc > 1)  {
 		if(*argv[1] == '-' && argv[1][1] != 0) {
 			l = 1;

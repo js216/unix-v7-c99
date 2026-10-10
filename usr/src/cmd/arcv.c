@@ -18,7 +18,7 @@ struct
 	unsigned short siz;
 } oh;
 
-char	*tmp;
+char	tmp[] = "/tmp/arcXXXXX";
 void	conv(char *fil);
 int	f;
 int	tf;
@@ -32,7 +32,7 @@ main(int argc, char *argv[])
 {
 	register int i;
 
-	tmp = mktemp("/tmp/arcXXXXX");
+	mktemp(tmp);
 	for(i=1; i<4; i++)
 		signal(i, SIG_IGN);
 	for(i=1; i<argc; i++)

@@ -78,16 +78,18 @@ struct	user
 	dev_t	u_ttyd;			/* controlling tty dev */
 	struct {			/* header of executable file */
 		int	ux_mag;		/* magic number */
-		unsigned ux_tsize;	/* text size */
-		int	ux_x[4];
+		int	ux_x[5];
 		unsigned ux_entloc;	/* entry location */
 		unsigned ux_phoff;
 		int	ux_y[3];
 		short	ux_phnum, ux_z[3];
-		unsigned ux_type, ux_off, ux_addr, ux_paddr;
-		unsigned ux_dsize;	/* data size */
-		unsigned ux_msize;
+		struct {
+			unsigned p_type, p_off, p_addr, p_paddr;
+			unsigned p_size, p_msize;
+		} ux_ph[2];		/* text and data segments */
 	} u_exdata;
+#define	ux_tsize	ux_ph[0].p_size	/* text size */
+#define	ux_dsize	ux_ph[1].p_size	/* data size */
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;

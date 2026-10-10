@@ -7,7 +7,7 @@ w=$(mktemp -d) || exit 1
 
 CC="arm-none-eabi-gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes
 	-Wold-style-definition -Wmissing-prototypes -ffreestanding -nostdlib
-	-mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 -Iusr/include -Iusr/sys"
+	-mcpu=cortex-a7 -marm -Os -Wl,-z,max-page-size=4096,-Ttext=0x80 -Iusr/include -Iusr/sys"
 mkdir "$w/t"
 for d in bin boot etc usr; do
 	ln -s "$R/$d" "$w/$d"

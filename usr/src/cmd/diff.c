@@ -102,6 +102,7 @@ char *empty = "";
 int bflag;
 
 char *tempfile;	/*used when comparing against std input*/
+char tempname[] = "/tmp/dXXXXX";
 void noroom(void), unravel(int p), check(char **argv), output(char **argv);
 void change(int a,int b,int c,int d), range(int a,int b,char *separator);
 void fetch(long *f,int a,int b,FILE *lb,char *s), mesg(char *s,char *t);
@@ -214,7 +215,7 @@ filename(char **pa1, char **pa2)
 		signal(SIGINT,done);
 		signal(SIGPIPE,done);
 		signal(SIGTERM,done);
-		*pa1 = tempfile = mktemp("/tmp/dXXXXX");
+		*pa1 = tempfile = mktemp(tempname);
 		if((f=creat(tempfile,0600)) < 0) {
 			mesg("cannot create ",tempfile);
 			done(0);

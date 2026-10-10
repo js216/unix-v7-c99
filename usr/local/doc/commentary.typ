@@ -783,16 +783,16 @@ The ARM definitions begin at line 24. The size of the user's address
 space, `USERSIZE`, which belongs with them, is in #f("param.h").
 
 `UENTRY_SIGTRAMP` (24) is the user address of a two-instruction
-trampoline, `mov r7, #63; svc #0`, which `getxfile` writes into every
-new image (`install_sigtramp`, #f("machdep.c")). `sendsig` sets the link
+trampoline, `mov r7, #63; svc #0`, which `xalloc` (#f("text.c")) writes
+into every text it reads in (`install_sigtramp`, #f("machdep.c")). `sendsig` sets the link
 register to it before entering a signal handler, so that the handler's
 return executes the `sigreturn` system call. v7's `sendsig` needed no
 such help: it pushed the old program counter and status word onto the
 user stack, and the catcher in the C library returned with `rtt`. In
 the port the kernel restores the interrupted registers itself, in
-`sigreturn`. Address 8 lies
-below the point at which programs are loaded (0x10), so it can never
-collide with a program, and location 0 still reads as zero.
+`sigreturn`. Address 8 lies below the point at which programs begin
+(0x80, #f("Makefile")), so it can never collide with a program, and
+location 0 still reads as zero.
 
 `CLKADDR` (25) converts a click number into a kernel address. On the
 PDP-11, a click number was a physical address divided by 64, and the
@@ -1889,10 +1889,12 @@ driver sets `ENXIO`.
 #lines(258, 293)
 
 `install_sigtramp` writes the two-instruction signal trampoline,
-`sigreturn` by `svc`, at user address 8. It is called by `exec`
-(#f("sys1.c")) after the new image has been loaded; `fork` copies it with
-the rest of the image. Address 8 lies below `0x10`, where programs are
-linked to begin, so no program overwrites it.
+`sigreturn` by `svc`, at user address 8. It is called by `xalloc`
+(#f("text.c")) after a text has been read in, while the text is still
+mapped writable, so that it becomes part of the shared text. Address 8
+lies below `0x80`, where programs are linked to begin, so no program
+overwrites it. The stores go through `suword` (#f("mch.s")), with the
+permissions of user mode.
 
 `panictrap` is the target of the vectors which should never be taken
 (#f("low.s")).
@@ -1945,9 +1947,8 @@ which is `MAXMEM` (#f("param.h")), 258 clicks; it still fits in a
 
 `p_wchan` (23) is the address on which a sleeping process waits;
 `wakeup` compares it with its argument. `p_textp` (24) points to the
-shared text segment, if there is one. In this port none is ever
-created, since programs are loaded as a single writable segment, and
-`p_textp` remains null. `p_link` (25) chains the runnable processes
+shared text segment, which every program has (#f("text.c")); only
+process 0, and process 1 while it runs `icode`, have none. `p_link` (25) chains the runnable processes
 into the list headed by `runq` (#f("systm.h")): `setrq` (#f("slp.c")) adds a
 process to it, and `swtch` searches it for the most urgent one that is
 in memory. `p_clktim` (26) counts down the seconds of an `alarm`.
@@ -2084,50 +2085,50 @@ controlling terminal.
 #lines(61, 78)
 
 `u_exdata` (79) is the header of the program being executed, read by
-`getxfile` (#f("sys1.c")). In v7 it was the eight-word `a.out` header. Our executables are in ELF, and the
-structure has been rearranged to hold two pieces of an ELF file. Its
-first 52 bytes overlay the ELF file header. The fields that the
-kernel reads have names; the rest are fill:
+`getxfile` (#f("sys1.c")). In v7 it was the eight-word `a.out` header.
+Our executables are in ELF, and the structure has been rearranged to
+hold the pieces of an ELF file which the kernel needs. Its first 52
+bytes overlay the ELF file header. The fields that the kernel reads have
+names; the rest are fill:
 
 - `ux_mag` (80) receives the four identifying bytes, `\x7fELF`, which
   read as a little-endian word are 0x464c457f.
-- `ux_tsize` (81) overlays further identification bytes. `getxfile`
-  sets it to zero after the header has been checked, to say that there
-  is no separate text segment; programs are linked `-N` into one
-  writable segment, the ELF counterpart of v7's 0407 format.
-- `ux_entloc` (83), the entry point, and `ux_phoff` (84), the file
+- `ux_entloc` (82), the entry point, and `ux_phoff` (83), the file
   offset of the program header table, fall at the offsets of the ELF
   fields `e_entry` and `e_phoff`.
-- `ux_phnum` (86) is the number of program headers.
+- `ux_phnum` (85) is the number of program headers.
 
-The next six words, from `ux_type` (87) onward, receive the first six
-fields of one program header: its type, file offset, virtual address,
-physical address, size in the file (`ux_dsize`, which keeps v7's name),
-and size in memory. `getxfile` reads 24 bytes from each program header
-in turn into this place until it finds one of type 1, the loadable
-segment. The remaining two fields of the program header are not
-needed.
+`ux_ph` (86--89) then receives two program headers, or rather their
+first six fields: type, file offset, virtual address, physical address,
+size in the file, and size in memory. `getxfile` fills it with the two
+loadable segments of the program: the text, read-only and executable,
+and the data, which the linker places in separate pages
+(#f("Makefile")). This is the ELF form of v7's 0410 executable, whose
+text was shared and read-only. The remaining two fields of a program
+header are not needed.
 
-v7's `ux_bsize`, `ux_ssize`, `ux_unused`, and `ux_relflg` have gone.
-The data size of the new image is taken as `ux_addr` plus `ux_msize`.
-Since the whole image is cleared before the segment is read in, the
-part beyond `ux_dsize`, the uninitialised data, reads as zero without
-further work.
+v7's `ux_tsize` and `ux_dsize`, the sizes of the text and the
+initialised data, which the kernel still names, are now macros (91,
+92) for the sizes in the file of the two segments. `ux_bsize`,
+`ux_ssize`, `ux_unused`, and `ux_relflg` have gone. The data's size in
+memory includes the uninitialised data, as v7's `ux_bsize` added it;
+since the image is cleared before the segment is read in, that part
+reads as zero without further work.
 
-#lines(79, 90)
+#lines(79, 92)
 
-`u_comm` (91) is the last component of the name of the program, for
+`u_comm` (93) is the last component of the name of the program, for
 accounting and `ps`; `u_start` and `u_acflag` are also for accounting.
-`u_cmask` (95) is the `umask`.
+`u_cmask` (97) is the `umask`.
 
-`u_stack` (96) marks the end of the structure. The kernel stack begins
+`u_stack` (98) marks the end of the structure. The kernel stack begins
 at the top of the data area, 0xFFF02000, where #f("low.s") sets the
 supervisor mode stack pointer, and grows down towards it. Nothing but
 the size of the area guarantees that it does not reach the structure.
 
-#lines(91, 101)
+#lines(93, 103)
 
-In v7, `u` was an external variable (103). Its address was fixed not
+In v7, `u` was an external variable (105). Its address was fixed not
 by storage but by the assembler line `_u = 140000` in `mch.s`, which
 made `_u` an absolute symbol. The port does the same with one line of
 the linker script, `u = 0xFFF00000`, which `mkconf` writes
@@ -2136,12 +2137,12 @@ reference to it is to that fixed address, as in v7. A program which
 includes #f("user.h") for the structure may still name a variable of
 its own `u`, as `ps` does.
 
-#lines(102, 104)
+#lines(104, 106)
 
 The error numbers which a system call may return in `u_error`. The
 user sees them in `errno`. They are unchanged from v7.
 
-#lines(105, 139)
+#lines(107, 141)
 #source("/usr/sys/sys/ureg.c")
 
 #f("ureg.c") contains the two procedures through which the rest of the
@@ -2982,70 +2983,81 @@ into `u.u_exdata`, whose fields have been rearranged to match it
 
 #lines(168, 181)
 
-The search which follows is new. If the magic number is that of ELF (`\x7fELF` read as
-a little-endian word), the program header table is read, one entry of
-32 bytes at a time, at offset `ux_phoff`. The first 24 bytes of each
-entry are read over the tail of `u_exdata`, until one of type 1
-(`PT_LOAD`), a loadable segment, is found. The programs are linked with
-`-N` into one segment holding text and data together, so the first such
-header describes the whole program. A file which is not ELF, or which
-has no loadable segment, gives `ENOEXEC`.
+The search which follows is new. If the magic number is that of ELF
+(`\x7fELF` read as a little-endian word), the program header table is
+read, one entry of 32 bytes at a time, at offset `ux_phoff`. The first
+24 bytes of each entry are read into `ux_ph[n]`, and `n` advances only
+over entries of type 1 (`PT_LOAD`), the loadable segments, so that the
+first two such end up in `ux_ph[0]` and `ux_ph[1]`. The programs are
+linked so that the first is the text and the second the data
+(#f("Makefile")). A file which is not ELF, or which has not two
+loadable segments, gives `ENOEXEC`; a program linked into one writable
+segment, the counterpart of v7's 0407 format, is not accepted, since
+its code would lie in memory which every process writes privately.
 
-#lines(182, 195)
+#lines(182, 196)
 
-The text size is set to zero: no program has a separate,
-shareable text segment. This is the ELF form of v7's 0407 executable,
-for which v7 also folded the text into the data and set the text size to
-zero. In consequence the `ETXTBSY` test which follows can never succeed.
+v7's test follows unchanged: a program with a text may not be executed
+while some process has the file open, unless that is because it is
+already running as a shared text (`ITEXT`), since the writer could
+change the text under the processes which share it. The counterpart,
+that a running text cannot be opened for writing, is in `access`
+(#f("fio.c")).
 
-#lines(196, 201)
+#lines(197, 201)
 
-The data size `ds` (207--213) is measured from address zero to the end
-of the segment in memory (`ux_addr` plus `ux_msize`), which takes in the
-uninitialised data as v7's sum of `ux_dsize` and `ux_bsize` did. The
-check for overflow is changed to fit: a sum of unsigned numbers which
-wraps round is smaller than either addend. The stack is given `SSIZE`
-clicks plus room for the arguments.
+The text occupies the bottom of the address space: `ts` (207) is the
+number of clicks from address zero to the end of the text segment,
+which includes the bottom page, below the text's own first address.
+The data begins at the first click above the text, and `ds` (214) is
+the number of clicks from there to the end of the data segment in
+memory (its address plus `p_msize`), which takes in the uninitialised
+data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
+overflow is changed to fit: a sum of unsigned numbers which wraps round
+is smaller than either addend. A data segment which begins below the
+end of the text is refused with the same error (210). The stack is
+given `SSIZE` clicks plus room for the arguments.
 
-The overlay branch (215--226) is dead, since `overlay` is never set; it
+The overlay branch (216--227) is dead, since `overlay` is never set; it
 is kept as v7 wrote it, but for the parentheses that make the
-precedence of `&&` over `||` explicit (216).
+precedence of `&&` over `||` explicit (217).
 
-#lines(202, 229)
+#lines(202, 230)
 
-From line 236 the old image is abandoned. As in v7, the image is
+From line 237 the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` clicks, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
-(238--241). The uninitialised data and the stack therefore read as
+(239--242). The uninitialised data and the stack therefore read as
 zero. The image is no larger than the program: `sbreak` and the growth
 of the stack (`grow`, #f("sig.c")) enlarge it when the program asks for
 more, and `fork` copies only what there is (#f("slp.c")).
 
-#lines(230, 242)
+#lines(231, 243)
 
-The segment is read from the file into user space at its
-own address, `ux_addr`, from the file offset `ux_off`, for `ux_dsize`
-bytes, the size of the segment in the file. v7 read text and data from
-just after its header to address zero.
+`xalloc` (#f("text.c")) has attached the text, shared with any other
+process running the same file, or read it in. The data segment is now
+read from the file into user space at its own address, from its file
+offset, for `ux_dsize` bytes, the size of the segment in the file
+(249--253). v7 mapped the data at address zero for the purpose, and
+read from just after the text in the file; here the final mapping of
+text and data serves.
 
-#lines(243, 252)
+#lines(244, 253)
 
 The set-user-id and set-group-id bits take effect unless
 the process is being traced, in which case it is stopped with `SIGTRC`
 instead, so that the tracing parent can examine the new image.
 
-#lines(253, 266)
+#lines(254, 267)
 
 The sizes are recorded and the user mapping set by
-`estabur`. Two calls are new. `install_sigtramp` (#f("machdep.c"))
-writes the two-instruction trampoline to which signal handlers return.
-`arm_sync_icache` (#f("mch.s")) makes the instructions just written
+`estabur`. The call which follows is new: `arm_sync_icache` (#f("mch.s")) makes the instructions just written
 visible to instruction fetch: the ARM has separate instruction and data
 caches, and the new program was written through the data cache, while
 the instruction cache may still hold the old program's code at the same
 addresses. The PDP-11 had no caches to worry about.
 
-#lines(267, 276)
+#lines(268, 276)
 
 `setregs` first resets to the default the signals that were caught
 (287--289), since the handlers no longer exist; signals that were ignored
@@ -3457,10 +3469,12 @@ grown with `USIZE` (#f("param.h")).
 #lines(345, 351)
 
 Request 4 writes a word into the program's text, to plant a breakpoint
-for instance. v7 had to make a shared text segment private first and
-make the text writable for the duration; here programs have no separate
-text (`getxfile`, #f("sys1.c")), so the `p_textp` test does nothing,
-and the word is stored in the data, which is always writable. The parentheses at 359 only tell the
+for instance. As in v7, the text must be private: if another process
+shares it, or it is sticky, the request fails. The inode loses `ITEXT`,
+so that the altered text is never attached by a later `exec`, and the
+text is mapped writable for the one store (`RW`, #f("seg.h")) and then
+read-only again; `XWRIT` makes sure the altered text, not the file's,
+is what is swapped back in. The parentheses at 359 only tell the
 compiler that the assignment is meant.
 
 The second `estabur` has a use of its own, however. The word is stored
@@ -3625,11 +3639,11 @@ the file which manages it are kept because the rest of v7 refers to them.
 the one procedure, `xswap`, by which a process image is written to the
 swap device.
 
-Apart from `xswap`, nothing in the file does any work in this port:
-every process has a text size of zero (#f("sys1.c")), so `p_textp` is
-always `NULL`, `xalloc` returns at its first test, and `xfree` and
-`xccdec` at theirs. The code is v7's, and is read here for what it
-would do if a shared text were ever made.
+The code is v7's. Every program has a separate text segment, read-only
+and shared by all the processes which run it (#f("sys1.c")), so the
+text table is in use as it was on the PDP-11 for 0410 programs: a text
+is read from the file once, kept in core while any process using it is
+in core, and kept on the swap device while any process uses it at all.
 
 The declaration of three procedures (11, 12) is new. Each is used in
 this file before its definition, which C99 does not allow without a
@@ -3687,8 +3701,9 @@ only the in-core count is decremented (74).
 #lines(47, 75)
 
 `xalloc` is called by `exec` after the new program's header has been
-read into `u.u_exdata`. With a text size of zero it returns at once (94),
-and in this port it always does.
+read into `u.u_exdata`. A program without a text returns at once (94);
+since `getxfile` accepts only programs with one, only the dead overlay
+branch of `getxfile` could call it so.
 
 #lines(76, 96)
 
@@ -3703,40 +3718,53 @@ If the table is full, the process is killed.
 
 #lines(115, 119)
 
-Otherwise the free entry is claimed, with `XLOAD` set to show
-that its contents come from the file rather than from the swap device,
-and swap space and core are allocated. The user mapping is then
-set up with the text segment only (132--139), writable for the moment, and the text
-is read from the file into it; `u_segflg` 2 directs `readi` to
-instruction space, which on the ARM is the same as data space. `XWRIT` (141) then ensures that the swap copy is
-written when the core copy is first given up.
+Otherwise the free entry is claimed, with `XLOAD` set to show that its
+contents come from the file rather than from the swap device, and swap
+space and core are allocated. The size `ts` (126) is reckoned from
+address zero, as in `getxfile`. The core is cleared (132, 133), which
+v7 did not need: its text filled the core from the first byte, but here
+the bottom of the first page lies below the text's first address, and
+the last page may extend beyond its end.
 
-#lines(120, 142)
+The user mapping is then set up with the text segment only (134),
+writable for the moment, and the text is read from the file into it;
+`u_segflg` 2 directs `readi` to instruction space, which on the ARM is
+the same as data space. When the linker has put the ELF file header and
+program headers at the start of the text segment, as it does when they
+fit below the text's first address (#f("Makefile")), they are skipped
+(138--143): they are not part of the program, and the bottom of the
+address space then reads as zero. The signal trampoline is planted in
+the text while it is still writable (149, `install_sigtramp`,
+#f("machdep.c")); every process sharing the text uses the same one.
+`XWRIT` (150) then ensures that the swap copy is written when the core
+copy is first given up.
+
+#lines(120, 151)
 
 `xexpand` obtains core for a text which has none. If core is available,
 the text is read in from its swap copy, unless `XLOAD` says it is about
 to be read from the file instead.
 
 If not, the process makes room for itself by swapping itself out
-(164), and leaves the matter to `sched`, which brings in data area and
+(173), and leaves the matter to `sched`, which brings in data area and
 text together (`swapin`, #f("slp.c")). The pattern is that of `expand`:
-`save(u.u_ssav)` (160) is the point to which the process returns, by way
+`save(u.u_ssav)` (169) is the point to which the process returns, by way
 of `SSWAP` and `swtch`, once it is back in core; it then reloads its
-user mapping with `sureg` and returns. `qswtch` (167) does not return.
+user mapping with `sureg` and returns. `qswtch` (176) does not return.
 
-#lines(143, 169)
+#lines(152, 178)
 
 The lock on a text entry. `xlock` sleeps at `PSWP`, a priority at which
 no signal can interrupt it.
 
-#lines(170, 192)
+#lines(179, 201)
 
 `xccdec` is called when a process using a text leaves core, by being
 swapped out or by giving up the text. When the last such process has
 gone, the core copy is freed, but first written to the swap device if
 it has never been written there (`XWRIT`).
 
-#lines(193, 213)
+#lines(202, 222)
 
 `xumount` is called by `umount` (#f("sys3.c")): a file system cannot be
 unmounted while a sticky text from it holds its inode. `xrele` is called
@@ -3744,15 +3772,15 @@ when write access to a file is checked (`access`, #f("fio.c")), when the
 file is unlinked, and when `chmod` clears its sticky bit (#f("sys4.c")):
 a text which no process is using should not hold the inode, nor survive
 a change to the file. Both pass the work to `xuntext`, which empties the
-entry only if no process uses it (254).
+entry only if no process uses it (263).
 
-The test in `xrele` (237) has gained parentheses. v7 wrote
+The test in `xrele` (246) has gained parentheses. v7 wrote
 `ip->i_flag&ITEXT==0`, which C parses as `ip->i_flag & (ITEXT==0)`,
 which is always zero, so that v7 never took the early return and always
 searched the table. The search finds nothing for an inode without
 `ITEXT`, so the bug cost only time; the port writes what was meant.
 
-#lines(214, 267)
+#lines(223, 276)
 #source("/usr/sys/h/buf.h")
 
 #f("buf.h") is unchanged from v7. Each `buf` is a header which describes
@@ -4328,8 +4356,8 @@ transfer is described by `u_base`, `u_count`, and `u_offset`, as for
 
 The checks (491) are v7's, with one added: the transfer must lie within
 the user's address space, below `USERSIZE` (492). The check that a
-transfer does not overlap the text segment (494--503) is kept, though
-the text size is always zero here. v7 rounded the text size up to a
+transfer does not overlap the text segment (494--503) is v7's: the
+text is shared, and a device must not write into it. v7 rounded the text size up to a
 whole number of 8 KB segments, 128 clicks, since the data began at the
 next segment; here the data begins at the next page, so the size in
 clicks is used as it stands (494). `nb` is the click of the start of
@@ -11281,14 +11309,23 @@ compiled with `cc -O`, and the kernel's code shrinks from 61 KB to
 38 KB, which matters on the MP135, where the whole kernel must fit in
 128 KB of on-chip memory (#f("mp135/unix.ld")).
 
-`-Wl,-N,-Ttext=0x10` are options for the linker, which the compiler
-ignores when it only compiles; they apply to the link of every user
-program (21), never to the kernel, which is linked by its own line in
-#f("sys.mk"). `-N` makes a program one segment, text and data together,
-writable and not aligned to a page: the ELF counterpart of v7's 0407
-file, which `exec` (#f("sys1.c")) loads as a whole. `-Ttext=0x10` links
-it at address `0x10`, leaving location 0 out of every program and
-room for the signal trampoline at 8 (#f("seg.h")). `-MMD -MP` make the
+`-Wl,-z,max-page-size=4096,-Ttext=0x80` are options for the linker,
+which the compiler ignores when it only compiles; they apply to the
+link of every user program (21), never to the kernel, which is linked by
+its own line in #f("sys.mk"). The linker makes a program two loadable
+segments: the text, with the read-only constants, readable and
+executable, and the data, readable and writable. The ELF counterpart of
+v7's 0410 file, `exec` (#f("sys1.c")) maps the first read-only and
+shares it among all the processes running the program. `max-page-size`
+places the data at the start of a new 4096-byte page, so that the two
+can be mapped with different permissions. `-Ttext=0x80` links the text
+at address `0x80`, which leaves room below it for the signal trampoline
+at 8 (#f("seg.h")), and for the ELF file header and the two program
+headers (116 bytes), which the linker then places at the start of the
+text segment. Linked any lower, the text would have to start at the
+same offset in its page in the file as in memory, and every program
+file would carry a page of padding; the kernel skips the headers when it
+loads the text (`xalloc`, #f("text.c")). `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
 (84).
 
@@ -12097,7 +12134,11 @@ the signal number, which is what `signal` returns in the port
 (#f("sys/signal.s")). The local declarations of `lseek`, `mktemp`,
 `malloc`, and `realloc` have gone, since #f("stdio.h") declares them.
 The prototypes (91--110) cover every procedure, since in this file
-nearly every one is used before its definition.
+nearly every one is used before its definition. The name of the
+temporary file, `tfname` (69), is now an array holding the template
+which `mktemp` fills in; v7 passed `mktemp` the string constant itself,
+which the PDP-11 compiler put in writable data, but which is now part
+of the read-only text, where `mktemp`'s stores fault.
 
 #lines(29, 110)
 
@@ -12112,7 +12153,8 @@ pointers and `int`s are both 32 bits.
 A file named as an argument is read by placing `r` in `globp`, as
 though it had been typed as the first command. The array of line
 pointers is allocated, the temporary file named, and `setjmp` marks
-the place to which `error` will return after each mistake. `quit` now
+the place to which `error` will return after each mistake; `mktemp` (155)
+fills in the array `tfname`. `quit` now
 takes the signal number, being also a handler, and the direct call
 passes 0. v7 declared the three handlers inside `main`, as functions
 returning `int`; the prototypes above replace that declaration, and
@@ -12595,53 +12637,56 @@ The lone `#` (1) is the same relic as in #f("mem.c").
 `main`.
 
 v7's declarations of `fopen` and `mktemp` are gone, since the port's
-#f("stdio.h") declares both. The prototypes (105--109) are for the
+#f("stdio.h") declares both. The prototypes (106--110) are for the
 procedures used before their definitions; those defined before use
 have been made `static` instead, which spares them a prototype.
 
-#lines(65, 111)
+#lines(65, 112)
 
 `done` is also the handler for the signals caught while a temporary
 file exists, and now takes the signal number; the direct calls of it
-pass 0. `talloc` gains a `return(p)` (127) after `noroom`, which never
+pass 0. `talloc` gains a `return(p)` (128) after `noroom`, which never
 returns, because a function returning a value must not run off its
 end; `p` is null there.
 
 `ralloc` is v7's "compacting reallocation". It frees the block, frees
 `dummy`, and allocates `dummy` again. `dummy` was the first block
-allocated (324), so it lies low in the arena; v7's `free` leaves the
+allocated (325), so it lies low in the arena; v7's `free` leaves the
 allocator's search pointer at the block just freed, and the `malloc`
 inside `realloc` therefore starts searching from the bottom of the
 arena (#f("gen/malloc.c")). The block is moved to the lowest place
 which will hold it, and the arena is kept compact. Like `cron`'s use
 (#f("cmd/cron.c")), it relies on `realloc` of a freed block.
 
-#lines(112, 148)
+#lines(113, 149)
 
 `sort` is a Shell sort, ordering by hash value and, among equal values,
 by serial number, so that each equivalence class ends up with its lines
-in their order in the file. The test for "wraparound" (164) guarded
+in their order in the file. The test for "wraparound" (165) guarded
 against a pointer passing the top of the PDP-11's 64 KB address space;
 it can no longer succeed.
 
-Two changes. `m` is now initialized (153): for an empty file the first
+Two changes. `m` is now initialized (154): for an empty file the first
 loop does not run, and v7 then halved an undefined `m`; the compiler's
-analysis at `-Os` found this. The parentheses at (167--168) make
+analysis at `-Os` found this. The parentheses at (168--169) make
 explicit that `&&` binds more tightly than `||`, as `-Wall` asks.
 
 `unsort` uses the serial numbers to put the class indices of the first
 file back into the file's own order.
 
-#lines(149, 193)
+#lines(150, 194)
 
 If one argument is a directory, the file of the same base name within
 it is meant. An argument `-` names the standard input, which is copied
-to a temporary file, since `diff` reads each file more than once.
+to a temporary file, since `diff` reads each file more than once. Its
+name is made by `mktemp` (218) in the array `tempname` (105), which is
+new: v7 passed the string constant, which is now in read-only text,
+where `mktemp` cannot write.
 
 `prepare` reads a file, storing one hash per line from index 1 up, and
 grows the array by one element per line with `ralloc`.
 
-#lines(194, 246)
+#lines(195, 247)
 
 `prune` counts the identical lines at the start and at the end of the
 two files, and renumbers the lines in between from 1; `sfile` and
@@ -12655,7 +12700,7 @@ equivalence classes, each listing its lines in increasing order, are
 simply concatenated, and the first element of each class is negated to
 mark its start. A final -1 stops the scan of the last class.
 
-#lines(247, 291)
+#lines(248, 292)
 
 `main`. Memory is reused as soon as it is free: `member` is written
 over the array of the second file, and `class` over that of the first,
@@ -12664,7 +12709,7 @@ the `struct line` it replaces. The comment's estimate of six words per
 line was made for the PDP-11; with four-byte `int`s and `long`s the
 proportions are much the same.
 
-#lines(292, 360)
+#lines(293, 361)
 
 `stone` is the heart of the program. A k-candidate is a match `(x, y)`,
 line `x` of the first file with line `y` of the second, which ends a
@@ -12682,8 +12727,8 @@ by bisection, the length `l` of the shortest candidate whose `y` is at
 least `y`. If that candidate's `y` equals `y`, nothing is gained.
 Otherwise `(i, y)` extends the candidate of length `l-1` to a common
 subsequence of length `l` ending lower in the second file than the
-present one, and replaces it (387). If `l` exceeds every length so far,
-the table grows by one (391--393), and the rest of the class, whose
+present one, and replaces it (388). If `l` exceeds every length so far,
+the table grows by one (392--394), and the rest of the class, whose
 `y`s are larger, cannot do better.
 
 The subtle part is `oldc`. Several members of the same class may
@@ -12691,13 +12736,13 @@ replace entries during one line `i`, at increasing lengths. The
 predecessor of a new candidate must come from an earlier line of the
 first file, so when `l` is one more than the length just replaced,
 the predecessor must be the candidate which was there before the
-replacement, saved in `tc` (386, 388), not the new one, whose `x` is
+replacement, saved in `tc` (387, 389), not the new one, whose `x` is
 `i` itself. Likewise a `y` no greater than the `y` of that saved
-predecessor (378) cannot extend it, and is passed over. Note that
-`continue` in a `do`-`while` goes to the test (395), which advances to
+predecessor (379) cannot extend it, and is passed over. Note that
+`continue` in a `do`-`while` goes to the test (396), which advances to
 the next member of the class.
 
-#lines(361, 399)
+#lines(362, 400)
 
 `newcand` adds a candidate to `clist`, a store from which nothing is
 ever removed, growing it by one element at a time. `search` first tries
@@ -12707,7 +12752,7 @@ the commonest case, a `y` beyond every candidate.
 lines their counterparts, and the rest are filled in by following
 `pred` back from the longest candidate.
 
-#lines(400, 445)
+#lines(401, 446)
 
 `check` reads both files again, line by line in step with `J`. Each
 pair of lines which `J` claims to match is compared character by
@@ -12721,26 +12766,26 @@ the same time the byte offset of the end of every line is recorded in
 `ixold` and `ixnew`, so that `fetch` can later seek straight to any
 line.
 
-`c` and `d` (457) are now `int`, where v7 had `char`, for two reasons.
+`c` and `d` (458) are now `int`, where v7 had `char`, for two reasons.
 `isspace` is a macro which indexes a table, and a `char` subscript draws
 a warning from `-Wall`. And on the ARM, whose `char` is unsigned, the
 `EOF` returned by `getc` would become 255, which with `-b` indexes
 `isspace`'s table beyond its end; the PDP-11's signed `char` kept it
 -1, as the `int` now does.
 
-#lines(446, 522)
+#lines(447, 523)
 
 `output` scans `J` for runs of unmatched lines and reports each run as
 a `change`: lines `a` to `b` of the first file are replaced by lines `c`
 to `d` of the second. An empty first range means an addition, an empty
-second range a deletion. The sentinels `J[0]` and `J[m+1]` (532--533)
+second range a deletion. The sentinels `J[0]` and `J[m+1]` (533--534)
 spare the loops tests for the ends. With `-e` the commands form an
 `ed` script, and are produced from the end of the file backwards, so
 that the line numbers in each command are not disturbed by the
 commands already applied. `-f` gives the same commands in forward
 order and a different form, for reading, not for `ed`.
 
-#lines(523, 599)
+#lines(524, 600)
 
 `readhash` computes a line's hash: each character is added to a
 `long` after a shift of seven bits more than the last, taken modulo 16,
@@ -12755,7 +12800,7 @@ sum of the two `short` halves is kept in 32 bits. Two results which
 differ by 65536, and which the PDP-11 would have reduced to the same
 value, now stay distinct; otherwise only the values change.
 
-#lines(600, 648)
+#lines(601, 649)
 #source("/usr/src/cmd/ps.c")
 
 `ps` reports on processes, and it has no system call to ask. It reads
@@ -12780,7 +12825,9 @@ v7 included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
 such header, and the macros are defined here (8--10), with the top of
 the stack at `0x100000`, the end of the 1 MB user window, where the
-PDP-11's was at `0x10000`, the end of its 64 KB address space. The
+PDP-11's was at `0x10000`, the end of its 64 KB address space.
+`TXTRNDSIZ`, the unit to which the text is rounded before the data
+begins, is a page, where the PDP-11's was an 8 KB segment. The
 argument `siz` of `stacktop` was unused in v7 too.
 
 `proc.h` and `user.h` are taken from the kernel's own directory (12,
@@ -12866,8 +12913,9 @@ too (#f("machdep.c")): the `USIZE` clicks of the `user` area, then the
 data, then the stack, packed together; the stack segment, at the top of
 the address space, follows the data in the image. `f2` (236) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
-area. The data map is right unchanged, since the port's executables
-have no separate text (`u_tsize` is zero) and `b1` is therefore zero.
+area. The data map begins after the text (`b1`), which is a whole
+number of pages; the text itself is not in the image, and is not
+mapped.
 
 #lines(200, 237)
 

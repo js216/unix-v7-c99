@@ -88,7 +88,7 @@ void
 xalloc(register struct inode *ip)
 {
 	register struct text *xp;
-	register unsigned ts;
+	register unsigned ts, i;
 	register struct text *xp1;
 
 	if(u.u_exdata.ux_tsize == 0)
@@ -123,21 +123,30 @@ xalloc(register struct inode *ip)
 	xp->x_iptr = ip;
 	ip->i_flag |= ITEXT;
 	ip->i_count++;
-	ts = btoc(u.u_exdata.ux_tsize);
+	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
 	xp->x_size = ts;
 	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
 		panic("out of swap space");
 	u.u_procp->p_textp = xp;
 	xexpand(xp);
+	for(i = 0; i < ts; i++)
+		clearseg(xp->x_caddr+i);
 	estabur(ts, (unsigned)0, (unsigned)0, 0, RW);
 	u.u_count = u.u_exdata.ux_tsize;
-	u.u_offset = sizeof(u.u_exdata);
-	u.u_base = 0;
+	u.u_offset = u.u_exdata.ux_ph[0].p_off;
+	u.u_base = (caddr_t)u.u_exdata.ux_ph[0].p_addr;
+	if(u.u_offset == 0) {
+		i = u.u_exdata.ux_phoff + 32*u.u_exdata.ux_phnum;
+		u.u_offset += i;
+		u.u_base += i;
+		u.u_count -= i;
+	}
 	u.u_segflg = 2;
 	u.u_procp->p_flag |= SLOCK;
 	readi(ip);
 	u.u_procp->p_flag &= ~SLOCK;
 	u.u_segflg = 0;
+	install_sigtramp();
 	xp->x_flag = XWRIT;
 }
 

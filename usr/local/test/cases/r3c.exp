@@ -50,7 +50,7 @@ found /t/words
      16
 /
 # find /t ! -type d -ctime -100000 -atime -100000 -print | wc -l
-     27
+     28
 # ps ax | wc -l; ps; ps alx | wc -l
       6
    PID TTY TIME CMD
@@ -63,12 +63,12 @@ found /t/words
  0   0   0   0   06230       0  0   0   OC         2
 4 processes
    LOC S  F  PRI SIGNAL UID TIM CPU NI  PGRP   PID  PPID ADDR SIZE  WCHAN   LINK  TEXTP  CLKT
-5 active inodes
+8 active inodes
    LOC  FLAGS  CNT DEVICE   INO   MODE NLK UID  SIZE/DEV
 # pstat -f >o; sed 2q o; pstat -x >o; sed 2q o
 3 open files
   LOC   FLG CNT   INO    OFFS
-0 text segments
+3 text segments
    LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT
 # dcheck /dev/root; dcheck -i 2 /dev/root; icheck -b 5 /dev/root
 /dev/root:
@@ -82,7 +82,7 @@ found /t/words
     2 arg; 136/..
     2 arg; 170/..
 /dev/root:
-files    198 (r=172,d=18,b=2,c=6)
+files    199 (r=173,d=18,b=2,c=6)
 used    N (i=N,ii=N,iii=N,d=N)
 free N
 missing    0
@@ -169,13 +169,13 @@ Dump   date: Tue Jan  9 HH:MM 1979
 Dumped from: Wed Dec 31 HH:MM 1969
     2   /.
   142   /usr/dict/words
-  196   /t/words
+  197   /t/words
 Dump   date: Tue Jan  9 HH:MM 1979
 Dumped from: Wed Dec 31 HH:MM 1969
 # mkdir rx; cd rx; echo 1 | restor xf /tmp/d t/words; ls; cmp * /t/words; echo cmp$?; cd /tmp; rm -r rx /tmp/d
-t/words: inode 196
-Mount desired tape volume: Specify volume #: extract file 196
-196
+t/words: inode 197
+Mount desired tape volume: Specify volume #: extract file 197
+197
 cmp0
 # echo 1+1 | bc /nonexist /t/bcf; echo bcst$?
 cannot open input file on line 1, (null)

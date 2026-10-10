@@ -66,7 +66,7 @@ int	col;
 char	*globp;
 int	tfile	= -1;
 int	tline;
-char	*tfname;
+char	tfname[] = "/tmp/eXXXXX";
 char	*loc1;
 char	*loc2;
 char	*locs;
@@ -152,7 +152,7 @@ main(int argc, char **argv)
 		globp = "r";
 	}
 	zero = (int *)malloc(nlall*sizeof(int));
-	tfname = mktemp("/tmp/eXXXXX");
+	mktemp(tfname);
 	init();
 	if (((int)oldintr&01) == 0)
 		signal(SIGINT, onintr);

@@ -62,7 +62,7 @@ FILE *inptr = stdin;
 char *outfile;
 FILE *outptr = stdout;
 
-char *sortfile;	/* output of sort program */
+char sortfile[] = "/tmp/ptxsXXXXX";	/* output of sort program */
 char nofold[] = {'-', 'd', 't', TILDE, 0};
 char fold[] = {'-', 'd', 'f', 't', TILDE, 0};
 char *sortopt = nofold;
@@ -219,7 +219,7 @@ main(int argc,char **argv)
 
 	/* open output file for sorting */
 
-	sortfile = mktemp("/tmp/ptxsXXXXX");
+	mktemp(sortfile);
 	if((sortptr = fopen(sortfile, "w")) == NULL)
 		diag("Cannot open output for sorting:",sortfile);
 

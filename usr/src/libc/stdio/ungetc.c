@@ -12,6 +12,7 @@ ungetc(int c, register FILE *iop)
 			return(-1);
 	}
 	iop->_cnt++;
-	*--iop->_ptr = c;
+	if (*--iop->_ptr != c)
+		*iop->_ptr = c;
 	return(0);
 }

@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 #include <a.out.h>
-#define TXTRNDSIZ 8192L
+#define TXTRNDSIZ 4096L
 #define stacktop(siz) (0x100000L)
 #define stackbas(siz) (0x100000L-siz)
 #include <sys/param.h>

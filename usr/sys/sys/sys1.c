@@ -151,7 +151,7 @@ getxfile(register struct inode *ip, int nargc)
 	register unsigned ds;
 	register int sep;
 	register unsigned ts, ss;
-	register int i, overlay;
+	register int i, n, overlay;
 	long lsize;
 
 	/*
@@ -179,21 +179,21 @@ getxfile(register struct inode *ip, int nargc)
 	}
 	sep = 0;
 	overlay = 0;
-	for(i = 0; u.u_exdata.ux_mag == 0x464c457f && i < u.u_exdata.ux_phnum; i++) {
-		u.u_base = (caddr_t)&u.u_exdata.ux_type;
+	n = 0;
+	for(i = 0; u.u_exdata.ux_mag == 0x464c457f && i < u.u_exdata.ux_phnum && n < 2; i++) {
+		u.u_base = (caddr_t)&u.u_exdata.ux_ph[n];
 		u.u_count = 24;
 		u.u_offset = u.u_exdata.ux_phoff + 32*i;
 		u.u_segflg = 1;
 		readi(ip);
 		u.u_segflg = 0;
-		if(u.u_exdata.ux_type == 1)
-			break;
+		if(u.u_exdata.ux_ph[n].p_type == 1)
+			n++;
 	}
-	if(u.u_exdata.ux_mag != 0x464c457f || i == u.u_exdata.ux_phnum) {
+	if(u.u_exdata.ux_mag != 0x464c457f || n != 2) {
 		u.u_error = ENOEXEC;
 		goto bad;
 	}
-	u.u_exdata.ux_tsize = 0;
 	if(u.u_exdata.ux_tsize!=0 && (ip->i_flag&ITEXT)==0 && ip->i_count!=1) {
 		u.u_error = ETXTBSY;
 		goto bad;
@@ -204,13 +204,14 @@ getxfile(register struct inode *ip, int nargc)
 	 * try them out for possible
 	 * overflow of max sizes
 	 */
-	ts = btoc(u.u_exdata.ux_tsize);
-	lsize = (long)u.u_exdata.ux_addr + u.u_exdata.ux_msize;
-	if ((unsigned)lsize < u.u_exdata.ux_msize) {
+	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
+	lsize = (long)u.u_exdata.ux_ph[1].p_addr + u.u_exdata.ux_ph[1].p_msize;
+	if ((unsigned)lsize < u.u_exdata.ux_ph[1].p_msize ||
+	    u.u_exdata.ux_ph[1].p_addr < ctob(ts)) {
 		u.u_error = ENOMEM;
 		goto bad;
 	}
-	ds = btoc(lsize);
+	ds = btoc(lsize) - ts;
 	ss = SSIZE + btoc(nargc);
 	if (overlay) {
 		if ((u.u_sep==0 && ctos(ts) != ctos(u.u_tsize)) || nargc) {
@@ -245,9 +246,9 @@ getxfile(register struct inode *ip, int nargc)
 		 * read in data segment
 		 */
 	
-		estabur((unsigned)0, ds, (unsigned)0, 0, RO);
-		u.u_base = (caddr_t)u.u_exdata.ux_addr;
-		u.u_offset = u.u_exdata.ux_off;
+		estabur(ts, ds, (unsigned)0, 0, RO);
+		u.u_base = (caddr_t)u.u_exdata.ux_ph[1].p_addr;
+		u.u_offset = u.u_exdata.ux_ph[1].p_off;
 		u.u_count = u.u_exdata.ux_dsize;
 		readi(ip);
 		/*
@@ -269,7 +270,6 @@ getxfile(register struct inode *ip, int nargc)
 	u.u_ssize = ss;
 	u.u_sep = sep;
 	estabur(ts, ds, ss, sep, RO);
-	install_sigtramp();
 	arm_sync_icache();
 bad:
 	return(overlay);

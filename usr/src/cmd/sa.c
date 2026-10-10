@@ -42,6 +42,7 @@ float	treal;
 float	tcpu;
 float	tsys;
 int	junkp = -1;
+char	other[NC] = "***other", junk[NC] = "**junk**";
 char	*sname;
 float	ncom;
 time_t	expand(unsigned t);
@@ -163,7 +164,7 @@ main(int argc, char **argv)
 			continue;
 	yes:
 		if(junkp == -1)
-			junkp = enter("***other");
+			junkp = enter(other);
 		tab[junkp].count += tab[i].count;
 		tab[junkp].realt += tab[i].realt;
 		tab[junkp].cput += tab[i].cput;
@@ -460,7 +461,7 @@ strip(void)
 {
 	int i, j, c;
 
-	j = enter("**junk**");
+	j = enter(junk);
 	for (i = 0; i<size; i++) {
 		if (tab[i].name[0] && tab[i].count<=thres) {
 			printf("%.10s--", tab[i].name);
