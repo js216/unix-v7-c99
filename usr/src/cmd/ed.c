@@ -1531,7 +1531,7 @@ advance(register char *lp, register char *ep)
 				return(1);
 			lp -= braelist[i] - braslist[i];
 		}
-		continue;
+		return(0);
 
 	case CDOT|STAR:
 		curlp = lp;
