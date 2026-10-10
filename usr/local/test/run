@@ -42,7 +42,7 @@ fail=0
 for n; do
 	start=$(date +%s)
 	cp "$w/img" "$w/run.img"
-	nice -n 19 python3 $T/drive.py "$w/run.img" boot/unix $C/$n.steps >"$w/$n.raw"
+	python3 $T/drive.py "$w/run.img" boot/unix $C/$n.steps >"$w/$n.raw"
 	if [ -f $C/$n.sed ]; then
 		sed -f $C/$n.sed "$w/$n.raw"
 	else
