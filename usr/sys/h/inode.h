@@ -26,7 +26,7 @@ struct group {
 struct	inode
 {
 	char	i_flag;
-	char	i_count;	/* reference count */
+	short	i_count;	/* reference count */
 	dev_t	i_dev;		/* device where inode resides */
 	ino_t	i_number;	/* i number, 1-to-1 with device address */
 	unsigned short	i_mode;

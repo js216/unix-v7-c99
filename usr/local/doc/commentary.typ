@@ -4252,7 +4252,7 @@ neither disk driver sets `b_error`.
 
 #source("/usr/sys/h/file.h")
 
-#f("file.h") is unchanged from v7. A `file` structure stands between
+#f("file.h") is v7's but for one type. A `file` structure stands between
 the descriptors of one or more processes and the inode of an open file.
 `open`, `creat`, and `pipe` (#f("sys2.c"), #f("pipe.c")) each make a new
 one; `fork` and `dup` merely make a second descriptor point at an
@@ -4261,9 +4261,12 @@ here, not in the inode and not in `u`, so that processes which share a
 `file` also share the position in it, as a shell and its children must
 when they write in turn to the same output.
 
-`f_count` is a `char`. On the PDP-11 it was signed and could count to
-127; on the ARM `char` is unsigned and the limit is 255. Nothing checks
-for overflow, here or in v7. `f_offset` is a `long` on both machines,
+`f_count` (11) was a `char`. On the PDP-11 it was signed and could
+count to 127; on the ARM `char` is unsigned and the limit was 255.
+Every process forked from a shell shares its terminal's `file`, so a
+process table larger than v7's 150 entries could wrap the count to
+zero and free the entry while still in use; nothing checks for
+overflow, here or in v7. It is now a `short`, which counts to 32767. `f_offset` is a `long` on both machines,
 but on the PDP-11 it occupied two words, high word first, where here it
 is a single word.
 
@@ -4274,8 +4277,8 @@ and the tests of `FMP` in `rdwr`, `seek`, and `closef` always take the
 ordinary path. `FKERNEL` was used by nothing even in v7.
 
 A `file` now occupies 12 bytes rather than 8: the inode pointer has
-grown to four bytes, and two bytes of padding after the two `char`s
-put it on a four-byte boundary.
+grown to four bytes, and a byte of padding after `f_flag` puts the
+`short` `f_count`, and the pointer after it, on their boundaries.
 
 #lines(1, 28)
 #source("/usr/sys/h/inode.h")
@@ -4304,8 +4307,11 @@ files, which this system does not have (see #f("file.h")).
 
 #lines(1, 25)
 
-`i_flag` and `i_count` are `char`s, so that on the ARM, where `char` is
-unsigned, as many as 255 references to an inode may be counted.
+`i_flag` is a `char`, as in v7. `i_count` (29) was one too, and could
+count 127 references to an inode on the PDP-11 and 255 on the ARM. The
+root directory is the current directory of most processes, so a process
+table larger than v7's 150 entries could wrap its count to zero, and the
+inode would be freed while in use. It is now a `short`.
 
 `i_un` is a union because a special file has no blocks. For a regular
 file or directory it holds the block addresses and `i_lastr`, the last

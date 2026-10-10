@@ -144,7 +144,7 @@ doinode(void)
 		putf(ip->i_flag&IMOUNT, 'M');
 		putf(ip->i_flag&IWANT, 'W');
 		putf(ip->i_flag&ITEXT, 'T');
-		printf("%4d", ip->i_count&0377);
+		printf("%4d", ip->i_count);
 		printf("%3d,%3d", major(ip->i_dev), minor(ip->i_dev));
 		printf("%6l", ip->i_number);
 		printf("%7o", ip->i_mode);
@@ -397,7 +397,7 @@ dofil(void)
 		putf(fp->f_flag&FREAD, 'R');
 		putf(fp->f_flag&FWRITE, 'W');
 		putf(fp->f_flag&FPIPE, 'P');
-		printf("%4d", mask(fp->f_count));
+		printf("%4d", fp->f_count);
 		printf("%8.1o", fp->f_inode);
 		printf(" %ld\n", fp->f_un.f_offset);
 	}
