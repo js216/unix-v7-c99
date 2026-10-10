@@ -197,7 +197,7 @@ getname(void)
 			return(0);
 		if (c==EOT)
 			exit(1);
-		if (c=='\r' || c=='\n' || np >= &name[16])
+		if (c=='\r' || c=='\n' || np >= &name[15])
 			break;
 		putchr(cs);
 		if (c>='a' && c <='z')
