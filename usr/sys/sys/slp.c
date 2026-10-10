@@ -8,6 +8,7 @@
 #include "../h/file.h"
 #include "../h/inode.h"
 #include "../h/buf.h"
+#include "../h/seg.h"
 int	swapin(struct proc *p);
 
 #define SQSIZE 0100	/* Must be power of 2 */
@@ -309,8 +310,10 @@ swapin(register struct proc *p)
 				return(0);
 			}
 			xp->x_caddr = x;
-			if ((xp->x_flag&XLOAD)==0)
+			if ((xp->x_flag&XLOAD)==0) {
 				swap(xp->x_daddr,x,xp->x_size,B_READ);
+				arm_sync_icache(CLKADDR(x), ctob(xp->x_size));
+			}
 		}
 		xp->x_ccount++;
 		xunlock(xp);

@@ -38,7 +38,7 @@ sureg(void)
 	a = (unsigned)CLKADDR(daddr+USIZE+u.u_pdsize+u.u_pssize);
 	for(i = 0; i < u.u_pssize; i++)
 		user_l2[--uhi] = (a -= PGSIZE) | pguser | RW;
-	arm_sync_icache();
+	tlbflush();
 }
 
 /*

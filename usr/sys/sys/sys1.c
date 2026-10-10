@@ -270,7 +270,6 @@ getxfile(register struct inode *ip, int nargc)
 	u.u_ssize = ss;
 	u.u_sep = sep;
 	estabur(ts, ds, ss, sep, RO);
-	arm_sync_icache();
 bad:
 	return(overlay);
 }

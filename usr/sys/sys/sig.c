@@ -367,6 +367,7 @@ procxmt(void)
 		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
 		if (i<0)
 			goto error;
+		arm_sync_icache((caddr_t)ipc.ip_addr, NBPW);
 		if (xp)
 			xp->x_flag |= XWRIT;
 		break;

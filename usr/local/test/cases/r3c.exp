@@ -23,7 +23,6 @@ apple	banana	cherry	date
 /usr/local/test/utils/words:	ascii text
 /usr/local/test/utils/edscr:	ascii text
      16
-/usr/local/test/utils
 /usr/local/test/utils/asm
 /usr/local/test/utils/bcf
 /usr/local/test/utils/ctxt
@@ -40,7 +39,7 @@ apple	banana	cherry	date
 found /usr/local/test/utils/words
      16
 /
-     30
+     31
 1
    PID TTY TIME CMD
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD

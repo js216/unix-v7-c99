@@ -96,7 +96,7 @@ main(void)
 		expand(USIZE + (int)btoc(szicode));
 		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
-		arm_sync_icache();
+		arm_sync_icache(CLKADDR(u.u_procp->p_addr+USIZE), szicode);
 		/*
 		 * Return goes to loc. 0 of user init
 		 * code just copied out.

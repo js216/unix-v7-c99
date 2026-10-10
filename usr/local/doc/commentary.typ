@@ -1279,31 +1279,39 @@ the device has written. The PDP-11 had no cache, and so no such routine.
 
 #lines(127, 142)
 
-`arm_sync_icache` is called whenever the user's instructions may have
-changed: by `sureg` (#f("ureg.c")) after it rewrites the user page
-table, by `getxfile` (#f("sys1.c")) after it has read in a
-program and planted the signal trampoline,
-and by `main` (#f("main.c")) after it copies out `icode`.
+`arm_sync_icache` makes instructions just written to memory visible to
+instruction fetch. It is called with the kernel address and length of
+what was written: by `xalloc` (#f("text.c")) after it has read in a
+text and planted the signal trampoline, by `xexpand` (#f("text.c")) and
+`swapin` (#f("slp.c")) after a text has been read back from the swap area, by
+`procxmt` (#f("sig.c")) after a debugger has stored a word into the
+text, and by `main` (#f("main.c")) after it copies out `icode`. Nothing
+else is ever executed: a program's data and stack are not, and the
+process switch, which changes only the mapping, does not call it.
 
-First the TLB is invalidated, which disposes of the old process's
-user translations after `sureg` has changed `user_l2`.
+The instructions were written through the data cache, while the
+instruction cache fills from the point of unification, which on the
+Cortex-A7 lies beyond the level 1 data cache. Each line of the range is therefore
+cleaned to that point (`DCCMVAU`, `c7, c11, 1`), with the same line
+size and rounding as `dcflush`; the loop tests before it cleans, so
+that a length of zero cleans nothing. The instruction cache is then
+discarded entire (`ICIALLU`): it is indexed by virtual address and
+tagged by physical, so a stale line for the memory may sit under any
+alias, and the user addresses at which the text will run are not those
+through which the kernel wrote it. The branch predictor (`BPIALL`)
+goes with it.
 
-#lines(143, 149)
+#lines(143, 165)
 
-The level 1 data cache is cleaned by set and way (`DCCSW`,
-`c7, c10, 2`), with the same loop as in `mmu_on`. The instructions which
-`exec` read in were written through the data cache, and the instruction
-cache fetches from memory; cleaning writes them out. On the Cortex-A7
-level 1 is the point at which the two caches meet, so it suffices.
+`tlbflush` invalidates the TLB (`TLBIALL`) and the branch predictor,
+which hold translations and targets of the old user mapping. `sureg`
+(#f("ureg.c")) calls it each time it rewrites `user_l2`, at every
+process switch among other times; the caches, which are indexed and
+tagged so as not to depend on the mapping, are left alone. The table
+itself needs no cleaning: the walker reads it through the data cache
+(`mmu_on`).
 
-#lines(150, 170)
-
-Then the instruction cache (`ICIALLU`) and the branch
-predictor (`BPIALL`) are invalidated, so that the new program is fetched
-afresh. `r0` must be reloaded with zero at 168, having been overwritten
-at 150.
-
-#lines(171, 177)
+#lines(166, 174)
 
 The routines which move data between the kernel and the current user
 process, which were in v7's `mch.s` too. On the PDP-11 they used the
@@ -1314,12 +1322,12 @@ store with the permissions of user mode even when executed by the
 kernel. A user address which is not mapped, or which only the kernel
 may touch, faults, just as `mfpi` trapped on a missing segment.
 
-The fault is caught, in v7's way, through `nofault` (280). Each routine
-first stores there the address of `uerr` (253); if one of its user
+The fault is caught, in v7's way, through `nofault` (276). Each routine
+first stores there the address of `uerr` (249); if one of its user
 references faults, the data abort handler (#f("low.s")) finds `nofault`
 set and returns, not to the faulting instruction, but to `uerr`, which
 clears `nofault` and returns -1. A routine which completes clears it at
-`uok` (249) and returns its value. Only these routines set `nofault`,
+`uok` (245) and returns its value. Only these routines set `nofault`,
 so any other fault in the kernel is still a `panic`. `r3` holds the
 address of `nofault` throughout, and the abort restores the registers
 as they were at the fault, so `uerr` finds it there.
@@ -1327,7 +1335,7 @@ as they were at the fault, so `uerr` finds it there.
 `fubyte` and `fuword` return the byte or word at a user address, or -1;
 `subyte` and `suword` store one, and return 0 or -1. The byte is loaded
 without sign extension, whatever the signedness of `char`. The loaded
-value goes first into `r1` (183, 199): a load which wrote back to its
+value goes first into `r1` (179, 195): a load which wrote back to its
 own base register would be unpredictable, and the `t` forms always
 write back. v7 distinguished `fuibyte` from `fubyte`, instruction space
 from data space; #f("systm.h") makes the former names aliases of these.
@@ -1335,17 +1343,17 @@ from data space; #f("systm.h") makes the former names aliases of these.
 `copyin(from, to, n)` and `copyout` move `n` bytes from a user address
 to a kernel one, and back, and return 0, or -1 if any user reference
 faults. As v7's did, they move words when both addresses and the count
-are multiples of the word (219--223, 238--242), and bytes otherwise
-(224--228, 243--247). Only the user side of each move uses the `t`
+are multiples of the word (215--219, 234--238), and bytes otherwise
+(220--224, 239--243). Only the user side of each move uses the `t`
 form.
 
-#lines(178, 258)
+#lines(175, 254)
 
 `idle` is v7's, in ARM form. Interrupts are enabled, and `wfi` ("wait for
 interrupt") halts the processor until one arrives, as the PDP-11's
 `wait` did. The interrupt is taken at once, and the PC it saves is that
-of the instruction after `wfi`, labelled `1` (262). Its address is
-stored in `waitloc` (275, 276), which `clock` (#f("clock.c")) compares
+of the instruction after `wfi`, labelled `1` (258). Its address is
+stored in `waitloc` (271, 272), which `clock` (#f("clock.c")) compares
 with the interrupted PC to count the time spent idle. `idle` must
 therefore be the last routine in the file to have a label `1`, which
 `1b` finds by searching backwards. v7's `idle` restored the previous PS
@@ -1358,7 +1366,7 @@ floating point registers into `u.u_fps`. This kernel never enables the
 ARM's floating point unit, so there is no state to save, but the calls
 in `swtch` (#f("slp.c")) and `psig` (#f("sig.c")) are kept.
 
-#lines(259, 265)
+#lines(255, 261)
 
 `dfar` and `dfsr` return the data fault address and status registers,
 which describe the last data abort. `user_trap_handler` (#f("sysent.c"))
@@ -1366,19 +1374,19 @@ prints them before it panics on a fault in kernel mode, much as v7's
 `trap` printed the memory management status registers it had copied into
 `ssr`.
 
-#lines(266, 273)
+#lines(262, 269)
 
 `waitloc` is a word of initialised data holding the address of the
 label in `idle`, as `_waitloc` was in v7. `nofault` is the word which
 v7 also kept in `mch.s`, zero except while a user reference is made.
 
-#lines(274, 282)
+#lines(270, 278)
 
 The translation tables. `l1` is the first-level table: 4096 words, each
 describing one megabyte of the address space, either directly (a
 "section") or by pointing to a second-level table of 256 words, each
 describing a 4 KB page. The hardware requires the first-level table to be
-aligned on 16 KB (284). `user_l2` maps the first megabyte, the user's
+aligned on 16 KB (280). `user_l2` maps the first megabyte, the user's
 address space, and `uarea_l2` the megabyte at `UBASE`; both are
 rewritten as processes come and go, by `sureg` (#f("ureg.c")) and
 `resume` respectively. Everything else is mapped by sections which
@@ -1390,7 +1398,7 @@ kernel itself lives in a 128 KB on-chip RAM, and this section is put in
 the external DDR memory, which cannot be used until `machine_init` has
 initialised its controller; that routine clears the section afterwards.
 
-#lines(283, 290)
+#lines(279, 286)
 #source("/usr/sys/sys/main.c")
 
 #f("main.c") holds the procedure through which the kernel passes exactly
@@ -1470,8 +1478,9 @@ user address 0.
 separate instruction and data caches which are not kept coherent by the
 hardware: the instructions just stored may sit in the data cache, and
 stale lines may sit in the instruction cache. The routine (#f("mch.s"))
-writes the data cache back, then discards the instruction cache, the
-branch predictor, and the TLB.
+writes the page back from the data cache, through the kernel's own
+address for it, then discards the instruction cache and the branch
+predictor.
 
 #lines(96, 99)
 
@@ -2158,9 +2167,10 @@ stack's pages are mapped downward from the top of the address space,
 from the end of the image (38--40). The attributes other than the
 access rights come from the configuration (`pguser`, #f("qemuconf")).
 
-Finally `arm_sync_icache` (#f("mch.s")) invalidates the TLB, so that the
-new entries take effect, and brings the caches into step with an image
-which may just have been copied.
+Finally `tlbflush` (#f("mch.s")) invalidates the TLB, so that the
+new entries take effect. The caches need nothing: those parts of an
+image which are executed are brought into step where they are written
+(`arm_sync_icache`).
 
 #lines(12, 43)
 
@@ -2212,43 +2222,43 @@ table `uarea_l2` which map `u` and then discards the TLB.
 Note that `lab` is always one of `u.u_rsav`, `u.u_qsav`, or `u.u_ssav`,
 that is, an address within `u`. `resume` reads it only after the new
 process has been mapped, so that it is the incoming process's copy of
-the label which is used. The comment at (417) says as much.
+the label which is used. The comment at (420) says as much.
 
-The declaration of `swapin` (11) is new. `sched` (239) calls it before
+The declaration of `swapin` (12) is new. `sched` (240) calls it before
 its definition, which v7 C permitted and C99 does not; no other file
 uses it, so the declaration is here and not in #f("systm.h").
 
 A process sleeps on a _channel_: an address which by convention stands
 for the event awaited, such as that of the buffer or inode concerned.
 Processes which sleep are kept on `SQSIZE` short lists, chained through
-`p_link`. `HASH` (14) picks the list from the address of the
+`p_link`. `HASH` (15) picks the list from the address of the
 channel. The cast to `int` may now give a negative number for a kernel
 address with its top bit set, but the mask removes the sign.
 
-#lines(1, 16)
+#lines(1, 17)
 
 `sleep` records why (`chan`) and how urgently (`pri`) the current process
 waits, puts it on the appropriate sleep list, and calls `swtch`.
 
-The processor priority is raised by `spl6` (35) so that no interrupt
+The processor priority is raised by `spl6` (36) so that no interrupt
 handler can call `wakeup` while the proc entry and the list are half
 changed. The port keeps v7's names for these routines: on the ARM there
 is only one level worth distinguishing, so `spl5`, `spl6`, and `spl7` all
 mask the IRQ, `spl0` and `spl1` unmask it, and `splx` restores the state
 of the I bit in the value returned by an earlier call, which is the saved
 CPSR where the PDP-11 returned its processor status word (#f("mch.s")).
-The repeated test of `chan` (40) is v7's.
+The repeated test of `chan` (41) is v7's.
 
-#lines(17, 45)
+#lines(18, 46)
 
 If `pri` is above `PZERO`, the sleep may be broken by a signal.
-A signal already pending (47) cancels the sleep before it has begun.
+A signal already pending (48) cancels the sleep before it has begun.
 Otherwise, if `sched` is waiting on `runin` for a sleeping process to
-swap out (55), it is roused, since this process is now such a candidate.
-After `swtch` returns, the signal test is repeated (60): a signal is one
+swap out (56), it is roused, since this process is now such a candidate.
+After `swtch` returns, the signal test is repeated (61): a signal is one
 of the events which may have ended the sleep, by way of `setrun`.
 
-#lines(46, 67)
+#lines(47, 68)
 
 A signal is handled by abandoning the system call altogether.
 `resume` to `u.u_qsav` with the process's own address is a non-local
@@ -2261,16 +2271,16 @@ Note that callers of `sleep` above `PZERO` are therefore never told that
 they were interrupted; any locks they hold must be such that the
 abandoned system call leaves nothing inconsistent.
 
-#lines(68, 78)
+#lines(69, 79)
 
 `wakeup` walks the one list on which processes sleeping on `chan` may
 be, unlinks each such process, clears its channel, and hands it to
 `setrun`. Several unrelated channels may hash to the same list, hence
-the test of `p_wchan` (95). Since `p_link` is reused by `setrun` to put
-the process on the run queue, the successor is taken (99, 101) before
+the test of `p_wchan` (96). Since `p_link` is reused by `setrun` to put
+the process on the run queue, the successor is taken (100, 102) before
 `setrun` is called.
 
-#lines(79, 111)
+#lines(80, 112)
 
 `setrq` adds a process to the run queue `runq`, a list chained through
 the same `p_link`: a process is either asleep or runnable, never both.
@@ -2280,59 +2290,59 @@ The search for a duplicate is purely diagnostic, as the comment admits.
 a declaration in #f("systm.h"), which `-Wmissing-prototypes` would
 otherwise demand.
 
-#lines(112, 135)
+#lines(113, 136)
 
 `setrun` is called from interrupt routines, from `wakeup`, and from
 places such as `psignal` which wish to rouse a process whatever it is
 waiting for. In the last case the process is still on a sleep list, and
-`wakeup` of its channel (152) is the correct way to take it off. The
-extra parentheses around the assignment (152) only tell the compiler
+`wakeup` of its channel (153) is the correct way to take it off. The
+extra parentheses around the assignment (153) only tell the compiler
 that `=` is meant.
 
-#lines(136, 157)
+#lines(137, 158)
 
 If the newly runnable process is more urgent than the current one,
 `runrun` asks for a call of `swtch` at the next opportunity, which is the
-return from a trap or interrupt to user mode. If `sched` is idle (160)
+return from a trap or interrupt to user mode. If `sched` is idle (161)
 for want of a runnable swapped-out process, and this is one, `sched` is
 woken.
 
-#lines(158, 164)
+#lines(159, 165)
 
 `setpri` computes the priority with which a user process will compete:
 `PUSER`, plus a share of recent processor use (`p_cpu`, which `clock`
 increments each tick and decays each second), plus the bias `p_nice`.
 The result is never above 127, so that it fits in the `char` `p_pri`.
 
-The `0377` mask (177) undid the sign extension of a PDP-11 `char`. On
+The `0377` mask (178) undid the sign extension of a PDP-11 `char`. On
 the ARM `char` is unsigned and the mask changes nothing, but it is
 harmless and is v7's.
 
-The reader may be puzzled that `runrun` is set (181) when the process
+The reader may be puzzled that `runrun` is set (182) when the process
 whose priority was just computed is better than `curpri`, whereas that
 process may not be the current one. `clock` calls `setpri` for every
 user process once a second, and it is precisely when one of these has
 become more deserving than the running process that a switch is wanted.
 
-#lines(165, 185)
+#lines(166, 186)
 
 `sched` is the endless loop of process 0, entered from `main` after
 `newproc` has made process 1. It moves images between core and the
 swap area: it chooses the runnable swapped-out process which has been
-out longest (218-223), weighted by `p_nice`, and tries to bring it in.
-If there is none, it sleeps on `runout` (229), to be roused by `setrun`
+out longest (219-224), weighted by `p_nice`, and tries to bring it in.
+If there is none, it sleeps on `runout` (230), to be roused by `setrun`
 or by `xswap` (#f("text.c")).
 
-If there is no room for the chosen process (239), a victim is sought:
+If there is no room for the chosen process (240), a victim is sought:
 first the largest process sleeping at a priority from which a signal
-could rouse it, or stopped by tracing (259); failing that, the process
+could rouse it, or stopped by tracing (260); failing that, the process
 which has been longest in core. The victim is swapped out only if the
 first kind was found, or if the process to be brought in has waited 3
-seconds and the victim has had 2 (278); otherwise `sched` sleeps on
-`runin`, which `clock` wakes each second and `sleep` (55) wakes when a
+seconds and the victim has had 2 (279); otherwise `sched` sleeps on
+`runin`, which `clock` wakes each second and `sleep` (56) wakes when a
 candidate appears.
 
-The parentheses added in (259) make explicit v7's reliance on `&&`
+The parentheses added in (260) make explicit v7's reliance on `&&`
 binding more tightly than `||`; the meaning is unchanged.
 
 On the PDP-11 this code was in constant use. Here memory is ample, and
@@ -2340,36 +2350,37 @@ in practice the first search always fails or `swapin` succeeds; the
 code is kept intact all the same, together with the swap area which
 `fork` insists upon.
 
-#lines(186, 287)
+#lines(187, 288)
 
 `swapin` allocates core for the data area and, if the process has a
 shared text segment not yet in core, for the text as well; reads both
 in; and releases the swap space. It returns zero, having undone its
 allocations, if either `malloc` fails.
 
-In this system no text segment is ever shared: programs are linked as
-one writable segment and `getxfile` (#f("sys1.c")) sets the text size
-to zero, so `p_textp` is always zero and (303-317) is never executed.
-The parentheses (303) are again for the compiler only.
+A text read back from the swap area is new to the instruction cache, which
+may hold stale lines for the same memory; `arm_sync_icache`
+(#f("mch.s")) is called on it, as in `xexpand` (#f("text.c")). The
+include of #f("seg.h") (11), for `CLKADDR`, is for that call. The
+parentheses (304) are for the compiler only.
 
-#lines(288, 324)
+#lines(289, 327)
 
 `qswtch` gives up the processor without sleeping: the current process
 is put back on the run queue and `swtch` is called. `trap` uses it when
 `runrun` is set.
 
-#lines(325, 337)
+#lines(328, 340)
 
 `swtch` chooses the next process to run and runs it. As in the sixth
 edition it works in three stages and involves, in general, three
 processes: the one giving up the processor, process 0, which always
 acts as an intermediary, and the one taking it over.
 
-#lines(338, 358)
+#lines(341, 361)
 
 Unless the caller is process 0 itself, its state is saved in
 `u.u_rsav` and process 0 is resumed at `u.u_qsav`. The zero return from
-`save` (360) continues on the second branch; the nonzero return comes
+`save` (363) continues on the second branch; the nonzero return comes
 much later, when this process is chosen again, and then `sureg`
 re-establishes its user mappings before `swtch` returns to its caller.
 
@@ -2378,13 +2389,13 @@ kernel and the user programs are compiled for soft floating point and
 no floating point register is ever in use, so `savfp` in #f("mch.s") is
 an empty routine and `u_fpsaved` merely records that it was called.
 
-#lines(359, 369)
+#lines(362, 372)
 
-The double `save` (381) is explained by its comment. The point to grasp
+The double `save` (384) is explained by its comment. The point to grasp
 is that `u.u_qsav` in process 0 marks the entrance to the search loop:
-every switch passes through it by the `resume` of (368).
+every switch passes through it by the `resume` of (371).
 
-#lines(370, 383)
+#lines(373, 386)
 
 With interrupts masked, the run queue is searched for the
 loaded runnable process of best (lowest) priority, and that process is
@@ -2392,15 +2403,15 @@ removed from the queue. If there is none, `idle` waits for an interrupt
 and the search is repeated. On the PDP-11 `idle` executed `wait`; here
 it unmasks the IRQ and executes `wfi`.
 
-#lines(384, 416)
+#lines(387, 419)
 
 The incoming process is resumed at `u.u_rsav` unless it has
-`SSWAP` set (420), in which case it is resumed at `u.u_ssav`. The flag is set
-by `newproc` (533), by `expand` (572), and by `xexpand` (#f("text.c")),
+`SSWAP` set (423), in which case it is resumed at `u.u_ssav`. The flag is set
+by `newproc` (536), by `expand` (575), and by `xexpand` (#f("text.c")),
 all of which made an image of a process (on the swap area or in fresh
 core) after doing `save(u.u_ssav)`. In such an image `u.u_rsav` is stale:
 it was recorded by some earlier switch, or, in `expand`'s case, by the
-call of `swtch` from `qswtch` (573), after the image had already been
+call of `swtch` from `qswtch` (576), after the image had already been
 written. Hence the explicit choice of label.
 
 Note that the ARM `resume` masks interrupts while the mapping and
@@ -2408,32 +2419,32 @@ registers are changed and, like the PDP-11 version, which ended at
 priority zero, unmasks them again with `spl0` once the new stack is in
 place (#f("mch.s")).
 
-#lines(417, 423)
+#lines(420, 426)
 
 `newproc` is the body of `fork`, and of the creation of process 1 by
 `main`. It returns 1 in the new process and 0 in the old.
 
-#lines(424, 444)
+#lines(427, 447)
 
 A process id is chosen which is in use neither as a process id
 nor as a process group, cycling below 30000. At the same time the first
 empty slot of `proc` is noted. `fork` (#f("sys1.c")) has already made
 sure that one exists.
 
-#lines(445, 463)
+#lines(448, 466)
 
 The new entry is filled in, and the reference counts of
 everything the child will share with its parent, its open files, text,
 and current and root directories, are incremented.
 
-#lines(464, 492)
+#lines(467, 495)
 
 The child's image is a copy of the parent's, `u` included, made after
-the parent has done `save(u.u_ssav)` (508). Before the copy,
-`u.u_procp` is set to the child's entry (499), so that the copy differs
-from the original in that one respect; the parent restores it (531).
+the parent has done `save(u.u_ssav)` (511). Before the copy,
+`u.u_procp` is set to the child's entry (502), so that the copy differs
+from the original in that one respect; the parent restores it (534).
 
-When the child is first chosen by `swtch` its `SSWAP` flag (533) causes
+When the child is first chosen by `swtch` its `SSWAP` flag (536) causes
 it to be resumed at `u.u_ssav`; its `save` returns 1, and `newproc`
 returns 1 to `fork`. The child's kernel stack, being part of `u`, is
 copied with the rest, and since `u` always appears at the same virtual
@@ -2449,13 +2460,13 @@ up the stack expect to find preserved were pushed on that stack before
 `volatile` in case it should be clobbered; since it is not used after
 the second return, the qualifier was removed.
 
-#lines(493, 517)
+#lines(496, 520)
 
-If there is no core for the copy (518), the parent's image is written
+If there is no core for the copy (521), the parent's image is written
 to the swap area as the child's image, without freeing the core
 (`xswap` with second argument zero). `rpp->p_addr` is pointed at the
 parent's core for the purpose, and `SIDL` keeps the parent from being
-chosen for swapping in the meanwhile. Otherwise (527) the image is
+chosen for swapping in the meanwhile. Otherwise (530) the image is
 copied, a click at a time, by `copyseg` (#f("machdep.c")). On the PDP-11
 `copyseg` had to borrow a user segmentation register to reach physical
 memory; here the kernel maps all of memory, and `CLKADDR` turns a click
@@ -2465,27 +2476,27 @@ The copy is of the whole image, as in v7: the per process area, the
 data, and the stack, which is no more than the program has asked for
 (`getxfile`, #f("sys1.c")). A small program's image is a few clicks.
 
-#lines(518, 535)
+#lines(521, 538)
 
 `expand` changes the size of the current process's image to `newsize`
-clicks. A shrinking image simply gives back its tail (562). A growing
-one is copied into a new area (577), after which `resume` (580)
-switches to the copy, whose `save` (565) then returns 1. The comment's
+clicks. A shrinking image simply gives back its tail (565). A growing
+one is copied into a new area (580), after which `resume` (583)
+switches to the copy, whose `save` (568) then returns 1. The comment's
 "taking care to reset registers" is a PDP-11 relic in effect: since `u`
 and the kernel stack always appear at the same virtual address, the
 copy needs no adjustment, and `resume` only has to remap `u` to the new
 area; `sureg` then maps the user pages there too.
 
-If there is no core (570), the image is written to the swap area at its
+If there is no core (573), the image is written to the swap area at its
 old size `n` but with `p_size` already set to the new one, the old core
 is freed, and the process gives up the processor with `SSWAP` set. When
 `sched` brings it back, `swapin` allocates the larger size, and the
-process resumes at `u.u_ssav` (565) and returns from `expand` as if
+process resumes at `u.u_ssav` (568) and returns from `expand` as if
 nothing had happened. Note that until `swtch` resumes another process it
 goes on running in core which is already free; nothing can reallocate
 it in that interval, since no interrupt routine allocates core.
 
-#lines(536, 581)
+#lines(539, 584)
 
 = Entering the Kernel
 
@@ -3024,17 +3035,14 @@ instead, so that the tracing parent can examine the new image.
 #lines(254, 267)
 
 The sizes are recorded and the user mapping set by
-`estabur`. The call which follows is new: `arm_sync_icache` (#f("mch.s")) makes the instructions just written
-visible to instruction fetch: the ARM has separate instruction and data
-caches, and the new program was written through the data cache, while
-the instruction cache may still hold the old program's code at the same
-addresses. The PDP-11 had no caches to worry about.
+`estabur`. The instructions of the new program were made visible to
+instruction fetch by `xalloc` (#f("text.c")), which read them in.
 
-#lines(268, 276)
+#lines(268, 275)
 
 `setregs` first resets to the default the signals that were caught
-(287--289), since the handlers no longer exist; signals that were ignored
-(value 1) stay ignored. Then the registers are cleared (290--292). v7
+(286--288), since the handlers no longer exist; signals that were ignored
+(value 1) stay ignored. Then the registers are cleared (289--291). v7
 cleared those which `regloc` names as `r0` to `r5`: on the PDP-11 every
 general register but the stack pointer `r6` and the `pc` `r7`. The port
 clears every general register of the ARM in the same way, `r0` to `r12`
@@ -3043,18 +3051,18 @@ program, and the `pc`, which is set next; the new program inherits
 nothing from the old. When the call returns, `trap` (#f("sysent.c"))
 puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
 zero, but the second is the caller's `r1`, the old program's argument
-pointer, so it is cleared too (293). The `pc` is set to the entry point
-with bit 0 cleared (294); on the PDP-11 this ensured an even address. On the
+pointer, so it is cleared too (292). The `pc` is set to the entry point
+with bit 0 cleared (293); on the PDP-11 this ensured an even address. On the
 ARM bit 0 of an entry point would select Thumb state, which no program
 here uses.
 
-#lines(277, 294)
+#lines(276, 293)
 
 The floating point save area is cleared, files marked close-on-exec are
 closed, and the last component of the name of the file (left in
 `u.u_dbuf` by `namei`) is kept for accounting.
 
-#lines(295, 309)
+#lines(294, 308)
 
 `rexit` is the system call; `exit` is also called by the kernel, from
 `psig` and `stop` (#f("sig.c")), with a signal number. The user's code
@@ -3064,7 +3072,7 @@ goes in the high byte of the status and the signal in the low, as
 `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit; files, current and root
 directories, text, and finally core are released. Note that after
-`mfree` (358) the process goes on running on the stack within the
+`mfree` (357) the process goes on running on the stack within the
 per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
@@ -3076,17 +3084,17 @@ which is woken in case it is waiting; stopped children are set running
 so that they can die. Finally the parent is woken, and `swtch` is
 called, never to return.
 
-#lines(310, 377)
+#lines(309, 376)
 
 `wait` looks for a child which is a zombie. If it finds one, it
 collects the status and times, frees the `proc` entry, and returns the
 child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
-`exit` (372) and `stop` wake, and looks again. If there are none,
+`exit` (371) and `stop` wake, and looks again. If there are none,
 `ECHILD`.
 
-#lines(378, 427)
+#lines(377, 426)
 
 `fork` checks that the swap area could hold a process of the maximum
 size, finds a free `proc` entry, and counts the caller's processes. The
@@ -3096,7 +3104,7 @@ still log in and kill something when the table is full.
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
 the user program must also be told which it is. v7 did it with a trick
 which the port keeps. In the child `fork` returns the parent's pid
-(469); in the parent it advances the saved `pc` by one word (481), so
+(468); in the parent it advances the saved `pc` by one word (480), so
 that the parent skips the instruction after the `svc`, a branch which
 only the child therefore takes. `R7` is the PDP-11's name for the `pc`
 (#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
@@ -3108,7 +3116,7 @@ branch, stores the parent's pid in `par_uid` and returns 0.
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(428, 482)
+#lines(427, 481)
 
 `sbreak` sets the size of the data area, and is v7's. The new break
 is converted to clicks, and, since the data begins at the first
@@ -3127,7 +3135,7 @@ relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
 
-#lines(483, 535)
+#lines(482, 534)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned
@@ -3450,20 +3458,21 @@ read-only again; `XWRIT` makes sure the altered text, not the file's,
 is what is swapped back in. The parentheses at 359 only tell the
 compiler that the assignment is meant.
 
-The second `estabur` has a use of its own, however. The word is stored
-through the data cache, and the processor fetches instructions through
-its instruction cache, which may still hold the old word. `estabur`
-calls `sureg`, which ends in `arm_sync_icache` (#f("mch.s"),
-#f("ureg.c")): the data cache is cleaned and the instruction cache
-discarded, so the planted instruction is the one executed.
+The word is stored through the data cache, and the processor fetches
+instructions through its instruction cache, which may still hold the
+old word. The call of `arm_sync_icache` (#f("mch.s")) which follows a
+successful store is new: it cleans the word's line out of the data cache
+and discards the instruction cache, so the planted instruction is the
+one executed. It is given the user address, which is mapped, since the
+process is the one being traced.
 
-#lines(352, 372)
+#lines(352, 373)
 
 Request 5 writes a word of data. Request 6 writes a word of the
 per-process area, but only in three places: the floating point save
 area, a saved register named by `regloc`, or the saved status register.
 
-The `&0377` (388) is new. In v7 the values of `regloc` were negative,
+The `&0377` (389) is new. In v7 the values of `regloc` were negative,
 and the PDP-11's signed `char` gave the right index. On the ARM they are
 all positive and `char` is unsigned; the mask converts the `char` to an
 `int` before it is used as an index, of which the compiler would
@@ -3471,7 +3480,7 @@ otherwise warn, and changes nothing. Note that, as on the PDP-11, only
 the registers `r0` to `r5`, the stack pointer, and the `pc` can be
 written: `regloc` names no other.
 
-#lines(373, 389)
+#lines(374, 390)
 
 A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
@@ -3482,7 +3491,7 @@ cleared the priority bits 5 to 7, is kept; on the ARM it clears the
 Thumb bit and the two interrupt masks, which the previous line has
 already cleared.
 
-#lines(390, 399)
+#lines(391, 400)
 
 Request 7 resumes the child, optionally at a new `pc`, with the
 pending signals replaced by the one given (or none). v7's request 9,
@@ -3498,7 +3507,7 @@ Request 8 makes the child exit. The `return` added after `exit` is
 never reached; it keeps the compiler, which does not know that `exit`
 does not return, from warning that control falls into the next case.
 
-#lines(400, 420)
+#lines(401, 421)
 #source("/usr/sys/h/acct.h")
 
 The record which the kernel appends to the accounting file when a
@@ -3709,35 +3718,38 @@ fit below the text's first address (#f("Makefile")), they are skipped
 address space then reads as zero. The signal trampoline is planted in
 the text while it is still writable (149, `install_sigtramp`,
 #f("machdep.c")); every process sharing the text uses the same one.
-`XWRIT` (150) then ensures that the swap copy is written when the core
+The text is then made visible to instruction fetch (150,
+`arm_sync_icache`, #f("mch.s")), a step the PDP-11, which had no
+caches, did not need. `XWRIT` (151) then ensures that the swap copy is written when the core
 copy is first given up.
 
-#lines(120, 151)
+#lines(120, 152)
 
 `xexpand` obtains core for a text which has none. If core is available,
 the text is read in from its swap copy, unless `XLOAD` says it is about
-to be read from the file instead.
+to be read from the file instead; a copy read from swap is made visible
+to instruction fetch (166) as `xalloc` does.
 
 If not, the process makes room for itself by swapping itself out
-(173), and leaves the matter to `sched`, which brings in data area and
+(176), and leaves the matter to `sched`, which brings in data area and
 text together (`swapin`, #f("slp.c")). The pattern is that of `expand`:
-`save(u.u_ssav)` (169) is the point to which the process returns, by way
+`save(u.u_ssav)` (172) is the point to which the process returns, by way
 of `SSWAP` and `swtch`, once it is back in core; it then reloads its
-user mapping with `sureg` and returns. `qswtch` (176) does not return.
+user mapping with `sureg` and returns. `qswtch` (179) does not return.
 
-#lines(152, 178)
+#lines(153, 181)
 
 The lock on a text entry. `xlock` sleeps at `PSWP`, a priority at which
 no signal can interrupt it.
 
-#lines(179, 201)
+#lines(182, 204)
 
 `xccdec` is called when a process using a text leaves core, by being
 swapped out or by giving up the text. When the last such process has
 gone, the core copy is freed, but first written to the swap device if
 it has never been written there (`XWRIT`).
 
-#lines(202, 222)
+#lines(205, 225)
 
 `xumount` is called by `umount` (#f("sys3.c")): a file system cannot be
 unmounted while a sticky text from it holds its inode. `xrele` is called
@@ -3745,15 +3757,15 @@ when write access to a file is checked (`access`, #f("fio.c")), when the
 file is unlinked, and when `chmod` clears its sticky bit (#f("sys4.c")):
 a text which no process is using should not hold the inode, nor survive
 a change to the file. Both pass the work to `xuntext`, which empties the
-entry only if no process uses it (263).
+entry only if no process uses it (266).
 
-The test in `xrele` (246) has gained parentheses. v7 wrote
+The test in `xrele` (249) has gained parentheses. v7 wrote
 `ip->i_flag&ITEXT==0`, which C parses as `ip->i_flag & (ITEXT==0)`,
 which is always zero, so that v7 never took the early return and always
 searched the table. The search finds nothing for an inode without
 `ITEXT`, so the bug cost only time; the port writes what was meant.
 
-#lines(223, 276)
+#lines(226, 279)
 #source("/usr/sys/h/buf.h")
 
 #f("buf.h") is unchanged from v7. Each `buf` is a header which describes
@@ -12001,13 +12013,13 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 297)
+#lines(139, 298)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(298, 299)
+#lines(299, 300)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

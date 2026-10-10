@@ -10,4 +10,5 @@ ps -l | awk '$NF == "r5b" {print $10}'
 $U/txtt
 cp /bin/sleep $T/sl; $T/sl 4 & $T/sl 4 & sleep 1; pstat -x >x; awk 'NR > 2 && $(NF-1) == 2 {print $(NF-1), $NF}' x
 echo x >$T/sl; echo st$?; cp /bin/echo $T/sl; wait; cp /bin/echo $T/sl; $T/sl replaced
+cp $U/ptw $T/pw; $U/ptw $T/pw
 cd /; rm -rf $T

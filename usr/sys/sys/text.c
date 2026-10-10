@@ -147,6 +147,7 @@ xalloc(register struct inode *ip)
 	u.u_procp->p_flag &= ~SLOCK;
 	u.u_segflg = 0;
 	install_sigtramp();
+	arm_sync_icache(CLKADDR(xp->x_caddr), ctob(ts));
 	xp->x_flag = XWRIT;
 }
 
@@ -160,8 +161,10 @@ void
 xexpand(register struct text *xp)
 {
 	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
-		if ((xp->x_flag&XLOAD)==0)
+		if ((xp->x_flag&XLOAD)==0) {
 			swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);
+			arm_sync_icache(CLKADDR(xp->x_caddr), ctob(xp->x_size));
+		}
 		xp->x_ccount++;
 		xunlock(xp);
 		return;

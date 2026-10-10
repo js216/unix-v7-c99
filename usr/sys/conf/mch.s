@@ -1,6 +1,6 @@
 .globl mmu_on, dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-.globl arm_sync_icache, idle, waitloc, savfp, dfar, dfsr
+.globl arm_sync_icache, tlbflush, idle, waitloc, savfp, dfar, dfsr
 .globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
 .globl l1, user_l2, uarea_l2
 
@@ -142,35 +142,31 @@ dcflush:
 	bx lr
 
 arm_sync_icache:
+	mrc p15, 0, r2, c0, c0, 1
+	lsr r2, r2, #16
+	and r2, r2, #0xf
+	mov r3, #4
+	lsl r2, r3, r2
+	add r1, r0, r1
+	sub r3, r2, #1
+	bic r0, r0, r3
+1:	cmp r0, r1
+	bhs 2f
+	mcr p15, 0, r0, c7, c11, 1
+	add r0, r0, r2
+	b 1b
+2:	dsb ish
+	mov r0, #0
+	mcr p15, 0, r0, c7, c5, 0
+	mcr p15, 0, r0, c7, c5, 6
+	dsb ish
+	isb
+	bx lr
+
+tlbflush:
 	mov r0, #0
 	dsb ish
 	mcr p15, 0, r0, c8, c7, 0
-	dsb ish
-	isb
-	push {r4, r5, r6, r7}
-	mcr p15, 2, r0, c0, c0, 0
-	isb
-	mrc p15, 1, r0, c0, c0, 0
-	and r1, r0, #7
-	add r1, r1, #4
-	movw r2, #0x3ff
-	and r2, r2, r0, lsr #3
-	clz r3, r2
-	movw r4, #0x7fff
-	and r4, r4, r0, lsr #13
-1:	mov r5, r2
-2:	lsl r6, r5, r3
-	lsl r7, r4, r1
-	orr r6, r6, r7
-	mcr p15, 0, r6, c7, c10, 2
-	subs r5, r5, #1
-	bge 2b
-	subs r4, r4, #1
-	bge 1b
-	pop {r4, r5, r6, r7}
-	mov r0, #0
-	dsb ish
-	mcr p15, 0, r0, c7, c5, 0
 	mcr p15, 0, r0, c7, c5, 6
 	dsb ish
 	isb

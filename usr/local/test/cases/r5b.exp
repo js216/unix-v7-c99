@@ -28,3 +28,9 @@ r5b: /tmp/r5b/sl: cannot create
 st1
 cp: cannot create /tmp/r5b/sl
 replaced
+exec stop 2577
+kill stop 1177
+before e3a00001
+w e3a00002 e12fff1e
+after e3a00002
+exit 12
