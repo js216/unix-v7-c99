@@ -3906,15 +3906,17 @@ descriptors in the virtqueue; a request needs three.
 requires. Each descriptor has a
 64-bit address, of which the ARM fills only the low word, a length,
 flags, and the index of the next descriptor of a chain. The available
-ring follows the descriptors, the used ring follows that at the next
-multiple of four bytes (the alignment `rkinit` gives the device), and
-each element of the used ring is a pair of words, hence `2*NVQ`. Note
-that the specification puts one more halfword after `aring`, which is
-not declared here; QEMU computes the place of the used ring without it,
-and the structure agrees with QEMU.
+ring follows the descriptors, and the used ring begins at the next
+multiple of 4096 bytes, the alignment which `rkinit` gives the device,
+as the legacy interface prescribes; `pad` (45) fills the space between.
+Each element of the used ring is a pair of words, hence `2*NVQ`. The
+specification puts one more halfword after `aring`, which is not
+declared, and QEMU leaves it out when it computes where the used ring
+lies; with an alignment of four the two would have differed by a word,
+but rounded up to 4096 bytes both arrive at the same place.
 
-The declaration of `rkstart` (50) is new, needed because `rkstrategy`
-calls it before its definition. `vqbuf` (54) is reserved with 4095
+The declaration of `rkstart` (51) is new, needed because `rkstrategy`
+calls it before its definition. `vqbuf` (55) is reserved with 4095
 bytes to spare, so that `rkinit` can
 place the virtqueue on a page boundary within it, as the legacy
 interface demands. `vreq` is the header of a request: its type, read or
@@ -3923,25 +3925,25 @@ number serves unchanged. `vstatus` receives the device's report, zero
 for success. One of each suffices, since the driver has only one
 request in the device at a time. `rktab` and `rrkbuf` are v7's.
 
-#lines(33, 63)
+#lines(33, 64)
 
 `rkinit` is called by `bdinit` (#f("qemu/c.c")) at the end of `startup`.
 Each transport is examined for the magic number `virt` (as a
 little-endian word) and a device type of 2, a block device; an empty
 transport reports type 0.
 
-#lines(64, 71)
+#lines(65, 72)
 
 The device is acknowledged and told that a driver exists, by writing 1
-and then 3 to the status register (72, 73). The
-virtqueue is then described to the device (74--78): the page size, the number of
+and then 3 to the status register (73, 74). The
+virtqueue is then described to the device (75--79): the page size, the number of
 descriptors, the alignment of the used ring, and the page number of the
 ring itself. `vq` is the address rounded up to a page; since the kernel
 maps memory at its own address (#f("qemu/c.c")), the same number serves
-as the physical address which the device needs. Status 7 (79) says the
+as the physical address which the device needs. Status 7 (80) says the
 driver is ready.
 
-The interrupt of the n-th transport (80) is shared peripheral
+The interrupt of the n-th transport (81) is shared peripheral
 interrupt 16 + n of the interrupt controller, number 48 + n. `intrtab`
 reaches `rkirq` through a pointer for that reason, and `clkstart`
 (#f("machdep.c")), which enables the interrupts in the table, runs after
@@ -3955,10 +3957,10 @@ of a request, is zero, which is right, since every request starts at
 descriptor 0. Both lie in `vqbuf`, which is zero, being uninitialised
 data.
 
-#lines(72, 82)
+#lines(73, 83)
 
 `rkstrategy` is v7's. A block number beyond the end of the disk is
-rejected at once (89--93), as v7 rejected one beyond the end of the
+rejected at once (90--94), as v7 rejected one beyond the end of the
 pack. Such requests arise: `breada` (#f("bio.c")) reads ahead the block
 after the last, and without the check the device would fail the
 request and `rkintr` would report and retry it ten times.
@@ -3972,20 +3974,20 @@ interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
 The queue is that of v7, threaded through `av_forw` and headed in
 `rktab` (#f("buf.h")).
 
-#lines(83, 105)
+#lines(84, 106)
 
 `rkstart` gives the request at the head of the queue to the device. v7
 computed the drive, cylinder, and sector, and loaded four registers,
 the last of which started the transfer; the port fills in a chain of
-three descriptors: the header `vreq` (115--120), which the device reads;
-the data (121--124), which the device writes on a read (flags 3, "next"
+three descriptors: the header `vreq` (116--121), which the device reads;
+the data (122--125), which the device writes on a read (flags 3, "next"
 and "device writes") and reads on a write (flag 1); and the status byte
-(125--127), which the device writes.
+(126--128), which the device writes.
 
 The minor device number, which v7 used to choose one of four drives, is
 ignored: there is one disk.
 
-#lines(106, 127)
+#lines(107, 128)
 
 The barrier `dmbsy` (#f("mch.s")) ensures that the device
 sees the descriptors before the incremented index of the available ring,
@@ -3998,16 +4000,16 @@ The remaining lines are v7's: they record the transfer for `iostat`.
 `dk_wds` is counted in units of 32 PDP-11 words, 64 bytes, since
 `iostat` multiplies it by 32.
 
-#lines(128, 137)
+#lines(129, 138)
 
 `rkintr` is called by `irq` (#f("machdep.c")) when the disk interrupts.
 The interrupt is acknowledged by writing back the bits read from
-the interrupt status register (143). It is ignored if no
+the interrupt status register (144). It is ignored if no
 request is outstanding, as in v7, or if the device has not yet returned
-it in the used ring. The barrier (146) keeps the processor from reading
+it in the used ring. The barrier (147) keeps the processor from reading
 `vstatus` or the data before it has seen the device's index.
 
-#lines(138, 146)
+#lines(139, 147)
 
 An error is reported by a nonzero status byte. v7 reported the
 RK11's error and drive status registers by `deverror` (#f("prf.c")),
@@ -4016,13 +4018,13 @@ and has nothing to reset. The retry, up to ten times, and the remainder
 of the procedure are v7's: the request is taken off the queue, completed
 by `iodone` (#f("bio.c")), and the next is started.
 
-#lines(147, 164)
+#lines(148, 165)
 
 The raw disk, `cdevsw` entry 9, transfers directly between the disk and
 the user's memory by way of `physio` (#f("bio.c")), using the private
 header `rrkbuf`.
 
-#lines(165, 177)
+#lines(166, 178)
 #source("/usr/sys/dev/bio.c")
 
 #f("bio.c") holds the buffer cache and the other routines which stand

@@ -42,6 +42,7 @@ struct	vring
 	unsigned short	aflags;
 	unsigned short	aidx;
 	unsigned short	aring[NVQ];
+	char	pad[4096-18*NVQ-4];
 	unsigned short	uflags;
 	unsigned short	uidx;
 	int	uring[2*NVQ];
@@ -73,7 +74,7 @@ rkinit(void)
 	RKADDR(0x70) = 3;
 	RKADDR(0x28) = 4096;
 	RKADDR(0x38) = NVQ;
-	RKADDR(0x3c) = 4;
+	RKADDR(0x3c) = 4096;
 	vq = (struct vring *)(((int)vqbuf+4095) & ~4095);
 	RKADDR(0x40) = (int)vq >> 12;
 	RKADDR(0x70) = 7;
