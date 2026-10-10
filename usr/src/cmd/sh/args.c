@@ -12,7 +12,7 @@
 LOCAL STRING *copyargs(STRING from[], INT n);
 LOCAL DOLPTR	dolh;
 
-CHAR	flagadr[10];
+CHAR	flagadr[11];
 
 CHAR	flagchar[] = {
 	'x',	'n',	'v',	't',	's',	'i',	'e',	'r',	'k',	'u',	0
