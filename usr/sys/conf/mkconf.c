@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-struct tab;
 void	puke(char **s);
 int	input(void), equal(char *a, char *b), badline(char *line);
 

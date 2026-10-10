@@ -6208,16 +6208,14 @@ have been made acceptable to a C99 compiler.
 
 `mkconf` runs on the host, not on the target, and is compiled as strict
 C99 like the rest. `<string.h>` (2) declares `strcmp`, which v7 used
-undeclared. The prototypes (4--6) are needed because the procedures are
-used before they are defined. `struct tab` (4) is declared ahead of
-them for the sake of a procedure `subst`, since removed; it is now
-unnecessary.
+undeclared. The prototypes (4, 5) are needed because the procedures are
+used before they are defined.
 
-The flag bits (8--15) are v7's. `CHAR`, `BLOCK`, `ROOT`, `SWAP`, and
+The flag bits (7--14) are v7's. `CHAR`, `BLOCK`, `ROOT`, `SWAP`, and
 `PIPE` are still used. `INTR`, `EVEN`, and `KL` controlled the layout of
 the vectors in `l.s`, and are now inert.
 
-#lines(1, 16)
+#lines(1, 15)
 
 The order of the names in `btab` and `ctab` is the order of the entries
 in `bdevsw` and `cdevsw`: the index of a name is its major device
@@ -6225,7 +6223,7 @@ number. A device which is not configured still occupies its place, so
 that the numbers never change, and the special files on the disk remain
 valid whatever the configuration. Both lists are v7's.
 
-#lines(17, 52)
+#lines(16, 51)
 
 `struct tab` describes one kind of device: its name; the number of
 such devices configured (`count`), negative for those which are always
@@ -6250,7 +6248,7 @@ strings: every driver routine is declared with a prototype in
 #f("systm.h"), which `c.c` includes, and v7's old-style declarations
 would conflict with them.
 
-#lines(53, 90)
+#lines(52, 89)
 
 The entries for devices which no configuration of this system names
 are unchanged but for their braces. Their declarations remain in v7's
@@ -6259,7 +6257,7 @@ style, and their drivers do not exist; to configure one would produce a
 clock and for memory parity never contributed anything but vectors, and
 are now without effect.
 
-#lines(91, 206)
+#lines(90, 205)
 
 The `rk` entry has the same changes as the console's. Its block
 declaration was `int rkstrategy();` and a definition of `rktab`, the
@@ -6270,13 +6268,13 @@ definition (#f("virtio_blk.c"), #f("stm32sd.c")) is the only one. Both
 boards' disk drivers took v7's `rk` names, so this one entry serves for
 each.
 
-#lines(207, 218)
+#lines(206, 217)
 
 The rest of v7's table is unchanged but for braces, except for `tty`,
 the controlling terminal, whose `d_stop` slot becomes `nulltty`. v7's
 terminating `0` is now `{0}`.
 
-#lines(219, 421)
+#lines(218, 420)
 
 `stre` heads `c.c` with its includes. v7 followed them with
 declarations of `nulldev` and `nodev`; those are in #f("systm.h"), and
@@ -6284,7 +6282,7 @@ their place is taken by the include of #f("seg.h"), which defines
 `struct memregion` and the section attributes used at the end of
 `c.c`.
 
-#lines(422, 440)
+#lines(421, 439)
 
 The remaining text of `c.c`. v7 wrote a bare `0` after the last entry
 of each switch; the port writes `{0}`, again for the braces. In `strg`,
@@ -6303,18 +6301,18 @@ in `l_rend`. The row for the packet driver `pk` (`strk`), which a
 `pack` line would add, gets braces and zeros for the three slots v7
 omitted; its declarations (`stri`) are v7's.
 
-#lines(441, 520)
+#lines(440, 519)
 
-v7's variables, followed by new ones (534--539) which hold the board
+v7's variables, followed by new ones (533--538) which hold the board
 description: whether DDR must be started (`ddr`); the origin and length
 of the kernel's memory (`ramb`, `ramn`) and of the region for its page
 tables (`tabb`, `tabn`); the core window; `pguser`; the addresses of the
 interrupt controller; and up to `NMAP` regions to be mapped, each with
 its attributes kept as text. The length of `mapa`'s strings is that of
 an input line, so that no token can overflow it. v7 declared `pack`
-twice (522, 532), which C permits for a variable without an initialiser.
+twice (521, 531), which C permits for a variable without an initialiser.
 
-#lines(521, 540)
+#lines(520, 539)
 
 The configuration is read in one go, and then the outputs are written,
 each by redirecting the standard output with `freopen`, as v7 did.
@@ -6336,7 +6334,7 @@ as v7's `mch.s` set `_u`; `mkconf` is a program of the build machine
 and does not include the kernel's headers, so the address is written
 out here, and the two must agree.
 
-#lines(541, 567)
+#lines(540, 566)
 
 The second pass writes `c.c` as v7 did. The assignments within the
 tests of the `for` loops (577, 584, 609, 616) are wrapped in a second
@@ -6348,12 +6346,12 @@ strategy slot gets `nostrat`, and a character device's read and write
 slots `nordwr`, its `ioctl` slot `noioctl`, and its `d_stop` slot
 `nulltty` (#f("conf.h")).
 
-#lines(568, 626)
+#lines(567, 625)
 
 The line disciplines, root, swap, and pipe devices, and the tables
 follow as in v7, except that the definition of `ldmpx` has gone.
 
-#lines(627, 642)
+#lines(626, 641)
 
 The tail of `c.c` is new. It defines the board's addresses for the
 kernel, the core window, `pguser`, and the interrupt controller, which
@@ -6374,12 +6372,12 @@ according to whether a TU16 tape was configured, so that the core dump
 routine in `mch.s` knew where to write. There is no dump routine in
 this system, and the pass is gone.
 
-#lines(643, 658)
+#lines(642, 657)
 
 `puke` writes a list of lines. v7 passed a second argument, which each
 line could use as a `printf` argument; no line used it, and it is gone.
 
-#lines(659, 669)
+#lines(658, 668)
 
 `input` reads one line of the configuration. The arrays `keyw` and `dev`
 were 32 characters long in v7, while a line may be 99; since `%s` copies
@@ -6395,13 +6393,13 @@ failed conversion. C99's `sscanf`, which is the host's here, stops at
 the first failure and returns 0, so the port scans the line a second
 time without the count.
 
-The keywords which describe the board are recognised first (690--709).
+The keywords which describe the board are recognised first (689--708).
 Their numbers are read in hexadecimal. A malformed line is reported by
 `badline`, a new procedure holding v7's message, which returns 1, so that
 reading continues as in v7. A ninth `map` line falls through to "cannot
 find".
 
-#lines(670, 709)
+#lines(669, 708)
 
 The remainder of `input` is v7's. A device name adds to that device's
 count, subject to the checks that a fixed device is not configured and
@@ -6413,12 +6411,12 @@ configured. The other keywords set the swap area, the root, swap,
 and pipe devices, and the options `pack` and `mpx`; `mpx` is now
 accepted and ignored.
 
-#lines(710, 792)
+#lines(709, 791)
 
 `badline` is the end of v7's `input`, made a procedure so that the new
 keywords can use it in an expression. `equal` is v7's.
 
-#lines(793, 805)
+#lines(792, 804)
 #source("/usr/sys/conf/mp135/c.c")
 
 The configuration of the STM32MP135, written by `mkconf`
