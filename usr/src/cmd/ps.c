@@ -133,7 +133,7 @@ bbreak:
 	getdev();
 	uid = getuid();
 	if (lflg)
-	printf(" F S UID   PID  PPID CPU PRI NICE  ADDR  SZ  WCHAN TTY TIME CMD\n"); else
+	printf(" F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD\n"); else
 		if (chkpid==0) printf("   PID TTY TIME CMD\n");
 	for (i=0; i<NPROC; i++) {
 		read(mem, (char *)&mproc, sizeof mproc);
@@ -245,14 +245,14 @@ prcom(int puid)
 	}
 	printf("%6u", mproc.p_pid);
 	if (lflg) {
-		printf("%6u%4d%4d%5d%6o%4d", mproc.p_ppid, mproc.p_cpu&0377,
+		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid, mproc.p_cpu&0377,
 			mproc.p_pri,
 			mproc.p_nice,
 			mproc.p_addr, (mproc.p_size+7)>>3);
 		if (mproc.p_wchan)
-			printf("%7o", mproc.p_wchan);
+			printf("%12o", mproc.p_wchan);
 		else
-			printf("       ");
+			printf("            ");
 	}
 	printf(" %-2.2s", tp);
 	if (mproc.p_stat==SZOMB) {
