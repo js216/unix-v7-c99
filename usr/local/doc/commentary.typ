@@ -13089,7 +13089,13 @@ asks with the real user and group ids whether the parent may be written
 of the permission check, since the effective id was root's and every
 later call would succeed. Note that `strncpy` (41) leaves `pname`
 unterminated, and the `strcpy` which follows supplies the terminator.
-Neither buffer is checked against the 128 bytes declared for it.
+
+v7 gave `pname` and `dname` 128 bytes each and never checked a name
+against them, although the kernel imposes no limit on the length of a
+path. A longer name overran them on the stack of a program running as
+root. The two arrays are now sized by the name itself (33), as C99's
+variable length arrays allow: `pname` holds at most the name and "."
+and a null, `dname` the name and "/.." and a null, so every copy fits.
 
 #lines(29, 47)
 

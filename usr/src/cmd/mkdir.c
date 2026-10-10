@@ -30,7 +30,7 @@ main(int argc, char *argv[])
 void
 mkdir(char *d)
 {
-	char pname[128], dname[128];
+	char pname[strlen(d)+2], dname[strlen(d)+4];
 	register int i, slash = 0;
 
 	pname[0] = '\0';
