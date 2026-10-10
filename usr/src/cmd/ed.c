@@ -368,7 +368,7 @@ commands(void)
 	case '=':
 		setall();
 		newline();
-		count = (addr2-zero)&077777;
+		count = addr2-zero;
 		putd();
 		putchr('\n');
 		continue;
@@ -919,7 +919,7 @@ putline(void)
 		}
 	}
 	nl = tline;
-	tline += (((lp-linebuf)+03)>>1)&077776;
+	tline += (((lp-linebuf)+03)>>1)&~1;
 	return(nl);
 }
 
@@ -930,12 +930,8 @@ getblock(int atl, int iof)
 	register char *p1, *p2;
 	register int n;
 	
-	bno = (atl>>8)&0377;
+	bno = atl>>8;
 	off = (atl<<1)&0774;
-	if (bno >= 255) {
-		lastc = '\n';
-		error(T);
-	}
 	nleft = 512 - off;
 	if (bno==iblock) {
 		ichanged |= iof;

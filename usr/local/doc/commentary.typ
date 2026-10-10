@@ -12004,8 +12004,10 @@ that a mark follows its line however lines are added or deleted before
 it; the search for a mark (466) compares pointers. `u` (329) undoes the
 last substitution by putting back the line pointer which it replaced,
 `subolda`; the old text is still in the temporary file, since nothing
-there is ever overwritten. The mask `077777` at (371) is a relic of the
-PDP-11's 16-bit `int`, and limits `=` to reporting 32767.
+there is ever overwritten. v7 masked the line number which `=` reports
+with `077777` (371), a relic of the PDP-11's 16-bit `int` which
+limited the report to 32767; the mask is gone, and `=` reports any
+number of lines.
 
 #lines(195, 387)
 
@@ -12096,8 +12098,8 @@ null-terminated string. `tline` counts the file in units of two bytes,
 and a line occupies a whole number of four-byte units (922), so that a
 pointer is always even. Its low bit is free, and `global` uses it to
 mark lines. Of the remaining bits, bits 1 to 7 give the offset within
-a block of 512 bytes, in four-byte units, and bits 8 to 15 the block
-number.
+a block of 512 bytes, in four-byte units, and the bits above them the
+block number.
 
 `getline` copies a line into `linebuf`, continuing at the start of the
 next block (`tl += 0400`) when a line runs over the end of one.
@@ -12105,10 +12107,14 @@ next block (`tl += 0400`) when a line runs over the end of one.
 newline within the text, as a substitution can produce, ends the line
 and leaves `linebp` at the rest, for `getsub` to collect.
 
-These sixteen bits, and so a temporary file of at most 255 blocks, are
-the PDP-11's limits. On the ARM `int` has 32 bits, but the masks at (922)
-and (933) keep the arithmetic as it was, and `getblock` reports `TMP`
-when the file would pass its 255th block (935).
+v7 kept a pointer in the sixteen bits of a PDP-11 `int`: the block
+number had eight, and the temporary file at most 255 blocks, about
+130 KB, at which `getblock` reported `TMP`. On the ARM `int` has 32 bits,
+and the masks which held the arithmetic to sixteen are gone: `tline`
+advances by an even number (922), and the block number is the whole of
+the pointer above bit 7 (933). A file of tens of thousands of lines now
+fits; the temporary file may grow until the disk is full, when a write
+fails and `blkio` reports `TMP` instead.
 
 #lines(879, 925)
 
@@ -12127,13 +12133,13 @@ v7 declared `read` and `write` here as external functions returning
 which is the type of `iofcn` in `blkio`'s prototype, so that either may
 be passed to it.
 
-#lines(926, 983)
+#lines(926, 979)
 
 `init` empties the buffer: a fresh temporary file, created with mode
 0600 and opened for reading and writing, `tline` at 2, no marks, and
 empty buffers.
 
-#lines(984, 1006)
+#lines(980, 1002)
 
 `global` reads the command list of `g` or `v` into `globuf`, then marks,
 in the low bit of each line pointer, the lines which match (or for `v`
@@ -12144,12 +12150,12 @@ command list. When the list is exhausted, `getchr` returns `EOF`, and
 time, because the commands may have added, deleted, or moved lines;
 the marks travel with the pointers.
 
-#lines(1007, 1059)
+#lines(1003, 1055)
 
 `join` concatenates lines `addr1` to `addr2` in `genbuf`, writes the
 result as a new line, and deletes the rest.
 
-#lines(1060, 1082)
+#lines(1056, 1078)
 
 `substitute` applies `s` to each line in range which matches. `dosub`
 builds the new line in `genbuf` from the part before the match, the
@@ -12163,11 +12169,11 @@ and `append` with `getsub` adds the remainder as further lines.
 `compsub` reads the replacement. An escaped character is stored with
 its top bit set, which is how `dosub` tells `\&` and `\1` from `&` and
 `1`; `ed` refuses characters with the top bit set in its text, so the
-bit is free for the purpose. The `&0377` at (1183), v7's, kept such a
+bit is free for the purpose. The `&0377` at (1179), v7's, kept such a
 character positive where `char` was signed. The local declaration of `getsub` has been
 removed, as the prototype now precedes it.
 
-#lines(1083, 1217)
+#lines(1079, 1213)
 
 `move` implements `m` and, with `cflag`, `t`, which first appends a
 copy of the lines at the end of the buffer and then moves the copy. A
@@ -12177,7 +12183,7 @@ each part and then the whole leaves the two parts exchanged. No text
 is copied, and no extra memory is needed. The local declaration of
 `getcopy` has been removed.
 
-#lines(1218, 1283)
+#lines(1214, 1279)
 
 `compile` translates a regular expression, read through `getchr` up to
 the delimiter `aeof`, into `expbuf`. An empty expression reuses the
@@ -12195,7 +12201,7 @@ A class is stored as its count, followed by the characters
 themselves. A range `a-z` is expanded into every character between its
 ends. `grep` stores a class as a bit map instead (#f("cmd/grep.c")).
 
-#lines(1284, 1413)
+#lines(1280, 1409)
 
 `execute` tries the compiled expression on line `addr`, or, when `gf`
 is set, on the rest of the current line after the previous match, for
@@ -12206,10 +12212,10 @@ the substitution forever. As in `grep`, if the expression begins with
 a literal character, `advance` is tried only where that character
 occurs.
 
-The masks `&0377` (1420, 1421) are new: `c` is a `char`, and a
+The masks `&0377` (1416, 1417) are new: `c` is a `char`, and a
 subscript of that type draws a warning from `-Wall`.
 
-#lines(1414, 1464)
+#lines(1410, 1460)
 
 `advance` is the matcher. It walks the compiled expression and the line
 together, each code testing and consuming characters, and returns 1 at
@@ -12222,22 +12228,22 @@ therefore the leftmost, and the longest which allows the rest to
 match. This backtracking is the whole of the algorithm, and it is what
 `grep` copied.
 
-A closure of a back reference (1523) gives back whole copies of the
-group. If no number of copies will do, the match fails (1534), as in
+A closure of a back reference (1519) gives back whole copies of the
+group. If no number of copies will do, the match fails (1530), as in
 `grep`'s copy of the case. v7 had `continue` here, which went on
 matching the rest of the expression from `lp`, by then before the point
 where the closure began, so that `/\(ab\)\1*a/` matched the line `ab`.
 
-The masks `&0377` (1507, 1511) are new, for the same reason as in
+The masks `&0377` (1503, 1507) are new, for the same reason as in
 `execute`.
 
-#lines(1465, 1571)
+#lines(1461, 1567)
 
 `backref` compares the text of a group with the line. `cclass` searches
 a class's list for a character; the null at the end of the line matches
 no class, negated or not.
 
-#lines(1572, 1597)
+#lines(1568, 1593)
 
 The output routines. `putchr` collects characters in `line` and writes
 it when a newline arrives or 64 characters have gathered. Under `l` it
@@ -12249,7 +12255,7 @@ folds long lines.
 it now returns `int` with the value 0, to agree with the declaration of
 `puts` in #f("stdio.h"). v7's returned nothing.
 
-#lines(1598, 1666)
+#lines(1594, 1662)
 
 The encryption of `-x` and `x`. The key is read with echo turned off
 (`getkey`), and passed with two characters of salt to
@@ -12266,10 +12272,10 @@ of the `crypt` command. For the temporary file, `makekey` at the end
 mixes the time and the process id into the key, so that each session's
 file is encrypted differently.
 
-The signal handler pointer in `getkey` (1699) has the new type of a
+The signal handler pointer in `getkey` (1695) has the new type of a
 handler.
 
-#lines(1667, 1803)
+#lines(1663, 1799)
 #source("/usr/src/cmd/grep.c")
 
 `grep` prints the lines of its files which match a regular expression.
