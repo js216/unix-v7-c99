@@ -15,3 +15,5 @@ $(TEST_IMG): $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \
 	$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null
 $(TS)/obj:
 	$Qmkdir -p $@
+
+-include $(TEST_OBJ:.o=.d)
