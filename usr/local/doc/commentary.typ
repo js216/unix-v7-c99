@@ -1650,7 +1650,7 @@ on the handler's first instruction; the ARM status register has no
 trace bit.
 
 When the handler returns, it returns to the trampoline, with the stack
-pointer at the frame, and the trampoline issues `sigreturn` (308).
+pointer at the frame, and the trampoline issues `sigreturn` (324).
 
 #lines(138, 142)
 
@@ -1773,31 +1773,41 @@ data space; #f("systm.h") makes the former names aliases of these.
 The `& 0377` (261) gives the byte without sign extension, whatever the
 signedness of `char`.
 
-#lines(249, 306)
+`copyin` and `copyout` share `ucopy` (290), which does what v7's
+assembler routines in `mch.s` did: when both addresses and the count are
+multiples of the word, it moves words (300--303); otherwise it moves
+bytes with `bcopy` (#f("subr.c")). The test of `n` (296) is needed
+because `bcopy`, v7's, copies at least one byte whatever its count;
+a count of zero with aligned addresses moves nothing in the word loop.
+`iomove` (#f("rdwri.c")) chooses `copyin` and `copyout` for exactly the
+aligned case, so most transfers between a buffer and the user go by
+words.
+
+#lines(249, 322)
 
 `sigreturn`, system call 63, undoes `sendsig`. It is called by the
 trampoline, at which point the user stack pointer addresses the saved
 frame.
 
-#lines(307, 313)
+#lines(323, 329)
 
 The frame is copied in through `copyin`, which bounds it to the
 user window; a bad stack pointer earns `SIGSEG`.
 
-#lines(314, 318)
+#lines(330, 334)
 
-`r0` to `r15` are restored (319, 320).
+`r0` to `r15` are restored (335, 336).
 
-Of the saved status register (321), only the condition flags (bits 27
+Of the saved status register (337), only the condition flags (bits 27
 to 31) and the `GE` flags (16 to 19) are taken. The mode bits are not:
 otherwise a forged frame could return the process to the processor in
 a privileged mode.
 
 `trap` (#f("sysent.c")) will store `r_val1` and `r_val2` into
 `r0` and `r1` as the results of this system call; setting them to the
-saved values (322, 323) makes the return restore those two registers too.
+saved values (338, 339) makes the return restore those two registers too.
 
-#lines(319, 324)
+#lines(335, 340)
 
 `fumem` and `sumem` serve the memory special files (#f("mem.c")) one byte
 at a time, in the role that `fuibyte` and `suibyte`, with a user segment
@@ -1811,7 +1821,7 @@ In either case the address must lie within the kernel image, `.ddrbss`,
 or core, all of which are mapped; anything else returns -1, and the
 driver sets `ENXIO`.
 
-#lines(325, 360)
+#lines(341, 376)
 
 `install_sigtramp` writes the two-instruction signal trampoline,
 `sigreturn` by `svc`, at user address 8. It is called by `exec`
@@ -1822,7 +1832,7 @@ linked to begin, so no program overwrites it.
 `panictrap` is the target of the vectors which should never be taken
 (#f("low.s")).
 
-#lines(361, 373)
+#lines(377, 389)
 #source("/usr/sys/h/proc.h")
 
 A process is represented in two places. Its `proc` structure, one
@@ -4678,10 +4688,9 @@ which checks the user address and counts.
 
 On the PDP-11 the test was for evenness, `NBPW` being 2, and the
 machine-language routines moved words. Here `NBPW` is 4, and `copyin`
-and `copyout` (#f("machdep.c")) are a range check followed by `bcopy`
-(#f("subr.c")), a byte loop; the single call is cheaper than one call of
-`passc` per byte, but alignment no longer matters to it. The test is
-v7's and has been left alone.
+and `copyout` (#f("machdep.c")) likewise move words when both addresses
+and the count are multiples of it, so the test is v7's and keeps its
+purpose.
 
 `u_segflg` 2 meant user instruction space, which the PDP-11/45 and /70
 kept apart from data space. The ARM has no such division, and

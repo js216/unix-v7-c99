@@ -287,12 +287,28 @@ suword(caddr_t a, int v)
 	return(0);
 }
 
+static void
+ucopy(caddr_t f, caddr_t t, unsigned n)
+{
+	register int *fp, *tp;
+
+	if((((unsigned)f|(unsigned)t|n) & (NBPW-1)) != 0) {
+		if(n)
+			bcopy(f, t, n);
+		return;
+	}
+	fp = (int *)f;
+	tp = (int *)t;
+	for(n /= NBPW; n; n--)
+		*tp++ = *fp++;
+}
+
 int
 copyin(caddr_t f, caddr_t t, unsigned n)
 {
 	if(!uaddr(f, n))
 		return(-1);
-	bcopy(f, t, n);
+	ucopy(f, t, n);
 	return(0);
 }
 
@@ -301,7 +317,7 @@ copyout(caddr_t f, caddr_t t, unsigned n)
 {
 	if(!uaddr(t, n))
 		return(-1);
-	bcopy(f, t, n);
+	ucopy(f, t, n);
 	return(0);
 }
 
