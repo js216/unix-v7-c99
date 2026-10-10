@@ -114,8 +114,9 @@ d--755 0 0
 		mem	c--644 0 0 8 0
 		kmem	c--640 0 0 8 1
 		null	c--666 0 0 8 2
-		root	b--640 0 0 0 0
-		swap	b--640 0 0 0 0
+		root	b--644 0 0 0 0
+		rrk0	c--644 0 0 9 0
+		swap	b--644 0 0 0 0
 		tty	c--666 0 0 17 0
 		$
 	etc	d--755 0 0
@@ -146,6 +147,8 @@ d--755 0 0
 		dict	d--755 0 0
 			words	---644 0 0 usr/dict/words
 			$
+		dmr	d--755 7 3
+			$
 		games	d--755 0 0
 			arithmetic	---755 0 0 usr/games/arithmetic
 			backgammon	---755 0 0 usr/games/backgammon
@@ -167,6 +170,8 @@ d--755 0 0
 			calendar	---755 0 0 usr/lib/calendar
 			diff3	---755 0 0 usr/lib/diff3
 			atrun	-u-755 0 0 usr/lib/atrun
+			uucp	d--755 4 4
+				$
 			$
 		spool	d--755 0 0
 			at	d--777 0 0
@@ -174,6 +179,8 @@ d--755 0 0
 				past	d--777 0 0
 					$
 				$
+			$
+		sys	d--755 2 2
 			$
 		$
 	unix	---644 0 0 boot/unix

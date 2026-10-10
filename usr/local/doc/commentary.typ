@@ -11790,7 +11790,8 @@ links, so `[`, which `test` recognizes as its own
 name, is a second copy of it. `1` is one of v7's shell scripts, like
 `true`, `false`, and `nohup`; `osh` is the old shell.
 
-Every file is owned by root but two in `/usr/adm`. A `u` in the second
+Every file is owned by root but two in `/usr/adm` and the three home
+directories below. A `u` in the second
 place of a mode sets the set-user-id bit. It is given to the programs
 which were set-user-id root in v7's distribution, because they must act
 as the super-user whoever runs them: `login`, `mkdir`, `mv`, `newgrp`,
@@ -11806,10 +11807,15 @@ read by anyone, as v7's `dmesg`, which is not set-user-id, requires:
 `cron` runs it as `daemon` (#f("cmd/cron.c")). `root` and
 `swap` are the same block device, the one disk, since the swap area lies
 on it beyond the file system; `ps` reads `/dev/swap` for the images of
-processes which are swapped out. There are no other terminals, so the
+processes which are swapped out. Both may be read by anyone, mode 644,
+as v7's `/dev/makefile` made them, so that `ps`, which is not
+set-user-id either, works for every user. `rrk0` is the raw disk,
+character device 9 (#f("virtio_blk.c")), the same disk read without the
+buffer cache; v7's makefile made a raw node beside every block one, with
+the same mode. There are no other terminals, so the
 lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 
-#lines(112, 120)
+#lines(112, 121)
 
 `/etc` holds the programs which v7 installed there, and its data:
 #f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
@@ -11818,7 +11824,7 @@ lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 mounts something, and #f("rc") empties the second, creating it on the
 first boot.
 
-#lines(121, 137)
+#lines(122, 138)
 
 `/tmp` may be written by anyone. Under `/usr`, `adm` holds three empty
 files. `messages` and `msgbuf` belong to `daemon`, so that `dmesg`, run
@@ -11832,13 +11838,19 @@ the table of `units`; and the spool directory of `at`, with the file in
 which `atrun` keeps the time of its last run and the directory `past`
 into which it moves each job while it runs. There is no `/usr/bin`.
 
-#lines(138, 178)
+`dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
+directories which #f("passwd") gives those users, owned by each user
+and his group. `login` changes to the home directory and refuses a user
+whose directory does not exist, so without them none of the three
+could log in.
+
+#lines(139, 185)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(179, 180)
+#lines(186, 187)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
