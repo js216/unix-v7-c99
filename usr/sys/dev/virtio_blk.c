@@ -11,7 +11,7 @@
 
 #define	RKADDR(off)	(*(volatile int *)(vbase+(off)))
 #define	NRK	4
-#define	NRKBLK	4872
+#define	NRKBLK	RKADDR(0x100)
 
 #define	RESET	0
 #define	WCOM	2
@@ -86,6 +86,11 @@ rkstrategy(register struct buf *bp)
 
 	if(bp->b_flags&B_PHYS)
 		mapalloc(bp);
+	if (bp->b_blkno >= NRKBLK) {
+		bp->b_flags |= B_ERROR;
+		iodone(bp);
+		return;
+	}
 	bp->av_forw = (struct buf *)NULL;
 	spl5();
 	if(rktab.b_actf == NULL)
