@@ -7237,7 +7237,7 @@ preprocessor only on a file whose first character was `#`.
 The declarations at 8--11 are new. C99 requires a declaration of every
 function before it is called, and v7 had none here. `getty` cannot take
 them from `stdio.h` (#f("stdio.h")), as the other commands do, because it
-defines a `puts` of its own (228) which differs from the library's, so
+defines a `puts` of its own (209) which differs from the library's, so
 it declares the system calls it uses itself. `stty` is declared by
 `sgtty.h`.
 
@@ -7284,20 +7284,26 @@ console of the PDP-11 had a speed set by jumpers.
 
 #lines(50, 103)
 
-`partab` (113) is a table of parity bits for the ASCII characters,
-used by `putchr` (238) when the terminal is in raw mode and the kernel
-adds no parity. It is nearly the kernel's table (#f("partab.c")),
-whose low bits encode the delay classes; here only the top bit, the
-parity, is used.
+`name` (107) receives the name which `getname` reads, and `crmod`,
+`upper`, and `lower` record what it learns about the terminal on the
+way.
 
-#lines(104, 131)
+v7 had here `partab`, a table of parity bits for the ASCII characters,
+which `putchr` used to send every character with even parity, since in
+raw mode the kernel adds none. The UART drivers of the port send eight
+data bits without parity (#f("pl011.c")), and a terminal emulator takes
+the eighth bit as part of the character, so the parity bit garbled the
+prompt: the `g` of `login:`, which has an odd number of one bits,
+arrived as `ç`. The table and its use are removed.
+
+#lines(104, 112)
 
 `main` chooses the first table from its argument; with none it uses
 `'0'`. For a line of type `'3'`, a Bell 212 modem which can answer at
 300 or 1200 bits per second, the current speed decides between the two
-cycles (143--149).
+cycles (124--130).
 
-#lines(132, 150)
+#lines(113, 131)
 
 The loop. The modes and speeds of the chosen table are set with
 `TIOCSETP`, the special characters with `TIOCSETC`, and the prompt is
@@ -7307,21 +7313,21 @@ by what `getname` learnt about the terminal, and `login` executed with
 the name as its argument. The modes are set by `stty`, which is `ioctl`
 with `TIOCSETP`. Otherwise the next table is tried.
 
-Note that the list of arguments to `execl` (175) ends with an `int` 0
+Note that the list of arguments to `execl` (156) ends with an `int` 0
 where a null pointer is meant. The function is variadic, so the
 compiler does not convert it; the call works because an `int` and a
 pointer are the same size, two bytes on the PDP-11 and four on the ARM.
 
-#lines(151, 180)
+#lines(132, 161)
 
 `getname` reads the name one character at a time, with the parity bit
-removed (196). A NUL means that the character was not received
+removed (177). A NUL means that the character was not received
 properly, which is what a terminal sending at a different speed, or a
 break, produces; `getname` returns 0, and `main` moves to the next
 table. End of file or EOT ends `getty`, and `init` starts another.
 
 Since the terminal is in raw mode, `getname` echoes each character
-itself (202), and does its own erasing (`#`) and killing (`@`). It also
+itself (183), and does its own erasing (`#`) and killing (`@`). It also
 learns about the terminal: if the name was ended by a carriage return,
 the terminal needs `CRMOD`; if it contains upper case letters, they are
 converted to lower case, and unless lower case letters appeared as well
@@ -7329,19 +7335,17 @@ the terminal is assumed to have no lower case, so `LCASE` will be set.
 A space becomes an underscore, since `login` reads the name as a single
 word.
 
-The test of `np` (200) stops the loop when 15 characters have been
-stored, leaving room in `name` for the null which `*np = 0` (221)
+The test of `np` (181) stops the loop when 15 characters have been
+stored, leaving room in `name` for the null which `*np = 0` (202)
 stores. v7 stopped at 16, and the null went one byte beyond the end of
 `name`.
 
-#lines(181, 225)
+#lines(162, 206)
 
 `puts` writes a string without the newline which the library's
-`puts` adds. `putchr` adds even parity to each character. Here `c` is a
-`char`, which on the ARM is unsigned; the `0177` mask makes the index
-non-negative whatever the signedness, so the code is v7's unchanged.
+`puts` adds, and `putchr` writes a single character, now as it is.
 
-#lines(226, 244)
+#lines(207, 224)
 #source("/usr/src/cmd/login.c")
 
 `login` turns the process which `init` (#f("cmd/init.c")) forked for a
