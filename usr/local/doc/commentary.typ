@@ -11036,8 +11036,12 @@ the assignment is meant as the condition (`-Wparentheses`).
 
 `execat` builds the name: the next element of the path, a `/` if the
 element was not empty, and the name. It returns a pointer to the
-element after, or 0 at the end of the path. An element ends at a `:`,
-and also, for a reason the code does not record, at a `-`.
+element after, or 0 at the end of the path. An element ends at a `:`
+(92). v7 ended it at a `-` as well, for a reason the code does not
+record, and so could not find a command in a directory such as
+`/usr/local-bin`, which it took for two directories, `/usr/local` and
+`bin`; the `-` is now part of the name, as it is for `sh`
+(#f("sh/service.c")).
 
 #lines(85, 100)
 #source("/usr/src/libc/gen/setjmp.s")

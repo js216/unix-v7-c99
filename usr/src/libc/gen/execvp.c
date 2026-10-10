@@ -89,7 +89,7 @@ execat(register char *s1, register char *s2, char *si)
 	register char *s;
 
 	s = si;
-	while (*s1 && *s1 != ':' && *s1 != '-')
+	while (*s1 && *s1 != ':')
 		*s++ = *s1++;
 	if (si != s)
 		*s++ = '/';
