@@ -49,19 +49,19 @@ d--755 0 0
 		join	---755 0 0 bin/join
 		kill	---755 0 0 bin/kill
 		ln	---755 0 0 bin/ln
-		login	---755 0 0 bin/login
+		login	-u-755 0 0 bin/login
 		look	---755 0 0 bin/look
 		ls	---755 0 0 bin/ls
 		mesg	---755 0 0 bin/mesg
-		mkdir	---755 0 0 bin/mkdir
-		mv	---755 0 0 bin/mv
+		mkdir	-u-755 0 0 bin/mkdir
+		mv	-u-755 0 0 bin/mv
 		ncheck	---755 0 0 bin/ncheck
-		newgrp	---755 0 0 bin/newgrp
+		newgrp	-u-755 0 0 bin/newgrp
 		nice	---755 0 0 bin/nice
 		nohup	---755 0 0 bin/nohup
 		od	---755 0 0 bin/od
 		osh	---755 0 0 bin/osh
-		passwd	---755 0 0 bin/passwd
+		passwd	-u-755 0 0 bin/passwd
 		pr	---755 0 0 bin/pr
 		primes	---755 0 0 bin/primes
 		prof	---755 0 0 bin/prof
@@ -74,7 +74,7 @@ d--755 0 0
 		restor	---755 0 0 bin/restor
 		rev	---755 0 0 bin/rev
 		rm	---755 0 0 bin/rm
-		rmdir	---755 0 0 bin/rmdir
+		rmdir	-u-755 0 0 bin/rmdir
 		sa	---755 0 0 bin/sa
 		sed	---755 0 0 bin/sed
 		sh	---755 0 0 bin/sh
@@ -84,7 +84,7 @@ d--755 0 0
 		spline	---755 0 0 bin/spline
 		split	---755 0 0 bin/split
 		stty	---755 0 0 bin/stty
-		su	---755 0 0 bin/su
+		su	-u-755 0 0 bin/su
 		sum	---755 0 0 bin/sum
 		sync	---755 0 0 bin/sync
 		tabs	---755 0 0 bin/tabs
@@ -164,7 +164,7 @@ d--755 0 0
 			units	---644 0 0 usr/lib/units
 			calendar	---755 0 0 usr/lib/calendar
 			diff3	---755 0 0 usr/lib/diff3
-			atrun	---755 0 0 usr/lib/atrun
+			atrun	-u-755 0 0 usr/lib/atrun
 			$
 		spool	d--755 0 0
 			at	d--777 0 0
