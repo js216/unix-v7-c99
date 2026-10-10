@@ -15,7 +15,7 @@ CMD_OBJ = $(CMD_ONE:%=$C/%.o) $(AWK_OBJ) $(foreach d,dc sed sh tar tp,$(call dir
 GEN += $(patsubst %.y,%.c,$(wildcard $C/*.y)) $C/awk/awk.g.c $C/awk/awk.h \
 	$C/awk/awk.lx.c $C/awk/proc $C/awk/proctab.c
 
-$(CMD_OBJ): CPPFLAGS = -Iusr/include -Iusr/src
+$(CMD_OBJ): CPPFLAGS = -Iusr/include
 $(CMD_OBJ): $C/cmd.mk
 $C/bc.o $C/egrep.o $C/expr.o $(AWK_OBJ): CPPFLAGS += -DYYSTACK_USE_ALLOCA=1
 
