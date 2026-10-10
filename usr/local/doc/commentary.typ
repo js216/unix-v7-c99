@@ -6758,84 +6758,95 @@ which the PHY writes into the DRAM when it initialises it.
 
 #lines(71, 94)
 
+`pgwait` waits for the PHY to finish a piece of work which `PIR` has
+started. The PHY's general status register `PGSR` (`0xc`) reports the
+end in bit 0, or a failure in one of the error bits `0x3e0`: of the
+impedance calibration, of the initialisation of the DRAM, or of the
+training below. Either ends the wait (100, 101). A failure leaves the
+memory unusable, and the kernel cannot run without it, so the status
+is printed and the system stops with a panic (102--105). The status is
+printed first because `panic` (#f("prf.c")) calls `update`, which the
+buffer cache, not yet set up, might keep from returning.
+
+#lines(95, 107)
+
 First the clock. The external 24 MHz crystal oscillator, HSE, is
-switched on and waited for (101--103). PLL2 is stopped and waited for
-(104--106), given HSE as its reference (107), and configured: the
+switched on and waited for (114--116). PLL2 is stopped and waited for
+(117--119), given HSE as its reference (120), and configured: the
 reference is divided by 3 and multiplied by 66 plus a fraction of
 5120/8192, which gives 533 MHz, and its R output, which clocks the
-DDR, divides that by 1 (108--111). The outputs and the PLL are then
+DDR, divides that by 1 (121--124). The outputs and the PLL are then
 enabled, and the PLL waited for until it is locked.
 
-#lines(95, 116)
+#lines(108, 129)
 
 If a previous low power mode left the DDR pads in retention (bit 12 of
 the power controller's `PWR_CR3`), the PHY could not drive the memory;
-retention is turned off (117--120).
+retention is turned off (130--133).
 
 DDR is guarded by the TrustZone address space controller, `TZC`, at
 `0x5c006000`, which filters every access by its address and by the
 security state of the bus master. Its clock, and that of the memory
-encryption unit beside it, are enabled (121--123); then, with its
+encryption unit beside it, are enabled (134--136); then, with its
 filter disabled, region 0, which covers the whole of DDR, is opened to
-reading and writing by every master (124--127). The SD card's DMA
+reading and writing by every master (137--140). The SD card's DMA
 controller is one of the masters which must reach it.
 
-#lines(117, 128)
+#lines(130, 141)
 
 The controller is now started up, following the sequence in the
 reference firmware. Through `DDRITFCR`, the RCC's register for the DDR
-interface, automatic clock gating is turned off for the duration (129);
-all the resets of the controller and PHY are asserted (130); their
-clocks are enabled (131); and the resets of the PHY and of the
-controller's register interface are released (132, 133). The loop
-(134) waits for the logic to settle. Its body reads a register, which
+interface, automatic clock gating is turned off for the duration (142);
+all the resets of the controller and PHY are asserted (143); their
+clocks are enabled (144); and the resets of the PHY and of the
+controller's register interface are released (145, 146). The loop
+(147) waits for the logic to settle. Its body reads a register, which
 the compiler must do, since an empty delay loop is removed by an
 optimising compiler, as happened in this file at one time.
 
-#lines(129, 135)
+#lines(142, 148)
 
 The controller is told not to consider the PHY ready (`DFIMISC`,
-136), and is programmed from `ddrc`. The remaining resets, of the
+149), and is programmed from `ddrc`. The remaining resets, of the
 controller's core, its AXI port, and the PHY's register interface, are
-released (139), and the PHY is programmed from `dphy`. The PHY
+released (152), and the PHY is programmed from `dphy`. The PHY
 performs some initialisation of its own on leaving reset; its general
 status register `PGSR` (`0xc`) reports the end of it in bit 0, and that
-is awaited (142).
+is awaited (155).
 
-#lines(136, 144)
+#lines(149, 157)
 
-Writing `0x1007f` to the PHY's initialisation register `PIR` (145)
+Writing `0x1007f` to the PHY's initialisation register `PIR` (158)
 asks it to reset and lock its DLLs, calibrate the output impedance,
 reset the memory and run its initialisation sequence, and to report
 completion to the controller only when all of this is done (bit 16). After a short delay, which
-lets the previous completion flag drop, `PGSR` is polled until it
-reports that the work is done or has failed (148); the error bits
-(`0x3e0`) are not examined further.
+lets the previous completion flag drop, `pgwait` (161) waits for the
+work to be done, or stops the system if it has failed.
 
 The controller is then told that the PHY is ready. `DFIMISC` is one
 of the controller's "quasi-dynamic" registers, which may be changed
 only between a clear and a set of `sw_done` in `SWCTL` (`0x320`); the
 controller acknowledges in `SWSTAT` (`0x324`). Once the change is
 acknowledged, the controller brings the memory to normal operation,
-which `STAT` (`0x4`) reports as mode 1 (155).
+which `STAT` (`0x4`) reports as mode 1 (167).
 
-#lines(145, 157)
+#lines(158, 169)
 
 Finally the PHY is trained. It must learn when, relative to its own
 clock, the strobe which accompanies data read from the memory is valid
 ("DQS gate training"); without this, reads do not work. During the
 training the controller must not issue refresh commands, so, by the
-same handshake, automatic refresh is turned off (160) and the
+same handshake, automatic refresh is turned off (172) and the
 controller again told that the PHY is not ready. `PIR` is set to
-`0x81` (164), which runs the training, and its completion is awaited
-as before. Refresh is turned back on and the PHY declared ready
-(169--174).
+`0x81` (176), which runs the training, and its completion is awaited
+by `pgwait` (179), as before. Refresh is turned back on and the PHY declared ready
+(180--185).
 
 The controller's AXI port, through which the processor and the DMA
-controllers reach memory, is enabled (176), and clock gating is
-restored (177). DDR may now be used.
+controllers reach memory, is enabled (187), and clock gating is
+restored (188). DDR may now be used.
 
-#lines(158, 178)
+#lines(170, 189)
 
 = User Space
 

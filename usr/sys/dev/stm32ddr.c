@@ -92,6 +92,19 @@ static unsigned int dphy[] = {
 	0xFFFF
 };
 
+static void
+pgwait(void)
+{
+	unsigned int s;
+
+	while (((s = DPHY(0x00C)) & 0x3E1) == 0)
+		;
+	if (s & 0x3E0) {
+		printf("PGSR %x\n", s);
+		panic("ddr");
+	}
+}
+
 void
 ddrinit(void)
 {
@@ -145,8 +158,7 @@ ddrinit(void)
 	DPHY(0x004) = 0x1007F;
 	for (i = 0; i < 10000; i++)
 		(void)DDRITFCR;
-	while ((DPHY(0x00C) & 0x3E1) == 0)
-		;
+	pgwait();
 	DDRC(0x320) &= ~1;
 	DDRC(0x1B0) |= 1;
 	DDRC(0x320) |= 1;
@@ -164,8 +176,7 @@ ddrinit(void)
 	DPHY(0x004) = 0x81;
 	for (i = 0; i < 10000; i++)
 		(void)DDRITFCR;
-	while ((DPHY(0x00C) & 0x3E1) == 0)
-		;
+	pgwait();
 	DDRC(0x320) &= ~1;
 	DDRC(0x060) = 0;
 	DDRC(0x1B0) |= 1;
