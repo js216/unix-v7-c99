@@ -3,6 +3,7 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/reg.h"
+#define	EBIT	0x20000000	/* user error bit in PS: C-bit */
 static void nullsys(void) { }
 static void nosys(void) { u.u_error = EINVAL; }
 
@@ -92,6 +93,7 @@ trap(int *r)
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
 	u.u_error = 0;
+	r[RPS] &= ~EBIT;
 	callp = &sysent[r[7] & 077];
 	for(i = 0; i < callp->sy_narg; i++)
 		u.u_arg[i] = r[i];
@@ -105,9 +107,10 @@ trap(int *r)
 	} else {
 		(*callp->sy_call)();
 	}
-	if (u.u_error)
-		r[R0] = -u.u_error;
-	else {
+	if (u.u_error) {
+		r[RPS] |= EBIT;
+		r[R0] = u.u_error;
+	} else {
 		r[R0] = u.u_r.r_val1;
 		r[R1] = u.u_r.r_val2;
 	}
