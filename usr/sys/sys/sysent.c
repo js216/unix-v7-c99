@@ -21,7 +21,7 @@ struct sysent sysent[64] =
 	{0, 0, fork},			/*  2 = fork */
 	{3, 3, read},			/*  3 = read */
 	{3, 3, write},			/*  4 = write */
-	{3, 3, open},			/*  5 = open */
+	{2, 2, open},			/*  5 = open */
 	{1, 1, close},			/*  6 = close */
 	{0, 0, wait},			/*  7 = wait */
 	{2, 2, creat},			/*  8 = creat */
@@ -99,7 +99,7 @@ trap(int *r)
 		u.u_arg[i] = r[i];
 	u.u_dirp = (caddr_t)u.u_arg[0];
 	u.u_r.r_val1 = 0;
-	u.u_r.r_val2 = 0;
+	u.u_r.r_val2 = r[R1];
 	u.u_ap = u.u_arg;
 	if (save(u.u_qsav)) {
 		if (u.u_error == 0)
@@ -125,8 +125,7 @@ trap(int *r)
 void
 user_trap_handler(int signo, int *r)
 {
-	int mode = r[RPS] & 0x1f;
-	if(mode != 0x10 && mode != 0x1f) {
+	if((r[RPS] & 0x1f) != 0x10) {
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
 		    signo, r[15], r[RPS], dfar(), dfsr());
 		panic("kernel trap");
