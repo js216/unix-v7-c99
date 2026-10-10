@@ -52,7 +52,7 @@ struct inode *mpxip;
  *	fork - process 0 to schedule
  *	     - process 1 execute bootstrap
  *
- * exit at low address in user mode -- /etc/init
+ * loop at low address in user mode -- /etc/init
  *	cannot be executed.
  */
 void

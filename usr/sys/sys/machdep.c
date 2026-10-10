@@ -18,24 +18,16 @@
  */
 int	icode[] =
 {
-	0xe3a00024,	/* mov r0, #init */
-	0xe3a01040,	/* mov r1, #initp */
-	0xe3a02000,	/* mov r2, #0 */
+	0xe3a0001c,	/* mov r0, #init */
+	0xe3a01014,	/* mov r1, #initp */
 	0xe3a0700b,	/* mov r7, #exec */
 	0xef000000,	/* svc #0 */
-	0xe3a00001,	/* mov r0, #1 */
-	0xe3a07001,	/* mov r7, #exit */
-	0xef000000,	/* svc #0 */
 	0xeafffffe,	/* b . */
+	0x0000001c,	/* initp: init; 0 */
+	0x00000000,
 	0x6374652f,	/* init: </etc/init\0> */
 	0x696e692f,
 	0x00000074,
-	0x00000000,
-	0x00000000,
-	0x00000000,
-	0x00000000,
-	0x00000024,	/* initp: init; 0 */
-	0x00000000,
 };
 int	szicode = sizeof(icode);
 
