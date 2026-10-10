@@ -513,6 +513,14 @@ differ between the two boards (the kernel, the start and end of user
 memory, the interrupt controller) are defined in the #f("qemu/c.c") which
 `mkconf` generates for each board.
 
+User programs include a copy of the file, `/usr/include/sys/param.h`,
+as they did in v7. The copy is identical to this file but for a guard
+around `NULL` (85), which `stdio.h` (#f("stdio.h")) defines as well; a
+program which includes both would otherwise define it twice. The same
+holds for the other headers which appear in both places, `inode.h`
+among them, except that `stat.h` and `timeb.h` add prototypes for their
+system calls (#f("stat.h")).
+
 #lines(145, 146)
 #source("/usr/sys/h/systm.h")
 

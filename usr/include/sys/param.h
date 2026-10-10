@@ -119,7 +119,7 @@
 #define	btoc(x)	((((unsigned)x+63)>>6))
 
 /* major part of a device */
-#define	major(x)	(int)(((unsigned)x>>8)&0377)
+#define	major(x)	(int)(((unsigned)x>>8))
 
 /* minor part of a device */
 #define	minor(x)	(int)(x&0377)
@@ -132,7 +132,7 @@ typedef	long		daddr_t;
 typedef char *		caddr_t;
 typedef	unsigned short	ino_t;
 typedef	long		time_t;
-typedef	int		label_t[10];	/* regs 2-7 */
+typedef	int		label_t[10];	/* regs 4-11, sp, lr */
 typedef	int		dev_t;
 typedef	long		off_t;
 
@@ -144,3 +144,5 @@ typedef	long		off_t;
 
 #define	INTPRI	0340		/* Priority bits */
 #define	BASEPRI(ps)	((ps & INTPRI) != 0)
+
+extern unsigned kernbase, corebase, coretop, pguser, gicdbase, giccbase;
