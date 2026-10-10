@@ -37,10 +37,12 @@ clock(caddr_t pc, int ps)
 	 * restart clock
 	 */
 
-
-	/*
-	 * display register
-	 */
+	clkcval += clkreload;
+	if((clkfrac += clkrem) >= HZ) {
+		clkfrac -= HZ;
+		clkcval++;
+	}
+	cntv_cval_set(clkcval);
 
 	/*
 	 * callouts

@@ -115,7 +115,8 @@ bad:
 #define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
 #define	TIMER	27
 extern struct intr intrtab[];
-unsigned	clkreload;
+unsigned long long clkcval;
+unsigned	clkreload, clkrem, clkfrac;
 int	irq_ready;
 
 static void
@@ -132,6 +133,7 @@ clkstart(void)
 
 	if((clkreload = cntfrq_get()/HZ) == 0)
 		panic("no clock");
+	clkrem = cntfrq_get()%HZ;
 	gicen(TIMER);
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)
@@ -139,7 +141,7 @@ clkstart(void)
 	GICD(0) = 1;
 	GICC(4) = 0xff;
 	GICC(0) = 1;
-	cntv_tval_set(clkreload);
+	cntv_cval_set(clkcval = cntvct_get() + clkreload);
 	cntv_ctl_set(1);
 	irq_ready = 1;
 	spl0();
@@ -152,11 +154,9 @@ irq(int *r)
 	register unsigned n;
 
 	n = GICC(0xc);
-	if((n&0x3ff) == TIMER) {
-		cntv_tval_set(clkreload);
-		if(u.u_procp != NULL)
-			clock((caddr_t)r[PC], (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
-	} else
+	if((n&0x3ff) == TIMER)
+		clock((caddr_t)r[PC], (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
+	else
 		for(ip = intrtab; ip->i_irq; ip++)
 			if(*ip->i_irq == (int)(n&0x3ff))
 				(*ip->i_fn)();

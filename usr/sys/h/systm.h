@@ -45,6 +45,8 @@ extern	dev_t	swapdev;		/* swapping device */
 extern	dev_t	pipedev;		/* pipe device */
 extern	int	icode[];	/* user init code */
 extern	int	szicode;	/* its size */
+extern	unsigned long long clkcval;	/* when the clock is next due */
+extern	unsigned clkreload, clkrem, clkfrac;
 
 dev_t getmdev(void);
 daddr_t	bmap(struct inode *ip, daddr_t bn, int rwflg);
@@ -73,7 +75,8 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	clock(caddr_t pc, int ps),
 	clock_ddr_init(void), close(void), closef(struct file *fp),
 	clrbuf(struct buf *bp), cninit(void), cntv_ctl_set(int c),
-	cntv_tval_set(unsigned t), copyseg(int from, int to), creat(void),
+	cntv_cval_set(unsigned long long c), copyseg(int from, int to),
+	creat(void),
 	dcflush(caddr_t a, unsigned n), ddrinit(void),
 	deverror(struct buf *bp, int o1, int o2), dmbsy(void), dup(void),
 	exec(void), exece(void), exit(int rv), expand(int newsize), fork(void),

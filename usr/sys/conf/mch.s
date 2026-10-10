@@ -1,5 +1,5 @@
 .globl mmu_on, dmbsy, spl0, spl1, spl5, spl6, spl7, splx
-.globl cntfrq_get, cntvct_get, cntv_tval_set, cntv_ctl_set, save, resume, dcflush
+.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
 .globl arm_sync_icache, idle, waitloc, savfp, dfar, dfsr
 .globl l1, user_l2, uarea_l2
 
@@ -85,8 +85,8 @@ cntvct_get:
 	mrrc p15, 1, r0, r1, c14
 	bx lr
 
-cntv_tval_set:
-	mcr p15, 0, r0, c14, c3, 0
+cntv_cval_set:
+	mcrr p15, 3, r0, r1, c14
 	isb
 	bx lr
 
