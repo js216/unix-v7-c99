@@ -125,7 +125,7 @@ DOLPTR	useargs(void)
 {
 	IF dolh
 	THEN	dolh->doluse++;
-		dolh->dolnxt=argfor;
+		IF dolh!=argfor THEN dolh->dolnxt=argfor FI
 		return(argfor=dolh);
 	ELSE	return(0);
 	FI
