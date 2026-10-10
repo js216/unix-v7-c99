@@ -30,7 +30,7 @@ usr/local
 +GEN += $(patsubst %.y,%.c,$(wildcard $C/*.y)) $C/awk/awk.g.c $C/awk/awk.h \
 +	$C/awk/awk.lx.c $C/awk/proc $C/awk/proctab.c
 +
-+$(CMD_OBJ): CPPFLAGS = -Iusr/include -Iusr/src
++$(CMD_OBJ): CPPFLAGS = -Iusr/include
 +$(CMD_OBJ): $C/cmd.mk
 +$C/bc.o $C/egrep.o $C/expr.o $(AWK_OBJ): CPPFLAGS += -DYYSTACK_USE_ALLOCA=1
 +
@@ -83,7 +83,7 @@ usr/local
 +LIBC_OBJ := $(addsuffix .o,$(basename $(wildcard $L/*.[cs] $L/gen/*.[cs] \
 +	$L/stdio/*.[cs] $L/sys/*.[cs])))
 +
-+$(LIBC_OBJ) $(CRT): CPPFLAGS = -Iusr/include -Iusr
++$(LIBC_OBJ) $(CRT): CPPFLAGS = -Iusr/include
 +$(LIBC_OBJ) $(CRT): $L/lib.mk
 +
 +$(LIBC): $(LIBC_OBJ)
@@ -225,7 +225,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,178 @@
+@@ -0,0 +1,180 @@
 +/dev/null
 +10648 2048
 +d--755 0 0
@@ -277,19 +277,19 @@ usr/local
 +		join	---755 0 0 bin/join
 +		kill	---755 0 0 bin/kill
 +		ln	---755 0 0 bin/ln
-+		login	---755 0 0 bin/login
++		login	-u-755 0 0 bin/login
 +		look	---755 0 0 bin/look
 +		ls	---755 0 0 bin/ls
 +		mesg	---755 0 0 bin/mesg
-+		mkdir	---755 0 0 bin/mkdir
-+		mv	---755 0 0 bin/mv
++		mkdir	-u-755 0 0 bin/mkdir
++		mv	-u-755 0 0 bin/mv
 +		ncheck	---755 0 0 bin/ncheck
-+		newgrp	---755 0 0 bin/newgrp
++		newgrp	-u-755 0 0 bin/newgrp
 +		nice	---755 0 0 bin/nice
 +		nohup	---755 0 0 bin/nohup
 +		od	---755 0 0 bin/od
 +		osh	---755 0 0 bin/osh
-+		passwd	---755 0 0 bin/passwd
++		passwd	-u-755 0 0 bin/passwd
 +		pr	---755 0 0 bin/pr
 +		primes	---755 0 0 bin/primes
 +		prof	---755 0 0 bin/prof
@@ -302,7 +302,7 @@ usr/local
 +		restor	---755 0 0 bin/restor
 +		rev	---755 0 0 bin/rev
 +		rm	---755 0 0 bin/rm
-+		rmdir	---755 0 0 bin/rmdir
++		rmdir	-u-755 0 0 bin/rmdir
 +		sa	---755 0 0 bin/sa
 +		sed	---755 0 0 bin/sed
 +		sh	---755 0 0 bin/sh
@@ -312,7 +312,7 @@ usr/local
 +		spline	---755 0 0 bin/spline
 +		split	---755 0 0 bin/split
 +		stty	---755 0 0 bin/stty
-+		su	---755 0 0 bin/su
++		su	-u-755 0 0 bin/su
 +		sum	---755 0 0 bin/sum
 +		sync	---755 0 0 bin/sync
 +		tabs	---755 0 0 bin/tabs
@@ -339,7 +339,7 @@ usr/local
 +		$
 +	dev	d--755 0 0
 +		console	c--644 0 0 0 0
-+		mem	c--640 0 0 8 0
++		mem	c--644 0 0 8 0
 +		kmem	c--640 0 0 8 1
 +		null	c--666 0 0 8 2
 +		root	b--640 0 0 0 0
@@ -367,6 +367,8 @@ usr/local
 +		$
 +	usr	d--755 0 0
 +		adm	d--755 0 0
++			messages	---644 1 1 /dev/null
++			msgbuf	---644 1 1 /dev/null
 +			wtmp	---644 0 0 /dev/null
 +			$
 +		dict	d--755 0 0
@@ -392,7 +394,7 @@ usr/local
 +			units	---644 0 0 usr/lib/units
 +			calendar	---755 0 0 usr/lib/calendar
 +			diff3	---755 0 0 usr/lib/diff3
-+			atrun	---755 0 0 usr/lib/atrun
++			atrun	-u-755 0 0 usr/lib/atrun
 +			$
 +		spool	d--755 0 0
 +			at	d--777 0 0
@@ -410,9 +412,6 @@ usr/local
 % etc/passwd
 
 % etc/rc
-@@ -5 +5 @@
--rm /etc/mtab
-+rm -f /etc/mtab
 @@ -7 +6,0 @@
 -/etc/mount /dev/rp3 /usr
 
@@ -495,11 +494,7 @@ usr/local
 +#define	SIG_IGN	(void (*)(int))1
 
 % usr/include/stdio.h
-@@ -21,0 +22 @@
-+#ifndef NULL
-@@ -22,0 +24 @@
-+#endif
-@@ -37,5 +39,63 @@
+@@ -37,5 +37,63 @@
 -FILE	*fopen();
 -FILE	*freopen();
 -FILE	*fdopen();
@@ -4643,6 +4638,9 @@ usr/local
 @@ -1471 +1511 @@
 -		braelist[*ep++] = lp;
 +		braelist[*ep++&0377] = lp;
+@@ -1494 +1534 @@
+-		continue;
++		return(0);
 @@ -1532,3 +1572,2 @@
 -backref(i, lp)
 -register i;
@@ -6026,6 +6024,9 @@ usr/local
 @@ -181 +186 @@
 -	register c;
 +	register int c;
+@@ -195 +200 @@
+-		if (c=='\r' || c=='\n' || np >= &name[16])
++		if (c=='\r' || c=='\n' || np >= &name[15])
 @@ -222,2 +227,2 @@
 -puts(as)
 -char *as;
@@ -6987,6 +6988,9 @@ usr/local
 @@ -35 +34 @@
 -	register i, slash = 0;
 +	register int i, slash = 0;
+@@ -66 +65 @@
+-		dname[strlen(dname)] = '\0';
++		dname[strlen(dname)-1] = '\0';
 
 % usr/src/cmd/mkfs.c
 @@ -8,0 +9 @@
@@ -8546,6 +8550,9 @@ usr/local
 -char **argv;
 +int
 +main(int argc, char **argv)
+@@ -134 +136 @@
+-	printf(" F S UID   PID  PPID CPU PRI NICE  ADDR  SZ  WCHAN TTY TIME CMD\n"); else
++	printf(" F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD\n"); else
 @@ -154 +156,2 @@
 -getdev()
 +void
@@ -8578,6 +8585,15 @@ usr/local
 @@ -241 +244 @@
 -			"0SWRIZT"[mproc.p_stat], puid);
 +			"0SWRIZT"[mproc.p_stat&0377], puid);
+@@ -245 +248 @@
+-		printf("%6u%4d%4d%5d%6o%4d", mproc.p_ppid, mproc.p_cpu&0377,
++		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid, mproc.p_cpu&0377,
+@@ -250 +253 @@
+-			printf("%7o", mproc.p_wchan);
++			printf("%12o", mproc.p_wchan);
+@@ -252 +255 @@
+-			printf("       ");
++			printf("            ");
 @@ -304 +307 @@
 -	if (read(file, abuf, sizeof(abuf)) != sizeof(abuf))
 +	if (read(file, (char *)abuf, sizeof(abuf)) != sizeof(abuf))
@@ -9932,6 +9948,9 @@ usr/local
 @@ -12 +12 @@
 -PROC STRING *copyargs();
 +LOCAL STRING *copyargs(STRING from[], INT n);
+@@ -15 +15 @@
+-CHAR	flagadr[10];
++CHAR	flagadr[11];
 @@ -27,3 +27 @@
 -INT	options(argc,argv)
 -	STRING		*argv;
@@ -9977,6 +9996,9 @@ usr/local
 @@ -127 +124 @@
 -DOLPTR	useargs()
 +DOLPTR	useargs(void)
+@@ -131 +128 @@
+-		dolh->dolnxt=argfor;
++		IF dolh!=argfor THEN dolh->dolnxt=argfor FI
 
 % usr/src/cmd/sh/blok.c
 @@ -27,2 +27 @@
@@ -11036,6 +11058,9 @@ usr/local
 % usr/src/cmd/sh/name.h
 
 % usr/src/cmd/sh/print.c
+@@ -12 +12 @@
+-CHAR		numbuf[6];
++CHAR		numbuf[11];
 @@ -17 +17,2 @@
 -newline()
 +VOID
@@ -11076,6 +11101,9 @@ usr/local
 -itos(n)
 +VOID
 +itos(INT n)
+@@ -75 +77 @@
+-	FOR i=10000; i!=1; i/=10
++	FOR i=1000000000; i!=1; i/=10
 @@ -83,2 +85,2 @@
 -stoi(icp)
 -STRING	icp;
@@ -14220,7 +14248,7 @@ usr/local
 +	return(*(int *)p1 - *(int *)p2);
 
 % usr/src/libc/csu/crt0.s
-@@ -1,36 +1,12 @@
+@@ -1,36 +1,14 @@
 -/ C runtime startoff
 -
 -.globl	_exit, _environ
@@ -14267,6 +14295,8 @@ usr/local
 +	str	r2, [r3]
 +	bl	main
 +	bl	exit
++	mov	r7, #1
++	svc	#0
 +.comm	environ, 4
 +.comm	errno, 4
 
@@ -16469,7 +16499,7 @@ usr/local
 +	b	cerror
 
 % usr/src/libc/sys/sbrk.s
-@@ -1,40 +1,20 @@
+@@ -1,40 +1,18 @@
 -/old = sbrk(increment);
 -/
 -/sbrk gets increment more core, and returns a pointer
@@ -16518,19 +16548,17 @@ usr/local
 +	add	r0, r1, r0
 +	bl	brk
 +	pop	{r1, lr}
-+	cmp	r0, #0
-+	movge	r0, r1
++	movcc	r0, r1
 +	bx	lr
 +brk:
 +	push	{r0, lr}
 +	mov	ip, #17
 +	bl	cerror
 +	pop	{r1, lr}
-+	cmp	r0, #0
-+	ldrge	r2, =nd
-+	strge	r1, [r2]
++	ldrcc	r2, =nd
++	strcc	r1, [r2]
 +	bx	lr
-@@ -43,3 +23 @@
+@@ -43,3 +21 @@
 -9:
 -	sys	.break; 0:..
 -nd:	_end
@@ -17321,7 +17349,7 @@ usr/local
 +	b	cerror
 
 % usr/src/libc/sys/pipe.s
-@@ -1,24 +1,11 @@
+@@ -1,24 +1,10 @@
 -/ pipe -- C library
 -
 -/	pipe(f)
@@ -17352,8 +17380,7 @@ usr/local
 +	mov	ip, #42
 +	bl	cerror
 +	pop	{r2, lr}
-+	cmp	r0, #0
-+	bxlt	lr
++	bxcs	lr
 +	stmia	r2, {r0, r1}
 +	mov	r0, #0
 +	bx	lr
@@ -17865,7 +17892,7 @@ usr/local
 +	b	cerror
 
 % usr/src/libc/sys/wait.s
-@@ -1,26 +1,11 @@
+@@ -1,26 +1,10 @@
 -/ C library -- wait
 -
 -/ pid = wait(0);
@@ -17898,8 +17925,7 @@ usr/local
 +	mov	ip, #7
 +	bl	cerror
 +	pop	{r2, lr}
-+	cmp	r0, #0
-+	bxlt	lr
++	bxcs	lr
 +	cmp	r2, #0
 +	strne	r1, [r2]
 +	bx	lr
@@ -17937,7 +17963,7 @@ usr/local
 +	b	cerror
 
 % usr/src/libc/syscall.s usr/src/libc/v6/syscall.s
-@@ -1,27 +1,13 @@
+@@ -1,27 +1,11 @@
 -/ syscall
 -
 -.globl	_syscall,csv,cret,cerror
@@ -17971,11 +17997,9 @@ usr/local
 +	mov	r7, ip
 +	svc	#0
 +	pop	{r7}
-+	cmp	r0, #0
-+	bxge	lr
-+	rsb	r1, r0, #0
++	bxcc	lr
 +	ldr	r2, =errno
-+	str	r1, [r2]
++	str	r0, [r2]
 +	mvn	r0, #0
 +	bx	lr
 
@@ -20653,6 +20677,9 @@ usr/local
 @@ -12 +12 @@
 -#define	RKADDR	((struct device *)0177400)
 +#define	SD(off)	(*(volatile int *)(0x58005000+(off)))
+@@ -14 +14 @@
+-#define	NRKBLK	4872
++#define	NRKBLK	11520
 @@ -17,3 +17,3 @@
 -#define	WCOM	2
 -#define	RCOM	4
@@ -20706,7 +20733,7 @@ usr/local
 +rkstrategy(register struct buf *bp)
 @@ -51 +64 @@
 -	if (bp->b_blkno >= NRKBLK) {
-+	if (bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
++	if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
 @@ -68 +81,2 @@
 -rkstart()
 +void
@@ -21161,6 +21188,9 @@ usr/local
 @@ -12 +12 @@
 -#define	RKADDR	((struct device *)0177400)
 +#define	RKADDR(off)	(*(volatile int *)(vbase+(off)))
+@@ -14 +14 @@
+-#define	NRKBLK	4872
++#define	NRKBLK	RKADDR(0x100)
 @@ -25,0 +26 @@
 +#define	NVQ	8
 @@ -32 +33 @@
@@ -21223,22 +21253,16 @@ usr/local
 +
 +void
 +rkstrategy(register struct buf *bp)
-@@ -51,5 +88,0 @@
--	if (bp->b_blkno >= NRKBLK) {
--		bp->b_flags |= B_ERROR;
--		iodone(bp);
--		return;
--	}
-@@ -68 +101,2 @@
+@@ -68 +106,2 @@
 -rkstart()
 +void
 +rkstart(void)
-@@ -71,3 +105 @@
+@@ -71,3 +110 @@
 -	register com;
 -	daddr_t bn;
 -	int dn, cn, sn;
 +	register int com;
-@@ -78,12 +110,17 @@
+@@ -78,12 +115,17 @@
 -	bn = bp->b_blkno;
 -	dn = minor(bp->b_dev);
 -	cn = bn/12;
@@ -21268,17 +21292,17 @@ usr/local
 +	vq->aidx++;
 +	dmbsy();
 +	RKADDR(0x50) = 0;
-@@ -96 +133,2 @@
+@@ -96 +138,2 @@
 -rkintr()
 +void
 +rkintr(void)
-@@ -100 +138,2 @@
+@@ -100 +143,2 @@
 -	if (rktab.b_active == NULL)
 +	RKADDR(0x64) = RKADDR(0x60);
 +	if (rktab.b_active == NULL || vq->uidx != vq->aidx)
-@@ -101,0 +141 @@
+@@ -101,0 +146 @@
 +	dmbsy();
-@@ -105,5 +145,2 @@
+@@ -105,5 +150,2 @@
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
 -		RKADDR->rkcs = RESET|GO;
@@ -21286,12 +21310,12 @@ usr/local
 -			;
 +	if (vstatus) {
 +		deverror(bp, vstatus, 0);
-@@ -123,2 +160,2 @@
+@@ -123,2 +165,2 @@
 -rkread(dev)
 -dev_t dev;
 +void
 +rkread(dev_t dev)
-@@ -130,2 +167,2 @@
+@@ -130,2 +172,2 @@
 -rkwrite(dev)
 -dev_t dev;
 +void
@@ -21806,7 +21830,7 @@ usr/local
 +	register unsigned i;
 +	short c;
 +
-+	i = ((unsigned long long)(((unsigned)pc-p->pr_off)>>1) * (p->pr_scale>>1) >> 14) & ~1;
++	i = (((unsigned long long)(((unsigned)pc-p->pr_off)>>1) * (p->pr_scale>>1) >> 14) + 1) & ~1;
 +	if (i >= p->pr_size)
 +		return;
 +	if (copyin((caddr_t)p->pr_base+i, (caddr_t)&c, 2) < 0) {
@@ -23241,13 +23265,14 @@ usr/local
 +utime(void)
 
 % usr/sys/sys/sysent.c
-@@ -2,0 +3,5 @@
+@@ -2,0 +3,6 @@
 +#include "../h/dir.h"
 +#include "../h/user.h"
 +#include "../h/reg.h"
++#define	EBIT	0x20000000	/* user error bit in PS: C-bit */
 +static void nullsys(void) { }
 +static void nosys(void) { u.u_error = EINVAL; }
-@@ -10,54 +14,0 @@
+@@ -10,54 +15,0 @@
 -int	alarm();
 -int	mpxchan();
 -int	chdir();
@@ -23302,7 +23327,7 @@ usr/local
 -int	utime();
 -int	wait();
 -int	write();
-@@ -67,64 +18,64 @@
+@@ -67,64 +19,64 @@
 -	0, 0, nullsys,			/*  0 = indir */
 -	1, 1, rexit,			/*  1 = exit */
 -	0, 0, fork,			/*  2 = fork */
@@ -23372,7 +23397,7 @@ usr/local
 +	{0, 0, fork},			/*  2 = fork */
 +	{3, 3, read},			/*  3 = read */
 +	{3, 3, write},			/*  4 = write */
-+	{3, 3, open},			/*  5 = open */
++	{2, 2, open},			/*  5 = open */
 +	{1, 1, close},			/*  6 = close */
 +	{0, 0, wait},			/*  7 = wait */
 +	{2, 2, creat},			/*  8 = creat */
@@ -23431,7 +23456,7 @@ usr/local
 +	{1, 1, chroot},			/* 61 = chroot */
 +	{0, 0, nosys},			/* 62 = x */
 +	{0, 0, sigreturn}		/* 63 = sigreturn */
-@@ -131,0 +83,57 @@
+@@ -131,0 +84,58 @@
 +char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
 +void
 +trap(int *r)
@@ -23444,12 +23469,13 @@ usr/local
 +	u.u_fpsaved = 0;
 +	u.u_ar0 = r;
 +	u.u_error = 0;
++	r[RPS] &= ~EBIT;
 +	callp = &sysent[r[7] & 077];
 +	for(i = 0; i < callp->sy_narg; i++)
 +		u.u_arg[i] = r[i];
 +	u.u_dirp = (caddr_t)u.u_arg[0];
 +	u.u_r.r_val1 = 0;
-+	u.u_r.r_val2 = 0;
++	u.u_r.r_val2 = r[R1];
 +	u.u_ap = u.u_arg;
 +	if (save(u.u_qsav)) {
 +		if (u.u_error == 0)
@@ -23457,9 +23483,10 @@ usr/local
 +	} else {
 +		(*callp->sy_call)();
 +	}
-+	if (u.u_error)
-+		r[R0] = -u.u_error;
-+	else {
++	if (u.u_error) {
++		r[RPS] |= EBIT;
++		r[R0] = u.u_error;
++	} else {
 +		r[R0] = u.u_r.r_val1;
 +		r[R1] = u.u_r.r_val2;
 +	}
@@ -23474,8 +23501,7 @@ usr/local
 +void
 +user_trap_handler(int signo, int *r)
 +{
-+	int mode = r[RPS] & 0x1f;
-+	if(mode != 0x10 && mode != 0x1f) {
++	if((r[RPS] & 0x1f) != 0x10) {
 +		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
 +		    signo, r[15], r[RPS], dfar(), dfsr());
 +		panic("kernel trap");
