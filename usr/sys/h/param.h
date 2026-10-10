@@ -141,7 +141,5 @@ typedef	long		off_t;
 #define	UMODE	0170000		/* usermode bits */
 #define	USERMODE(ps)	((ps & UMODE)==UMODE)
 
-#define	INTPRI	0340		/* Priority bits */
-#define	BASEPRI(ps)	((ps & INTPRI) != 0)
 
 extern unsigned kernbase, corebase, coretop, pguser, gicdbase, giccbase;

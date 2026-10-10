@@ -6,7 +6,6 @@
 extern	char	canonb[CANBSIZ];	/* buffer for erase and kill (#@) */
 extern	struct inode *rootdir;		/* pointer to inode of root directory */
 extern	struct proc *runq;		/* head of linked list of running processes */
-extern	int	cputype;		/* type of cpu =40, 45, or 70 */
 extern	int	lbolt;			/* time of day in 60th not in time */
 extern	time_t	time;			/* time in sec from 1970 */
 
@@ -32,7 +31,6 @@ extern	char	runout;			/* scheduling flag */
 extern	char	runrun;			/* scheduling flag */
 extern	char	curpri;			/* more scheduling */
 extern	int	maxmem;			/* actual max memory per process */
-extern	physadr	lks;			/* pointer to clock device */
 extern	daddr_t	swplo;			/* block number of swap space */
 extern	int	nswap;			/* size of swap space */
 extern	int	updlock;		/* lock for sync */
@@ -90,7 +88,6 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	klioctl(dev_t dev, int cmd, caddr_t addr, int flag),
 	klopen(dev_t dev, int flag), klread(dev_t dev),
 	klwrite(dev_t dev), link(void),
-	mapalloc(struct buf *bp), mapfree(struct buf *bp),
 	mfree(struct map *mp, int size, int a), mknod(void), mmread(int dev),
 	mmu_on(unsigned *l1), mmwrite(int dev),
 	ndflush(struct clist *q, int cc), nice(void),

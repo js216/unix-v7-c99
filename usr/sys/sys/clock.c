@@ -58,12 +58,6 @@ clock(caddr_t pc, int ps)
 	p2->c_time--;
 
 	/*
-	 * if ps is high, just return
-	 */
-	if (BASEPRI(ps))
-		goto out;
-
-	/*
 	 * callout
 	 */
 
@@ -106,8 +100,6 @@ out:
 	if(++pp->p_cpu == 0)
 		pp->p_cpu--;
 	if(++lbolt >= HZ) {
-		if (BASEPRI(ps))
-			return;
 		lbolt -= HZ;
 		++time;
 		spl1();

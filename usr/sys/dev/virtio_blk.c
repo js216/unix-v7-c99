@@ -85,8 +85,6 @@ void
 rkstrategy(register struct buf *bp)
 {
 
-	if(bp->b_flags&B_PHYS)
-		mapalloc(bp);
 	if (bp->b_blkno >= NRKBLK) {
 		bp->b_flags |= B_ERROR;
 		iodone(bp);

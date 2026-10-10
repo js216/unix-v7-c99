@@ -144,49 +144,6 @@ sendsig(caddr_t p, int signo)
 	u.u_ar0[R0] = signo;
 }
 
-/*
- * 11/70 routine to allocate the
- * UNIBUS map and initialize for
- * a unibus device.
- * The code here and in
- * rhstart assumes that an rh on an 11/70
- * is an rh70 and contains 22 bit addressing.
- */
-int	maplock;
-
-void
-mapalloc(register struct buf *bp)
-{
-	register int i, a;
-
-	if(cputype != 70)
-		return;
-	spl6();
-	while(maplock&B_BUSY) {
-		maplock |= B_WANTED;
-		sleep((caddr_t)&maplock, PSWP+1);
-	}
-	maplock |= B_BUSY;
-	spl0();
-	bp->b_flags |= B_MAP;
-	a = bp->b_xmem;
-	for(i=16; i<32; i+=2)
-		UBMAP->r[i+1] = a;
-	for(a++; i<48; i+=2)
-		UBMAP->r[i+1] = a;
-	bp->b_xmem = 1;
-}
-
-void
-mapfree(struct buf *bp)
-{
-
-	bp->b_flags &= ~B_MAP;
-	if(maplock&B_WANTED)
-		wakeup((caddr_t)&maplock);
-	maplock = 0;
-}
-
 extern struct memregion board_map[];
 extern char __bss_end[], __ddrbss_start[], __ddrbss_end[];
 extern unsigned l1[], user_l2[], uarea_l2[];

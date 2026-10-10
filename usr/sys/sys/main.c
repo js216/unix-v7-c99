@@ -14,7 +14,6 @@ void	iinit(void), binit(void);
 char	canonb[CANBSIZ];
 struct inode *rootdir;
 struct proc *runq;
-int	cputype;
 int	lbolt;
 time_t	time;
 int	nblkdev;

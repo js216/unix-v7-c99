@@ -371,8 +371,6 @@ void
 iodone(register struct buf *bp)
 {
 
-	if(bp->b_flags&B_MAP)
-		mapfree(bp);
 	bp->b_flags |= B_DONE;
 	if (bp->b_flags&B_ASYNC)
 		brelse(bp);
@@ -421,12 +419,9 @@ swap(int blkno, int coreaddr, register int count, int rdflg)
 		bp->b_flags = B_BUSY | B_PHYS | rdflg;
 		bp->b_dev = swapdev;
 		tcount = count;
-		if (tcount >= 01700)	/* prevent byte-count wrap */
-			tcount = 01700;
 		bp->b_bcount = ctob(tcount);
 		bp->b_blkno = swplo+blkno;
 		bp->b_un.b_addr = CLKADDR(coreaddr);
-		bp->b_xmem = (coreaddr>>10) & 077;
 		(*bdevsw[major(swapdev)].d_strategy)(bp);
 		spl6();
 		while((bp->b_flags&B_DONE)==0)
@@ -527,7 +522,6 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
 		    (btoc(USERSIZE)-u.u_ssize);
 	bp->b_un.b_addr = CLKADDR(ts) + (base&07777);
-	bp->b_xmem = (ts>>10) & 077;
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;
 	bp->b_error = 0;

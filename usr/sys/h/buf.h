@@ -35,7 +35,6 @@ struct buf
 	    daddr_t *b_daddr;		/* indirect block */
 	} b_un;
 	daddr_t	b_blkno;		/* block # on device */
-	char	b_xmem;			/* high order core address */
 	char	b_error;		/* returned after I/O */
 	unsigned int b_resid;		/* words not transferred after error */
 };
@@ -52,7 +51,6 @@ extern struct buf bfreelist;		/* head of available list */
 #define	B_ERROR	04	/* transaction aborted */
 #define	B_BUSY	010	/* not on av_forw/back list */
 #define	B_PHYS	020	/* Physical IO potentially using UNIBUS map */
-#define	B_MAP	040	/* This block has the UNIBUS map allocated */
 #define	B_WANTED 0100	/* issue wakeup when BUSY goes off */
 #define	B_AGE	0200	/* delayed write for correct aging */
 #define	B_ASYNC	0400	/* don't wait for I/O completion */

@@ -425,7 +425,7 @@ The port's two disk drivers pass a single status value and a zero:
 #f("param.h") is the first file which nearly every kernel source file
 includes, and most of the other `.h` files assume that it has been
 included before them. It reserves no storage, with the single exception
-noted below (147), but defines the constants and simple types upon
+noted below (145), but defines the constants and simple types upon
 which the remainder of the system is built. As elsewhere in UNIX,
 defined constants are written in upper case only.
 
@@ -550,12 +550,15 @@ spoke of the PDP-11's registers 2 to 7, now says so.
 #lines(129, 137)
 
 These describe the PDP-11 processor status word, and survive because
-`clock` (#f("clock.c")) examines its argument `ps` with them. The ARM has no
-such word to offer; `irq` (#f("machdep.c")) instead passes `UMODE` if the
-interrupted program was in user mode, and zero otherwise. Hence
-`BASEPRI` is always false.
+`clock` (#f("clock.c")) examines its argument `ps` with `USERMODE`. The
+ARM has no such word to offer; `irq` (#f("machdep.c")) instead passes
+`UMODE` if the interrupted program was in user mode, and zero
+otherwise. v7 also defined `INTPRI` and `BASEPRI`, with which `clock`
+asked whether the interrupted program had run at a raised priority.
+An interrupt can only be taken here while interrupts are enabled, which
+is the base priority, so the test was always false; both are gone.
 
-#lines(138, 145)
+#lines(138, 143)
 
 The one declaration of variables in the file. The addresses which
 differ between the two boards (the kernel, the start and end of user
@@ -570,7 +573,7 @@ holds for the other headers which appear in both places, `inode.h`
 among them, except that `stat.h` and `timeb.h` add prototypes for their
 system calls (#f("stat.h")).
 
-#lines(146, 147)
+#lines(144, 145)
 #source("/usr/sys/h/systm.h")
 
 #f("systm.h") is the kernel's collection of global variables and,
@@ -591,45 +594,42 @@ program, and modern compilers no longer merge by default. Every
 variable is therefore now declared `extern`, and defined once:
 `rootdev`, `swapdev`, `pipedev`, `swplo`, and `nswap` with their values
 in the configuration file #f("qemu/c.c"), as in v7; `msgbufp` in
-#f("machdep.c"); the rest in #f("main.c"), except `lks`, which nothing
-uses. Since the array sizes (6, 41) come from
-#f("param.h"), that file must be included first.
+#f("machdep.c"); the rest in #f("main.c"). Since the array sizes (6,
+39) come from #f("param.h"), that file must be included first.
 
-`cputype` (9) is never assigned on the ARM and so remains zero. The
-tests of it in `sureg` (#f("ureg.c")) and `mapalloc` (#f("machdep.c"))
-which select PDP-11/40 and 11/70 behaviour are therefore never true.
-`lbolt` (10) counts clock ticks up to `HZ`, not to 60 as its comment
-says.
+v7's `cputype`, the model of PDP-11, which `sureg` and `mapalloc`
+consulted, and `lks`, the address of the clock's register, are gone
+with the hardware they described. `lbolt` (9) counts clock ticks up to
+`HZ`, not to 60 as its comment says.
 
-#lines(1, 11)
+#lines(1, 10)
 
-#lines(12, 27)
+#lines(11, 26)
 
-`runin`, `runout`, and `runrun` (30-32) are the flags by which `sched`
-and `swtch` (#f("slp.c")) communicate. `lks` (35) is a PDP-11 remnant
-which nothing uses. `regloc` (40) is now defined in #f("sysent.c"), which
+`runin`, `runout`, and `runrun` (29-31) are the flags by which `sched`
+and `swtch` (#f("slp.c")) communicate. `regloc` (38) is now defined in #f("sysent.c"), which
 in our port also contains v7's `trap.c`; its comment is corrected to
 say so.
 
-`msgbufp` (42) is new. v7 defined this pointer into the circular
+`msgbufp` (40) is new. v7 defined this pointer into the circular
 buffer `msgbuf` in its console driver, `kl.c`. The port has two
 console drivers, #f("pl011.c") for QEMU and `stm32usart.c` for the
 MP135, and both append to the buffer, so the pointer is now defined
 once in #f("machdep.c") and declared here for both, without the comment
 the other lines carry.
 
-The four variables of the clock (48, 49) are new as well. `clkstart`
+The four variables of the clock (46, 47) are new as well. `clkstart`
 (#f("machdep.c")), which defines them, sets them up, and `clock`
 (#f("clock.c")) uses them to set the deadline of each tick.
 
-#lines(28, 49)
+#lines(27, 47)
 
-These are v7's own declarations, now given parameter lists. `namei` (57) takes as
+These are v7's own declarations, now given parameter lists. `namei` (55) takes as
 its first argument the routine which fetches the next character of the
 path name: `uchar` when the name is in user space, `schar` when it is
 in the kernel.
 
-#lines(50, 66)
+#lines(48, 64)
 
 The list which follows is entirely new. Each procedure which is
 called from another file, or before its definition, is declared once
@@ -641,7 +641,7 @@ Line 65 deserves a word. A structure tag which first appears inside
 a prototype's parameter list belongs to that prototype alone, and a
 later definition of the structure would be a different type. `inode`,
 `proc`, `buf`, `file`, and `filsys` have already been declared at file
-scope by lines 7 to 63; `clist`, `map`, `text`, `tty`, and `uprof` have
+scope by lines 7 to 61; `clist`, `map`, `text`, `tty`, and `uprof` have
 not, so they are declared, without members, before the lists use them.
 `uprof` is the tag the port gives to the profiling arguments `u_prof`
 in #f("user.h"), so that `addupc` can be declared.
@@ -658,7 +658,7 @@ handlers, which take no arguments since they find them through
 - `mmu_on`, `arm_sync_icache`, `dcflush`, `dmbsy`, `idle`, `savfp`, and
   the generic timer accessors `cntv_ctl_set` and `cntv_cval_set` are
   in #f("mch.s"). There, too, are `cntfrq_get`, `dfar`, and `dfsr`, in the
-  second list (134--137), which return the timer frequency and the
+  second list (131--134), which return the timer frequency and the
   address and status of the last data abort. `savfp` does nothing,
   since no floating point state is saved.
 - `cninit` and `clock_ddr_init` are generated by `mkconf` into each
@@ -681,30 +681,30 @@ handlers, which take no arguments since they find them through
   `nodev` and `nulldev` in every such slot whatever its arguments,
   which K&R C allowed; with prototypes, each kind of slot needs a
   placeholder of the matching type.
-- `addupc` (68) was assembler in v7's `mch.s`; it is now C, in
+- `addupc` (66) was assembler in v7's `mch.s`; it is now C, in
   `clock.c`, and is called from `clock` and from `trap`.
 
-`clock` (75) had in v7 seven parameters, which mirrored the PDP-11
+`clock` (73) had in v7 seven parameters, which mirrored the PDP-11
 interrupt frame. Only the last two, the program counter and the
 processor status, were ever used, and only they remain; `irq` passes
 the saved PC and the mode (#f("param.h")).
 
-#lines(67, 132)
+#lines(65, 129)
 
-The routines which return a value. `save` (145) returns twice, like
+The routines which return a value. `save` (142) returns twice, like
 `setjmp`: zero when it saves, one when `resume` later returns through
 the saved label. `max` and `min` keep v7's `int` result, although
-their arguments are `unsigned`. `cntvct_get` (152), which reads the
+their arguments are `unsigned`. `cntvct_get` (149), which reads the
 generic timer's counter (#f("mch.s")), returns all 64 bits of it as an
-`unsigned long long`. `machine_init` (151) returns the address at which
+`unsigned long long`. `machine_init` (148) returns the address at which
 #f("low.s") is to place the kernel stack.
 
-`printf` (153) has a true variable argument list. v7's `printf`
+`printf` (150) has a true variable argument list. v7's `printf`
 walked up the PDP-11 stack from the address of its first argument.
 Under the ARM calling convention the first four arguments arrive in
 registers, so the port's #f("prf.c") uses `<stdarg.h>` instead.
 
-#lines(133, 153)
+#lines(130, 150)
 
 On a PDP-11 with separate instruction and data spaces, reading a
 program's text required different instructions (`mfpi`, `mtpi`) from
@@ -713,40 +713,38 @@ and so on. The ARM has one address space, so the I-space forms are
 simply aliases, and their callers (`passc`, `cpass`, `iomove`,
 `procxmt`) keep v7's text.
 
-#lines(154, 159)
+#lines(151, 156)
 
 Counters for `iostat`, kept by the clock and by the drivers, which
 set and clear their bit of `dk_busy` around each transfer. Like the
 variables above, they are now `extern`, and defined in #f("main.c").
 
-#lines(160, 168)
+#lines(157, 165)
 
 The table of system calls, defined in #f("sysent.c") and indexed by
-`trap` with the number of the call. The handler (176) was declared in
+`trap` with the number of the call. The handler (173) was declared in
 v7 as returning `int`, by default. The handlers return nothing; their
 results go back to the user through `u.u_r`. It is now a pointer to a
 `void` function of no arguments, and every handler is defined so.
 
-#lines(169, 177)
+#lines(166, 174)
 #source("/usr/sys/h/seg.h")
 
 In v7, #f("seg.h") held the addresses of the PDP-11 memory management
 registers (the KT-11 unit) and the bits of a segment descriptor. The
-first 23 lines are v7's, unaltered but for one word; the ARM definitions which the port
-uses are appended after them. The arrangement is deliberate: the v7
-text stays where a reader of v7 expects it, and what is new is
-visibly new.
+PDP-11 divided each address space into eight segments of up to 8 KB,
+each described by a pair of registers: an address register, giving the
+base in clicks, and a descriptor register, giving the length and the
+access rights. None of that hardware exists here, and the addresses of
+the registers, the descriptor bits which only v7's `estabur` and `sureg`
+used, and the handles `ka6` and `UBMAP` on kernel segment 6 and on the
+11/70's UNIBUS map are gone. What remains of v7's file is its first
+comment, corrected to describe what follows, and the two access rights,
+followed by the definitions which the port adds.
 
 #lines(1, 4)
 
-The PDP-11 divided each address space into eight segments of up to
-8 KB, each described by a pair of registers: an address register,
-giving the base in clicks, and a descriptor register, giving the
-length and the access rights. `UISD`, `UISA`, and `UDSA` (5-7) are the
-addresses of the first such registers for user mode. Nothing in the
-port uses them.
-
-`RO` and `RW` (8, 9) are the access rights which callers pass to
+`RO` and `RW` (5, 6) are the access rights which callers pass to
 `estabur` (#f("ureg.c")) for the text: read-only, or read and write.
 On the PDP-11 they were the access field of a descriptor register. Here
 they are the access permission bits of an ARM small page entry, bits 4
@@ -757,32 +755,12 @@ always mapped `RW`. The page entries' other bits come from `pguser`,
 which the configuration gives without the access bits
 (#f("qemuconf")).
 
-`ED`, `TX`, and `ABS` (10--12) are not used. `ED` marked a PDP-11
-segment which grew downwards, as the stack did; `TX` and `ABS`, never
-hardware bits, told v7's `sureg` to relocate a segment by the text's
-core address or not at all.
+#lines(5, 6)
 
-#lines(5, 13)
-
-`ka6` (18) was the kernel's handle on the segmentation register for
-kernel page 6, through which the per process data area of the current
-process appeared. Here it is a variable that nothing reads; the same
-job is done by the page table `uarea_l2` (#f("mch.s")). v7 relied on
-the common-block convention to define it once in spite of its being
-included many times; C99 allows a single definition, so it is now
-declared `extern`, like the variables of #f("systm.h"), and since
-nothing refers to it, it is defined nowhere.
-
-#lines(14, 19)
-
-`UBMAP` (23) addressed the map through which UNIBUS devices on the
-11/70 reached memory beyond 18 bits. `mapalloc` still refers to it, but
-returns at once because `cputype` is never 70.
-
-The ARM definitions begin at line 24. The size of the user's address
+The ARM definitions begin at line 7. The size of the user's address
 space, `USERSIZE`, which belongs with them, is in #f("param.h").
 
-`UENTRY_SIGTRAMP` (24) is the user address of a two-instruction
+`UENTRY_SIGTRAMP` (7) is the user address of a two-instruction
 trampoline, `mov r7, #63; svc #0`, which `xalloc` (#f("text.c")) writes
 into every text it reads in (`install_sigtramp`, #f("machdep.c")). `sendsig` sets the link
 register to it before entering a signal handler, so that the handler's
@@ -794,7 +772,7 @@ the port the kernel restores the interrupted registers itself, in
 (0x80, #f("Makefile")), so it can never collide with a program, and
 location 0 still reads as zero.
 
-`CLKADDR` (25) converts a click number into a kernel address. On the
+`CLKADDR` (8) converts a click number into a kernel address. On the
 PDP-11, a click number was a physical address divided by 64, and the
 kernel reached it by loading a segmentation register. Here a click
 number is a physical address divided by 4096, a page number, and all of
@@ -804,20 +782,20 @@ the MP135 machine's memory lies above 0x80000000, where an `int` would
 overflow. Every place where v7 manipulated memory by click
 (`copyseg`, `clearseg`, `swap`, `physio`) goes through this macro.
 
-#lines(20, 25)
+#lines(7, 8)
 
 The remainder are ARMv7 short-descriptor page table constants, used
 by `machine_init` (#f("machdep.c")) and by the board table which `mkconf`
 writes into #f("qemu/c.c").
 
-`SEC_KERN` (26) is the descriptor for a one-megabyte section of
+`SEC_KERN` (9) is the descriptor for a one-megabyte section of
 kernel memory. Read from the right: section type (2), bufferable and
 cacheable (0xc), access permission 01, which grants access only in
 privileged modes (0x400), memory type extension 001 (0x1000), which
 with the C and B bits makes it normal write-back memory, and shareable
 (0x10000).
 
-`SEC_DEV` (27) describes a section of device registers: section type
+`SEC_DEV` (10) describes a section of device registers: section type
 with all type and cache bits zero, which makes it strongly ordered,
 execute never (0x10), and access permission 01 (0x400), as for kernel
 memory. The sections are mapped at their physical addresses in the one
@@ -829,15 +807,15 @@ register open to user programs. Execute never keeps the processor
 from fetching instructions, even speculatively, from device memory,
 as the architecture requires.
 
-`PTE_PT` (28) is the type field of a first-level entry which points to
-a second-level table. `PGSHIFT` and `PGSIZE` (29, 30) describe the
+`PTE_PT` (11) is the type field of a first-level entry which points to
+a second-level table. `PGSHIFT` and `PGSIZE` (12, 13) describe the
 4 KB small page, the unit of the user mapping. `struct memregion`
-(31) is the type of the table `board_map`, which `mkconf` writes into
+(14) is the type of the table `board_map`, which `mkconf` writes into
 #f("qemu/c.c") from the `map` lines of the board's configuration file. Each
 entry is a range of addresses to be mapped one-to-one, and the
 section descriptor bits to use.
 
-#lines(26, 31)
+#lines(9, 14)
 #source("/usr/sys/conf/low.s")
 
 #f("low.s") takes the place of v7's `l.s`, the "low core" file. On the
@@ -1442,44 +1420,44 @@ toolchain merges such "common" symbols only when asked to. The headers
 now declare the variables `extern`, and each is defined here, once.
 `rootdev`, `swapdev`, `pipedev`, `swplo`, and `nswap` are not among them,
 because the configuration file #f("qemu/c.c") defines them with their
-values; nor are `lks` and `ka6`, which nothing uses any longer.
+values. v7's `cputype` is gone (#f("systm.h")).
 
-#lines(1, 57)
+#lines(1, 56)
 
-`startup` (62) frees the core outside process 0 and initialises the
+`startup` (61) frees the core outside process 0 and initialises the
 block device.
 
-#lines(58, 62)
+#lines(57, 61)
 
-`p_addr` of process 0, set at line 67, is the click at which its per
+`p_addr` of process 0, set at line 66, is the click at which its per
 process data area begins. v7 read it from the kernel segmentation
 register `KISA6` (`ka6`), whose value `mch.s` had chosen. Here
 `machine_init` has already mapped the first `USIZE` clicks of core, at
 `corebase`, at `UBASE`, so the click is that of `corebase`.
 
-The remaining fields of `proc[0]` (68--73) are as in v7: the process
+The remaining fields of `proc[0]` (67--72) are as in v7: the process
 occupies only its `USIZE` clicks, is runnable, is in core, and is never
 to be swapped. `u` and `proc[0]` are linked through `u_procp`.
 
-#lines(63, 74)
+#lines(62, 73)
 
-`clkstart` (80) now does rather more than start the clock: it also
+`clkstart` (79) now does rather more than start the clock: it also
 programs the interrupt controller and is the point at which interrupts
 are first allowed (#f("machdep.c")). Everything which follows may
 therefore sleep: `iinit` waits for the disk.
 
 `rootdir` and the current directory of process 0 are obtained as
 separate references to the root inode; each `iget` returns it locked,
-and the lock is released at once (85, 87).
+and the lock is released at once (84, 86).
 
-#lines(75, 89)
+#lines(74, 88)
 
-`newproc` (96) makes process 1 as a copy of process 0 and returns zero
-to the parent, which falls through to `sched` (107) and never comes back.
+`newproc` (95) makes process 1 as a copy of process 0 and returns zero
+to the parent, which falls through to `sched` (106) and never comes back.
 Process 1 eventually resumes in `newproc` with a value of one, and
 takes the branch.
 
-#lines(90, 96)
+#lines(89, 95)
 
 The image is first enlarged to hold `icode`: `btoc(szicode)` is one
 click, so the image becomes the u-area and one page.
@@ -1488,20 +1466,20 @@ maps the page into the user window at virtual address 0, and
 `copyout` writes `icode` (#f("machdep.c")) through that mapping, to
 user address 0.
 
-`arm_sync_icache` (100) is new. The ARM, unlike the PDP-11, has
+`arm_sync_icache` (99) is new. The ARM, unlike the PDP-11, has
 separate instruction and data caches which are not kept coherent by the
 hardware: the instructions just stored may sit in the data cache, and
 stale lines may sit in the instruction cache. The routine (#f("mch.s"))
 writes the data cache back, then discards the instruction cache, the
 branch predictor, and the TLB.
 
-#lines(97, 100)
+#lines(96, 99)
 
 `main` then returns to `_start` (#f("low.s")), which, as v7's `start` did
 with `rtt`, sets the saved status register to user mode and jumps to
 location 0. Process 1 begins to execute `icode`.
 
-#lines(101, 108)
+#lines(100, 107)
 
 `iinit` opens the root device, reads its super-block (block 1,
 `SUPERB`), and copies it into a buffer which is never released, the
@@ -1509,9 +1487,9 @@ first entry of the mount table. The super-block's time of last
 modification becomes the initial time of day, until `date` or
 `stime` corrects it.
 
-#lines(109, 140)
+#lines(108, 139)
 
-The buffers themselves (150). v7 declared each as `BSIZE+BSLOP`, i.e.
+The buffers themselves (149). v7 declared each as `BSIZE+BSLOP`, i.e.
 514, bytes of `char`. With 514 bytes every second buffer started on an
 address which was only two-byte aligned, and the internal DMA engine of
 the SD card controller on the STM32MP135 requires a word-aligned buffer
@@ -1521,7 +1499,7 @@ the rows only relative to the start of the array, and C promises no
 alignment for a `char` array; an `int` array is aligned for `int`, so
 every row starts on a word. The cast at 169 is the price.
 
-#lines(141, 151)
+#lines(140, 150)
 
 `binit` links every buffer into the free list through `brelse`, then
 makes each block device's queue (`d_tab`) an empty circular list, and
@@ -1529,13 +1507,13 @@ counts the block devices in `nblkdev`. The scan of `bdevsw` ends at
 the first entry without an open routine, the null entry with which
 #f("qemu/c.c") closes the table.
 
-#lines(152, 185)
+#lines(151, 184)
 #source("/usr/sys/sys/machdep.c")
 
 In v7, #f("machdep.c") collected those parts of the machine-dependent
 code which could be written in C: the bootstrap program `icode`,
 `startup`, `clkstart`, `sendsig`, and the UNIBUS map routines for the
-11/70. The assembly language remainder lived in `mch.s`. The port keeps
+11/70, which are gone with the map. The assembly language remainder lived in `mch.s`. The port keeps
 v7's procedures in v7's order, rewriting their bodies for the ARM, and
 appends a second half which does the work that `mch.s` did on the
 PDP-11 with the help of the memory management unit: building the page
@@ -1703,7 +1681,7 @@ the saved registers of the interrupted program, in the layout of
 #f("reg.h"), and with interrupts masked; it plays the part of v7's
 `call` in `mch.s` together with the PDP-11's vectored interrupts.
 
-Reading the acknowledge register (`0xc`) at line 159 yields the number of
+Reading the acknowledge register (`0xc`) at line 116 yields the number of
 the highest priority pending interrupt, in its low ten bits, and marks
 it active.
 
@@ -1719,7 +1697,7 @@ Otherwise (119--122), call the routine of the device whose number
 matches. A spurious interrupt (1023) matches nothing.
 
 Writing the same value to the end-of-interrupt register (`0x10`) at
-line 166 retires the interrupt.
+line 123 retires the interrupt.
 
 Note that all interrupts share one level. The six PDP-11 priorities of
 `spl4` to `spl7` have collapsed into "masked" and "unmasked", and an
@@ -1755,7 +1733,7 @@ default so that it is not caught in turn.
 
 The stack pointer is then lowered past the frame; the link
 register, `u_ar0[14]`, for which #f("reg.h") has no name, is set to the
-trampoline at `UENTRY_SIGTRAMP` (see `install_sigtramp`, 296); the
+trampoline at `UENTRY_SIGTRAMP` (see `install_sigtramp`, 253); the
 program counter (`R7`, which in #f("reg.h") is `r15`) to the handler; and
 `r0` to the signal number, the handler's argument. v7 also cleared the
 trace bit in the saved status, so that a traced process would not trap
@@ -1763,44 +1741,39 @@ on the handler's first instruction; the ARM status register has no
 trace bit.
 
 When the handler returns, it returns to the trampoline, with the stack
-pointer at the frame, and the trampoline issues `sigreturn` (241).
+pointer at the frame, and the trampoline issues `sigreturn` (198).
 
-#lines(141, 145)
+#lines(141, 146)
 
-`mapalloc` and `mapfree` are v7's, for the UNIBUS map of the 11/70.
-They compile, but nothing sets `cputype`, which is therefore 0;
-`mapalloc` always returns at once, and no buffer is ever marked
-`B_MAP`, so `mapfree` is never called from `iodone` (#f("bio.c")).
+v7's `mapalloc` and `mapfree`, which set up the UNIBUS map of the
+11/70 for a raw transfer, followed here. The ARM's devices address all
+of memory, and they are gone. The remainder of the file is new.
 
-#lines(146, 188)
-
-The remainder of the file is new.
-
-`board_map` (190) comes from #f("qemu/c.c"): the regions which the board's
+`board_map` (147) comes from #f("qemu/c.c"): the regions which the board's
 configuration file asks to be mapped by sections, each with the
-attribute bits of its section descriptors. The `__` symbols (191) are
+attribute bits of its section descriptors. The `__` symbols (148) are
 defined by the linker script. `.ddrbss` is a second, uninitialised
 data section: on the STM32MP135 the kernel image runs from the 128 KB of
 on-chip SYSRAM, and the page tables and other large arrays are placed in
 external DDR memory, which is useless until it has been set up. On the
-QEMU board it is ordinary memory. The page tables themselves (192) are
+QEMU board it is ordinary memory. The page tables themselves (149) are
 reserved in #f("mch.s") in `.ddrbss`: `l1` must be aligned on 16 KB.
 
-`msgbufp` (193), the pointer into the circular buffer of console
+`msgbufp` (150), the pointer into the circular buffer of console
 output read by `dmesg`, was defined in v7's console driver `kl.c`. It
 is here because either of two console drivers may be configured
 (#f("pl011.c") or the MP135's), and both use it.
 
-#lines(189, 194)
+#lines(147, 151)
 
 `machine_init` is called from `_start` (#f("low.s")), with the MMU off,
 running on a small stack in the bss. It first initialises the console
-(202), so that `printf` and `panic` work from here on.
+(159), so that `printf` and `panic` work from here on.
 
 On the MP135, it then starts the DDR controller (`clock_ddr_init`
 is empty on QEMU), and clears `.ddrbss`, which `_start` could not do.
 
-#lines(195, 205)
+#lines(152, 162)
 
 Each region of `board_map` is mapped by one-megabyte sections,
 with physical address equal to virtual address. The attributes,
@@ -1809,17 +1782,17 @@ defined in #f("seg.h"): kernel memory is normal, cacheable, and accessible
 only from the kernel; device memory is strongly ordered, never
 executable, and likewise closed to user mode.
 
-Entry 0 (209) points to the second-level table of the user window;
+Entry 0 (166) points to the second-level table of the user window;
 `PTE_PT` marks a page-table descriptor. Its 256 entries are filled by
 `sureg` (#f("ureg.c")), and stay zero, i.e. invalid, until then.
 
-The entry for `UBASE` (0xFFF00000) points to `uarea_l2` (210). The
+The entry for `UBASE` (0xFFF00000) points to `uarea_l2` (167). The
 topmost megabyte is neither memory nor device on either machine, so no
 section of `board_map` is overwritten.
 
-#lines(206, 210)
+#lines(163, 167)
 
-Core begins at the first page boundary after `.ddrbss` (211), the last
+Core begins at the first page boundary after `.ddrbss` (168), the last
 part of the kernel to be placed (#f("qemu/unix.ld")). On the QEMU
 machine that is just past the kernel image; on the MP135 machine, whose
 kernel runs from SYSRAM, it is just past the tables in DDR. Neither
@@ -1827,19 +1800,19 @@ needs to be stated in the configuration, which gives only the top of
 core.
 
 The `USIZE` pages of the per process data area of process 0, the first
-of core, are mapped at `UBASE` (212, 213). The attribute `0x45e`
+of core, are mapped at `UBASE` (169, 170). The attribute `0x45e`
 describes a small page of cached memory which the kernel may read and
-write and user mode may not touch, as in `resume` (#f("mch.s")). The area is then cleared (214, 215); v7's `start`
+write and user mode may not touch, as in `resume` (#f("mch.s")). The area is then cleared (171, 172); v7's `start`
 did the same for process 0.
 
 `mmu_on` (#f("mch.s")) loads the table base register, sets domain 0
 to "client" so that the permission bits are checked, invalidates the
 data cache, and turns on the MMU and the caches. Since the kernel is mapped
 one to one, execution continues undisturbed at the next instruction.
-The address returned (217) is the top of the u-area, where #f("low.s")
+The address returned (174) is the top of the u-area, where #f("low.s")
 puts the kernel stack.
 
-#lines(211, 218)
+#lines(168, 175)
 
 `copyseg` and `clearseg` copy and clear one click, a page of 1024
 words. In v7 they were in `mch.s`, and had to borrow a user segment to
@@ -1849,31 +1822,31 @@ pointer. The routines which move data between the kernel and the user,
 `fubyte`, `copyin`, and the rest, are in #f("mch.s"), as they were in
 v7.
 
-#lines(219, 239)
+#lines(176, 196)
 
 `sigreturn`, system call 63, undoes `sendsig`. It is called by the
 trampoline, at which point the user stack pointer addresses the saved
 frame.
 
-#lines(240, 246)
+#lines(197, 203)
 
 The frame is copied in through `copyin`, which fails unless it lies in
 the process's memory; a bad stack pointer earns `SIGSEG`.
 
-#lines(247, 251)
+#lines(204, 208)
 
-`r0` to `r15` are restored (252, 253).
+`r0` to `r15` are restored (209, 210).
 
-Of the saved status register (254), only the condition flags (bits 27
+Of the saved status register (211), only the condition flags (bits 27
 to 31) and the `GE` flags (16 to 19) are taken. The mode bits are not:
 otherwise a forged frame could return the process to the processor in
 a privileged mode.
 
 `trap` (#f("sysent.c")) will store `r_val1` and `r_val2` into
 `r0` and `r1` as the results of this system call; setting them to the
-saved values (255, 256) makes the return restore those two registers too.
+saved values (212, 213) makes the return restore those two registers too.
 
-#lines(252, 257)
+#lines(209, 214)
 
 `fumem` and `sumem` serve the memory special files (#f("mem.c")) one byte
 at a time, in the role that `fuibyte` and `suibyte`, with a user segment
@@ -1886,7 +1859,7 @@ In either case the address must lie within the kernel image, `.ddrbss`,
 or core, all of which are mapped; anything else returns -1, and the
 driver sets `ENXIO`.
 
-#lines(258, 293)
+#lines(215, 250)
 
 `install_sigtramp` writes the two-instruction signal trampoline,
 `sigreturn` by `svc`, at user address 8. It is called by `xalloc`
@@ -1899,7 +1872,7 @@ permissions of user mode.
 `panictrap` is the target of the vectors which should never be taken
 (#f("low.s")).
 
-#lines(294, 306)
+#lines(251, 263)
 #source("/usr/sys/h/proc.h")
 
 A process is represented in two places. Its `proc` structure, one
@@ -2583,7 +2556,7 @@ it too. In v7 it was an assembly routine in `mch.s`.
 `SCHMAG` (10) is a fraction written as a bare macro: since `x*SCHMAG`
 expands to `x*8/10`, the multiplication is done first and the result is
 the integer 0.8`x`. It sets how fast the record of recent processor use
-decays (123).
+decays (115).
 
 #lines(1, 11)
 
@@ -2631,18 +2604,18 @@ waiting to be called, which happens next.
 
 #lines(47, 58)
 
-`BASEPRI(ps)` (63) asked whether the interrupted program had been
-running at a raised processor priority. If so, v7 put off the calling of
-callouts, and the once-per-second work below, until a later tick, so as
-not to run them inside some other, half-finished, interrupt routine. On
-the ARM `irq` never passes a `ps` with priority bits, so the test is
-always false. This is correct: the clock interrupt can only be taken
-when the IRQ is unmasked, which is the state that `spl0` and `spl1`
-give, and that is the ARM equivalent of priority zero. A clock tick can
-therefore never interrupt a routine which has raised its priority with
-`spl5` and above, nor a device interrupt routine.
+v7 went on to ask, with `BASEPRI(ps)`, whether the interrupted program
+had been running at a raised processor priority, and if so put off the
+calling of callouts, and the once-per-second work below, until a later
+tick, so as not to run them inside some other, half-finished, interrupt
+routine; the second test followed `++lbolt` below. Both tests have
+gone. The clock interrupt can only be taken when the IRQ is unmasked,
+which is the state that `spl0` and `spl1` give, the ARM equivalent of
+priority zero, so a clock tick never interrupts a routine which has
+raised its priority with `spl5` and above, nor a device interrupt
+routine, and the tests were always false.
 
-#lines(59, 69)
+#lines(59, 63)
 
 Every expired callout is called, in order, with its argument,
 and the remainder of the list is then moved down to the front of the
@@ -2651,7 +2624,7 @@ admitting other clock-level work; on the ARM the IRQ is already masked
 and `spl5` changes nothing. The extra parentheses at 78 tell the
 compiler that the assignment is meant.
 
-#lines(70, 85)
+#lines(64, 79)
 
 `out` is reached on every tick. The tick is charged to the current
 process as user or system time. If the process is being profiled
@@ -2660,17 +2633,17 @@ process as user or system time. If the process is being profiled
 structure tag `uprof` (#f("user.h")) so that `addupc` can be declared to
 take a pointer to it.
 
-`dk_time` (104) gathers statistics for `iostat`: `a` is formed from the
+`dk_time` (98) gathers statistics for `iostat`: `a` is formed from the
 busy bits of up to three disks (`dk_busy`, which the block drivers set
 and clear), plus 8 for a user process of lowered priority, 16 for system
 time, and another 8 if the processor was idle. The test for idleness is
 that the interrupted `pc` is `waitloc`, the address just after the `wfi`
 in `idle` (#f("mch.s")).
 
-`p_cpu` (106), the recent use of the processor, is incremented but not
+`p_cpu` (100), the recent use of the processor, is incremented but not
 allowed to wrap round to zero.
 
-#lines(86, 107)
+#lines(80, 101)
 
 Once a second, when `lbolt` reaches `HZ`, the system's slower duties are
 done: `time` is advanced, everyone waiting on `lbolt` is woken, and for
@@ -2681,33 +2654,33 @@ and fires `SIGCLK` when it expires, and `p_cpu` is decayed by the factor
 recomputed by `setpri`. Finally `sched`, if waiting on `runin`, is
 roused.
 
-`runrun` is set (114), so that the current process gives up the
+`runrun` is set (106), so that the current process gives up the
 processor at its next return to user mode. This is what makes the
 priorities just recomputed take effect against a process which computes
 without pause and so never sleeps.
 
-`spl1` (113) unmasks the IRQ. On the PDP-11 it let other interrupts in
+`spl1` (105) unmasks the IRQ. On the PDP-11 it let other interrupts in
 while the loop over `proc` was done. Here it does not: the interrupt
 controller delivers no further interrupt until `irq` writes the end of
-interrupt, after `clock` returns. The `& 0377` (123) undid sign extension
+interrupt, after `clock` returns. The `& 0377` (115) undid sign extension
 of a PDP-11 `char` and is harmless on the ARM, where `char` is unsigned.
 
-#lines(108, 137)
+#lines(102, 129)
 
 `timeout` inserts an entry into the callout list. The list
-is walked (163--166), the delay of each earlier entry being subtracted from `t`,
+is walked (155--158), the delay of each earlier entry being subtracted from `t`,
 until the place is found where the remainder is less than the next
-entry's delay. That entry's delay is reduced by `t` (169), since it
+entry's delay. That entry's delay is reduced by `t` (161), since it
 will now be counted after the new one. The tail of the list,
-including its null terminator, is then moved up one place (170--178) to make room.
+including its null terminator, is then moved up one place (162--170) to make room.
 
 The table must keep one slot for the terminator, hence the comparison
-with `NCALL-1` (167). The processor priority is raised to the maximum
+with `NCALL-1` (159). The processor priority is raised to the maximum
 for the duration, since `clock` changes the same list.
 
 The type of `fun` is now that of `c_func` (#f("callo.h")).
 
-#lines(138, 183)
+#lines(130, 175)
 
 `addupc` is new as C. v7's was a PDP-11 assembly routine in `mch.s`,
 called, as this one is, from `clock` and from `trap`. Given the program
@@ -2722,17 +2695,17 @@ members are now named.
 The index is (`pc` - offset) × scale / 65536 bytes, made even so as to
 select a `short`. As in the assembler, both factors are halved first;
 but the product of two 32-bit values may need 64 bits, so it is formed
-as an `unsigned long long` (190). An odd byte offset is rounded up to
+as an `unsigned long long` (182). An odd byte offset is rounded up to
 the next counter, as the PDP-11 code did.
 
-#lines(184, 192)
+#lines(176, 184)
 
 The counter is read and written with `copyin` and
 `copyout`, two bytes at a time, since the user's buffer may be
 anywhere. If it cannot be reached, profiling is turned off by clearing
 the scale, as v7 did by way of `nofault`.
 
-#lines(193, 199)
+#lines(185, 191)
 #source("/usr/sys/sys/sysent.c")
 
 In v7 #f("sysent.c") held nothing but the table of system calls, and the
@@ -3793,7 +3766,7 @@ cache, in the rows of `buffers` (#f("main.c")), to which
 
 The head of a driver's lists is itself a `buf`, the `d_tab` of the
 driver's `bdevsw` entry (#f("conf.h")), and the names at the end of the
-file (69--72) rename those fields of it which serve another purpose
+file (67--70) rename those fields of it which serve another purpose
 there: `b_actf` and `b_actl` are the head and tail of the queue of
 requests, `b_active` says that the device is busy, and `b_errcnt` counts
 retries. A header on that queue is linked through `av_forw`, which is
@@ -3806,26 +3779,26 @@ buffers which are not busy, in the order in which they were released, so
 that the one least recently used is at the front. The comment (1--20)
 states the rules.
 
-`b_xmem` (38) held the high-order bits of the 18- or 22-bit PDP-11
-physical address, of which `b_addr` held only the low sixteen. On the
-ARM `b_addr` is a full 32-bit address; `b_xmem` is still set by `swap`
-and `physio` but read by no driver. `b_un` (30--36) lets the same
-address be used as a pointer to whatever the block contains.
+v7 had a further member, `b_xmem`, for the high-order bits of the 18-
+or 22-bit PDP-11 physical address, of which `b_addr` held only the low
+sixteen. On the ARM `b_addr` is a full 32-bit address, and `b_xmem` is
+gone. `b_un` (30--36) lets the same address be used as a pointer to
+whatever the block contains.
 
-#lines(1, 45)
+#lines(1, 44)
 
 The flags. `B_DONE` means that the contents are valid, `B_BUSY` that
 some process or the driver owns the buffer, and `B_DELWRI` that the
 contents are newer than the disk and must be written before the buffer
 is reused. `B_AGE` puts a buffer at the front of the available list
-rather than the back, so that it is reused first. `B_PHYS` and `B_MAP`
-concern the UNIBUS map of the PDP-11/70, which `mapalloc`
-(#f("machdep.c")) still sets up only on that processor; here it never
-does. `B_TAPE` is set in the `d_tab` of a magnetic tape driver, of
+rather than the back, so that it is reused first. `B_PHYS` marks a
+transfer directly to or from a user image. v7's `B_MAP`, which recorded
+that the buffer held the UNIBUS map of the PDP-11/70, is gone with the
+map (#f("machdep.c")). `B_TAPE` is set in the `d_tab` of a magnetic tape driver, of
 which there is none. `B_PBUSY` and `B_PACK` are used by no file of
 this system.
 
-#lines(46, 72)
+#lines(45, 70)
 #source("/usr/sys/h/conf.h")
 
 #f("conf.h") declares the switches through which the rest of the system
@@ -4100,13 +4073,14 @@ data.
 #lines(73, 83)
 
 `rkstrategy` is v7's. A block number beyond the end of the disk is
-rejected at once (90--94), as v7 rejected one beyond the end of the
+rejected at once (88--92), as v7 rejected one beyond the end of the
 pack. Such requests arise: `breada` (#f("bio.c")) reads ahead the block
 after the last, and without the check the device would fail the
 request and `rkintr` would report and retry it ten times.
 
-The call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is kept; it
-returns at once, since `cputype` is never 70 (#f("machdep.c")). The
+v7 called `mapalloc` here for a `B_PHYS` transfer, to set up the
+UNIBUS map of the PDP-11/70; the map does not exist, and the call is
+gone (#f("machdep.c")). The
 priority is raised with `spl5` and lowered with `spl0`, as in v7: the
 routine is called at process level. During startup `spl0` leaves
 interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
@@ -4114,20 +4088,20 @@ interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
 The queue is that of v7, threaded through `av_forw` and headed in
 `rktab` (#f("buf.h")).
 
-#lines(84, 106)
+#lines(84, 104)
 
 `rkstart` gives the request at the head of the queue to the device. v7
 computed the drive, cylinder, and sector, and loaded four registers,
 the last of which started the transfer; the port fills in a chain of
-three descriptors: the header `vreq` (116--121), which the device reads;
-the data (122--125), which the device writes on a read (flags 3, "next"
+three descriptors: the header `vreq` (114--119), which the device reads;
+the data (120--123), which the device writes on a read (flags 3, "next"
 and "device writes") and reads on a write (flag 1); and the status byte
-(126--128), which the device writes.
+(124--126), which the device writes.
 
 The minor device number, which v7 used to choose one of four drives, is
 ignored: there is one disk.
 
-#lines(107, 128)
+#lines(105, 126)
 
 The barrier `dmbsy` (#f("mch.s")) ensures that the device
 sees the descriptors before the incremented index of the available ring,
@@ -4140,16 +4114,16 @@ The remaining lines are v7's: they record the transfer for `iostat`.
 `dk_wds` is counted in units of 32 PDP-11 words, 64 bytes, since
 `iostat` multiplies it by 32.
 
-#lines(129, 138)
+#lines(127, 136)
 
 `rkintr` is called by `irq` (#f("machdep.c")) when the disk interrupts.
 The interrupt is acknowledged by writing back the bits read from
-the interrupt status register (144). It is ignored if no
+the interrupt status register (142). It is ignored if no
 request is outstanding, as in v7, or if the device has not yet returned
-it in the used ring. The barrier (147) keeps the processor from reading
+it in the used ring. The barrier (145) keeps the processor from reading
 `vstatus` or the data before it has seen the device's index.
 
-#lines(139, 147)
+#lines(137, 145)
 
 An error is reported by a nonzero status byte. v7 reported the
 RK11's error and drive status registers by `deverror` (#f("prf.c")),
@@ -4158,13 +4132,13 @@ and has nothing to reset. The retry, up to ten times, and the remainder
 of the procedure are v7's: the request is taken off the queue, completed
 by `iodone` (#f("bio.c")), and the next is started.
 
-#lines(148, 165)
+#lines(146, 163)
 
 The raw disk, `cdevsw` entry 9, transfers directly between the disk and
 the user's memory by way of `physio` (#f("bio.c")), using the private
 header `rrkbuf`.
 
-#lines(166, 178)
+#lines(164, 176)
 #source("/usr/sys/dev/bio.c")
 
 #f("bio.c") holds the buffer cache and the other routines which stand
@@ -4293,58 +4267,57 @@ the available list and marks it busy.
 #lines(334, 364)
 
 `iodone` is called by a driver's interrupt routine when a transfer
-finishes. It frees the UNIBUS map if the transfer had it, which on this
-machine never happens, and marks the buffer done. An asynchronous
+finishes. It marks the buffer done; v7 first freed the UNIBUS map if the
+transfer had it, and that step is gone with the map. An asynchronous
 transfer has no one waiting, so the buffer is released; otherwise the
 process waiting in `iowait`, `swap`, or `physio` is woken.
 
 `clrbuf` zeroes a buffer, a word at a time; `sizeof(int)` makes the count
 128 words here, where it was 256 on the PDP-11.
 
-#lines(365, 400)
+#lines(365, 398)
 
 `swap` transfers `count` clicks of a process image between core, at
 click `coreaddr`, and the swap device, at block `blkno` of the swap area.
 It is called by `xswap` (#f("text.c")) and by `swapin` (#f("slp.c")),
 and sleeps until the transfer is complete.
 
-#lines(401, 410)
+#lines(399, 408)
 
 Of the two swap headers, the first is used unless it is busy; the second is
 taken if no one is already waiting for it, else the caller waits for
 the first.
 
-#lines(411, 419)
+#lines(409, 417)
 
-The image is transferred (420--437) in pieces of at most `01700`
-clicks. On the PDP-11 the byte count of a transfer was bounded by a
-sixteen-bit register, and `01700` 64-byte clicks was 61440 bytes. Here
-neither `b_bcount` nor the virtio request has such a limit, and with
-4096-byte clicks no image approaches `01700` of them, so the loop
-always ends after one transfer.
+The image is transferred (418--432) in one piece. v7 broke it into
+pieces of at most `01700` clicks, because on the PDP-11 the byte count
+of a transfer was bounded by a sixteen-bit register, and `01700` 64-byte
+clicks was 61440 bytes. Here neither `b_bcount` nor either driver's
+request has such a limit, so the loop is kept but always ends after one
+transfer.
 
-v7 set `b_addr` (428) to the low sixteen bits of the physical address,
+v7 set `b_addr` (424) to the low sixteen bits of the physical address,
 `coreaddr<<6`, and `b_xmem` to the high bits. The port uses `CLKADDR`
 (#f("seg.h")), which gives the kernel's address for the click; since
 the kernel maps memory at its own
 address (#f("qemu/c.c")), that is also the physical address which the
-driver gives the device. `b_xmem` (429) is still computed, but no
-driver reads it.
+driver gives the device.
 
-The priority is raised again (431) after the strategy routine, which
+The priority is raised again (426) after the strategy routine, which
 in v7 lowered it, before `B_DONE` is tested; the reason is that given
 for `getblk`.
 
-An error in swapping is fatal (443): a process image cannot be recovered.
+An error in swapping is fatal (438): a process image cannot be recovered.
 
-#lines(420, 444)
+#lines(418, 439)
 
 `bflush` starts the writing of every delayed-write buffer of a device,
 or of all devices. It is called by `update` (#f("alloc.c")), which is
 itself called by `sync`, by `umount`, and by `panic`. Each write changes the available
 list, so the search starts again from the head after each one.
 
-#lines(445, 468)
+#lines(440, 463)
 
 `physio` implements the raw devices: it transfers directly between the
 device and the user's memory, using a header which belongs to the
@@ -4352,19 +4325,19 @@ driver, and does as much in one transfer as the user asks for. The
 transfer is described by `u_base`, `u_count`, and `u_offset`, as for
 `read` and `write`.
 
-#lines(469, 490)
+#lines(464, 485)
 
-The checks (491) are v7's, with one added: the transfer must lie within
-the user's address space, below `USERSIZE` (492). The check that a
-transfer does not overlap the text segment (494--503) is v7's: the
+The checks (486) are v7's, with one added: the transfer must lie within
+the user's address space, below `USERSIZE` (487). The check that a
+transfer does not overlap the text segment (489--498) is v7's: the
 text is shared, and a device must not write into it. v7 rounded the text size up to a
 whole number of 8 KB segments, 128 clicks, since the data began at the
 next segment; here the data begins at the next page, so the size in
-clicks is used as it stands (494). `nb` is the click of the start of
-the transfer (497).
+clicks is used as it stands (489). `nb` is the click of the start of
+the transfer (492).
 
 v7 then checked that the transfer lay wholly in the data segment or
-wholly in the stack (504--512), the two parts of the user's address
+wholly in the stack (499--507), the two parts of the user's address
 space which are mapped, and which lie in different places in core. The
 check is v7's, with the click size changed and the top of the address
 space, which v7 wrote as 1024 clicks, now `btoc(USERSIZE)`. v7 also
@@ -4373,31 +4346,31 @@ space; the test at 491 has already done that here. Like v7's, the test
 of the end is a little strict: a transfer which ends exactly at the end
 of the data is refused.
 
-#lines(491, 519)
+#lines(486, 514)
 
 v7 found the physical address of the user's buffer by reading the user
 segmentation registers (`UISA` or `UDSA`), simulating the translation
 which the hardware would have made. The port computes it from the
-layout of the image instead (524--528): the data begins `USIZE` clicks
+layout of the image instead (519--523): the data begins `USIZE` clicks
 into the image (#f("proc.h")), at `p_addr`, and the stack follows it.
 An address in the data lies `nb-ts` clicks into it; one in the stack
 lies as many clicks into the stack as it lies above the stack's lowest
 address. `CLKADDR` converts the click number to an address, as in
 `swap`, and the low twelve bits of the user's address give the offset
-within the click (529). Each part is contiguous in core, so the whole
+within the click (524). Each part is contiguous in core, so the whole
 transfer is too.
 
-`SLOCK` (534) keeps the process in core while the device transfers
+`SLOCK` (528) keeps the process in core while the device transfers
 into its memory: the address given to the device would be wrong if the
 image were swapped out and brought back elsewhere.
 
-#lines(520, 549)
+#lines(515, 543)
 
 `geterror` passes the error of a failed transfer to the user. The
 comment's last sentence was true of v7's drivers and remains so here:
 neither disk driver sets `b_error`.
 
-#lines(550, 564)
+#lines(544, 558)
 
 = File System
 
@@ -6814,7 +6787,7 @@ low bits. The buffer cache and the swap area always move whole blocks
 from aligned addresses, so these two tests can fail only for raw I/O, which `physio` (#f("bio.c")) lets through
 with an even address and count.
 
-#lines(58, 80)
+#lines(58, 78)
 
 `rkstart` transfers one block of the request at the head of the queue,
 the one at offset `rkoff`. Commands 17 and 24 move exactly one block,
@@ -6824,7 +6797,7 @@ the RK05 and loaded four registers; here the minor device is ignored,
 since there is one card, and the block number is the argument of the
 command.
 
-The cache is cleaned and invalidated over the block's buffer (90) by
+The cache is cleaned and invalidated over the block's buffer (88) by
 `dcflush` (#f("mch.s")), which writes any modified lines to memory and
 discards them. The IDMA reads and writes memory directly, without
 seeing the processor's data cache: before a write the data must be in
@@ -6837,11 +6810,11 @@ The device is then programmed in the order the controller requires:
 the old flags are cleared, the data path is stopped and given the
 length and the block size and direction, the IDMA is given the
 buffer's address and enabled, the interrupts are unmasked, and the
-argument is set. Writing the command register (103) starts the
+argument is set. Writing the command register (101) starts the
 transfer. The counts for `iostat` are v7's, but count one block per
 command.
 
-#lines(81, 109)
+#lines(79, 107)
 
 `rkintr` is called by `irq` (#f("machdep.c")) at the end of the data or
 on an error. It reads the status, clears every flag, masks the
@@ -6852,17 +6825,17 @@ request is active.
 On an error the status is reported by `deverror` (#f("prf.c")) and the
 same block retried, up to v7's ten times. v7 also reset the RK11 and
 waited for it to be ready; there is no reset here. On success the next
-block of the request is started if there is one (132), and the request
+block of the request is started if there is one (130), and the request
 is otherwise complete. After a read, the cache is cleaned and
 invalidated once more over the whole buffer, so that any line which the
 processor may have fetched while the transfer was under way is
 discarded. The rest is v7's.
 
-#lines(110, 145)
+#lines(108, 143)
 
 `rkread` and `rkwrite` are v7's, for the raw disk.
 
-#lines(146, 158)
+#lines(144, 156)
 #source("/usr/sys/dev/stm32ddr.c")
 
 This file is not a driver in v7's sense: it has no switch entry and no
