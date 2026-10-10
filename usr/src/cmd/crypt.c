@@ -14,7 +14,7 @@ char	t3[ROTORSZ];
 static void
 setup(char *pw)
 {
-	int ic, i, k, temp, pf[2];
+	int ic, i, k, temp, pf[2], pid;
 	unsigned random;
 	char buf[13];
 	unsigned long seed;
@@ -25,7 +25,7 @@ setup(char *pw)
 	buf[8] = buf[0];
 	buf[9] = buf[1];
 	pipe(pf);
-	if (fork()==0) {
+	if ((pid = fork())==0) {
 		close(0);
 		close(1);
 		dup(pf[0]);
@@ -35,7 +35,8 @@ setup(char *pw)
 		exit(1);
 	}
 	write(pf[1], buf, 10);
-	wait((int *)NULL);
+	while ((i = wait((int *)NULL)) != pid && i != -1)
+		;
 	if (read(pf[0], buf, 13) != 13) {
 		fprintf(stderr, "crypt: cannot generate key\n");
 		exit(1);
