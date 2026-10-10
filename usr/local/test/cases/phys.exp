@@ -1,0 +1,63 @@
+mem = 67096576
+# cd /tmp; /etc/mknod /dev/rrk0 c 9 0; ls -l /dev/rrk0
+crw-rw-rw- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
+# dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
+8+0 records in
+8+0 records out
+8+0 records in
+8+0 records out
+same512
+# dd if=/dev/rrk0 bs=4096 skip=300 count=6 >r1; dd if=/dev/root bs=4096 skip=300 count=6 >r2; cmp r1 r2 && echo same4096
+6+0 records in
+6+0 records out
+6+0 records in
+6+0 records out
+same4096
+# dd if=/dev/rrk0 bs=16384 skip=100 count=3 >r1; dd if=/dev/root bs=16384 skip=100 count=3 >r2; cmp r1 r2 && echo same16384
+3+0 records in
+3+0 records out
+3+0 records in
+3+0 records out
+same16384
+# echo hello raw world | dd of=/dev/rrk0 bs=512 seek=10700 conv=sync
+0+1 records in
+1+0 records out
+# dd if=/dev/rrk0 bs=512 skip=10700 count=1 | od -c | sed 2q
+1+0 records in
+1+0 records out
+0000000   h   e   l   l   o       r   a   w       w   o   r   l   d  \n
+0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
+# dd if=/dev/swap bs=512 skip=10700 count=1 | od -c | sed 2q
+1+0 records in
+1+0 records out
+0000000   h   e   l   l   o       r   a   w       w   o   r   l   d  \n
+0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
+# echo second | dd of=/dev/swap bs=512 seek=10701 conv=sync; sync
+0+1 records in
+1+0 records out
+# dd if=/dev/rrk0 bs=512 skip=10701 count=1 | od -c | sed 2q
+1+0 records in
+1+0 records out
+0000000   s   e   c   o   n   d  \n  \0  \0  \0  \0  \0  \0  \0  \0  \0
+0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
+# dd if=/dev/rrk0 bs=511 count=1 | wc -c
+read: Bad address
+0+0 records in
+0+0 records out
+      0
+# dd if=/dev/rrk0 bs=512 skip=3 count=1 >b3; dd if=/dev/root bs=512 skip=3 count=1 | cmp - b3 && echo same3
+1+0 records in
+1+0 records out
+1+0 records in
+1+0 records out
+same3
+# dd if=/dev/root of=/dev/null bs=512 skip=11518 count=4; echo dd$?
+read: I/O error
+2+0 records in
+2+0 records out
+dd0
+# ls /bin | wc
+    106    106     508
+# echo TEST""DONE
+TESTDONE
+# 

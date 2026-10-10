@@ -1,0 +1,7 @@
+/an/p
+1,$s/a/A/g
+$a
+new line
+.
+w
+q

@@ -1,0 +1,49 @@
+mem = 67096576
+# ls -l /bin/su /bin/mkdir /bin/login /bin/mv /usr/lib/atrun /dev/mem | awk '{ print $1, $3, $NF }'; ls -l /usr/adm
+-rwsr-xr-x root /bin/login
+-rwsr-xr-x root /bin/mkdir
+-rwsr-xr-x root /bin/mv
+-rwsr-xr-x root /bin/su
+crw-r--r-- root /dev/mem
+-rwsr-xr-x root /usr/lib/atrun
+total 0
+-rw-r--r-- 1 daemon      0 Jan  9 HH:MM messages
+-rw-r--r-- 1 daemon      0 Jan  9 HH:MM msgbuf
+-rw-r--r-- 1 root        0 Jan  9 HH:MM wtmp
+# rm /etc/mtab; rm /etc/mtab; echo rc$?
+rm: /etc/mtab nonexistent
+rm: /etc/mtab nonexistent
+rc1
+# cd /tmp; echo ab >e; grep '\(ab\)\1*a' e; echo grep$?
+grep1
+# ed - e
+g/\(ab\)\1*a/p
+q
+# set a b c; for i do for j do :; done; done; cd /nonexistent
+/nonexistent: bad directory
+# echo args $*
+args a b c
+# echo after
+after
+# ps l
+ F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
+ 1 S   0     2     1 ... co M:SS -
+ 1 R   0    15     2 ... co M:SS ps l
+# echo '* * * * * /etc/dmesg - >>/usr/adm/messages' >/usr/lib/crontab; /etc/cron; sleep 75; ls -l /usr/adm; sed 3q /usr/adm/messages
+total 2
+-rw-r--r-- 1 daemon     29 Jan  9 HH:MM messages
+-rw-r--r-- 1 daemon    136 Jan  9 HH:MM msgbuf
+-rw-r--r-- 1 root        0 Jan  9 HH:MM wtmp
+
+Jan  9 HH:MM
+mem = 67096576
+# date 3802010000; date; echo date$?
+Thu Dec 26 17:31:44 EST 1901
+Thu Dec 26 17:31:44 EST 1901
+date0
+# yes : | sed 100000q >l; echo fi >>l; sh l
+
+l: syntax error at line 100002: `fi' unexpected
+# echo TEST""DONE
+TESTDONE
+# 

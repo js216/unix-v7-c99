@@ -1,0 +1,36 @@
+mem = 67096576
+# sleep 100
+
+# echo r""c=$?
+rc=3
+# yes >/dev/null
+
+# echo r""c=$?
+rc=3
+# yes | cat >/dev/null
+
+
+# echo r""c=$?
+rc=3
+# sh -c 'trap "echo caught; exit 3" 2; echo rea""dy; sleep 100'
+ready
+
+caught
+# echo r""c=$?
+rc=3
+# sleep 100 & sleep 1; kill $!; wait; echo k""d=$?
+15
+15 Terminated
+kd=0
+# yes >/dev/null & sleep 2; kill -9 $!; wait; echo k""9=$?
+19
+19 Killed
+k9=137
+# sh -c 'trap "echo term" 15; kill $$; echo after'
+term
+after
+# ls /bin | wc -l
+    106
+# echo TEST""DONE
+TESTDONE
+# 

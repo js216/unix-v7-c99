@@ -1,0 +1,54 @@
+mem = 67096576
+# for i in 1 2 3 4 5 6 7 8; do (yes | sed 200q | wc >/tmp/w$i) & done; wait; cat /tmp/w*
+3
+4
+5
+6
+7
+8
+9
+10
+    200    200     400
+    200    200     400
+    200    200     400
+    200    200     400
+    200    200     400
+    200    200     400
+    200    200     400
+    200    200     400
+# yes >/dev/null & a=$!; yes >/dev/null & b=$!; yes >/dev/null & c=$!
+28
+29
+30
+# for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo $i | sed s/1/X/ ; done | wc
+     20     20      51
+# /t/ptt; /t/prt; /t/bigx | wc
+stop 1177
+glob 5
+r0 0 pcok 1
+w 40
+wr9 -1
+wps 16
+rps 10
+exit 42
+ticks N
+      1      6      35
+# sort /usr/dict/words | uniq | wc
+  24001  24001  196513
+# cat /usr/dict/words | sed 's/a/b/'
+# echo r""c=$?
+rc=3
+# sh -c "trap 'echo caught; exit 3' 2; echo rea""dy; yes >/dev/null"
+ready
+
+caught
+# echo r""c=$?
+rc=3
+# kill -9 $a $b $c; wait; ps | wc -l
+PID Killed
+PID Killed
+PID Killed
+      4
+# echo TEST""DONE
+TESTDONE
+# 

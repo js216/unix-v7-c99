@@ -1,0 +1,20 @@
+Regression tests, run on the QEMU target.
+
+Build the tree with make first, then run
+
+	usr/local/test/run		all tests
+	usr/local/test/run sh awk	only the named tests
+
+Each test boots boot/unix on a fresh copy of the root file system, with
+the programs compiled from t/*.c and the data files from t/ installed in
+/t. The script prints one PASS or FAIL line per test and exits non-zero
+if any test failed, keeping the outputs in the directory it names.
+
+A test is cases/NAME.steps, the session to type; cases/NAME.exp, the
+expected output; and optionally cases/NAME.sed, which normalises output
+that legitimately varies, such as dates, clock ticks, and addresses.
+
+A plain line of a steps file is typed at the shell prompt, or at the
+here-document prompt. A line @expect|send waits for expect, then types
+send, in which \n is a newline, ^C is DEL, and ^D is EOT; expect may
+contain \xNN. Type the erase and kill characters # and @ as \# and \@.

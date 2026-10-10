@@ -1,0 +1,44 @@
+cd /tmp; echo one two three >a; echo four five >>a; echo six one seven eight >>a; echo nine >>a
+awk '/one/' a; awk '$1 == "four"' a; awk 'NR==2 || NF==1' a; awk '!/o/' a
+awk '/two/,/six/ { print NR ": " $0 }' a; awk 'NR==2,NR==3' a
+awk 'BEGIN { printf "%d %5.2f %s %o %x %ld %e %g|", 42, 3.14159, "str", 8, 255, 123456789, 1234.5, 0.0001; print "" }' </dev/null
+awk 'BEGIN { printf "%c%c%c", 200, 233, 65 }' </dev/null | od -c
+awk 'BEGIN { printf "%-5s|%5s|%.2s|", "ab", "cd", "efgh"; print "" }' </dev/null
+awk '{ for (i=1;i<=NF;i++) c[$i]++ } END { for (w in c) print w, c[w] }' a | sort
+awk 'BEGIN { print sqrt(16), exp(0), log(1), int(3.7), int(-3.7), length("abcd"); print 2^10, 7%3, -7%3, 1/3 }' </dev/null
+awk 'BEGIN { print substr("hello",2,3), index("hello","ll"); n = split("a:b:c", x, ":"); print n, x[3]; s = sprintf("%03d", 7); print s }' </dev/null
+awk -F: '{ print $1, NF }' /etc/passwd | sed 3q
+awk '{ if (NR==1) next; print NR, NF, length; if (NR==3) exit }' a
+awk 'BEGIN { x = "a" "b"; if (x < "b") print x; else print "no"; y = 1e3 + 0.5; print y; z = "10"; if (z > 9) print "numcmp" }' </dev/null
+awk '$1 ~ /^[a-f][a-z]*$/ { print "m", $1 } $2 !~ /e/ { print "nm", $2 }' a
+awk '{ n += NF; $2 = "X"; print } END { print n, NR }' a
+awk 'BEGIN { i = 0; while (i < 3) { i++; s = s i }; print s; for (;;) { if (++j > 4) break }; print j }' </dev/null
+awk 'BEGIN { x = }' </dev/null; echo st$?
+awk '{ print $1 > "out" }' a; cat out; awk '{ print $1 | "sort -r" }' a; sleep 1
+echo '{ print NR, $NF }' >p.awk; awk -f p.awk a
+awk 'length > 10' a; awk '{ $3 = ""; print NF ":" $0 }' a
+awk 'BEGIN { OFS = "-"; ORS = "|" } { $1 = $1; print }' </dev/null a; echo
+echo 'a b' | awk '{ print; print $0; print $1$2 }'
+awk 'BEGIN { print 1==1.0, "a" == "a", 3 " " -3, 1e6, 1e7 * 10, 100000 * 100000 }' </dev/null
+awk 'BEGIN { printf "%s %d|", "x"; print "" }' </dev/null
+echo 3 4 | awk '{ print $1 * $2, $1 / $2, $1 - $2, $1 + $2; $5 = "e"; print; print NF }'
+awk 'END { print NR, $0 }' a
+awk 'BEGIN { getline; print "g" }' </dev/null
+awk '{ print $100 }' a; echo st$?
+awk 'BEGIN { x = 1/0 }' </dev/null; echo st$?
+awk 'BEGIN { print "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }' </dev/null; echo st$?
+awk '/[a-f]+e/ { print "cc", $0 } /^[^o]*$/ { print "nc", $0 } /(on|ni)e$/ { print "alt", $0 }' a
+awk '/t.o|fi?ve/ { print "re", NR }' a
+echo 'x=5' | awk '{ print x }' x=7 -; awk '{ print x, $1 }' x=3 a
+awk 'BEGIN { a["x"] = 1; a["y"] = 2; for (k in a) n++; print n; if ("x" in a) print "in" }' </dev/null; echo st$?
+awk 'BEGIN { printf "%d %d\n", 3 }' </dev/null; echo st$?
+awk 'BEGIN { print length() }' </dev/null
+awk '{ $7 = "z"; print NF; print }' a
+awk -f nosuch a; echo st$?
+awk 'BEGIN { s = substr("hello", 0); t = substr("hello", 3, 100); print s, t; print index("abc", "z") }' </dev/null
+awk '{ print > "o2" } END { print NR }' a; cat o2
+awk 'BEGIN { print 1,2 > "/dev/null"; x["a"]; print 7 }' </dev/null
+echo 'é ü' | awk '{ print $2, length($1) }'
+awk '{ print NR ": " $1 ; next; print "no" }' a
+awk 'BEGIN { while (i++ < 3) { if (i == 2) continue; print i } }' </dev/null
+awk 'BEGIN { x["a"] = 1; delete; print }' </dev/null; echo st$?

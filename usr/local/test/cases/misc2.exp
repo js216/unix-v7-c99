@@ -1,0 +1,138 @@
+mem = 67096576
+# cd /tmp; echo a >1; echo b >>1; echo c >>1; echo d >>1; sed s/b/B/ 1 >2; sed s/d/D/ 1 >3; sed s/b/B/ 3 >4
+# diff 1 3 >d13; diff 2 3 >d23; /usr/lib/diff3 d13 d23 1 2 3; /usr/lib/diff3 -e d13 d23 1 2 3; /usr/lib/diff3 -x d13 d23 1 2 3
+====2
+1:2c
+2:2c
+  B
+3:2c
+  b
+====3
+1:4c
+2:4c
+  d
+3:4c
+  D
+4c
+D
+.
+# diff 1 4 >d14; diff 2 4 >d24; /usr/lib/diff3 d14 d24 1 2 4; /usr/lib/diff3 -e d14 d24 1 2 4; diff3 1 2 3
+====1
+1:2c
+  b
+2:2c
+3:2c
+  B
+====3
+1:4c
+2:4c
+  d
+3:4c
+  D
+4c
+D
+.
+diff3: not found
+# /usr/lib/diffh 1 3; /usr/lib/diffh /etc/passwd /etc/group | sed 10q; sed 1d /etc/passwd >p2; echo new >>p2; /usr/lib/diffh /etc/passwd p2; /usr/lib/diffh -b 1 2
+4,$c4,$
+< d
+---
+> D
+1,$c1,$
+< root:VwL97VCAx1Qhs:0:1::/:
+< daemon:x:1:1::/:
+< sys::2:2::/usr/sys:
+< bin::3:3::/bin:
+< uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
+< dmr::7:3::/usr/dmr:
+---
+> other::1:
+> sys::2:bin,sys
+1d0
+< root:VwL97VCAx1Qhs:0:1::/:
+6a6,$
+> new
+2,$c2,$
+< b
+< c
+< d
+---
+> B
+> c
+> d
+# dd if=/etc/passwd conv=ucase >o 2>&1; sed 3q o; dd if=/etc/passwd conv=lcase,swab >o 2>&1; sed 2q o
+ROOT:VWL97VCAX1QHS:0:1::/:
+DAEMON:X:1:1::/:
+SYS::2:2::/USR/SYS:
+ortov:lw79cvxaq1sh0:1::::/d
+eaom:n:x:1:1/:
+# dd if=/etc/passwd of=x conv=ebcdic; dd if=x conv=ascii 2>/dev/null | sed 2q; dd if=/etc/passwd conv=ibm 2>/dev/null | od -c | sed 2q
+0+1 records in
+0+1 records out
+root:VwL97VCAx1Qhs:0:1::/:
+daemon:x:1:1::/:
+0000000 231 226 226 243   z 345 246 323 371 367 345 303 301 247 361 330
+0000020 210 242   z 360   z 361   z   z   a   z   % 204 201 205 224 226
+# dd if=/etc/passwd ibs=1b obs=7 count=2 skip=1 | wc -c; dd if=/etc/passwd bs=2x3 cbs=10 conv=noerror,sync | wc -c; dd if=/etc/passwd bs=1k count=1 | wc -c; dd bogus=1; echo st$?
+0+0 records in
+0+0 records out
+      0
+23+1 records in
+24+0 records out
+    144
+0+1 records in
+0+1 records out
+    141
+bad arg: bogus=1
+st0
+# (echo inch; echo cm; echo mile/hour; echo km/hour; echo acre; echo ft2; echo furlong; echo nosuch; echo 3 kg; echo lb; echo 'm/s'; echo 'kg') | units
+437 units; 3191 bytes
+
+you have: you want:     * 2.540000e+00
+        / 3.937008e-01
+you have: you want:     * 1.609344e+00
+        / 6.213712e-01
+you have: you want:     * 4.356000e+04
+        / 2.295684e-05
+you have: you want: cannot recognize nosuch
+you want: conformability
+        2.011680e+02 m
+        3.000000e+00 kg
+you have: you want: conformability
+        4.535924e-01 kg
+        1.000000e+00 m/sec
+you have: you want: 
+# echo 'main(){if(a){b;}else{c;}/* x */ s="{";while(x)y++;}' >c.c; cb <c.c; echo 'int f(x) { switch(x){case 1: return 2; default: break;} }' | cb
+main(){
+        if(a){
+                b;
+        }
+        else{
+                c;
+        }/* x */
+        s="{";
+        while(x)y++;
+}
+int f(x) { 
+        switch(x){
+        case 1: 
+                return 2; 
+        default: 
+                break;
+        } 
+}
+# file /bin/ls /etc/passwd /tmp/1 /bin /dev/tty /etc/ttys x c.c
+/bin/ls:        data
+/etc/passwd:    ascii text
+/tmp/1: ascii text
+/bin:   directory
+/dev/tty:       character special (17/0)
+/etc/ttys:      ascii text
+x:      data
+c.c:    c program text
+# echo '.globl _x' >s.s; echo 'mov r0,r1' >>s.s; echo 'The cat is on the mat and it is a fine day for the people of the town who are' >e; file s.s e
+s.s:    assembler program text
+e:      English text
+# echo TEST""DONE
+TESTDONE
+# 

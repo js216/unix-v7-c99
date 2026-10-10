@@ -1,0 +1,257 @@
+mem = 67096576
+# cd /tmp; echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
+0000000   i   j   F   Y   N   c   S   N   c   t   B   Y   g  \0
+0000015
+crypttest
+# cat >f <<'X'
+> the quick brown fox
+> jumps over the lazy dog
+> line three 123
+> aaa bbb aaa
+> X
+# ed f <<'X'
+> 1,$p
+> 2s/lazy/sleepy/p
+> g/the/s//THE/gp
+> /three/m0
+> 1,$n
+> $t0
+> 1,2j
+> 1p
+> ka
+> 'a,$d
+> 1,$p
+> a
+> appended
+> .
+> w g
+> q
+> X
+71
+the quick brown fox
+jumps over the lazy dog
+line three 123
+aaa bbb aaa
+jumps over the sleepy dog
+THE quick brown fox
+jumps over THE sleepy dog
+?
+?
+# cat g; ed - f <<'X'
+> s/\(q[a-z]*\) \(b[a-z]*\)/\2 \1/p
+> /aaa/s/a*/X/gp
+> =
+> !echo shell
+> q
+> X
+cat: can't open g
+?
+# find / -name 'pass*' -o -name 'group' -print
+/etc/group
+# find /etc /bin -type f -size -2 -links 1 -perm 755 -user 0 -group 0 -print | sed 4q
+/etc/rc
+/bin/1
+/bin/false
+/bin/nohup
+# find /bin \( -name 'ca*' -o -name 'ch*' \) ! -name cal -print
+/bin/cat
+/bin/checkeq
+/bin/chgrp
+/bin/chmod
+/bin/chown
+# find /tmp -newer /unix -type f -print; find /usr/lib -name 'make*' -exec echo found {} \;
+/tmp/f
+found /usr/lib/makekey
+# find /etc -inum 2 -print; find / -mtime -100000 -name unix -print; find /bin -atime +100000 -print | wc -l
+/unix
+      0
+# cat >s <<'X'
+> 3 b x
+> 1 a y
+> 2 c z
+> 10 a w
+> 2 c z
+> B q q
+> b q q
+> X
+# sort s; echo --; sort -n s; echo --; sort -rn s; echo --; sort -u s; echo --; sort -f s; echo --; sort +1 -2 s; echo --; sort -t' ' +2 s
+1 a y
+10 a w
+2 c z
+2 c z
+3 b x
+B q q
+b q q
+--
+B q q
+b q q
+1 a y
+2 c z
+2 c z
+3 b x
+10 a w
+--
+10 a w
+3 b x
+2 c z
+2 c z
+1 a y
+b q q
+B q q
+--
+1 a y
+10 a w
+2 c z
+3 b x
+B q q
+b q q
+--
+1 a y
+10 a w
+2 c z
+2 c z
+3 b x
+B q q
+b q q
+--
+1 a y
+10 a w
+3 b x
+2 c z
+2 c z
+B q q
+b q q
+--
+B q q
+b q q
+10 a w
+3 b x
+1 a y
+2 c z
+2 c z
+# sort -nr +0 -1 s -o s2; cat s2; sort s >s3; sort -c s3 && echo sorted; sort -m s3 s3 | wc -l; sort -d s | sed 2q; sort -b s | sed 2q
+10 a w
+3 b x
+2 c z
+2 c z
+1 a y
+b q q
+B q q
+sorted
+     14
+1 a y
+10 a w
+1 a y
+10 a w
+# grep -n the f; grep -c a f; grep -v the f; grep -y QUICK f; grep '\(a\)\1' f; grep '^[a-j]' f; grep -l over f g; grep 'o[gv]' f
+1:the quick brown fox
+2:jumps over the lazy dog
+2
+line three 123
+aaa bbb aaa
+aaa bbb aaa
+jumps over the lazy dog
+aaa bbb aaa
+f
+grep: can't open g
+jumps over the lazy dog
+# egrep 'fox|dog' f; egrep '(ab|cd)+' f; egrep -n 'a+b?' f; egrep -v 'a' f; egrep -c 'o' f; egrep '[0-9]+$' f; egrep 'qu.ck' f
+the quick brown fox
+jumps over the lazy dog
+2:jumps over the lazy dog
+4:aaa bbb aaa
+the quick brown fox
+line three 123
+2
+line three 123
+the quick brown fox
+# ls -l /etc/passwd; ls -la /tmp | sed 3q; ls -lt /dev | sed 3q; ls -i /unix; ls -s /etc/passwd; ls -ld /etc; ls -lc /dev/console
+-rw-r--r-- 1 root      141 Jan  9 HH:MM /etc/passwd
+total 6
+drwxrwxrwx 2 root      112 Jan  9 HH:MM .
+drwxr-xr-x 8 root      144 Jan  9 HH:MM ..
+total 0
+crw-r--r-- 1 root    0,  0 Jan  9 HH:MM console
+crw-r----- 1 root    8,  1 Jan  9 HH:MM kmem
+  165 /unix
+   1 /etc/passwd
+drwxr-xr-x 2 root      272 Jan  9 HH:MM /etc
+crw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/console
+# od -o f | sed 2q; od -x f | sed 2q; od -d f | sed 2q; od -b f | sed 2q; od -c f +5 | sed 2q
+0000000 064164 020145 072561 061551 020153 071142 073557 020156
+0000020 067546 005170 072552 070155 020163 073157 071145 072040
+0000000 6874 2065 7571 6369 206b 7262 776f 206e
+0000020 6f66 0a78 756a 706d 2073 766f 7265 7420
+0000000 26740 08293 30065 25449 08299 29282 30575 08302
+0000020 28518 02680 30058 28781 08307 30319 29285 29728
+0000000 164 150 145 040 161 165 151 143 153 040 142 162 157 167 156 040
+0000020 146 157 170 012 152 165 155 160 163 040 157 166 145 162 040 164
+0000005   u   i   c   k       b   r   o   w   n       f   o   x  \n   j
+0000025   u   m   p   s       o   v   e   r       t   h   e       l   a
+# echo hello world | tr a-z A-Z; echo hello | tr -d l; echo aaabbb | tr -s ab; echo hello world | tr -c a-z '\012'; echo abc | tr abc 'x-z'
+HELLO WORLD
+heo
+aaabbb
+hello
+world
+xyz
+# cat >ts <<'X'
+> a b
+> b c
+> c d
+> X
+# tsort ts; echo x y y x | tsort
+a
+b
+c
+d
+tsort: cycle in reverse order
+tsort: x
+tsort: y
+x
+y
+# basename /usr/lib/makekey; basename foo.c .c; tty; yes | sed 2q; cp f h; cmp f h && echo same; cmp -l f g | sed 2q; cmp f; cmp f g; rm h
+makekey
+foo
+/dev/console
+y
+y
+
+same
+cmp: cannot open g
+cmp: arg count
+cmp: cannot open g
+# osh -c 'echo osh works; echo a b | wc'
+osh works
+      1      2       4
+# mknod /tmp/nod c 0 0; ls -l /tmp/nod; rm /tmp/nod; mkdir rd; >rd/x; rm -r rd; ls; sync; kill -0 1; echo k$?
+mknod: not found
+/tmp/nod not found
+rm: /tmp/nod nonexistent
+f
+s
+s2
+s3
+ts
+k0
+# ncheck /dev/root | sed 3q; dcheck /dev/root | sed 3q
+/dev/root:
+3       /bin/.
+110     /dev/.
+
+/dev/root:
+     entries  link cnt
+281     0       0
+# ac -p | sed 3q; sa | sed 3q; sa -m | sed 3q; mesg
+Can't open /usr/adm/acct
+     0     0.00     0.00
+Can't open /usr/adm/acct
+is n
+# Restricted rights: Use, duplication, or disclosure
+is subject to restrictions stated in your contract with
+Western Electric Company, Inc.
+Tue Jan  9 HH:MM EST 1979
+
+çloÁiÓ:†Û˘Û
+No directory
+login: 

@@ -1,0 +1,38 @@
+mem = 67096576
+# cd /bin; /t/argt * | wc
+      1      6      28
+# /t/argt /bin/* /bin/* /bin/* /bin/*
+argc 425 chars 3735 last /bin/yes
+# /t/argt * * * * * * * * *
+argc 955 chars 3625 last yes
+# /t/argt /bin/* /bin/* /bin/* /bin/* /bin/* /bin/* /bin/*; echo r""c=$?
+/t/argt: arg list too long
+rc=1
+# cd /; for i in 1 2 3 4 5 6 7 8 9 10; do /t/argt $i /bin/* >/dev/null & done; wait; echo spawned
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+spawned
+# sh -c "echo nested; sh -c 'exec echo deep'"
+nested
+deep
+# /t/ptt; /t/prt
+stop 1177
+glob 5
+r0 0 pcok 1
+w 40
+wr9 -1
+wps 16
+rps 10
+exit 42
+ticks N
+# echo TEST""DONE
+TESTDONE
+# 

@@ -1,0 +1,189 @@
+mem = 67096576
+# cd /tmp; od -cbdox /t/words >o; sed 4q o
+0000000  070141  066160  005145  060542  060556  060556  061412  062550
+          28769   27760   02661   24930   24942   24942   25354   25960
+           7061    6c70    0a65    6162    616e    616e    630a    6568
+          a   p   p   l   e  \n   b   a   n   a   n   a  \n   c   h   e
+# echo hello world | crypt secret | od -b | sed 2q; echo hello | crypt k1 | crypt k1
+0000000 236 162 151 060 142 202 141 161 204 102 141 137
+0000014
+hello
+# echo abcdefghijkl | dd bs=1w count=1 2>/dev/null; echo
+ab
+# sp </t/words; sp 20 </t/long | wc
+apple   banana  cherry  date
+     16     18    3335
+# uniq -c /t/sortin; uniq -c /t/long | wc
+   1 3 c
+   1 1 a
+   1 2 b
+   1 1 a
+      3      8    1328
+# file /t/asm /t/bcf /t/ctxt /t/long /t/roff /t/sortin /t/u2 /t/words /t/edscr
+/t/asm: assembler program text
+/t/bcf: ascii text
+/t/ctxt:        c program text
+/t/long:        English text
+/t/roff:        roff, nroff, or eqn input text
+/t/sortin:      ascii text
+/t/u2:  ascii text
+/t/words:       ascii text
+/t/edscr:       ascii text
+# find /etc -user root -print | wc -l; find /t -size -2 -print; find /bin -name 'c?' -perm 755 -print
+     16
+/t
+/t/asm
+/t/bcf
+/t/ctxt
+/t/edscr
+/t/monout
+/t/olda
+/t/roff
+/t/sortin
+/t/u2
+/t/words
+/t/xout
+/bin/cb
+/bin/cp
+# find /t -type f -links 1 -name 'w*' -exec echo found {} \; ; find /etc -group 0 -mtime -100000 -print | wc -l; find / -inum 2 -print
+found /t/words
+     16
+/
+# find /t ! -type d -ctime -100000 -atime -100000 -print | wc -l
+     20
+# ps ax | wc -l; ps; ps alx | wc -l
+      6
+   PID TTY TIME CMD
+     2 co  M:SS -
+    52 co  M:SS ps
+      6
+# pstat -t >o; sed 's/\#/N/' o; pstat -p >o; sed 2q o; pstat -i >o; sed 2q o
+1 kl11
+ N RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP
+ 0   0   0   0   06230       0  0   0   OC         2
+4 processes
+   LOC S  F  PRI SIGNAL UID TIM CPU NI  PGRP   PID  PPID ADDR SIZE  WCHAN   LINK  TEXTP  CLKT
+5 active inodes
+   LOC  FLAGS  CNT DEVICE   INO   MODE NLK UID  SIZE/DEV
+# pstat -f >o; sed 2q o; pstat -x >o; sed 2q o
+3 open files
+  LOC   FLG CNT   INO    OFFS
+0 text segments
+   LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT
+# dcheck /dev/root; dcheck -i 2 /dev/root; icheck -b 5 /dev/root
+/dev/root:
+/dev/root:
+    2 arg; 2/.
+    2 arg; 2/..
+    2 arg; 3/..
+    2 arg; 110/..
+    2 arg; 118/..
+    2 arg; 134/..
+    2 arg; 135/..
+    2 arg; 166/..
+/dev/root:
+files    187 (r=165,d=15,b=2,c=5)
+used    N (i=N,ii=N,iii=N,d=N)
+free N
+missing    0
+# echo '2^40; scale=3; 1/3; 7%3' | bc
+1099511627776
+0.333
+.001
+# cp /t/words w; ed - w </t/edscr; cat w; cp /t/words w2; ed w2 </t/edscr; echo st$?; cat w2
+banana
+Apple
+bAnAnA
+cherry
+dAte
+new line
+25
+banana
+34
+st0
+Apple
+bAnAnA
+cherry
+dAte
+new line
+# expr 1 + 2; expr abc : 'a\(.\)'; expr 'a\b' : 'a\\b'; expr abc : 'a\('; echo st$?
+3
+b
+3
+RE error
+st2
+# echo hi | tee t1 t2; echo ho | tee -a t1 >/dev/null; cat t1 t2
+hi
+hi
+ho
+hi
+# look -f ban /t/words; echo hello | tr a-z A-Z; sort -u /t/sortin; sort -m /t/sortin /t/words | wc
+banana
+HELLO
+1 a
+2 b
+3 c
+      8     12      41
+# sort -c /t/sortin; echo $?; sort -n +1 /t/sortin
+sort: disorder:1 a
+1
+1 a
+1 a
+2 b
+3 c
+# ptx /t/words | sed 2q; ptx -i /dev/null /t/words
+Cannot open  file /usr/lib/eign
+.xx "" "" "apple" ""
+.xx "" "" "banana" ""
+.xx "" "" "cherry" ""
+.xx "" "" "date" ""
+# factor 360 1000000007 4294967297; echo x | tc | od -b | sed 2q; diff /t/words /t/sortin | wc; who
+
+     2
+     2
+     2
+     3
+     3
+     5
+0000000 035 070 154 167 040 100 037 142 035 067 177 100 033 073 037 000
+0000017
+     10     22      69
+who: cannot open utmp
+# iostat | sed 2q; iostat | wc -l; prof /bin/ls; arcv /t/words
+   RF                RK                RP                  PERCENT
+   tpm  msps  mspt   tpm  msps  mspt   tpm  msps  mspt  user  nice systm  idle
+      3
+/bin/ls: bad format
+arcv: /t/words not archive format
+# units </t/u2 | sed 3q
+437 units; 3191 bytes
+
+you have: you want:     * 2.540000e+00
+# osh -c 'echo hi; echo $0 there'; echo 'echo $$ x; date >/dev/null' | osh >o 2>&1; sed 's/[0-9]/N/g; s/\#/P/g' o
+hi
+-c there
+P NNNNN x
+# dump 0f /tmp/d /dev/root 2>&1 | wc -l; dumpdir f /tmp/d | sed -n '1,3p;/words/p'; restor tf /tmp/d | sed 3q
+     10
+Dump   date: Tue Jan  9 HH:MM 1979
+Dumped from: Wed Dec 31 HH:MM 1969
+    2   /.
+  141   /usr/dict/words
+  185   /t/words
+Dump   date: Tue Jan  9 HH:MM 1979
+Dumped from: Wed Dec 31 HH:MM 1969
+# mkdir rx; cd rx; echo 1 | restor xf /tmp/d t/words; ls; cmp * /t/words; echo cmp$?; cd /tmp; rm -r rx /tmp/d
+t/words: inode 185
+Mount desired tape volume: Specify volume #: extract file 185
+185
+cmp0
+# echo 1+1 | bc /nonexist /t/bcf; echo bcst$?
+cannot open input file on line 1, (null)
+4
+2
+bcst0
+# echo 'zz:x:123\c' >>/etc/passwd; find /t -user zz -print; echo findst$?
+findst0
+# echo TEST""DONE
+TESTDONE
+# 

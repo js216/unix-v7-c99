@@ -1,0 +1,186 @@
+mem = 67096576
+# cd /tmp; echo T-SED
+T-SED
+# echo axb | sed 's/x*/-/g'; echo xx | sed 's/o*x/-/g'; echo aaa | sed 's/a*/X/g'
+-a-b-
+--
+X
+# echo abc | sed 's/b*/X/'; echo abc | sed 's/$/X/g'; echo abc | sed 's/^/X/g'; echo foo | sed 's/o/0/g'
+Xabc
+abcX
+Xabc
+f00
+# echo hello | sed 'y/abcdefgh/ABCDEFGH/'; echo abcabc | sed 's/\(abc\)\1/[\1]/'; echo abcd | sed 's/\(b\)\(c\)/\2\1/g'
+HEllo
+[abc]
+acbd
+# echo one two three | sed -e 's/two/2/' -e '/one/p' -n; echo xay | sed 's/a*/Z/g'
+one 2 three
+ZxZyZ
+# echo T-DC
+T-DC
+# echo '2 3 / p 10 3 % p 7 _2 * p 2 k 2 v p 5 2 ^ p' | dc
+0
+1
+-14
+1.41
+25
+# echo '1 0 / p' | dc; echo r=$?
+divide by 0
+0
+r=0
+# echo '[[gt]p]sa 1 2 >a 2 1 >a 3 3 =a _3 _1 <a _1 _3 <a' | dc
+gt
+gt
+gt
+# echo '16 o 255 p 8 i 17 p' | dc
+FF
+F
+# echo '[1p?2p]x' | dc; echo r=$?
+1
+r=0
+# echo '?' | dc; echo r=$?
+r=0
+# echo T-AWK
+T-AWK
+# echo 'a b c' >f; echo 'd e f' >>f; echo 'g h i' >>f
+# awk '{ print $2, NF }' f; awk 'BEGIN { x = 3 * 4; print x } END { print NR }' f
+b 3
+e 3
+h 3
+12
+3
+# awk '/e/' f; awk '{ if ($1 == "a") print "first"; else print "other" }' f
+d e f
+first
+other
+other
+# awk '{ n = split($0, w); print n, w[3], substr($0, 3) }' f
+3 c b c
+3 f e f
+3 i h i
+# awk '{ for (i = NF; i > 0; i--) printf "%s.", $i; printf "\n" }' f
+c.b.a.
+f.e.d.
+i.h.g.
+# awk 'length > 3 { s = s $1 } END { print s, length(s) }' f
+adg 3
+# echo T-TAR
+T-TAR
+# echo x >f1; tar cf t.tar f1; tar tvf t.tar | wc -l; rm f1; tar xf t.tar; cat f1
+Tar: blocksize = 5
+      1
+Tar: blocksize = 5
+x
+# echo T-TP
+T-TP
+# >t.tp; tp rmf /tmp/t.tp f1 f; tp tmf /tmp/t.tp; rm f1; tp xmf /tmp/t.tp f1; cat f1
+   2 entries
+   2 used
+  64 last
+End
+f1
+f
+   2 entries
+   2 used
+  64 last
+End
+End
+x
+# echo T-SH
+T-SH
+# echo ${u-def} ${HOME+set} ${PATH?x} ${u=assigned}; echo $u; x=1; echo ${x}y
+PATH: x
+# (echo in; exit 3); echo st=$?; umask 022; umask; umask 077; umask
+in
+st=3
+0022
+0077
+# echo /bin/s? | wc -w; for i in a b; do case $i in a) echo isa;; *) echo nota;; esac; done
+      4 
+isa
+nota
+# if test -f f; then echo yes; else echo no; fi; while false; do echo never; done; echo `echo nested`
+yes
+nested
+# a=1; b=2; echo $a$b; set x y z; echo $\# $2; shift; echo $1
+12
+3 y
+y
+# echo T-CMD
+T-CMD
+# mkdir d1; mv d1 d2; ls -d d2; mv f f2; ls f2; rmdir d2
+d2
+f2
+# cat /etc/passwd | tail -2 | wc -l; tail -1 f2; echo q | tail
+      2
+g h i
+q
+# /etc/umount /dev/nothere; echo r=$?
+umount: No such file or directory
+r=1
+# cd /tmp; echo T-DC0
+T-DC0
+# echo '0i .5 p 1 p' | dc; echo r=$?
+divide by 0
+0
+1
+r=0
+# echo '0o 5 p 1 p' | dc; echo r=$?
+11111
+1
+r=0
+# echo '1o 5 p' | dc; echo r=$?
+11111
+r=0
+# set x y z; echo $2 $3
+y z
+# echo T-SEDLONG
+T-SEDLONG
+# awk 'BEGIN { for (i = 0; i < 1500; i++) printf "ab"; printf "\n" }' </dev/null >long; wc -c long
+   3001 long
+# sed 's/a/xyz/g' long | wc -c; echo r=$?
+Output line too long.
+      0
+r=2
+# echo hello | sed 's/o*/-/g'; echo r=$?
+-h-e-l-l-
+r=0
+# echo T-TARW
+T-TARW
+# echo x >f1; tar cf t.tar f1; tar xwf t.tar </dev/null; echo r=$?
+Tar: blocksize = 5
+x f1: r=0
+# echo y | tar xwf t.tar; echo r=$?
+Tar: blocksize = 5
+x f1: r=0
+# echo T-TPW
+T-TPW
+# >t.tp; tp rmf /tmp/t.tp f1; tp xwmf /tmp/t.tp </dev/null; echo r=$?
+   1 entries
+   1 used
+  63 last
+End
+x f1 End
+r=0
+# echo y | tp xwmf /tmp/t.tp; echo r=$?
+x f1 End
+r=0
+# echo T-BG
+T-BG
+# echo n | /usr/games/backgammon; echo r=$?
+Do you want instructions? Type 'y' for yes,
+anything else means no.?? Choose the level of your oppponent.
+Type 'b' for beginner, or 'i' for intermediate.
+Anything else gets you an expert.?? r=0
+# echo T-SHLONG
+T-SHLONG
+# a=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx; b=
+# b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; : $b
+# b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; echo $b | wc -c
+    641
+# cd /bin; echo * * * * * * * * * * | wc -w
+   1060 
+# echo TEST""DONE
+TESTDONE
+# 

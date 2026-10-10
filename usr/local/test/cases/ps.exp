@@ -1,0 +1,68 @@
+mem = 67096576
+# ps ax
+   PID TTY TIME CMD
+     0 ?   M:SS swapper
+     1 ?   0:00 /etc/init
+     2 co  0:00 -
+     3 co  0:00 ps ax
+# sleep 1 & wait; ps ax
+4
+   PID TTY TIME CMD
+     0 ?   M:SS swapper
+     1 ?   0:00 /etc/init
+     2 co  0:00 -
+     5 co  0:00 ps ax
+# (echo a; sleep 2) | (sleep 1; ps ax; cat)
+   PID TTY TIME CMD
+     0 ?   M:SS swapper
+     1 ?   0:00 /etc/init
+     2 co  0:00 -
+     6 co  0:00 sleep 2
+     7 co  0:00 -
+    10 co  0:00 ps ax
+a
+# cd /tmp; for i in 1 2 3 4 5 6 7 8 9 10; do echo crypttest | crypt key | crypt key; done
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+crypttest
+# for i in 1 2 3 4 5 6 7 8 9 10; do sleep 1 & wait; ps | wc -l; echo crypttest | crypt key | crypt key; done
+61
+      4
+crypttest
+69
+      4
+crypttest
+77
+      4
+crypttest
+85
+      4
+crypttest
+93
+      4
+crypttest
+101
+      4
+crypttest
+109
+      4
+crypttest
+117
+      4
+crypttest
+125
+      4
+crypttest
+133
+      4
+crypttest
+# echo TEST""DONE
+TESTDONE
+# 

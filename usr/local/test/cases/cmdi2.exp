@@ -1,0 +1,279 @@
+mem = 67096576
+# cd /tmp; basename /a/b/c.c .c; basename x/y; basename; echo abcabc | tr a-c A-C; echo hello | tr -d l; echo aabbccdd | tr -s abc; echo abc | tr -c a x; echo
+c
+y
+
+ABCABC
+heo
+aabbccdd
+axxx
+# echo 'a b' >ts; echo 'b c' >>ts; echo 'a c' >>ts; echo 'c d' >>ts; tsort ts; echo 'd a' >>ts; tsort ts; tsort /nonexist
+a
+b
+c
+d
+tsort: cycle in reverse order
+tsort: a
+tsort: d
+tsort: c
+a
+b
+c
+d
+tsort: cannot open /nonexist
+# yes | sed 3q; yes no | sed 2q; tty; tty -s; echo tty$?; sync; echo synced
+y
+y
+y
+
+no
+no
+
+/dev/console
+tty0
+synced
+# /etc/mknod /tmp/nod c 1 2; ls -l /tmp/nod; /etc/mknod; /etc/mknod x y 1 2; /etc/mknod /tmp/bnod b 3 x; rm -f /tmp/nod
+crw-rw-rw- 1 root    1,  2 Jan  9 HH:MM /tmp/nod
+arg count
+usage: mknod name b/c major minor
+usage: mknod name b/c major minor
+usage: mknod name b/c major minor
+# kill; sleep 30 & sleep 1; kill $!; wait; echo killed; kill -9 29999; kill -x 1
+usage: kill [ -signo ] pid ...
+39
+39 Terminated
+killed
+29999: No such process
+# echo 'ONE two three' >a; echo 'four five' >>a; od a; od -c a; od -x a; od -b a | sed 3q; od -d a +4; od -o a 10.
+0000000 047117 020105 073564 020157 064164 062562 005145 067546
+0000020 071165 063040 073151 005145
+0000030
+0000000   O   N   E       t   w   o       t   h   r   e   e  \n   f   o
+0000020   u   r       f   i   v   e  \n
+0000030
+0000000 4e4f 2045 7774 206f 6874 6572 0a65 6f66
+0000020 7275 6620 7669 0a65
+0000030
+0000000 117 116 105 040 164 167 157 040 164 150 162 145 145 012 146 157
+0000020 165 162 040 146 151 166 145 012
+0000030
+0000004 30580 08303 26740 25970 02661 28518 29301 26144
+0000024 30313 02661
+0000030
+0000010 062562 005145 067546 071165 063040 073151 005145
+0000024
+# cp a b; cmp a b; echo yy >>b; cmp a b; cmp -l a b; cmp -s a b; echo st$?; echo ONE two threX >c; cmp -l a c; cmp a c 4 4; cmp a
+cmp: EOF on a
+cmp: EOF on a
+st1
+    13 145 130
+cmp: EOF on c
+a c differ: char 9, line 1
+cmp: arg count
+# cp a /tmp/b/x; mkdir dd; cp a b dd; ls dd; cp a; cp /nonexist a2
+cp: cannot create /tmp/b/x
+a
+b
+Usage: cp: f1 f2; or cp f1 ... fn d2
+cp: cannot open /nonexist
+# rm -f b c; rm -r dd; ls; rm nonexist; mkdir e1; mkdir e1/e2; echo z >e1/e2/f; rm -r e1; ls; rm -rf ../tmp/zz
+a
+ts
+rm: nonexist nonexistent
+a
+ts
+# cd /tmp; echo 'ONE two three' >a; echo 'four five' >>a; echo 'six 10' >n; echo 'six 9' >>n; echo 'abc 100' >>n; echo 'Abc -3' >>n; chmod 600 a
+# find /etc -name 'pass*' -print; find /usr/dict -size +20 -print | wc -l; find /tmp -type f -print; find /etc -user root -print | wc -l; find /etc -group 0 -print | wc -l
+/etc/passwd
+      1
+/tmp/ts
+/tmp/a
+/tmp/n
+     16
+     16
+# find /tmp -mtime -1 -print; find /tmp -atime +5 -print; find /tmp -ctime 0 -print; find /tmp -perm 600 -print; find /tmp -perm -600 -print; find /tmp -links 1 -print | wc -l
+/tmp
+/tmp/ts
+/tmp/a
+/tmp/n
+/tmp
+/tmp/ts
+/tmp/a
+/tmp/n
+/tmp/a
+/tmp
+/tmp/ts
+/tmp/a
+/tmp/n
+      3
+# find /tmp ! -name a -print; find /tmp \( -name a -o -name n \) -print; find /tmp -name a -exec echo found {} \; ; find /tmp -newer /unix -print; find /dev -type c -print | wc -l; find /dev -type b -print
+/tmp
+/tmp/ts
+/tmp/n
+/tmp/a
+/tmp/n
+found /tmp/a
+/tmp
+/tmp/ts
+/tmp/a
+/tmp/n
+      5
+/dev/root
+/dev/swap
+# find /tmp -inum `ls -i /tmp/a | sed 's/ .*//'` -print; find /tmp -user nobody -print; find /tmp -bogus; find; find /tmp -name a -cpio /tmp/x.cpio; ls -l /tmp/x.cpio; find /tmp -user 0 -name n -print
+find: cannot find -user name
+find: bad option -bogus
+Usage: find path-list predicate-list
+-rw-rw-rw- 1 root     5120 Jan  9 HH:MM /tmp/x.cpio
+/tmp/n
+# ls -lt /dev | sed 4q; ls -ltr /dev | sed 4q; ls -s /tmp; ls -id /tmp; ls -lu /dev | sed 3q; ls -d /tmp /etc; ls -a /tmp; ls -lr /dev | sed 3q; ls -f /etc | wc; ls -g /tmp; ls -c /etc | sed 3q; ls /nonexist
+total 0
+crw-r--r-- 1 root    0,  0 Jan  9 HH:MM console
+crw-r----- 1 root    8,  1 Jan  9 HH:MM kmem
+crw-r--r-- 1 root    8,  0 Jan  9 HH:MM mem
+total 0
+crw-r--r-- 1 root    8,  0 Jan  9 HH:MM mem
+crw-r----- 1 root    8,  1 Jan  9 HH:MM kmem
+brw-r----- 1 root    0,  0 Jan  9 HH:MM swap
+total 13
+   1 a
+   1 n
+   1 ts
+  10 x.cpio
+  134 /tmp
+total 0
+crw-r--r-- 1 root    0,  0 Jan  9 HH:MM console
+crw-r----- 1 root    8,  1 Jan  9 HH:MM kmem
+/etc
+/tmp
+.
+..
+a
+n
+ts
+x.cpio
+total 0
+crw-rw-rw- 1 root   17,  0 Jan  9 HH:MM tty
+brw-r----- 1 root    0,  0 Jan  9 HH:MM swap
+     17     17      92
+a
+n
+ts
+x.cpio
+accton
+cron
+ddate
+/nonexist not found
+# sort n; sort -r n; sort +1n n; sort +1nr n; sort -f n; sort -u n n | wc -l; sort -t' ' +1 -2 n; sort -m n a; sort -c n; echo st$?; sort -d n; sort -b +1 n; sort -o o n; cat o; sort -n -r n
+Abc -3
+abc 100
+six 10
+six 9
+six 9
+six 10
+abc 100
+Abc -3
+Abc -3
+six 9
+six 10
+abc 100
+abc 100
+six 10
+six 9
+Abc -3
+Abc -3
+abc 100
+six 10
+six 9
+      4
+Abc -3
+six 10
+abc 100
+six 9
+ONE two three
+four five
+six 10
+six 9
+abc 100
+Abc -3
+sort: disorder:abc 100
+st1
+Abc -3
+abc 100
+six 10
+six 9
+Abc -3
+six 10
+abc 100
+six 9
+Abc -3
+abc 100
+six 10
+six 9
+six 9
+six 10
+abc 100
+Abc -3
+# grep -n five a; grep -c o a; grep -v five a; grep -i one a; grep -l five a n; grep -h six a n; grep -e '-3' n; grep -x 'four five' a; grep '[a-c][0-9]*' n; grep 'b\(c\) 1\1*' n; grep -y abc n; grep -s x /nonexist; echo st$?
+2:four five
+2
+ONE two three
+grep: unknown flag
+a
+six 10
+six 9
+Abc -3
+grep: unknown flag
+abc 100
+Abc -3
+abc 100
+abc 100
+Abc -3
+grep: can't open /nonexist
+st2
+# egrep 'one|four' a; egrep -v 's.x' n; egrep -c '(ab|ix)+' n; egrep -n '^[A-Z]' n; egrep 'x+|fi?ve' a n; echo 'ab' >pf; egrep -f pf n; egrep -l six a n; egrep 'a[^b]' n; egrep '(' n
+four five
+abc 100
+Abc -3
+3
+4:Abc -3
+a:four five
+n:six 10
+n:six 9
+abc 100
+n
+egrep: syntax error
+# ed - a <<'X'
+> 1,$p
+> g/o/s//0/gp
+> 2m0
+> 1,$p
+> 1t$
+> ,p
+> 1,2j
+> ,p
+> $a
+> new line
+> .
+> /new/c
+> changed
+> .
+> v/two/d
+> ,p
+> !echo hi
+> w
+> q
+> X
+ONE two three
+four five
+ONE tw0 three
+f0ur five
+f0ur five
+ONE tw0 three
+?
+# cat a
+ONE two three
+four five
+# echo TEST""DONE
+TESTDONE
+# 

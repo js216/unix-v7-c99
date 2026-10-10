@@ -1,0 +1,71 @@
+cd /tmp; HOME=/usr; cat >s1 <<\!
+echo 0=$0 n=$\# all=$* first=$1
+for a in "$\@"; do echo arg:$a; done
+for a do echo plain:$a; done
+shift; echo after shift $\# $*
+x=${UNSET-def} y=${y=assigned}; echo $x $y ${y+plus} ${UNSET+no}
+case $1 in b*) echo case-b;; *) echo case-other;; esac
+i=a; while test $i != axxx; do i=${i}x; echo w$i; if test $i = axx; then break; fi; done
+until false; do echo until; break; done
+for j in 1 2 3; do if test $j = 2; then continue; fi; echo for$j; done
+if test -d /tmp; then echo d; elif true; then echo no; else echo no2; fi
+echo `echo nested \`echo inner\``
+exit 3
+!
+sh s1 a 'b c' d; echo status $?
+chmod 755 s1; ./s1 x y; echo status $?
+s1 q; echo $?
+cat <<EOF
+home=$HOME sub=`echo cmd` lit=\$HOME
+EOF
+cat <<\EOF
+home=$HOME sub=`echo cmd`
+EOF
+X=1; export X; Y=2; sh -c 'echo X=$X Y=$Y'; Z=3 sh -c 'echo Z=$Z'; echo Z=$Z
+echo 'single $HOME' "double $HOME" back\\slash "q\"q" a\ b
+echo "$*" '*' "*" * | wc -w
+case z in [a-'c']) echo bad;; [x-z]) echo good;; esac; case b in [a-'c']) echo good2;; esac
+case abc in a?c) echo q;; esac; case a.c in *.c) echo star;; esac; case x in a|x) echo alt;; esac
+trap 'echo trapped' 2; kill -2 $$; echo after; trap 2
+sh -c 'trap "echo exit-trap" 0; echo body'
+(trap '' 2; kill -2 $$ ; echo ignored)
+echo a b c | (read x y; echo x=$x y=$y)
+echo one >f1; echo two >>f1; cat <f1; cat f1 nonexist 2>&1 >/dev/null | wc -l
+ls s1 nonexist 2>/dev/null; echo $?
+exec 3<f1; cat <&3; exec 3<&-
+echo 'echo in-dot $HOME; dotvar=set' >s2; . ./s2; echo $dotvar
+eval 'a=ev; echo $a'
+set a b c; echo $\# $2; set -; echo $-
+sh -xc 'echo traced' 2>&1
+sh -ec 'false; echo notreached'; echo e=$?
+sh -c 'exit 7'; echo $?
+readonly R; R=1; echo r
+umask; umask 22; umask
+cd /usr; pwd; cd; pwd; cd /tmp
+(sleep 1; echo bg) & wait; echo waited
+echo a | sed s/a/b/ | tr b c | cat -
+x=`cat s1 | wc -l`; echo lines $x
+for f in s*; do echo glob $f; done; echo /us*/b*n
+echo ${NOPE?missing}; echo notreached
+echo ok; nonexistentcmd; echo $?
+{ echo brace; echo group; } | wc -l
+false || echo or; true && echo and; false && echo no; echo semi
+sh <s1; echo stdin-status $?
+echo 'echo $1 $2' | sh -s p1 p2
+cat >s3 <<\!
+cat <<XX
+in script heredoc $1
+XX
+read line; echo read:$line
+!
+echo fromstdin | sh s3 arg
+echo cleanup; rm -f s1 s2 s3 f1 p
+cd /tmp; times | wc -l; trap 'echo one' 1; trap 'echo two' 15; trap; trap 1 15; trap
+E1=x; export E1; export | grep E1; set | grep '^E1'
+sh -c 'trap "" 2 3; sh -c "kill -2 \$\$; echo child-ignored"'
+(exec 2>&1; echo err >&2) | wc -c; echo x 1>&2 2>/dev/null
+eval echo '$HOME' `echo e2`; eval "x=1; y=2"; echo $x$y
+echo [a-z]* | wc -w; echo /etc/pass?d /bin/[sx]h /nonexist*
+shift 5; echo after-bad-shift
+echo '\#!/bin/sh' >s4; echo 'echo script $\#' >>s4; chmod 755 s4; ./s4 a b; rm s4
+wait; echo waited-none; sh -c 'exec echo execd'

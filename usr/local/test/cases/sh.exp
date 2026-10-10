@@ -1,0 +1,219 @@
+mem = 67096576
+# cd /tmp; HOME=/usr; cat >s1 <<\!
+> echo 0=$0 n=$\# all=$* first=$1
+> for a in "$\@
+"; do echo arg:$a; done
+> for a do echo plain:$a; done
+> shift; echo after shift $\# $*
+> x=${UNSET-def} y=${y=assigned}; echo $x $y ${y+plus} ${UNSET+no}
+> case $1 in b*) echo case-b;; *) echo case-other;; esac
+> i=a; while test $i != axxx; do i=${i}x; echo w$i; if test $i = axx; then break; fi; done
+> until false; do echo until; break; done
+> for j in 1 2 3; do if test $j = 2; then continue; fi; echo for$j; done
+> if test -d /tmp; then echo d; elif true; then echo no; else echo no2; fi
+> echo `echo nested \`echo inner\``
+> exit 3
+> !
+# sh s1 a 'b c' d; echo status $?
+0=s1 n=3 all=a b c d first=a
+arg:a
+arg:b c
+arg:d
+plain:a
+plain:b c
+plain:d
+after shift 2 b c d
+def assigned plus
+case-b
+wax
+waxx
+until
+for1
+for3
+d
+nested inner
+status 3
+# chmod 755 s1; ./s1 x y; echo status $?
+0=./s1 n=2 all=x y first=x
+arg:x
+arg:y
+plain:x
+plain:y
+after shift 1 y
+def assigned plus
+case-other
+wax
+waxx
+until
+for1
+for3
+d
+nested inner
+status 3
+# s1 q; echo $?
+0=s1 n=1 all=q first=q
+arg:q
+plain:q
+after shift 0
+def assigned plus
+case-other
+wax
+waxx
+until
+for1
+for3
+d
+nested inner
+3
+# cat <<EOF
+> home=$HOME sub=`echo cmd` lit=\$HOME
+> EOF
+home=/usr sub=cmd lit=$HOME
+# cat <<\EOF
+> home=$HOME sub=`echo cmd`
+> EOF
+home=$HOME sub=`echo cmd`
+# X=1; export X; Y=2; sh -c 'echo X=$X Y=$Y'; Z=3 sh -c 'echo Z=$Z'; echo Z=$Z
+X=1 Y=
+Z=3
+Z=
+# echo 'single $HOME' "double $HOME" back\\slash "q\"q" a\ b
+single $HOME double /usr back\slash q"q a b
+# echo "$*" '*' "*" * | wc -w
+      3 
+# case z in [a-'c']) echo bad;; [x-z]) echo good;; esac; case b in [a-'c']) echo good2;; esac
+good
+good2
+# case abc in a?c) echo q;; esac; case a.c in *.c) echo star;; esac; case x in a|x) echo alt;; esac
+q
+star
+alt
+# trap 'echo trapped' 2; kill -2 $$; echo after; trap 2
+trapped
+after
+# sh -c 'trap "echo exit-trap" 0; echo body'
+body
+exit-trap
+# (trap '' 2; kill -2 $$ ; echo ignored)
+ignored
+# echo a b c | (read x y; echo x=$x y=$y)
+x=a y=b c
+# echo one >f1; echo two >>f1; cat <f1; cat f1 nonexist 2>&1 >/dev/null | wc -l
+one
+two
+      1
+# ls s1 nonexist 2>/dev/null; echo $?
+nonexist not found
+s1
+0
+# exec 3<f1; cat <&3; exec 3<&-
+one
+two
+# echo 'echo in-dot $HOME; dotvar=set' >s2; . ./s2; echo $dotvar
+in-dot /usr
+set
+# eval 'a=ev; echo $a'
+ev
+# set a b c; echo $\# $2; set -; echo $-
+3 b
+s
+# sh -xc 'echo traced' 2>&1
++ echo traced 
+traced
+# sh -ec 'false; echo notreached'; echo e=$?
+e=1
+# sh -c 'exit 7'; echo $?
+7
+# readonly R; R=1; echo r
+R: is read only
+# umask; umask 22; umask
+0000
+0022
+# cd /usr; pwd; cd; pwd; cd /tmp
+/usr
+/usr
+# (sleep 1; echo bg) & wait; echo waited
+138
+bg
+waited
+# echo a | sed s/a/b/ | tr b c | cat -
+c
+# x=`cat s1 | wc -l`; echo lines $x
+lines 12
+# for f in s*; do echo glob $f; done; echo /us*/b*n
+glob s1
+glob s2
+/us*/b*n
+# echo ${NOPE?missing}; echo notreached
+NOPE: missing
+# echo ok; nonexistentcmd; echo $?
+ok
+nonexistentcmd: not found
+1
+# { echo brace; echo group; } | wc -l
+      2
+# false || echo or; true && echo and; false && echo no; echo semi
+or
+and
+semi
+# sh <s1; echo stdin-status $?
+0=sh n=0 all= first=
+arg:
+sh: cannot shift
+stdin-status 1
+# echo 'echo $1 $2' | sh -s p1 p2
+p1 p2
+# cat >s3 <<\!
+> cat <<XX
+> in script heredoc $1
+> XX
+> read line; echo read:$line
+> !
+# echo fromstdin | sh s3 arg
+in script heredoc arg
+read:fromstdin
+# echo cleanup; rm -f s1 s2 s3 f1 p
+cleanup
+# cd /tmp; times | wc -l; trap 'echo one' 1; trap 'echo two' 15; trap; trap 1 15; trap
+0m0s 0m0s
+      0
+1: echo one
+15: echo two
+# E1=x; export E1; export | grep E1; set | grep '^E1'
+export E1
+readonly R
+export X
+E1=x
+HOME=/usr
+IFS=    
+
+PS1=# 
+PS2=> 
+X=1
+Y=2
+a=ev
+dotvar=set
+f=s2
+x=     12
+# sh -c 'trap "" 2 3; sh -c "kill -2 \$\$; echo child-ignored"'
+child-ignored
+# (exec 2>&1; echo err >&2) | wc -c; echo x 1>&2 2>/dev/null
+      4
+x
+# eval echo '$HOME' `echo e2`; eval "x=1; y=2"; echo $x$y
+/usr e2
+12
+# echo [a-z]* | wc -w; echo /etc/pass?d /bin/[sx]h /nonexist*
+      1 
+/etc/passwd /bin/sh /nonexist*
+# shift 5; echo after-bad-shift
+after-bad-shift
+# echo '\#!/bin/sh' >s4; echo 'echo script $\#' >>s4; chmod 755 s4; ./s4 a b; rm s4
+./s4: #!/bin/sh: not found
+script 2
+# wait; echo waited-none; sh -c 'exec echo execd'
+waited-none
+execd
+# echo TEST""DONE
+TESTDONE
+# 

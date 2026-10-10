@@ -1,0 +1,32 @@
+mem = 67096576
+# /t/tt; echo r""c=$?
+PASS 8bit %s
+PASS 8bit %[
+PASS 0377 %s
+PASS unterminated %[
+info %[^] n=1
+PASS long number
+PASS types
+PASS suppress
+PASS o x F
+PASS malloc huge
+PASS malloc small
+PASS malloc reuse
+PASS atof huge
+PASS atof neg huge
+PASS atof 0e500
+PASS atof 0e99999999999
+PASS atof plain
+PASS modf
+PASS modf small
+PASS frexp
+PASS frexp denormal
+PASS swab inplace
+PASS swab
+rand 16838 5758 10113
+PASS sleep
+EXECVP-OK child
+rc=0
+# echo TEST""DONE
+TESTDONE
+# 

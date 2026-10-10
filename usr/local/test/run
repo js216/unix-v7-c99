@@ -1,0 +1,64 @@
+#!/bin/sh
+cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)" || exit 1
+R=$PWD
+T=usr/local/test
+C=$T/cases
+w=$(mktemp -d) || exit 1
+
+CC="arm-none-eabi-gcc -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes
+	-Wold-style-definition -Wmissing-prototypes -ffreestanding -nostdlib
+	-mcpu=cortex-a7 -marm -Os -Wl,-N,-Ttext=0x10 -Iusr/include -Iusr/sys"
+mkdir "$w/t"
+for d in bin boot etc usr; do
+	ln -s "$R/$d" "$w/$d"
+done
+for f in $T/t/*; do
+	n=$(basename "$f" .c)
+	case $f in
+	*.c)	$CC -s -o "$w/t/$n" usr/src/libc/csu/crt0.o "$f" \
+		    usr/src/libm/libm.a usr/src/libc/libc.a -lgcc || exit 1
+		echo "		$n	---755 0 0 t/$n" ;;
+	*)	cp "$f" "$w/t/$n"
+		echo "		$n	---644 0 0 t/$n" ;;
+	esac
+done >"$w/t.proto"
+awk -v t="$w/t.proto" '
+	{ l[NR] = $0 }
+	END {
+		for (i = 1; i < NR; i++)
+			print l[i]
+		print "\tt\td--755 0 0"
+		while ((getline s <t) > 0)
+			print s
+		print "\t\t$"
+		print l[NR]
+	}' boot/rootfs.proto >"$w/proto"
+(cd "$w" && V7_MKFS_TIME=284774400 "$R/etc/mkfs" img proto >/dev/null) || exit 1
+truncate -s $(awk '/^(swplo|nswap) /{n+=$2} END{print n*512}' \
+    usr/sys/conf/qemuconf) "$w/img"
+
+[ $# -gt 0 ] || set -- $(cd $C && ls *.steps | sed 's/\.steps$//')
+fail=0
+for n; do
+	start=$(date +%s)
+	cp "$w/img" "$w/run.img"
+	nice -n 19 python3 $T/drive.py "$w/run.img" boot/unix $C/$n.steps >"$w/$n.raw"
+	if [ -f $C/$n.sed ]; then
+		sed -f $C/$n.sed "$w/$n.raw"
+	else
+		cat "$w/$n.raw"
+	fi >"$w/$n.out"
+	if cmp -s $C/$n.exp "$w/$n.out"; then
+		r=PASS
+	else
+		r=FAIL
+		fail=1
+	fi
+	echo "$r $n $(($(date +%s) - start))s"
+done
+if [ $fail = 0 ]; then
+	rm -rf "$w"
+else
+	echo "outputs in $w"
+fi
+exit $fail

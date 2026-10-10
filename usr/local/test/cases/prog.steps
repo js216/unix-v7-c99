@@ -1,0 +1,60 @@
+mkdir /tmp/w; cd /tmp/w; cat >sx <<\!
+echo ==sed
+printf=x
+echo 'hello world
+foo bar baz
+line three
+abc ABC 123' >in
+sed 's/o/0/g' in
+sed -n '2,3p' in
+sed '/foo/d' in
+sed -n '/three/=' in
+sed '2q' in
+sed 's/\(hel*\)o/[\1]/' in
+sed 's/[a-c][a-z]*/<&>/g' in
+sed 'y/abc/xyz/' in
+sed -e '1i\
+inserted' -e '$a\
+appended' -e '2c\
+changed' in
+sed -n '$!p' in
+sed '1!G;h;$!d' in
+sed 'N;P;D' in
+sed ':a
+s/o//
+ta' in
+sed '/foo/{s/foo/FOO/;s/bar/BAR/;}' in
+sed '/foo/b skip
+s/./X/
+:skip' in
+sed -n '/hello/,/three/{p;}' in
+sed 'w wout' in >/dev/null; cat wout
+echo READ >rf; sed '1r rf' in
+echo 'a\tb' | sed 's/[^a-z]/_/g'
+echo '1/2' | sed 's,/,|,'
+echo s/x/y/ >scr; echo xxx | sed -f scr
+echo ==dc
+echo '2 3+p 10 3/p 10 3%p 2 10^p 5 k 2vp 1 3/p _5 3*p' | dc
+echo '16o 255p 8i 777p 10o' | dc
+echo '[yes]sa [no]sb 1 2>a 2 1>a 1 2<b 2 1<b 3 3=a 3 4!=b' | dc
+echo '[d1-d0<a]sa 5lax f' | dc
+echo '[la1+dsa*pla10>y]sy 0sa1 lyx' | dc
+echo '1 2 3 zp cp _3 1-p 12.345 Xp Zp' | dc
+echo '99999999999999999999 99999999999999999999*p' | dc
+echo '2 100^p' | dc
+echo '_7 2/p _7 2%p 0 _1-p 3 _2^p' | dc
+echo ==tar
+mkdir td; echo aaa >td/a; echo bbbb >td/b; mkdir td/sub; echo c >td/sub/c
+tar cf t.tar td; tar tf t.tar; tar tvf t.tar | wc -l
+rm -r td; tar xf t.tar; ls -R td; cat td/a td/sub/c
+echo new >nf; tar rf t.tar nf; tar tf t.tar | sed -n '$p'
+tar cvf t2.tar in sx 2>&1; rm in; tar xvf t2.tar in 2>&1; cat in | wc -l
+echo ==tp
+tp rf tape td nf; tp tf tape
+rm -r td nf; tp xf tape; ls -R td nf; cat td/b
+tp tvf tape | wc -l
+tp df tape nf; tp tf tape
+echo ENDTEST
+!
+sh sx >out 2>&1; echo ran
+cat out
