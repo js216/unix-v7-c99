@@ -550,7 +550,19 @@ numbers (`NINDIR`), and `NMASK` and `NSHIFT` are unchanged.
 `USIZE` (85) is the size, in clicks, of the "per process data area":
 the `user` structure followed by the kernel stack. It has grown from
 1024 bytes, 16 clicks of 64 bytes, to two pages, 8192 bytes, because a
-thirty-two bit kernel stack is larger. `UBASE` (86) is the address at
+thirty-two bit kernel stack is larger. The `user` structure takes 728
+of them, which leaves 7464 for the stack. The compiler can report the
+stack frame of every procedure and the calls each makes
+(`-fcallgraph-info=su`), and from that report the deepest chain of
+calls was measured: about 630 bytes from a system call or a trap,
+including the 68-byte register frame of #f("low.s"), through `exec`,
+`readi`, `bmap`, and the buffer cache down to `sleep`, `swtch`, and a
+`printf`; about 280 more for an interrupt taken at that point; and at
+most some 260 for the bounded recursions of `printn` (#f("prf.c")),
+one level for each digit, and `tloop` (#f("iget.c")), one for each
+level of indirect block. The kernel thus needs about 1.2 KB of stack
+and has more than six times that; one page would also suffice, with
+less to spare. The measurement is not part of the build. `UBASE` (86) is the address at
 which the data area of the current process always appears, so that the
 kernel may refer to it simply as `u`. It lies in the topmost megabyte
 of the kernel's part of the address space, above everything else the
