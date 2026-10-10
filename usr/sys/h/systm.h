@@ -66,7 +66,7 @@ struct file *falloc(void);
 int	uchar(void);
 struct clist; struct map; struct text; struct tty; struct uprof;
 void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
-	alarm(void), arm_sureg(void), arm_sync_icache(void),
+	alarm(void), arm_sync_icache(void),
 	bawrite(struct buf *bp), bcopy(caddr_t from, caddr_t to, int count),
 	bdinit(void), bdwrite(struct buf *bp), bflush(dev_t dev),
 	brelse(struct buf *bp), bwrite(struct buf *bp), chdir(void),
@@ -123,7 +123,8 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	ttychars(struct tty *tp), ttyclose(struct tty *tp),
 	ttyinput(int c, struct tty *tp), ttyopen(dev_t dev, struct tty *tp),
 	ttyrend(struct tty *tp, char *pb, char *pe), umask(void), unlink(void),
-	update(void), user_trap_handler(int signo, int *r), utime(void),
+	update(void), user_trap_handler(int signo, int *r, unsigned a),
+	utime(void),
 	wait(void), wakeup(caddr_t chan), wdir(struct inode *ip), write(void),
 	writei(struct inode *ip), writep(struct file *fp),
 	xalloc(struct inode *ip), xfree(void), xlock(struct text *xp),

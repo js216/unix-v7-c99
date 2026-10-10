@@ -94,15 +94,26 @@ undef_entry:
 	b 1f
 pabort_entry:
 	sub lr, lr, #4
-	b 3f
-dabort_entry:
-	sub lr, lr, #8
-3:
 	srsdb sp!, #0x13
 	cpsid if, #0x13
 	sub sp, sp, #60
 	stmia sp, {r0-r14}^
 	mov r0, #11
+	mov r2, #0
+	b 1f
+dabort_entry:
+	sub lr, lr, #8
+	srsdb sp!, #0x13
+	cpsid if, #0x13
+	sub sp, sp, #60
+	stmia sp, {r0-r14}^
+	ldr r0, =nofault
+	ldr r0, [r0]
+	cmp r0, #0
+	strne r0, [sp, #60]
+	bne 2f
+	mov r0, #11
+	mrc p15, 0, r2, c6, c0, 0
 1:
 	mov r1, sp
 	bl user_trap_handler

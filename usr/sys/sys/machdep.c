@@ -132,6 +132,7 @@ sendsig(caddr_t p, int signo)
 	register unsigned n;
 
 	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
+	grow(n);
 	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
 		u.u_signal[SIGSEG] = 0;
 		psignal(u.u_procp, SIGSEG);
@@ -217,20 +218,6 @@ machine_init(void)
 }
 
 void
-arm_sureg(void)
-{
-	register unsigned i, n, base;
-
-	if(u.u_procp == NULL)
-		return;
-	base = (unsigned)CLKADDR(u.u_procp->p_addr + USIZE);
-	n = u.u_procp->p_size - USIZE;
-	for(i = 0; i < 256; i++)
-		user_l2[i] = i < n ? (base + i*PGSIZE) | pguser : 0;
-	arm_sync_icache();
-}
-
-void
 copyseg(int from, int to)
 {
 	register int *s, *d, i;
@@ -249,80 +236,6 @@ clearseg(int a)
 	d = (int *)CLKADDR(a);
 	for(i = 0; i < PGSIZE/4; i++)
 		d[i] = 0;
-}
-
-static int
-uaddr(caddr_t a, unsigned n)
-{
-	return((unsigned)a < USERSIZE && n <= USERSIZE - (unsigned)a);
-}
-
-int
-fubyte(caddr_t a)
-{
-	if(!uaddr(a, 1))
-		return(-1);
-	return(*a & 0377);
-}
-
-int
-subyte(caddr_t a, int c)
-{
-	if(!uaddr(a, 1))
-		return(-1);
-	*a = c;
-	return(0);
-}
-
-int
-fuword(caddr_t a)
-{
-	if(!uaddr(a, sizeof(int)))
-		return(-1);
-	return(*(int *)a);
-}
-
-int
-suword(caddr_t a, int v)
-{
-	if(!uaddr(a, sizeof(int)))
-		return(-1);
-	*(int *)a = v;
-	return(0);
-}
-
-static void
-ucopy(caddr_t f, caddr_t t, unsigned n)
-{
-	register int *fp, *tp;
-
-	if((((unsigned)f|(unsigned)t|n) & (NBPW-1)) != 0) {
-		if(n)
-			bcopy(f, t, n);
-		return;
-	}
-	fp = (int *)f;
-	tp = (int *)t;
-	for(n /= NBPW; n; n--)
-		*tp++ = *fp++;
-}
-
-int
-copyin(caddr_t f, caddr_t t, unsigned n)
-{
-	if(!uaddr(f, n))
-		return(-1);
-	ucopy(f, t, n);
-	return(0);
-}
-
-int
-copyout(caddr_t f, caddr_t t, unsigned n)
-{
-	if(!uaddr(t, n))
-		return(-1);
-	ucopy(f, t, n);
-	return(0);
 }
 
 void

@@ -6,6 +6,9 @@
 #include "../h/text.h"
 #include "../h/seg.h"
 
+extern unsigned user_l2[];
+static unsigned	ulo, uhi = USERSIZE/PGSIZE;
+
 /*
  * Load the user hardware segmentation
  * registers from the software prototype.
@@ -15,26 +18,27 @@
 void
 sureg(void)
 {
-	register int *udp, *uap, *rdp;
-	int auisa[16], auisd[16];
-	int *rap, *limudp;
+	register unsigned i, a;
 	int taddr, daddr;
 	struct text *tp;
 
 	taddr = daddr = u.u_procp->p_addr;
 	if ((tp=u.u_procp->p_textp) != NULL)
 		taddr = tp->x_caddr;
-	limudp = &u.u_uisd[16];
-	if (cputype==40)
-		limudp = &u.u_uisd[8];
-	rap = auisa;
-	rdp = auisd;
-	uap = &u.u_uisa[0];
-	for (udp = &u.u_uisd[0]; udp < limudp;) {
-		*rap++ = *uap++ + (*udp&TX? taddr: (*udp&ABS? 0: daddr));
-		*rdp++ = *udp++;
-	}
-	arm_sureg();
+	while(ulo > 0)
+		user_l2[--ulo] = 0;
+	while(uhi < USERSIZE/PGSIZE)
+		user_l2[uhi++] = 0;
+	a = (unsigned)CLKADDR(taddr);
+	for(i = 0; i < u.u_ptsize; i++, a += PGSIZE)
+		user_l2[ulo++] = a | pguser | u.u_pxrw;
+	a = (unsigned)CLKADDR(daddr+USIZE);
+	for(i = 0; i < u.u_pdsize; i++, a += PGSIZE)
+		user_l2[ulo++] = a | pguser | RW;
+	a = (unsigned)CLKADDR(daddr+USIZE+u.u_pdsize+u.u_pssize);
+	for(i = 0; i < u.u_pssize; i++)
+		user_l2[--uhi] = (a -= PGSIZE) | pguser | RW;
+	arm_sync_icache();
 }
 
 /*
@@ -51,10 +55,17 @@ sureg(void)
 int
 estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 {
-	(void)sep; (void)xrw;
 
+	if(sep)
+		goto err;
+	if(ctos(nt)+ctos(nd)+ctos(ns) > USERSIZE/PGSIZE)
+		goto err;
 	if((int)(nt+nd+ns+USIZE) > maxmem)
 		goto err;
+	u.u_ptsize = nt;
+	u.u_pdsize = nd;
+	u.u_pssize = ns;
+	u.u_pxrw = xrw;
 	sureg();
 	return(0);
 

@@ -319,20 +319,8 @@ dousr(void)
 	printf("dirp %.1o\n", up->u_dirp);
 	printf("dent %d %.14s\n", up->u_dent.d_ino, up->u_dent.d_name);
 	printf("pdir %.1o\n", up->u_pdir);
-	printf("dseg");
-	for (i=0; i<8; i++)
-		printf("%8.1o", up->u_uisa[i]);
-	printf("\n    ");
-	for (i=0; i<8; i++)
-		printf("%8.1o", up->u_uisd[i]);
-	if (up->u_sep) {
-		printf("\ntseg");
-		for (i=8; i<16; i++)
-			printf("%8.1o", up->u_uisa[i]);
-		printf("\n    ");
-		for (i=8; i<16; i++)
-			printf("%8.1o", up->u_uisd[i]);
-	}
+	printf("segs %.1o %.1o %.1o %.1o", up->u_ptsize, up->u_pdsize,
+		up->u_pssize, up->u_pxrw);
 	printf("\nfile");
 	for (i=0; i<10; i++)
 		printf("%8.1o", up->u_ofile[i]);

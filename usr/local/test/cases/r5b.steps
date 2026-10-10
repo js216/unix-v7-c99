@@ -1,0 +1,8 @@
+cd /tmp
+/t/szt & sleep 1; ps -l | grep '/t/sz[t]' | awk '{print $10}'; wait
+/t/memt; /t/memt x; echo st$?; wc -c core
+/t/stkt
+/t/physt
+ps -l | awk '$NF == "-" {print $10}'
+x=`cat /usr/dict/words`; case $x in *Zurich) echo found;; esac
+ps -l | awk '$NF == "-" {print $10}'

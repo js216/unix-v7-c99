@@ -235,7 +235,7 @@ getxfile(register struct inode *ip, int nargc)
 	
 		u.u_prof.pr_scale = 0;
 		xfree();
-		i = USIZE+btoc(USERSIZE);
+		i = USIZE+ds+ss;
 		expand(i);
 		while(--i >= USIZE)
 			clearseg(u.u_procp->p_addr+i);
@@ -491,7 +491,8 @@ sbreak(void)
 	struct a {
 		char	*nsiz;
 	};
-	register int n, d;
+	register int a, n, d;
+	int i;
 
 	/*
 	 * set n to new data size
@@ -509,4 +510,26 @@ sbreak(void)
 	if(estabur(u.u_tsize, u.u_dsize+d, u.u_ssize, u.u_sep, RO))
 		return;
 	u.u_dsize += d;
+	if(d > 0)
+		goto bigger;
+	a = u.u_procp->p_addr + n - u.u_ssize;
+	i = n;
+	n = u.u_ssize;
+	while(n--) {
+		copyseg(a-d, a);
+		a++;
+	}
+	expand(i);
+	return;
+
+bigger:
+	expand(n);
+	a = u.u_procp->p_addr + n;
+	n = u.u_ssize;
+	while(n--) {
+		a--;
+		copyseg(a-d, a);
+	}
+	while(d--)
+		clearseg(--a);
 }

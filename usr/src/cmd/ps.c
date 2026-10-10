@@ -233,7 +233,7 @@ prcom(int puid)
 	datmap.f1 = ctob(USIZE)+addr;
 	datmap.b2 = stackbas(stksiz);
 	datmap.e2 = stacktop(stksiz);
-	datmap.f2 = ctob(USIZE)+datmap.b2+addr;
+	datmap.f2 = ctob(USIZE)+(datmap.e1-datmap.b1)+addr;
 
 	tp = gettty();
 	if (tptr && strncmp(tptr, tp, 2))

@@ -1,6 +1,7 @@
 .globl mmu_on, dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
 .globl arm_sync_icache, idle, waitloc, savfp, dfar, dfsr
+.globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
 .globl l1, user_l2, uarea_l2
 
 mmu_on:
@@ -175,6 +176,86 @@ arm_sync_icache:
 	isb
 	bx lr
 
+fubyte:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	ldrbt r1, [r0]
+	mov r0, r1
+	b uok
+
+subyte:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	strbt r1, [r0]
+	mov r0, #0
+	b uok
+
+fuword:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	ldrt r1, [r0]
+	mov r0, r1
+	b uok
+
+suword:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	strt r1, [r0]
+	mov r0, #0
+	b uok
+
+copyin:
+	ldr r3, =nofault
+	adr ip, uerr
+	str ip, [r3]
+	orr ip, r0, r1
+	orr ip, ip, r2
+	tst ip, #3
+	bne 2f
+1:	subs r2, r2, #4
+	blo 3f
+	ldrt ip, [r0], #4
+	str ip, [r1], #4
+	b 1b
+2:	subs r2, r2, #1
+	blo 3f
+	ldrbt ip, [r0], #1
+	strb ip, [r1], #1
+	b 2b
+
+copyout:
+	ldr r3, =nofault
+	adr ip, uerr
+	str ip, [r3]
+	orr ip, r0, r1
+	orr ip, ip, r2
+	tst ip, #3
+	bne 2f
+1:	subs r2, r2, #4
+	blo 3f
+	ldr ip, [r0], #4
+	strt ip, [r1], #4
+	b 1b
+2:	subs r2, r2, #1
+	blo 3f
+	ldrb ip, [r0], #1
+	strbt ip, [r1], #1
+	b 2b
+3:	mov r0, #0
+uok:
+	mov r2, #0
+	str r2, [r3]
+	bx lr
+uerr:
+	mov r2, #0
+	str r2, [r3]
+	mvn r0, #0
+	bx lr
+
 idle:
 	cpsie i
 	wfi
@@ -193,6 +274,11 @@ dfsr:
 .data
 waitloc:
 	.word 1b
+
+.bss
+.balign 4
+nofault:
+	.space 4
 
 .section .ddrbss,"aw",%nobits
 .balign 16384

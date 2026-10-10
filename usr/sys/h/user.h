@@ -50,8 +50,8 @@ struct	user
 	caddr_t	u_dirp;			/* pathname pointer */
 	struct direct u_dent;		/* current directory entry */
 	struct inode *u_pdir;		/* inode of parent directory of dirp */
-	int	u_uisa[16];		/* prototype of segmentation addresses */
-	int	u_uisd[16];		/* prototype of segmentation descriptors */
+	unsigned u_ptsize, u_pdsize, u_pssize;	/* prototype of segment sizes */
+	int	u_pxrw;			/* prototype of text access */
 	struct file *u_ofile[NOFILE];	/* pointers to file structures of open files */
 	char	u_pofile[NOFILE];	/* per-process flags of open files */
 	int	u_arg[5];		/* arguments to current system call */

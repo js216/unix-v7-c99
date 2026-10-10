@@ -123,7 +123,7 @@ trap(int *r)
 		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
 }
 void
-user_trap_handler(int signo, int *r)
+user_trap_handler(int signo, int *r, unsigned a)
 {
 	if((r[RPS] & 0x1f) != 0x10) {
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
@@ -132,7 +132,8 @@ user_trap_handler(int signo, int *r)
 	}
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
-	psignal(u.u_procp, signo);
+	if(signo != SIGSEG || a+256 < (unsigned)r[R6] || grow(a) == 0)
+		psignal(u.u_procp, signo);
 	if (issig())
 		psig();
 	curpri = setpri(u.u_procp);

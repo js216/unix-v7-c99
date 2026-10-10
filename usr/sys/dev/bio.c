@@ -501,6 +501,15 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 */
 	if (nb < ts)
 		goto bad;
+	/*
+	 * Check that transfer is either entirely in the
+	 * data or in the stack: that is, either
+	 * the end is in the data or the start is in the stack
+	 * (remember wraparound was already checked).
+	 */
+	if (((base+u.u_count)>>12) >= ts+u.u_dsize
+	    && nb < (int)(btoc(USERSIZE)-u.u_ssize))
+		goto bad;
 	spl6();
 	while (bp->b_flags&B_BUSY) {
 		bp->b_flags |= B_WANTED;
@@ -512,7 +521,11 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * Compute physical address by simulating
 	 * the segmentation hardware.
 	 */
-	ts = u.u_procp->p_addr + USIZE + nb;
+	if (nb < (int)(ts+u.u_dsize))
+		ts = u.u_procp->p_addr + USIZE + nb - ts;
+	else
+		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
+		    (btoc(USERSIZE)-u.u_ssize);
 	bp->b_un.b_addr = CLKADDR(ts) + (base&07777);
 	bp->b_xmem = (ts>>10) & 077;
 	bp->b_blkno = u.u_offset >> BSHIFT;
