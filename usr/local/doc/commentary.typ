@@ -5896,7 +5896,7 @@ the IRQ, as do `spl6` and `spl7` (#f("mch.s")).
 v7 included `mx.h` here for the multiplexed files (`mx1.c` and
 `mx2.c`). They are not part of this system, so the include, and the
 three places below which handed characters or signals to a multiplexed
-channel, have gone. The tests of `t_chan` which remain (347, 709) still
+channel, have gone. The tests of `t_chan` which remain (347, 710) still
 compile, and always find it `NULL`.
 
 `partab` (16) is now declared `extern`. In v7 `char partab[];` at file
@@ -5912,7 +5912,7 @@ A non-zero entry is the character which the pair stands for on an upper
 case terminal: `\(` stands for `{`, `\!` for `|`, and `\a` (typed as
 `\A`, since such a terminal's input is folded to lower case) for a real
 capital. `canon` makes an escaped erase or kill character, whatever it has been
-set to, stand for itself (373, 374).
+set to, stand for itself (374, 375).
 The table has only 128 entries, which suffices since `canon` consults
 it only for characters already cut to seven bits.
 
@@ -5996,12 +5996,12 @@ otherwise demand.
 
 The extra parentheses in the condition (345, 346) are new and make
 explicit what v7 left to the precedence of `&&` over `||`; the meaning
-is unchanged. Note that the early `return` (348) leaves the processor
-at `spl5`, as it did in v7. On the ARM the IRQ stays masked until the
-return to user mode, when `rfeia` (#f("low.s")) restores the saved
-status register.
+is unchanged. v7's early `return` (349) left the processor at `spl5`,
+and so kept every interrupt, the clock's among them, masked until the
+process next returned to user mode. `spl0` (348) now unmasks them
+first, as the normal path does after the loop.
 
-#lines(328, 352)
+#lines(328, 353)
 
 The line is assembled in `canonb` (#f("systm.h")), starting at its
 third byte, so that `bp[-1]` and `bp[-2]` can always be examined: the
@@ -6017,20 +6017,20 @@ When the queue has emptied below a fifth of `TTYHOG`, a terminal which
 was told to stop sending (`TBLOCK`, see `ttyblock`) is sent the start
 character.
 
-#lines(353, 398)
+#lines(354, 399)
 
 `ttyrend` accepts a block of input at once, from a driver which receives
 by DMA. No driver here does so, and the slot `l_rend` of `linesw` is
 empty; v7's `mkconf` had in fact put `ttstart` in that slot, one place
 too early, and it now occupies `l_start`. v7 began the raw case by
 handing the block to a multiplexed channel, if there was one; the
-`else` has gone, which is why the `wakeup` (412) is indented as it is.
+`else` has gone, which is why the `wakeup` (413) is indented as it is.
 
-#lines(399, 421)
+#lines(400, 422)
 
 `ttyinput` is called by the driver's receive interrupt with each
 character. `tk_nin` counts them for the statistics of `iostat`. The
-mask with `0377` (436) keeps the character proper: the PL011 returns
+mask with `0377` (437) keeps the character proper: the PL011 returns
 error flags above it.
 
 In the normal mode the character is cut to seven bits and the special
@@ -6038,7 +6038,7 @@ characters act at once. The stop and start characters suspend and
 resume output. The interrupt and quit characters flush the queues and
 send `SIGINT` or `SIGQUIT` to every process in the terminal's group by
 `signal` (#f("sig.c")); v7 first offered the signal to a multiplexed
-channel, and the indentation of the call (464) is a remnant of the
+channel, and the indentation of the call (465) is a remnant of the
 `else` which followed.
 
 The raw queue is discarded entirely if it has grown beyond `TTYHOG`,
@@ -6050,14 +6050,14 @@ character is echoed, a kill being followed by a newline, and output
 started. The echo goes through `ttyoutput` at interrupt level, which
 is why `ttyoutput` must never sleep.
 
-#lines(422, 489)
+#lines(423, 490)
 
 `ttyblock` serves `TANDEM` mode, in which the terminal is a machine
 that obeys the stop and start characters itself. When the raw and canonical
 queues together hold half of `TTYHOG`, the stop character is sent to
 it.
 
-#lines(490, 511)
+#lines(491, 512)
 
 `ttyoutput` puts one character on the output queue, transformed as the
 modes require. In `RAW` mode it goes unchanged. Otherwise a tab may be
@@ -6066,7 +6066,7 @@ the characters which it cannot print are replaced by a backslash and a
 substitute, and lower case letters by capitals; and with `CRMOD` a
 newline is preceded by a carriage return.
 
-#lines(512, 571)
+#lines(513, 572)
 
 The rest of `ttyoutput` maintains `t_col`, the column of the carriage,
 and computes the delay which should follow the character. The class of
@@ -6079,10 +6079,10 @@ characters were cut to seven bits above, there is no confusion.
 For the tab of a Model 37 teletype, `1 - (*colp | ~07)` is the
 number of columns to the next tab stop. The expression works as in v7
 although `t_col` is now an unsigned `char`: it is promoted to `int`
-before the `|`, and the result is the same. The comment at (588) is
+before the `|`, and the result is the same. The comment at (589) is
 new, as at (223).
 
-#lines(572, 644)
+#lines(573, 645)
 
 `ttrstrt` is called by the clock when a delay has expired; it clears
 `TIMEOUT` and restarts output. It now takes the `caddr_t` which
@@ -6093,7 +6093,7 @@ prototype admits only procedures taking a `caddr_t`.
 `ttstart` calls the driver's start routine, unless output is stopped,
 delayed, or already in progress.
 
-#lines(645, 676)
+#lines(646, 677)
 
 `ttread` and `ttwrite` are the line discipline's read and write
 routines, which the driver's own routines call. `ttread` copies the
@@ -6104,10 +6104,10 @@ multiplexed files and is ignored here.
 `ttwrite` passes each character from the user to `ttyoutput`. When more
 than `TTHIWAT` characters are queued it starts output and sleeps,
 until the transmit interrupt wakes it at `TTLOWAT`. For a multiplexed line it
-would instead return the address to wait on (709, 710); since `t_chan`
+would instead return the address to wait on (710, 711); since `t_chan`
 is always `NULL`, it returns `NULL`.
 
-#lines(677, 720)
+#lines(678, 721)
 
 = More Drivers
 

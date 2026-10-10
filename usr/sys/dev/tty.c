@@ -345,6 +345,7 @@ canon(register struct tty *tp)
 	while (((tp->t_flags&(RAW|CBREAK))==0 && tp->t_delct==0)
 	    || ((tp->t_flags&(RAW|CBREAK))!=0 && tp->t_rawq.c_cc==0)) {
 		if ((tp->t_state&CARR_ON)==0 || tp->t_chan!=NULL) {
+			spl0();
 			return(0);
 		}
 		sleep((caddr_t)&tp->t_rawq, TTIPRI);
