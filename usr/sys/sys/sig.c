@@ -399,8 +399,6 @@ procxmt(void)
 		break;
 
 	/* set signal and continue */
-	/*  one version causes a trace-trap */
-	case 9:
 	case 7:
 		if ((int)ipc.ip_addr != 1)
 			u.u_ar0[PC] = (int)ipc.ip_addr;

@@ -3385,18 +3385,21 @@ already cleared.
 
 #lines(390, 399)
 
-Requests 7 and 9 resume the child, optionally at a new `pc`, with the
-pending signals replaced by the one given (or none). v7's request 9
-also set the PDP-11 trace bit (`TBIT`), so that the child would trap
-again after one instruction; that line is deleted, since the ARM's
-status register has no such bit and single-stepping would need the
-debug hardware. Request 9 is now the same as 7.
+Request 7 resumes the child, optionally at a new `pc`, with the
+pending signals replaced by the one given (or none). v7's request 9,
+handled by the same code, also set the PDP-11 trace bit (`TBIT`), so
+that the child would trap again after one instruction. The ARM's status
+register has no such bit, and single-stepping would need the debug
+hardware, so request 9 has been removed, with the comment which
+described it: it now reaches `error` like any unknown request, and
+`ptrace` (307) fails with `EIO` rather than letting the child
+run on as if it had asked for request 7.
 
 Request 8 makes the child exit. The `return` added after `exit` is
 never reached; it keeps the compiler, which does not know that `exit`
 does not return, from warning that control falls into the next case.
 
-#lines(400, 422)
+#lines(400, 420)
 #source("/usr/sys/h/acct.h")
 
 The record which the kernel appends to the accounting file when a
