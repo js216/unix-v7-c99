@@ -12964,20 +12964,26 @@ command is given to the shell with `-c`, with its standard input on
 
 #lines(108, 135)
 
-`init` reads the table into `list`, which starts with 512 bytes and
-grows by 512 whenever fewer than 100 bytes remain at the start of a
-line. Note that the margin is not a guarantee: a command line longer
-than about 100 characters, started near the end, would write past the
-block.
+`init` reads the table into `list`, which starts with 512 bytes. v7
+grew it by 512 whenever fewer than 100 bytes remained at the start of a
+line, a margin which was no guarantee: a command line longer than about
+100 characters, started near the end, wrote past the block. Now the
+length of each line is measured first (156--159): the line is read to
+its end and the file positioned back at its start with `fseek`, which
+the table, an ordinary file, allows. The compiled form of a line is
+never longer than the line itself and two bytes more, the newline and
+the null which end the command, and the two `EOS` codes need no more,
+so `i` counts from 2. If that does not fit, the list grows by the
+length and another 512 bytes (162).
 
-The calls of `free` before `realloc` (147, 159) rely on a promise of
+The calls of `free` before `realloc` (148, 164) rely on a promise of
 v7's allocator: `realloc` accepts a block freed since the last `malloc`,
 and still finds its contents there (#f("gen/malloc.c")). Since `realloc`
 frees a busy block itself, the explicit `free` changes nothing. At
-(148) any copying of the old contents is wasted, since the list is about
+(149) any copying of the old contents is wasted, since the list is about
 to be rebuilt.
 
-#lines(136, 162)
+#lines(136, 167)
 
 A line is parsed field by field. A field is `*`, a number, a list of
 numbers separated by commas, or a range `a-b`, followed by a blank. A
@@ -12988,11 +12994,11 @@ several lines for the shell. The command is stored with a newline and a
 null; at the end of the file two `EOS` codes are written, the first of
 which ends the scan at (56).
 
-#lines(163, 238)
+#lines(168, 243)
 
 `number` reads decimal digits and pushes back the first non-digit.
 
-#lines(239, 253)
+#lines(244, 258)
 #source("/usr/src/cmd/update.c")
 
 The kernel does not write a modified buffer at once. `bdwrite`

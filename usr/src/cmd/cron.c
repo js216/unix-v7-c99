@@ -141,6 +141,7 @@ init(void)
 	register char *cp;
 	register char *ocp;
 	register int n;
+	long pos;
 
 	freopen(crontab, "r", stdin);
 	if (list) {
@@ -152,9 +153,13 @@ init(void)
 	cp = list;
 
 loop:
-	if(cp > list+listsize-100) {
+	pos = ftell(stdin);
+	for(i = 2; (c = getchar()) != EOF && c != '\n'; i++)
+		;
+	fseek(stdin, pos, 0);
+	if(cp+i > list+listsize) {
 		char *olist;
-		listsize += LISTS;
+		listsize += i+LISTS;
 		olist = list;
 		free(list);
 		list = realloc(list, listsize);
