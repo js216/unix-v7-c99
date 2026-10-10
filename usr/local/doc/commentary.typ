@@ -7872,6 +7872,12 @@ ignored, where v7 compared the result of `signal` with 1. `fault` is
 declared with the signal number it receives, so that it has the type
 which `signal` expects of a handler.
 
+`MAXTRAP` (261), one more than the highest signal which `trap` accepts
+and the size of the tables of #f("sh/fault.c"), was v7's literal 17, its
+sixteen signals and the exit trap 0. It is now `NSIG`, from
+`signal.h`, so that the shell traps every signal the kernel can send,
+1 to 31.
+
 #lines(249, 275)
 
 `execbrk` (285) was a `BOOL` in v7, that is a `char`. It is set to
@@ -8667,14 +8673,18 @@ directory first.
 `sysmsg` gives, for each signal number, the message printed when a
 command dies of it (#f("sh/service.c")). The entries for interrupt and
 broken pipe are null, since a user who interrupts a command, or a
-command whose reader has gone, needs no message. `commands` is the
+command whose reader has gone, needs no message. v7's table ended at
+"Signal 16", the last of its sixteen signals; `await` indexes it with
+any signal number a child dies of, so the port, whose kernel has 31
+signals (#f("param.h")), continues it to "Signal 31" (107--121) in the
+same style. `commands` is the
 table of built-in commands, with their codes from #f("sh/defs.h");
 the entry for `[`, `SYSTST`, is commented out, as in v7.
 
-The only changes are the `=` before the initialisers of the three
-tables (70, 89, 111), which v7's compiler did not require.
+The other changes are the `=` before the initialisers of the three
+tables (70, 89, 126), which v7's compiler did not require.
 
-#lines(68, 136)
+#lines(68, 151)
 
 = Running Commands
 
@@ -12018,13 +12028,13 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 294)
+#lines(139, 297)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(295, 296)
+#lines(298, 299)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

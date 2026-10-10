@@ -104,6 +104,21 @@ STRING	sysmsg[] = {
 		"Alarm call",
 		"Terminated",
 		"Signal 16",
+		"Signal 17",
+		"Signal 18",
+		"Signal 19",
+		"Signal 20",
+		"Signal 21",
+		"Signal 22",
+		"Signal 23",
+		"Signal 24",
+		"Signal 25",
+		"Signal 26",
+		"Signal 27",
+		"Signal 28",
+		"Signal 29",
+		"Signal 30",
+		"Signal 31",
 };
 
 MSG		export = "export";

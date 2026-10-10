@@ -1,0 +1,9 @@
+T=/tmp/nsig U=/usr/local/test/utils
+mkdir $T; cd $T
+trap 'echo caught 25' 25; kill -25 $$; trap 25
+trap 'echo caught 31' 31; kill -31 $$; trap; trap 31
+(trap 'echo bad' 32) 2>&1
+sh -c 'kill -16 $$'; echo st$?
+sh -c 'kill -17 $$'; echo st$?
+sh -c 'kill -31 $$'; echo st$?
+cd /; rm -rf $T

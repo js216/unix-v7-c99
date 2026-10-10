@@ -220,6 +220,9 @@ d--755 0 0
 					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
 					misc2	---644 0 0 usr/local/test/cases/misc2
 					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
+					nsig	---644 0 0 usr/local/test/cases/nsig
+					nsig.exp	---644 0 0 usr/local/test/cases/nsig.exp
+					nsig.sed	---644 0 0 usr/local/test/cases/nsig.sed
 					phys	---644 0 0 usr/local/test/cases/phys
 					phys.exp	---644 0 0 usr/local/test/cases/phys.exp
 					phys.sed	---644 0 0 usr/local/test/cases/phys.sed

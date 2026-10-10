@@ -258,7 +258,7 @@ extern jmp_buf		errshell;
 extern POS		brkincr;
 
 #define MINTRAP	0
-#define MAXTRAP	17
+#define MAXTRAP	NSIG
 
 #define INTR	2
 #define QUIT	3
