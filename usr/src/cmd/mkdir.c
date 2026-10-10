@@ -62,7 +62,7 @@ mkdir(char *d)
 	strcat(dname, ".");
 	if((link(pname, dname)) < 0) {
 		fprintf(stderr, "mkdir: cannot link %s\n",dname);
-		dname[strlen(dname)] = '\0';
+		dname[strlen(dname)-1] = '\0';
 		unlink(dname);
 		unlink(d);
 		++Errors;
