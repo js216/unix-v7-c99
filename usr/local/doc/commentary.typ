@@ -455,9 +455,13 @@ distinction tested in `sleep` (#f("slp.c")).
 #lines(27, 42)
 
 `NSIG` is one more than the number of signals, since signal zero means
-"no signal". The comment on lines 50 and 51 belongs to a sixteen bit
-machine; the words here have thirty-two bits, but the limit has been
-retained.
+"no signal". The pending signals of a process are kept as bits in
+`p_sig` (#f("proc.h")), and v7 allowed sixteen, the bits of a PDP-11
+word. `p_sig` is now an `int`, and `NSIG` has been raised from 17 to 32:
+31 signals, as many as a 32-bit word holds without its sign bit, which
+`1<<(sig-1)` must not reach. The comment (50, 51) has been changed to
+match. Only v7's fifteen signals have names; the others may be sent,
+caught, and ignored by number.
 
 #lines(43, 68)
 
@@ -1832,8 +1836,11 @@ are kept in a `char`, and `clock` stops each at its maximum so that
 it cannot wrap.
 
 `p_sig` (16) is the set of pending signals, one bit each, the bit for
-signal _n_ being 1 shifted left _n_-1. Sixteen bits are enough because
-`NSIG` (#f("param.h")) is 17.
+signal _n_ being 1 shifted left _n_-1. v7 kept it in a `short`, the
+sixteen bits of which held its sixteen signals; it is now an `int`, for
+the 31 signals which `NSIG` (#f("param.h")) allows. `xp_sig` (61), its
+counterpart in `struct xproc` below, is widened with it, so that the
+fields after it still lie where `proc`'s do.
 
 `p_addr` (21) and `p_size` (22) locate the image. When `SLOAD` is set,
 `p_addr` is a click number counted from `corebase` (`CLKADDR`,
@@ -1885,8 +1892,8 @@ fields after it, which are now meaningless.
 
 The overlay works only if `xproc` is no larger than `proc`. With
 `p_addr` now four bytes, `xp_xstat` covers half of it, the two
-`time_t`s are aligned to offset 20, and `xproc` ends at 28 bytes, well
-inside the 40 bytes of a `proc` entry.
+`time_t`s are aligned to offset 24, and `xproc` ends at 32 bytes, well
+inside the 44 bytes of a `proc` entry.
 
 #lines(48, 69)
 #source("/usr/sys/h/user.h")

@@ -45,9 +45,9 @@
  * dont change
  */
 
-#define	NSIG	17
+#define	NSIG	32
 /*
- * No more than 16 signals (1-16) because they are
+ * No more than 31 signals (1-31) because they are
  * stored in bits in a word.
  */
 #define	SIGHUP	1	/* hangup */

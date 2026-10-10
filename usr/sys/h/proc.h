@@ -13,7 +13,7 @@ struct	proc {
 	char	p_time;		/* resident time for scheduling */
 	char	p_cpu;		/* cpu usage for scheduling */
 	char	p_nice;		/* nice for cpu usage */
-	short	p_sig;		/* signals pending to this process */
+	int	p_sig;		/* signals pending to this process */
 	short	p_uid;		/* user id, used to direct tty signals */
 	short	p_pgrp;		/* name of process group leader */
 	short	p_pid;		/* unique process id */
@@ -58,7 +58,7 @@ struct	xproc {
 	char	xp_time;	/* resident time for scheduling */
 	char	xp_cpu;		/* cpu usage for scheduling */
 	char	xp_nice;	/* nice for cpu usage */
-	short	xp_sig;		/* signals pending to this process */
+	int	xp_sig;		/* signals pending to this process */
 	short	xp_uid;		/* user id, used to direct tty signals */
 	short	xp_pgrp;	/* name of process group leader */
 	short	xp_pid;		/* unique process id */

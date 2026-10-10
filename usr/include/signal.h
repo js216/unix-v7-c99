@@ -1,4 +1,4 @@
-#define NSIG 17
+#define NSIG 32
 
 #define	SIGHUP	1	/* hangup */
 #define	SIGINT	2	/* interrupt */
