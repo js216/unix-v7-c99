@@ -3947,7 +3947,8 @@ released.
 the one procedure, `xswap`, by which a process image is written to the
 swap device.
 
-The code is v7's. Every program has a separate text segment, read-only
+The code is v7's, with the additions described below. Every program
+has a separate text segment, read-only
 and shared by all the processes which run it (#f("sys1.c")), so the
 text table is in use as it was on the PDP-11 for 0410 programs: a text
 is read from the file once, kept in core while any process using it is
@@ -4053,9 +4054,9 @@ program headers at the start of the text segment, as it does when they
 fit below the text's first address (#f("Makefile")), they are skipped
 (139--144): they are not part of the program, and the bottom of the
 address space then reads as zero. The signal trampoline is planted in
-the text while it is still writable (149, `install_sigtramp`,
+the text while it is still writable (150, `install_sigtramp`,
 #f("machdep.c")); every process sharing the text uses the same one.
-The text is then made visible to instruction fetch (150,
+The text is then made visible to instruction fetch (151,
 `arm_sync_icache`, #f("mch.s")), a step the PDP-11, which had no
 caches, did not need. `XWRIT` (152) then ensures that the swap copy is written when the core
 copy is first given up.
@@ -4105,7 +4106,8 @@ searched the table. The search finds nothing for an inode without
 #lines(227, 280)
 #source("/usr/sys/h/buf.h")
 
-#f("buf.h") is unchanged from v7. Each `buf` is a header which describes
+Apart from two deletions, described below, #f("buf.h") is v7's. Each
+`buf` is a header which describes
 a block transfer: the device and block number, the core address, and the
 byte count, and the state of the operation in `b_flags`. The data itself
 lies elsewhere: for an entry of the array `buf`, which forms the buffer
@@ -4156,9 +4158,8 @@ number, which selects an entry of `bdevsw` or `cdevsw`, and so a
 driver; and the minor number, which the driver interprets as it pleases.
 Neither the file system nor #f("bio.c") knows any driver by name. The tables
 themselves are defined in the `c.c` which `mkconf` generates for each
-configuration (#f("qemu/c.c")); the comment's `conf.c` is the sixth
-edition's name for that file, which v7's `mkconf` already wrote as
-`c.c`.
+configuration (#f("qemu/c.c")); the comment's `conf.c` is an older
+name for that file.
 
 A block device needs only `open`, `close`, and a strategy routine, which
 accepts a `buf` and queues it for transfer, and the head of the driver's
@@ -4200,13 +4201,13 @@ its device: the virtio disk (#f("virtio_blk.c")) does. `clkstart` and
 #source("/usr/sys/conf/qemu/c.c")
 
 This file is not written by hand. `mkconf` (#f("mkconf.c")) reads a
-short description of the machine, #f("qemuconf") for the QEMU `virt`
-board, and writes `c.c`, which holds the device switches declared in
+short description of the machine, #f("qemuconf") for the QEMU machine,
+and writes `c.c`, which holds the device switches declared in
 #f("conf.h"), the choice of root and swap devices, the principal tables
-of the system, and, new in this port, the facts about the board which
-differ between QEMU and the MP135 (#f("mp135/c.c")). Everything else in
-the kernel is the same for both boards; the board is chosen by linking
-with one `c.c` or the other.
+of the system, and, new in this port, the facts which differ between
+the QEMU machine and the MP135 machine (#f("mp135/c.c")). Everything
+else in the kernel is the same for both machines; the machine is chosen
+by linking with one `c.c` or the other.
 
 v7 generated its `c.c` in the same way, with a companion `l.s` holding
 the PDP-11 interrupt vectors. The port has no `l.s`: its interrupt
@@ -4228,9 +4229,9 @@ configuration: `rk` is always 0. A device which is configured gets its
 driver's entry; one which is not gets an entry which fails. Only `rk` is
 configured here, and the routines named `rk` are those of the virtio
 disk driver (#f("virtio_blk.c")), which took v7's names so that
-`mkconf`'s table could be used unchanged. On the MP135 the same entry
-names the routines of the SD card driver, #f("stm32sd.c"), which took
-v7's names too; each board's kernel links only its own driver.
+`mkconf`'s table could be used unchanged. On the MP135 machine the same
+entry names the routines of the SD card driver, #f("stm32sd.c"), which
+took v7's names too; each machine's kernel links only its own driver.
 
 Note the braces around each row, without which `-Wall` warns that a
 structure within an array is initialised without its own braces, and `nostrat` where v7 wrote
@@ -4248,8 +4249,9 @@ in `rk.c`.
 The character device switch, in the same manner. The console (major 0),
 memory (8), the raw disk (9), and the controlling terminal `tty` (17)
 are configured. Of these only the disk is named in #f("qemuconf"):
-`mkconf` always includes the console, memory, and `tty`. The console's routines are named `kl`, after the
-PDP-11's KL11 interface, and are those of #f("pl011.c").
+`mkconf` always includes the console, memory, and `tty`. The console's
+routines are named `kl`, after the PDP-11's KL11 interface, and are
+those of #f("pl011.c") (on the MP135 machine, of #f("stm32usart.c")).
 
 The raw disk entry uses `rkread` and `rkwrite`, which call `physio`
 (#f("bio.c")) with the disk's strategy routine. v7's `nodev` in the
@@ -4303,13 +4305,13 @@ to `ps` and `pstat`, which read them from the kernel's memory.
 
 #lines(85, 109)
 
-From here on the file is new: the facts about the board, taken from
+The rest of the file is new: the facts about the machine, taken from
 lines of #f("qemuconf") which v7's format did not have.
 
 `corebase` and `coretop` (110) bound, by physical address, the memory
 which `startup` (#f("machdep.c")) gives to `coremap` for process images:
 from the first page after the kernel, which `machine_init` stores into
-`corebase`, to the end of QEMU's 512 MB. `coreoff`, which
+`corebase`, to the end of the QEMU machine's 512 MB. `coreoff`, which
 `machine_init` also sets, is the distance from the physical address of
 core to its kernel address (#f("seg.h")). `pguser` (111) holds the
 attribute bits of the third-level page table entries which map user
@@ -4322,8 +4324,8 @@ controller.
 `board_map` (114) lists the regions which the kernel maps in 2 MB blocks
 (`machine_init`, #f("machdep.c")), each with its kernel address, its
 physical bounds, and its attributes: all 512 MB of memory, at
-0xc0000000, as cacheable kernel memory, and three blocks of QEMU's
-devices (the interrupt controller, the UART, and the virtio transports),
+0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
+machine's devices (the interrupt controller, the UART, and the virtio transports),
 from 0xf0000000, as device memory which may not be executed (Section 1).
 Since a kernel address is not a physical one, a device performing DMA
 must be given the latter, which `vtop` (#f("machdep.c")) finds in this
@@ -4341,15 +4343,15 @@ The three procedures at the end are the glue by which the
 machine-dependent code calls the configured drivers without naming
 them: `cninit` sets up the console early in `machine_init`, `bdinit`
 finds the disk at the end of `startup`, and `clock_ddr_init`, which on
-the MP135 starts the memory controller (#f("stm32ddr.c")), does nothing
-here, since QEMU's memory needs no initialisation. `putchar`, the
+the MP135 machine starts the memory controller (#f("stm32ddr.c")), does
+nothing here, since the QEMU machine's memory needs no initialisation. `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
 
 #lines(123, 133)
 #source("/usr/sys/dev/virtio_blk.c")
 
-This is the disk driver for the QEMU `virt` board. It replaces v7's
+This is the disk driver of the QEMU machine. It replaces v7's
 `rk.c`, the driver for the RK05 cartridge disk, and takes over its
 names (`rkstrategy`, `rkintr`, `rktab`, and so on), its configuration
 entry in `mkconf` (#f("qemu/c.c")), and as much of its text as the new
@@ -4451,10 +4453,8 @@ pack. Such requests arise: `breada` (#f("bio.c")) reads ahead the block
 after the last, and without the check the device would fail the
 request and `rkintr` would report and retry it ten times.
 
-v7 called `mapalloc` here for a `B_PHYS` transfer, to set up the
-UNIBUS map of the PDP-11/70; the map does not exist, and the call is
-gone (#f("machdep.c")). The
-priority is raised with `spl5` and lowered with `spl0`, as in v7: the
+v7's call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is gone
+with the map. The priority is raised with `spl5` and lowered with `spl0`, as in v7: the
 routine is called at process level. During startup `spl0` leaves
 interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
 
@@ -4529,9 +4529,10 @@ any transfer takes place, and when, is decided here. The file also holds
 between a device and a user's memory without passing it through the
 cache.
 
-The file is v7's but for the dressing of C99 and two places which
-computed PDP-11 physical addresses, in `swap` and `physio`. The
-declarations at (9--11) are new: each of these procedures is called
+The file is v7's but for the dressing of C99, the size of one array,
+the UNIBUS map, which is gone, and the places in `swap` and `physio`
+which computed PDP-11 physical addresses. The declarations (9--11) are
+new: each of these procedures is called
 before its definition and only within this file.
 
 #lines(1, 11)
@@ -4723,7 +4724,7 @@ space which are mapped, and which lie in different places in core. The
 check is v7's, with the click size changed and the top of the address
 space, which v7 wrote as 1024 clicks, now `btoc(USERSIZE)`. v7 also
 masked the addresses with `01777` to keep them within the 64 KB address
-space; the test at 491 has already done that here. Like v7's, the test
+space; the test at 487 has already done that here. Like v7's, the test
 of the end is a little strict: a transfer which ends exactly at the end
 of the data is refused.
 
