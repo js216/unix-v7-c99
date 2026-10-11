@@ -8327,8 +8327,8 @@ to a pointer, as C99 requires. `assert` is defined away.
 From here on most of the lines declare variables. In v7 they were
 written without `extern`: each was a tentative definition in every file
 that included #f("sh/defs.h"), and the loader merged the copies into a
-single "common" symbol. C99 permits one definition only, and the port no
-longer compiles with `-fcommon`, so the header now declares them
+single "common" symbol. C99 permits one definition only, and the port
+does not compile with `-fcommon`, so the header now declares them
 `extern`, and #f("sh/main.c") and #f("sh/stak.c") define them.
 
 #lines(140, 167)
@@ -8658,9 +8658,8 @@ nodes were also allocated on the stack, above `x`. The cast of `x` to
 #lines(57, 67)
 
 `stakchk`, called from the command loop, gives back data space when
-more than two increments of it lie above the stack's base. On this
-system the memory stays mapped, and only the size recorded by the
-kernel shrinks.
+more than two increments of it lie above the stack's base; `sbreak`
+(#f("sys1.c")) returns the pages to core and unmaps them.
 
 `cpystak` copies a string to a new item.
 
@@ -8714,10 +8713,9 @@ next turns into a block.
 
 The items already on the stack thus keep their addresses; only the
 current item moves, which is why #f("sh/stak.h") warns about pointers
-into it. Note that `addblok` does not itself extend the data segment.
-On the PDP-11 the stores into the new space would fault and be extended
-by `fault`; here they land in memory that is already mapped (see
-#f("sh/stak.c")). The cast of `round`'s result (58) is new, as in
+into it. Note that `addblok` does not itself extend the data segment:
+the stores into the new space fault, here as on the PDP-11, and `fault`
+extends it (#f("sh/stak.c")). The cast of `round`'s result (58) is new, as in
 #f("sh/stak.c").
 
 #lines(50, 73)
