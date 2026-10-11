@@ -4180,7 +4180,7 @@ its name says. `nolioctl` replaces `nodev` in `l_ioctl`.
 #lines(58, 62)
 
 Root, swap, and pipe devices are all minor device 0 of major device 0,
-the one disk. The file system occupies its first 10648 blocks
+the one disk. The file system occupies its first 131072 blocks
 (#f("rootfs.proto")), and the swap area is the 327680 blocks after it,
 from `swplo`. This is the arrangement of v7's own RK05 configuration,
 where `swplo` was 4000 and the swap area ended at block 4872, the end
@@ -6564,8 +6564,8 @@ only a device name (`rk`) configures one such device; `root` and `swap`
 name the device and minor device of the root file system and of the
 swap area; `swplo` and `nswap` give the first block and the length of
 the swap area. v7's `rktmconf` put the swap area at block 4000 of the
-RK05; here it starts at block 10648, just after the root file system
-(#f("rootfs.proto")). v7 gave it 872 blocks, 436 KB, which held
+RK05; here it starts at block 131072, just after the root file system
+of 64 MB (#f("rootfs.proto")). v7 gave it 872 blocks, 436 KB, which held
 several of its largest images, `MAXMEM`. Here it holds 327680 blocks,
 160 MB: the largest image, `MAXMEM` (#f("param.h")), of 128 MB, and
 32 MB more, so that besides one such image there is room for smaller
@@ -7122,7 +7122,7 @@ the register of the controller at offset `off`, by the kernel address
 at which the controller, physical `0x58005000`, is mapped
 (#f("mp135conf")); the structure is deleted. `NRKBLK` (14) is the number of blocks the system uses, the
 file system and the swap area of the configuration (#f("mp135conf")),
-which end at block 338328. The card itself is larger, but its size could
+which end at block 458752. The card itself is larger, but its size could
 be read only with a command which the card accepts in another state
 than the one the ROM leaves it in. `NRK` and the RK11's bits are kept
 although unused, as in #f("virtio_blk.c"), but four of the names are
@@ -12363,10 +12363,13 @@ made on the build machine, every time the system is built
 The format is v7's. The first word names the program to be written
 into block 0 as a bootstrap: here `/dev/null`, since QEMU or the boot
 ROM of the MP135 loads the kernel directly and block 0 is never read.
-The second line gives the size of the file system, 10648 blocks of 512
-bytes, a little over 5 MB, and the number of inodes, 2048, four to a
-block; `mkfs` gives the i-list blocks 2 to 514. The swap area follows on the same disk, from block
-10648 (#f("qemuconf")). Then comes the root directory, described like
+The second line gives the size of the file system, 131072 blocks of 512
+bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
+gives the i-list blocks 2 to 4098. The system's own files take some 3
+MB of it; the rest is room for the users. The size is bounded by
+nothing but the configuration: three-byte block addresses
+(#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
+block 131072 (#f("qemuconf")). Then comes the root directory, described like
 every other file: its mode, as `d--755`, its owner, and its group.
 
 #lines(1, 3)
@@ -12440,13 +12443,13 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 308)
+#lines(139, 309)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(309, 310)
+#lines(310, 311)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

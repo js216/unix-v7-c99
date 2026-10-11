@@ -1,7 +1,7 @@
 rk
 root rk 0
 swap rk 0
-swplo 10648
+swplo 131072
 nswap 327680
 nbuf 1000
 ninode 1000

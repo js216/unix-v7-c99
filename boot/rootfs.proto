@@ -1,5 +1,5 @@
 /dev/null
-10648 2048
+131072 16384
 d--755 0 0
 	bin	d--755 0 0
 		1	---755 0 0 bin/1
@@ -292,6 +292,7 @@ d--755 0 0
 					roff	---644 0 0 usr/local/test/utils/roff
 					sortin	---644 0 0 usr/local/test/utils/sortin
 					stkt	---755 0 0 usr/local/test/obj/stkt
+					swb	---755 0 0 usr/local/test/obj/swb
 					szt	---755 0 0 usr/local/test/obj/szt
 					tsz	---755 0 0 usr/local/test/obj/tsz
 					tt	---755 0 0 usr/local/test/obj/tt

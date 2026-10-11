@@ -11,7 +11,7 @@
 
 #define	SD(off)	(*(volatile int *)(0xF0405000+(off)))
 #define	NRK	4
-#define	NRKBLK	338328
+#define	NRKBLK	458752
 
 #define	RESET	0
 #define	WCOM	24
