@@ -764,13 +764,13 @@ handlers, which take no arguments since they find them through
 - `machine_init`, `install_sigtramp`, `irq`, `panictrap`,
   `sigreturn`, and `vtop` are in #f("machdep.c"). `sigreturn` is system
   call 63, which a signal handler returns through. `irq` is the
-  interrupt handler. `vtop` (155) turns a kernel address into the
+  interrupt handler. `vtop` (157) turns a kernel address into the
   physical address a device must be given.
 - `ptfree` (#f("ureg.c")) releases a process's page tables.
 - `arm_sync_icache`, `dcflush`, `dcinval`, `dmbsy`, `idle`, `restfp`, `savfp`,
   `tlbflush`, `ttbset`, and the generic timer accessors `cntv_ctl_set` and
   `cntv_cval_set` are in #f("mch.s"). There, too, are `cntfrq_get`, `dfar`, and `dfsr`, in the
-  second list (136--139), which return the timer frequency and the
+  second list (138--141), which return the timer frequency and the
   address and status of the last data abort. `savfp` and `restfp`, v7's
   names, store and load the floating point registers of the current
   process.
@@ -803,25 +803,25 @@ interrupt frame. Only the last two, the program counter and the
 processor status, were ever used, and only they remain; `irq` passes
 the saved PC and the mode (#f("param.h")).
 
-#lines(67, 133)
+#lines(67, 135)
 
-The routines which return a value. `expand` (138) and `xswap` (152)
+The routines which return a value. `expand` (140) and `xswap` (154)
 are among them, where v7's returned nothing: each returns zero when
 there is no swap space for the image (#f("slp.c"), #f("text.c")).
-`save` (146) returns twice, like
+`save` (148) returns twice, like
 `setjmp`: zero when it saves, one when `resume` later returns through
 the saved label. `max` and `min` keep v7's `int` result, although
-their arguments are `unsigned`. `cntvct_get` (154), which reads the
+their arguments are `unsigned`. `cntvct_get` (156), which reads the
 generic timer's counter (#f("mch.s")), returns all 64 bits of it as an
-`unsigned long long`. `machine_init` (153) returns the address at which
+`unsigned long long`. `machine_init` (155) returns the address at which
 #f("low.s") is to place the kernel stack.
 
-`printf` (156) has a true variable argument list. v7's `printf`
+`printf` (158) has a true variable argument list. v7's `printf`
 walked up the PDP-11 stack from the address of its first argument.
 Under the ARM calling convention the first four arguments arrive in
 registers, so #f("prf.c") uses `<stdarg.h>` instead.
 
-#lines(134, 156)
+#lines(136, 158)
 
 On a PDP-11 with separate instruction and data spaces, reading a
 program's text required different instructions (`mfpi`, `mtpi`) from
@@ -830,21 +830,21 @@ and so on. The ARM has one address space, so the I-space forms are
 simply aliases, and their callers (`passc`, `cpass`, `iomove`,
 `procxmt`) keep v7's text.
 
-#lines(157, 162)
+#lines(159, 164)
 
 Counters for `iostat`, kept by the clock and by the drivers, which
 set and clear their bit of `dk_busy` around each transfer. Like the
 variables above, they are `extern` here and defined in #f("main.c").
 
-#lines(163, 171)
+#lines(165, 173)
 
 The table of system calls, defined in #f("sysent.c") and indexed by
-`trap` with the number of the call. The handler (179) was declared in
+`trap` with the number of the call. The handler (181) was declared in
 v7 as returning `int`, by default. The handlers return nothing; their
 results go back to the user through `u.u_r`. It is now a pointer to a
 `void` function of no arguments, and every handler is defined so.
 
-#lines(172, 180)
+#lines(174, 182)
 #source("/usr/sys/h/seg.h")
 
 In v7, #f("seg.h") held the addresses of the PDP-11 memory management
@@ -6378,8 +6378,11 @@ When the raw queue exceeds `TTYHOG` characters, all the queues are
 thrown away (`ttyinput`, #f("tty.c")). `TTHOLD` (98, 99) is new: it is
 true when the raw queue has reached `TTYHOG` and holds something the
 reader can take, a complete line or, in `RAW` and `CBREAK` modes, any
-character. The console's drivers then stop taking input
-(#f("pl011.c")), so that a long paste waits instead of being lost.
+character. The console's drivers then hold further input in a queue of
+their own (`ttyhold`, #f("tty.c"); #f("pl011.c")), so that a long paste
+waits instead of being lost. `TTHOLDQ` (100), also new, bounds that
+queue at two thirds of the character blocks (`NCLIST`, #f("param.h")),
+the rest being left for the other queues.
 
 The modes are those of `stty`. `NLDELAY`, `TBDELAY`, `CRDELAY`, and
 `VTDELAY` are fields which select a terminal type for the output delays
@@ -6392,7 +6395,7 @@ definitions here. Of the state bits, `XCLUDE` and `HUPCLS` may be set by
 the console's driver ignores them; `DKCMD` to `DKLINGR` belong to the
 datakit and are never set.
 
-#lines(82, 137)
+#lines(82, 138)
 
 The `ioctl` commands encode a letter for the class of device and a
 number. The `t` commands are carried out by `ttioccomm` (#f("tty.c")),
@@ -6401,7 +6404,7 @@ which are the datakit's, `ttioccomm` passes `DIOCGETP` and `DIOCSETP` to
 the line discipline, which here rejects them; the `x` commands are the
 multiplexor's.
 
-#lines(138, 169)
+#lines(139, 170)
 #source("/usr/sys/dev/pl011.c")
 
 #f("pl011.c") is the console driver of the QEMU machine. It
@@ -6423,7 +6426,7 @@ transmitter has room, and a group of interrupt registers: a mask
 (`UARTIMSC`), the masked status (`UARTMIS`), and a clear register
 (`UARTICR`). The KL11 held one character in each direction. The PL011
 has a receive and a transmit buffer ("FIFO") of 16 or more characters
-each, disabled after reset, and the driver enables them (159). Then the
+each, disabled after reset, and the driver enables them (161). Then the
 UART goes on taking in characters while the processor is busy
 elsewhere, with interrupts masked or in another interrupt, and the
 driver moves several characters at each interrupt: what typing ahead at
@@ -6445,25 +6448,26 @@ The other definitions are v7's. `KLBASE` and `DLBASE`, the addresses of
 further KL11s and DL11s, and the receiver bits `DSRDY` and `RDRENB` are
 no longer used, nor were the delay bits `NL1` to `TAB1` used even in
 v7; they remain because they still compile. `DLDELAY` is still added to
-every output delay (149).
+every output delay (151).
 
 #lines(11, 38)
 
 The declarations of `ttrstrt` and `partab` have gone: the first is in
 #f("systm.h") with a prototype, and the second is no longer used here.
-`klrint` is declared (41) because `klread` now calls it, before its
-definition. `klirq` (42) is the console's interrupt number at the interrupt
+`klhold` (40), the queue of held input, is new (see `klread`).
+`klrint` is declared (42) because `klread` now calls it, before its
+definition. `klirq` (43) is the console's interrupt number at the interrupt
 controller, which `intrtab` (#f("qemu/c.c")) reaches through a pointer;
 33 is shared peripheral interrupt 1, to which QEMU wires the UART. `struct
 device` is v7's description of the KL11's registers and is now unused.
 
-#lines(39, 50)
+#lines(39, 51)
 
 `klopen` no longer computes the device's address and stores it in
 `t_addr`: there is only one line, and its registers are at a fixed
 address. Where `kl.c` set the interrupt enable bits in the receiver and
 transmitter status registers, `klopen` unmasks the receive, transmit,
-and receive timeout interrupts in `UARTIMSC` (70).
+and receive timeout interrupts in `UARTIMSC` (71).
 
 The default modes differ from v7's. v7 assumed an upper case terminal
 (`LCASE`) needing a delay after carriage return (`CR2`); the port
@@ -6476,26 +6480,36 @@ hundred lines would take some 25 seconds to print. Without them lower case passe
 unchanged in both directions and output runs at the speed of the line.
 `EVENP` remains, although nothing here generates parity.
 
-#lines(51, 72)
+#lines(52, 73)
 
 `klclose` and `klwrite` are v7's. As in v7, closing the console does
 not disable its receiver interrupt, so characters typed while it is
 closed still go to `ttyinput` and accumulate in the raw queue.
 
 `klread` is new in part. When the raw queue holds `TTYHOG` characters
-and a complete line, `klrint` (below) stops taking characters and masks
-the receive interrupts, and the characters wait in the UART's FIFO and,
-beyond it, in QEMU, which passes the UART no more than the FIFO holds
-and leaves the rest with the host. A paste of any length thus arrives
-whole, where v7 threw away everything typed once `TTYHOG` was passed.
-`klread` is where the hold ends: before the reader takes a line, it
-unmasks the interrupts and calls `klrint` itself (89--92), at `spl5`,
-to empty the FIFO as far as the queue allows, and then reads as v7
-did. A reader can never wait on a held line, since input is held only
-while there is a line to read. A DEL typed behind a held paste reaches
-the system only when the reader has caught up.
+and a complete line, `klrint` (below) puts what follows on `klhold`
+(40) instead, by way of `ttyhold` (#f("tty.c")), and when `klhold` too
+is full it stops taking characters and masks the receive interrupts;
+the characters then wait in the UART's FIFO and, beyond it, in QEMU,
+which passes the UART no more than the FIFO holds and leaves the rest
+with the host. A paste of any length thus arrives whole, where v7 threw
+away everything typed once `TTYHOG` was passed. `klread` is where the
+hold ends: before the reader takes a line, it moves what it can from
+`klhold` to the raw queue (`ttyunhold`, 91), unmasks the interrupts,
+and calls `klrint` itself (92, 93), at `spl5`, to empty the FIFO as
+far as the queues allow, and then reads as v7 did. A reader can never
+wait on a held line, since input is held only while there is a line to
+read.
 
-#lines(73, 101)
+The interrupt, quit, stop, and start characters are never held:
+`ttyhold` hands them to `ttyinput` at once, and an interrupt or a quit
+discards `klhold` along with the other queues, as it discards what was
+typed ahead in v7. So a DEL typed behind a held paste stops a program
+which is not reading its terminal, such as one in a loop, at once. Only
+behind more than `klhold` can take does it wait, in the FIFO, for the
+reader to catch up.
+
+#lines(74, 103)
 
 `klxint` and `klrint` were reached in v7 through separate interrupt
 vectors, whose processor status words carried the minor device number.
@@ -6507,11 +6521,10 @@ to `TTLOWAT`. v7 first asked whether the line was attached to a
 multiplexed file (`t_chan`), and if so called `mcstart` in `mx2.c`;
 those files are not part of this system and the test has gone.
 
-`klrint` reads characters from `UARTDR` and hands each to `ttyinput`
-until the receive FIFO is empty (120), or until `TTHOLD` (#f("tty.h"))
-says that the raw queue is full and has a line for the reader; it then
-masks the receive interrupts and leaves the rest in the FIFO (121--124),
-for `klread` to collect. The KL11 interrupted for every
+`klrint` reads characters from `UARTDR` and hands each to `ttyhold`
+(#f("tty.c")) until the receive FIFO is empty (122), or until `klhold`
+is full (`TTHOLDQ`, #f("tty.h")); it then masks the receive interrupts
+and leaves the rest in the FIFO (123--126), for `klread` to collect. The KL11 interrupted for every
 character and had to be told (`RDRENB`) to receive another; the PL011
 receives continuously, and interrupts when its FIFO is half full, or,
 with fewer characters waiting, when no new one has arrived for 32 bit
@@ -6521,7 +6534,7 @@ also clears both interrupts. The bits above the character which the
 PL011 returns, flags for framing, parity, break, and overrun errors,
 are removed by the mask in `ttyinput` (#f("tty.c")).
 
-#lines(102, 128)
+#lines(104, 130)
 
 `klioctl` hands the commands to the common code. v7's `kl.c` called it
 `ttioccom`, with one `m`, although #f("tty.c") defines `ttioccomm`. The
@@ -6530,7 +6543,7 @@ underscore which the compiler prefixed to every external name, so to it
 the two spellings were the same name. Here the misspelling would be an
 undefined symbol, and is corrected.
 
-#lines(129, 136)
+#lines(131, 138)
 
 `klstart` moves characters from the output queue into the transmit
 FIFO until the FIFO is full or the queue empty. The KL11 took one
@@ -6540,7 +6553,7 @@ only when the contents fall to the trigger level, half the FIFO, from
 above, so `klstart` must fill it: a single character, below that level,
 would never raise the interrupt, and output would stop. A character
 above `0177` is a delay: `ttrstrt` is scheduled to start output again
-when it has passed, and the filling stops (151).
+when it has passed, and the filling stops (153).
 
 v7 added the parity bit from `partab` to each ordinary character
 (`c | (partab[c]&0200)`). The port sends the character as it is. The
@@ -6550,7 +6563,7 @@ terminal as part of the character: with it, the shell's prompt `#`,
 which has odd parity, is printed as `£`. In `RAW` mode all eight bits
 are sent, as `kl.c` did.
 
-#lines(137, 154)
+#lines(139, 156)
 
 Two procedures are new. `klinit` is called by `cninit`
 (#f("qemu/c.c")) early in `machine_init` (#f("machdep.c")). It sets
@@ -6565,11 +6578,11 @@ guest error, and a real PL011 would send nothing.
 (#f("machdep.c")) when the interrupt controller reports interrupt 33.
 The one interrupt serves both directions, so the masked status is
 examined to decide which of v7's two handlers to call, the receive
-timeout counting as a receive interrupt (166). The transmit interrupt
+timeout counting as a receive interrupt (168). The transmit interrupt
 is raised when the transmit FIFO has drained to its trigger level, and
-is cleared explicitly (169), before `klxint` refills the FIFO.
+is cleared explicitly (171), before `klxint` refills the FIFO.
 
-#lines(155, 172)
+#lines(157, 174)
 
 `putchar` is the console output of `printf` (#f("prf.c")). It polls
 the transmitter, bypassing the `tty` structure and its queues, and is
@@ -6603,7 +6616,7 @@ could not be made without reading `UARTDR`, which would remove a
 character from the receive queue and so steal it from the input. The comment
 about the console switches was already stale in v7.
 
-#lines(173, 214)
+#lines(175, 216)
 #source("/usr/sys/dev/tty.c")
 
 #f("tty.c") holds the code common to all terminals: what a driver such
@@ -6627,7 +6640,7 @@ the IRQ, as do `spl6` and `spl7` (#f("mch.s")).
 v7 included `mx.h` here for the multiplexed files (`mx1.c` and
 `mx2.c`). They are not part of this system, so the include, and the
 three places below which handed characters or signals to a multiplexed
-channel, have gone. The tests of `t_chan` which remain (347, 710) still
+channel, have gone. The tests of `t_chan` which remain (347, 745) still
 compile, and always find it `NULL`.
 
 `partab` (16) is now declared `extern`. In v7 `char partab[];` at file
@@ -6773,9 +6786,9 @@ channel, and the indentation of the call (465) is a remnant of the
 `else` which followed.
 
 The raw queue is discarded entirely if it has grown beyond `TTYHOG`,
-on the theory that nobody is reading it. The console's drivers stop
-taking input before that point while the queue holds a complete line
-(`TTHOLD`, #f("tty.h"); #f("pl011.c")), so here the queue is now
+on the theory that nobody is reading it. The console's drivers hold
+input back before that point while the queue holds a complete line
+(`TTHOLD`, #f("tty.h"); `ttyhold` below), so here the queue is now
 discarded only when it holds a line longer than `TTYHOG`, which no
 reader could take whole anyway. Otherwise the character is
 appended; at the end of a line, or for any character in `RAW` or
@@ -6787,12 +6800,27 @@ is why `ttyoutput` must never sleep.
 
 #lines(423, 490)
 
+`ttyhold` and `ttyunhold` are new; the console's drivers use them to
+hold input which the raw queue cannot take (#f("pl011.c")). Each
+character received goes to `ttyhold`. While `TTHOLD` (#f("tty.h")) is
+true, or the driver's queue `q` already holds characters, which must
+keep their order, the character is put on `q`, unless it is one of the
+four which act at once: interrupt, quit, stop, and start, in any mode
+but `RAW`, where no character is special. Those go to `ttyinput`
+straight away, so that a terminal held behind a paste can still be
+interrupted or its output stopped; an interrupt or a quit also empties
+`q`, since `ttyinput` will throw away the raw queue in front of it.
+`ttyunhold`, called by the driver's read routine, moves characters from
+`q` to `ttyinput` until the raw queue is held again or `q` is empty.
+
+#lines(491, 525)
+
 `ttyblock` serves `TANDEM` mode, in which the terminal is a machine
 that obeys the stop and start characters itself. When the raw and canonical
 queues together hold half of `TTYHOG`, the stop character is sent to
 it.
 
-#lines(491, 512)
+#lines(526, 547)
 
 `ttyoutput` puts one character on the output queue, transformed as the
 modes require. In `RAW` mode it goes unchanged. Otherwise a tab may be
@@ -6801,7 +6829,7 @@ the characters which it cannot print are replaced by a backslash and a
 substitute, and lower case letters by capitals; and with `CRMOD` a
 newline is preceded by a carriage return.
 
-#lines(513, 572)
+#lines(548, 607)
 
 The rest of `ttyoutput` maintains `t_col`, the column of the carriage,
 and computes the delay which should follow the character. The class of
@@ -6815,10 +6843,10 @@ For the tab of a Model 37 teletype, `1 - (*colp | ~07)` is the
 number of columns to the next tab stop. `t_col` is a plain `char`,
 signed or not as the compiler chooses; it is promoted to `int` before
 the `|`, and since the column never reaches 128, the result is the
-same either way. The comment at (589) is
+same either way. The comment at (624) is
 new, as at (223).
 
-#lines(573, 645)
+#lines(608, 680)
 
 `ttrstrt` is called by the clock when a delay has expired; it clears
 `TIMEOUT` and restarts output. It now takes the `caddr_t` which
@@ -6829,7 +6857,7 @@ prototype admits only procedures taking a `caddr_t`.
 `ttstart` calls the driver's start routine, unless output is stopped,
 delayed, or already in progress.
 
-#lines(646, 677)
+#lines(681, 712)
 
 `ttread` and `ttwrite` are the line discipline's read and write
 routines, which the driver's own routines call. `ttread` copies the
@@ -6840,10 +6868,10 @@ multiplexed files and is ignored here.
 `ttwrite` passes each character from the user to `ttyoutput`. When more
 than `TTHIWAT` characters are queued it starts output and sleeps,
 until the transmit interrupt wakes it at `TTLOWAT`. For a multiplexed line it
-would instead return the address to wait on (710, 711); since `t_chan`
+would instead return the address to wait on (745, 746); since `t_chan`
 is always `NULL`, it returns `NULL`.
 
-#lines(678, 721)
+#lines(713, 756)
 
 = More Drivers
 
@@ -7299,21 +7327,21 @@ they do in #f("pl011.c").
 
 `klirq` is 85, shared peripheral interrupt 53 of the interrupt
 controller, to which the chip wires UART4. v7's declarations of
-`ttrstrt` and `partab` have gone, and `klrint` is declared (51), as in
-#f("pl011.c").
+`ttrstrt` and `partab` have gone, and `klhold` (50) and the
+declaration of `klrint` (52) are new, as in #f("pl011.c").
 
-#lines(49, 60)
+#lines(49, 61)
 
 `klinit` is called by `cninit` (#f("mp135/c.c")) at the start of
 `machine_init` (#f("machdep.c")), as soon as the device registers are
 mapped. The kernel
 otherwise takes the clocks as the boot ROM left them, but the UART
 is given a clock of its own choosing so that its speed does not depend
-on that state. In turn: the clock of `GPIOD` is enabled (64), and pins
-PD6 and PD8 are switched to their alternate function 8 (66--68), which
+on that state. In turn: the clock of `GPIOD` is enabled (65), and pins
+PD6 and PD8 are switched to their alternate function 8 (67--69), which
 connects them to UART4's transmitter and receiver. The clock of UART4
-is enabled on its bus (69), and HSI, the internal 64 MHz oscillator,
-which runs from reset, is chosen as its kernel clock (72). `BRR` (71)
+is enabled on its bus (70), and HSI, the internal 64 MHz oscillator,
+which runs from reset, is chosen as its kernel clock (73). `BRR` (72)
 divides that clock to 115200 baud: 64000000/115200 is 555.6. Lastly
 the unit, the transmitter, and the receiver are enabled, and with them
 the FIFOs (`FIFOEN`, 73), which hold several characters in each
@@ -7326,20 +7354,20 @@ parity.
 
 The registers which enable clocks are of a "set" kind: a one sets the
 corresponding bit, and a zero leaves it alone. Each write is followed
-by a read of the same register (65, 70), which does not complete until
+by a read of the same register (66, 71), which does not complete until
 the write has, so that the clock is running before the device it feeds
 is touched.
 
-#lines(61, 75)
+#lines(62, 76)
 
 `klopen`, `klclose`, `klread`, and `klwrite` are those of #f("pl011.c"),
 except that the receiver interrupt is enabled by setting `RXNEIE` in
-`CR1` (95), and `klread` ends a hold of the input by setting it again
-(115). The transmitter interrupt is not enabled here; see `klstart`.
+`CR1` (96), and `klread` ends a hold of the input by setting it again
+(117). The transmitter interrupt is not enabled here; see `klstart`.
 
-#lines(76, 125)
+#lines(77, 127)
 
-`klxint` turns off the transmitter interrupt (133) before calling
+`klxint` turns off the transmitter interrupt (135) before calling
 `ttstart`, which will turn it on again if it sends a character. The
 reason lies in the nature of `TXE`. The PL011, like the KL11, raises
 its transmit interrupt once, when a character has gone. The USART's
@@ -7349,52 +7377,54 @@ remains asserted. With nothing more to send, an enabled interrupt would
 be taken again the moment it was returned from.
 
 `klrint` takes characters from `RDR` for as long as `RXNE` says the
-receive FIFO holds one (146), unless the raw queue is full and holds a
+receive FIFO holds one (148), unless the raw queue is full and holds a
 line, when it clears `RXNEIE` and leaves the characters where they are
-(147--150), as #f("pl011.c") explains. The interrupt is a condition too, asserted
+(149--152), as #f("pl011.c") explains, with `klhold` and `ttyhold` as
+there. The interrupt is a condition too, asserted
 while any character waits, so it comes with the first character, and
 the loop takes that one and any which arrive behind it. A receive
 timeout, which the PL011 needs (#f("pl011.c")), is not wanted here.
-Writing 017 to `ICR` (154) then clears the error flags for parity,
+Writing 017 to `ICR` (156) then clears the error flags for parity,
 framing, noise, and overrun. An overrun in particular, with `RXNEIE`
 set, would otherwise hold the interrupt asserted for good.
 
-On the MP135 machine a held paste fares less well than under QEMU.
-While input is held the characters gather in the receive FIFO, but
-nothing tells the sender to stop: the driver connects only the receive
-and transmit pins (`klinit`), so there are no flow control lines, and
-the console does not use `TANDEM`. When the FIFO is full, the next
-character to arrive sets the overrun flag and is lost, as is every one
-after it until `klread` takes input again. A paste longer than
-`TTYHOG` and the FIFO together therefore loses characters there, though
-fewer than v7, which threw away the whole queue.
+On the MP135 machine a paste longer than `klhold` can take fares less
+well than under QEMU. Once `klhold` is full the characters gather in
+the receive FIFO, but nothing tells the sender to stop: the driver
+connects only the receive and transmit pins (`klinit`), so there are no
+flow control lines, and the console does not use `TANDEM`. When the
+FIFO is full, the next character to arrive sets the overrun flag and is
+lost, as is every one after it until `klread` takes input again. A
+paste longer than `TTYHOG`, `klhold`, and the FIFO together therefore
+loses characters there, though fewer than v7, which threw away the
+whole queue.
 
-#lines(126, 155)
+#lines(128, 157)
 
 `klioctl` is that of #f("pl011.c"), with v7's misspelling `ttioccom`
 corrected.
 
-#lines(156, 164)
+#lines(158, 166)
 
 `klstart` sends the next character if the transmit FIFO has room, or
 arranges a delay, as in `kl.c`. One character at each interrupt
 suffices, since the interrupt is asserted again as long as the FIFO
-has room. `TXEIE` is set (181) whenever
+has room. `TXEIE` is set (183) whenever
 something was taken from the queue, so that the interrupt follows when
 the character has gone. Strictly, for a delay nothing has been
 written, `TXE` stays set, and the interrupt comes at once; `klxint` then
 calls `ttstart`, which finds the `TIMEOUT` state set and returns, and
 the interrupt is disabled until `ttrstrt` restarts output.
 
-#lines(165, 184)
+#lines(167, 186)
 
 `klintr` is the entry in `intrtab`, called by `irq` (#f("machdep.c"))
 for interrupt 85. It calls one or both of v7's handlers. The test of
-`TXEIE` (190) is needed because `TXE` is set nearly always, and an
+`TXEIE` (192) is needed because `TXE` is set nearly always, and an
 interrupt from the receiver must not be taken for one from the
 transmitter.
 
-#lines(185, 193)
+#lines(187, 195)
 
 `putchar` is `kl.c`'s with `ISR`, `TDR`, and `CR1` in place of the
 KL11's registers. Where `kl.c` cleared the transmitter status register,
@@ -7406,7 +7436,7 @@ interrupt which follows restarts it. The wait for the transmitter is
 bounded by time, and a newline is followed by a carriage return alone,
 as in #f("pl011.c").
 
-#lines(194, 234)
+#lines(196, 236)
 #source("/usr/sys/dev/stm32sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.

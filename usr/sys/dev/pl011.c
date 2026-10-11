@@ -37,6 +37,7 @@
 #define	TAB1	002000
 
 struct	tty kl11[NKL11+NDL11];
+struct	clist klhold;
 void	klstart(struct tty *tp);
 static void	klrint(dev_t dev);
 int	klirq = 33;
@@ -87,6 +88,7 @@ klread(dev_t dev)
 	register int s;
 
 	s = spl5();
+	ttyunhold(&kl11[minor(dev)], &klhold);
 	UARTIMSC |= RXI|RTI;
 	klrint(dev);
 	splx(s);
@@ -118,12 +120,12 @@ klrint(dev_t dev)
 
 	tp = &kl11[minor(dev)];
 	while((UARTFR&RXFE) == 0) {
-		if(TTHOLD(tp)) {
+		if(klhold.c_cc >= TTHOLDQ) {
 			UARTIMSC &= ~(RXI|RTI);
 			return;
 		}
 		c = UARTDR;
-		ttyinput(c, tp);
+		ttyhold(c, tp, &klhold);
 	}
 }
 

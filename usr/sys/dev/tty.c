@@ -488,6 +488,41 @@ ttyinput(register int c, register struct tty *tp)
 	}
 }
 
+/*
+ * Called by a console driver for each character received.
+ * While the raw queue is held (TTHOLD), or characters wait
+ * in the driver's queue q, the character is put on q,
+ * unless it is one which stops, starts, or interrupts.
+ */
+void
+ttyhold(register int c, register struct tty *tp, register struct clist *q)
+{
+	register int x;
+
+	x = c&0177;
+	if ((tp->t_flags&RAW)==0 && (x==tun.t_intrc || x==tun.t_quitc ||
+	    x==tun.t_stopc || x==tun.t_startc)) {
+		if (x==tun.t_intrc || x==tun.t_quitc)
+			while (getc(q) >= 0)
+				;
+		ttyinput(c, tp);
+	} else if (q->c_cc || TTHOLD(tp))
+		putc(c, q);
+	else
+		ttyinput(c, tp);
+}
+
+/*
+ * Move characters from the driver's queue to the raw queue
+ * until it is held again.
+ */
+void
+ttyunhold(register struct tty *tp, register struct clist *q)
+{
+	while (q->c_cc && !TTHOLD(tp))
+		ttyinput(getc(q), tp);
+}
+
 
 /*
  * Send stop character on input overflow.

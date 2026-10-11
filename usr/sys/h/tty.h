@@ -97,6 +97,7 @@ struct	ttiocb {
 #define	TTYHOG	256
 #define	TTHOLD(tp)	((tp)->t_rawq.c_cc >= TTYHOG && \
 	((tp)->t_delct || (tp)->t_flags&(RAW|CBREAK)))
+#define	TTHOLDQ	(NCLIST*CBSIZE/3*2)
 
 /* modes */
 #define	TANDEM	01
