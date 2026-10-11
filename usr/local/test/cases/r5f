@@ -1,0 +1,14 @@
+T=/tmp/r5f U=/usr/local/test/utils
+mkdir $T; cd $T
+echo x >f
+$U/ut f 4107499200 4107499200
+$U/ut f 4107585600 4107585600
+$U/ut f 13574606400 13574606400
+$U/ut f 13574692800 13574692800
+$U/ut f 951825600 951825600
+$U/ut f 4134024000 4134024000
+ls -l f
+$U/ut f 2211667200 2211667200
+>t.tp; tp cmf t.tp f; tp tvmf t.tp
+find f -cpio c.cpio; $U/cpt c.cpio
+cd /; rm -rf $T

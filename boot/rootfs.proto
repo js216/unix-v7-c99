@@ -202,6 +202,8 @@ d--755 0 0
 					cmdi3	---644 0 0 usr/local/test/cases/cmdi3
 					cmdi3.exp	---644 0 0 usr/local/test/cases/cmdi3.exp
 					cmdi3.sed	---644 0 0 usr/local/test/cases/cmdi3.sed
+					ddend	---644 0 0 usr/local/test/cases/ddend
+					ddend.exp	---644 0 0 usr/local/test/cases/ddend.exp
 					exec	---644 0 0 usr/local/test/cases/exec
 					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
@@ -224,6 +226,8 @@ d--755 0 0
 					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
 					misc2	---644 0 0 usr/local/test/cases/misc2
 					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
+					noswap	---644 0 0 usr/local/test/cases/noswap
+					noswap.exp	---644 0 0 usr/local/test/cases/noswap.exp
 					nsig	---644 0 0 usr/local/test/cases/nsig
 					nsig.exp	---644 0 0 usr/local/test/cases/nsig.exp
 					nsig.sed	---644 0 0 usr/local/test/cases/nsig.sed
@@ -248,6 +252,8 @@ d--755 0 0
 					r5b	---644 0 0 usr/local/test/cases/r5b
 					r5b.exp	---644 0 0 usr/local/test/cases/r5b.exp
 					r5b.sed	---644 0 0 usr/local/test/cases/r5b.sed
+					r5f	---644 0 0 usr/local/test/cases/r5f
+					r5f.exp	---644 0 0 usr/local/test/cases/r5f.exp
 					sh	---644 0 0 usr/local/test/cases/sh
 					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 					sig	---644 0 0 usr/local/test/cases/sig
@@ -273,9 +279,11 @@ d--755 0 0
 					argt	---755 0 0 usr/local/test/obj/argt
 					asm	---644 0 0 usr/local/test/utils/asm
 					bcf	---644 0 0 usr/local/test/utils/bcf
+					bigb	---755 0 0 usr/local/test/obj/bigb
 					bigm	---755 0 0 usr/local/test/obj/bigm
 					bigx	---755 0 0 usr/local/test/obj/bigx
 					clock	---755 0 0 usr/local/test/obj/clock
+					cpt	---755 0 0 usr/local/test/obj/cpt
 					ctxt	---644 0 0 usr/local/test/utils/ctxt
 					devt	---755 0 0 usr/local/test/obj/devt
 					dit	---755 0 0 usr/local/test/obj/dit
@@ -288,6 +296,7 @@ d--755 0 0
 					long	---644 0 0 usr/local/test/utils/long
 					memt	---755 0 0 usr/local/test/obj/memt
 					monout	---644 0 0 usr/local/test/utils/monout
+					nswp	---755 0 0 usr/local/test/obj/nswp
 					olda	---644 0 0 usr/local/test/utils/olda
 					physt	---755 0 0 usr/local/test/obj/physt
 					prs	---755 0 0 usr/local/test/obj/prs
