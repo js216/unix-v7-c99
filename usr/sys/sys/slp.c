@@ -278,8 +278,9 @@ loop:
 	 */
 	if (maxsize>=0 || (outage>=3 && inage>=2)) {
 		p->p_flag &= ~SLOAD;
-		xswap(p, 1, 0);
-		goto loop;
+		if (xswap(p, 1, 0))
+			goto loop;
+		p->p_flag |= SLOAD;
 	}
 	spl6();
 	runin++;
@@ -554,7 +555,7 @@ retry:
  * After the expansion, the caller will take care of copying
  * the user's stack towards or away from the data area.
  */
-void
+int
 expand(int newsize)
 {
 	register int i, n;
@@ -567,11 +568,11 @@ expand(int newsize)
 	a1 = p->p_addr;
 	if(n >= newsize) {
 		mfree(coremap, n-newsize, a1+newsize);
-		return;
+		return(1);
 	}
 	if (save(u.u_ssav)) {
 		sureg();
-		return;
+		return(1);
 	}
 	a2 = malloc(coremap, newsize);
 	if(a2 == NULL) {
@@ -579,7 +580,10 @@ expand(int newsize)
 			savfp(&u.u_fps);
 			u.u_fpsaved = 1;
 		}
-		xswap(p, 1, n);
+		if (xswap(p, 1, n) == 0) {
+			p->p_size = n;
+			return(0);
+		}
 		p->p_flag |= SSWAP;
 		qswtch();
 		/* no return */
@@ -590,4 +594,5 @@ expand(int newsize)
 		copyseg(a1+i, a2+i);
 	mfree(coremap, n, a1);
 	resume(a2, u.u_ssav);
+	return(1);
 }

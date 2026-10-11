@@ -56,8 +56,10 @@ exece(void)
 	ne = 0;
 	nc = 0;
 	uap = (struct execa *)u.u_ap;
-	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
-		panic("Out of swap");
+	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {
+		u.u_error = ENOMEM;
+		goto bad;
+	}
 	if (uap->argp) for (;;) {
 		ap = NULL;
 		if (uap->argp) {
@@ -237,7 +239,12 @@ getxfile(register struct inode *ip, int nargc)
 		u.u_prof.pr_scale = 0;
 		xfree();
 		i = USIZE+ds+ss;
-		expand(i);
+		if(expand(i) == 0) {
+			u.u_error = ENOMEM;
+			printf("out of swap space\n");
+			psignal(u.u_procp, SIGKIL);
+			goto bad;
+		}
 		while(--i >= USIZE)
 			clearseg(u.u_procp->p_addr+i);
 		xalloc(ip);
@@ -438,14 +445,14 @@ fork(void)
 	register int a;
 
 	/*
-	 * Make sure there's enough swap space for max
+	 * Make sure there's enough swap space for the
 	 * core image, thus reducing chances of running out
 	 */
-	if ((a = malloc(swapmap, ctod(MAXMEM))) == 0) {
+	if ((a = malloc(swapmap, ctod(u.u_procp->p_size))) == 0) {
 		u.u_error = ENOMEM;
 		goto out;
 	}
-	mfree(swapmap, ctod(MAXMEM), a);
+	mfree(swapmap, ctod(u.u_procp->p_size), a);
 	a = 0;
 	p2 = NULL;
 	for(p1 = &proc[0]; p1 < &proc[NPROC]; p1++) {
@@ -525,7 +532,12 @@ sbreak(void)
 	return;
 
 bigger:
-	expand(n);
+	if(expand(n) == 0) {
+		u.u_dsize -= d;
+		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
+		u.u_error = ENOMEM;
+		return;
+	}
 	a = u.u_procp->p_addr + n;
 	n = u.u_ssize;
 	while(n--) {

@@ -79,7 +79,7 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	creat(void),
 	dcflush(caddr_t a, unsigned n), ddrinit(void),
 	deverror(struct buf *bp, int o1, int o2), dmbsy(void), dup(void),
-	exec(void), exece(void), exit(int rv), expand(int newsize), fork(void),
+	exec(void), exece(void), exit(int rv), fork(void),
 	free(dev_t dev, daddr_t bno), fstat(void), ftime(void), getgid(void),
 	getpid(void), getuid(void), gtime(void), gtty(void), idle(void),
 	ifree(dev_t dev, ino_t ino), install_sigtramp(void),
@@ -129,13 +129,12 @@ void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
 	wait(void), wakeup(caddr_t chan), wdir(struct inode *ip), write(void),
 	writei(struct inode *ip), writep(struct file *fp),
 	xalloc(struct inode *ip), xfree(void), xlock(struct text *xp),
-	xrele(struct inode *ip), xswap(struct proc *p, int ff, int os),
-	xumount(int dev), xunlock(struct text *xp);
+	xrele(struct inode *ip), xumount(int dev), xunlock(struct text *xp);
 int	access(struct inode *ip, int mode),
 	b_to_q(char *cp, int cc, struct clist *q), cntfrq_get(void),
 	copyin(caddr_t f, caddr_t t, unsigned n),
 	copyout(caddr_t f, caddr_t t, unsigned n), cpass(void), dfar(void),
-	dfsr(void),
+	dfsr(void), expand(int newsize),
 	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw),
 	fsig(struct proc *p), fubyte(caddr_t a), fumem(int dev, off_t off),
 	fuword(caddr_t a), getc(struct clist *p), getw(struct clist *p),
@@ -148,7 +147,8 @@ int	access(struct inode *ip, int mode),
 	spl7(void), subyte(caddr_t a, int c), sumem(int dev, off_t off, int c),
 	suser(void), suword(caddr_t a, int v),
 	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
-	ttread(struct tty *tp), ufalloc(void);
+	ttread(struct tty *tp), ufalloc(void),
+	xswap(struct proc *p, int ff, int os);
 caddr_t	machine_init(void), ttwrite(struct tty *tp);
 unsigned long long cntvct_get(void);
 unsigned	vtop(caddr_t va);

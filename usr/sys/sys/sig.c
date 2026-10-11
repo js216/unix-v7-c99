@@ -252,7 +252,10 @@ grow(unsigned sp)
 	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))
 		return(0);
 	p = u.u_procp;
-	expand(p->p_size+si);
+	if(expand(p->p_size+si) == 0) {
+		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
+		return(0);
+	}
 	a = p->p_addr + p->p_size;
 	for(i=u.u_ssize; i; i--) {
 		a--;

@@ -19,9 +19,9 @@ void	xexpand(struct text *xp), xccdec(struct text *xp),
  * Os is the old size of the data area of the process,
  * and is supplied during core expansion swaps.
  *
- * panic: out of swap space
+ * Zero return: out of swap space, nothing done
  */
-void
+int
 xswap(register struct proc *p, int ff, int os)
 {
 	register int a;
@@ -30,7 +30,7 @@ xswap(register struct proc *p, int ff, int os)
 		os = p->p_size;
 	a = malloc(swapmap, ctod(p->p_size));
 	if(a == NULL)
-		panic("out of swap space");
+		return(0);
 	p->p_flag |= SLOCK;
 	xccdec(p->p_textp);
 	swap(a, p->p_addr, os, B_WRITE);
@@ -44,6 +44,7 @@ xswap(register struct proc *p, int ff, int os)
 		runout = 0;
 		wakeup((caddr_t)&runout);
 	}
+	return(1);
 }
 
 /*
@@ -110,6 +111,10 @@ xalloc(register struct inode *ip)
 			else
 				xp->x_ccount++;
 			xunlock(xp);
+			if (xp->x_ccount == 0) {
+				xp->x_count--;
+				goto noswap;
+			}
 			return;
 		}
 	}
@@ -118,18 +123,25 @@ xalloc(register struct inode *ip)
 		psignal(u.u_procp, SIGKIL);
 		return;
 	}
+	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
+	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
+		goto noswap;
 	xp->x_flag = XLOAD|XLOCK;
 	xp->x_count = 1;
 	xp->x_ccount = 0;
 	xp->x_iptr = ip;
 	ip->i_flag |= ITEXT;
 	ip->i_count++;
-	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
 	xp->x_size = ts;
-	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
-		panic("out of swap space");
 	u.u_procp->p_textp = xp;
 	xexpand(xp);
+	if (xp->x_ccount == 0) {
+		mfree(swapmap, ctod(ts), xp->x_daddr);
+		xp->x_iptr = NULL;
+		ip->i_flag &= ~ITEXT;
+		ip->i_count--;
+		goto noswap;
+	}
 	for(i = 0; i < ts; i++)
 		clearseg(xp->x_caddr+i);
 	estabur(ts, (unsigned)0, (unsigned)0, 0, RW);
@@ -150,6 +162,13 @@ xalloc(register struct inode *ip)
 	install_sigtramp();
 	arm_sync_icache(CLKADDR(xp->x_caddr), ctob(ts));
 	xp->x_flag = XWRIT;
+	return;
+
+noswap:
+	u.u_procp->p_textp = NULL;
+	u.u_error = ENOMEM;
+	printf("out of swap space\n");
+	psignal(u.u_procp, SIGKIL);
 }
 
 /*
@@ -174,7 +193,8 @@ xexpand(register struct text *xp)
 		sureg();
 		return;
 	}
-	xswap(u.u_procp, 1, 0);
+	if (xswap(u.u_procp, 1, 0) == 0)
+		return;
 	xunlock(xp);
 	u.u_procp->p_flag |= SSWAP;
 	qswtch();
