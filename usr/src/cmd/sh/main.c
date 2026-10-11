@@ -11,7 +11,7 @@
 #include	"dup.h"
 #include	"sym.h"
 #include	"timeout.h"
-#include	<sys/types.h>
+#include	<sys/param.h>
 #include	<sys/stat.h>
 #include	<sgtty.h>
 

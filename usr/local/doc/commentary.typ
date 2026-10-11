@@ -8773,6 +8773,10 @@ the type of the value it actually returns.
 where commands are to come from, and calls `exfile`, which reads and
 executes them until the end of the input.
 
+`<sys/param.h>` (14) replaces v7's `<sys/types.h>`: it carries the
+same type definitions, which may not be given twice, and also
+`USERSIZE`, which `execargs.h` needs.
+
 The definitions at 23--30 are new. They are the variables which
 #f("sh/defs.h") declares; in v7 the header itself defined them, in
 every file, and the loader merged the copies. `execargs.h` (31) defines
@@ -8824,8 +8828,8 @@ On re-entry for a command file (92), the shell stores `dolv` through
 looks for the arguments of a process, and the store makes the command
 file appear there under its own name. In v7 `execargs` was
 `(char **)-2`, the last word of the PDP-11's 64 KB address space; in
-the port it is `0xC0000000-4`, the last word below `USERSIZE`, the end of
-the 3 GB user address space, which `exec` leaves zero. The cast of `dolv` to `char *` is new: v7 stored a
+the port it is `USERSIZE-4`, the last word below the end of the 3 GB
+user address space, which `exec` leaves zero. The cast of `dolv` to `char *` is new: v7 stored a
 `char **` where a `char *` belongs without one.
 
 #lines(62, 97)
@@ -13433,9 +13437,10 @@ headers and must agree with it exactly. The mechanism shared with
 v7 included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
 such header, and the macros are defined here (8--10), with the top of
-the stack at `0xC0000000`, `USERSIZE`, the end of the 3 GB user address
-space (#f("param.h")), where the PDP-11's was at `0x10000`, the end of
-its 64 KB address space.
+the stack at `USERSIZE`, the end of the 3 GB user address space
+(#f("param.h")), where the PDP-11's was at `0x10000`, the end of its
+64 KB address space. The macros are expanded only where they are used,
+after `<sys/param.h>` (11) has defined `USERSIZE`.
 `TXTRNDSIZ`, the unit to which the text is rounded before the data
 begins, is a page, where the PDP-11's was an 8 KB segment. The
 argument `siz` of `stacktop` was unused in v7 too.

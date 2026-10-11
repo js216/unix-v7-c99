@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <a.out.h>
 #define TXTRNDSIZ 4096L
-#define stacktop(siz) (0xC0000000L)
-#define stackbas(siz) (0xC0000000L-siz)
+#define stacktop(siz) (USERSIZE)
+#define stackbas(siz) (USERSIZE-siz)
 #include <sys/param.h>
 #include "../../sys/h/proc.h"
 #include <sys/dir.h>
