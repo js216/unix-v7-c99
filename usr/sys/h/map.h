@@ -4,6 +4,6 @@ struct map
 	int	m_addr;
 };
 
-extern struct map coremap[CMAPSIZ];	/* space for core allocation */
-extern struct map swapmap[SMAPSIZ];	/* space for swap allocation */
-extern struct map ptmap[PMAPSIZ];	/* space for page table allocation */
+extern struct map coremap[];	/* space for core allocation */
+extern struct map swapmap[];	/* space for swap allocation */
+extern struct map ptmap[];	/* space for page table allocation */

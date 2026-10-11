@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 void	puke(char **s);
 int	input(void), equal(char *a, char *b), badline(char *line);
@@ -435,6 +436,9 @@ char	*stre[] =
 	"#include \"../h/acct.h\"",
 	"",
 	"#include \"../h/seg.h\"",
+	"#include \"../h/map.h\"",
+	"#include \"../h/mount.h\"",
+	"#include \"../h/callo.h\"",
 	0
 };
 
@@ -490,6 +494,31 @@ struct	acct	acctbuf;\n\
 struct	inode	*acctp;\n"
 };
 
+char	strg3[] =
+{
+"int	buffers[NBUF][(BSIZE+BSLOP+3)/4];\n\
+struct	map	coremap[CMAPSIZ];\n\
+struct	map	swapmap[SMAPSIZ];\n\
+struct	map	ptmap[PMAPSIZ];\n\
+struct	mount	mount[NMOUNT];\n\
+struct	callo	callout[NCALL];\n\
+struct	cblock	cfree[NCLIST];\n"
+};
+
+char	*tune[] =
+{
+	"nbuf",
+	"ninode",
+	"nfile",
+	"nmount",
+	"ncall",
+	"nproc",
+	"ntext",
+	"nclist",
+	0
+};
+long	tunev[] = { 29, 200, 175, 8, 20, 150, 40, 100 };
+
 char	*strh[] =
 {
 	"	{0}",
@@ -543,6 +572,7 @@ main(void)
 	register struct tab *p;
 	register char *q;
 	int i;
+	char up[10], *x;
 
 	while(input());
 
@@ -560,10 +590,13 @@ main(void)
 	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) { *(.rodata*) } > RAM\n", ramv-ramb);
 	printf("\t.data : AT(ADDR(.data) - 0x%lx) { *(.data*) } > RAM\n", ramv-ramb);
 	printf("\t. = ALIGN(4);\n\t__bss_start = .;\n");
-	printf("\t.bss : AT(ADDR(.bss) - 0x%lx) { *(.bss*) *(COMMON) } > RAM\n", ramv-ramb);
+	x = tabn ? "EXCLUDE_FILE(*/c.o) " : "";
+	printf("\t.bss : AT(ADDR(.bss) - 0x%lx) { *(%s.bss*) *(%sCOMMON) } > RAM\n", ramv-ramb, x, x);
 	printf("\t__bss_end = .;\n");
 	printf("\t.ddrbss (NOLOAD) : ALIGN(4096) {\n");
 	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
+	if (tabn)
+		printf("\t\t*/c.o(.bss* COMMON)\n");
 	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n", tabn ? "TAB" : "RAM");
 
 /*
@@ -637,8 +670,15 @@ main(void)
 		pipemaj, pipemin,
 		nldisp,
 		swplo, nswap);
+	for(i=0; tune[i]; i++) {
+		for(q=tune[i], x=up; (*x++ = toupper(*q++)); );
+		printf("#undef\t%s\n#define\t%s\t%ld\n", up, up, tunev[i]);
+	}
 	printf(strg1);
 	printf(strg2);
+	printf(strg3);
+	for(i=0; tune[i]; i++)
+		printf("int\t%s = %ld;\n", tune[i], tunev[i]);
 	if(rootmaj < 0)
 		fprintf(stderr, "No root device given\n");
 	printf("\nunsigned int\tcorebase, coreoff, coretop = 0x%lx;\n", coret);
@@ -673,7 +713,7 @@ input(void)
 {
 	char line[100];
 	register struct tab *q;
-	int count, n;
+	int count, n, i;
 	long num;
 	char keyw[100], dev[100];
 
@@ -718,6 +758,15 @@ input(void)
 			q->count = 1;
 			fprintf(stderr, "%s: only one\n", keyw);
 		}
+		return(1);
+	}
+	for(i=0; tune[i]; i++)
+	if(equal(keyw, tune[i])) {
+		if (n<3)
+			goto badl;
+		if (sscanf(dev, "%ld", &num) <= 0)
+			goto badl;
+		tunev[i] = num;
 		return(1);
 	}
 	if (equal(keyw, "nswap")) {

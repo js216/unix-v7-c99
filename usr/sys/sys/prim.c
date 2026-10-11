@@ -4,12 +4,7 @@
 #include "../h/conf.h"
 #include "../h/buf.h"
 
-struct cblock {
-	struct cblock *c_next;
-	char	c_info[CBSIZE];
-};
-
-struct	cblock	cfree[NCLIST];
+extern struct	cblock	cfree[];
 struct	cblock	*cfreelist;
 int	cbad;
 

@@ -255,6 +255,8 @@ d--755 0 0
 					stress	---644 0 0 usr/local/test/cases/stress
 					stress.exp	---644 0 0 usr/local/test/cases/stress.exp
 					stress.sed	---644 0 0 usr/local/test/cases/stress.sed
+					tables	---644 0 0 usr/local/test/cases/tables
+					tables.exp	---644 0 0 usr/local/test/cases/tables.exp
 					time64	---644 0 0 usr/local/test/cases/time64
 					time64.exp	---644 0 0 usr/local/test/cases/time64.exp
 					time64.sed	---644 0 0 usr/local/test/cases/time64.sed
@@ -291,6 +293,7 @@ d--755 0 0
 					sortin	---644 0 0 usr/local/test/utils/sortin
 					stkt	---755 0 0 usr/local/test/obj/stkt
 					szt	---755 0 0 usr/local/test/obj/szt
+					tsz	---755 0 0 usr/local/test/obj/tsz
 					tt	---755 0 0 usr/local/test/obj/tt
 					txtt	---755 0 0 usr/local/test/obj/txtt
 					u2	---644 0 0 usr/local/test/utils/u2

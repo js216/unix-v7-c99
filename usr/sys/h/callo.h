@@ -14,4 +14,4 @@ struct	callo
 	caddr_t	c_arg;		/* argument to routine */
 	void	(*c_func)(caddr_t arg);	/* routine */
 };
-struct	callo	callout[NCALL];
+extern struct	callo	callout[];

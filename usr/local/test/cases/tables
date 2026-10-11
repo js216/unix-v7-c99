@@ -1,0 +1,5 @@
+T=/tmp/tables U=/usr/local/test/utils
+mkdir $T; cd $T
+$U/tsz; $U/tsz 300 "pstat -x >x"
+awk 'NR > 2 && $(NF-1) > 300 {print $(NF-1), $NF}' x
+cd /; rm -rf $T

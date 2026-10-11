@@ -1,0 +1,10 @@
+nbuf 1000
+ninode 1000
+nfile 1000
+nmount 16
+ncall 100
+nproc 500
+ntext 100
+nclist 1000
+forked 300
+301 301

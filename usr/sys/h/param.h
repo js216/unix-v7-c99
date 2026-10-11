@@ -2,10 +2,10 @@
  * tunable variables
  */
 
-#define	NBUF	29		/* size of buffer cache */
-#define	NINODE	200		/* number of in core inodes */
-#define	NFILE	175		/* number of in core file structures */
-#define	NMOUNT	8		/* number of mountable file systems */
+#define	NBUF	nbuf		/* size of buffer cache */
+#define	NINODE	ninode		/* number of in core inodes */
+#define	NFILE	nfile		/* number of in core file structures */
+#define	NMOUNT	nmount		/* number of mountable file systems */
 #define	MAXMEM	32768		/* max core per process */
 #define	MAXUPRC	25		/* max processes per user */
 #define	SSIZE	2		/* initial stack size (*4096 bytes) */
@@ -16,10 +16,10 @@
 #define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
 #define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
 #define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
-#define	NCALL	20		/* max simultaneous time callouts */
-#define	NPROC	150		/* max number of processes */
-#define	NTEXT	40		/* max number of pure texts */
-#define	NCLIST	100		/* max total clist size */
+#define	NCALL	ncall		/* max simultaneous time callouts */
+#define	NPROC	nproc		/* max number of processes */
+#define	NTEXT	ntext		/* max number of pure texts */
+#define	NCLIST	nclist		/* max total clist size */
 #define	HZ	60		/* Ticks/second of the clock */
 #define	TIMEZONE (5*60)		/* Minutes westward from Greenwich */
 #define	DSTFLAG	1		/* Daylight Saving Time applies in this locality */
@@ -144,4 +144,5 @@ typedef	long		off_t;
 #define	USERMODE(ps)	((ps & UMODE)==UMODE)
 
 
+extern int nbuf, ninode, nfile, nmount, ncall, nproc, ntext, nclist;
 extern unsigned corebase, coretop, coreoff, pguser, gicdbase, giccbase;

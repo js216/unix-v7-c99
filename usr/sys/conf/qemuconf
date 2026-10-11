@@ -3,6 +3,14 @@ root rk 0
 swap rk 0
 swplo 10648
 nswap 327680
+nbuf 1000
+ninode 1000
+nfile 1000
+nmount 16
+ncall 100
+nproc 500
+ntext 100
+nclist 1000
 ram c0000000 40000000 4000000
 core 60000000
 gic f0000000 f0010000

@@ -33,10 +33,6 @@ long	dk_numb[3];
 long	dk_wds[3];
 long	tk_nin;
 long	tk_nout;
-struct map coremap[CMAPSIZ];
-struct map swapmap[SMAPSIZ];
-struct map ptmap[PMAPSIZ];
-struct mount mount[NMOUNT];
 struct inode *mpxip;
 
 /*
@@ -147,7 +143,7 @@ iinit(void)
  * I/O to be done-- e.g. swbuf for
  * swapping.
  */
-int	buffers[NBUF][(BSIZE+BSLOP+3)/4];
+extern int	buffers[][(BSIZE+BSLOP+3)/4];
 
 /*
  * Initialize the buffer I/O system by freeing

@@ -13,6 +13,11 @@ struct clist
 	char	*c_cl;		/* pointer to last char */
 };
 
+struct cblock {
+	struct cblock *c_next;
+	char	c_info[CBSIZE];
+};
+
 /*
  * A tty structure is needed for
  * each UNIX character device that
