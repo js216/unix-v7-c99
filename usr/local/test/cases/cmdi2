@@ -1,5 +1,5 @@
 T=/tmp/cmdi2 U=/usr/local/test/utils
-mkdir $T; cd $T
+mkdir $T; cd $T; sleep 1
 basename /a/b/c.c .c; basename x/y; basename; echo abcabc | tr a-c A-C; echo hello | tr -d l; echo aabbccdd | tr -s abc; echo abc | tr -c a x; echo
 echo 'a b' >ts; echo 'b c' >>ts; echo 'a c' >>ts; echo 'c d' >>ts; tsort ts; echo 'd a' >>ts; tsort ts; tsort /nonexist
 yes | sed 3q; yes no | sed 2q; tty; tty -s; echo tty$?; sync; echo synced
