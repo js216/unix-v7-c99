@@ -203,7 +203,7 @@ get(void)
 		return(-1);
 	if(b == '\n')
 		return(0);
-	return(b);
+	return(b&0377);
 }
 
 void

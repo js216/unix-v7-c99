@@ -8039,10 +8039,10 @@ as disabled. `rline` returns 0 only at the end of the file.
 `maktty` builds the terminal's path name in `tty`. `get` reads one
 character, mapping the newline to 0 and end of file to -1.
 
-Note that `b` (200) is a `char`. On the PDP-11 a byte with its top bit
-set became negative when returned, and would end the file early; on
-the ARM `char` is unsigned and the byte is returned as it is. The text of
-`/etc/ttys` is ASCII, so the difference is never seen.
+`b` (200) is a `char`, which C leaves signed or unsigned as the
+compiler chooses. Where it is signed, as on the PDP-11, a byte with its
+top bit set would be returned negative and end the file early; the mask
+(206) returns every byte as a positive number, whatever the compiler.
 
 #lines(182, 207)
 
