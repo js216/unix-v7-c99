@@ -9739,7 +9739,13 @@ the high byte, and in the low byte the number of the signal which
 killed the process, with 0200 if a core image was written, or 0177 if it
 is stopped under trace. A death by signal is reported, by the message in
 `sysmsg`, preceded by the pid unless the process was the one awaited
-by an interactive shell. The status kept, `rc`, is the first nonzero one collected,
+by an interactive shell. A newline follows, even for the signals
+which have no message, so that after an interrupt typed at the
+terminal the prompt begins a fresh line. v7 printed it for `SIGPIPE`
+as well; the port does not (234). A writer in a pipeline such as
+`ls | sed 1q` dies of `SIGPIPE` or finishes first as the scheduling
+happens to fall, and the blank line would come and go with it.
+The status kept, `rc`, is the first nonzero one collected,
 a signal being marked with `SIGFLG`; with the option `-e` any failure
 ends the shell. The parentheses at 224 are new.
 

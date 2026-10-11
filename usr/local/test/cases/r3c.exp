@@ -39,11 +39,10 @@ apple	banana	cherry	date
 found /usr/local/test/utils/words
      15
 /
-     43
+     46
 1
    PID TTY TIME CMD
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
-
 1 kl11
  # RAW CAN OUT   MODE   ADDR   DEL COL  STATE   PGRP
    LOC S  F  PRI SIGNAL UID TIM CPU NI  PGRP   PID  PPID ADDR SIZE  WCHAN   LINK  TEXTP  CLKT

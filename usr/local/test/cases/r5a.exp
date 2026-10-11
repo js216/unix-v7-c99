@@ -7,7 +7,6 @@ phys: -1 errno 22
 malloc: 0 of 64 blocks misaligned
 signal 31: caught 31
 signal 32: -1 errno 22
-
 80000
 40000
 60000

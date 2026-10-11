@@ -231,7 +231,7 @@ VOID	await(INT i)
 				prs(sysmsg[sig]);
 				IF w&0200 THEN prs(coredump) FI
 			FI
-			newline();
+			IF sig != SIGPIPE THEN newline() FI
 		FI
 
 		IF rc==0

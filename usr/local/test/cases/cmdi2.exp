@@ -21,10 +21,8 @@ tsort: cannot open /nonexist
 y
 y
 y
-
 no
 no
-
 /dev/console
 tty0
 synced
