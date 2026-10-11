@@ -6662,7 +6662,7 @@ is always `NULL`, it returns `NULL`.
 
 #source("/usr/sys/conf/qemuconf")
 
-#f("qemuconf") describes the QEMU `virt` board to `mkconf`
+#f("qemuconf") describes the QEMU machine to `mkconf`
 (#f("mkconf.c")), which reads it on its standard input and writes
 #f("qemu/c.c") and #f("qemu/unix.ld"). The first five lines are in v7's
 own format, and could have come from v7's `rktmconf`. A line holding
@@ -6698,12 +6698,12 @@ value.
 
 #lines(6, 13)
 
-The remaining lines are new too, and describe the board rather than its
-devices. All the numbers are hexadecimal, without the `0x`.
+The remaining lines are new too, and describe the machine rather than
+its devices. All the numbers are hexadecimal, without the `0x`.
 
 `ram` gives the kernel address at which the kernel is linked, the
 physical address at which it is loaded, and the length of the region:
-the first 64 MB of QEMU's memory, at `0x40000000`, far more than the
+the first 64 MB of the QEMU machine's memory, at `0x40000000`, far more than the
 kernel needs, linked at 0xc0000000 (Section 1). The difference of the
 two addresses must be a multiple of 2 MB, the size of the blocks by
 which #f("low.s") maps the kernel. `core` gives the physical end of the
@@ -6729,21 +6729,22 @@ transports. The devices which QEMU puts between them are not mapped.
 #lines(14, 21)
 #source("/usr/sys/conf/mp135conf")
 
-The configuration of the STM32MP135 board, in the format of
+The configuration of the MP135 machine, in the format of
 #f("qemuconf"). The devices, root, and swap are the same: one disk,
 configured as `rk` although it is an SD card driven by #f("stm32sd.c"),
 holding the root file system and, after it, the swap area. The console
-is the board's UART, driven by #f("stm32usart.c").
+is the chip's UART4, driven by #f("stm32usart.c").
 
 #lines(1, 5)
 
-The tables have the sizes of QEMU's (#f("qemuconf")), for the MP135 has
-512 MB of DDR as well. They are far larger than SYSRAM, and lie in DDR
+The tables have the sizes of the QEMU machine's (#f("qemuconf")), for
+the MP135 machine has 512 MB of memory as well. They are far larger than SYSRAM, and lie in DDR
 (#f("mp135/unix.ld")).
 
 #lines(6, 13)
 
-The memory of the MP135 is in two pieces which are not contiguous. The
+The memory of the MP135 machine is in two pieces which are not
+contiguous. The
 boot ROM loads the kernel from the SD card into the 128 KB of on-chip
 SYSRAM at `0x2ffe0000` and jumps to it; this is `ram`, linked at
 0xc01e0000, so that the difference is a multiple of 2 MB. Process
@@ -6751,7 +6752,7 @@ images, and anything else too large for SYSRAM, live in the 512 MB of
 external DDR memory at `0xc0000000`, which the kernel maps 2 MB higher,
 at 0xc0200000, just above the block of SYSRAM (Section 1).
 
-`tables` is a keyword which only this board uses. It names a second
+`tables` is a keyword which only this configuration uses. It names a second
 region for the linker, by kernel address, physical address, and
 length, into which `mkconf` places the section `.ddrbss`: the table
 `kl3u` reserved in #f("mch.s"), and the tables of the configuration,
@@ -6759,7 +6760,7 @@ which SYSRAM cannot spare. It takes the
 start of DDR, and core, which `machine_init` (#f("machdep.c")) begins at
 the first page after it, the rest of it; `core` gives its physical end.
 
-`pguser` (18) and the attributes of DDR (20) are those of QEMU's:
+`pguser` (18) and the attributes of DDR (20) are the QEMU machine's:
 user pages and all of DDR are normal memory, cached write-back, like
 the kernel itself in SYSRAM (19). The 2 MB block of SYSRAM also covers
 the reserved addresses below it, which nothing reads. The one party
@@ -6801,9 +6802,10 @@ four ways. The pass which wrote `l.s` is gone, since the ARM's vectors
 are fixed (#f("low.s")) and interrupts are routed by a table in `c.c`;
 so is the pass which wrote `mch0.s`, since there is no crash dump. A new
 first pass writes the linker script. The configuration has new
-keywords for the facts about the board and for the sizes of the
-tables, and `c.c` gets a new tail which records the facts. Lastly, the strings which `mkconf` copies into `c.c`
-have been made acceptable to a C99 compiler.
+keywords for the facts about the machine and for the sizes of the
+tables, and `c.c` gets a new tail which records the facts. Lastly, the
+strings which `mkconf` copies into `c.c` have been made acceptable to a
+C99 compiler.
 
 `mkconf` runs on the host, not on the target, and is compiled as strict
 C99 like the rest. `<string.h>` (2) declares `strcmp`, which v7 used
@@ -6864,8 +6866,8 @@ head of the disk's queue, which the disk driver also defined; v7's
 loader merged the two as a common symbol. Now `rkstrategy` is declared
 in #f("systm.h"), and `rktab` is declared `extern`, so that the driver's
 definition (#f("virtio_blk.c"), #f("stm32sd.c")) is the only one. Both
-boards' disk drivers took v7's `rk` names, so this one entry serves for
-each.
+machines' disk drivers took v7's `rk` names, so this one entry serves
+for each.
 
 #lines(207, 218)
 
@@ -6909,8 +6911,8 @@ v7's until the configuration says otherwise.
 
 #lines(444, 548)
 
-v7's variables, followed by new ones (562--567) which hold the board
-description: whether DDR must be started (`ddr`); the kernel address,
+v7's variables, followed by new ones (562--567) which hold the
+description of the machine: whether DDR must be started (`ddr`); the kernel address,
 physical origin, and length of the kernel's memory (`ramv`, `ramb`,
 `ramn`) and of the region for its tables (`tabv`, `tabb`, `tabn`); the
 top of core (`coret`); `pguser`; the addresses of the interrupt
@@ -6937,14 +6939,14 @@ a time before the MMU is on, when an unaligned store faults. The section
 `.ddrbss` holds the large tables. It is aligned to 4 KB, which a table
 requires, is not loaded (`NOLOAD`), and is cleared by `machine_init`
 (#f("machdep.c")) once memory is ready. It is placed in the `tables`
-region if the configuration has one, as on the MP135, and otherwise in
+region if the configuration has one, as on the MP135 machine, and otherwise in
 `RAM`. With a `tables` region it also takes the uninitialised data of
 `c.o`, the tables of the system, which `EXCLUDE_FILE` keeps out of
 `.bss` (593--599; #f("mp135/unix.ld")).
 
 The entry point is named: `start`, the physical address of `_start`.
 QEMU, which loads the ELF file itself, jumps to the entry point with
-the MMU off, so the kernel address would not do; the MP135's boot ROM,
+the MMU off, so the kernel address would not do; the MP135 machine's boot ROM,
 which loads a plain image made from the file, starts it at its first
 byte, which is `_start` too. Between the regions and the sections the
 symbol `u` is set to `0xFFF00000`, the value of `UBASE` (#f("param.h")),
@@ -6975,7 +6977,7 @@ defined with its value (679--681).
 
 #lines(661, 683)
 
-The tail of `c.c` is new. It defines the board's top of core, `pguser`,
+The tail of `c.c` is new. It defines the machine's top of core, `pguser`,
 and the addresses of the interrupt controller, which #f("machdep.c")
 and #f("seg.h") use, and `corebase` and `coreoff` without a value, for
 `machine_init` (#f("machdep.c")) to set; `board_map`, the regions to map,
@@ -6988,8 +6990,8 @@ Last come three small procedures by which the machine-dependent code
 starts the configured drivers without naming them: `cninit`, `bdinit`,
 and `clock_ddr_init`, which calls `ddrinit` only if the configuration
 said `ddr`. The names they call, like those in `intrtab`, are fixed:
-every board's drivers use v7's `kl` and `rk` names, and only one
-board's drivers are linked into a kernel.
+every machine's drivers use v7's `kl` and `rk` names, and only one
+machine's drivers are linked into a kernel.
 
 v7 ended `main` by writing `mch0.s`, which set `HTDUMP` or `TUDUMP`
 according to whether a TU16 tape was configured, so that the core dump
@@ -7017,7 +7019,7 @@ failed conversion. C99's `sscanf`, which is the host's here, stops at
 the first failure and returns 0, so the port scans the line a second
 time without the count.
 
-The keywords which describe the board are recognised first (730--749).
+The keywords which describe the machine are recognised first (730--749).
 Their numbers are read in hexadecimal. A malformed line is reported by
 `badline`, a new procedure holding v7's message, which returns 1, so that
 reading continues as in v7. A ninth `map` line falls through to "cannot
@@ -7044,7 +7046,7 @@ keywords can use it in an expression. `equal` is v7's.
 #lines(842, 854)
 #source("/usr/sys/conf/mp135/c.c")
 
-The configuration of the STM32MP135, written by `mkconf`
+The configuration of the MP135 machine, written by `mkconf`
 (#f("mkconf.c")) from #f("mp135conf"). Since the two configurations
 name the same devices, root, and swap, and give the tables the same
 sizes, the first 109 lines are identical to those of #f("qemu/c.c"), to
@@ -7057,7 +7059,7 @@ driver #f("stm32usart.c"), and `rk` the SD card driver #f("stm32sd.c").
 The tables defined above lie in DDR, which #f("mp135/unix.ld")
 arranges. Process images occupy DDR from the first page after them to
 its end, physical address `0xe0000000` (110). `pguser` (111) maps user
-pages cached, as on QEMU (#f("mp135conf")). The interrupt controller
+pages cached, as on the QEMU machine (#f("mp135conf")). The interrupt controller
 is the Cortex-A7's own, at physical `0xa0021000` and `0xa0022000`, which
 the kernel reaches at `0xf0821000` and `0xf0822000` (112).
 
@@ -7067,7 +7069,7 @@ it; and six blocks of peripherals, from 0xf0000000 (Section 1).
 
 #lines(110, 125)
 
-`intrtab` is the same as QEMU's, though the numbers behind `klirq` and
+`intrtab` is the same as the QEMU machine's, though the numbers behind `klirq` and
 `rkirq` differ (85 and 82, #f("stm32usart.c"), #f("stm32sd.c")). The one
 difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
 (#f("stm32ddr.c")), since the configuration ends with `ddr`.
@@ -7075,7 +7077,8 @@ difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
 #lines(126, 137)
 #source("/usr/sys/dev/stm32usart.c")
 
-The console driver of the STM32MP135 board. Like #f("pl011.c") on QEMU,
+The console driver of the MP135 machine. Like #f("pl011.c") on the QEMU
+machine,
 it is v7's `kl.c` with a different device under it, and it keeps
 `kl.c`'s comment, order, names, and `tty` array `kl11`, so that the
 switch entry `klopen, klclose, klread, klwrite, klioctl` in
@@ -7086,8 +7089,8 @@ and the break test in `putchar`, the commentary on #f("pl011.c") applies
 and is not repeated here.
 
 The device is UART4, one of the chip's USARTs ("universal synchronous
-asynchronous receiver transmitter"), whose pins the board brings out
-as its serial console. Its registers differ from
+asynchronous receiver transmitter"), whose pins the STM32MP135F-DK
+brings out as its serial console. Its registers differ from
 both the KL11's and the PL011's. There is one control register `CR1`,
 holding the enables of the unit, transmitter, and receiver and of the
 interrupts; a baud rate register `BRR`; an interrupt and status register
@@ -7114,7 +7117,8 @@ controller, to which the chip wires UART4. v7's declarations of
 #lines(49, 59)
 
 `klinit` is called by `cninit` (#f("mp135/c.c")) at the start of
-`machine_init` (#f("machdep.c")), before the MMU is on. The kernel
+`machine_init` (#f("machdep.c")), as soon as the device registers are
+mapped. The kernel
 otherwise takes the clocks as the boot ROM left them, but the UART
 is given a clock of its own choosing so that its speed does not depend
 on that state. In turn: the clock of `GPIOD` is enabled (63), and pins
@@ -7205,8 +7209,8 @@ as in #f("pl011.c").
 #lines(183, 223)
 #source("/usr/sys/dev/stm32sd.c")
 
-The disk of the STM32MP135 board is its SD card, and this is its
-driver. Like #f("virtio_blk.c") on QEMU, it replaces v7's `rk.c` and
+The disk of the MP135 machine is its SD card, and this is its driver.
+Like #f("virtio_blk.c") on the QEMU machine, it replaces v7's `rk.c` and
 takes over its names, its configuration entry, and its shape: a queue
 headed in `rktab`, `rkstrategy` to add a request, `rkstart` to give the
 head of the queue to the device, `rkintr` to finish it and start the
@@ -7299,9 +7303,9 @@ The cache is cleaned and invalidated over the block's buffer (88) by
 discards them. The IDMA reads and writes memory directly, without
 seeing the processor's data cache: before a write the data must be in
 memory, and before a read no modified line may be left to overwrite
-the incoming data later. Both the buffer cache in SYSRAM and the
-process images in DDR, which swapping and raw I/O transfer directly,
-are cached (#f("mp135conf")).
+the incoming data later. Both the buffer cache and the process images,
+which swapping and raw I/O transfer directly, lie in DDR, which is
+cached (#f("mp135conf")).
 
 The device is then programmed in the order the controller requires:
 the old flags are cleared, the data path is stopped and given the
@@ -7339,13 +7343,12 @@ discarded. The rest is v7's.
 This file is not a driver in v7's sense: it has no switch entry and no
 special file, and its one procedure, `ddrinit`, is called once, early
 in `machine_init` (#f("machdep.c")), through `clock_ddr_init`
-(#f("mp135/c.c")), and never again. Its job is to make the external DDR
-memory of the MP135 usable. v7 had nothing like it, since a PDP-11's
+(#f("mp135/c.c")), and never again. Its job is to make the DDR memory
+of the MP135 machine usable. v7 had nothing like it, since a PDP-11's
 core was ready when the machine was switched on.
 
-The boot ROM of the MP135 brings up only the chip's internal SYSRAM, 128
-KB, and loads the kernel into it. The 512 MB of DDR3 on the board are
-dead until a memory controller and its physical interface ("PHY")
+The boot ROM of the MP135 machine brings up only the chip's SYSRAM, and
+loads the kernel into it. The 512 MB of DDR3L memory are dead until a memory controller and its physical interface ("PHY")
 have been clocked, configured, and trained to the particular chips;
 this is normally the work of a first-stage boot loader, and here the
 kernel is the first stage. The page tables, the core, and all the
@@ -7354,16 +7357,17 @@ anything else touches it; `machine_init` calls `ddrinit` immediately
 after the device registers are mapped and the console is set up, before
 it maps the DDR, clears `.ddrbss`, and builds the table of the u-area.
 The registers are named by their kernel addresses, those of the blocks
-which #f("mp135conf") maps. Doing it later, in a user program, was considered and
-rejected: the kernel, its page tables, and the first processes would
-then all have to fit in SYSRAM, and they do not.
+which #f("mp135conf") maps. The work cannot be left to a user program:
+the kernel, its page tables, and the first processes would then all
+have to fit in SYSRAM, and they do not.
 
-This is also the one place where the kernel changes the chip's clocks.
+This is also one of the two places where the kernel changes the chip's
+clocks; the other is the console's `klinit` (#f("stm32usart.c")).
 Elsewhere they are taken as the ROM left them, but the DDR needs a
 clock of a particular frequency which the ROM does not provide.
 
-The register values are those of the board's reference firmware, for
-DDR3 at 533 MHz (DDR3-1066). Unlike the other drivers, this one names
+The register values are those of the maker's reference firmware for the
+STM32MP135F-DK, for DDR3 at 533 MHz (DDR3-1066). Unlike the other drivers, this one names
 its registers by their offsets and gives no names to the bits; the
 values below are explained in the text.
 
@@ -7439,7 +7443,7 @@ clocks are enabled (144); and the resets of the PHY and of the
 controller's register interface are released (145, 146). The loop
 (147) waits for the logic to settle. Its body reads a register, which
 the compiler must do, since an empty delay loop is removed by an
-optimising compiler, as happened in this file at one time.
+optimising compiler.
 
 #lines(142, 148)
 
