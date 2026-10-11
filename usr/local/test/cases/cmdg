@@ -28,7 +28,7 @@ echo root >pat; echo bin >>pat; fgrep -f pat /etc/passwd /etc/group; rm pat
 cp /etc/group g; chmod 751 g; ls -l g; chmod u-x,o+w g; ls -l g; chmod a=r g; ls -l g; chmod +t,g+s g; ls -l g; rm -f g
 date | wc -c; nice -5 echo hi; nice echo x; time sleep 1; time nosuchcmd
 write root </dev/null; echo st$?; write nosuchuser </dev/null; echo st$?
-ps | sed 1q; ps a | sed 1q; ps l | sed 1q; ps x | sed 1q; sleep 3 & ps | grep -c 'sle[e]p 3'; wait
+ps >p; sed 1q p; ps a >p; sed 1q p; ps l >p; sed 1q p; ps x >p; sed 1q p; sleep 3 & for i in 1 2 3 4 5; do ps >p; grep 'sle[e]p 3' p >/dev/null && break; sleep 1; done; grep -c 'sle[e]p 3' p; rm p; wait
 vpr /etc/passwd; echo st$?; rm -f /dev/vp0
 cp old.a a1; arcv a1; od -c a1
 umount /dev/nothing; su nosuchuser </dev/null; passwd nosuchuser </dev/null
