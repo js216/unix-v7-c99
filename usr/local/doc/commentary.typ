@@ -5980,8 +5980,8 @@ it is a null directive and does nothing.
 
 The include of #f("systm.h") (13) is new; it declares `fumem`, `sumem`,
 `passc`, and `cpass`, and the prototypes of the two routines here.
-#f("seg.h") (17) is still included, as in v7, although nothing it
-defines for the PDP-11 memory unit is used any longer.
+#f("seg.h") (17) is still included, as in v7, although nothing in it
+is used here.
 
 #lines(1, 18)
 
@@ -6023,8 +6023,9 @@ names no memory is refused rather than stored through.
 #source("/usr/sys/sys/prim.c")
 
 #f("prim.c") manages the character lists, or clists, in which the
-terminal drivers queue characters on their way in and out. The only
-changes from v7 are those of prototype syntax; what deserves attention
+terminal drivers queue characters on their way in and out. Apart from
+the C99 dressing, only the declarations at the head of the file have
+changed; what deserves attention
 is that a scheme designed around the sizes of the PDP-11 works
 unaltered on a machine with four-byte pointers.
 
@@ -6061,11 +6062,11 @@ signed: without it the character 0377, which #f("tty.c") uses as a line
 delimiter, would have been returned as −1 and mistaken for an empty
 queue. On the ARM `char` is unsigned and the mask changes nothing.
 
-When the count reaches zero (32), the block holding the character just
+When the count reaches zero (27), the block holding the character just
 taken is freed, and both pointers are cleared. Otherwise, if `c_cf` has
-just stepped past the end of a block (39), the block is freed and
+just stepped past the end of a block (34), the block is freed and
 `c_cf` moves to the first character of the next. The casts of pointers
-to `int` (34, 39) were safe on the PDP-11 because both were 16 bits;
+to `int` (29, 34) were safe on the PDP-11 because both were 16 bits;
 they are equally safe here, where both are 32.
 
 #lines(11, 44)
@@ -6090,8 +6091,8 @@ part of this system, and neither procedure is called.
 #lines(89, 183)
 
 `putc` appends a character to a queue, returning 0, or −1 if no block
-is free. A new block is needed if the queue is empty (197), or if
-`c_cl` lies just past the end of the last block (205). In the second
+is free. A new block is needed if the queue is empty (192), or if
+`c_cl` lies just past the end of the last block (200). In the second
 case the free block is linked into the chain through the old block's
 link before `cfreelist` is tested, so that a failure leaves the old
 block's link `NULL` as before. The callers in #f("tty.c") mostly ignore
@@ -6167,8 +6168,8 @@ defined by the configuration, at the size `NCLIST` which it gives
 end of file, and an extra input delimiter. The user's view of the same
 six bytes is `struct tchars` in `sgtty.h`. The drivers named in the
 comment are v7's; in this system the only one is the console, whose
-driver (#f("pl011.c")) still uses `kl11` as the name of its `tty`
-array.
+drivers (#f("pl011.c"), #f("stm32usart.c")) still use `kl11` as the
+name of the `tty` array.
 
 #lines(20, 40)
 
@@ -6181,7 +6182,7 @@ sent (`t_outq`). `t_oproc` is the driver's routine to start output, which
 Several fields serve devices which this system lacks: `t_chan` belonged
 to the multiplexed files and is always `NULL`; `t_iproc`, `t_linep`,
 and `t_addr` are not used (v7's `kl.c` kept the device's address in
-`t_addr`, but the PL011 is at a fixed address). The union `t_un` holds
+`t_addr`, but the console's registers are at a fixed address). The union `t_un` holds
 the special characters or, when the state bit `CNTLQ` is set, a fourth
 queue; nothing here sets that bit.
 
@@ -6237,16 +6238,16 @@ multiplexor's.
 #lines(136, 167)
 #source("/usr/sys/dev/pl011.c")
 
-#f("pl011.c") is the console driver for QEMU's `virt` machine. It
+#f("pl011.c") is the console driver of the QEMU machine. It
 takes the place of v7's `kl.c`, the driver for the DEC KL11 and DL11
 single-line serial interfaces, and it has been kept as close to
 `kl.c` as the hardware allows: the file keeps `kl.c`'s comment, its
 order, its procedure names (`klopen`, `klread`, `klstart`, and so on),
 and its `tty` array `kl11`, so that the character switch in
 #f("qemu/c.c") names the console's routines exactly as v7's did. The
-STM32MP135's console driver, `stm32usart.c`, follows `kl.c` in the
-same way and defines the same names; each board's kernel links only
-its own.
+MP135 machine's console driver, #f("stm32usart.c"), follows `kl.c` in
+the same way and defines the same names; each machine's kernel links
+only its own.
 
 The hardware is an ARM PrimeCell PL011 UART. Where the KL11 had four
 registers on the UNIBUS (receiver status and data, transmitter status
@@ -6303,8 +6304,8 @@ leaves both out. With `LCASE` the console prints every letter in upper
 case and the shell's `|` as `\!`, since `ttyoutput` (#f("tty.c"))
 maps them for a terminal that has no lower case. With `CR2` each
 carriage return is followed by a delay of 10 ticks, which with
-`DLDELAY` makes 14 ticks, 0.23 seconds at 60 Hz: a listing of `/bin`,
-107 lines, took 25 seconds to print. Without them lower case passes
+`DLDELAY` makes 14 ticks, 0.23 seconds at 60 Hz, and a listing of a
+hundred lines would take some 25 seconds to print. Without them lower case passes
 unchanged in both directions and output runs at the speed of the line.
 `EVENP` remains, although nothing here generates parity.
 
@@ -6399,8 +6400,8 @@ The procedure waits a bounded time for the transmitter to have room.
 v7 bounded the wait by counting 30000 turns of its loop, some thirty
 character times on the PDP-11. A count of turns means nothing on a
 processor many times faster: a Cortex-A7 at 1 GHz makes them in about
-one character time at 115200 baud, and the end of a panic message was
-lost. The port bounds the wait by time instead. `timo` is set to the
+one character time at 115200 baud, and the end of a panic message would
+be lost. The port bounds the wait by time instead. `timo` is set to the
 value which the generic timer's counter, read by `cntvct_get`
 (#f("mch.s")), will reach one clock tick later, `1/HZ` second or some
 190 character times, and the loop gives up when the counter gets there.
@@ -6409,8 +6410,8 @@ The console's interrupts are masked while the character is written, as
 v7 cleared the transmitter status register, and the old mask is
 restored at the end. A newline is followed by a carriage return. v7
 then sent two deletes, which gave a mechanical terminal time to return
-its carriage; they are gone, since no terminal of today needs the time,
-and they arrived among the output. The final call with 0 only waits
+its carriage; they are gone, since no terminal here needs the time, and
+they would arrive among the output. The final call with 0 only waits
 until the transmitter has room again, which with the FIFO no longer
 means that the last character has left.
 
@@ -6578,7 +6579,7 @@ handing the block to a multiplexed channel, if there was one; the
 
 `ttyinput` is called by the driver's receive interrupt with each
 character. `tk_nin` counts them for the statistics of `iostat`. The
-mask with `0377` (437) keeps the character proper: the PL011 returns
+mask with `0377` (437) keeps the character proper: a UART may return
 error flags above it.
 
 In the normal mode the character is cut to seven bits and the special
