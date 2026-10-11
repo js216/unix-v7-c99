@@ -38,6 +38,7 @@
 
 struct	tty kl11[NKL11+NDL11];
 void	klstart(struct tty *tp);
+static void	klrint(dev_t dev);
 int	klirq = 33;
 
 struct device {
@@ -83,6 +84,12 @@ klclose(dev_t dev, int flag)
 void
 klread(dev_t dev)
 {
+	register int s;
+
+	s = spl5();
+	UARTIMSC |= RXI|RTI;
+	klrint(dev);
+	splx(s);
 	ttread(&kl11[minor(dev)]);
 }
 
@@ -111,6 +118,10 @@ klrint(dev_t dev)
 
 	tp = &kl11[minor(dev)];
 	while((UARTFR&RXFE) == 0) {
+		if(TTHOLD(tp)) {
+			UARTIMSC &= ~(RXI|RTI);
+			return;
+		}
 		c = UARTDR;
 		ttyinput(c, tp);
 	}
