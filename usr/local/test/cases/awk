@@ -16,7 +16,7 @@ awk '$1 ~ /^[a-f][a-z]*$/ { print "m", $1 } $2 !~ /e/ { print "nm", $2 }' a
 awk '{ n += NF; $2 = "X"; print } END { print n, NR }' a
 awk 'BEGIN { i = 0; while (i < 3) { i++; s = s i }; print s; for (;;) { if (++j > 4) break }; print j }' </dev/null
 awk 'BEGIN { x = }' </dev/null; echo st$?
-awk '{ print $1 > "out" }' a; cat out; awk '{ print $1 | "sort -r" }' a; sleep 1
+awk '{ print $1 > "out" }' a; cat out; awk '{ print $1 | "sort -r" }' a | cat
 echo '{ print NR, $NF }' >p.awk; awk -f p.awk a
 awk 'length > 10' a; awk '{ $3 = ""; print NF ":" $0 }' a
 awk 'BEGIN { OFS = "-"; ORS = "|" } { $1 = $1; print }' </dev/null a; echo

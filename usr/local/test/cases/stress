@@ -7,10 +7,11 @@ for i in 1 2 3 4 5 6 7 8; do (yes | sed 200q | wc >w$i) & done; wait; cat w*
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo $i | sed s/1/X/ ; done | wc
 $U/ptt; $U/prt; $U/bigx | wc
 sort /usr/dict/words | uniq | wc
-(sleep 2; kill -2 `cat p1`) &
-sh -c 'echo $$ >p1; exec yes abc' | sh -c 'echo $$ >p2; exec sed s/a/b/' >/dev/null; echo rc=$?; sleep 1
-(sleep 2; kill -2 `cat p1` `cat p2`) &
-sh -c 'echo $$ >p1; trap "echo caught; exit 3" 2; echo ready; sh -c "echo \$\$ >p2; exec yes" >/dev/null'
-echo rc=$?; sleep 1
+(until test -s p1; do sleep 1; done; kill -2 `cat p1`) &
+$U/pidf p1 yes abc | $U/pidf p2 sed s/a/b/ >/dev/null; echo rc=$?
+rm -f p1 p2; (until test -s p1 -a -s p2; do sleep 1; done; kill -2 `cat p1` `cat p2`) &
+sh -c 'trap "echo caught; exit 3" 2; echo ready; echo $$ >p1; /usr/local/test/utils/pidf p2 yes >/dev/null'
+echo rc=$?
+until test -s pa -a -s pb -a -s pc; do sleep 1; done
 kill -9 `cat pa` `cat pb` `cat pc`; wait; ps | grep -c 'y[e]s'
 cd /; rm -rf $T

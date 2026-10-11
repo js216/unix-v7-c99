@@ -29,6 +29,11 @@ at the end. A test which changes anything else (the date, accounting,
 the crontab, the at spool, a file in /etc or /usr/adm) puts it back
 before it ends, and kills every process it started, so that no test
 depends on which tests ran before it. Its output must not depend on
-timing: a test which interrupts a command sends the signal from a
-background process (kill -2) to a process whose id the command itself
-has written to a file.
+timing, and no test waits a fixed time for another process. A test
+which interrupts a command starts it through utils/pidf, which writes
+its own process id to a file and then executes the command; the
+process which sends the signal (kill -2) waits until the file exists.
+A signal which arrives before the exec kills pidf as it would kill the
+command; where the command catches the signal, the sender waits as well
+for a sign that the command is running, such as its first output. A test which waits for some other event, such as cron having
+run a job, polls for its result with sleep 1 in a loop.

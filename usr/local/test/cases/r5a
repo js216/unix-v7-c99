@@ -14,7 +14,7 @@ p=.; for i in 0 1 2 3 4 5 6 7 8 9 a b c d e; do p=$p/./././././././././.; done; 
 mkdir $p/longdir; echo st$?; ls -d longdir; rmdir longdir
 cp /usr/lib/crontab crontab
 awk 'BEGIN { for (i = 1; i <= 4; i++) { s = ""; for (j = 0; j < 40; j++) s = s "xxxxxxxxxx"; printf "* * * * * echo %d %s >/tmp/r5a/cron%d\n", i, s, i } }' </dev/null >/usr/lib/crontab; wc /usr/lib/crontab
-/etc/cron; sleep 10; cat $T/cron? | wc
+/etc/cron; until test -s $T/cron1 -a -s $T/cron2 -a -s $T/cron3 -a -s $T/cron4; do sleep 1; done; cat $T/cron? | wc
 kill -9 `ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`; cp crontab /usr/lib/crontab
 mkdir $T/a-b; cp /bin/echo $T/a-b/zzz; PATH=$T/a-b:/bin nice zzz hello
 sh -c 'exit 2147483647'; echo st$?; sh -c 'exit 2147483648'; echo st$?; sh -c 'exit 4294967297'; echo st$?
