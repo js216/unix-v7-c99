@@ -11369,7 +11369,8 @@ v7's `time_t` was a `long`, 32 bits on the ARM as on the PDP-11, and
 signed, and the count ran out early in 2038. It is now a `long long`
 (#f("param.h")): the routines take a pointer to a `time_t` (76, 82,
 126) where v7's took a pointer to `long`, and `copyt`, `hms`, and `day`
-(87, 129), which hold a time or a number of days, are widened with it.
+(87, 129), which hold a time or a number of days, are widened with it;
+`cyc` (129) is new.
 
 The comment's mention of a call to "the system" refers to `ftime`, which
 returns, besides the time, the local time zone in minutes west of
@@ -11421,6 +11422,15 @@ counts from 1900 (121); v7 passed `tm_year` itself.
 
 `gmtime` divides the time into days and seconds within the day,
 correcting for a negative time, which is a moment before 1970. The
+days are then divided into whole cycles of 400 years, 146,097 days
+each, in `cyc`, and the days left over, fewer than one cycle (142,
+143). The Gregorian calendar repeats itself after 400 years, to the
+day of the week, since 146,097 is a multiple of seven; so the date
+within the cycle is that of the same date 400 years earlier or later.
+v7 had no such step, and with a 32-bit time needed none: the loops
+below ran at most 68 times. A 64-bit time reaches some 290 billion
+years, and any owner can set a file's times so far (`utime`,
+#f("sys4.c")); the loops would then take hours over a single `ls -l`. The
 hours, minutes, and seconds are stored through `tp`, which walks the
 first members of `struct tm` as though it were an array of `int`; this
 depends on the members being consecutive `int`s, which they are on both
@@ -11429,17 +11439,22 @@ machines.
 The day of the week is computed from the day count plus 7340036, a
 number which is 4 more than a multiple of seven (1 January 1970 was a
 Thursday, day 4) and large enough to keep the sum positive for any
-day after the twentieth millennium before 1970.
+day after the twentieth millennium before 1970, which, since the day
+count is now less than one cycle from 1970, is every day.
 
-The year is found by subtracting the lengths of whole years. v7
-counted `d1` from 70, the year less 1900, and `date` called `dysize`
-with the whole year, 1970 and on; only v7's rule, a leap year every
-fourth year, gave the same answer for both, and it fails first in 2100.
-`d1` now counts whole years from 1970 (164--167), `tm_year` is set to
-the year less 1900 as before (168), and `dysize` (below) follows the
-Gregorian calendar.
+The year is found by subtracting the lengths of whole years, at most
+400 of them. v7 counted `d1` from 70, the year less 1900, and `date`
+called `dysize` with the whole year, 1970 and on; only v7's rule, a
+leap year every fourth year, gave the same answer for both, and it
+fails first in 2100. `d1` now counts whole years from 1970 (166--169),
+and `dysize` (below) follows the Gregorian calendar. `tm_year` is the
+year less 1900, as before (170), but the year is first reduced modulo
+10,000, which is 25 cycles, so that it lies between 0 and 9999 and
+fits the four digits of `asctime`; a year beyond them would overflow an
+`int` in any case. Being a whole number of cycles, the reduction leaves
+the month, the day, and the day of the week exact.
 
-#lines(124, 184)
+#lines(124, 186)
 
 `asctime` produces the fixed format of 26 characters, newline and null
 included. A template is copied into `cbuf`, and the names and the
@@ -11450,8 +11465,10 @@ and the day of the month without, so that it gets a leading space.
 
 The year is printed as its last two digits after the template's
 `19`. For a year of 2000 or later v7 changed the `19` to `20`, which
-was right until 2099; the two digits of the century are now computed
-from the year (209--212). `date`, which reads a year as two digits, now
+was right until 2099. The two digits of the century are now computed
+from the year (211, 212), and the last two digits too (214), for every
+year from 0 to 9999, which is all `gmtime` produces; v7's `tm_year+100`
+fails before 1900. `date`, which reads a year as two digits, now
 takes one below 70 to be in the twenty-first century; v7's took it to
 be in the twentieth.
 
@@ -11460,10 +11477,10 @@ in the Gregorian calendar is every fourth year except the centuries,
 of which only every fourth is one, and 365 otherwise. v7 tested only
 the first condition, which agrees with the full rule from 1901 to 2099.
 
-The extra parentheses in the copy loop (193) tell the compiler that the
+The extra parentheses in the copy loop (195) tell the compiler that the
 assignment in the condition is intended (`-Wparentheses`).
 
-#lines(185, 236)
+#lines(187, 236)
 #source("/usr/src/libc/gen/atof.c")
 
 `atof` converts a decimal number in characters, with an optional sign,

@@ -126,7 +126,7 @@ struct tm *
 gmtime(time_t *tim)
 {
 	register int d0, d1;
-	time_t hms, day;
+	time_t hms, day, cyc;
 	register int *tp;
 	static struct tm xtime;
 
@@ -139,6 +139,8 @@ gmtime(time_t *tim)
 		hms += 86400;
 		day -= 1;
 	}
+	cyc = day / 146097;
+	day %= 146097;
 	tp = (int *)&xtime;
 
 	/*
@@ -165,7 +167,7 @@ gmtime(time_t *tim)
 		day -= dysize(d1);
 	else for (d1=1970; day<0; d1--)
 		day += dysize(d1-1);
-	xtime.tm_year = d1-1900;
+	xtime.tm_year = (d1 + cyc%25*400 + 10000) % 10000 - 1900;
 	xtime.tm_yday = d0 = day;
 
 	/*
@@ -206,12 +208,10 @@ asctime(struct tm *t)
 	cp = ct_numb(cp, *--tp+100);
 	cp = ct_numb(cp, *--tp+100);
 	cp = ct_numb(cp, *--tp+100);
-	if (t->tm_year>=100) {
-		cp[1] = (t->tm_year+1900)/1000%10 + '0';
-		cp[2] = (t->tm_year+1900)/100%10 + '0';
-	}
+	cp[1] = (t->tm_year+1900)/1000%10 + '0';
+	cp[2] = (t->tm_year+1900)/100%10 + '0';
 	cp += 2;
-	cp = ct_numb(cp, t->tm_year+100);
+	cp = ct_numb(cp, (t->tm_year+1900)%100+100);
 	return(cbuf);
 }
 

@@ -8,5 +8,8 @@ cp $U/fs.img fs2; $U/dit fs2 8; echo | restor rf d fs2; $U/dit fs2 8; $U/dit fs2
 dd if=fs2 bs=128 skip=11 count=1 | od | sed 1q
 icheck fs2; ncheck fs2 | sed -n '1p; /words/p'
 date 4107011200 >/dev/null; ls -l g
+$U/ut g -2208970801 -2208970801; $U/ut g -62135578800 -62135578800
+$U/ut g -315576000000000 -315576000000000
+$U/ut g 9223372036854775807 9223372036854775807; ls -l g
 $U/clock $t; cp wtmp /usr/adm/wtmp
 cd /; rm -rf $T
