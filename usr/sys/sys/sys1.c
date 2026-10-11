@@ -99,7 +99,7 @@ exece(void)
 		bawrite(bp);
 	bp = 0;
 	nc = (nc + NBPW-1) & ~(NBPW-1);
-	if (getxfile(ip, nc) || u.u_error)
+	if (getxfile(ip, nc+(na+3)*NBPW) || u.u_error)
 		goto bad;
 
 	/*
@@ -189,10 +189,14 @@ getxfile(register struct inode *ip, int nargc)
 		u.u_segflg = 1;
 		readi(ip);
 		u.u_segflg = 0;
+		if(u.u_count != 0 || u.u_error)
+			break;
 		if(u.u_exdata.ux_ph[n].p_type == 1)
 			n++;
 	}
-	if(u.u_exdata.ux_mag != 0x464c457f || n != 2) {
+	if(u.u_exdata.ux_mag != 0x464c457f || n != 2 ||
+	    u.u_exdata.ux_tsize == 0 ||
+	    u.u_exdata.ux_dsize > u.u_exdata.ux_ph[1].p_msize) {
 		u.u_error = ENOEXEC;
 		goto bad;
 	}

@@ -283,6 +283,7 @@ d--755 0 0
 					bcf	---644 0 0 usr/local/test/utils/bcf
 					bigb	---755 0 0 usr/local/test/obj/bigb
 					bigm	---755 0 0 usr/local/test/obj/bigm
+					bigv	---755 0 0 usr/local/test/obj/bigv
 					bigx	---755 0 0 usr/local/test/obj/bigx
 					clock	---755 0 0 usr/local/test/obj/clock
 					cpt	---755 0 0 usr/local/test/obj/cpt
@@ -290,6 +291,7 @@ d--755 0 0
 					devt	---755 0 0 usr/local/test/obj/devt
 					dit	---755 0 0 usr/local/test/obj/dit
 					edscr	---644 0 0 usr/local/test/utils/edscr
+					elft	---755 0 0 usr/local/test/obj/elft
 					forkt	---755 0 0 usr/local/test/obj/forkt
 					fpt	---755 0 0 usr/local/test/obj/fpt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img

@@ -4,6 +4,14 @@ argc 955 chars 3644 last yes
 exec: /usr/local/test/utils/argt: arg list too long
 rc=1
 spawned
+argc 3000 chars 26 last 
+argc 5000 chars 26 last 
+short: errno 8
+short: status 0
+bigdata: errno 8
+bigdata: status 0
+notext: errno 8
+notext: status 0
 nested
 deep
 stop 1177

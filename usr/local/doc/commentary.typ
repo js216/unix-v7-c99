@@ -3280,6 +3280,14 @@ A fault in reading either list gives `EFAULT`, and too much gives
 room for the arguments, `exec` fails with `ENOMEM` (59--62), where v7
 panicked; nothing has been changed yet.
 
+`getxfile` is told how much the new stack must hold (102): the strings,
+rounded up to a word, and the `na+3` words of the pointer vector built
+below them, the argument count, a pointer to each string, and two
+zeros. v7 passed the strings alone. When the vector did not fit in the
+`SSIZE` clicks left over, the `suword`s below the stack failed unseen,
+and the program began with an argument count of zero; with 4-byte
+pointers and an 8 KB `SSIZE`, some 2,900 arguments are enough.
+
 #lines(52, 103)
 
 Once `getxfile` has built the new image, the strings are copied back
@@ -3339,7 +3347,18 @@ loadable segments, gives `ENOEXEC`; a program linked into one writable
 segment, the counterpart of v7's 414 format, is not accepted, since
 its code would lie in memory which every process writes privately.
 
-#lines(184, 198)
+A malformed header is refused here too, before anything of the old
+image is given up. A program header which cannot be read whole ends the
+search (192, 193); what `ux_ph[n]` held would be left over from the
+program that ran before. A text segment with nothing in the file
+(198) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
+reckoned from its address, could still be nonzero, so that the page
+tables (#f("ureg.c")) would map the start of the process's own image,
+its per process area, as the text. A data segment with more bytes in
+the file than in memory (199) would be read past the end of the space
+reserved for it.
+
+#lines(184, 202)
 
 v7's test follows unchanged: a program with a text may not be executed
 while some process has the file open, unless that is because it is
@@ -3348,67 +3367,68 @@ change the text under the processes which share it. The counterpart,
 that a running text cannot be opened for writing, is in `access`
 (#f("fio.c")).
 
-#lines(199, 203)
+#lines(203, 207)
 
-The text occupies the bottom of the address space: `ts` (209) is the
+The text occupies the bottom of the address space: `ts` (213) is the
 number of clicks from address zero to the end of the text segment,
 which includes the bottom page, below the text's own first address.
-The data begins at the first click above the text, and `ds` (216) is
+The data begins at the first click above the text, and `ds` (220) is
 the number of clicks from there to the end of the data segment in
 memory (its address plus `p_msize`), which takes in the uninitialised
 data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
 overflow is changed to fit: a sum of unsigned numbers which wraps round
 is smaller than either addend. A data segment which begins below the
-end of the text is refused with the same error (212). The stack is
-given `SSIZE` clicks plus room for the arguments.
+end of the text is refused with the same error (216). The stack is
+given `SSIZE` clicks plus room for the strings and the pointer vector,
+`nargc` bytes.
 
-The overlay branch (218--229) is dead, since `overlay` is never set; it
+The overlay branch (222--233) is dead, since `overlay` is never set; it
 is kept as v7 wrote it, but for the parentheses that make the
-precedence of `&&` over `||` explicit (219).
+precedence of `&&` over `||` explicit (223).
 
-#lines(204, 232)
+#lines(208, 236)
 
-With the profiling turned off (239) the old image is abandoned. As in v7, the image is
+With the profiling turned off (243) the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` clicks, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
-(241, 248, 249). The uninitialised data and the stack therefore read as
+(245, 252, 253). The uninitialised data and the stack therefore read as
 zero. The image is no larger than the program: `sbreak` and the growth
 of the stack (`grow`, #f("sig.c")) enlarge it when the program asks for
 more, and `fork` copies only what there is (#f("slp.c")).
 
 `expand` fails when there is room neither in core nor in the swap area
 (#f("slp.c")). The old image is already gone, so the process is killed
-with a message (242--247), as `xalloc` (#f("text.c")) kills it when it
+with a message (246--251), as `xalloc` (#f("text.c")) kills it when it
 cannot place the text; `u_error` stops `exec` from copying the
 arguments into an image which was never made.
 
-#lines(233, 250)
+#lines(237, 254)
 
 `xalloc` (#f("text.c")) has attached the text, shared with any other
 process running the same file, or read it in. The data segment is now
 read from the file into user space at its own address, from its file
 offset, for `ux_dsize` bytes, the size of the segment in the file
-(256--260). v7 mapped the data at address zero for the purpose, and
+(260--264). v7 mapped the data at address zero for the purpose, and
 read from just after the text in the file; here the final mapping of
 text and data serves.
 
-#lines(251, 260)
+#lines(255, 264)
 
 The set-user-id and set-group-id bits take effect unless
 the process is being traced, in which case it is stopped with `SIGTRC`
 instead, so that the tracing parent can examine the new image.
 
-#lines(261, 274)
+#lines(265, 278)
 
 The sizes are recorded and the user mapping set by
 `estabur`. The instructions of the new program were made visible to
 instruction fetch by `xalloc` (#f("text.c")), which read them in.
 
-#lines(275, 282)
+#lines(279, 286)
 
 `setregs` first resets to the default the signals that were caught
-(293--295), since the handlers no longer exist; signals that were ignored
-(value 1) stay ignored. Then the registers are cleared (296--298). v7
+(297--299), since the handlers no longer exist; signals that were ignored
+(value 1) stay ignored. Then the registers are cleared (300--302). v7
 cleared those which `regloc` names as `r0` to `r5`: on the PDP-11 every
 general register but the stack pointer `r6` and the `pc` `r7`. The port
 clears every general register of the ARM in the same way, `r0` to `r12`
@@ -3417,16 +3437,16 @@ program, and the `pc`, which is set next; the new program inherits
 nothing from the old. When the call returns, `trap` (#f("sysent.c"))
 puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
 zero, but the second is the caller's `r1`, the old program's argument
-pointer, so it is cleared too (299). The `pc` is set to the entry point
-with bit 0 cleared (300); on the PDP-11 this ensured an even address. On the
+pointer, so it is cleared too (303). The `pc` is set to the entry point
+with bit 0 cleared (304); on the PDP-11 this ensured an even address. On the
 ARM bit 0 of an entry point would select Thumb state, which no program
 here uses.
 
-#lines(283, 300)
+#lines(287, 304)
 
-The floating point save area is cleared (301, 302): all 32 registers
+The floating point save area is cleared (305, 306): all 32 registers
 become zero, and `FPSCR` zero selects rounding to nearest, with no
-exception flags. `u_fpsaved` is set (303), so that the return to user
+exception flags. `u_fpsaved` is set (307), so that the return to user
 mode loads the cleared state (#f("sysent.c")). In v7 it was set only if
 `exec` had happened to sleep, so that `swtch` stored the registers;
 otherwise the cleared area was never loaded, and the new program began
@@ -3434,7 +3454,7 @@ with the old one's floating point registers. Files marked close-on-exec are
 closed, and the last component of the name of the file (left in
 `u.u_dbuf` by `namei`) is kept for accounting.
 
-#lines(301, 316)
+#lines(305, 320)
 
 `rexit` is the system call; `exit` is also called by the kernel, from
 `psig` and `stop` (#f("sig.c")), with a signal number. The user's code
@@ -3444,7 +3464,7 @@ goes in the high byte of the status and the signal in the low, as
 `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit; files, current and root
 directories, text, page tables (#f("ureg.c")), and finally core are
-released. Note that after `mfree` (366) the process goes on running on the stack within the
+released. Note that after `mfree` (370) the process goes on running on the stack within the
 per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
@@ -3456,19 +3476,19 @@ which is woken in case it is waiting; stopped children are set running
 so that they can die. Finally the parent is woken, and `swtch` is
 called, never to return.
 
-#lines(317, 385)
+#lines(321, 389)
 
 `wait` looks for a child which is a zombie. If it finds one, it
 collects the status and times, frees the `proc` entry, and returns the
 child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
-`exit` (380) and `stop` wake, and looks again. If there are none,
-`ECHILD`. Clearing `p_nptab` (417) is new; #f("proc.h") explains why.
+`exit` (384) and `stop` wake, and looks again. If there are none,
+`ECHILD`. Clearing `p_nptab` (421) is new; #f("proc.h") explains why.
 
-#lines(386, 436)
+#lines(390, 440)
 
-`fork` checks that the swap area could hold the caller's image (451),
+`fork` checks that the swap area could hold the caller's image (455),
 finds a free `proc` entry, and counts the caller's processes. v7
 checked for room for an image of the maximum size, `MAXMEM`
 (#f("param.h")), as insurance against running out of swap space later.
@@ -3477,15 +3497,15 @@ harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
 clicks, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
-to the swap device, is the size of the caller's. The comment (448,
-449) is changed to match. The
+to the swap device, is the size of the caller's. The comment (452,
+453) is changed to match. The
 last slot of `proc` is reserved for the super-user, so that he can
 still log in and kill something when the table is full.
 
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
 the user program must also be told which it is. v7 did it with a trick
 which the port keeps. In the child `fork` returns the parent's pid
-(478); in the parent it advances the saved `pc` by one word (490), so
+(482); in the parent it advances the saved `pc` by one word (494), so
 that the parent skips the instruction after the `svc`, a branch which
 only the child therefore takes. `R7` is the PDP-11's name for the `pc`
 (#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
@@ -3497,7 +3517,7 @@ branch, stores the parent's pid in `par_uid` and returns 0.
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(437, 491)
+#lines(441, 495)
 
 `sbreak` sets the size of the data area, and is v7's. The new break
 is converted to clicks, and, since the data begins at the first
@@ -3516,11 +3536,11 @@ relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
 
-If `expand` fails for want of swap space (535), the data size and the
+If `expand` fails for want of swap space (539), the data size and the
 mapping are set back and `sbreak` fails with `ENOMEM`, as when the
 image would exceed `maxmem`; v7 panicked.
 
-#lines(492, 549)
+#lines(496, 553)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned
@@ -12765,7 +12785,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 329)
+#lines(139, 331)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -12774,7 +12794,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(330, 331)
+#lines(332, 333)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
