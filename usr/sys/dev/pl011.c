@@ -18,13 +18,16 @@
 #define	RDRENB	01
 #define	UARTDR	(*(volatile int *)(KLADDR+0x00))
 #define	UARTFR	(*(volatile int *)(KLADDR+0x18))
+#define	UARTLCRH	(*(volatile int *)(KLADDR+0x2c))
 #define	UARTCR	(*(volatile int *)(KLADDR+0x30))
 #define	UARTIMSC	(*(volatile int *)(KLADDR+0x38))
 #define	UARTMIS	(*(volatile int *)(KLADDR+0x40))
 #define	UARTICR	(*(volatile int *)(KLADDR+0x44))
+#define	RXFE	020
 #define	TXFF	040
 #define	RXI	020
 #define	TXI	040
+#define	RTI	0100
 #define	DLDELAY	4	/* Extra delay for DL's (double buff) */
 
 #define	NL1	000400
@@ -63,7 +66,7 @@ klopen(dev_t dev, int flag)
 		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
 		ttychars(tp);
 	}
-	UARTIMSC = RXI|TXI;
+	UARTIMSC = RXI|TXI|RTI;
 	ttyopen(dev, tp);
 }
 
@@ -107,8 +110,10 @@ klrint(dev_t dev)
 	register struct tty *tp;
 
 	tp = &kl11[minor(dev)];
-	c = UARTDR;
-	ttyinput(c, tp);
+	while((UARTFR&RXFE) == 0) {
+		c = UARTDR;
+		ttyinput(c, tp);
+	}
 }
 
 void
@@ -124,9 +129,7 @@ klstart(register struct tty *tp)
 {
 	register int c;
 
-	if(UARTFR&TXFF)
-		return;
-	if ((c=getc(&tp->t_outq)) >= 0) {
+	while((UARTFR&TXFF) == 0 && (c=getc(&tp->t_outq)) >= 0) {
 		if (tp->t_flags&RAW)
 			UARTDR = c;
 		else if (c<=0177)
@@ -134,6 +137,7 @@ klstart(register struct tty *tp)
 		else {
 			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
 			tp->t_state |= TIMEOUT;
+			return;
 		}
 	}
 }
@@ -141,13 +145,14 @@ klstart(register struct tty *tp)
 void
 klinit(void)
 {
+	UARTLCRH = 0160;
 	UARTCR = 0x301;
 }
 
 void
 klintr(void)
 {
-	if (UARTMIS&RXI)
+	if (UARTMIS&(RXI|RTI))
 		klrint(0);
 	if (UARTMIS&TXI) {
 		UARTICR = TXI;

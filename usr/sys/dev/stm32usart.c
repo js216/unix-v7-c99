@@ -37,6 +37,7 @@
 #define	TXEIE	0200
 #define	RXNE	040
 #define	TXE	0200
+#define	FIFOEN	04000000000
 #define	DLDELAY	4	/* Extra delay for DL's (double buff) */
 
 #define	NL1	000400
@@ -68,7 +69,7 @@ klinit(void)
 	(void)APB1ENSETR;
 	UART4CKSELR = (UART4CKSELR & ~7) | 2;
 	BRR = 556;
-	CR1 = UE|TE|RE;
+	CR1 = FIFOEN|UE|TE|RE;
 }
 
 void
@@ -135,9 +136,11 @@ klrint(dev_t dev)
 	register struct tty *tp;
 
 	tp = &kl11[minor(dev)];
-	c = RDR;
+	while(ISR&RXNE) {
+		c = RDR;
+		ttyinput(c, tp);
+	}
 	ICR = 017;
-	ttyinput(c, tp);
 }
 
 void
