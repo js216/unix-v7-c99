@@ -1846,7 +1846,7 @@ number and the routine to call. A pointer, rather than the number,
 because some numbers are not known until the driver has probed its
 device.
 
-`gicen` (89) gives interrupt `n` a middling priority (0x80) in the
+`gicen` (90) gives interrupt `n` a middling priority (0x80) in the
 distributor's byte-per-interrupt priority array at `0x400`, then sets
 its bit in the set-enable registers at `0x100`.
 
@@ -1981,7 +1981,7 @@ closed to user mode. Since entries which were invalid are made valid,
 no stale translation can exist; `tlbflush` (#f("mch.s")) is called all
 the same, since a region may be entered twice, as the kernel's own is.
 
-`vtop` (174) is the inverse of the kernel's mapping: it finds the
+`vtop` (175) is the inverse of the kernel's mapping: it finds the
 region of memory which holds a kernel address, and returns the physical
 address. A device which reads or writes memory by itself (the virtio
 disk of the QEMU machine, the SD card controller of the MP135 machine) must be
@@ -2897,7 +2897,7 @@ procedure, and `clock` takes just those two: the interrupted `pc`, and
 for `ps` either `UMODE` or zero, according to whether the processor was
 in user mode.
 
-`clock` runs `HZ` (60) times a second, with interrupts masked, and must
+`clock` runs 60 times a second (`HZ`), with interrupts masked, and must
 therefore be brief. The list of functions in the comment is v7's; the
 second has lost its code.
 
@@ -3070,11 +3070,11 @@ the instruction stream. On the ARM all arguments come in registers, so
 the two columns are now equal and the counts have been corrected for
 the 32-bit word:
 
-- `seek` (19) took four words, since its offset was a two-word `long`;
-  now it takes three. `stime` (25) keeps v7's two: the `time_t` it
+- `seek` (38), call 19, took four words, since its offset was a two-word `long`;
+  now it takes three. `stime` (44) keeps v7's two: the `time_t` it
   receives is now 64 bits, two ARM words, as the PDP-11's `long` was
   two of its own.
-- `tell` (40), which is `nosys` in any case, is given no arguments.
+- `tell` (59), which is `nosys` in any case, is given no arguments.
 
 Two slots have changed their routine. Slot 56, the multiplexor
 `mpxchan`, was in v7 either the real multiplexed file system or the
@@ -3819,7 +3819,7 @@ A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
 "user" by or-ing in 0170000. Here everything is discarded except the
 condition flags (bits 27 to 31) and the `GE` flags (16 to 19), and the
-mode field is set to user mode, `0x10` (20). v7's following line, which
+mode field is set to user mode, `0x10` (octal 020). v7's following line, which
 cleared the priority bits 5 to 7, is kept; on the ARM it clears the
 Thumb bit and the two interrupt masks, which the previous line has
 already cleared.
@@ -5427,7 +5427,7 @@ user's memory. The mask in `schar` undid the sign extension of a PDP-11
 #source("/usr/sys/h/filsys.h")
 
 #f("filsys.h") is unchanged from v7. It describes the super-block, block
-`SUPERB` (1) of every file system; block 0 is left for a bootstrap. The
+`SUPERB`, block 1, of every file system; block 0 is left for a bootstrap. The
 i-list, the array of inodes on the disk, occupies blocks 2 up to `s_isize`−1, so that `s_isize` is in
 effect the number of the first block which may hold data, and
 `badblock` (#f("alloc.c")) checks block numbers against it and against
@@ -7720,7 +7720,7 @@ instead, unless the action was 0 or odd. Because the kernel's previous
 value was then the address of a `tvect` entry, `signal` returned the
 old `dvect[n]` instead, unless the kernel's value was odd, meaning
 ignored. It also checked `n` against `NSIG` itself before indexing its
-tables, and failed with `EINVAL` (22) if the number was out of range.
+tables, and failed with `EINVAL`, error 22, if the number was out of range.
 
 All of that work has moved into the kernel. The ARM `sendsig`
 (#f("machdep.c")) saves the whole register frame, seventeen words
@@ -13617,7 +13617,7 @@ The bounds are therefore `unsigned long`, and the address is cast to
 
 Everything the kernel prints with `printf` (#f("prf.c")) passes through
 the console driver's `putchar`, which keeps a copy of each character in
-the circular buffer `msgbuf`, `MSGBUFS` (128) bytes long, with
+the circular buffer `msgbuf`, 128 bytes (`MSGBUFS`) long, with
 `msgbufp` pointing at the next place to be written (#f("pl011.c")). The
 buffer is defined in #f("main.c") and the pointer in #f("machdep.c").
 `dmesg` copies the two out of the running kernel and prints the
