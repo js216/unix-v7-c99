@@ -11813,7 +11813,7 @@ things it implies `-fno-builtin`, so that calls of `printf` or `strcpy`
 remain calls of the port's own library rather than being replaced by
 code the compiler supplies. `-nostdlib` keeps the
 toolchain's own start-up file and libraries out of every link.
-`-mcpu=cortex-a7 -marm` selects the processor of both boards, and the
+`-mcpu=cortex-a7 -marm` selects the processor of both machines, and the
 ARM instruction set rather than Thumb.
 
 `-mfloat-abi=hard` makes the programs compute with the floating point
@@ -11835,12 +11835,12 @@ the assembler accepts the floating point instructions of #f("low.s"),
 convention in the objects, which therefore link with code of either
 kind. `-Os` optimizes for size; v7
 compiled with `cc -O`, and the kernel's code shrinks from 61 KB to
-38 KB, which matters on the MP135, where the whole kernel must fit in
-128 KB of on-chip memory (#f("mp135/unix.ld")).
+38 KB, which matters on the MP135 machine, where the whole kernel must
+fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
 `-Wl,-z,max-page-size=4096,-Ttext=0x80` are options for the linker,
 which the compiler ignores when it only compiles; they apply to the
-link of every user program (21), never to the kernel, which is linked by
+link of every user program (20), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
 segments: the text, with the read-only constants, readable and
 executable, and the data, readable and writable. The ELF counterpart of
@@ -11881,11 +11881,12 @@ the library's variant for hard floating point from the same flags.
 #lines(15, 20)
 
 `all` is the default goal: the QEMU kernel and the root file system
-images of both machines, and, after the fragments are read (31), the kernels of both
-boards, whose names `KERNELS` only #f("sys.mk") supplies.
+images of both machines, and, after the fragments are read (31), the
+kernels of both machines, whose names `KERNELS` only #f("sys.mk")
+supplies.
 
 `GEN` collects the generated sources, among them the `c.c` and
-`unix.ld` of each board and the output of `bison`. `.SECONDARY` keeps
+`unix.ld` of each machine and the output of `bison`. `.SECONDARY` keeps
 `make` from deleting them as intermediate files once the objects are
 made. Every object and generated file depends on the `Makefile`
 itself (36), and on its own fragment as well, so that a change of flags
@@ -11907,8 +11908,8 @@ own declarations.
 `boot/unix` is a copy of the QEMU kernel, which `make qemu` boots. QEMU
 loads the ELF file at its link address and starts it at its entry,
 `_start` (#f("low.s")); the disk is the root image, on a virtio block
-device (#f("virtio_blk.c")), and the console is the board's UART on the
-standard input and output. `-m 512M` gives the machine the 512 MB of
+device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
+on the standard input and output. `-m 512M` gives the machine the 512 MB of
 memory which #f("qemuconf") describes; QEMU's default is 128 MB.
 
 #lines(37, 47)
@@ -11927,24 +11928,23 @@ repository, and the programs and the file system image which
 `test.mk` makes.
 
 Each machine has an image of its own, which differs from the other only
-in `/unix`: `boot/rootfs.img` for QEMU, which `make qemu` boots, and
-`boot/rootfs-mp135.img` for the MP135. The first two lines name each
+in `/unix`: `boot/rootfs.img` for the QEMU machine, which `make qemu`
+boots, and `boot/rootfs-mp135.img` for the MP135 machine. The first two lines name each
 image's kernel and configuration, which `filter` picks out again from
 the prerequisites (`$^`) in the recipe. The prototype names the kernel
 as `boot/unix`, the QEMU kernel's copy; `sed` puts the machine's own
 kernel in its place, and passes the prototype to `mkfs` on its standard
-input, which `mkfs` reads as the file `/dev/stdin`. For QEMU the
-substitution changes nothing.
+input, which `mkfs` reads as the file `/dev/stdin`. For the QEMU
+machine the substitution changes nothing.
 
 An image is rebuilt whenever its kernel, `mkfs`, the prototype, or any
 file in it changes. `V7_MKFS_TIME` gives `mkfs` the time to stamp on
 every file and on the super-block: 284774400 seconds, 10 January 1979,
 the date of the files on v7's own distribution tape. Two things depend
-on it. The port once stamped every file with time zero, and `cron`, like
-v7's, never reads a crontab dated zero, and then went on to use the
-empty list it had not read; and the kernel takes its first idea of the
-date from the super-block of the root file system (`iinit`,
-#f("main.c")).
+on it. `cron`, like v7's, never reads a crontab dated zero, and would
+go on using the empty list it had not read; and the kernel takes its
+first idea of the date from the super-block of the root file system
+(`iinit`, #f("main.c")).
 
 `mkfs` writes only the blocks which it uses. The image is then extended
 to the end of the swap area, whose first block and length `awk` reads
@@ -11988,11 +11988,12 @@ replaces a previous copy, which is read-only like its original.
 
 #lines(76, 81)
 
-`.DELETE_ON_ERROR` removes a target whose command fails, so that a
-half-written image or object is never taken for a finished one; `mkfs`
-can therefore write the image in place.
+`clean` removes everything the build has made except the copied files
+and their directories. `.DELETE_ON_ERROR` removes a target whose
+command fails, so that a half-written image or object is never taken
+for a finished one; `mkfs` can therefore write the image in place.
 
-The dependency files are read only for sources which still exist (85).
+The dependency files are read only for sources which still exist (91).
 When a file in C is replaced by one in assembler, its old `.d` file
 still names the `.c` file as a prerequisite of the object, and `make`
 would otherwise stop for want of a rule to make it.
@@ -12011,12 +12012,12 @@ search path, since they name their headers relative to themselves, as
 `"../h/param.h"`.
 
 `LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
-board only are kept out of `LIB2`: the UART and the disk of QEMU
-(#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
-(#f("stm32usart.c"), #f("stm32sd.c"), #f("stm32ddr.c")). The two sets
+machine only are kept out of `LIB2`: the UART and the disk of the QEMU
+machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
+machine (#f("stm32usart.c"), #f("stm32sd.c"), #f("stm32ddr.c")). The two sets
 take the same v7 names, such as `klopen` and `rkstrategy`, and so could
 not share one archive; each kernel is instead linked with its own
-board's drivers (30, 31). `SYS_OBJ` names every kernel object, so that
+machine's drivers (30, 31). `SYS_OBJ` names every kernel object, so that
 the `Makefile` can make them all depend on itself.
 
 v7's `conf/makefile` had a target `allsystems`, which ran `mkconf` and
@@ -12056,8 +12057,8 @@ v7's `#include "../h/param.h"`; the search path `-I$S/conf` (28) lets
 
 The link. In place of v7's `ld -X -i l.o mch.o c.o ../sys/LIB1
 ../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
-the board's drivers, then the two archives, with no start-up file or
-library of the toolchain's (`-nostdlib`) and with the board's linker
+the machine's drivers, then the two archives, with no start-up file or
+library of the toolchain's (`-nostdlib`) and with the machine's linker
 script (#f("qemu/unix.ld")). `-i`, which gave the PDP-11 kernel separate
 instruction and data spaces, has no meaning on the ARM, and `-X`, which
 kept the local symbols, is not needed, since the GNU linker keeps them
@@ -12191,8 +12192,8 @@ kernel address at which it runs, 0xc0000000 (Section 1), and loaded at
 the physical address which that address maps to; there is nothing to
 move.
 
-`MEMORY` declares the one region, `RAM`: the first 64 MB of QEMU's
-memory, by its kernel address. The kernel takes only its start; process
+`MEMORY` declares the one region, `RAM`: the first 64 MB of the QEMU
+machine's memory, by its kernel address. The kernel takes only its start; process
 images are kept in the `core` above it (#f("qemuconf")), which the
 linker is not told about.
 
@@ -12221,7 +12222,7 @@ them, a word at a time, before it calls any C. That is done with the
 memory management unit off, when the processor faults on a store to an
 unaligned word, hence the `ALIGN(4)`. `*(COMMON)` would collect
 tentative definitions left as common symbols; GCC makes them only when
-asked with `-fcommon`, which the port no longer uses, so it collects
+asked with `-fcommon`, which the port does not use, so it collects
 nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
 kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
 
@@ -12231,15 +12232,15 @@ kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
 lie on a 4 KB boundary. `NOLOAD` makes it like `.bss`: it occupies
 memory but nothing in the file. It is cleared, not by `_start`, but by
 `machine_init` (#f("machdep.c")), between the symbols `__ddrbss_start`
-and `__ddrbss_end`. On QEMU the distinction serves nothing, and the
-section simply follows `.bss` in `RAM`; it exists for the MP135
-(#f("mp135/unix.ld")), where the table lies in a memory which cannot be
+and `__ddrbss_end`. On the QEMU machine the distinction serves nothing,
+and the section simply follows `.bss` in `RAM`; it exists for the MP135
+machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
 written until `machine_init` has started it.
 
 #lines(17, 22)
 #source("/usr/sys/conf/mp135/unix.ld")
 
-#f("mp135/unix.ld") is the MP135's linker script, written by `mkconf`
+#f("mp135/unix.ld") is the MP135 machine's linker script, written by `mkconf`
 from #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
 regions, in the difference between kernel and physical addresses, and
 in where it puts `.ddrbss` and what it puts there; `u` and `start` are
@@ -12249,7 +12250,7 @@ defined in the same way.
 which the boot ROM loads the kernel, by its kernel address 0xc01e0000.
 The text, data, and `.bss` of the kernel must all fit there; the linker
 reports an overflow of the region, so a kernel which has outgrown SYSRAM
-fails to link rather than to boot. `TAB` is the external DDR memory, at
+fails to link rather than to boot. `TAB` is the DDR memory, at
 physical `0xc0000000` and kernel address 0xc0200000, which holds the
 table `kl3u` in `.ddrbss`, at its very start, and after it the tables
 of the configuration; `core` follows them (#f("mp135conf")). The boot ROM loads a plain image, made from the file
@@ -12279,8 +12280,8 @@ already populated with directories, files, and special files. In v7 it
 was an ordinary command, kept in `/etc`, which the administrator ran on
 the PDP-11 against a disk partition. Here it never runs on the target:
 it is compiled by the `Makefile` (#f("Makefile")) for the build
-machine, where it writes the image of the root file system,
-`boot/rootfs.img`, from #f("rootfs.proto"), taking the files from the
+machine, where it writes the images of the root file system,
+`boot/rootfs.img` and `boot/rootfs-mp135.img`, from #f("rootfs.proto"), taking the files from the
 tree in which the system was built.
 
 Since the image must be read by the ARM kernel, `mkfs` must lay out
@@ -12366,7 +12367,7 @@ tells the compiler that `=` is meant.
 
 From a prototype, the first word names a bootstrap program. v7 copied
 its text and data into block 0, which the PDP-11's boot ROMs read to
-start the system. Here QEMU or the MP135's boot ROM loads the kernel
+start the system. Here QEMU or the MP135 machine's boot ROM loads the kernel
 itself, and block 0 is never read; the prototype names `/dev/null`, and
 the file is opened only to be closed again. The `else` and the blank
 line which follow (153, 154) are what is left of v7's code around the
@@ -12519,7 +12520,7 @@ made on the build machine, every time the system is built
 
 The format is v7's. The first word names the program to be written
 into block 0 as a bootstrap: here `/dev/null`, since QEMU or the boot
-ROM of the MP135 loads the kernel directly and block 0 is never read.
+ROM of the MP135 machine loads the kernel directly and block 0 is never read.
 The second line gives the size of the file system, 131072 blocks of 512
 bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
 gives the i-list blocks 2 to 4098. The system's own files take some 3
@@ -12603,7 +12604,7 @@ could log in.
 #lines(139, 318)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
-the QEMU kernel, as written here, or the MP135's, which the `Makefile`
+the QEMU kernel, as written here, or the MP135 machine's, which the `Makefile`
 puts in its place for that machine's image (#f("Makefile")). It is not
 booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
@@ -12658,11 +12659,9 @@ through `getpwent` (#f("stdio/getpwent.c")), and compares the
 encryption by `crypt` (#f("gen/crypt.c")) of what is typed with the
 second field. `root` keeps the password of the v7 distribution.
 `daemon`'s `x` is not a value `crypt` can produce, so no one can log in
-by that name; the other users have no password. Of these, only `bin`
-can in fact log in to this system. `login` refuses a user whose home
-directory does not exist, and `/usr/sys`, `/usr/lib/uucp`, and
-`/usr/dmr` are not in the image (#f("rootfs.proto")); `uucp`'s program,
-`/usr/lib/uucico`, is missing as well.
+by that name; the other users have no password. Of these, all but
+`uucp` can log in: their home directories are in the image
+(#f("rootfs.proto")), but `uucp`'s program, `/usr/lib/uucico`, is not.
 
 #lines(1, 6)
 #source("/etc/group")
