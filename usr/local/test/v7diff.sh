@@ -103,7 +103,7 @@ usr/local
 +	$(call T,AR)$(AR) rc $@ $^
 
 % usr/sys/sys.mk /dev/null
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,33 @@
 +S = usr/sys
 +LIB1 = $S/sys/LIB1
 +LIB2 = $S/dev/LIB2
@@ -117,6 +117,7 @@ usr/local
 +GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf
 +
 +$(SYS_OBJ): $S/sys.mk
++$(SYS_OBJ): CFLAGS += -mfloat-abi=soft
 +$(LIB1): $(LIB1_OBJ)
 +$(LIB2): $(LIB2_OBJ)
 +$(LIB1) $(LIB2):
@@ -149,9 +150,9 @@ usr/local
 +W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
 +	-Wold-style-definition -Wmissing-prototypes
 +CFLAGS = $W \
-+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -Os -Wl,-z,max-page-size=4096,-Ttext=0x80 \
++	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=hard -Os -Wl,-z,max-page-size=4096,-Ttext=0x80 \
 +	-MMD -MP
-+ASFLAGS = -mcpu=cortex-a7
++ASFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
 +HOSTCFLAGS = $W
 +
 +T = $(if $V,,@printf '  %-7s %s\n' $1 $@;)
@@ -232,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,320 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -440,6 +441,8 @@ usr/local
 +					exec	---644 0 0 usr/local/test/cases/exec
 +					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 +					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
++					fp	---644 0 0 usr/local/test/cases/fp
++					fp.exp	---644 0 0 usr/local/test/cases/fp.exp
 +					intr	---644 0 0 usr/local/test/cases/intr
 +					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
 +					kern	---644 0 0 usr/local/test/cases/kern
@@ -514,6 +517,7 @@ usr/local
 +					dit	---755 0 0 usr/local/test/obj/dit
 +					edscr	---644 0 0 usr/local/test/utils/edscr
 +					forkt	---755 0 0 usr/local/test/obj/forkt
++					fpt	---755 0 0 usr/local/test/obj/fpt
 +					fs.img	---644 0 0 usr/local/test/obj/fs.img
 +					kcmp	---755 0 0 usr/local/test/obj/kcmp
 +					kmt	---755 0 0 usr/local/test/obj/kmt
@@ -624,7 +628,7 @@ usr/local
 % usr/include/setjmp.h
 @@ -1 +1,2 @@
 -typedef int jmp_buf[3];
-+typedef int jmp_buf[10];
++typedef int jmp_buf[26];
 +int	setjmp(jmp_buf env), longjmp(jmp_buf env, int val);
 
 % usr/include/sgtty.h
@@ -15571,7 +15575,7 @@ usr/local
 +rindex(register char *sp, register char c)
 
 % usr/src/libc/gen/setjmp.s
-@@ -1,41 +1,5 @@
+@@ -1,41 +1,6 @@
 -/ C library -- setjmp, longjmp
 -
 -/	longjmp(a,v)
@@ -15615,13 +15619,15 @@ usr/local
 -	jmp	cret
 +.globl setjmp
 +setjmp:
-+	stmia r0, {r4-r11, sp, lr}
++	stmia r0!, {r4-r11, sp, lr}
++	vstmia r0, {d8-d15}
 +	mov r0, #0
 +	bx lr
-@@ -42,0 +7,6 @@
+@@ -42,0 +8,7 @@
 +.globl longjmp
 +longjmp:
-+	ldmia r0, {r4-r11, sp, lr}
++	ldmia r0!, {r4-r11, sp, lr}
++	vldmia r0, {d8-d15}
 +	movs r0, r1
 +	moveq r0, #1
 +	bx lr
@@ -18844,7 +18850,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,201 @@
+@@ -1,72 +1,206 @@
 -/ low core
 -
 -.data
@@ -19012,7 +19018,12 @@ usr/local
 +	ldr sp, =stack_top
 +	ldr r0, =vectors
 +	mcr p15, 0, r0, c12, c0, 0
++	mrc p15, 0, r0, c1, c0, 2
++	orr r0, r0, #(0xf << 20)
++	mcr p15, 0, r0, c1, c0, 2
 +	isb
++	mov r0, #(1 << 30)
++	vmsr fpexc, r0
 +	bl machine_init
 +	mov sp, r0
 +	bl main
@@ -19125,7 +19136,7 @@ usr/local
 -/ for 11/45 or 11/70 CPUs
 +.globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 +.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-+.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, dfar, dfsr
++.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, restfp, dfar, dfsr
 +.globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
 +.globl kl3u
 +
@@ -19865,7 +19876,7 @@ usr/local
 -_suword:
 -	mov	2(sp),r1
 -	mov	4(sp),r0
-@@ -578,2 +173,69 @@
+@@ -578,2 +173,82 @@
 -	jsr	pc,pword
 -	rts	pc
 +	ldr r3, =nofault
@@ -19927,7 +19938,20 @@ usr/local
 +	cpsie i
 +	wfi
 +1:	cpsid i
++	bx lr
++
 +savfp:
++	vmrs r1, fpscr
++	str r1, [r0], #8
++	vstmia r0!, {d0-d15}
++	vstmia r0, {d16-d31}
++	bx lr
++
++restfp:
++	ldr r1, [r0], #8
++	vmsr fpscr, r1
++	vldmia r0!, {d0-d15}
++	vldmia r0, {d16-d31}
 +	bx lr
 +
 +dfar:
@@ -19937,7 +19961,7 @@ usr/local
 +dfsr:
 +	mrc p15, 0, r0, c5, c0, 0
 +	bx lr
-@@ -581,444 +242,0 @@
+@@ -581,444 +255,0 @@
 -piword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -20382,7 +20406,7 @@ usr/local
 -	.=.+[6*340.]
 -
 -.globl countbase
-@@ -1026,25 +244,2 @@
+@@ -1026,25 +257,2 @@
 -countbase:
 -	_profcnts
 -_profsize:
@@ -20410,7 +20434,7 @@ usr/local
 -	rts	pc
 +waitloc:
 +	.word 1b
-@@ -1053,6 +248,8 @@
+@@ -1053,6 +261,8 @@
 -_xprobuf:.=.+512.
 -_proloc:.=.+2
 -_mode:	.=.+16.
@@ -21167,35 +21191,38 @@ usr/local
 @@ -12 +12 @@
 -#define	KLADDR	((struct device *)0177560)	/* console */
 +#define	KLADDR	0xF0200000
-@@ -18,0 +19,9 @@
+@@ -18,0 +19,12 @@
 +#define	UARTDR	(*(volatile int *)(KLADDR+0x00))
 +#define	UARTFR	(*(volatile int *)(KLADDR+0x18))
++#define	UARTLCRH	(*(volatile int *)(KLADDR+0x2c))
 +#define	UARTCR	(*(volatile int *)(KLADDR+0x30))
 +#define	UARTIMSC	(*(volatile int *)(KLADDR+0x38))
 +#define	UARTMIS	(*(volatile int *)(KLADDR+0x40))
 +#define	UARTICR	(*(volatile int *)(KLADDR+0x44))
++#define	RXFE	020
 +#define	TXFF	040
 +#define	RXI	020
 +#define	TXI	040
-@@ -28,3 +37,2 @@
++#define	RTI	0100
+@@ -28,3 +40,2 @@
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
 +void	klstart(struct tty *tp);
 +int	klirq = 33;
-@@ -39,2 +47,2 @@
+@@ -39,2 +50,2 @@
 -klopen(dev, flag)
 -dev_t dev;
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +49,0 @@
+@@ -42 +52,0 @@
 -	register struct device *addr;
-@@ -44 +51 @@
+@@ -44 +54 @@
 -	register d;
 +	register int d;
-@@ -45,0 +53 @@
+@@ -45,0 +56 @@
 +	(void)flag;
-@@ -52,12 +59,0 @@
+@@ -52,12 +62,0 @@
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -21208,95 +21235,104 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +63 @@
+@@ -67 +66 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +66 @@
+@@ -70,2 +69 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
-+	UARTIMSC = RXI|TXI;
-@@ -75,3 +70,2 @@
++	UARTIMSC = RXI|TXI|RTI;
+@@ -75,3 +73,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +75 @@
+@@ -80,0 +78 @@
 +	(void)flag;
-@@ -85,2 +80,2 @@
+@@ -85,2 +83,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -91,2 +86,2 @@
+@@ -91,2 +89,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +92,2 @@
+@@ -97,2 +95,2 @@
 -klxint(dev)
 -dev_t dev;
 +static void
 +klxint(dev_t dev)
-@@ -105,4 +100 @@
+@@ -105,4 +103 @@
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
 +		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +103,2 @@
+@@ -111,2 +106,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
 +klrint(dev_t dev)
-@@ -115 +106,0 @@
+@@ -115 +109,0 @@
 -	register struct device *addr;
-@@ -119,3 +110 @@
+@@ -119,4 +113,4 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
-+	c = UARTDR;
-@@ -125,3 +114,2 @@
+-	ttyinput(c, tp);
++	while((UARTFR&RXFE) == 0) {
++		c = UARTDR;
++		ttyinput(c, tp);
++	}
+@@ -125,3 +119,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +117,2 @@
+@@ -129 +122,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +122,2 @@
+@@ -133,2 +127,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
 +klstart(register struct tty *tp)
-@@ -136,2 +125 @@
+@@ -136,2 +130 @@
 -	register c;
 -	register struct device *addr;
 +	register int c;
-@@ -139,2 +127 @@
+@@ -139,4 +132 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
-+	if(UARTFR&TXFF)
-@@ -144 +131 @@
+-		return;
+-	if ((c=getc(&tp->t_outq)) >= 0) {
++	while((UARTFR&TXFF) == 0 && (c=getc(&tp->t_outq)) >= 0) {
+@@ -144 +134 @@
 -			addr->tbuf = c;
 +			UARTDR = c;
-@@ -146 +133 @@
+@@ -146 +136 @@
 -			addr->tbuf = c | (partab[c]&0200);
 +			UARTDR = c;
-@@ -154 +141,17 @@
+@@ -149,0 +140 @@
++			return;
+@@ -154 +145,18 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klinit(void)
 +{
++	UARTLCRH = 0160;
 +	UARTCR = 0x301;
 +}
 +
 +void
 +klintr(void)
 +{
-+	if (UARTMIS&RXI)
++	if (UARTMIS&(RXI|RTI))
 +		klrint(0);
 +	if (UARTMIS&TXI) {
 +		UARTICR = TXI;
@@ -21304,16 +21340,16 @@ usr/local
 +	}
 +}
 +
-@@ -166,2 +169,2 @@
+@@ -166,2 +174,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +172,2 @@
+@@ -169 +177,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +180 @@
+@@ -176,6 +185 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -21321,22 +21357,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +185,2 @@
+@@ -186,2 +190,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while(UARTFR&TXFF)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +190,3 @@
+@@ -191,3 +195,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = UARTIMSC;
 +	UARTIMSC = 0;
 +	UARTDR = c;
-@@ -196,2 +194,0 @@
+@@ -196,2 +199,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +197 @@
+@@ -200 +202 @@
 -	KLADDR->tcsr = s;
 +	UARTIMSC = s;
 
@@ -21675,7 +21711,7 @@ usr/local
 @@ -14,0 +15,2 @@
 +#define	RCC	0xF0200000
 +#define	GPIOD	0xF0205000
-@@ -18,0 +21,19 @@
+@@ -18,0 +21,20 @@
 +#define	CR1	(*(volatile int *)(KLADDR+0x00))
 +#define	BRR	(*(volatile int *)(KLADDR+0x0c))
 +#define	ISR	(*(volatile int *)(KLADDR+0x1c))
@@ -21695,13 +21731,14 @@ usr/local
 +#define	TXEIE	0200
 +#define	RXNE	040
 +#define	TXE	0200
-@@ -28,3 +49,2 @@
++#define	FIFOEN	04000000000
+@@ -28,3 +50,2 @@
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
 +void	klstart(struct tty *tp);
 +int	klirq = 85;
-@@ -39,2 +59,17 @@
+@@ -39,2 +60,17 @@
 -klopen(dev, flag)
 -dev_t dev;
 +void
@@ -21716,19 +21753,19 @@ usr/local
 +	(void)APB1ENSETR;
 +	UART4CKSELR = (UART4CKSELR & ~7) | 2;
 +	BRR = 556;
-+	CR1 = UE|TE|RE;
++	CR1 = FIFOEN|UE|TE|RE;
 +}
 +
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +76,0 @@
+@@ -42 +77,0 @@
 -	register struct device *addr;
-@@ -44 +78 @@
+@@ -44 +79 @@
 -	register d;
 +	register int d;
-@@ -45,0 +80 @@
+@@ -45,0 +81 @@
 +	(void)flag;
-@@ -52,12 +86,0 @@
+@@ -52,12 +87,0 @@
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -21741,89 +21778,93 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +90 @@
+@@ -67 +91 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +93 @@
+@@ -70,2 +94 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
 +	CR1 |= RXNEIE;
-@@ -75,3 +97,2 @@
+@@ -75,3 +98,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +102 @@
+@@ -80,0 +103 @@
 +	(void)flag;
-@@ -85,2 +107,2 @@
+@@ -85,2 +108,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -91,2 +113,2 @@
+@@ -91,2 +114,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +119,2 @@
+@@ -97,2 +120,2 @@
 -klxint(dev)
 -dev_t dev;
 +static void
 +klxint(dev_t dev)
-@@ -102,0 +125 @@
+@@ -102,0 +126 @@
 +	CR1 &= ~TXEIE;
-@@ -105,4 +128 @@
+@@ -105,4 +129 @@
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
 +		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +131,2 @@
+@@ -111,2 +132,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
 +klrint(dev_t dev)
-@@ -115 +134,0 @@
+@@ -115 +135,0 @@
 -	register struct device *addr;
-@@ -119,3 +138,2 @@
+@@ -119,4 +139,5 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
-+	c = RDR;
+-	ttyinput(c, tp);
++	while(ISR&RXNE) {
++		c = RDR;
++		ttyinput(c, tp);
++	}
 +	ICR = 017;
-@@ -125,3 +143,2 @@
+@@ -125,3 +146,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +146,2 @@
+@@ -129 +149,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +151,2 @@
+@@ -133,2 +154,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
 +klstart(register struct tty *tp)
-@@ -136,2 +154 @@
+@@ -136,2 +157 @@
 -	register c;
 -	register struct device *addr;
 +	register int c;
-@@ -139,2 +156 @@
+@@ -139,2 +159 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 +	if((ISR&TXE) == 0)
-@@ -144 +160 @@
+@@ -144 +163 @@
 -			addr->tbuf = c;
 +			TDR = c;
-@@ -146 +162 @@
+@@ -146 +165 @@
 -			addr->tbuf = c | (partab[c]&0200);
 +			TDR = c;
-@@ -150,0 +167 @@
+@@ -150,0 +170 @@
 +		CR1 |= TXEIE;
-@@ -154 +171,9 @@
+@@ -154 +174,9 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klintr(void)
@@ -21834,16 +21875,16 @@ usr/local
 +		klxint(0);
 +}
 +
-@@ -166,2 +191,2 @@
+@@ -166,2 +194,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +194,2 @@
+@@ -169 +197,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +202 @@
+@@ -176,6 +205 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -21851,22 +21892,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +207,2 @@
+@@ -186,2 +210,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while((ISR&TXE) == 0)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +212,3 @@
+@@ -191,3 +215,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = CR1;
 +	CR1 &= ~TXEIE;
 +	TDR = c;
-@@ -196,2 +216,0 @@
+@@ -196,2 +219,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +219 @@
+@@ -200 +222 @@
 -	KLADDR->tcsr = s;
 +	CR1 = s;
 
@@ -22612,7 +22653,7 @@ usr/local
 +	prele(struct inode *ip), profil(void), psig(void),
 +	psignal(struct proc *p, int sig), ptfree(struct proc *p), ptrace(void),
 +	putchar(int c),
-+	qswtch(void), read(void), readi(struct inode *ip),
++	qswtch(void), read(void), readi(struct inode *ip), restfp(void *fps),
 +	readp(struct file *fp), resume(int a, label_t lab), rexit(void),
 +	rkinit(void), rkintr(void), rkread(dev_t dev),
 +	rkstrategy(struct buf *bp), rkwrite(dev_t dev), saccess(void),
@@ -22726,6 +22767,9 @@ usr/local
 @@ -9 +9 @@
 - * loc 140000; contains the system
 + * loc 0xFFF00000; contains the system
+@@ -24 +24 @@
+-		double	u_fpregs[6];	/* FP registers */
++		double	u_fpregs[32];	/* FP registers */
 @@ -38 +38 @@
 -		};
 +		} u_pair;
@@ -23189,23 +23233,28 @@ usr/local
 -caddr_t p;
 +void
 +sendsig(caddr_t p, int signo)
-@@ -146 +141 @@
+@@ -144 +139 @@
+-	register unsigned n;
++	register unsigned n, m;
+@@ -146 +141,2 @@
 -	n = u.u_ar0[R6] - 4;
-+	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
-@@ -148,2 +143,5 @@
++	m = (RPS+1)*sizeof(int);
++	n = (u.u_ar0[R6] - m - sizeof(u.u_fps)) & ~7;
+@@ -148,2 +144,6 @@
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
-+	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
++	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
++	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
 +		return;
 +	}
-@@ -151 +149 @@
+@@ -151 +151 @@
 -	u.u_ar0[RPS] &= ~TBIT;
 +	u.u_ar0[14] = UENTRY_SIGTRAMP;
-@@ -152,0 +151 @@
+@@ -152,0 +153 @@
 +	u.u_ar0[R0] = signo;
-@@ -155,9 +154,66 @@
+@@ -155,9 +156,23 @@
 -/*
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
@@ -23238,7 +23287,9 @@ usr/local
 +{
 +	register struct memregion *m;
 +	register unsigned a;
-+
+@@ -165,2 +180,10 @@
+-mapalloc(bp)
+-register struct buf *bp;
 +	a = (unsigned)va;
 +	for(m = board_map; m->end != 0; m++)
 +		if(m->attr != BLK_DEV && a - m->va < m->end - m->start)
@@ -23249,10 +23300,12 @@ usr/local
 +
 +caddr_t
 +machine_init(void)
-+{
+@@ -168 +191,2 @@
+-	register i, a;
 +	register unsigned a;
 +	register char *p;
-+
+@@ -170 +194,51 @@
+-	if(cputype != 70)
 +	kmap(1);
 +	cninit();
 +	clock_ddr_init();
@@ -23281,16 +23334,12 @@ usr/local
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = s[i];
 +}
-@@ -165,2 +221,2 @@
--mapalloc(bp)
--register struct buf *bp;
++
 +void
 +clearseg(int a)
-@@ -168 +224 @@
--	register i, a;
++{
 +	register int *d, i;
-@@ -170 +226,14 @@
--	if(cputype != 70)
++
 +	d = (int *)CLKADDR(a);
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = 0;
@@ -23301,16 +23350,19 @@ usr/local
 +{
 +	int f[RPS+1];
 +	register int i;
++	register caddr_t a;
 +
-+	if(copyin((caddr_t)u.u_ar0[R6], (caddr_t)f, sizeof(f)) < 0) {
++	a = (caddr_t)u.u_ar0[R6];
++	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
++	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-@@ -172,4 +240,0 @@
+@@ -172,4 +245,0 @@
 -	spl6();
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +242,59 @@
+@@ -177,19 +247,60 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -23330,6 +23382,7 @@ usr/local
 -	if(maplock&B_WANTED)
 -		wakeup((caddr_t)&maplock);
 -	maplock = 0;
++	u.u_fpsaved = 1;
 +	for(i = 0; i < RPS; i++)
 +		u.u_ar0[i] = f[i];
 +	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);
@@ -23799,9 +23852,11 @@ usr/local
 +		if ((xp = u.u_procp->p_textp)) {
 @@ -364,0 +370 @@
 +		arm_sync_icache((caddr_t)ipc.ip_addr, NBPW);
-@@ -379 +385 @@
+@@ -379,2 +385,2 @@
 -		p = (int *)&((physadr)&u)->r[i>>1];
+-		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
 +		p = (int *)&((physadr)&u)->r[i>>2];
++		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[32])
 @@ -383 +389 @@
 -			if (p == &u.u_ar0[regloc[i]])
 +			if (p == &u.u_ar0[regloc[i]&0377])
@@ -23903,19 +23958,29 @@ usr/local
 @@ -431 +438 @@
 -	register n;
 +	register int n;
-@@ -526,0 +534 @@
+@@ -498,0 +506,4 @@
++	if (u.u_fpsaved==0) {
++		savfp(&u.u_fps);
++		u.u_fpsaved = 1;
++	}
+@@ -526,0 +538 @@
 +	sureg();
-@@ -545 +553,2 @@
+@@ -545 +557,2 @@
 -expand(newsize)
 +void
 +expand(int newsize)
-@@ -547 +556 @@
+@@ -547 +560 @@
 -	register i, n;
 +	register int i, n;
-@@ -549 +558 @@
+@@ -549 +562 @@
 -	register a1, a2;
 +	register int a1, a2;
-@@ -569,0 +579 @@
+@@ -564,0 +578,4 @@
++		if (u.u_fpsaved==0) {
++			savfp(&u.u_fps);
++			u.u_fpsaved = 1;
++		}
+@@ -569,0 +587 @@
 +	ptfree(p);
 
 % usr/sys/sys/subr.c
@@ -24097,37 +24162,42 @@ usr/local
 +		if(i != R6)
 +			u.u_ar0[i] = 0;
 +	u.u_r.r_val2 = 0;
-@@ -308 +314,2 @@
+@@ -288 +294 @@
+-	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[6];)
++	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[32];)
+@@ -289,0 +296 @@
++	u.u_fpsaved = 1;
+@@ -308 +315,2 @@
 -rexit()
 +void
 +rexit(void)
-@@ -325 +332,2 @@
+@@ -325 +333,2 @@
 -exit(rv)
 +void
 +exit(int rv)
-@@ -348,0 +357 @@
+@@ -348,0 +358 @@
 +	ptfree(p);
-@@ -377 +386,2 @@
+@@ -377 +387,2 @@
 -wait()
 +void
 +wait(void)
-@@ -379 +389 @@
+@@ -379 +390 @@
 -	register f;
 +	register int f;
-@@ -398,0 +409 @@
+@@ -398,0 +410 @@
 +			p->p_nptab = 0;
-@@ -422 +433,2 @@
+@@ -422 +434,2 @@
 -fork()
 +void
 +fork(void)
-@@ -425 +437 @@
+@@ -425 +438 @@
 -	register a;
 +	register int a;
-@@ -477 +489,2 @@
+@@ -477 +490,2 @@
 -sbreak()
 +void
 +sbreak(void)
-@@ -482 +495 @@
+@@ -482 +496 @@
 -	register a, n, d;
 +	register int a, n, d;
 
@@ -24539,7 +24609,7 @@ usr/local
 +	{1, 1, chroot},			/* 61 = chroot */
 +	{0, 0, nosys},			/* 62 = x */
 +	{0, 0, sigreturn}		/* 63 = sigreturn */
-@@ -131,0 +84,59 @@
+@@ -131,0 +84,63 @@
 +char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
 +void
 +trap(int *r)
@@ -24580,6 +24650,8 @@ usr/local
 +		qswtch();
 +	if(u.u_prof.pr_scale)
 +		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
++	if (u.u_fpsaved)
++		restfp(&u.u_fps);
 +}
 +void
 +user_trap_handler(int signo, int *r, unsigned a)
@@ -24598,6 +24670,8 @@ usr/local
 +	curpri = setpri(u.u_procp);
 +	if (runrun)
 +		qswtch();
++	if (u.u_fpsaved)
++		restfp(&u.u_fps);
 +}
 
 % usr/sys/sys/text.c
