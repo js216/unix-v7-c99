@@ -2635,15 +2635,15 @@ removed from the queue. If there is none, `idle` waits for an interrupt
 and the search is repeated. On the PDP-11 `idle` executed `wait`; here
 it unmasks the IRQ and executes `wfi`.
 
-#lines(387, 419)
+#lines(387, 418)
 
 The incoming process is resumed at `u.u_rsav` unless it has
-`SSWAP` set (423), in which case it is resumed at `u.u_ssav`. The flag is set
-by `newproc` (536), by `expand` (575), and by `xexpand` (#f("text.c")),
+`SSWAP` set (422), in which case it is resumed at `u.u_ssav`. The flag is set
+by `newproc` (535), by `expand` (574), and by `xexpand` (#f("text.c")),
 all of which made an image of a process (on the swap area or in fresh
 core) after doing `save(u.u_ssav)`. In such an image `u.u_rsav` is stale:
 it was recorded by some earlier switch, or, in `expand`'s case, by the
-call of `swtch` from `qswtch` (576), after the image had already been
+call of `swtch` from `qswtch` (575), after the image had already been
 written. Hence the explicit choice of label.
 
 Note that the ARM `resume` masks interrupts while the mapping and
@@ -2651,32 +2651,48 @@ registers are changed and, like the PDP-11 version, which ended at
 priority zero, unmasks them again with `spl0` once the new stack is in
 place (#f("mch.s")).
 
-#lines(420, 426)
+v7 called `spl0` here, before `resume`, after `curpri` was set. The call
+is gone, so that interrupts stay masked from the search through to the
+point in `resume` where the new stack pointer is loaded. The reason is
+the compiler. The call of `resume` is the last statement of `swtch`, and
+GCC makes it a tail call: it pops `swtch`'s own stack frame, the saved
+registers and the return address, and then branches to `resume`. In
+process 0 that frame is not dead, for `u.u_rsav`, which `swtch` saved
+in it (384), still points at it: when process 0 is itself chosen, it
+returns from `swtch` through the very words just popped. An interrupt
+taken between the pop and `resume`'s masking pushed its register frame
+over them, and process 0 later returned through the frame's saved status
+word, as though it were an address: the kernel trap at
+`pc=0x60000152`, with the Thumb bit set, which interrupted the system
+now and then under swapping. With interrupts masked nothing can be
+pushed there.
+
+#lines(419, 425)
 
 `newproc` is the body of `fork`, and of the creation of process 1 by
 `main`. It returns 1 in the new process and 0 in the old.
 
-#lines(427, 447)
+#lines(426, 446)
 
 A process id is chosen which is in use neither as a process id
 nor as a process group, cycling below 30000. At the same time the first
 empty slot of `proc` is noted. `fork` (#f("sys1.c")) has already made
 sure that one exists.
 
-#lines(448, 466)
+#lines(447, 465)
 
 The new entry is filled in, and the reference counts of
 everything the child will share with its parent, its open files, text,
 and current and root directories, are incremented.
 
-#lines(467, 495)
+#lines(466, 494)
 
 The child's image is a copy of the parent's, `u` included, made after
-the parent has done `save(u.u_ssav)` (511). Before the copy,
-`u.u_procp` is set to the child's entry (502), so that the copy differs
-from the original in that one respect; the parent restores it (534).
+the parent has done `save(u.u_ssav)` (510). Before the copy,
+`u.u_procp` is set to the child's entry (501), so that the copy differs
+from the original in that one respect; the parent restores it (533).
 
-When the child is first chosen by `swtch` its `SSWAP` flag (536) causes
+When the child is first chosen by `swtch` its `SSWAP` flag (535) causes
 it to be resumed at `u.u_ssav`; its `save` returns 1, and `newproc`
 returns 1 to `fork`. The child's kernel stack, being part of `u`, is
 copied with the rest, and since `u` always appears at the same virtual
@@ -2695,13 +2711,13 @@ up the stack expect to find preserved were pushed on that stack before
 `volatile` in case it should be clobbered; since it is not used after
 the second return, the qualifier was removed.
 
-#lines(496, 520)
+#lines(495, 519)
 
-If there is no core for the copy (521), the parent's image is written
+If there is no core for the copy (520), the parent's image is written
 to the swap area as the child's image, without freeing the core
 (`xswap` with second argument zero). `rpp->p_addr` is pointed at the
 parent's core for the purpose, and `SIDL` keeps the parent from being
-chosen for swapping in the meanwhile. Otherwise (530) the image is
+chosen for swapping in the meanwhile. Otherwise (529) the image is
 copied, a click at a time, by `copyseg` (#f("machdep.c")). On the PDP-11
 `copyseg` had to borrow a user segmentation register to reach physical
 memory; here the kernel maps all of memory, and `CLKADDR` turns a click
@@ -2711,30 +2727,30 @@ The copy is of the whole image, as in v7: the per process area, the
 data, and the stack, which is no more than the program has asked for
 (`getxfile`, #f("sys1.c")). A small program's image is a few clicks.
 
-#lines(521, 538)
+#lines(520, 537)
 
 `expand` changes the size of the current process's image to `newsize`
-clicks. A shrinking image simply gives back its tail (565). A growing
-one is copied into a new area (581), after which `resume` (584)
-switches to the copy, whose `save` (568) then returns 1. The comment's
+clicks. A shrinking image simply gives back its tail (564). A growing
+one is copied into a new area (580), after which `resume` (583)
+switches to the copy, whose `save` (567) then returns 1. The comment's
 "taking care to reset registers" is a PDP-11 relic in effect: since `u`
 and the kernel stack always appear at the same virtual address, the
 copy needs no adjustment, and `resume` only has to remap `u` to the new
-area. The page tables of the old image are released first (579), and
+area. The page tables of the old image are released first (578), and
 `sureg` builds new ones for the copy (#f("ureg.c")). A shrinking image
 keeps its tables: the caller has already set the new sizes with
 `estabur`, whose tables no longer reach the tail given back.
 
-If there is no core (573), the image is written to the swap area at its
+If there is no core (572), the image is written to the swap area at its
 old size `n` but with `p_size` already set to the new one, the old core
 is freed, and the process gives up the processor with `SSWAP` set. When
 `sched` brings it back, `swapin` allocates the larger size, and the
-process resumes at `u.u_ssav` (568) and returns from `expand` as if
+process resumes at `u.u_ssav` (567) and returns from `expand` as if
 nothing had happened. Note that until `swtch` resumes another process it
 goes on running in core which is already free; nothing can reallocate
 it in that interval, since no interrupt routine allocates core.
 
-#lines(539, 585)
+#lines(538, 584)
 
 = Entering the Kernel
 

@@ -416,7 +416,6 @@ loop:
 	else
 		q->p_link = p->p_link;
 	curpri = n;
-	spl0();
 	/*
 	 * The rsav (ssav) contents are interpreted in the new address space
 	 */
