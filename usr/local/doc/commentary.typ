@@ -12107,8 +12107,9 @@ the assembler accepts the floating point instructions of #f("low.s"),
 #f("mch.s"), and `setjmp` (#f("gen/setjmp.s")); it marks no calling
 convention in the objects, which therefore link with code of either
 kind. `-Os` optimizes for size; v7
-compiled with `cc -O`, and the kernel's code shrinks from 61 KB to
-38 KB, which matters on the MP135 machine, where the whole kernel must
+compiled with `cc -O`, and the text of the MP135 machine's kernel, its
+code and constants, is 41,571 bytes with `-Os` against 48,651 with
+`-O`, which matters on the MP135 machine, where the whole kernel must
 fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
 `-Wl,-z,max-page-size=4096,-Ttext=0x80` are options for the linker,
