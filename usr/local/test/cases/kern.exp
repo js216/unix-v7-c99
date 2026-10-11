@@ -1,4 +1,4 @@
-undef: sig=4 r12=5a5a1234
+undef: sig=4 r12=5a5a1234 calls=1
 dabort: sig=11 r12=1234a5a5
 ready
 

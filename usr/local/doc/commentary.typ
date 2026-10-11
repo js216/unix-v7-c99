@@ -1012,7 +1012,7 @@ directly (a "block") instead of pointing to a table of the next level.
 The format can divide the address space between two tables, one for
 the low addresses and one for the high, which the short-descriptor
 format of the earlier ARMs cannot do at a three-gigabyte boundary; that
-is why it is used. The kernel's table `kl2` (205) is a second-level
+is why it is used. The kernel's table `kl2` (204) is a second-level
 table of 512 entries, which together map the gigabyte from 0xc0000000.
 
 Here `kl2` receives the blocks which hold the kernel itself, from
@@ -1029,7 +1029,7 @@ the kernel exactly.
 
 #lines(30, 46)
 
-`bootl1` (207) is a first-level table for the low addresses, with a
+`bootl1` (206) is a first-level table for the low addresses, with a
 single entry: the gigabyte which contains the kernel's physical
 address is mapped onto itself. When the MMU is turned on, the next
 instructions are still fetched at physical addresses, and this mapping
@@ -1144,7 +1144,7 @@ system. The reserved slot and FIQ should never be taken, and lead to
 
 Note that the PDP-11 distinguished its traps by vector, and wrote the
 trap type into the low bits of the new PS (`br7+n` in `l.s`) for `trap`
-to recover. On the ARM the vector, and the signal chosen at 167, 176, or 190,
+to recover. On the ARM the vector, and the signal chosen at 166, 175, or 189,
 carry the same information.
 
 #lines(109, 119)
@@ -1175,7 +1175,7 @@ at 52, the user `lr` at 56, the return PC at 60, and the saved status at
 which it saves in `u.u_ar0`. Interrupts are enabled for the duration of
 the system call and masked again afterwards. v7's `trap` routine also
 lowered the priority (`spl 0` in `call1`) before calling C. The return
-is shared with the other traps (195).
+is shared with the other traps (194).
 
 #lines(125, 129)
 
@@ -1228,21 +1228,27 @@ the stray exception selected, on a stack which was never set up.
 #lines(156, 159)
 
 The remaining exceptions all become signals to the process. The three
-entries differ in the correction to `lr` and in the signal number. For an undefined instruction `lr` is four bytes past
-the instruction, for a prefetch abort four, for a data abort eight; after
-the correction the saved PC addresses the offending instruction. An
-undefined instruction yields signal 4 (`SIGINS`), either abort signal
-11 (`SIGSEG`). The PDP-11's illegal instruction and segmentation traps
+entries differ in the correction to `lr` and in the signal number. For
+a prefetch abort `lr` is four bytes past the instruction, for a data
+abort eight, and the correction makes the saved PC address the
+offending instruction, which the return then executes again, as it must
+once the stack has grown. For an undefined instruction `lr` is also
+four bytes past the instruction, and is left so: as after the PDP-11's
+trap, the saved PC addresses the next instruction, and a handler of the
+signal which returns, an emulator of a missing instruction, for
+example, continues there instead of meeting the same instruction again.
+An undefined instruction yields signal 4 (`SIGINS`), either abort
+signal 11 (`SIGSEG`). The PDP-11's illegal instruction and segmentation traps
 gave the same signals; its bus error (`SIGBUS`) has no counterpart here.
 
-The frame is built exactly as for an interrupt (163--166, 172--175,
-181--184). Only then is the signal number loaded, into `r0` (167, 176,
-190), and `user_trap_handler` receives the signal, the frame, and in
-`r2` an address (192--194). For a data abort the address is the one the
+The frame is built exactly as for an interrupt (162--165, 171--174,
+180--183). Only then is the signal number loaded, into `r0` (166, 175,
+189), and `user_trap_handler` receives the signal, the frame, and in
+`r2` an address (191--193). For a data abort the address is the one the
 instruction failed to reach, read from the fault address register
-`DFAR` (191), by which the handler decides whether the stack should
-grow (#f("sysent.c")); a prefetch abort passes zero (177), and so does
-an undefined instruction (168). The handler reads the address only for
+`DFAR` (190), by which the handler decides whether the stack should
+grow (#f("sysent.c")); a prefetch abort passes zero (176), and so does
+an undefined instruction (167). The handler reads the address only for
 `SIGSEG`, but it is given a defined value in every case, never the
 user's `r2`, which the `stmia` has saved but left in the register. The handler
 panics, after printing the fault address and status (`dfar`, `dfsr`,
@@ -1252,7 +1258,7 @@ A data abort taken by the kernel may be one which it expects. While one
 of the routines which reach user memory runs, `nofault` (#f("mch.s"))
 holds the address at which it wants to continue if a user reference
 fails, as v7's `trap` found it in `nofault` on the PDP-11. That address
-is then written over the saved PC (185--189), and the exception returns
+is then written over the saved PC (184--188), and the exception returns
 there at once, by the common return below, without calling C. The
 saved registers are restored as they were at the fault, and SVC mode's
 own `lr`, which C would have destroyed, is never touched. A fault in
@@ -1265,22 +1271,22 @@ register is free to carry the signal number to a common save: `r0` to
 and `lr` of the abort and undefined modes are left behind by the change
 to SVC mode.
 
-#lines(160, 194)
+#lines(160, 193)
 
 The common return, the counterpart of the `rtt` at the end of v7's
-`call`. `ldmia ... ^` (196), without the PC in the list, loads the user
-mode's banked registers, as the `stmia` stored them. `rfeia sp!` (198),
+`call`. `ldmia ... ^` (195), without the PC in the list, loads the user
+mode's banked registers, as the `stmia` stored them. `rfeia sp!` (197),
 "return from exception", pops the PC and the saved status together into
 `pc` and `cpsr`, so the mode, the interrupt mask, and the condition flags
 of the interrupted program are restored with its PC in one step.
 
-#lines(195, 198)
+#lines(194, 197)
 
 The boot stack, 8192 bytes, which is used only until line 103, and the
 two boot tables. `kl2` must be aligned on 4 KB, and goes on serving as
 the kernel's table; `bootl1`, which needs 32, follows it.
 
-#lines(199, 208)
+#lines(198, 207)
 #source("/usr/sys/conf/mch.s")
 
 v7's `mch.s` held, besides the startup code, every operation which C

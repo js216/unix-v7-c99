@@ -159,7 +159,6 @@ badtrap:
 	b badtrap
 
 undef_entry:
-	sub lr, lr, #4
 	srsdb sp!, #0x13
 	cpsid if, #0x13
 	sub sp, sp, #60
