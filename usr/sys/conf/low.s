@@ -146,6 +146,7 @@ irq_entry:
 	cmp r0, #0
 	beq 1f
 	mov r0, #0
+	mov r2, #0
 	mov r1, sp
 	bl user_trap_handler
 	cpsid i
@@ -164,6 +165,7 @@ undef_entry:
 	sub sp, sp, #60
 	stmia sp, {r0-r14}^
 	mov r0, #4
+	mov r2, #0
 	b 1f
 pabort_entry:
 	sub lr, lr, #4
