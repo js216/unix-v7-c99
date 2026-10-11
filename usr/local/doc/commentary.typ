@@ -2547,8 +2547,7 @@ process has been mapped, so that it is the incoming process's copy of
 the label which is used. The comment at (421) says as much.
 
 The declaration of `swapin` (12) is new. `sched` (240) calls it before
-its definition, which v7 C permitted and C99 does not; no other file
-uses it, so the declaration is here and not in #f("systm.h").
+its definition (#f("prf.c")); no other file uses it, so the declaration is here and not in #f("systm.h").
 
 A process sleeps on a _channel_: an address which by convention stands
 for the event awaited, such as that of the buffer or inode concerned.
@@ -2614,8 +2613,7 @@ otherwise demand.
 places such as `psignal` which wish to rouse a process whatever it is
 waiting for. In the last case the process is still on a sleep list, and
 `wakeup` of its channel (153) is the correct way to take it off. The
-extra parentheses around the assignment (153) only tell the compiler
-that `=` is meant.
+doubled parentheses at 153 are those of #f("malloc.c").
 
 #lines(137, 158)
 
@@ -2661,7 +2659,8 @@ seconds and the victim has had 2 (279); otherwise `sched` sleeps on
 candidate appears.
 
 The parentheses added in (260) make explicit v7's reliance on `&&`
-binding more tightly than `||`; the meaning is unchanged.
+binding more tightly than `||`, of which `gcc` warns otherwise; the
+meaning is unchanged. The same change appears throughout the system.
 
 If the swap area has no room for the victim, `xswap` returns zero
 (281), where v7 panicked. The victim keeps its core, `SLOAD` is set
@@ -2685,7 +2684,7 @@ A text read back from the swap area is new to the instruction cache, which
 may hold stale lines for the same memory; `arm_sync_icache`
 (#f("mch.s")) is called on it, as in `xexpand` (#f("text.c")). The
 include of #f("seg.h") (11), for `CLKADDR`, is for that call. The
-parentheses (305) are for the compiler only.
+doubled parentheses at 305 are those of #f("malloc.c").
 
 #lines(290, 328)
 
@@ -3009,8 +3008,8 @@ Every expired callout is called, in order, with its argument,
 and the remainder of the list is then moved down to the front of the
 table. `spl5` was meant to lower the PDP-11 priority from 6 to 5,
 admitting other clock-level work; on the ARM the IRQ is already masked
-and `spl5` changes nothing. The extra parentheses at 72 tell the
-compiler that the assignment is meant.
+and `spl5` changes nothing. The doubled parentheses at 72 are those of
+#f("malloc.c").
 
 #lines(64, 79)
 
@@ -3280,8 +3279,7 @@ file, the layout of the arguments on the stack, and the convention by
 which `fork` tells parent from child.
 
 `getxfile` and `setregs` are declared (12, 13) because they are used
-before they are defined, and C99 does not allow an undeclared function
-to be called.
+before they are defined (#f("prf.c")).
 
 #lines(1, 14)
 
@@ -3412,8 +3410,7 @@ given `SSIZE` clicks plus room for the strings and the pointer vector,
 `nargc` bytes.
 
 The overlay branch (222--233) is dead, since `overlay` is never set; it
-is kept as v7 wrote it, but for the parentheses that make the
-precedence of `&&` over `||` explicit (223).
+is kept as v7 wrote it, but for the parentheses at 223, as in #f("slp.c").
 
 #lines(208, 236)
 
@@ -3895,8 +3892,8 @@ shares it, or it is sticky, the request fails. The inode loses `ITEXT`,
 so that the altered text is never attached by a later `exec`, and the
 text is mapped writable for the one store (`RW`, #f("seg.h")) and then
 read-only again; `XWRIT` makes sure the altered text, not the file's,
-is what is swapped back in. The parentheses at 359 only tell the
-compiler that the assignment is meant.
+is what is swapped back in. The doubled parentheses at 359 are those of
+#f("malloc.c").
 
 The word is stored through the data cache, and the processor fetches
 instructions through its instruction cache, which may still hold the
@@ -4074,8 +4071,7 @@ is read from the file once, kept in core while any process using it is
 in core, and kept on the swap device while any process uses it at all.
 
 The declaration of three procedures (11, 12) is new. Each is used in
-this file before its definition, which C99 does not allow without a
-prototype, and no other file calls them. The procedures which other
+this file before its definition (#f("prf.c")), and no other file calls them. The procedures which other
 files call are declared in #f("systm.h").
 
 #lines(1, 13)
@@ -5402,9 +5398,8 @@ blocks of a disk made here are not those of a PDP-11 disk, although
 there are 128 to a block on both.
 
 `NINDIR` is computed with `sizeof` and is therefore unsigned; the cast
-at (115) makes the comparison with the `int` `i` explicitly unsigned, so
-that the compiler does not warn of mixed signedness. Since `i` is never
-negative, the meaning is v7's.
+at (115) makes the comparison with the `int` `i` explicitly unsigned, as
+in #f("fio.c"). Since `i` is never negative, the meaning is v7's.
 
 #lines(85, 118)
 
@@ -6647,7 +6642,7 @@ compile, and always find it `NULL`.
 level was taken as a reference to the array in #f("partab.c"); in C99
 it is a tentative definition, which would give this file an array of
 its own. The four procedures declared at (17, 18) are used before they
-are defined, and only in this file; C99 requires a declaration first.
+are defined, and only in this file.
 
 #lines(1, 19)
 
@@ -6691,8 +6686,7 @@ and passes everything else to the character device's `ioctl` routine.
 `TIOCSETD` changes the line discipline. `t` is unsigned, so a negative
 number fails the test against `nldisp`, which is 1 here. The cast
 (196) is new. It makes explicit the conversion of `nldisp` to unsigned
-which C performs in any case, so that the compiler need not warn of a
-comparison between signed and unsigned values. Likewise `t_line`, a `char`, is
+which C performs in any case (#f("fio.c")). Likewise `t_line`, a `char`, is
 now converted to `int` (201, and again at 266) before it subscripts
 `linesw`: a `char` subscript draws a warning, since `char` is signed on
 some machines.
@@ -6738,9 +6732,7 @@ or `CBREAK` mode it waits for any character at all. If the line is not open,
 it a declaration in #f("systm.h"), which `-Wmissing-prototypes` would
 otherwise demand.
 
-The extra parentheses in the condition (345, 346) are new and make
-explicit what v7 left to the precedence of `&&` over `||`; the meaning
-is unchanged. v7's early `return` (349) left the processor at `spl5`,
+The parentheses in the condition (345, 346) are new, as in #f("slp.c"). v7's early `return` (349) left the processor at `spl5`,
 and so kept every interrupt, the clock's among them, masked until the
 process next returned to user mode. `spl0` (348) now unmasks them
 first, as the normal path does after the loop.
@@ -7172,8 +7164,8 @@ out here, and the two must agree.
 #lines(569, 601)
 
 The second pass writes `c.c` as v7 did. The assignments within the
-tests of the `for` loops (611, 618, 643, 650) are wrapped in a second
-pair of parentheses, which tells the compiler that `=` is meant. Each
+tests of the `for` loops (611, 618, 643, 650) have the doubled
+parentheses of #f("malloc.c"). Each
 configured row is now enclosed in braces. A device which is not
 configured gets a row of routines which fail: v7 wrote `nodev` in every
 slot, but the slots now have types of their own, so a block device's
@@ -8927,9 +8919,8 @@ if nothing is found, `addblok` enlarges the arena and the search starts
 again.
 
 The cast to `POS` in the comparison (36) is new. The difference of two
-pointers is signed, `rbytes` is unsigned, and GCC warns of the
-comparison of the two (`-Wsign-compare`); the comparison was unsigned
-in v7 too, and the cast only says so.
+pointers is signed and `rbytes` unsigned; the comparison was unsigned
+in v7 too, and the cast only says so (#f("fio.c")).
 
 #lines(26, 49)
 
@@ -9160,8 +9151,7 @@ read raw and marked not to undergo substitution.
 
 `nosubst` (110) is now declared `extern`. v7 defined it both here and
 in #f("sh/service.c"), which worked only because the loader merged the
-two. The parentheses around the assignment in the test (120) are new,
-and tell GCC that `=` is meant.
+two. The doubled parentheses at 120 are those of #f("malloc.c").
 
 #lines(108, 137)
 #source("/usr/src/cmd/sh/word.c")
@@ -9297,8 +9287,8 @@ symbol the caller expects to end the command, such as `fi` or `)`;
 `chksym` insists on it.
 
 The comments `/* fallthrough */` (82, 94) are new, and tell GCC that the
-missing `break` is intended; it warns of one otherwise. The
-parentheses around the assignment (85) say the same of `=` in a test.
+missing `break` is intended; it warns of one otherwise. The doubled
+parentheses at 85 are those of #f("malloc.c").
 
 #lines(52, 103)
 
@@ -9490,9 +9480,8 @@ The option `-x` (`execpr`) prints the expanded command.
 The port names the node through `c`, a `COMPTR`, where v7 used the
 generic `t` for every field. In particular v7 read the I/O list of a
 command node as `t->treio`; it is now `c->comio`, the same word, since
-both structures put it after the type (#f("sh/mode.h")). The
-parentheses around the condition (53) mark the assignment within it as
-intended.
+both structures put it after the type (#f("sh/mode.h")). The doubled
+parentheses at 53 are those of #f("malloc.c").
 
 #lines(39, 65)
 
@@ -9752,8 +9741,8 @@ on the stack the next candidate, the first directory of `path` joined to
 
 `execa` tries each directory in turn. Before the first `exec` the
 exported variables are marked (`exname`) and the environment is built
-(`setenv`, #f("sh/name.c")). The parentheses around the assignment (119)
-are new and tell GCC that `=` is meant.
+(`setenv`, #f("sh/name.c")). The doubled parentheses at 119 are those
+of #f("malloc.c").
 
 `execs` calls `execve` (`exece` in #f("sys1.c")); if it returns at all,
 it has failed, and `errno` says why. `ENOENT` and most others send the
@@ -9932,8 +9921,7 @@ inherited them, except those ignored by `trap ''`.
 #lines(68, 94)
 
 `chktrap` runs the traps of the signals which have arrived since the
-last call, preserving `$?` across them. The parentheses at 106 are new,
-to mark the assignment in the condition as intended.
+last call, preserving `$?` across them. The parentheses at 106 are new.
 
 #lines(95, 113)
 #source("/usr/src/cmd/sh/builtin.c")
@@ -9979,8 +9967,7 @@ reads the next command. Anything else exits through `done`.
 
 `done` runs the trap set on signal 0, the shell's exit, clearing it
 first so that an error within it does not run it again, removes the
-temporary files, and exits. The parentheses around the assignment (71)
-are new and tell GCC that it is intended.
+temporary files, and exits. The parentheses at 71 are new.
 
 `rmtemp` unlinks the temporary files made since `base`, which hold
 here documents. The I/O nodes naming them are chained through `iolst`
@@ -10280,8 +10267,8 @@ needs no conversion.
 (#f("sh/mode.h")), which C99 does not assign to a `NAMPTR`; it is now
 zero. `v` is initialised (64) in the port. Every path assigns it or
 leaves by `error`, but `error` is an ordinary function, not declared
-to return never, and GCC would warn that `v` might be used unset. The parentheses around the
-assignment to `bra` (68) mark it as intended.
+to return never, and GCC would warn that `v` might be used unset. The
+parentheses at 68 are new.
 
 #lines(58, 95)
 
@@ -11226,8 +11213,7 @@ and hexadecimal, and for decimal by `((lcval<<2) + lcval)<<1`, which
 is ten times `lcval` without a multiplication, a saving on the PDP-11. A floating number is accumulated in the same way, uselessly,
 but its characters are also kept in `numbuf`. A point is accepted only
 in a floating conversion, and an exponent only after a digit has been
-seen. The extra parentheses (158) state v7's precedence explicitly, to
-satisfy `-Wparentheses`.
+seen. The parentheses at 158 are new, as in #f("slp.c").
 
 #lines(156, 191)
 
@@ -11561,8 +11547,7 @@ in the Gregorian calendar is every fourth year except the centuries,
 of which only every fourth is one, and 365 otherwise. v7 tested only
 the first condition, which agrees with the full rule from 1901 to 2099.
 
-The extra parentheses in the copy loop (195) tell the compiler that the
-assignment in the condition is intended (`-Wparentheses`).
+The doubled parentheses in the copy loop (195) are those of #f("malloc.c").
 
 #lines(187, 236)
 #source("/usr/src/libc/gen/atof.c")
@@ -11713,9 +11698,8 @@ so that an array with many equal keys does not degrade the sort.
 The pivot is the middle element. `n` is computed so that `a+n` is the
 address of an element, not merely the middle byte.
 
-`es` (19) is now `unsigned`. `n` is `unsigned`, and the comparison
-`n <= es` (28) of an `unsigned` with an `int` draws `-Wsign-compare`
-from GCC; both are unsigned now, which changes no result since `es` is
+`es` (19) is now `unsigned`, like `n`, so that `n <= es` (28) compares
+two unsigned numbers (#f("fio.c")); no result changes, since `es` is
 positive. v7's unused variable `k` has been deleted.
 
 #lines(15, 33)
@@ -11966,8 +11950,7 @@ program the caller is told that a file was found but could not be
 executed, rather than the error of the last directory tried. `ENOMEM`
 and `E2BIG` will fail in every directory alike, and end the search.
 
-The extra parentheses in the copying loop (60) tell the compiler that
-the assignment is meant as the condition (`-Wparentheses`).
+The doubled parentheses in the copying loop (60) are those of #f("malloc.c").
 
 #lines(52, 84)
 
@@ -12631,13 +12614,12 @@ that code is kept but never compiled.
 If the second argument is not a file which can be opened, it must be a
 number, the size of an empty file system in blocks, with one inode for
 every 25 blocks, up to the limit of 65500 inodes which a two-byte
-`ino_t` allows. The casts here and below to `unsigned` compare an `int` or
-a `long` with a value of type `size_t`, as the `sizeof` in `NIPB` makes it,
-without the warning which `-Wextra` gives for such a comparison, and
-which `-Werror` would make fatal. v7 printed a `long` with its own
-`%D`; C99 spells it `%ld`. The second pair of parentheses around the
-assignment in the test of the loop (125), here and in `getnum` (338),
-tells the compiler that `=` is meant.
+`ino_t` allows. The casts here and below to `unsigned` make explicit
+that an `int` or a `long` is compared with a value of type `size_t`,
+which the `sizeof` in `NIPB` gives, as an unsigned number
+(#f("fio.c")). v7 printed a `long` with its own
+`%D`; C99 spells it `%ld`. The doubled parentheses at 125, and in
+`getnum` at 338, are those of #f("malloc.c").
 
 #lines(123, 142)
 
@@ -12989,8 +12971,8 @@ commands, is straightforward, and is described only briefly.
 
 The changes from v7 are C99 declarations, and the few others noted
 fragment by fragment. Throughout the file, assignments used as
-conditions, such as `while ((*p2++ = *p1++))` (150), have gained a
-second pair of parentheses, which tell the compiler that `=` is meant.
+conditions, such as `while ((*p2++ = *p1++))` (150), have gained the
+doubled parentheses of #f("malloc.c").
 
 `stdio.h` (8) is new. `ed` uses no standard I/O at all, but in the port
 the header carries the prototypes of the system call stubs (#f("stdio.h")).
@@ -13557,8 +13539,8 @@ it can no longer succeed.
 
 Two changes. `m` is now initialized (154): for an empty file the first
 loop does not run, and v7 then halved an undefined `m`, which the
-compiler's analysis at `-Os` reports. The parentheses at (168--169) make
-explicit that `&&` binds more tightly than `||`, as `-Wall` asks.
+compiler's analysis at `-Os` reports. The parentheses at 168 and 169
+are new, as in #f("slp.c").
 
 `unsort` uses the serial numbers to put the class indices of the first
 file back into the file's own order.
@@ -14006,7 +13988,7 @@ the machine was busy, and never examined twice.
 
 The declarations of `localtime`, `malloc`, and `realloc` (deleted after
 17) are now in #f("stdio.h"). The procedures are declared at (21--23):
-those used before their definitions need it in C99, and `cmp`, which v7
+those used before their definitions need it (#f("prf.c")), and `cmp`, which v7
 declared inside `main`, is declared at file scope so that
 `-Wmissing-prototypes` sees the declaration before the definition.
 
