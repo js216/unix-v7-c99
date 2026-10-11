@@ -158,11 +158,11 @@ getxfile(register struct inode *ip, int nargc)
 	 * read in first few bytes
 	 * of file for segment
 	 * sizes:
-	 * ux_mag = 407/410/411/405
-	 *  407 is plain executable
-	 *  410 is RO text
-	 *  411 is separated ID
-	 *  405 is overlaid text
+	 * ux_mag = 0x464c457f, ELF;
+	 *  the program headers follow,
+	 *  and the first two loadable
+	 *  segments are the text
+	 *  and the data
 	 */
 
 	u.u_base = (caddr_t)&u.u_exdata;

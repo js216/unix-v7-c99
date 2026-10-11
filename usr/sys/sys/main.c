@@ -41,7 +41,7 @@ struct inode *mpxip;
  * soon as a stack and segmentation
  * have been established.
  * Functions:
- *	clear and free user core
+ *	free user core
  *	turn on clock
  *	hand craft 0th process
  *	call all initialization routines

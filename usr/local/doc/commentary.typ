@@ -1606,6 +1606,10 @@ mount table, which v7's `main.c` defined, since their sizes are now
 part of the configuration too (#f("param.h")). v7's `cputype` is gone
 (#f("systm.h")).
 
+The comment above `main` lists its work. Its first item reads "free
+user core" (44), where v7's read "clear and free user core", since
+`startup` no longer clears core (#f("machdep.c")).
+
 #lines(1, 53)
 
 `startup` (58) sets aside the page tables of the processes, frees the
@@ -1800,7 +1804,7 @@ process starts with an empty address space. The next `NPTAB` clicks
 into `ptmap` as v7 freed core into `coremap`. The rest of core is freed
 (54, 55). Core is no longer cleared here; `machine_init` clears the
 area of process 0, and `exec` (#f("sys1.c")) clears each image it
-builds. The v7 comment (43) is therefore only half true.
+builds, so the v7 comment (43) now says only "free".
 
 As in v7, `maxmem` (54) is first the amount of core, which is printed
 (56), and is then limited to `MAXMEM` (#f("param.h")), the largest image
@@ -3279,10 +3283,11 @@ buffer and the swap area are released in every case, success included.
 
 `getxfile` reads the header of the executable and builds the new image.
 Here the port departs furthest from v7. v7 accepted only its own
-`a.out` formats, distinguished by the magic numbers listed in the
-comment; this kernel accepts only ELF files, which is what the cross
-compiler produces, and the comment is a relic. The ELF loader is a
-deliberate exception to the port's practice of keeping v7's formats.
+`a.out` formats, distinguished by the magic numbers which its comment
+listed; this kernel accepts only ELF files, which is what the cross
+compiler produces, and the comment (161--165) now describes them. The
+ELF loader is a deliberate exception to the port's practice of keeping
+v7's formats.
 
 #lines(142, 167)
 
@@ -4146,9 +4151,10 @@ some process or the driver owns the buffer, and `B_DELWRI` that the
 contents are newer than the disk and must be written before the buffer
 is reused. `B_AGE` puts a buffer at the front of the available list
 rather than the back, so that it is reused first. `B_PHYS` marks a
-transfer directly to or from a user image. v7's `B_MAP`, which recorded
-that the buffer held the UNIBUS map of the PDP-11/70, is gone with the
-map (#f("machdep.c")). `B_TAPE` is set in the `d_tab` of a magnetic tape driver, of
+transfer directly to or from a user image; v7's comment added
+"potentially using UNIBUS map", which no longer applies. v7's `B_MAP`,
+which recorded that the buffer held the UNIBUS map of the PDP-11/70, is
+gone with the map (#f("machdep.c")). `B_TAPE` is set in the `d_tab` of a magnetic tape driver, of
 which there is none. `B_PBUSY` and `B_PACK` are used by no file of
 this system.
 

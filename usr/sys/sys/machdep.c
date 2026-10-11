@@ -40,7 +40,7 @@ startup(void)
 	register int i, a;
 
 	/*
-	 * zero and free all of core
+	 * free all of core
 	 */
 
 	i = btoc(corebase) + USIZE;
