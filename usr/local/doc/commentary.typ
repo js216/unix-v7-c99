@@ -48,9 +48,9 @@
 ]
 
 Unix, the greatest operating system ever created, served tens of thousands of
-users with a kernel that fit in under 100 kB of core. This repository aims to
-bring the Seventh Edition kernel up to date with C99 to run on hardware
-available nowadays.
+users with a kernel that fit in under 100 kB of core. This book presents
+the Seventh Edition kernel brought up to date with C99 to run on
+hardware available nowadays.
 
 #v(1em)
 *References*
@@ -100,9 +100,12 @@ on-chip memory (SYSRAM) at 0x2ffe0000, and the controllers below; the
 board adds 512 MB of DDR3L memory, at 0xc0000000, and an SD card slot. The console is the chip's UART4 at
 0x40010000, the disk is the SD card on its SDMMC1 controller at
 0x58005000, and the interrupt controller is again a GIC version 2, at
-0xa0021000. The chip's boot ROM reads the kernel from the SD card into
-SYSRAM and starts it; the kernel must then bring up the DDR memory
-itself (#f("stm32ddr.c")) before it can use it.
+0xa0021000. The kernel is linked to run in SYSRAM, where the chip's
+boot ROM places what it loads from the SD card; the build makes the
+kernel and the root file system, but not yet the image, with the
+header the ROM requires, nor puts anything where the ROM looks for it.
+Once running, the kernel must bring up the DDR memory itself
+(#f("stm32ddr.c")) before it can use it.
 
 The Cortex-A7 implements the ARMv7-A architecture: sixteen 32-bit
 registers, a status register `CPSR`, separate processor modes for user
@@ -1080,7 +1083,7 @@ execution going, to the kernel address of the next line.
 
 #lines(78, 92)
 
-A provisional stack, at the end of the kernel's `bss` (201--203),
+A provisional stack, at the start of the kernel's `bss` (200--202),
 serves until the u-area of process 0 can be mapped. v7 needed no such
 thing: its `start` set the memory management registers inline and then
 pointed `sp` at the u-area directly.
@@ -3231,8 +3234,8 @@ stack pointer, which on the PDP-11 had already been decremented when a
 push faulted. On the ARM a store multiple which pushes registers leaves
 `sp` unchanged when it faults, so the address of the fault is used
 instead. Only a fault close below the stack pointer, or above it, is
-taken for a stack reference: 256 bytes is the most that one instruction
-can store below `sp`, the 32 double registers of a `vpush`. A fault
+taken for a stack reference: 256 bytes, twice the most that one
+instruction can store below `sp`, the 16 double registers of a `vpush`. A fault
 further down, in the gap between the data and the stack, is a wild
 reference, or the shell asking for more memory (#f("sh/fault.c")), and
 gets its signal. A prefetch abort passes zero for the address, which
@@ -4528,8 +4531,7 @@ as the legacy interface prescribes; `pad` (45) fills the space between.
 Each element of the used ring is a pair of words, hence `2*NVQ`. The
 specification puts one more halfword after `aring`, which is not
 declared, and QEMU leaves it out when it computes where the used ring
-lies; with an alignment of four the two would have differed by a word,
-but rounded up to 4096 bytes both arrive at the same place.
+lies; rounded up to 4096 bytes, both arrive at the same place.
 
 The declaration of `rkstart` (51) is new, needed because `rkstrategy`
 calls it before its definition. `vqbuf` (55) is reserved with 4095
@@ -6790,9 +6792,10 @@ than a character to send (`klstart`, #f("pl011.c")); since ordinary
 characters were cut to seven bits above, there is no confusion.
 
 For the tab of a Model 37 teletype, `1 - (*colp | ~07)` is the
-number of columns to the next tab stop. The expression works as in v7
-although `t_col` is now an unsigned `char`: it is promoted to `int`
-before the `|`, and the result is the same. The comment at (589) is
+number of columns to the next tab stop. `t_col` is a plain `char`,
+signed or not as the compiler chooses; it is promoted to `int` before
+the `|`, and since the column never reaches 128, the result is the
+same either way. The comment at (589) is
 new, as at (223).
 
 #lines(573, 645)
@@ -6907,10 +6910,8 @@ the MP135 machine has 512 MB of memory as well. They are far larger than SYSRAM,
 #lines(6, 13)
 
 The memory of the MP135 machine is in two pieces which are not
-contiguous. The
-boot ROM loads the kernel from the SD card into the 128 KB of on-chip
-SYSRAM at `0x2ffe0000` and jumps to it; this is `ram`, linked at
-0xc01e0000, so that the difference is a multiple of 2 MB. Process
+contiguous. The kernel runs in the 128 KB of on-chip SYSRAM at
+`0x2ffe0000` (Section 1); this is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
 images, and anything else too large for SYSRAM, live in the 512 MB of
 external DDR memory at `0xc0000000`, which the kernel maps 2 MB higher,
 at 0xc0200000, just above the block of SYSRAM (Section 1).
@@ -7109,9 +7110,8 @@ region if the configuration has one, as on the MP135 machine, and otherwise in
 
 The entry point is named: `start`, the physical address of `_start`.
 QEMU, which loads the ELF file itself, jumps to the entry point with
-the MMU off, so the kernel address would not do; the MP135 machine's boot ROM,
-which loads a plain image made from the file, starts it at its first
-byte, which is `_start` too. Between the regions and the sections the
+the MMU off, so the kernel address would not do. On the MP135 machine
+the kernel's first byte, at the start of SYSRAM, is `_start` too. Between the regions and the sections the
 symbol `u` is set to `0xFFF00000`, the value of `UBASE` (#f("param.h")),
 as v7's `mch.s` set `_u`; `mkconf` is a program of the build machine
 and does not include the kernel's headers, so the address is written
@@ -7403,8 +7403,8 @@ card and the controller, and the controller's own DMA engine, the
 command 17, `READ_SINGLE_BLOCK`, whose argument is the number of the
 block; a write is command 24, `WRITE_BLOCK`.
 
-Much is assumed. The boot ROM has just loaded the kernel from this
-card, so the card is powered, identified, selected, and in the state
+Much is assumed: that the boot ROM, having loaded the kernel from this
+card, has left the card powered, identified, selected, and in the state
 in which it accepts these commands, and the controller's clock and bus
 width are set. The driver issues none of the commands by which a card
 is brought to that state, and touches neither the clock nor the pins.
@@ -7523,8 +7523,8 @@ in `machine_init` (#f("machdep.c")), through `clock_ddr_init`
 of the MP135 machine usable. v7 had nothing like it, since a PDP-11's
 core was ready when the machine was switched on.
 
-The boot ROM of the MP135 machine brings up only the chip's SYSRAM, and
-loads the kernel into it. The 512 MB of DDR3L memory are dead until a memory controller and its physical interface ("PHY")
+The boot ROM of the MP135 machine brings up only the chip's SYSRAM, in
+which the kernel runs. The 512 MB of DDR3L memory are dead until a memory controller and its physical interface ("PHY")
 have been clocked, configured, and trained to the particular chips;
 this is normally the work of a first-stage boot loader, and here the
 kernel is the first stage. The page tables, the core, and all the
@@ -12453,15 +12453,17 @@ regions, in the difference between kernel and physical addresses, and
 in where it puts `.ddrbss` and what it puts there; `u` and `start` are
 defined in the same way.
 
-`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, into
-which the boot ROM loads the kernel, by its kernel address 0xc01e0000.
+`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, in
+which the kernel runs, by its kernel address 0xc01e0000.
 The text, data, and `.bss` of the kernel must all fit there; the linker
 reports an overflow of the region, so a kernel which has outgrown SYSRAM
 fails to link rather than to boot. `TAB` is the DDR memory, at
 physical `0xc0000000` and kernel address 0xc0200000, which holds the
 table `kl3u` in `.ddrbss`, at its very start, and after it the tables
-of the configuration; `core` follows them (#f("mp135conf")). The boot ROM loads a plain image, made from the file
-by its load addresses, and starts it at its first byte, `_start`.
+of the configuration; `core` follows them (#f("mp135conf")). The first
+byte of the text, at the start of SYSRAM, is `_start`. The build makes
+only this ELF file; the image which the boot ROM would load, with its
+header, is not made.
 
 Here the separation of `.ddrbss` from `.bss` matters. The DDR is dead
 until `ddrinit` (#f("stm32ddr.c")) has started it, so `_start`
@@ -12574,9 +12576,9 @@ tells the compiler that `=` is meant.
 
 From a prototype, the first word names a bootstrap program. v7 copied
 its text and data into block 0, which the PDP-11's boot ROMs read to
-start the system. Here QEMU or the MP135 machine's boot ROM loads the kernel
-itself, and block 0 is never read; the prototype names `/dev/null`, and
-the file is opened only to be closed again. The `else` and the blank
+start the system. QEMU loads the kernel from its ELF file, and reads no
+bootstrap from the disk; the prototype names `/dev/null`, and the file
+is opened only to be closed again. The `else` and the blank
 line which follow (153, 154) are what is left of v7's code around the
 deleted lines, as is the comment, which has lost its second line.
 
@@ -12726,8 +12728,9 @@ made on the build machine, every time the system is built
 (#f("Makefile")).
 
 The format is v7's. The first word names the program to be written
-into block 0 as a bootstrap: here `/dev/null`, since QEMU or the boot
-ROM of the MP135 machine loads the kernel directly and block 0 is never read.
+into block 0 as a bootstrap: here `/dev/null`, since QEMU loads the
+kernel from its ELF file, and nothing is written for the MP135
+machine's boot ROM (Section 1).
 The second line gives the size of the file system, 131072 blocks of 512
 bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
 gives the i-list blocks 2 to 4098. The system's own files take some 3
