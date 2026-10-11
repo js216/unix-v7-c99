@@ -1917,9 +1917,15 @@ matches. A spurious interrupt (1023) matches nothing.
 Writing the same value to the end-of-interrupt register (`0x10`) at
 line 130 retires the interrupt.
 
-Note that all interrupts share one level. The PDP-11's priorities have
-collapsed into "masked" and "unmasked", and an interrupt handler is
-never itself interrupted.
+All interrupts share one level. The PDP-11's priorities have collapsed
+into "masked" and "unmasked", and until the end of interrupt is written
+the controller delivers no other interrupt, even to a handler which
+unmasks the IRQ, as `clock` does with `spl1` (#f("clock.c")). After
+that, an IRQ left unmasked lets a second interrupt in, in the tail of
+`irq_entry` (#f("low.s")), before the first frame is unloaded. It nests
+as any interrupt of the kernel does: its frame goes below the first,
+and the `r5` saved in it, which carries the first entry's `lr`, is
+restored before the first entry uses it.
 
 #lines(116, 131)
 
@@ -3032,7 +3038,8 @@ without pause and so never sleeps.
 `spl1` (105) unmasks the IRQ. On the PDP-11 it let other interrupts in
 while the loop over `proc` was done. Here it does not: the interrupt
 controller delivers no further interrupt until `irq` writes the end of
-interrupt, after `clock` returns. The `& 0377` (115) undid sign extension
+interrupt, after `clock` returns; only then can one nest
+(#f("machdep.c")). The `& 0377` (115) undid sign extension
 of a PDP-11 `char` and is harmless on the ARM, where `char` is unsigned.
 
 #lines(102, 129)
