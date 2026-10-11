@@ -4772,9 +4772,10 @@ count to 127; on the ARM `char` is unsigned and the limit was 255.
 Every process forked from a shell shares its terminal's `file`, so a
 process table larger than v7's 150 entries could wrap the count to
 zero and free the entry while still in use; nothing checks for
-overflow, here or in v7. It is now a `short`, which counts to 32767. `f_offset` is a `long` on both machines,
-but on the PDP-11 it occupied two words, high word first, where here it
-is a single word.
+overflow, here or in v7. It is now a `short`, which counts to 32767.
+`f_offset` is a `long` on the PDP-11 and the ARM alike, but on the
+PDP-11 it occupied two words, high word first, where here it is a
+single word.
 
 The union's second member, `f_chan`, and the flags `FMPX`, `FMPY`, and
 `FMP` belong to v7's multiplexed files, `mx1.c` and `mx2.c`. Those files
@@ -4852,9 +4853,8 @@ once. `mpxip` is never set in this system, so the tests of it in
 `ILOCK` and `IWANT` implement the lock on an inode: whoever finds the
 inode locked sets `IWANT` and sleeps on its address, and `prele`
 (#f("pipe.c")) wakes the sleepers when the lock is released. `ITEXT`
-marks the inode of a program whose text is in the text table, and which
-therefore may not be written; since no program here has a separate text
-segment (#f("text.c")), the flag is never set. `IMOUNT` marks an inode
+marks the inode of a program whose text is in the text table
+(#f("text.c")), and which therefore may not be written. `IMOUNT` marks an inode
 on which a file system is mounted, which `iget` replaces by the root of
 that file system.
 
@@ -5113,8 +5113,7 @@ but a character device makes of the offset what it will, and
 `/dev/kmem` and `/dev/mem` (#f("mem.c")) take it as an address: the
 kernel's addresses lie above 0xc0000000, and core on the MP135 machine
 too, which as a 32-bit `off_t` are negative. The check is therefore
-made only for files and block devices, as the Berkeley systems also
-came to do. In v7 the call read
+made only for files and block devices. In v7 the call read
 `return((*cdevsw[major(dev)].d_read)(dev))`, returning whatever the
 driver returned from a procedure whose value nobody used. Both are
 `void` now, so the call and the `return` are separate statements.
@@ -5122,9 +5121,8 @@ driver returned from a procedure whose value nobody used. Both are
 #lines(9, 43)
 
 The offset is split into a logical block number and a position within
-the block, and `n` is the most that can come from this block. The sixth
-edition needed `lshift` to do this with its two-word offset; a `long`
-shift has done since v7. `min`, below, compares as `unsigned`.
+the block, and `n` is the most that can come from this block. `min`,
+below, compares as `unsigned`.
 
 For a file, `n` is cut to what remains before the end of the file, and
 `bmap` converts the logical block number into a block of the device;
@@ -5180,7 +5178,7 @@ which checks the user address and counts.
 
 On the PDP-11 the test was for evenness, `NBPW` being 2, and the
 machine-language routines moved words. Here `NBPW` is 4, and `copyin`
-and `copyout` (#f("machdep.c")) likewise move words when both addresses
+and `copyout` (#f("mch.s")) likewise move words when both addresses
 and the count are multiples of it, so the test is v7's and keeps its
 purpose.
 
@@ -5271,7 +5269,7 @@ stop as soon as the request is satisfied.
 `cpass` is the converse, fetching one character of a write. The mask
 (168) mattered on the PDP-11, where the direct fetch for a kernel
 address sign-extended the `char`. On the ARM a `char` is unsigned and
-`fubyte` (#f("machdep.c")) already returns a value from 0 to 255, so the
+`fubyte` (#f("mch.s")) already returns a value from 0 to 255, so the
 mask changes nothing.
 
 #lines(143, 169)
@@ -5410,7 +5408,7 @@ this very process.
 #lines(164, 199)
 
 `schar` takes the name from kernel space, `uchar` from user space with
-`fubyte` (#f("machdep.c")), which returns −1 for an address outside the
+`fubyte` (#f("mch.s")), which returns −1 for an address outside the
 user's memory. The mask in `schar` undid the sign extension of a PDP-11
 `char`; on the ARM `char` is unsigned and the mask is idle.
 
@@ -5852,7 +5850,7 @@ delayed-write buffer.
 #source("/usr/sys/sys/pipe.c")
 
 #f("pipe.c") implements pipes. A pipe is an ordinary inode, allocated on
-the device `pipedev` (the root device, on both boards, by the `c.c`
+the device `pipedev` (the root device, on both machines, by the `c.c`
 which `mkconf` writes) but entered in no directory, and opened twice: by
 one `file` for reading and by another for writing. Data written to the
 pipe is appended to the file; the reader reads from its own offset; and
