@@ -7557,7 +7557,7 @@ routine which sets it (#f("libc/syscall.s")).
 v7's file ended by reserving two bytes at the start of `.data`. In a
 program with separate instruction and data spaces, data location 0
 would otherwise have held a variable, whose address would then compare
-equal to a null pointer. The port's programs are linked at `0x10`, with
+equal to a null pointer. The port's programs are linked at `0x80`, with
 the signal trampoline at 8 (#f("seg.h")), so no object of the program can
 lie at address 0, and the padding is gone.
 
@@ -7575,8 +7575,8 @@ and its child at different places (#f("sys1.c")).
 The file corresponds to nothing in v7 of the same name and content.
 v7's `syscall.s`, a compatibility routine of its library, was a
 routine `syscall(n, r0, r1, a1, ...)` which built a `sys` instruction
-for call `n` at run time; the port's version of it, `syscall3`, was used
-by nothing and has been dropped. What this file does replace is v7's
+for call `n` at run time, and has no counterpart here. What this file
+does replace is v7's
 `cerror.s`, together with the `sys` instruction which each v7 stub
 contained. The name `cerror` is v7's; its job has grown.
 
@@ -7644,9 +7644,10 @@ result, an offset from `lseek` beyond 2 GB or a `time` after January
 `errno` (12) is reserved here, a word of `bss`, as v7's `cerror.s`
 reserved `_errno`. Every program which makes a system call links this
 file, and the C files of the library declare `errno` `extern`, so this
-is its one definition. That matters: when `perror.c` also defined
-`errno`, the linker resolved the common symbol by pulling `perror.o`,
-and `sys_errlist` with it, into every program which made a system call.
+is its one definition. That matters: were `perror.c` to define `errno`
+too, as v7's did, the linker would resolve the common symbol by pulling
+`perror.o`, and `sys_errlist` with it, into every program which made a
+system call.
 
 #lines(12, 12)
 #source("/usr/src/libc/sys/read.s")
@@ -7897,8 +7898,9 @@ all so that `write` and `mail` can reach it; `login` will give it to the
 user. Opening it (267) makes the child the leader of the terminal's
 process group, as in `single`. In v7 the open of a dial-up
 line slept until the modem reported a call, so that this is where an
-idle line's process waited; the UART drivers of the port
-(#f("pl011.c")) have no modem control, and the open returns at once.
+idle line's process waited; the console drivers (#f("pl011.c"),
+#f("stm32usart.c")) have no modem control, and the open returns at
+once.
 
 `getty` is called with the name `-` and one argument, the table
 character from `/etc/ttys`, which is borrowed from the `tty` buffer
@@ -7914,9 +7916,9 @@ record with the user's name. Either file is skipped if it cannot be
 opened, so the history is kept only if `/usr/adm/wtmp` has been
 created.
 
-The `utmp` structure is 16 bytes on both machines: two arrays of 8
-characters and a `long` of 4 bytes, so the files have the same format as
-v7's.
+The `utmp` structure is two arrays of 8 characters and a time of 8
+bytes, 24 bytes in all, where v7's time was a `long` and the structure
+20 bytes; the files are therefore not in v7's format.
 
 #lines(277, 309)
 
@@ -7990,23 +7992,24 @@ line given one of them never changes speed. The console of the port is
 the entry `14console` in `/etc/ttys`: enabled, with table `'4'`, the
 "Console Decwriter", whose modes ask for carriage return mapping and
 tab expansion on output. The speeds of any table are irrelevant here.
-`tty.c` records them, but the UART drivers (#f("pl011.c")) never program
-the speed, which is fixed when the board starts, just as the KL11
+`tty.c` records them, but the console drivers never use them: the QEMU
+machine's UART has no speed to set, and the MP135 machine's is set to
+115200 baud once, by `klinit` (#f("stm32usart.c")), just as the KL11
 console of the PDP-11 had a speed set by jumpers.
 
 #lines(50, 103)
 
-`name` (107) receives the name which `getname` reads, and `crmod`,
+`name` (108) receives the name which `getname` reads, and `crmod`,
 `upper`, and `lower` record what it learns about the terminal on the
 way.
 
 v7 had here `partab`, a table of parity bits for the ASCII characters,
 which `putchr` used to send every character with even parity, since in
-raw mode the kernel adds none. The UART drivers of the port send eight
-data bits without parity (#f("pl011.c")), and a terminal emulator takes
-the eighth bit as part of the character, so the parity bit garbled the
-prompt: the `g` of `login:`, which has an odd number of one bits,
-arrived as `ç`. The table and its use are removed.
+raw mode the kernel adds none. The console drivers send eight data bits
+without parity (#f("pl011.c")), and a terminal emulator takes the eighth
+bit as part of the character, so the parity bit would garble the
+prompt: the `g` of `login:`, which has an odd number of one bits, would
+arrive as `ç`. The table and its use are removed.
 
 #lines(104, 112)
 
