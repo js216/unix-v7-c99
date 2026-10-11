@@ -1,0 +1,11 @@
+T=/tmp/fp U=/usr/local/test/utils
+mkdir $T; cd $T
+$U/fpt ieee
+$U/fpt fork
+$U/fpt switch
+$U/fpt sig
+sh -c "$U/fpt core" 2>/dev/null; $U/fpt rcore
+awk 'BEGIN { printf "%.12f\n%.12f\n%.12f\n%.12f\n", 1/3, 22/7, sqrt(2), exp(1) }' </dev/null >a
+echo 'scale=12; 1/3; 22/7; sqrt(2); e(1)' | bc -l | sed 's/^\./0./' >b
+cat a; cmp a b && echo awk and bc agree
+cd /; rm -rf $T

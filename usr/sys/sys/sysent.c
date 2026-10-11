@@ -121,6 +121,8 @@ trap(int *r)
 		qswtch();
 	if(u.u_prof.pr_scale)
 		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
+	if (u.u_fpsaved)
+		restfp(&u.u_fps);
 }
 void
 user_trap_handler(int signo, int *r, unsigned a)
@@ -139,4 +141,6 @@ user_trap_handler(int signo, int *r, unsigned a)
 	curpri = setpri(u.u_procp);
 	if (runrun)
 		qswtch();
+	if (u.u_fpsaved)
+		restfp(&u.u_fps);
 }

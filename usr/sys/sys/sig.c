@@ -383,7 +383,7 @@ procxmt(void)
 	case 6:
 		i = (int)ipc.ip_addr;
 		p = (int *)&((physadr)&u)->r[i>>2];
-		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
+		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[32])
 			goto ok;
 		for (i=0; i<8; i++)
 			if (p == &u.u_ar0[regloc[i]&0377])

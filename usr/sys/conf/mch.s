@@ -1,6 +1,6 @@
 .globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, dfar, dfsr
+.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, restfp, dfar, dfsr
 .globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
 .globl kl3u
 
@@ -229,7 +229,20 @@ idle:
 	cpsie i
 	wfi
 1:	cpsid i
+	bx lr
+
 savfp:
+	vmrs r1, fpscr
+	str r1, [r0], #8
+	vstmia r0!, {d0-d15}
+	vstmia r0, {d16-d31}
+	bx lr
+
+restfp:
+	ldr r1, [r0], #8
+	vmsr fpscr, r1
+	vldmia r0!, {d0-d15}
+	vldmia r0, {d16-d31}
 	bx lr
 
 dfar:

@@ -291,8 +291,9 @@ setregs(void)
 			u.u_ar0[i] = 0;
 	u.u_r.r_val2 = 0;
 	u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
-	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[6];)
+	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[32];)
 		*rp++ = 0;
+	u.u_fpsaved = 1;
 	for(i=0; i<NOFILE; i++) {
 		if (u.u_pofile[i]&EXCLOSE) {
 			closef(u.u_ofile[i]);

@@ -93,7 +93,12 @@ _start:
 	ldr sp, =stack_top
 	ldr r0, =vectors
 	mcr p15, 0, r0, c12, c0, 0
+	mrc p15, 0, r0, c1, c0, 2
+	orr r0, r0, #(0xf << 20)
+	mcr p15, 0, r0, c1, c0, 2
 	isb
+	mov r0, #(1 << 30)
+	vmsr fpexc, r0
 	bl machine_init
 	mov sp, r0
 	bl main

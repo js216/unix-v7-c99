@@ -503,6 +503,10 @@ retry:
 	n = rip->p_size;
 	a1 = rip->p_addr;
 	rpp->p_size = n;
+	if (u.u_fpsaved==0) {
+		savfp(&u.u_fps);
+		u.u_fpsaved = 1;
+	}
 	/*
 	 * When the resume is executed for the new process,
 	 * here's where it will resume.
@@ -571,6 +575,10 @@ expand(int newsize)
 	}
 	a2 = malloc(coremap, newsize);
 	if(a2 == NULL) {
+		if (u.u_fpsaved==0) {
+			savfp(&u.u_fps);
+			u.u_fpsaved = 1;
+		}
 		xswap(p, 1, n);
 		p->p_flag |= SSWAP;
 		qswtch();

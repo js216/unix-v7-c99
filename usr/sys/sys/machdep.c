@@ -136,11 +136,13 @@ irq(int *r)
 void
 sendsig(caddr_t p, int signo)
 {
-	register unsigned n;
+	register unsigned n, m;
 
-	n = (u.u_ar0[R6] - (RPS+1)*sizeof(int)) & ~7;
+	m = (RPS+1)*sizeof(int);
+	n = (u.u_ar0[R6] - m - sizeof(u.u_fps)) & ~7;
 	grow(n);
-	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, (RPS+1)*sizeof(int)) < 0) {
+	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
+	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
 		u.u_signal[SIGSEG] = 0;
 		psignal(u.u_procp, SIGSEG);
 		return;
@@ -233,12 +235,16 @@ sigreturn(void)
 {
 	int f[RPS+1];
 	register int i;
+	register caddr_t a;
 
-	if(copyin((caddr_t)u.u_ar0[R6], (caddr_t)f, sizeof(f)) < 0) {
+	a = (caddr_t)u.u_ar0[R6];
+	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
+	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
 		u.u_signal[SIGSEG] = 0;
 		psignal(u.u_procp, SIGSEG);
 		return;
 	}
+	u.u_fpsaved = 1;
 	for(i = 0; i < RPS; i++)
 		u.u_ar0[i] = f[i];
 	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);

@@ -11,6 +11,7 @@ SYS_OBJ = $(LIB1_OBJ) $(LIB2_OBJ) $(QEMU_DRV) $(MP135_DRV) $S/conf/low.o $S/conf
 GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf
 
 $(SYS_OBJ): $S/sys.mk
+$(SYS_OBJ): CFLAGS += -mfloat-abi=soft
 $(LIB1): $(LIB1_OBJ)
 $(LIB2): $(LIB2_OBJ)
 $(LIB1) $(LIB2):

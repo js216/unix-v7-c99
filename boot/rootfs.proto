@@ -205,6 +205,8 @@ d--755 0 0
 					exec	---644 0 0 usr/local/test/cases/exec
 					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
+					fp	---644 0 0 usr/local/test/cases/fp
+					fp.exp	---644 0 0 usr/local/test/cases/fp.exp
 					intr	---644 0 0 usr/local/test/cases/intr
 					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
 					kern	---644 0 0 usr/local/test/cases/kern
@@ -279,6 +281,7 @@ d--755 0 0
 					dit	---755 0 0 usr/local/test/obj/dit
 					edscr	---644 0 0 usr/local/test/utils/edscr
 					forkt	---755 0 0 usr/local/test/obj/forkt
+					fpt	---755 0 0 usr/local/test/obj/fpt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img
 					kcmp	---755 0 0 usr/local/test/obj/kcmp
 					kmt	---755 0 0 usr/local/test/obj/kmt
