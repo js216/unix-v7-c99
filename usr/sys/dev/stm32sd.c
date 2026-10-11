@@ -133,7 +133,7 @@ rkintr(void)
 	}
 	rkoff = 0;
 	if (bp->b_flags & B_READ)
-		dcflush(bp->b_un.b_addr, bp->b_bcount);
+		dcinval(bp->b_un.b_addr, bp->b_bcount);
 	rktab.b_errcnt = 0;
 	rktab.b_actf = bp->av_forw;
 	bp->b_resid = 0;

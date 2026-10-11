@@ -764,13 +764,13 @@ handlers, which take no arguments since they find them through
 - `machine_init`, `install_sigtramp`, `irq`, `panictrap`,
   `sigreturn`, and `vtop` are in #f("machdep.c"). `sigreturn` is system
   call 63, which a signal handler returns through. `irq` is the
-  interrupt handler. `vtop` (154) turns a kernel address into the
+  interrupt handler. `vtop` (155) turns a kernel address into the
   physical address a device must be given.
 - `ptfree` (#f("ureg.c")) releases a process's page tables.
-- `arm_sync_icache`, `dcflush`, `dmbsy`, `idle`, `restfp`, `savfp`,
+- `arm_sync_icache`, `dcflush`, `dcinval`, `dmbsy`, `idle`, `restfp`, `savfp`,
   `tlbflush`, `ttbset`, and the generic timer accessors `cntv_ctl_set` and
   `cntv_cval_set` are in #f("mch.s"). There, too, are `cntfrq_get`, `dfar`, and `dfsr`, in the
-  second list (135--138), which return the timer frequency and the
+  second list (136--139), which return the timer frequency and the
   address and status of the last data abort. `savfp` and `restfp`, v7's
   names, store and load the floating point registers of the current
   process.
@@ -803,25 +803,25 @@ interrupt frame. Only the last two, the program counter and the
 processor status, were ever used, and only they remain; `irq` passes
 the saved PC and the mode (#f("param.h")).
 
-#lines(67, 132)
+#lines(67, 133)
 
-The routines which return a value. `expand` (137) and `xswap` (151)
+The routines which return a value. `expand` (138) and `xswap` (152)
 are among them, where v7's returned nothing: each returns zero when
 there is no swap space for the image (#f("slp.c"), #f("text.c")).
-`save` (145) returns twice, like
+`save` (146) returns twice, like
 `setjmp`: zero when it saves, one when `resume` later returns through
 the saved label. `max` and `min` keep v7's `int` result, although
-their arguments are `unsigned`. `cntvct_get` (153), which reads the
+their arguments are `unsigned`. `cntvct_get` (154), which reads the
 generic timer's counter (#f("mch.s")), returns all 64 bits of it as an
-`unsigned long long`. `machine_init` (152) returns the address at which
+`unsigned long long`. `machine_init` (153) returns the address at which
 #f("low.s") is to place the kernel stack.
 
-`printf` (155) has a true variable argument list. v7's `printf`
+`printf` (156) has a true variable argument list. v7's `printf`
 walked up the PDP-11 stack from the address of its first argument.
 Under the ARM calling convention the first four arguments arrive in
 registers, so #f("prf.c") uses `<stdarg.h>` instead.
 
-#lines(133, 155)
+#lines(134, 156)
 
 On a PDP-11 with separate instruction and data spaces, reading a
 program's text required different instructions (`mfpi`, `mtpi`) from
@@ -830,21 +830,21 @@ and so on. The ARM has one address space, so the I-space forms are
 simply aliases, and their callers (`passc`, `cpass`, `iomove`,
 `procxmt`) keep v7's text.
 
-#lines(156, 161)
+#lines(157, 162)
 
 Counters for `iostat`, kept by the clock and by the drivers, which
 set and clear their bit of `dk_busy` around each transfer. Like the
 variables above, they are `extern` here and defined in #f("main.c").
 
-#lines(162, 170)
+#lines(163, 171)
 
 The table of system calls, defined in #f("sysent.c") and indexed by
-`trap` with the number of the call. The handler (178) was declared in
+`trap` with the number of the call. The handler (179) was declared in
 v7 as returning `int`, by default. The handlers return nothing; their
 results go back to the user through `u.u_r`. It is now a pointer to a
 `void` function of no arguments, and every handler is defined so.
 
-#lines(171, 179)
+#lines(172, 180)
 #source("/usr/sys/h/seg.h")
 
 In v7, #f("seg.h") held the addresses of the PDP-11 memory management
@@ -1323,7 +1323,7 @@ reports it. The
 PDP-11 performed accesses in program order and needed nothing of this
 kind.
 
-#lines(1, 9)
+#lines(1, 10)
 
 The interrupt priority routines. The PDP-11 had eight priority levels in
 its PS, and a device interrupted only when its level exceeded the
@@ -1334,17 +1334,17 @@ clear the mask, `spl5`, `spl6`, and `spl7` set it, and every interrupt
 handler runs with all interrupts masked. v7's `spl4`, which nothing in
 this system calls, is omitted.
 
-Each routine returns the previous `cpsr` in `r0` (13, 24), as v7's
+Each routine returns the previous `cpsr` in `r0` (14, 25), as v7's
 returned the old PS, so that `s = spl6(); ... splx(s);` works.
-`splx` (28) looks only at the `I` bit of the value it is given.
+`splx` (29) looks only at the `I` bit of the value it is given.
 
 Neither `spl0` nor `splx` will unmask interrupts while
-`irq_ready` is zero (14--17, 31--34). `clkstart` (#f("machdep.c")) sets it once the
+`irq_ready` is zero (15--18, 32--35). `clkstart` (#f("machdep.c")) sets it once the
 interrupt controller and the timer have been programmed, and then calls
 `spl0` itself. Until then interrupts stay masked, whatever `spl0` calls
 the initialisation makes.
 
-#lines(10, 39)
+#lines(11, 40)
 
 Access to the ARM generic timer, which replaces the PDP-11's line clock.
 `cntfrq_get` reads `CNTFRQ`, the counter frequency, which the boot loader
@@ -1362,7 +1362,7 @@ routine returns. `clkstart` (#f("machdep.c")) and `clock`
 and the console's `putchar` (#f("pl011.c"), #f("stm32usart.c")) times
 its wait with `cntvct_get`.
 
-#lines(40, 58)
+#lines(41, 59)
 
 `save(lab)`
 records in the array `lab` (a `label_t`, #f("param.h")) the registers
@@ -1371,20 +1371,20 @@ pointer and the return address, and returns 0. On the PDP-11 these were
 `r2` to `r5`, `sp`, and the PC; here they are `r4` to `r11`, `sp`, and
 `lr`: ten words.
 
-#lines(59, 65)
+#lines(60, 66)
 
 `resume(p_addr, lab)` switches the u-area window to process `p_addr` and
 returns, with the value 1, from the `save` which stored `lab`.
-Interrupts are masked first (68), as v7 raised the priority to 7.
+Interrupts are masked first (69), as v7 raised the priority to 7.
 
 The physical address of the new u-area, `p_addr` shifted left by 12,
 is or'ed with `0x703`, which in a page entry means "page, normal
 write-back memory, shareable, accessed, kernel read and write, no user
 access", and stored in the third-level table `kl3u`, which maps the top
 2 MB of the address space. `UBASE` is 256 pages into that range, hence
-the offset `256*8` (69); the entries are 8 bytes apart, and their upper
+the offset `256*8` (70); the entries are 8 bytes apart, and their upper
 words stay zero. The constant does not fit an ARM immediate operand, and
-is loaded into `ip` (71) first. The u-area of the new process now
+is loaded into `ip` (72) first. The u-area of the new process now
 appears at `UBASE`. This is the counterpart of v7's single store into
 `KDSA6`, the kernel segment register for the u-area.
 
@@ -1401,7 +1401,7 @@ out because the assembler cannot read #f("param.h"). The other entries
 of `kl3u` stay invalid, so that a stray kernel reference beyond the
 top of the u-area faults.
 
-#lines(66, 75)
+#lines(67, 76)
 
 `dsb` makes the table writes visible to the hardware table walker; the
 translations of the two pages of `u` are then invalidated
@@ -1410,7 +1410,7 @@ that no translation of `UBASE` to the old u-area remains, and `dsb` and
 `isb` wait for that to take effect. The user's mapping is not touched
 here; `sureg` (#f("ureg.c")) changes it after the switch.
 
-#lines(76, 82)
+#lines(77, 83)
 
 The registers are reloaded from `lab`. The reader should
 observe that `lab` is always one of `u.u_rsav`, `u.u_qsav`, or `u.u_ssav`,
@@ -1420,34 +1420,36 @@ saved `lr` held in `r2`, the routine returns into the new process, at
 the point where it called `save`, which now appears to return 1.
 
 Two points deserve notice. From the moment the entries are rewritten
-(73) until `sp` is reloaded (84), the stack of the old process may
+(74) until `sp` is reloaded (85), the stack of the old process may
 already have vanished from `UBASE`, and the stack pointer addresses the
 new process's u-area at a meaningless position; the routine therefore
 uses no stack at all, and an interrupt, which would push a frame there,
-must be masked. Once the new stack is in place, `spl0` (86) unmasks
+must be masked. Once the new stack is in place, `spl0` (87) unmasks
 them, as v7's `resume` ended with `spl 0`. `spl0` is a call, which
 overwrites `lr`; that is why the saved `lr` is loaded into `r2`, which
-`spl0` leaves alone, and the return is through it (88). Without the
+`spl0` leaves alone, and the return is through it (89). Without the
 call, interrupts would stay masked until the process next called `spl0`
 or `splx` or returned to user mode; after `expand` had moved a process,
 for instance, they would be held off for the rest of the system call.
 
-#lines(83, 88)
+#lines(84, 89)
 
 `dcflush(addr, n)` cleans and invalidates the data cache over a range of
-memory. The cache type register `CTR` gives in bits 16 to 19 the log of
+memory, and `dcinval(addr, n)` only invalidates it. The cache type register `CTR` gives in bits 16 to 19 the log of
 the smallest data cache line in words; `r2` becomes the line size in
 bytes. The start is rounded down to a line boundary, and each line is
 cleaned and invalidated to the point of coherency (`DCCIMVAC`,
 `c7, c14, 1`): any dirty data is written to memory and the line is
-discarded. The SD card driver of the MP135 machine (#f("stm32sd.c"))
-calls it on a buffer before and after a DMA (direct memory access)
-transfer, in which the controller reads or writes memory by itself, since that controller's DMA
-does not see the cache: memory must hold what the processor wrote before
-the device reads it, and the processor must not find stale lines after
-the device has written. The PDP-11 had no cache, and so no such routine.
+discarded. `dcinval` enters with `r12` set and discards each line
+without writing it (`DCIMVAC`, `c7, c6, 1`). The SD card driver of the
+MP135 machine (#f("stm32sd.c")) calls `dcflush` on a buffer before a
+DMA (direct memory access) transfer, in which the controller reads or
+writes memory by itself, and `dcinval` after a read, since that
+controller's DMA does not see the cache: memory must hold what the
+processor wrote before the device reads it, and the processor must not
+find stale lines after the device has written. The PDP-11 had no cache, and so no such routine.
 
-#lines(89, 104)
+#lines(90, 111)
 
 `arm_sync_icache` makes instructions just written to memory visible to
 instruction fetch. It is called with the kernel address and length of
@@ -1471,16 +1473,16 @@ alias, and the user addresses at which the text will run are not those
 through which the kernel wrote it. The branch predictor (`BPIALL`)
 goes with it.
 
-#lines(105, 127)
+#lines(112, 134)
 
 `tlbflush` invalidates the whole TLB (`TLBIALL`) and the branch
 predictor. `machine_init` (#f("machdep.c")) calls it after it changes
 the kernel's own mapping.
 
 `ttbset(a)` makes the first-level table at physical address `a` the
-user's: `TTBR0` is loaded with it (140), its upper word zero, which also
+user's: `TTBR0` is loaded with it (147), its upper word zero, which also
 makes the address space identifier zero. The user's entries are marked
-"not global", and the kernel's are global, so `TLBIASID` (142) with
+"not global", and the kernel's are global, so `TLBIASID` (149) with
 identifier 0 invalidates the translations of the old user mapping and
 keeps the kernel's; the branch predictor, which holds targets of the
 old mapping, goes too. The caches, which are indexed and tagged so as
@@ -1489,7 +1491,7 @@ cleaning: the walker reads them through the data cache (#f("low.s")).
 `sureg` (#f("ureg.c")) calls it at every process switch, and whenever
 it has rebuilt the current process's tables.
 
-#lines(128, 147)
+#lines(135, 154)
 
 The routines which move data between the kernel and the current user
 process, which were in v7's `mch.s` too. On the PDP-11 they used the
@@ -1500,12 +1502,12 @@ store with the permissions of user mode even when executed by the
 kernel. A user address which is not mapped, or which only the kernel
 may touch, faults, just as `mfpi` trapped on a missing segment.
 
-The fault is caught, in v7's way, through `nofault` (262). Each routine
-first stores there the address of `uerr` (222); if one of its user
+The fault is caught, in v7's way, through `nofault` (269). Each routine
+first stores there the address of `uerr` (229); if one of its user
 references faults, the data abort handler (#f("low.s")) finds `nofault`
 set and returns, not to the faulting instruction, but to `uerr`, which
 clears `nofault` and returns -1. A routine which completes clears it at
-`uok` (218) and returns its value. Only these routines set `nofault`,
+`uok` (225) and returns its value. Only these routines set `nofault`,
 so any other fault in the kernel is still a `panic`. `r3` holds the
 address of `nofault` throughout, and the abort restores the registers
 as they were at the fault, so `uerr` finds it there.
@@ -1513,7 +1515,7 @@ as they were at the fault, so `uerr` finds it there.
 `fubyte` and `fuword` return the byte or word at a user address, or -1;
 `subyte` and `suword` store one, and return 0 or -1. The byte is loaded
 without sign extension, whatever the signedness of `char`. The loaded
-value goes first into `r1` (152, 168): a load which wrote back to its
+value goes first into `r1` (159, 175): a load which wrote back to its
 own base register would be unpredictable, and the `t` forms always
 write back. v7 distinguished `fuibyte` from `fubyte`, instruction space
 from data space; #f("systm.h") makes the former names aliases of these.
@@ -1521,17 +1523,17 @@ from data space; #f("systm.h") makes the former names aliases of these.
 `copyin(from, to, n)` and `copyout` move `n` bytes from a user address
 to a kernel one, and back, and return 0, or -1 if any user reference
 faults. As v7's did, they move words when both addresses and the count
-are multiples of the word (188--192, 207--211), and bytes otherwise
-(193--197, 212--216). Only the user side of each move uses the `t`
+are multiples of the word (195--199, 214--218), and bytes otherwise
+(200--204, 219--223). Only the user side of each move uses the `t`
 form.
 
-#lines(148, 227)
+#lines(155, 234)
 
 `idle` is v7's, in ARM form. Interrupts are enabled, and `wfi` ("wait for
 interrupt") halts the processor until one arrives, as the PDP-11's
 `wait` did. The interrupt is taken at once, and the PC it saves is that
-of the instruction after `wfi`, labelled `1` (231). Its address is
-stored in `waitloc` (257, 258), which `clock` (#f("clock.c")) compares
+of the instruction after `wfi`, labelled `1` (238). Its address is
+stored in `waitloc` (264, 265), which `clock` (#f("clock.c")) compares
 with the interrupted PC to count the time spent idle. `idle` must
 therefore be the last routine in the file to have a label `1`, which
 `1b` finds by searching backwards. v7's `idle` restored the previous PS
@@ -1539,7 +1541,7 @@ on the way out; this one simply masks interrupts again, which suits
 both callers, `swtch` and `panic`: the one loops at `spl6` and the
 other loops forever.
 
-#lines(228, 233)
+#lines(235, 240)
 
 `savfp` and `restfp` store and load the floating point state of the
 current process, as v7's did for the PDP-11's floating point processor.
@@ -1559,7 +1561,7 @@ exception, has no counterpart: the unit of the Cortex-A7 takes no trap
 on an arithmetic exception, so `SIGFPE` is never sent, and a program
 finds what happened in the cumulative flags of `FPSCR`.
 
-#lines(234, 247)
+#lines(241, 254)
 
 `dfar` and `dfsr` return the data fault address and status registers,
 which describe the last data abort. `user_trap_handler` (#f("sysent.c"))
@@ -1567,13 +1569,13 @@ prints them before it panics on a fault in kernel mode, much as v7's
 `trap` printed the memory management status registers it had copied into
 `ssr`.
 
-#lines(248, 255)
+#lines(255, 262)
 
 `waitloc` is a word of initialised data holding the address of the
 label in `idle`, as `_waitloc` was in v7. `nofault` is the word which
 v7 also kept in `mch.s`, zero except while a user reference is made.
 
-#lines(256, 264)
+#lines(263, 271)
 
 `kl3u` is the third-level table which maps the top 2 MB of the
 address space, page by page; of its 512 entries only the two at
@@ -1586,7 +1588,7 @@ section is put in the DDR memory, which cannot
 be used until `machine_init` has initialised its controller; that
 routine clears the section afterwards.
 
-#lines(265, 268)
+#lines(272, 275)
 #source("/usr/sys/sys/main.c")
 
 #f("main.c") holds the procedure through which the kernel passes exactly
@@ -1698,11 +1700,21 @@ configuration (#f("qemu/c.c")). v7 declared each as `BSIZE+BSLOP`, i.e.
 514, bytes of `char`. With 514 bytes every second buffer would start on
 an address which is only two-byte aligned, and the DMA engine of the SD
 card controller of the MP135 machine requires a word-aligned buffer
-address; the odd buffers would be corrupted on transfer. Each row is
-rounded up to 516 bytes and made of `int`s. Rounding alone would align
-the rows only relative to the start of the array, and C promises no
-alignment for a `char` array; an `int` array is aligned for `int`, so
-every row starts on a word. The cast at 165 is the price.
+address; the odd buffers would be corrupted on transfer. Alignment on
+a word is not enough either. The same DMA bypasses the data cache,
+whose lines on the Cortex-A7 are 64 bytes, and the driver must clean
+and invalidate the lines a buffer occupies (#f("stm32sd.c")); a line
+shared with the neighbouring buffer, which the processor may be
+changing meanwhile, would be written back over the new data, or
+discarded with the neighbour's changes. Each row is therefore rounded
+up to a multiple of 64 bytes, 576, and made of `int`s, so that the
+array is at least aligned for `int`. Rounding alone would align the
+rows only relative to the start of the array, which C places where it
+will; `binit` therefore moves every buffer up by the same amount, less
+than 64 bytes, to bring the first, and with it all the rest, onto a
+64-byte boundary (165). The configuration provides one row more than
+`NBUF` (#f("mkconf.c")), so that the last buffer still fits. The casts
+at 165 are the price.
 
 #lines(137, 147)
 
@@ -6940,9 +6952,11 @@ which does not see the
 processor's data cache is the SD card's DMA controller, which moves
 process images during swapping and raw I/O, and the buffers of the
 buffer cache. The disk driver therefore cleans and invalidates the
-cache over every transfer, before and after it (`dcflush`,
-#f("stm32sd.c")), so that the device reads what the processor wrote
-and the processor does not afterwards find stale lines.
+cache over every transfer before it, and invalidates it after a read
+(`dcflush`, `dcinval`, #f("stm32sd.c")), so that the device reads what
+the processor wrote and the processor does not afterwards find stale
+lines. The buffers of the buffer cache occupy whole cache lines of
+their own (#f("main.c")).
 
 The other maps are a block each of the peripherals which the drivers
 use: the UART, the reset and clock controller with the power controller
@@ -7076,7 +7090,9 @@ omitted; its declarations (`stri`) are v7's.
 
 `strg3` is new. It defines the tables which v7 defined elsewhere, at
 the sizes of its `param.h`: the buffers, the maps, the mount table, the
-callouts, and the character blocks (#f("qemu/c.c")). `tune` names the
+callouts, and the character blocks (#f("qemu/c.c")). The buffers have
+one row more than `NBUF`, of a whole number of 64-byte cache lines,
+for `binit` to align them (#f("main.c")). `tune` names the
 table sizes which a configuration may give, each by the name of its
 variable in the kernel (#f("param.h")), and `tunev` holds their values,
 v7's until the configuration says otherwise.
@@ -7512,10 +7528,15 @@ On an error the status is reported by `deverror` (#f("prf.c")) and the
 same block retried, up to v7's ten times. v7 also reset the RK11 and
 waited for it to be ready; there is no reset here. On success the next
 block of the request is started if there is one (130), and the request
-is otherwise complete. After a read, the cache is cleaned and
-invalidated once more over the whole buffer, so that any line which the
-processor may have fetched while the transfer was under way is
-discarded. The rest is v7's.
+is otherwise complete. After a read, the cache is invalidated once more
+over the whole buffer (136), so that any line which the processor may
+have fetched while the transfer was under way is discarded. Nothing is
+written back: a line written back now would overwrite the new data. The
+lines were clean at the start (88), and the buffers of the buffer cache
+share no line with a neighbour (#f("main.c")); a raw transfer may share
+its first and last lines with the rest of the process's memory, but the
+process sleeps until the transfer is done, and nothing else writes
+there. The rest is v7's.
 
 #lines(108, 143)
 

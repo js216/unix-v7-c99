@@ -496,7 +496,7 @@ struct	inode	*acctp;\n"
 
 char	strg3[] =
 {
-"int	buffers[NBUF][(BSIZE+BSLOP+3)/4];\n\
+"int	buffers[NBUF+1][(BSIZE+BSLOP+63)/64*16];\n\
 struct	map	coremap[CMAPSIZ];\n\
 struct	map	swapmap[SMAPSIZ];\n\
 struct	map	ptmap[PMAPSIZ];\n\

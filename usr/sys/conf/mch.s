@@ -1,5 +1,6 @@
 .globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
+.globl dcinval
 .globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, restfp, dfar, dfsr
 .globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
 .globl kl3u
@@ -87,8 +88,12 @@ resume:
 	mov r0, #1
 	bx r2
 
+dcinval:
+	mov r12, #1
+	b 2f
 dcflush:
-	mrc p15, 0, r2, c0, c0, 1
+	mov r12, #0
+2:	mrc p15, 0, r2, c0, c0, 1
 	lsr r2, r2, #16
 	and r2, r2, #0xf
 	mov r3, #4
@@ -96,7 +101,9 @@ dcflush:
 	add r1, r0, r1
 	sub r3, r2, #1
 	bic r0, r0, r3
-1:	mcr p15, 0, r0, c7, c14, 1
+1:	cmp r12, #0
+	mcreq p15, 0, r0, c7, c14, 1
+	mcrne p15, 0, r0, c7, c6, 1
 	add r0, r0, r2
 	cmp r0, r1
 	blo 1b
