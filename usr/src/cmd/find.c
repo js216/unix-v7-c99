@@ -399,7 +399,7 @@ cpio(struct anode *p)
 			h_gid,
 			h_nlink,
 			h_rdev;
-		short	h_mtime[2];
+		unsigned short	h_mtime[4];
 		short	h_namesize;
 		short	h_filesize[2];
 		char	h_name[256];
@@ -417,7 +417,8 @@ cpio(struct anode *p)
 	hdr.h_dev = Statb.st_dev;
 	hdr.h_ino = Statb.st_ino;
 	hdr.h_mode = Statb.st_mode;
-	MKSHORT(hdr.h_mtime, Statb.st_mtime);
+	for(i = 0; i < 4; i++)
+		hdr.h_mtime[i] = (unsigned long long)Statb.st_mtime >> (48-16*i);
 	hdr.h_nlink = Statb.st_nlink;
 	fsz = hdr.h_mode & S_IFREG? Statb.st_size: 0L;
 	MKSHORT(hdr.h_filesize, fsz);

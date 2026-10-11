@@ -30,9 +30,9 @@ extern struct 	tent	{	/* Structure of a tape directory block */
 	char	spare;
 	char	size0;
 	unsigned short	size1;
-	long	time;
+	long long	time;
 	unsigned short	tapea;	/* tape address */
-	short	unused[8];
+	short	unused[6];
 	short	cksum;
 }	tpentry[TPB];
 
