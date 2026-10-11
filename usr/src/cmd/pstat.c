@@ -102,8 +102,10 @@ main(int argc, char **argv)
 			break;
 		}
 	}
-	if (argc>0)
+	if (argc>0) {
 		fcore = fmem = argv[0];
+		setgid(getgid());
+	}
 	if ((fc = open(fcore, 0)) < 0 || (fm = open(fmem, 0)) < 0) {
 		printf("Can't find %s\n", fc < 0 ? fcore : fmem);
 		exit(1);

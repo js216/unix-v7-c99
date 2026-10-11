@@ -12704,6 +12704,11 @@ the third place sets the set-group-id bit. `df`, `iostat`, `ps`, and
 disk special files below, which only that group may read; `exec` gives
 the process the file's group (`getxfile`, #f("sys1.c")). v7 made the
 special files readable by anyone instead, and these programs plain.
+`dmesg`, `ps`, and `pstat` also accept a core file or a namelist named
+on the command line, and each gives up the group with
+`setgid(getgid())` before it uses one (#f("cmd/ps.c"),
+#f("cmd/dmesg.c")); otherwise any user could read `/dev/rrk0` or
+`/dev/mem` through them.
 
 #lines(4, 111)
 
@@ -13622,7 +13627,12 @@ process.
 
 #lines(54, 102)
 
-`ps` opens two files (110--118). The kernel's variables are read from
+A namelist named on the command line could make `ps` read and print
+any part of the kernel's memory, so `ps` then gives up group `sys`
+(108--109, #f("rootfs.proto")) and runs with the user's own
+permissions.
+
+`ps` opens two files (112--120). The kernel's variables are read from
 `/dev/kmem` (`mem`), at their kernel addresses, and the process images
 from `/dev/mem` (`swmem`), at their physical ones; with `k`, both come
 from the core file. v7 opened `/dev/mem` twice, for the same two
@@ -13646,7 +13656,7 @@ A slot with `p_stat` zero is unused. Processes of the super-user which
 have no process group, that is, which never opened a terminal, such
 as process 0, are shown only with `x`.
 
-#lines(103, 158)
+#lines(103, 160)
 
 `getdev` builds a table of the character special files in `/dev`, by
 name and device number, so that a terminal can later be named from the
@@ -13660,11 +13670,11 @@ it with `strncpy` into the larger `dname`, whose last byte remains
 zero, and passes the copy to `stat`; the copy is made before the type
 is known, and a slot which is not a character device is simply
 overwritten by the next. The loop also stops at the 256 entries the
-table holds (173), where v7 had no limit.
+table holds (175), where v7 had no limit.
 
-The `#include` of `<sys/stat.h>` inside the procedure (163) is v7's.
+The `#include` of `<sys/stat.h>` inside the procedure (165) is v7's.
 
-#lines(159, 189)
+#lines(161, 191)
 
 `round` is now `static`; it is used only after its definition, and a
 static procedure needs no separate prototype. `datmap` describes how
@@ -13675,7 +13685,7 @@ members are now `unsigned long`, since the stack lies above 0x80000000,
 and a physical offset in `/dev/mem` may too, where a `long` would turn
 negative.
 
-#lines(190, 204)
+#lines(192, 206)
 
 `prcom` handles one process. If it is loaded (`SLOAD`), its image is at
 `p_addr` clicks in `/dev/mem`. In the port, as on the PDP-11, `p_addr`
@@ -13690,20 +13700,20 @@ in both cases.
 The maps follow from the shape of the image, which is v7's on the ARM
 too (#f("machdep.c")): the `USIZE` clicks of the `user` area, then the
 data, then the stack, packed together; the stack segment, at the top of
-the address space, follows the data in the image. `f2` (241) is
+the address space, follows the data in the image. `f2` (243) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
 area. The data map begins after the text (`b1`), which is a whole
 number of pages; the text itself is not in the image, and is not
 mapped.
 
-#lines(205, 242)
+#lines(207, 244)
 
-The fields of the line. The mask `&0377` (248) is new. `p_stat` is a
+The fields of the line. The mask `&0377` (250) is new. `p_stat` is a
 `char`, and an array subscript of type `char` draws a warning from
 `-Wall`; the mask makes it an `int`, and on the PDP-11, where `char`
 was signed, it would also have kept the subscript positive. The
 formats were made for the PDP-11, and three fields of the long listing
-are widened for 32-bit values (140, 252, 257, 259): `ADDR`, the click
+are widened for 32-bit values (142, 254, 259, 261): `ADDR`, the click
 number in octal, from six digits to eight, since the 512 MB of the
 MP135 machine's memory reaches click 917504, 03400000; `SZ` from four
 columns to five, since a large image is thousands of blocks, which
@@ -13715,7 +13725,7 @@ v7 converted its 64-byte clicks with `(p_size+7)>>3`, and the port with
 assume `HZ`
 of 60, which holds (#f("param.h")).
 
-#lines(243, 285)
+#lines(245, 287)
 
 The arguments are sought in the last 512 bytes of the image, the top of
 the stack. First the last word below `USERSIZE` is examined: `exec` leaves
@@ -13725,7 +13735,7 @@ pointer to its own argument list (`execargs`, #f("sh/main.c")), so that
 and the strings are fetched one byte at a time through `getptr` and
 `getbyte`, which apply `datmap`.
 
-#lines(286, 308)
+#lines(288, 310)
 
 Otherwise the strings themselves are found. `exec` (#f("sys1.c")) puts
 the argument and environment strings at the top of the stack, preceded
@@ -13744,12 +13754,12 @@ for `int` accesses. The present compiler happens to place v7's array
 on a word boundary, but `-Wcast-align=strict` rejects both casts. An
 `int` array may be read as characters, as the rest of the loop does.
 
-#lines(309, 343)
+#lines(311, 345)
 
 `gettty` names the terminal by searching the table of `getdev` for the
 device number `u_ttyd`, dropping the prefix "tty".
 
-#lines(344, 362)
+#lines(346, 364)
 
 `getptr` assembles a pointer from the image byte by byte, through
 `getbyte`. Its counter is now `unsigned`, so that
@@ -13764,7 +13774,7 @@ and the user addresses reach 0xc0000000, which a `long` cannot hold.
 The bounds are therefore `unsigned long`, and the address is cast to
 `unsigned long` too, so that the comparison is exact again.
 
-#lines(363, 405)
+#lines(365, 407)
 #source("/usr/src/cmd/dmesg.c")
 
 Everything the kernel prints with `printf` (#f("prf.c")) passes through
@@ -13813,14 +13823,16 @@ explicitly, since a partial initializer draws a warning from
 
 #lines(1, 23)
 
-The two `read`s copy the buffer and the pointer. The check at (51) is the
+A file named on the command line, a core file or a namelist, makes the
+program give up group `sys` first (42--43), as in #f("cmd/ps.c").
+The two `read`s copy the buffer and the pointer. The check at (53) is the
 only defence against a `/unix` which is not the running kernel: if the
 pointer read at the address given for `msgbufp` does not lie within the
 address given for `msgbuf`, the names belong to some other system. The
-pointer is then moved (53) from the kernel's buffer to the program's
+pointer is then moved (55) from the kernel's buffer to the program's
 copy.
 
-#lines(24, 53)
+#lines(24, 55)
 
 The comparison decides where printing begins. `mstart` is set to the
 position recorded on the last run, and the copy is compared with the
@@ -13834,11 +13846,11 @@ buffer in the meantime, messages have been lost, and the program prints
 character. Null bytes, the part of the buffer never yet written, are
 skipped.
 
-#lines(54, 83)
+#lines(56, 85)
 
 `done` records the present buffer, its index, and the message which
 ended the run, and exits. The message is not printed if it is the one
-recorded last time: the test (90) compares the pointers, which works
+recorded last time: the test (92) compares the pointers, which works
 because the same program, run again, places the same string at the same
 address. A complaint such as "No mem" therefore appears once in the
 log, not every ten minutes. `sflg` was cleared at (41), so the test of
@@ -13848,7 +13860,7 @@ it is always true.
 printed. `ctime` is now declared in #f("stdio.h"), and v7's local
 declaration of it has been removed; `firstime` has gained its `int`.
 
-#lines(84, 114)
+#lines(86, 116)
 #source("/usr/src/cmd/cron.c")
 
 `cron` runs commands at stated times. It is started by #f("rc") and

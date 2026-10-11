@@ -8,6 +8,9 @@ cannot open /dev/swap
 0
 0
 0
+1
+1
+1
 crw-r----- root /dev/kmem
 crw-r----- root /dev/mem
 brw-r----- root /dev/root

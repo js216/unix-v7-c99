@@ -39,6 +39,8 @@ main(int argc, char **argv)
 	read(of, (char *)&omesg, sizeof(omesg));
 	lseek(of, 0L, 0);
 	sflg = 0;
+	if (argc>1)
+		setgid(getgid());
 	nlist(argc>2? argv[2]:"/unix", nl);
 	if (nl[0].n_type==0)
 		done("No namelist\n");

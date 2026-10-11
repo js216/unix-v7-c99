@@ -105,6 +105,8 @@ bbreak:
 		fprintf(stderr, "Can't change to /dev\n");
 		exit(1);
 	}
+	if (argc>2)
+		setgid(getgid());
 	nlist(argc>2? argv[2]:"/unix", nl);
 	if (nl[0].n_type==0) {
 		fprintf(stderr, "No namelist\n");
