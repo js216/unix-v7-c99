@@ -2,7 +2,7 @@
 -rwsr-xr-x root /bin/mkdir
 -rwsr-xr-x root /bin/mv
 -rwsr-xr-x root /bin/su
-crw-r--r-- root /dev/mem
+crw-r----- root /dev/mem
 -rwsr-xr-x root /usr/lib/atrun
 total 0
 -rw-r--r-- 1 daemon      0 Jan  9 HH:MM messages

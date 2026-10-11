@@ -27,7 +27,7 @@ d--755 0 0
 		dc	---755 0 0 bin/dc
 		dcheck	---755 0 0 bin/dcheck
 		dd	---755 0 0 bin/dd
-		df	---755 0 0 bin/df
+		df	--g755 0 2 bin/df
 		diff	---755 0 0 bin/diff
 		deroff	---755 0 0 bin/deroff
 		du	---755 0 0 bin/du
@@ -45,7 +45,7 @@ d--755 0 0
 		grep	---755 0 0 bin/grep
 		graph	---755 0 0 bin/graph
 		icheck	---755 0 0 bin/icheck
-		iostat	---755 0 0 bin/iostat
+		iostat	--g755 0 2 bin/iostat
 		join	---755 0 0 bin/join
 		kill	---755 0 0 bin/kill
 		ln	---755 0 0 bin/ln
@@ -65,8 +65,8 @@ d--755 0 0
 		pr	---755 0 0 bin/pr
 		primes	---755 0 0 bin/primes
 		prof	---755 0 0 bin/prof
-		ps	---755 0 0 bin/ps
-		pstat	---755 0 0 bin/pstat
+		ps	--g755 0 2 bin/ps
+		pstat	--g755 0 2 bin/pstat
 		ptx	---755 0 0 bin/ptx
 		pwd	---755 0 0 bin/pwd
 		quot	---755 0 0 bin/quot
@@ -111,12 +111,12 @@ d--755 0 0
 		$
 	dev	d--755 0 0
 		console	c--644 0 0 0 0
-		mem	c--644 0 0 8 0
-		kmem	c--644 0 0 8 1
+		mem	c--640 0 2 8 0
+		kmem	c--640 0 2 8 1
 		null	c--666 0 0 8 2
-		root	b--644 0 0 0 0
-		rrk0	c--644 0 0 9 0
-		swap	b--644 0 0 0 0
+		root	b--640 0 2 0 0
+		rrk0	c--640 0 2 9 0
+		swap	b--640 0 2 0 0
 		tty	c--666 0 0 17 0
 		$
 	etc	d--755 0 0
@@ -130,7 +130,7 @@ d--755 0 0
 		rc	---755 0 0 etc/rc
 		ttys	---644 0 0 etc/ttys
 		update	---755 0 0 etc/update
-		dmesg	---755 0 0 etc/dmesg
+		dmesg	--g755 0 2 etc/dmesg
 		mknod	---755 0 0 etc/mknod
 		mount	---755 0 0 etc/mount
 		umount	---755 0 0 etc/umount
@@ -204,6 +204,8 @@ d--755 0 0
 					cmdi3.sed	---644 0 0 usr/local/test/cases/cmdi3.sed
 					ddend	---644 0 0 usr/local/test/cases/ddend
 					ddend.exp	---644 0 0 usr/local/test/cases/ddend.exp
+					devperm	---644 0 0 usr/local/test/cases/devperm
+					devperm.exp	---644 0 0 usr/local/test/cases/devperm.exp
 					exec	---644 0 0 usr/local/test/cases/exec
 					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 					exec.sed	---644 0 0 usr/local/test/cases/exec.sed

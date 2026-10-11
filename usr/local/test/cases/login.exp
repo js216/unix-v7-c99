@@ -1,9 +1,9 @@
 drwxr-xr-x 2 dmr        32 Jan  9 HH:MM /usr/dmr
 drwxr-xr-x 2 uucp       32 Jan  9 HH:MM /usr/lib/uucp
 drwxr-xr-x 2 sys        32 Jan  9 HH:MM /usr/sys
-brw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/root
-crw-r--r-- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
-brw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/swap
+brw-r----- 1 root    0,  0 Jan  9 HH:MM /dev/root
+crw-r----- 1 root    9,  0 Jan  9 HH:MM /dev/rrk0
+brw-r----- 1 root    0,  0 Jan  9 HH:MM /dev/swap
 /tmp/login
 ps0
    PID TTY TIME CMD

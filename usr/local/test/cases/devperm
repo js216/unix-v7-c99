@@ -1,0 +1,8 @@
+echo 'for f in /dev/mem /dev/kmem /dev/rrk0 /dev/root /dev/swap; do od $f | sed 1q; done
+ps ax | grep -c "swappe[r]"
+df | grep -c "^/dev/root [0-9]"
+/etc/dmesg | grep -c "No mem"
+pstat -s | grep -c "Can.t find"
+iostat | grep -c "cannot open"' | su dmr 2>&1
+ls -l /dev/mem /dev/kmem /dev/rrk0 /dev/root /dev/swap | awk '{ print $1, $3, $NF }'
+ls -lg /bin/ps /bin/pstat /bin/iostat /bin/df /etc/dmesg | awk '{ print $1, $3, $NF }'

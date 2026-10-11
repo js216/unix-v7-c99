@@ -12660,26 +12660,33 @@ directories below. A `u` in the second
 place of a mode sets the set-user-id bit. It is given to the programs
 which were set-user-id root in v7's distribution, because they must act
 as the super-user whoever runs them: `login`, `mkdir`, `mv`, `newgrp`,
-`passwd`, `rmdir`, and `su` here, and `atrun` in `/usr/lib`.
+`passwd`, `rmdir`, and `su` here, and `atrun` in `/usr/lib`. A `g` in
+the third place sets the set-group-id bit. `df`, `iostat`, `ps`, and
+`pstat` here, and `dmesg` in `/etc`, belong to group `sys` (2,
+#f("group")) and are set-group-id, so that they may read the memory and
+disk special files below, which only that group may read; `exec` gives
+the process the file's group (`getxfile`, #f("sys1.c")). v7 made the
+special files readable by anyone instead, and these programs plain.
 
 #lines(4, 111)
 
 The special files. Each gives a type (`b` or `c`), and the major and
 minor device numbers, which are v7's (#f("qemu/c.c")): the console is
 character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
-and 2 of device 8 (#f("mem.c")), and `tty` is device 17. `mem` and
-`kmem` may be read by anyone, as `ps` and `dmesg`, which are not
-set-user-id, require: `cron` runs `dmesg` as `daemon`
-(#f("cmd/cron.c")); both read the kernel's tables through `kmem` and
-`ps` reads process images through `mem` (#f("mem.c")). `root` and
-`swap` are the same block device, the one disk, since the swap area lies
-on it beyond the file system; `ps` reads `/dev/swap` for the images of
-processes which are swapped out. Both may be read by anyone, mode 644,
-as v7's `/dev/makefile` made them, so that `ps`, which is not
-set-user-id either, works for every user. `rrk0` is the raw disk,
-character device 9 (#f("virtio_blk.c")), the same disk read without the
-buffer cache; v7's makefile made a raw node beside every block one, with
-the same mode. There are no other terminals, so the
+and 2 of device 8 (#f("mem.c")), and `tty` is device 17. `ps`,
+`pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
+and `ps` reads process images through `mem` (#f("mem.c")); `cron` runs
+`dmesg` as `daemon` (#f("cmd/cron.c")). `root` and `swap` are the same
+block device, the one disk, since the swap area lies on it beyond the
+file system; `ps` reads `/dev/swap` for the images of processes which
+are swapped out, and `df` reads the free list of `/dev/root`. `rrk0` is
+the raw disk, character device 9 (#f("virtio_blk.c")), the same disk
+read without the buffer cache; v7's makefile made a raw node beside
+every block one. All five belong to group `sys` and have mode 640, so
+that besides root only the set-group-id programs above may read them,
+and no one but root may write them. v7's `/dev/makefile` made them
+readable by anyone, mode 644, which let any user read every file on
+the disk and every process's memory. There are no other terminals, so the
 lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 
 #lines(112, 121)
@@ -12716,7 +12723,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 327)
+#lines(139, 329)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -12725,7 +12732,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(328, 329)
+#lines(330, 331)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
@@ -12787,9 +12794,10 @@ password (none here), its group id, and the users who may join it with
 between names and numbers; `chgrp` and `newgrp` use `getgrnam` and its
 companions from the C library. Note that
 the users of #f("passwd") have group ids 1 to 4, so that `root` and
-`daemon` belong to `other`; there is no group 0, though every file of
-the image has group id 0 (#f("rootfs.proto")), and `ls -lg` therefore
-shows those files' group as a number.
+`daemon` belong to `other`; there is no group 0, though most files of
+the image have group id 0 (#f("rootfs.proto")), and `ls -lg` therefore
+shows those files' group as a number. The memory and disk special
+files, and the programs which read them, have group `sys`.
 
 #lines(1, 4)
 
@@ -13531,8 +13539,10 @@ headers and must agree with it exactly. The mechanism shared with
 `dmesg`, `nlist` on the ELF `/unix` and kernel addresses as offsets in
 `/dev/kmem`, is described in #f("cmd/dmesg.c").
 
-`/dev/mem`, `/dev/kmem`, and `/dev/swap` may be read by anyone
-(#f("rootfs.proto")), so `ps` works for every user, as in v7.
+`/dev/mem`, `/dev/kmem`, and `/dev/swap` may be read only by root and
+group `sys`, and `ps` is set-group-id `sys` (#f("rootfs.proto")), so
+that it works for every user, as in v7, where the files could be read
+by anyone instead.
 
 v7 included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
@@ -13752,8 +13762,9 @@ With the flag `-`, the program keeps in `/usr/adm/msgbuf` a copy of the
 buffer as it was last seen, and prints only what has been added since.
 The crontab runs it so every ten minutes, appending to
 `/usr/adm/messages` (#f("cmd/cron.c")). The image provides both files,
-owned by `daemon`, and makes `/dev/kmem` readable by anyone
-(#f("rootfs.proto")), since `cron` runs the program as `daemon`. Without
+owned by `daemon`, and makes `dmesg` set-group-id `sys`, the group
+which may read `/dev/kmem` (#f("rootfs.proto")), since `cron` runs the
+program as `daemon`. Without
 `/usr/adm/msgbuf` the `open` (38) would fail, the `read` and `write` on
 descriptor -1 would fail harmlessly, the saved state would be all
 zeros, and the whole buffer would be printed each time.
@@ -13809,9 +13820,10 @@ table `/usr/lib/crontab`, and starts the commands whose times have
 come. The image's table (from v7's tape) runs `dmesg` (#f("cmd/dmesg.c"))
 every ten minutes, `atrun`, which starts the jobs queued by `at`, every
 five, and `calendar` once a day at 1:20. Since the commands run as
-the user `daemon` (31), the first entry works only because `/dev/kmem`
-may be read by anyone and `/usr/adm/messages` and `/usr/adm/msgbuf`
-belong to `daemon` (#f("rootfs.proto")).
+the user `daemon` (31), the first entry works only because `dmesg` is
+set-group-id `sys`, the group which may read `/dev/kmem`, and
+`/usr/adm/messages` and `/usr/adm/msgbuf` belong to `daemon`
+(#f("rootfs.proto")).
 
 The design is a loop which keeps its own idea of the minute, `itime`,
 advancing it by exactly 60 seconds each time round and sleeping until
