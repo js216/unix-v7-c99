@@ -7,11 +7,11 @@ fail=0
 for n
 do
 	if test -f $n.sed
-	then	sh $n 2>&1 | sed -f $n.sed | cmp -s - $n.exp
-	else	sh $n 2>&1 | cmp -s - $n.exp
+	then	d=`sh $n 2>&1 | sed -f $n.sed | cmp - $n.exp 2>&1`
+	else	d=`sh $n 2>&1 | cmp - $n.exp 2>&1`
 	fi
-	case $? in
-	0)	echo PASS $n
+	case "$d" in
+	"")	echo PASS $n
 		pass=`expr $pass + 1`;;
 	*)	echo FAIL $n
 		fail=`expr $fail + 1`
