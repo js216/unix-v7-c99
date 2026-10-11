@@ -2833,8 +2833,8 @@ needs one writes the index, as `trap` (#f("sysent.c")) does with `r[7]`,
 the register which holds the system call number.
 
 `TBIT` (17), the PDP-11 trace bit, is kept from v7, though nothing uses
-it any longer: the ARM has no equivalent bit in its status register, and
-`procxmt` (#f("sig.c")) no longer sets it.
+it: the ARM has no equivalent bit in its status register, and `procxmt`
+(#f("sig.c")), which set it in v7, does not.
 
 #lines(1, 17)
 #source("/usr/sys/h/callo.h")
@@ -2845,7 +2845,7 @@ the delay relative to the entry before it, so that the clock interrupt
 need only decrement the first non-zero entry (`clock`, #f("clock.c")). An
 entry with a null `c_func` ends the list. In this system its only user
 is the console driver, which calls `timeout` to have `ttrstrt` resume
-output after a delay (#f("pl011.c")).
+output after a delay (#f("pl011.c"), #f("stm32usart.c")).
 
 The only change is the type of `c_func` (15). In v7 it was an `int`
 function of unspecified arguments; now it is declared as a `void`
@@ -2854,9 +2854,8 @@ function of one `caddr_t`, which is how `clock` calls it and what
 exactly that type. `ttrstrt` (#f("tty.c")) was changed to take a `caddr_t`
 for this reason.
 
-Line 17 declared the table itself in v7, defining it, after the v7
-manner, in every file which included the header. It is now only
-declared, `extern` and without a size: the size, `NCALL`, is part of the
+The last line, in v7, defined the table itself, after the v7 manner,
+in every file which included the header. It is now only declared, `extern` and without a size: the size, `NCALL`, is part of the
 configuration (#f("param.h")), and the table is defined with it in
 #f("qemu/c.c").
 
@@ -2906,7 +2905,8 @@ counts later, the counter frequency divided by `HZ` (#f("machdep.c")).
 Since each deadline follows from the last and not from the moment the
 interrupt was taken, the time spent reaching `clock` never accumulates.
 Nor is the remainder of that division lost: the frequency is not in
-general a multiple of `HZ` (QEMU's 62.5 MHz leaves 40 over), so
+general a multiple of `HZ` (the QEMU machine's 62.5 MHz leaves 40
+over), so
 `clkrem` is gathered in `clkfrac`, and each time a whole `HZ` has
 gathered, one more count is added to the deadline. Over `HZ` ticks the
 deadline advances by exactly the frequency, and the clock keeps the
@@ -2939,7 +2939,7 @@ Every expired callout is called, in order, with its argument,
 and the remainder of the list is then moved down to the front of the
 table. `spl5` was meant to lower the PDP-11 priority from 6 to 5,
 admitting other clock-level work; on the ARM the IRQ is already masked
-and `spl5` changes nothing. The extra parentheses at 78 tell the
+and `spl5` changes nothing. The extra parentheses at 72 tell the
 compiler that the assignment is meant.
 
 #lines(64, 79)
@@ -3027,7 +3027,7 @@ the scale, as v7 did by way of `nofault`.
 
 In v7 #f("sysent.c") held nothing but the table of system calls, and the
 procedure which used it, `trap`, lived with the other trap handling in
-`trap.c`. In this port `trap.c` is gone and its surviving parts are
+`trap.c`. Here `trap.c` is gone and its surviving parts are
 here: the table, `regloc`, a much reduced `trap` which handles only
 system calls, `user_trap_handler`, which handles every other exception,
 and the two dummy calls `nosys` and `nullsys`.
@@ -3038,8 +3038,8 @@ all that `trap` now needs. `EBIT` (6), the carry bit of the saved
 status register, is v7's definition from `trap.c`, with the bit's
 position in the ARM's `CPSR`.
 
-v7 declared every system call routine here as an `int` function (56
-lines, deleted). Now #f("systm.h") declares them all with prototypes, as
+v7 declared every system call routine here as an `int` function.
+#f("systm.h") now declares them all with prototypes, as
 `void` functions of no arguments. `nosys` and `nullsys` (7, 8) are v7's,
 moved from `trap.c`: `nosys` fails with `EINVAL`, and `nullsys` does
 nothing. They are used only in the table, so they are made `static` and
@@ -3322,7 +3322,7 @@ precedence of `&&` over `||` explicit (217).
 
 #lines(202, 230)
 
-From line 237 the old image is abandoned. As in v7, the image is
+With the profiling turned off (237) the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` clicks, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
 (239--242). The uninitialised data and the stack therefore read as
@@ -3525,8 +3525,7 @@ Only the super-user may remove an entry for a directory (178), since a
 careless unlink can leave the tree inconsistent. An inode on another
 device must be a mounted file system's root (183). If the
 file is a shared text in use (187--192), `xrele` tries to free it; if it is still
-in use and this is its last link, `ETXTBSY`. In this system no text is
-shared, and the code is idle.
+in use and this is its last link, `ETXTBSY`.
 
 The entry is cleared (193--199) by writing it back with inode number
 zero; the inode loses a link, and is freed by `iput` if it has none left
@@ -3545,7 +3544,7 @@ Only the super-user may change the root.
 inode only if the caller owns it or is the super-user. Only the
 super-user may set the sticky bit (`ISVTX`, 262), which asks that a
 program's text be kept on the swap area after its last user has gone; when it is removed,
-`xrele` drops any text which was being kept for the file. In v7 only the
+`xrele` drops any text which was being kept for the file. Only the
 super-user may give a file away (281).
 
 #lines(247, 287)
@@ -3637,10 +3636,10 @@ is the terminal input routine, for the interrupt and quit characters
 
 `psignal` posts the signal. A signal number out of range is ignored,
 and so is 0, which posts nothing; `user_trap_handler` passes 0 when it
-only wants the tail of trap processing. (64): A process with a poor
-priority is given `PUSER`, so that it soon runs and sees the signal.
-(66): If it is sleeping at a priority above `PZERO`, it is woken, and
-`sleep` will abandon the system call. A process sleeping at `PZERO` or
+only wants the tail of trap processing. A process with a poor priority
+is given `PUSER` (64), so that it soon runs and sees the signal. If it
+is sleeping at a priority above `PZERO` (66), it is woken, and `sleep`
+will abandon the system call. A process sleeping at `PZERO` or
 below, typically waiting for a disk transfer, is left alone, and sees
 the signal when it returns to user mode.
 
@@ -3859,8 +3858,7 @@ whenever the super-user's privilege is used.
 #lines(1, 25)
 #source("/usr/sys/sys/acct.c")
 
-#f("acct.c") holds process accounting, which is new since the sixth
-edition, and the unrelated `syslock`. The file is v7's. `compress` is
+#f("acct.c") holds process accounting and the unrelated `syslock`. The file is v7's. `compress` is
 declared (9) because `acct` calls it before its definition.
 
 #lines(1, 10)
