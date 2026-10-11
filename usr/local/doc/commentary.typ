@@ -85,10 +85,11 @@ throughout as follows.
 *The QEMU machine* is the `virt` machine of the QEMU emulator (version
 10.0), configured with a single ARM Cortex-A7 processor and, by the `-m 512M`
 option which `make qemu` (#f("Makefile")) gives it, 512 MB of memory at
-address 0x40000000, a GIC version 2 interrupt controller at
-0x08000000, the ARM generic timer, a PL011 serial line at 0x09000000 as
-the console, and a virtio block device, found among the virtio
-"MMIO" slots at 0x0a000000, as the disk. QEMU loads the kernel into
+address 0x40000000, an ARM Generic Interrupt Controller (GIC) version
+2 at 0x08000000, the ARM generic timer, an ARM PL011 UART (a serial line
+interface) at 0x09000000 as the console, and, as the disk, a virtio
+block device (virtio being an interface which QEMU offers in place of
+real hardware), found among the virtio "MMIO" slots at 0x0a000000. QEMU loads the kernel into
 memory itself and starts it at its entry point; the disk is a file on
 the host, made by `mkfs` from the prototype `boot/rootfs.proto`.
 
@@ -105,7 +106,7 @@ itself (#f("stm32ddr.c")) before it can use it.
 
 The Cortex-A7 implements the ARMv7-A architecture: sixteen 32-bit
 registers, a status register `CPSR`, separate processor modes for user
-programs and for each kind of exception, a memory management unit
+programs and for each kind of exception, a memory management unit (MMU)
 which maps virtual addresses through page tables in memory, and a
 floating point unit, VFPv4 with the Advanced SIMD extension, with 32
 double registers, the counterpart of the PDP-11/45's floating point
@@ -145,11 +146,19 @@ machines, by the `map` lines of their configurations (#f("qemuconf"),
   [0xfff00000], [`u`, the current process's u-area], [`u`, likewise],
 )
 
+On the MP135 machine, RCC is the chip's reset and clock controller, PWR
+its power controller, GPIO its general purpose pins, SDMMC1 the SD card
+controller, and TZC the TrustZone address space controller, which
+guards the DDR memory. The u-area at the top is the per process data
+area of #f("user.h"): the `user` structure and kernel stack of the
+process which is running.
+
 Memory and devices are mapped in blocks of 2 MB, each at a fixed
 distance from its physical address; the right-hand columns give the
 physical address of each block's contents. The kernel's addresses are
 therefore not physical, and three places must convert: the kernel
-reaches a click of core through `CLKADDR` (#f("seg.h")), a driver gives
+reaches a click of core (the unit in which core is allocated, a page of
+4096 bytes, #f("map.h")) through `CLKADDR` (#f("seg.h")), a driver gives
 a device the physical address of a buffer through `vtop`
 (#f("machdep.c")), and `/dev/mem` and `/dev/kmem` (#f("mem.c")) take
 their offsets as physical and kernel addresses respectively.
@@ -689,7 +698,7 @@ defined in assembler or in some particular file (`regloc`, `icode`,
 emitted a "tentative definition" of each, and the linker merged them
 into a single zeroed copy: the old common-block convention of the UNIX
 linker. C99 permits one external definition of an object in the whole
-program, and modern compilers no longer merge by default. Every
+program, and GCC does not merge such definitions by default. Every
 variable is therefore now declared `extern`, and defined once:
 `rootdev`, `swapdev`, `pipedev`, `swplo`, and `nswap` with their values
 in the configuration file #f("qemu/c.c"), as in v7; `msgbufp` in
@@ -1417,7 +1426,8 @@ bytes. The start is rounded down to a line boundary, and each line is
 cleaned and invalidated to the point of coherency (`DCCIMVAC`,
 `c7, c14, 1`): any dirty data is written to memory and the line is
 discarded. The SD card driver of the MP135 machine (#f("stm32sd.c"))
-calls it on a buffer before and after a DMA transfer, since that controller's DMA
+calls it on a buffer before and after a DMA (direct memory access)
+transfer, in which the controller reads or writes memory by itself, since that controller's DMA
 does not see the cache: memory must hold what the processor wrote before
 the device reads it, and the processor must not find stale lines after
 the device has written. The PDP-11 had no cache, and so no such routine.
@@ -2291,7 +2301,8 @@ controlling terminal.
 
 `u_exdata` (79) is the header of the program being executed, read by
 `getxfile` (#f("sys1.c")). In v7 it was the eight-word `a.out` header.
-The executables here are in ELF, and the structure has been rearranged to
+The executables here are in ELF, the Executable and Linkable Format,
+and the structure has been rearranged to
 hold the pieces of an ELF file which the kernel needs. Its first 52
 bytes overlay the ELF file header. The fields that the kernel reads have
 names; the rest are fill:
@@ -2818,7 +2829,7 @@ the frame was built.
 In v7 the frame was assembled partly by the PDP-11 hardware (`pc` and
 `ps`) and partly by the `call` and `trap` routines of `l.s`, and the
 registers did not lie in order: `r1` was two words below `r0`, `r2` to
-`r5` further below again, `pc` and `ps` above. Hence v7's indices were
+`r5` further below again, and `pc` and `ps` above. Hence v7's indices were
 -2, -9, -8, -7, -6, -3, 1, and 2. On the ARM the frame is built by
 #f("low.s") in a single order: `r0` to `r12` at indices 0 to 12, the
 user's `sp` at 13, its `lr` at 14, the return address at 15, and the
@@ -4115,14 +4126,6 @@ cache, in the rows of `buffers` (#f("main.c")), to which
 `binit` points `b_addr`; for the headers used by `swap` and `physio`
 (#f("bio.c")), in the process image being transferred.
 
-The head of a driver's lists is itself a `buf`, the `d_tab` of the
-driver's `bdevsw` entry (#f("conf.h")), and the names at the end of the
-file (67--70) rename those fields of it which serve another purpose
-there: `b_actf` and `b_actl` are the head and tail of the queue of
-requests, `b_active` says that the device is busy, and `b_errcnt` counts
-retries. A header on that queue is linked through `av_forw`, which is
-free for the purpose, since a busy buffer is not on the available list.
-
 Two lists thread the cache. `b_forw` and `b_back` link every buffer to
 the device with which it is associated, so that `getblk` can find a
 block by searching one short list; `av_forw` and `av_back` link the
@@ -4148,6 +4151,14 @@ that the buffer held the UNIBUS map of the PDP-11/70, is gone with the
 map (#f("machdep.c")). `B_TAPE` is set in the `d_tab` of a magnetic tape driver, of
 which there is none. `B_PBUSY` and `B_PACK` are used by no file of
 this system.
+
+The head of a driver's lists is itself a `buf`, the `d_tab` of the
+driver's `bdevsw` entry (#f("conf.h")), and the names at the end of the
+file (67--70) rename those fields of it which serve another purpose
+there: `b_actf` and `b_actl` are the head and tail of the queue of
+requests, `b_active` says that the device is busy, and `b_errcnt` counts
+retries. A header on that queue is linked through `av_forw`, which is
+free for the purpose, since a busy buffer is not on the available list.
 
 #lines(45, 70)
 #source("/usr/sys/h/conf.h")
@@ -11880,7 +11891,7 @@ the library's variant for hard floating point from the same flags.
 
 #lines(15, 20)
 
-`all` is the default goal: the QEMU kernel and the root file system
+`all` is the default goal: the QEMU machine's kernel and the root file system
 images of both machines, and, after the fragments are read (31), the
 kernels of both machines, whose names `KERNELS` only #f("sys.mk")
 supplies.
@@ -11905,7 +11916,7 @@ checkers; the tests themselves run on the target, from
 mode, since the grammars use both v7's `%term` and some of `bison`'s
 own declarations.
 
-`boot/unix` is a copy of the QEMU kernel, which `make qemu` boots. QEMU
+`boot/unix` is a copy of the QEMU machine's kernel, which `make qemu` boots. QEMU
 loads the ELF file at its link address and starts it at its entry,
 `_start` (#f("low.s")); the disk is the root image, on a virtio block
 device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
@@ -11932,7 +11943,7 @@ in `/unix`: `boot/rootfs.img` for the QEMU machine, which `make qemu`
 boots, and `boot/rootfs-mp135.img` for the MP135 machine. The first two lines name each
 image's kernel and configuration, which `filter` picks out again from
 the prerequisites (`$^`) in the recipe. The prototype names the kernel
-as `boot/unix`, the QEMU kernel's copy; `sed` puts the machine's own
+as `boot/unix`, the copy of the QEMU machine's kernel; `sed` puts the machine's own
 kernel in its place, and passes the prototype to `mkfs` on its standard
 input, which `mkfs` reads as the file `/dev/stdin`. For the QEMU
 machine the substitution changes nothing.
@@ -12176,7 +12187,7 @@ among them.
 #lines(1, 8)
 #source("/usr/sys/conf/qemu/unix.ld")
 
-#f("qemu/unix.ld") is the linker script for the QEMU kernel. It is
+#f("qemu/unix.ld") is the linker script for the QEMU machine's kernel. It is
 written by `mkconf` (#f("mkconf.c")) from the `ram` line of
 #f("qemuconf"), in the pass which in v7 wrote `l.s`, and is used by the
 link in #f("sys.mk").
@@ -12604,7 +12615,7 @@ could log in.
 #lines(139, 318)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
-the QEMU kernel, as written here, or the MP135 machine's, which the `Makefile`
+the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
 puts in its place for that machine's image (#f("Makefile")). It is not
 booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
