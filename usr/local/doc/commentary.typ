@@ -2620,7 +2620,7 @@ woken.
 increments each tick and decays each second), plus the bias `p_nice`.
 The result is never above 127, so that it fits in the `char` `p_pri`.
 
-The `378` mask (178) undid the sign extension of a PDP-11 `char`. On
+The `0377` mask (178) undid the sign extension of a PDP-11 `char`. On
 the ARM `char` is unsigned and the mask changes nothing, but it is
 harmless and is v7's.
 
@@ -3316,7 +3316,7 @@ routine expects.
 
 v7 placed the strings at `-nc - NBPW` (109): on the PDP-11 user
 addresses were 16 bits, and a negative number named a location below the
-top of the 66 KB address space. The ARM user address space is `USERSIZE`, 3 GB,
+top of the 64 KB address space. The ARM user address space is `USERSIZE`, 3 GB,
 and the strings now end one word below its top. The stack pointer
 (`ap`) is rounded down to a multiple of 8, since the ARM procedure call
 standard requires that alignment at every call, and `crt0` calls `main`
@@ -3326,7 +3326,7 @@ without adjusting it.
 
 The new stack, from `ap` upwards, holds the argument count, the
 argument pointers and a zero, the environment pointers and a zero, and
-then the strings, followed by a zero word at 133. The `384` mask at 132
+then the strings, followed by a zero word at 133. The `0377` mask at 132
 is v7's; here `c` is never negative.
 
 #lines(112, 135)
@@ -3361,7 +3361,7 @@ first two such end up in `ux_ph[0]` and `ux_ph[1]`. The programs are
 linked so that the first is the text and the second the data
 (#f("Makefile")). A file which is not ELF, or which has not two
 loadable segments, gives `ENOEXEC`; a program linked into one writable
-segment, the counterpart of v7's 414 format, is not accepted, since
+segment, the counterpart of v7's 0407 format, is not accepted, since
 its code would lie in memory which every process writes privately.
 
 A malformed header is refused here too, before anything of the old
@@ -3794,7 +3794,7 @@ abandoned.
 
 Otherwise the process exits with the signal number as its
 status, and for the signals which indicate a program error, with a core
-image as well; the 200 bit tells `wait` that one was written.
+image as well; the `0200` bit tells `wait` that one was written.
 
 #lines(154, 169)
 
@@ -3901,7 +3901,7 @@ per-process area, but only in three places: the floating point save
 area, now 32 registers long (389), a saved register named by `regloc`, or
 the saved status register.
 
-The `&377` (392) is new. In v7 the values of `regloc` were negative,
+The `&0377` (392) is new. In v7 the values of `regloc` were negative,
 and the PDP-11's signed `char` gave the right index. On the ARM they are
 all positive and `char` is unsigned; the mask converts the `char` to an
 `int` before it is used as an index, of which the compiler would
@@ -3915,7 +3915,7 @@ A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
 "user" by or-ing in 0170000. Here everything is discarded except the
 condition flags (bits 27 to 31) and the `GE` flags (16 to 19), and the
-mode field is set to user mode, `0x10` (octal 20). v7's following line, which
+mode field is set to user mode, `0x10` (octal 020). v7's following line, which
 cleared the priority bits 5 to 7, is kept; on the ARM it clears the
 Thumb bit and the two interrupt masks, which the previous line has
 already cleared.
@@ -4057,7 +4057,7 @@ swap device.
 The code is v7's, with the additions described below. Every program
 has a separate text segment, read-only
 and shared by all the processes which run it (#f("sys1.c")), so the
-text table is in use as it was on the PDP-11 for 410 programs: a text
+text table is in use as it was on the PDP-11 for 0410 programs: a text
 is read from the file once, kept in core while any process using it is
 in core, and kept on the swap device while any process uses it at all.
 
