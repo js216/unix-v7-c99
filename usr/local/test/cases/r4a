@@ -10,7 +10,7 @@ X
 set a b c; for i do for j do :; done; done; (cd /nonexistent)
 echo args $*
 echo after
-ps l | sed 1q
+ps l | sed -n 1p
 cp /usr/lib/crontab crontab; cp /usr/adm/messages messages; cp /usr/adm/msgbuf msgbuf
 echo '* * * * * /etc/dmesg - >>/usr/adm/messages' >/usr/lib/crontab; /etc/cron; sleep 75; ls -l /usr/adm; sed 3q /usr/adm/messages
 kill -9 `ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`

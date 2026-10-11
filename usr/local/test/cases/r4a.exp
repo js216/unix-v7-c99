@@ -16,7 +16,6 @@ r4a: /nonexistent: bad directory
 args a b c
 after
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
-
 total 2
 -rw-r--r-- 1 daemon     30 Jan  9 HH:MM messages
 -rw-r--r-- 1 daemon    136 Jan  9 HH:MM msgbuf
