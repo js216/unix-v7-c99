@@ -9216,7 +9216,7 @@ before it calls `word`; `word` clears it again.
 The procedures of the file are declared `LOCAL` at the top (13--23),
 where v7 declared them `PROC`, that is `extern`, and defined them
 `LOCAL`, a contradiction C99 does not allow. `skipnl` was declared
-`VOID`, but returns `wdval`, and `item` uses the result (232); with
+`VOID`, but returns `wdval`, and `item` uses the result (226); with
 `VOID` now `void` it is declared, and defined, `INT`.
 
 #lines(1, 30)
@@ -9226,9 +9226,10 @@ local `t` in each as a `TREPTR` and assigned the fields of a fork or
 list node through it, which its compiler allowed for any structure
 pointer. The port declares `t` as the pointer it is, and converts it to
 `TREPTR` on return. `getstak` returns a `STKPTR`, a `char *`, and each
-call of it now has a cast to the type of node wanted, as C99 requires. The same change is made throughout `item` below,
-where the port introduces a pointer of the specific type (`s`, `it`,
-`fr`, `wh`, `c`) beside v7's `t`.
+call of it now has a cast to the type of node wanted, as C99 requires.
+In `item` below, where v7's `t` must stay a `TREPTR` for the code after
+the `switch`, each use of a field casts `t` to the node's own type
+instead.
 
 `makelist` initialises `t` to 0. `synbad` never returns, but the
 compiler cannot know it, and would otherwise warn that `t` may be
@@ -9273,18 +9274,18 @@ The compound commands. Each allocates its node and fills it by calling
 `cmd` with the symbol which must end each part. `elif` is handled by
 treating it as the start of a nested `if`, with `wdval` set to `IFSYM`
 and `item` called again; the nested `if` consumes the `fi`, and the
-outer returns at once (219).
+outer returns at once (215).
 
-#lines(196, 221)
+#lines(196, 217)
 
 `for` takes a name, an optional `in` with its list of words, which is
-parsed as a simple command and stored as a `COMPTR` (234), then a
+parsed as a simple command and stored as a `COMPTR` (228), then a
 `do ... done` or a `{ ... }`. The cast of the result of `item` is new.
 `while` and `until` share a node, distinguished by type. A brace group
 is no node at all, but just its command list; a parenthesised command
 is a `TPAR` node inside a fork node, so that it is run in a subshell.
 
-#lines(222, 269)
+#lines(218, 261)
 
 The simple command. Words are taken until a symbol appears; each is
 either an assignment, chained on `argset`, or an argument, appended to
@@ -9292,20 +9293,20 @@ the list through `argtail`. Assignments are recognised only before the
 first argument, unless the option `-k` (`keyflg`) is set. Redirections
 may be interleaved with the words. `argset` is declared as a pointer to
 `ARGPTR`, though it holds an `ARGPTR`; v7 assigned between the two types
-freely, and the port casts (291, 300).
+freely, and the port casts (281, 290).
 
 If no command begins here (`default`), but redirections were found, a
-command without words is made, and the case falls through (275, with
+command without words is made, and the case falls through (267, with
 the new comment). After a compound command, redirections may follow
-(305); they wrap the command in a fork node, through whose `treio` they
-are applied. The parentheses around the assignment (306) are new.
+(295); they wrap the command in a fork node, through whose `treio` they
+are applied. The parentheses around the assignment (296) are new.
 
-#lines(270, 310)
+#lines(262, 300)
 
 `skipnl` reads symbols until one is not a newline, prompting with
 `PS2` for each.
 
-#lines(311, 317)
+#lines(301, 307)
 
 `inout` parses one redirection, and recursively those that follow. The
 descriptor, if one was given before the operator, is in `wdnum`; the
@@ -9313,10 +9314,10 @@ kind of redirection is or-ed above it (#f("sh/defs.h")). A `<<`
 document is also put on `iopend`, to be read at the end of the line
 (#f("sh/word.c")). `<&` and `>&` are distinguished by reading one more
 character directly, and `<>` gives read and write. The `>` case falls
-through into the `<` case to make that test (339, with the new
+through into the `<` case to make that test (329, with the new
 comment).
 
-#lines(318, 361)
+#lines(308, 351)
 
 `chkword` requires an ordinary word. `chksym` requires the symbol
 `sym`, or one of several reserved words or-ed together: when both
@@ -9324,13 +9325,13 @@ comment).
 equals `wdval` only if all of `wdval`'s bits are in `sym`
 (#f("sh/sym.h")).
 
-#lines(362, 376)
+#lines(352, 366)
 
 `synbad` reports a syntax error, naming the offending symbol through
 `prsym`, with the line number when the shell is not interactive, and
 leaves through `exitsh` (#f("sh/error.c")).
 
-#lines(377, 411)
+#lines(367, 401)
 #source("/usr/src/cmd/sh/msg.c")
 
 The shell's strings, gathered in one file so that each is stored once.
