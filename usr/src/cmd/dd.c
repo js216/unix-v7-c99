@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <signal.h>
 
-#define	BIG	32767
+#define	BIG	2147483647
 #define	LCASE	01
 #define	UCASE	02
 #define	SWAB	04
@@ -382,14 +382,14 @@ int
 number(int big)
 {
 	register char *cs;
-	long n;
+	long long n;
 
 	cs = string;
 	n = 0;
-	while(*cs >= '0' && *cs <= '9')
+	while(*cs >= '0' && *cs <= '9' && n < big)
 		n = n*10 + *cs++ - '0';
 	for(;;)
-	switch(*cs++) {
+	switch(n < big? *cs++: '\0') {
 
 	case 'k':
 		n *= 1024;
@@ -411,7 +411,7 @@ number(int big)
 
 	case '\0':
 		if (n>=big || n<0) {
-			fprintf(stderr, "dd: argument %D out of range\n", n);
+			fprintf(stderr, "dd: argument %lld out of range\n", n);
 			exit(1);
 		}
 		return(n);
