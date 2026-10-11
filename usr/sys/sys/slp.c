@@ -531,6 +531,7 @@ retry:
 			copyseg(a1++, a2++);
 	}
 	u.u_procp = rip;
+	sureg();
 	setrq(rpp);
 	rpp->p_flag |= SSWAP;
 	return(0);

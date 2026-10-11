@@ -2639,11 +2639,11 @@ it unmasks the IRQ and executes `wfi`.
 
 The incoming process is resumed at `u.u_rsav` unless it has
 `SSWAP` set (422), in which case it is resumed at `u.u_ssav`. The flag is set
-by `newproc` (535), by `expand` (574), and by `xexpand` (#f("text.c")),
+by `newproc` (536), by `expand` (575), and by `xexpand` (#f("text.c")),
 all of which made an image of a process (on the swap area or in fresh
 core) after doing `save(u.u_ssav)`. In such an image `u.u_rsav` is stale:
 it was recorded by some earlier switch, or, in `expand`'s case, by the
-call of `swtch` from `qswtch` (575), after the image had already been
+call of `swtch` from `qswtch` (576), after the image had already been
 written. Hence the explicit choice of label.
 
 Note that the ARM `resume` masks interrupts while the mapping and
@@ -2690,9 +2690,10 @@ and current and root directories, are incremented.
 The child's image is a copy of the parent's, `u` included, made after
 the parent has done `save(u.u_ssav)` (510). Before the copy,
 `u.u_procp` is set to the child's entry (501), so that the copy differs
-from the original in that one respect; the parent restores it (533).
+from the original in that one respect; the parent restores it (533), and
+loads its own page tables again (534), for the reason given below.
 
-When the child is first chosen by `swtch` its `SSWAP` flag (535) causes
+When the child is first chosen by `swtch` its `SSWAP` flag (536) causes
 it to be resumed at `u.u_ssav`; its `save` returns 1, and `newproc`
 returns 1 to `fork`. The child's kernel stack, being part of `u`, is
 copied with the rest, and since `u` always appears at the same virtual
@@ -2717,7 +2718,13 @@ If there is no core for the copy (520), the parent's image is written
 to the swap area as the child's image, without freeing the core
 (`xswap` with second argument zero). `rpp->p_addr` is pointed at the
 parent's core for the purpose, and `SIDL` keeps the parent from being
-chosen for swapping in the meanwhile. Otherwise (529) the image is
+chosen for swapping in the meanwhile. While `xswap` waits for the
+write, the parent sleeps and is resumed in `swtch` as the child, for
+`u.u_procp` names the child's entry: the `sureg` there builds page
+tables in the child's slot, mapping the parent's core, and loads them.
+`xswap` frees them once the image is written (#f("text.c")), and the
+`sureg` at (534) points the processor back at the parent's own tables.
+Otherwise (529) the image is
 copied, a click at a time, by `copyseg` (#f("machdep.c")). On the PDP-11
 `copyseg` had to borrow a user segmentation register to reach physical
 memory; here the kernel maps all of memory, and `CLKADDR` turns a click
@@ -2727,30 +2734,30 @@ The copy is of the whole image, as in v7: the per process area, the
 data, and the stack, which is no more than the program has asked for
 (`getxfile`, #f("sys1.c")). A small program's image is a few clicks.
 
-#lines(520, 537)
+#lines(520, 538)
 
 `expand` changes the size of the current process's image to `newsize`
-clicks. A shrinking image simply gives back its tail (564). A growing
-one is copied into a new area (580), after which `resume` (583)
-switches to the copy, whose `save` (567) then returns 1. The comment's
+clicks. A shrinking image simply gives back its tail (565). A growing
+one is copied into a new area (581), after which `resume` (584)
+switches to the copy, whose `save` (568) then returns 1. The comment's
 "taking care to reset registers" is a PDP-11 relic in effect: since `u`
 and the kernel stack always appear at the same virtual address, the
 copy needs no adjustment, and `resume` only has to remap `u` to the new
-area. The page tables of the old image are released first (578), and
+area. The page tables of the old image are released first (579), and
 `sureg` builds new ones for the copy (#f("ureg.c")). A shrinking image
 keeps its tables: the caller has already set the new sizes with
 `estabur`, whose tables no longer reach the tail given back.
 
-If there is no core (572), the image is written to the swap area at its
+If there is no core (573), the image is written to the swap area at its
 old size `n` but with `p_size` already set to the new one, the old core
 is freed, and the process gives up the processor with `SSWAP` set. When
 `sched` brings it back, `swapin` allocates the larger size, and the
-process resumes at `u.u_ssav` (567) and returns from `expand` as if
+process resumes at `u.u_ssav` (568) and returns from `expand` as if
 nothing had happened. Note that until `swtch` resumes another process it
 goes on running in core which is already free; nothing can reallocate
 it in that interval, since no interrupt routine allocates core.
 
-#lines(538, 584)
+#lines(539, 585)
 
 = Entering the Kernel
 
@@ -3901,15 +3908,13 @@ files call are declared in #f("systm.h").
 image in core; it differs from `p_size` only when `expand` (#f("slp.c"))
 swaps out a process whose size has already been increased, in which case
 the space allocated on the swap device is for the new size (31) while
-only the old size is written (37).
+only the old size is written (36).
 
 #lines(14, 33)
 
 `SLOCK` (34) keeps `sched` from choosing the process as a victim while
-the write is in progress. Its page tables are released (35): they
-describe core which the image is about to leave, and `sureg`
-(#f("ureg.c")) builds new ones when it is next resumed. The process's claim on the core copy of
-its text is given up (36); if it was the last process in core using that
+the write is in progress. The process's claim on the core copy of
+its text is given up (35); if it was the last process in core using that
 text, the core copy is freed, having first been written out if `XWRIT`
 says the swap copy is stale. The core is freed (38) unless `ff` is zero,
 which is the case when `newproc` makes the child's image on the swap
@@ -3922,6 +3927,17 @@ is now such a thing.
 
 Note that `swap` (#f("bio.c")) sleeps until the transfer is complete, so
 that `xswap` returns only when the image is safely on the disk.
+
+The page tables are released (37) after the write, not before it. They
+describe the core which the image is leaving, and `sureg`
+(#f("ureg.c")) builds new ones when the process is next resumed, from
+`p_addr`, wherever `swapin` has put it. A process may be swapping
+itself out, from `expand` or `xexpand` or, as the child, from
+`newproc` (#f("slp.c")); it then sleeps in `swap`, and when it is
+resumed there, `sureg` finds no tables and builds them, still for the
+old core. Released before the write, those tables would have survived
+it, and the process, brought back elsewhere, would have run with its
+pages mapped onto core which belonged by then to other processes.
 
 #lines(34, 47)
 
@@ -12469,7 +12485,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 312)
+#lines(139, 315)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU kernel, as written here, or the MP135's, which the `Makefile`
@@ -12478,7 +12494,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(313, 314)
+#lines(316, 317)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
