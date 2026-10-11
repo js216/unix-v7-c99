@@ -29,15 +29,15 @@ readi(register struct inode *ip)
 
 	if(u.u_count == 0)
 		return;
+	if(u.u_offset < 0 && (ip->i_mode&IFMT) != IFCHR) {
+		u.u_error = EINVAL;
+		return;
+	}
 	ip->i_flag |= IACC;
 	dev = (dev_t)ip->i_un.i_rdev;
 	type = ip->i_mode&IFMT;
 	if (type==IFCHR || type==IFMPC) {
 		(*cdevsw[major(dev)].d_read)(dev);
-		return;
-	}
-	if(u.u_offset < 0) {
-		u.u_error = EINVAL;
 		return;
 	}
 
@@ -91,15 +91,15 @@ writei(register struct inode *ip)
 	register int n, on;
 	register int type;
 
+	if(u.u_offset < 0 && (ip->i_mode&IFMT) != IFCHR) {
+		u.u_error = EINVAL;
+		return;
+	}
 	dev = (dev_t)ip->i_un.i_rdev;
 	type = ip->i_mode&IFMT;
 	if (type==IFCHR || type==IFMPC) {
 		ip->i_flag |= IUPD|ICHG;
 		(*cdevsw[major(dev)].d_write)(dev);
-		return;
-	}
-	if(u.u_offset < 0) {
-		u.u_error = EINVAL;
 		return;
 	}
 	if (u.u_count == 0)

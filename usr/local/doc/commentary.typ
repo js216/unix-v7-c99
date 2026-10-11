@@ -4830,8 +4830,13 @@ transfer is described by `u_base`, `u_count`, and `u_offset`, as for
 
 #lines(464, 485)
 
-The checks (486) are v7's, with one added: the transfer must lie within
-the user's address space, below `USERSIZE` (487). The check that a
+The checks (486) are v7's, with two added. The transfer must lie within
+the user's address space, below `USERSIZE`, and its offset on the
+device must not be negative (487). `readi` and `writei` let a negative
+offset through to character devices, for the sake of `/dev/kmem`
+(#f("rdwri.c")); for a disk it would become a negative block number,
+which the drivers' checks of `b_blkno`, signed comparisons, do not
+catch. The check that a
 transfer does not overlap the text segment (489--498) is v7's: the
 text is shared, and a device must not write into it. v7 rounded the text size up to a
 whole number of 8 KB segments, 128 clicks, since the data began at the
@@ -5227,14 +5232,15 @@ definition, and no other file does.
 
 #lines(1, 8)
 
-`readi` marks the access time as due, and hands a character device the
-whole request. It then refuses a negative offset, which can arise from
-`seek`, since that does not check. v7 refused it first, for every file,
-but a character device makes of the offset what it will, and
-`/dev/kmem` and `/dev/mem` (#f("mem.c")) take it as an address: the
+`readi` refuses a negative offset, which can arise from `seek`, since
+that does not check, marks the access time as due, and hands a
+character device the whole request. v7 refused a negative offset for
+every file, but a character device makes of the offset what it will,
+and `/dev/kmem` and `/dev/mem` (#f("mem.c")) take it as an address: the
 kernel's addresses lie above 0xc0000000, and core on the MP135 machine
-too, which as a 32-bit `off_t` are negative. The check is therefore
-made only for files and block devices. In v7 the call read
+too, which as a 32-bit `off_t` are negative. The test (32) therefore
+exempts character devices; those which are disks refuse a negative
+offset themselves, in `physio` (#f("bio.c")). In v7 the call read
 `return((*cdevsw[major(dev)].d_read)(dev))`, returning whatever the
 driver returned from a procedure whose value nobody used. Both are
 `void` now, so the call and the `return` are separate statements.
@@ -5247,7 +5253,7 @@ below, compares as `unsigned`.
 
 For a file, `n` is cut to what remains before the end of the file, and
 `bmap` converts the logical block number into a block of the device;
-`dev` is now the device on which the file lies, whereas `i_rdev` (33)
+`dev` is now the device on which the file lies, whereas `i_rdev` (37)
 was the device a block special file refers to. For a block special file
 the logical block is the physical one, and the following block is the
 obvious candidate for read-ahead.
@@ -5264,8 +5270,8 @@ whole block, as at the end of a disk.
 
 #lines(60, 73)
 
-`writei` follows the same pattern, the check of the offset moved
-likewise. A write to a character device marks the inode as modified,
+`writei` follows the same pattern, with the same test of the offset
+(94). A write to a character device marks the inode as modified,
 so that the times of a terminal show its last use.
 
 #lines(74, 117)

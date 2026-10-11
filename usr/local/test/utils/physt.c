@@ -27,5 +27,9 @@ main(void)
 	errno = 0;
 	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512, 1024);
 	printf("across end of data: %d errno %d\n", r2, errno);
+	errno = 0;
+	lseek(fd, -512L, 0);
+	r1 = read(fd, dbuf, 512);
+	printf("negative offset: %d errno %d\n", r1, errno);
 	return 0;
 }

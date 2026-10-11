@@ -18,6 +18,7 @@ sum 49271 caught 401
 data 512 stack 512 same
 gap: -1 errno 14
 across end of data: -1 errno 14
+negative offset: -1 errno 14
 64
 found
 1216

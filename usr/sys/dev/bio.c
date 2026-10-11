@@ -484,7 +484,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * Check odd base, odd count, and address wraparound
 	 */
 	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
-	    base+u.u_count > USERSIZE)
+	    base+u.u_count > USERSIZE || u.u_offset < 0)
 		goto bad;
 	ts = u.u_tsize;
 	if (u.u_sep)
