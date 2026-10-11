@@ -9228,7 +9228,7 @@ enclosing loop is reached is skipped by this test.
 
 `com` is initialised (34) in the port. It is set only in the `TCOM`
 case, and used after the fall into `TFORK` only when the type is `TCOM`;
-GCC cannot follow the correlation and warned that it might be used
+GCC cannot follow the correlation and would warn that it might be used
 unset.
 
 #lines(22, 38)
@@ -9257,7 +9257,7 @@ intended.
 #lines(39, 65)
 
 The built-in commands. `.` reads commands from a file in the current
-shell by way of `execexp` (420). `times` prints the user and system
+shell by way of `execexp` (421). `times` prints the user and system
 times of the shell's children, which the kernel accumulates in
 `u_cutime` and `u_cstime` (`times`, #f("sys4.c")); `prt` converts ticks
 to minutes and seconds assuming 60 to the second, which is still `HZ`
@@ -9348,10 +9348,9 @@ shell must go on to do something else. If `fork` fails, because the
 process table is full, the shell waits ten seconds with `alarm` and `pause` and
 tries again; an interrupt meanwhile ends the attempt through `sigchk`.
 
-Only the zero or nonzero value of `fork` is used. The port's kernel
-returns 0 in the child, where v7's returned the parent's pid and relied
-on the library to tell the two apart (#f("sys1.c")); the shell sees the
-same values either way.
+Only the zero or nonzero value of `fork` is used. As in v7, the kernel
+returns the parent's pid in the child, and the library's stub turns it
+into 0 (#f("sys1.c")).
 
 The parent prints the child's pid for `&` in an interactive shell, and
 closes its copy of the pipe once the reading end of a pipeline has been
@@ -9493,7 +9492,7 @@ redirect output.
 
 `fd` is initialised to -1 (36) in the port. On the path through
 `failed` (56) it is never assigned, but GCC cannot know that `failed`
-does not return, and warned that `fd` might be used unset.
+does not return, and would warn that `fd` might be used unset.
 
 #lines(33, 67)
 
@@ -9529,7 +9528,9 @@ input, opens the file as its input, makes the arguments the positional
 parameters, and jumps to `subshell` in `main` (#f("sh/main.c")), which
 starts afresh. The port's kernel returns `ENOEXEC` for any file that is
 not ELF (#f("sys1.c")), so every shell procedure takes this path.
-`ETXTBSY` cannot occur, since no text segment is shared.
+`ENOMEM`, `E2BIG`, and `ETXTBSY`, the last returned for a program which
+some process has open for writing (`getxfile`, #f("sys1.c")), end the
+search with a message.
 
 The comments `/* fallthrough */` are new. GCC warns of a case which
 runs into the next without one; after `longjmp` and `failed` control
@@ -9604,8 +9605,7 @@ the end of a group, for `scan`.
 `argp` is a `STRING`, and v7 took `->argval` from it directly; the port
 casts it to `ARGPTR` (352, 355). v7 set the mark with `Lcheat`, storing
 into the pointer through an `int` lvalue, which C99's rules of aliasing
-do not allow; it came to light when the port began to compile with
-optimisation, and is now an assignment (357).
+do not allow; it is now an assignment (357).
 
 #lines(317, 359)
 #source("/usr/src/cmd/sh/fault.c")
