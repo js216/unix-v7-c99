@@ -210,6 +210,8 @@ d--755 0 0
 					kern	---644 0 0 usr/local/test/cases/kern
 					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
 					kern.sed	---644 0 0 usr/local/test/cases/kern.sed
+					kimage	---644 0 0 usr/local/test/cases/kimage
+					kimage.exp	---644 0 0 usr/local/test/cases/kimage.exp
 					libc	---644 0 0 usr/local/test/cases/libc
 					libc.exp	---644 0 0 usr/local/test/cases/libc.exp
 					login	---644 0 0 usr/local/test/cases/login
@@ -276,6 +278,7 @@ d--755 0 0
 					edscr	---644 0 0 usr/local/test/utils/edscr
 					forkt	---755 0 0 usr/local/test/obj/forkt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img
+					kcmp	---755 0 0 usr/local/test/obj/kcmp
 					kmt	---755 0 0 usr/local/test/obj/kmt
 					long	---644 0 0 usr/local/test/utils/long
 					memt	---755 0 0 usr/local/test/obj/memt

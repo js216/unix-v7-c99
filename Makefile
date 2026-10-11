@@ -19,7 +19,7 @@ COMPILE.c = $(call T,CC)$(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE.s = $(call T,AS)$(AS) $(ASFLAGS)
 LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
 
-all: boot/unix boot/rootfs.img
+all: boot/unix boot/rootfs.img boot/rootfs-mp135.img
 
 include usr/sys/sys.mk
 include usr/src/libc/lib.mk
@@ -55,10 +55,13 @@ ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) $(TEST_DATA)
 
 DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
-boot/rootfs.img: boot/unix etc/mkfs boot/rootfs.proto $(ROOT)
-	$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ boot/rootfs.proto
+boot/rootfs.img: boot/unix $S/conf/qemuconf
+boot/rootfs-mp135.img: $S/conf/mp135/unix $S/conf/mp135conf
+boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto $(ROOT)
+	$(call T,MKFS)sed 's| boot/unix$$| $(filter boot/unix $S/conf/%/unix,$^)|' boot/rootfs.proto | \
+	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin
 	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
-	    usr/sys/conf/qemuconf) $@
+	    $(filter $S/conf/%conf,$^)) $@
 
 etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
@@ -80,7 +83,7 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 clean:
 	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
-	rm -f etc/mkfs boot/unix boot/rootfs.img
+	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img
 
 .PHONY: all clean qemu
 .DELETE_ON_ERROR:
