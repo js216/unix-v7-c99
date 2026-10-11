@@ -13266,8 +13266,8 @@ against a pointer passing the top of the PDP-11's 64 KB address space;
 it can no longer succeed.
 
 Two changes. `m` is now initialized (154): for an empty file the first
-loop does not run, and v7 then halved an undefined `m`; the compiler's
-analysis at `-Os` found this. The parentheses at (168--169) make
+loop does not run, and v7 then halved an undefined `m`, which the
+compiler's analysis at `-Os` reports. The parentheses at (168--169) make
 explicit that `&&` binds more tightly than `||`, as `-Wall` asks.
 
 `unsort` uses the serial numbers to put the class indices of the first
@@ -13540,7 +13540,7 @@ The fields of the line. The mask `&0377` (248) is new. `p_stat` is a
 `-Wall`; the mask makes it an `int`, and on the PDP-11, where `char`
 was signed, it would also have kept the subscript positive. The
 formats were made for the PDP-11, and three fields of the long listing
-are widened for 32-bit values (141, 253, 258, 260): `ADDR`, the click
+are widened for 32-bit values (140, 252, 257, 259): `ADDR`, the click
 number in octal, from six digits to eight, since the 512 MB of the
 MP135 machine's memory reaches click 917504, 03400000; `SZ` from four
 columns to five, since a large image is thousands of blocks, which
@@ -13693,7 +13693,7 @@ table `/usr/lib/crontab`, and starts the commands whose times have
 come. The image's table (from v7's tape) runs `dmesg` (#f("cmd/dmesg.c"))
 every ten minutes, `atrun`, which starts the jobs queued by `at`, every
 five, and `calendar` once a day at 1:20. Since the commands run as
-the user `daemon` (31), the first entry works only because `/dev/mem`
+the user `daemon` (31), the first entry works only because `/dev/kmem`
 may be read by anyone and `/usr/adm/messages` and `/usr/adm/msgbuf`
 belong to `daemon` (#f("rootfs.proto")).
 
@@ -13729,11 +13729,9 @@ effect within a minute, without a signal to `cron` or a restart.
 
 `filetime` starts at zero, and the test is a strict "greater than". A
 table dated zero is therefore never read at all, and `list`, still null,
-is then scanned at (56). This was once a real failure in the port,
-whose `mkfs` stamped every file with time zero; the image is now built
-with every file dated 284774400 seconds, 10 January 1979, the date of
-v7's own files (#f("Makefile"), #f("cmd/mkfs.c")), and the table is read
-on the first pass. The same test means that a table replaced by an
+is then scanned at (56). The image therefore dates every file 284774400
+seconds, 10 January 1979, the date of v7's own files (#f("Makefile"),
+#f("cmd/mkfs.c")), and the table is read on the first pass. The same test means that a table replaced by an
 older file is ignored until it is touched.
 
 For each entry, `cmp` checks the five fields in order against the
@@ -13851,7 +13849,7 @@ The thirty-second `sync` also keeps the date on the disk. `update`
 (#f("alloc.c")) stamps each modified super-block with the current
 `time` before writing it, and `iinit` (#f("main.c")) takes the time of
 day at boot from the root file system's `s_time`, since the kernel reads no
-battery-backed clock on either board. A newly booted system therefore starts
+battery-backed clock on either machine. A newly booted system therefore starts
 from the last moment at which `update` found the super-block modified,
 at most thirty seconds after the last allocation or release of a block
 or inode, rather than from the 10 January 1979 of the image (#f("Makefile")). A system which has changed nothing on its disk
