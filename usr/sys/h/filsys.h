@@ -12,6 +12,7 @@ struct	filsys {
 	char   	s_ilock;   	/* lock during i-list manipulation */
 	char   	s_fmod;    	/* super block modified flag */
 	char   	s_ronly;   	/* mounted read-only flag */
+	char   	s_pad[6];  	/* reserved, zero */
 	time_t 	s_time;    	/* last super block update */
 	/* remainder not maintained by this version of the system */
 	daddr_t	s_tfree;   	/* total free blocks*/

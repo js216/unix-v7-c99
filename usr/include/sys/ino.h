@@ -10,6 +10,7 @@ struct dinode
 	short	di_gid;      	/* owner's group id */
 	off_t	di_size;     	/* number of bytes in file */
 	char  	di_addr[40];	/* disk block addresses */
+	char	di_pad[4];	/* reserved, zero */
 	time_t	di_atime;   	/* time last accessed */
 	time_t	di_mtime;   	/* time last modified */
 	time_t	di_ctime;   	/* time created */

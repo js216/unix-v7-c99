@@ -5542,7 +5542,7 @@ user's memory. The mask in `schar` undid the sign extension of a PDP-11
 #lines(200, 225)
 #source("/usr/sys/h/filsys.h")
 
-#f("filsys.h") is unchanged from v7. It describes the super-block, block
+#f("filsys.h") describes the super-block, block
 `SUPERB`, block 1, of every file system; block 0 is left for a bootstrap. The
 i-list, the array of inodes on the disk, occupies blocks 2 up to `s_isize`−1, so that `s_isize` is in
 effect the number of the first block which may hold data, and
@@ -5558,19 +5558,22 @@ sleeps in the middle of changing them; they mean nothing on the disk,
 and `smount` (#f("sys3.c")) clears them. The fields after `s_time` are
 kept by the programs which examine file systems, not by the kernel.
 
-The structure is v7's, but its image on the disk is not. The compiler
-lays it out for the ARM: a `long` is stored least significant byte
-first, where the PDP-11 put its high word first, and it is aligned on a
-four-byte boundary, so that two bytes of padding follow `s_isize` and
-`s_nfree`. `s_time`, a `time_t` of eight bytes (#f("param.h")), is
-aligned on eight, and six bytes of padding follow the four flags. The
-super-block is 456 bytes here, against 440 on the PDP-11. Since `mkfs` (#f("cmd/mkfs.c")) is compiled from these same
-headers, with their `long` types made `int` for the build machine
-(#f("Makefile")), the file systems it builds agree with the
-kernel; a disk written by a PDP-11 could not be mounted without
-conversion.
+The structure is v7's but for `s_pad` (15), and its image on the disk
+is not v7's. The compiler lays it out for the ARM: a `long` is stored
+least significant byte first, where the PDP-11 put its high word first,
+and it is aligned on a four-byte boundary, so that two bytes of padding
+follow `s_isize` and `s_nfree`. `s_time`, a `time_t` of eight bytes
+(#f("param.h")), must begin at a multiple of eight, 424, which the ARM
+would reach by padding of its own; but `mkfs` (#f("cmd/mkfs.c")) is
+compiled from these same headers by the build machine's compiler, with
+their `long` types made `int` (#f("Makefile")), and a compiler which
+aligns a `long long` on four, as for the Intel 386, would put `s_time`
+at 420. The six bytes of `s_pad` make the hole explicit, so that the
+layout is the same for every compiler. The super-block is 456 bytes
+here, against 440 on the PDP-11, and a disk written by a PDP-11 could
+not be mounted without conversion.
 
-#lines(1, 23)
+#lines(1, 24)
 #source("/usr/sys/h/mount.h")
 
 The mount table has one entry for each mounted file system. `m_bufp`
@@ -5609,12 +5612,15 @@ fortieth byte being unused; a block number must therefore be less than
 Up to the times the layout is the PDP-11's: four `short`s bring
 `di_size` to offset 8, already a multiple of four, and the forty bytes
 of addresses end at offset 52. A `time_t` is now eight bytes, aligned on
-eight (#f("param.h")), so four bytes are left before the times, which
-occupy offsets 56 to 79. `di_spare` (16) fills the inode to 128 bytes,
-and with the four bytes before the times makes 52 reserved bytes, zero
-on every disk: enough for a 64-bit `di_size` should files ever need
+eight (#f("param.h")), so the four bytes of `di_pad` (13) are left
+before the times, which occupy offsets 56 to 79. The ARM's compiler
+would leave them by itself, but one which aligns a `long long` on four
+would not, and `mkfs`, compiled by the build machine's compiler, would
+then make inodes of 124 bytes (see #f("filsys.h")). `di_spare` (17)
+fills the inode to 128 bytes, and with `di_pad` makes 52 reserved
+bytes, zero on every disk: enough for a 64-bit `di_size` should files ever need
 one. Nothing reads them; `mkfs` writes them as zeros, and `clri` and
-`restor` clear or copy whole inodes. The comment on `INOPB` (18) has
+`restor` clear or copy whole inodes. The comment on `INOPB` (19) has
 been corrected for the new value. The byte order is not the
 PDP-11's either. A `long` here is stored least significant byte
 first, and the three bytes of an address are packed in the same order;
@@ -5624,7 +5630,7 @@ addresses accordingly began with bits 16 to 23. The kernel's packing in
 C library's `l3tol` and `ltol3`, used by the programs which examine file
 systems, all follow the ARM's order.
 
-#lines(1, 23)
+#lines(1, 24)
 #source("/usr/sys/sys/sys3.c")
 
 #f("sys3.c") holds `stat`, `fstat`, `dup`, `mount`, and `umount`. Apart
