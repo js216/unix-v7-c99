@@ -78,7 +78,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 	
 				case SYSTIMES:
 					{
-					L_INT	t[4]; times(t);
+					long long	t[4]; times(t);
 					prt(t[2]); blank(); prt(t[3]); newline();
 					}
 					break;

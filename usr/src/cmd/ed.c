@@ -1786,7 +1786,7 @@ void
 makekey(char *a, char *b)
 {
 	register int i;
-	long t;
+	long long t;
 	char temp[KSIZE + 1];
 
 	for(i = 0; i < KSIZE; i++)

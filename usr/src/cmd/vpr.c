@@ -208,7 +208,7 @@ putline(int ff)
 void
 banner(char *s)
 {
-	long timeb;
+	long long timeb;
 	register char *sp;
 	int i, j, t;
 

@@ -339,8 +339,8 @@ dousr(void)
 	printf("sigs");
 	for (i=0; i<NSIG; i++)
 		printf(" %.1o", up->u_signal[i]);
-	printf("\ntimes %ld %ld\n", up->u_utime/60, up->u_stime/60);
-	printf("ctimes %ld %ld\n", up->u_cutime/60, up->u_cstime/60);
+	printf("\ntimes %lld %lld\n", up->u_utime/60, up->u_stime/60);
+	printf("ctimes %lld %lld\n", up->u_cutime/60, up->u_cstime/60);
 	printf("ar0 %.1o\n", up->u_ar0);
 /*
 	printf("prof");

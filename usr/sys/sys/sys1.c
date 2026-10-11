@@ -406,6 +406,7 @@ loop:
 			p->p_sig = 0;
 			p->p_flag = 0;
 			p->p_wchan = 0;
+			p->p_nptab = 0;
 			p->p_stat = NULL;
 			return;
 		}

@@ -8,7 +8,7 @@
 #define	LADDR	10
 #define	MAXFILEBLK	(LADDR+NINDIR+(NINDIR*NINDIR))
 #define	MAXFN	500
-#define	itoo(x)	(int)((x+15)&07)
+#define	itoo(x)	(int)((x+7)&03)
 #ifndef STANDALONE
 #include <stdio.h>
 #include <stdlib.h>

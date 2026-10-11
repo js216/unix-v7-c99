@@ -362,7 +362,7 @@ Deroff: Invalid flag m
 1	/tmp/cmdh/a
 1	/tmp/cmdh/b.b
 1	/tmp/cmdh/c.b
-368	/tmp/cmdh
+362	/tmp/cmdh
 2	/tmp/cmdh/dd
 2	/tmp/cmdh/rx
 abc

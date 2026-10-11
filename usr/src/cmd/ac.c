@@ -20,14 +20,14 @@ struct ubuf {
 
 struct tbuf {
 	struct	ubuf	*userp;
-	long	ttime;
+	time_t	ttime;
 } tbuf[TSIZE];
 
 char	*wtmp;
 int	pflag, byday;
-long	dtime;
-long	midnight;
-long	lastime;
+time_t	dtime;
+time_t	midnight;
+time_t	lastime;
 long	day	= 86400L;
 int	pcount;
 char	**pptr;
@@ -176,7 +176,7 @@ update(struct tbuf *tp, int f)
 {
 	int j;
 	struct ubuf *up;
-	long t, t1;
+	time_t t, t1;
 
 	if (f)
 		t = midnight;
@@ -230,7 +230,7 @@ among(int i)
 void
 newday(void)
 {
-	long ttime;
+	time_t ttime;
 	struct timeb tb;
 
 	time(&ttime);
@@ -247,7 +247,7 @@ newday(void)
 void
 pdate(void)
 {
-	long x;
+	time_t x;
 
 	if (byday==0)
 		return;

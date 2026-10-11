@@ -279,7 +279,7 @@ getdir(void)
 	sscanf(dblock.dbuf.gid, "%o", &i);
 	sp->st_gid = i;
 	sscanf(dblock.dbuf.size, "%lo", &sp->st_size);
-	sscanf(dblock.dbuf.mtime, "%lo", &sp->st_mtime);
+	sscanf(dblock.dbuf.mtime, "%llo", &sp->st_mtime);
 	sscanf(dblock.dbuf.chksum, "%o", &chksum);
 	if (chksum != checksum()) {
 		fprintf(stderr, "directory checksum error\n");
@@ -666,7 +666,7 @@ tomodes(register struct stat *sp)
 	sprintf(dblock.dbuf.uid, "%6o ", sp->st_uid);
 	sprintf(dblock.dbuf.gid, "%6o ", sp->st_gid);
 	sprintf(dblock.dbuf.size, "%11lo ", sp->st_size);
-	sprintf(dblock.dbuf.mtime, "%11lo ", sp->st_mtime);
+	sprintf(dblock.dbuf.mtime, "%11llo ", sp->st_mtime);
 }
 
 int
@@ -715,7 +715,7 @@ int
 checkupdate(char *arg)
 {
 	char name[100];
-	long	mtime;
+	time_t	mtime;
 	daddr_t seekp;
 
 	rewind(tfile);
@@ -723,7 +723,7 @@ checkupdate(char *arg)
 		if ((seekp = lookup(arg)) < 0)
 			return(1);
 		fseek(tfile, seekp, 0);
-		fscanf(tfile, "%s %lo", name, &mtime);
+		fscanf(tfile, "%s %llo", name, &mtime);
 		if (stbuf.st_mtime > mtime)
 			return(1);
 		else

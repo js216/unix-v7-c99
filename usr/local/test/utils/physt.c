@@ -25,7 +25,7 @@ main(void)
 	r1 = read(fd, (char *)0x80000, 512);
 	printf("gap: %d errno %d\n", r1, errno);
 	errno = 0;
-	r2 = read(fd, (char *)(((int)sbrk(0) + 511) & ~511) - 512, 1024);
+	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512, 1024);
 	printf("across end of data: %d errno %d\n", r2, errno);
 	return 0;
 }

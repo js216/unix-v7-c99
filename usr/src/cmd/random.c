@@ -6,7 +6,7 @@ char ibuf[BUFSIZ],obuf[BUFSIZ],line[BUFSIZ];
 int
 main(int argc, char **argv)
 {
-	long tvec;
+	long long tvec;
 	int i;
 	for(i=1;i<argc;i++)
 	{	if(*argv[i]!='-')

@@ -16,7 +16,7 @@ struct anode {
 } Node[100];
 int Nn;  /* number of nodes */
 char	*Fname;
-long	Now;
+time_t	Now;
 int	Argc,
 	Ai,
 	Pi;
@@ -27,7 +27,7 @@ short	*Buf, *Dbuf, *Wp;
 int	Bufsize = 5120;
 int	Wct = 2560;
 
-long	Newer;
+time_t	Newer;
 
 struct stat Statb;
 

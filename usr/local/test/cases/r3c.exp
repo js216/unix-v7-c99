@@ -39,7 +39,7 @@ apple	banana	cherry	date
 found /usr/local/test/utils/words
      16
 /
-     33
+     35
 1
    PID TTY TIME CMD
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
@@ -60,7 +60,7 @@ fs:
 fs:
 files     13 (r=8,d=4,b=0,c=1)
 used      23 (i=0,ii=0,iii=0,d=23)
-free     366
+free     358
 missing    0
 1099511627776
 0.333

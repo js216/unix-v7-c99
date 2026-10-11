@@ -98,7 +98,7 @@ main(INT c, STRING v[])
 
 LOCAL VOID	exfile(BOOL prof)
 {
-	volatile L_INT	mailtime = 0;
+	volatile long long	mailtime = 0;
 	REG INT		userid;
 	struct stat	statb;
 

@@ -79,13 +79,14 @@ iloop:
 
 void
 logit(int n, char *s[])
-{	int i, tvec[2];
+{	int i;
+	long long tvec;
 	FILE *f, *g;
 	char buf[512];
 	if ((f=fopen("/usr/pjw/awk/awkhist", "a"))==NULL)
 		return;
-	time((long *)tvec);
-	fprintf(f, "%-8s %s", getlogin(), ctime((long *)tvec));
+	time(&tvec);
+	fprintf(f, "%-8s %s", getlogin(), ctime(&tvec));
 	for (i=0; i<n; i++)
 		fprintf(f, "'%s'", s[i]);
 	putc('\n', f);

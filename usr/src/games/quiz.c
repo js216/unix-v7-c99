@@ -314,7 +314,7 @@ main(int argc, char *argv[])
 	int x;
 	int z;
 	char *info;
-	long tm;
+	long long tm;
 	int count;
 	info = "/usr/games/quiz.k/index";
 	time(&tm);

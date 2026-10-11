@@ -34,10 +34,10 @@ main(int argc, char **argv)
 }
 void
 setup(void)
-{	int tvec[2];
+{	long long tvec;
 	struct stat statb;
-	time((long *)tvec);
-	srand(tvec[0]);
+	time(&tvec);
+	srand(tvec);
 	if((dict=fopen(dictfile,"r"))==NULL) fatal("no dictionary");
 	if(stat(dictfile,&statb)<0) fatal("can't stat");
 	dictlen=statb.st_size;

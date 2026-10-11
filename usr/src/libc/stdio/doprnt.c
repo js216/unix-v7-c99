@@ -23,8 +23,8 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 	char buf[400];
 	register char *p, *s;
 	register int c;
-	int width, ndigit, ndfnd, rjust, zfill, base, decpt, sign;
-	unsigned long u;
+	int width, ndigit, ndfnd, rjust, zfill, base, decpt, sign, ll;
+	unsigned long long u;
 
 	for (;;) {
 		for (s = fmt; *fmt && *fmt != '%'; fmt++)
@@ -49,9 +49,12 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 			ndfnd++;
 		}
 		p = s = buf;
+		ll = 0;
 		switch (c = *fmt++) {
 		case 'l':
 		case 'L':
+			if ((ll = *fmt == 'l'))
+				fmt++;
 			switch (c = *fmt++) {
 			case 'd': c = 'D'; break;
 			case 'o': c = 'O'; break;
@@ -66,8 +69,8 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 			return;
 		case 'd':
 		case 'D':
-			u = c=='d'? va_arg(*argp, int): va_arg(*argp, long);
-			if ((long)u < 0) {
+			u = ll? va_arg(*argp, long long): c=='d'? va_arg(*argp, int): va_arg(*argp, long);
+			if ((long long)u < 0) {
 				*p++ = '-';
 				u = -u;
 			}
@@ -83,7 +86,7 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 		case 'u':
 		case 'U':
 		unum:
-			u = c>='a'? va_arg(*argp, unsigned): va_arg(*argp, unsigned long);
+			u = ll? va_arg(*argp, unsigned long long): c>='a'? va_arg(*argp, unsigned): va_arg(*argp, unsigned long);
 		num:
 			if (ndigit && u)
 				*p++ = '0';

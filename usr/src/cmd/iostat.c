@@ -135,7 +135,7 @@ loop:
 		goto contin;
 	}
 	if (dflg) {
-		long tm;
+		long long tm;
 		time(&tm);
 		printf("%s", ctime(&tm));
 	}

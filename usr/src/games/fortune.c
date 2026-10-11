@@ -8,7 +8,7 @@ main(void)
 {
 	double p;
 	register char * l;
-	long t;
+	long long t;
 	FILE *f;
 
 	f = fopen("/usr/games/lib/fortunes", "r");

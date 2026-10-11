@@ -23,12 +23,12 @@ struct lbuf {
 	short	luid;
 	short	lgid;
 	long	lsize;
-	long	lmtime;
+	time_t	lmtime;
 };
 
 int	aflg, dflg, lflg, sflg, tflg, uflg, iflg, fflg, gflg, cflg;
 int	rflg	= 1;
-long	year;
+time_t	year;
 int	flags;
 int	lastuid	= -1;
 char	tbuf[16];

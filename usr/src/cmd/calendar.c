@@ -25,7 +25,7 @@ char *month[] = {
 };
 
 static void
-tprint(long t)
+tprint(long long t)
 {
 	struct tm *tm;
 	tm = localtime(&t);
@@ -36,7 +36,7 @@ tprint(long t)
 int
 main(void)
 {
-	long t;
+	long long t;
 	time(&t);
 	tprint(t);
 	switch(localtime(&t)->tm_wday) {

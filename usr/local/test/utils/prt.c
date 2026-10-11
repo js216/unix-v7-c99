@@ -8,7 +8,7 @@ int
 main(void)
 {
 	int i, n;
-	long t;
+	long long t;
 
 	profil((char *)buf, sizeof buf, 0, 0x8000);
 	t = time(0);

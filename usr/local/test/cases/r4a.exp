@@ -24,8 +24,8 @@ total 2
 
 Jan  9 HH:MM
 mem = 533221376
-Thu Dec 26 17:31:44 EST 1901
-Thu Dec 26 17:31:44 EST 1901
+Mon Feb  1 00:00:SS EST 2038
+Mon Feb  1 00:00:SS EST 2038
 date0
 
 l: syntax error at line 100002: `fi' unexpected

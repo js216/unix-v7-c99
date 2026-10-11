@@ -8,6 +8,7 @@
 #define	SHORT	0
 #define	REGULAR	1
 #define	LONG	2
+#define	LLONG	3
 #define	INT	0
 #define	FLOAT	1
 
@@ -59,6 +60,10 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 		if (ch=='l') {
 			ch = *fmt++;
 			size = LONG;
+			if (ch=='l') {
+				ch = *fmt++;
+				size = LLONG;
+			}
 		} else if (ch=='h') {
 			size = SHORT;
 			ch = *fmt++;
@@ -78,6 +83,8 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 				    (char *)va_arg(*argp, float *);
 			else if (size==LONG)
 				ptr = (char *)va_arg(*argp, long *);
+			else if (size==LLONG)
+				ptr = (char *)va_arg(*argp, long long *);
 			else if (size==SHORT)
 				ptr = (char *)va_arg(*argp, short *);
 			else
@@ -117,7 +124,7 @@ _innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 	char numbuf[64];
 	register int c, base;
 	int expseen, scale, negflg, c1, ndigit;
-	long lcval;
+	long long lcval;
 
 	if (type=='c' || type=='s' || type=='[')
 		return(_instr(ptr, type, len, iop, eofptr));
@@ -213,6 +220,10 @@ _innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 
 	case (INT<<4) | LONG:
 		*(long *)ptr = lcval;
+		break;
+
+	case (INT<<4) | LLONG:
+		*(long long *)ptr = lcval;
 		break;
 	}
 	return(1);

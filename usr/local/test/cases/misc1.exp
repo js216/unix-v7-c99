@@ -63,7 +63,7 @@ st4
 hello world
       4
 st0
-fs 366
+fs 358
 misc1: dmesg: not found
 speed 0 baud
 erase = '#'; kill = '@'

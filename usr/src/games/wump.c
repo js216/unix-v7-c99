@@ -330,7 +330,7 @@ rline(void)
 int
 rnum(int n)
 {
-	static long first;
+	static long long first;
 
 	if(first == 0) {
 		time(&first);

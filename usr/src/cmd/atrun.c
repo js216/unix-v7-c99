@@ -53,14 +53,14 @@ main(void)
 void
 makenowtime(void)
 {
-	long t;
+	time_t t;
 	register struct tm *tp;
 
 	time(&t);
 	tp = localtime(&t);
 	nowtime = tp->tm_hour*100 + tp->tm_min;
 	nowdate = tp->tm_yday;
-	nowyear = tp->tm_year;
+	nowyear = tp->tm_year%100;
 }
 
 void

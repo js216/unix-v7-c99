@@ -82,7 +82,7 @@ main(int argc, char **argv)
 		uday -= c;
 		uyear++;
 	}
-	filename(THISDAY, uyear, uday, utime);
+	filename(THISDAY, uyear%100, uday, utime);
 	ifile = stdin;
 	if (argc > larg)
 		ifile = fopen(argv[larg], "r");
@@ -207,7 +207,7 @@ makeuday(int argc, char **argv)
 	   month day OR weekday [week].  Returns either 2 or 3 as last
 	   argument used */
 	/* first of all, what's today */
-	long tm;
+	long long tm;
 	int found = -1;
 	char **ps;
 	struct tm *detail;

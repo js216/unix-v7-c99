@@ -1,6 +1,6 @@
 .globl	stime
 .globl	cerror
 stime:
-	ldr	r0, [r0]
+	ldm	r0, {r0, r1}
 	mov	ip, #25
 	b	cerror

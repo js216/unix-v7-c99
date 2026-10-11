@@ -20,7 +20,7 @@ main(int argc, char *argv[])
 	char *p;
 	int i;
 	char saltc[2];
-	long salt;
+	long long salt;
 	int u,fi,fo;
 	int insist;
 	int ok, flags;

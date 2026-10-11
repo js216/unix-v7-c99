@@ -13,8 +13,9 @@ struct dinode
 	time_t	di_atime;   	/* time last accessed */
 	time_t	di_mtime;   	/* time last modified */
 	time_t	di_ctime;   	/* time created */
+	char	di_spare[48];	/* reserved, zero */
 };
-#define	INOPB	8	/* 8 inodes per block */
+#define	INOPB	4	/* 4 inodes per block */
 /*
  * the 40 address bytes:
  *	39 used; 13 addresses

@@ -591,7 +591,7 @@ unsigned rrno = 0;
 
 void
 srand(void){
-	rrno = time((long *)0);
+	rrno = time((long long *)0);
 	}
 
 int

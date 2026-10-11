@@ -8,7 +8,7 @@
 #include <sys/timeb.h>
 #include <utmp.h>
 #include <stdio.h>
-long	timbuf;
+time_t	timbuf;
 char	*ap, *ep, *sp;
 int	uflag;
 

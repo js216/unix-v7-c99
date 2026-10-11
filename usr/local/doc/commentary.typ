@@ -550,8 +550,8 @@ numbers (`NINDIR`), and `NMASK` and `NSHIFT` are unchanged.
 `USIZE` (85) is the size, in clicks, of the "per process data area":
 the `user` structure followed by the kernel stack. It has grown from
 1024 bytes, 16 clicks of 64 bytes, to two pages, 8192 bytes, because a
-thirty-two bit kernel stack is larger. The `user` structure takes 728
-of them, which leaves 7464 for the stack. The compiler can report the
+thirty-two bit kernel stack is larger. The `user` structure takes 760
+of them, which leaves 7432 for the stack. The compiler can report the
 stack frame of every procedure and the calls each makes
 (`-fcallgraph-info=su`), and from that report the deepest chain of
 calls was measured: about 630 bytes from a system call or a trap,
@@ -596,6 +596,13 @@ to find where the data begins, at the first segment after the text.
 On the ARM the unit of mapping and of protection is the page itself, so
 a segment is one click, and the macros convert nothing.
 
+`itod` and `itoo` (111, 114) find inode `x` on the disk: the block of the
+i-list which holds it, and its place in the block. The i-list begins at
+block 2, and an inode is now 128 bytes, four to a block (#f("ino.h")),
+so the macros shift by 2 and mask with 3 where v7's, for eight inodes of
+64 bytes, shifted by 3 and masked with 7; the addend, `2*INOPB-1`, is 7
+where it was 15.
+
 #lines(100, 130)
 
 `ino_t` is `unsigned short`, so that an inode number still occupies two
@@ -603,6 +610,16 @@ bytes in a directory entry on the disk (#f("dir.h")). `label_t` has ten
 words, to hold registers r4 to r11, the stack pointer, and the link
 register, which are saved by `save` (#f("mch.s")); the comment, which in v7
 spoke of the PDP-11's registers 2 to 7, now says so.
+
+`time_t` (135) is a `long long`, a signed count of 64 bits, where v7's
+was a `long`. On the PDP-11 and on the ARM alike a `long` is 32 bits,
+and a signed count of seconds since 1970 in 32 bits ends on 19 January
+2038; 64 bits last for some 292 thousand million years. The ARM
+aligns a `long long` on eight bytes, so every structure which holds a
+`time_t` is laid out anew: the inode on the disk (#f("ino.h")), the
+super-block (#f("filsys.h")), `stat` (#f("stat.h")), `user` and `xproc`
+(#f("user.h"), #f("proc.h")), and the records of accounting, of the
+login history, and of the archive formats which the commands keep.
 
 #lines(131, 139)
 
@@ -2097,8 +2114,13 @@ fields after it, which are now meaningless.
 
 The overlay works only if `xproc` is no larger than `proc`. With
 `p_addr` now four bytes, `xp_xstat` covers half of it, the two
-`time_t`s are aligned to offset 24, and `xproc` ends at 32 bytes, well
-inside the 52 bytes of a `proc` entry.
+`time_t`s, eight bytes each, are aligned to offset 24, and `xproc` ends
+at 40 bytes, inside the 52 bytes of a `proc` entry. The times thus lie
+over `p_size`, `p_ptab`, `p_nptab`, and `p_wchan`. None of these means
+anything in a zombie, but two are read again when the entry is reused,
+so `wait` (#f("sys1.c")) clears them as it frees it: `p_wchan`, as in
+v7, and `p_nptab`, without which `ptfree` (#f("ureg.c")) would hand the
+system time of the dead process to `mfree` as a number of page tables.
 
 #lines(50, 71)
 #source("/usr/sys/h/user.h")
@@ -2157,7 +2179,9 @@ compiler kept all structure member names in a single table, and
 `u.u_r.r_val1` was accepted although the union had no member called
 `r_val1`. C99 requires a name. The structure is now the member
 `u_pair` (38), and the two macros (42, 43) let the many statements
-which write `u.u_r.r_val1` remain as v7 wrote them.
+which write `u.u_r.r_val1` remain as v7 wrote them. `r_time` fills both
+words of the pair, as it did on the PDP-11; the union is therefore
+aligned on eight bytes.
 
 #lines(26, 43)
 
@@ -2944,7 +2968,9 @@ the two columns are now equal and the counts have been corrected for
 the 32-bit word:
 
 - `seek` (19) took four words, since its offset was a two-word `long`;
-  now it takes three. `stime` (25) likewise drops from two to one.
+  now it takes three. `stime` (25) keeps v7's two: the `time_t` it
+  receives is now 64 bits, two ARM words, as the PDP-11's `long` was
+  two of its own.
 - `tell` (40), which is `nosys` in any case, is given no arguments.
 
 Two slots have changed their routine. Slot 56, the multiplexor
@@ -3282,9 +3308,9 @@ child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
 `exit` (372) and `stop` wake, and looks again. If there are none,
-`ECHILD`.
+`ECHILD`. Clearing `p_nptab` (409) is new; #f("proc.h") explains why.
 
-#lines(378, 427)
+#lines(378, 428)
 
 `fork` checks that the swap area could hold a process of the maximum
 size, `MAXMEM` (#f("param.h")), finds a free `proc` entry, and counts the caller's processes. The
@@ -3294,7 +3320,7 @@ still log in and kill something when the table is full.
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
 the user program must also be told which it is. v7 did it with a trick
 which the port keeps. In the child `fork` returns the parent's pid
-(469); in the parent it advances the saved `pc` by one word (481), so
+(470); in the parent it advances the saved `pc` by one word (482), so
 that the parent skips the instruction after the `svc`, a branch which
 only the child therefore takes. `R7` is the PDP-11's name for the `pc`
 (#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
@@ -3306,7 +3332,7 @@ branch, stores the parent's pid in `par_uid` and returns 0.
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(428, 482)
+#lines(429, 483)
 
 `sbreak` sets the size of the data area, and is v7's. The new break
 is converted to clicks, and, since the data begins at the first
@@ -3325,7 +3351,7 @@ relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
 
-#lines(483, 535)
+#lines(484, 536)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned
@@ -3340,11 +3366,10 @@ names them; results go to `u.u_r`, and errors to `u.u_error`.
 
 `gtime` returns the time in seconds. `r_time` is a `time_t` overlaying
 the pair `r_val1`, `r_val2`. On the PDP-11 the `long` filled both, and
-the time came back in `r0` and `r1`; now it fills `r_val1` alone and
-comes back in `r0`. Errors are signalled by the carry bit (`trap`,
-#f("sysent.c")), so the call goes on working after the time passes
-2,147,483,647 seconds, in January 2038, although a signed `time_t`
-then reads as negative.
+the time came back in `r0` and `r1`; so it does again, now that a
+`time_t` is 64 bits: the low word in `r_val1` and `r0`, the high word
+in `r_val2` and `r1`, which is where the ARM returns a `long long` from
+a function, so the library's `time` need only store the pair.
 
 #lines(1, 23)
 
@@ -3358,9 +3383,11 @@ time zone is the one compiled into the system (#f("param.h")).
 
 The structure returned is described in #f("timeb.h").
 
-`stime` sets the time; only the super-user may. The argument is one
-word now, where it was two on the PDP-11 (see the table in
-#f("sysent.c")).
+`stime` sets the time; only the super-user may. The argument is two
+words, as on the PDP-11: the library passes the 64-bit time in `r0` and
+`r1`, and `trap` copies both into `u_arg` (see the table in
+#f("sysent.c")). `u_arg` lies on an eight-byte boundary of `user`, so
+the `time_t` of the structure `a` is aligned.
 
 #lines(24, 66)
 
@@ -3461,9 +3488,10 @@ of Greenwich, and a flag saying whether daylight saving time is
 observed. The file is v7's, unchanged.
 
 Its size has changed none the less. On the PDP-11 the four members
-occupied 4, 2, 2, and 2 bytes, 10 in all. On the ARM a `time_t` must
-lie on a four-byte boundary, so the compiler pads the structure to 12
-bytes, so that the next one in an array would be aligned. The kernel
+occupied 4, 2, 2, and 2 bytes, 10 in all. On the ARM a `time_t` is eight
+bytes and must lie on an eight-byte boundary, so the compiler pads the
+structure to 16 bytes, so that the next one in an array would be
+aligned. The kernel
 copies out `sizeof(t)` bytes and the library is compiled with the same
 header, so the two agree.
 
@@ -3711,8 +3739,10 @@ time of the `fork`, is a date in seconds.
 
 Though no line has changed, the record has. `ac_tty` (17) is a `dev_t`,
 which is now an `int` of four bytes (#f("param.h")), where it was two on
-the PDP-11; it is placed on a four-byte boundary, and the structure is
-padded to a multiple of four. A record is therefore 36 bytes, not 32.
+the PDP-11; it is placed on a four-byte boundary. `ac_btime` is a
+`time_t`, now eight bytes, which falls on an eight-byte boundary without
+padding, and the structure is padded to a multiple of eight. A record is
+therefore 40 bytes, not 32.
 Since `sa` is compiled with the same header, it reads the records
 correctly; accounting files from a PDP-11 could not be read.
 
@@ -5269,9 +5299,10 @@ kept by the programs which examine file systems, not by the kernel.
 The structure is v7's, but its image on the disk is not. The compiler
 lays it out for the ARM: a `long` is stored least significant byte
 first, where the PDP-11 put its high word first, and it is aligned on a
-four-byte boundary, so that two bytes of padding follow `s_isize`,
-`s_nfree`, and the four flags. The super-block is 448 bytes here, against
-440 on the PDP-11. Since `mkfs` (#f("cmd/mkfs.c")) is compiled from these same
+four-byte boundary, so that two bytes of padding follow `s_isize` and
+`s_nfree`. `s_time`, a `time_t` of eight bytes (#f("param.h")), is
+aligned on eight, and six bytes of padding follow the four flags. The
+super-block is 456 bytes here, against 440 on the PDP-11. Since `mkfs` (#f("cmd/mkfs.c")) is compiled from these same
 headers, with their `long` types made `int` for the build machine
 (#f("Makefile")), the file systems it builds agree with the
 kernel; a disk written by a PDP-11 could not be mounted without
@@ -5299,8 +5330,9 @@ accepts it by default. The table is now defined once, in #f("main.c").
 #lines(1, 11)
 #source("/usr/sys/h/ino.h")
 
-#f("ino.h") is unchanged from v7. It is the inode as stored in the i-list
-on the disk, 64 bytes, `INOPB` to a block. The macros `itod` and `itoo`
+#f("ino.h") is the inode as stored in the i-list on the disk, `INOPB`
+to a block. v7's was 64 bytes, eight to a block; it is now 128, four to
+a block, to hold three times of 64 bits. The macros `itod` and `itoo`
 (#f("param.h")) find the block and the position in it of inode `i`;
 inode 1 is the first of block 2, and inode 0 does not exist, a zero in a
 directory entry meaning "empty".
@@ -5310,10 +5342,17 @@ fortieth byte being unused; a block number must therefore be less than
 2²⁴, which `iupdat` (#f("iget.c")) checks. `iexpand` and
 `iupdat` unpack and pack them.
 
-On the ARM the layout of the structure is the same as on the PDP-11:
-four `short`s bring `di_size` to offset 8, already a multiple of four,
-and the forty bytes of addresses bring the times to offset 52. The byte
-order, however, is not. A `long` here is stored least significant byte
+Up to the times the layout is the PDP-11's: four `short`s bring
+`di_size` to offset 8, already a multiple of four, and the forty bytes
+of addresses end at offset 52. A `time_t` is now eight bytes, aligned on
+eight (#f("param.h")), so four bytes are left before the times, which
+occupy offsets 56 to 79. `di_spare` (16) fills the inode to 128 bytes,
+and with the four bytes before the times makes 52 reserved bytes, zero
+on every disk: enough for a 64-bit `di_size` should files ever need
+one. Nothing reads them; `mkfs` writes them as zeros, and `clri` and
+`restor` clear or copy whole inodes. The comment on `INOPB` (18) has
+been corrected for the new value. The byte order is not the
+PDP-11's either. A `long` here is stored least significant byte
 first, and the three bytes of an address are packed in the same order;
 the PDP-11 kept the high word of a `long` first, and its three-byte
 addresses accordingly began with bits 16 to 23. The kernel's packing in
@@ -5321,7 +5360,7 @@ addresses accordingly began with bits 16 to 23. The kernel's packing in
 C library's `l3tol` and `ltol3`, used by the programs which examine file
 systems, all follow the ARM's order.
 
-#lines(1, 22)
+#lines(1, 23)
 #source("/usr/sys/sys/sys3.c")
 
 #f("sys3.c") holds `stat`, `fstat`, `dup`, `mount`, and `umount`. Apart
@@ -5404,7 +5443,9 @@ the `S_` names repeat the mode bits of
 The kernel and the programs are compiled for the ARM from the same
 declaration, so they agree on its layout, which is not the PDP-11's:
 `dev_t` is an `int` of four bytes, and two bytes of padding after
-`st_gid` align `st_rdev`, so that a `stat` is 36 bytes rather than 30.
+`st_gid` align `st_rdev`; the three times, `time_t`s of eight bytes
+(#f("param.h")), then fall on eight-byte boundaries, so that a `stat` is
+48 bytes rather than 30.
 
 #lines(1, 28)
 #source("/usr/sys/sys/iget.c")
@@ -8581,7 +8622,10 @@ profile but not the shell.
 
 `mailtime` is `volatile`, where v7 had `register`. It is changed after
 the `setjmp` (127) and used after a `longjmp` to it, and C99 leaves the
-value of such a variable indeterminate unless it is `volatile`.
+value of such a variable indeterminate unless it is `volatile`. It is
+also a `long long` rather than v7's `L_INT`, a `long`, so that it holds
+a 64-bit `st_mtime` whole: cut to 32 bits, a time after 2038 would never
+again compare equal, and the shell would announce mail at every prompt.
 
 #lines(98, 130)
 
@@ -9002,7 +9046,10 @@ shell by way of `execexp` (420). `times` prints the user and system
 times of the shell's children, which the kernel accumulates in
 `u_cutime` and `u_cstime` (`times`, #f("sys4.c")); `prt` converts ticks
 to minutes and seconds assuming 60 to the second, which is still `HZ`
-(#f("param.h")).
+(#f("param.h")). The kernel copies out four `time_t`s, so the array
+`t` (81) is of `long long`; as v7's `L_INT`, a `long`, it would hold
+only half of what is copied into it, and the rest would overwrite the
+stack.
 
 `break` and `continue` work through `execbrk`. `continue` sets it to
 `-loopcnt`, a negative value which the loops below reset to zero after
@@ -10271,10 +10318,17 @@ and the rest. The declarations of `stat`, `times`, `ftime`, `gtty`, and
 `stty` are instead kept beside their structures in their own headers,
 and `signal` in `signal.h`.
 
+`time`, `stime`, `utime`, `localtime`, `gmtime`, and `ctime` (49, 56,
+75, 79, 80) take or return a `long long`, where v7's took a `long`:
+`long long` is the port's `time_t` (#f("param.h")), which the header
+cannot name, since it is defined in `<sys/types.h>`, which many
+programs do not include. `time` has a line of its own (75) for its
+result type.
+
 The argument and result types are v7's own, not those of later
 standards. `sprintf` (72) returns its first argument, a `char *`;
-`malloc` (85) returns `char *` and takes an `unsigned`; `index` and
-`rindex` (84) take the character as a `char`; `sleep` and `putw` (76)
+`malloc` (86) returns `char *` and takes an `unsigned`; `index` and
+`rindex` (85) take the character as a `char`; `sleep` and `putw` (77)
 return nothing, as their v7 definitions did. `ioctl` (56) takes a
 `void *` because its callers pass a pointer to whichever structure the
 request needs. `exit`, `_exit`, and `abort` (73) are declared as plain
@@ -10283,10 +10337,10 @@ variadic functions, `printf` and `scanf` and their relatives and `execl`
 and `execlp` (68--72), are declared with `...`; their definitions use
 `stdarg.h` (#f("stdio/printf.c")).
 
-`environ` (99) is defined in #f("csu/crt0.s"); the declaration lets the
+`environ` (100) is defined in #f("csu/crt0.s"); the declaration lets the
 `exec` routines and `getenv` find it.
 
-#lines(36, 99)
+#lines(36, 100)
 #source("/usr/src/libc/stdio/filbuf.c")
 
 `_filbuf` is called by `getc` (#f("stdio.h")) when the buffer of an
@@ -10501,7 +10555,7 @@ takes the value from the argument list as v7's did.
 The literal text up to the next `%` is passed to `_strout` in one
 piece. `buf` must hold the longest conversion: a `%f` of the largest
 `double`, about 1.8e308, needs 309 digits before the point, and the
-precision is limited to 70 (103), so 400 bytes suffice. v7's buffer was
+precision is limited to 70 (106), so 400 bytes suffice. v7's buffer was
 128 bytes, enough when the largest PDP-11 number was about 1.7e38.
 
 #lines(19, 35)
@@ -10515,31 +10569,36 @@ for zeros instead of spaces as padding. A precision is recorded with
 In v7 a long argument was asked for by a capital letter, `%D`, `%O`,
 `%X`, or `%U`, or by `l` (or `L`) before the lower-case letter; `%l`
 followed by anything else meant `%u`, and the following character is
-not consumed. All of this is kept (53--62). The distinction matters
+not consumed. All of this is kept (54--65). The distinction matters
 less than it did: `int` and `long` are both 32 bits here, while on the
 PDP-11 a `long` was two words of the argument list.
 
-#lines(36, 62)
+`ll` is new (52, 56, 57): a second `l`, as in `%lld` or `%llo`, asks
+for a `long long`, the type of the 64-bit `time_t` (#f("param.h")),
+which `tar` writes into its headers in octal and `pstat` prints.
 
-A signed conversion takes an `int` or a `long` and converts it to
-`unsigned long`; if it was negative a `-` is stored and the magnitude
+#lines(36, 65)
+
+A signed conversion takes an `int`, a `long`, or a `long long` and
+converts it to `unsigned long long`; if it was negative a `-` is stored and the magnitude
 taken by unsigned negation, which is correct even for the most negative
 value.
 
-#lines(63, 74)
+#lines(66, 77)
 
 The unsigned conversions, and the common code for all integers. The
 digits are generated backwards, from the least significant, into the
 far end of `buf`, then copied forward to follow any sign. v7 printed
 `%X` in lower case like `%x`, and so does this. A precision on an
 integer has v7's meaning, not the later one: if it is nonzero, and so
-is the number, a `0` is placed before the digits (88). The PDP-11 had
+is the number, a `0` is placed before the digits (91). The PDP-11 had
 no instruction to divide a 32-bit number, so `doprnt.s` divided the two
 words separately by a method it credits to Keith Davis; here `%` and
-`/` on an `unsigned long` serve, and the Cortex-A7 divides in one
+`/` on an `unsigned long long` serve, by way of the compiler's routine
+for 64-bit division, since the Cortex-A7 divides only 32 bits in one
 instruction.
 
-#lines(75, 97)
+#lines(78, 100)
 
 The floating conversions take a `double`, the type to which a `float`
 argument is always promoted. The precision, the number of digits after
@@ -10550,17 +10609,17 @@ of `buf`. `%g` is wholly the business of `gcvt`.
 as a digit, the point, the rest, and the exponent. If the first digit
 is `0` the value was zero, and the exponent is adjusted to print as
 `+00`. The exponent of an IEEE `double` reaches 308, and is printed in
-three digits from 100 up (127); `fltpr.s` had to provide only two,
+three digits from 100 up (130); `fltpr.s` had to provide only two,
 since the PDP-11's exponent did not exceed 38.
 
 `%f` asks `fcvt` for the given number of digits after the point. A value
 below 1 begins with `0`. The digits before the point come from the
 buffer, but `fcvt` returns no more than 79 digits in all, so a value of
-1e80 or more runs out of digits; the tests of `*s` (137, 141) then
+1e80 or more runs out of digits; the tests of `*s` (140, 144) then
 supply zeros in their place. A `double` carries only about seventeen
 significant decimal digits, so nothing of value is lost.
 
-#lines(98, 144)
+#lines(101, 147)
 
 `%c` stores the character unless it is the null character, as in v7. `%s`
 takes the string, or `"(null)"` for a null pointer, which v7 also
@@ -10568,7 +10627,7 @@ printed, and uses at most the precision's worth of it. Neither is ever
 padded with zeros. Note that for `%s` the result is not copied into
 `buf`; `s` and `p` bracket the string itself.
 
-#lines(145, 156)
+#lines(148, 159)
 
 Any other character is printed as itself, which is how `%%` prints a
 percent sign. Then the padding is computed: `c` is the number of fill
@@ -10576,7 +10635,7 @@ characters, given to `_strout` as negative for padding on the left and
 positive for padding on the right. `_strout` takes care that a minus
 sign precedes the zeros of a zero-filled number.
 
-#lines(157, 165)
+#lines(160, 168)
 #source("/usr/src/libc/stdio/printf.c")
 
 `printf` formats its arguments on the standard output by way of
@@ -10640,7 +10699,7 @@ Unlike `_doprnt` the file was C in v7, so the port's changes are
 modest. Three of them repair faults which v7 shared, and one replaces
 the way the arguments were found.
 
-`_sctab` (19) classifies characters: `SPC` marks the white space which
+`_sctab` (20) classifies characters: `SPC` marks the white space which
 separates fields, and `STP` is set afresh for each `%[` conversion to
 mark the characters which stop it. v7's table had 128 entries, but it
 was indexed by the result of `getc`, which may be anything from 0 to
@@ -10650,12 +10709,12 @@ and a `%[` set with such characters wrote beyond it. The table now has
 256 entries, one for each value of a byte. Only the first 64 are
 written out; the rest are zero.
 
-The prototypes (14--17) are new. `_doscan`, `_innum`, and `_instr` are
+The prototypes (15--18) are new. `_doscan`, `_innum`, and `_instr` are
 external, so `-Wmissing-prototypes` requires each to be declared before
 its definition, and `_innum` calls `_instr`, defined after it. #f("stdio.h")
 does not declare these internal routines.
 
-#lines(1, 28)
+#lines(1, 29)
 
 The main loop. A `%` introduces a conversion, `%%` matches a percent
 sign, white space in the format skips any amount of white space in the
@@ -10666,23 +10725,24 @@ After the `%` comes an optional `*`, which suppresses the assignment,
 then an optional field width, which defaults to 30000, in effect
 unlimited; then `l` for long or `h` for short; then the conversion
 letter. A capital letter means long, as in `printf`, so `%D` and `%E`
-are `%ld` and `%le`. `%[` reads the character class at once with
-`_getccl`.
+are `%ld` and `%le`. `ll`, with its size `LLONG` (11, 63--66), is new:
+`%llo` reads the 64-bit `time_t` back from a header of `tar`. `%[`
+reads the character class at once with `_getccl`.
 
 In v7, `argp` was a pointer into the PDP-11 argument list, and `ptr` was
 set at once to the address of the next argument (`ptr = argp++`), or to
 0 if the assignment was suppressed; `_innum` then stored through it as
 through a pointer to a pointer of the appropriate type, `**(float **)ptr`
-and the like. Now `ptr` is set to `fmt` (48), which is used only as a
+and the like. Now `ptr` is set to `fmt` (49), which is used only as a
 value known not to be null, to record that an argument is to be taken.
 
-#lines(29, 72)
+#lines(30, 77)
 
-The argument itself is taken here (73--85), once the conversion letter
+The argument itself is taken here (78--92), once the conversion letter
 and the size are known, with `va_arg` and the type which the caller
 really passed: `char *` for strings and characters, `float *` or
-`double *` for the floating conversions, and `short *`, `int *`, or
-`long *` for integers. The pointer is converted to `char *` for
+`double *` for the floating conversions, and `short *`, `int *`,
+`long *`, or `long long *` for integers. The pointer is converted to `char *` for
 `_innum`, which converts it back. Fetching every argument as an `int **`,
 as v7 in effect did, is undefined in C99 (7.15.1.1), and so is storing a
 `float` through an `int` object (6.5): under the ARM procedure call
@@ -10693,36 +10753,36 @@ is entitled to assume otherwise.
 it stored something, and an argument was supplied for it, the count of
 matches goes up. If the input ended, the scan ends.
 
-#lines(73, 111)
+#lines(78, 118)
 
 `_innum` converts a number. The field width is first cut to 62
-characters (124), since the characters of the field are copied into
+characters (131), since the characters of the field are copied into
 `numbuf`, of 64 bytes, for `atof`; with v7's default width of 30000 a
 long enough number overflowed the stack. 62 leaves room for an `e`
 which may be added after the count is exhausted, and for the null
 character. Leading white space is skipped, and a sign noted.
 
-#lines(112, 148)
+#lines(119, 155)
 
-Digits are accumulated in `lcval` as they are read, by shifts for octal
+Digits are accumulated in `lcval`, now a `long long`, as they are read, by shifts for octal
 and hexadecimal, and for decimal by `((lcval<<2) + lcval)<<1`, which
 is ten times `lcval` without a multiplication, a saving on the PDP-11. A floating number is accumulated in the same way, uselessly,
 but its characters are also kept in `numbuf`. A point is accepted only
 in a floating conversion, and an exponent only after a digit has been
-seen. The extra parentheses (151) state v7's precedence explicitly, to
+seen. The extra parentheses (158) state v7's precedence explicitly, to
 satisfy `-Wparentheses`.
 
-#lines(149, 184)
+#lines(156, 191)
 
 The character which ended the number is put back with `ungetc`, unless
 it was `EOF`, which `*eofptr` reports. Nothing is stored if no
 characters were taken or the assignment was suppressed. Otherwise the
 value is stored according to the scale and size, now through a pointer
-of the right type (199--215) rather than v7's double indirection. A
+of the right type (204--227) rather than v7's double indirection. A
 `float` is produced by converting the `double` from `atof`; v7's
 declaration of `atof` has gone to #f("stdio.h").
 
-#lines(185, 219)
+#lines(192, 230)
 
 `_instr` reads a string (`%s`), a character class (`%[`), or
 characters (`%c`, by default one). A string first skips white space;
@@ -10731,19 +10791,19 @@ and `%c` stops only when the count is exhausted. Only a `%c` is stored
 without a null character. Note that `ptr` may be null for a suppressed
 assignment, in which case the characters are read and discarded.
 
-The first `getc` is masked with `0377` (236) for the enlarged table.
+The first `getc` is masked with `0377` (247) for the enlarged table.
 `EOF`, -1, then indexes entry 0377, which is harmless: the loop stops at
-`EOF` in any case, and the second loop (244) tests for `EOF` before it
+`EOF` in any case, and the second loop (255) tests for `EOF` before it
 indexes the table.
 
-#lines(220, 263)
+#lines(231, 274)
 
 `_getccl` builds the stop set for `%[`. A class beginning with `^`
 names the characters which stop the scan; otherwise it names those which
 do not. The loop sets or clears `STP` in all 256 entries, then flips it
 for each character up to the `]`.
 
-The loop at (280) has been rewritten. v7 masked the byte with `0177`
+The loop at (291) has been rewritten. v7 masked the byte with `0177`
 only for the comparison with `]` and indexed the table with the
 unmasked, possibly negative, value; the byte is now taken with `0377`
 once, and used as it is. v7 also stored each byte with `c++` and then
@@ -10753,7 +10813,7 @@ the end of the format. The test is now made before the byte is entered,
 and `_getccl` returns a pointer to the null character, at which
 `_doscan` stops.
 
-#lines(264, 289)
+#lines(275, 300)
 #source("/usr/src/libc/stdio/scanf.c")
 
 The three entries to `_doscan` (#f("stdio/doscan.c")): `scanf` reads the
@@ -10925,15 +10985,18 @@ The debugging routine `allock` follows.
 #lines(138, 189)
 #source("/usr/src/libc/gen/ctime.c")
 
-The system keeps time as a single `long`, the number of seconds since
+The system keeps time as a single `time_t`, the number of seconds since
 the beginning of 1970, Greenwich time: the kernel's `time`, advanced by
 `clock` (#f("clock.c")) and read and set by the system calls `time`,
 `stime`, and `ftime` (#f("sys4.c")). The routines here turn such a
 number into a calendar date and a printable string. `date` and `ls -l`
 are their best known users.
 
-Since `long` is 32 bits on the ARM as on the PDP-11, and signed, the
-count runs out early in 2038; nothing here can change that.
+v7's `time_t` was a `long`, 32 bits on the ARM as on the PDP-11, and
+signed, and the count ran out early in 2038. It is now a `long long`
+(#f("param.h")): the routines take a pointer to a `time_t` (76, 82,
+126) where v7's took a pointer to `long`, and `copyt`, `hms`, and `day`
+(87, 129), which hold a time or a number of days, are widened with it.
 
 The comment's mention of a call to "the system" refers to `ftime`, which
 returns, besides the time, the local time zone in minutes west of
@@ -10991,11 +11054,13 @@ machines.
 The day of the week is computed from the day count plus 7340036, a
 number which is 4 more than a multiple of seven (1 January 1970 was a
 Thursday, day 4) and large enough to keep the sum positive for any
-day which a 32-bit time can express.
+day after the twentieth millennium before 1970.
 
 The year is found by subtracting the lengths of whole years. `dysize`
-treats every fourth year as a leap year; this fails first in 2100, long
-after the time itself has overflowed.
+treats every fourth year as a leap year; this fails first in 2100. It is
+kept as v7 had it, because `date` calls it with a whole year, 1970 and
+on, where this file passes the year less 1900, and only the test of
+every fourth year serves both.
 
 #lines(124, 184)
 
@@ -11972,11 +12037,12 @@ addresses, a bigger limit on the size of a file, and the loss of the
 bootstrap block.
 
 `NIPB`, `NINDIR`, and `NDIRECT` are the numbers of inodes, block
-addresses, and directory entries in a block: 8, 128, and 32. `MAXFILEBLK`
+addresses, and directory entries in a block: 4, 128, and 32. `MAXFILEBLK`
 (9) is new: the largest number of blocks a file may have when ten are
 addressed directly, 128 through the indirect block, and 128 times 128
 through the double indirect block. `itoo` is the position of an inode in
-its block, to go with the `itod` of #f("param.h").
+its block, to go with the `itod` of #f("param.h"); like it, it is now
+for four inodes to a block, masking with 3 where v7 masked with 7.
 
 The headers of the host's library (14--17) replace v7's `<a.out.h>`,
 which was needed for the bootstrap; `<stdio.h>` too is the host's. The
@@ -12195,8 +12261,8 @@ The format is v7's. The first word names the program to be written
 into block 0 as a bootstrap: here `/dev/null`, since QEMU or the boot
 ROM of the MP135 loads the kernel directly and block 0 is never read.
 The second line gives the size of the file system, 10648 blocks of 512
-bytes, a little over 5 MB, and the number of inodes, 2048, eight to a
-block; `mkfs` gives the i-list blocks 2 to 258. The swap area follows on the same disk, from block
+bytes, a little over 5 MB, and the number of inodes, 2048, four to a
+block; `mkfs` gives the i-list blocks 2 to 514. The swap area follows on the same disk, from block
 10648 (#f("qemuconf")). Then comes the root directory, described like
 every other file: its mode, as `d--755`, its owner, and its group.
 
@@ -12271,13 +12337,13 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 300)
+#lines(139, 305)
 
 `/unix` is the kernel built for QEMU. It is not booted from here, since
 neither board loads its kernel from the file system; it is there for
 its symbol table, which `ps`, `pstat`, and `iostat` read.
 
-#lines(301, 302)
+#lines(306, 307)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

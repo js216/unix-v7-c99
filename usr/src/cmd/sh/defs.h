@@ -116,7 +116,7 @@ INT		any(CHAR c, STRING s), builtin(void), cf(STRING s1, STRING s2),
 		execve(char *name, char **argv, char **envp), fork(void),
 		getpid(void), getuid(void), ioctl(int fd, int req, void *argp),
 		open(char *name, int mode), pause(void), pipe(int *fd),
-		read(int fd, char *buf, int n), times(L_INT *t),
+		read(int fd, char *buf, int n), times(long long *t),
 		umask(int mask), unlink(char *name), wait(int *status),
 		write(int fd, char *buf, int n);
 VOID		assign(NAMPTR n, STRING v), assnum(STRING *p, INT i),

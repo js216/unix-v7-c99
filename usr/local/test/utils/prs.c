@@ -12,7 +12,7 @@ main(void)
 	struct stat sb;
 	struct tms tb;
 	int i, n;
-	long t;
+	time_t t;
 
 	profil((char *)buf, sizeof buf, 0, 0x8000);
 	t = time(0);

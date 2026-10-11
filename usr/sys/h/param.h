@@ -108,10 +108,10 @@
 #define	ctod(x)	((x)<<3)
 
 /* inumber to disk address */
-#define	itod(x)	(daddr_t)((((unsigned)x+15)>>3))
+#define	itod(x)	(daddr_t)((((unsigned)x+7)>>2))
 
 /* inumber to disk offset */
-#define	itoo(x)	(int)((x+15)&07)
+#define	itoo(x)	(int)((x+7)&03)
 
 /* clicks to bytes */
 #define	ctob(x)	(x<<12)
@@ -132,7 +132,7 @@ typedef	struct { int r[1]; } *	physadr;
 typedef	long		daddr_t;
 typedef char *		caddr_t;
 typedef	unsigned short	ino_t;
-typedef	long		time_t;
+typedef	long long	time_t;
 typedef	int		label_t[10];	/* regs 4-11, sp, lr */
 typedef	int		dev_t;
 typedef	long		off_t;

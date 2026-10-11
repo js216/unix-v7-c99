@@ -73,18 +73,18 @@ static char	*ct_numb(char *cp, int n);
 static int	sunday(struct tm *t, int d);
 
 char *
-ctime(long *t)
+ctime(time_t *t)
 {
 	return(asctime(localtime(t)));
 }
 
 struct tm *
-localtime(long *tim)
+localtime(time_t *tim)
 {
 	register int dayno;
 	register struct tm *ct;
 	register int daylbegin, daylend;
-	long copyt;
+	time_t copyt;
 	struct timeb systime;
 
 	ftime(&systime);
@@ -123,10 +123,10 @@ sunday(register struct tm *t, register int d)
 }
 
 struct tm *
-gmtime(long *tim)
+gmtime(time_t *tim)
 {
 	register int d0, d1;
-	long hms, day;
+	time_t hms, day;
 	register int *tp;
 	static struct tm xtime;
 

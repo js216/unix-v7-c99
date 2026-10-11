@@ -1,0 +1,12 @@
+T=/tmp/time64 U=/usr/local/test/utils
+mkdir $T; cd $T
+cp /usr/adm/wtmp wtmp; t=`$U/clock`; date 4006011200; date
+echo x >f; echo y >g; $U/ut f 2147483648 2208988800; ls -l f; ls -lu f; $U/ut f
+tar cf t.tar f; rm f; tar xf t.tar; $U/ut f; tar tvf t.tar
+cp $U/fs.img fs; $U/dit fs 8 2208988800; dump 0f d fs >/dev/null 2>&1; dumpdir f d | sed 2q
+cp $U/fs.img fs2; $U/dit fs2 8; echo | restor rf d fs2; $U/dit fs2 8; $U/dit fs2 2
+dd if=fs2 bs=128 skip=11 count=1 | od | sed 1q
+icheck fs2; ncheck fs2 | sed -n '1p; /words/p'
+date 4107011200 >/dev/null; ls -l g
+$U/clock $t; cp wtmp /usr/adm/wtmp
+cd /; rm -rf $T

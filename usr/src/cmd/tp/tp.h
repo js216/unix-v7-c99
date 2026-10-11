@@ -45,7 +45,7 @@ extern struct	dent {	/* in core version of tent with "unused" removed
 	int	d_uid;
 	int	d_gid;
 	long	d_size;
-	long	d_time;
+	long long	d_time;
 	int	d_tapea;
 }  dir[MDIRENT];
 

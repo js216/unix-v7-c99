@@ -8,9 +8,9 @@ int	right[MAX];
 int	left[MAX];
 int	rights;
 int	wrongs;
-long	stvec;
-long	etvec;
-long	dtvec;
+long long	stvec;
+long long	etvec;
+long long	dtvec;
 int	getnum(char *s), random(int range), skrand(int range);
 void	getline(char *s), score(void), delete(int sig);
 
@@ -178,7 +178,7 @@ score(void)
 		(rights * 100)/(rights + wrongs));
 
 	if(rights == 0)	return;
-	printf("Total time %ld seconds; %.1f seconds per problem\n\n\n",
+	printf("Total time %lld seconds; %.1f seconds per problem\n\n\n",
 		etvec - stvec,
 		(etvec - stvec) / (rights + 0.));
 
