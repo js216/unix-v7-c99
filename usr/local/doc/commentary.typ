@@ -5997,10 +5997,11 @@ it is a null directive and does nothing.
 
 The include of #f("systm.h") (13) is new; it declares `fumem`, `sumem`,
 `passc`, and `cpass`, and the prototypes of the two routines here.
-#f("seg.h") (17) is still included, as in v7, although nothing in it
-is used here.
+v7 also included #f("seg.h"), for the segmentation registers it
+borrowed (below); nothing in that header is used here now, and the
+include is gone.
 
-#lines(1, 18)
+#lines(1, 17)
 
 `mmread` copies bytes, one at a time, from memory at the file offset
 to the user, until `passc` (#f("subr.c")) reports that the request is
@@ -6027,16 +6028,16 @@ kernel address, so that a kernel variable is found at the address which
 `/dev/mem`, where v7's read both from `/dev/mem`, whose offsets on the
 PDP-11 were the same for the kernel's data.
 
-#lines(19, 30)
+#lines(18, 29)
 
 `mmwrite` is the converse. `cpass` (#f("subr.c")) fetches the next byte
 from the user and has already advanced `u.u_offset` when it returns,
-hence the `-1` (44). The writes are checked as the reads are: `sumem`
+hence the `-1` (43). The writes are checked as the reads are: `sumem`
 shares `memaddr` with `fumem`, so that a byte is stored at the address
 from which a read at the same offset would fetch it, and an offset which
 names no memory is refused rather than stored through.
 
-#lines(31, 47)
+#lines(30, 46)
 #source("/usr/sys/sys/prim.c")
 
 #f("prim.c") manages the character lists, or clists, in which the

@@ -14,7 +14,6 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/conf.h"
-#include "../h/seg.h"
 
 void
 mmread(int dev)
