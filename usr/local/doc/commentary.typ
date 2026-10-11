@@ -11251,7 +11251,7 @@ and around the start of November.
 
 `sunday` finds the first Sunday on or after a given day of the year,
 using the day of the week known for the current day. Days from the
-end of February onwards (58) are moved one later in a leap year.
+end of February onwards (day 58) are moved one later in a leap year.
 
 #lines(111, 123)
 
@@ -11383,8 +11383,8 @@ and `r2` decremented, as long as the product stays below 1.
 The loop at (53--55) is new. The largest PDP-11 number, about 1.7e38,
 had 39 digits before the point, and these always fitted in the 80 bytes
 of `buf`. An IEEE `double` may have 309, and the digits, built
-backwards from the end, ran off the front of the buffer for any number
-of 1e80 or more. Numbers of 1e40 or more are therefore divided by
+backwards from the end, would run off the front of the buffer for any
+number of 1e80 or more. Numbers of 1e40 or more are therefore divided by
 1e10 until they are smaller, `r2` counting ten places for each
 division, and the fraction which the division leaves is discarded
 (55). At most 40 digits are thus produced; the rest are lost, but a
@@ -11521,9 +11521,8 @@ entries in memory, and so the result, is unchanged.
 `L` and `R` are the two halves of the block. v7 declared them as two
 arrays of 32, but `encrypt` indexes `L` with the positions of the
 initial and final permutations, which run up to 64, and so assumed that
-`R` followed `L` in memory. C makes no such promise, and once the port
-was compiled with optimisation GCC's analysis reported the indexing as
-out of bounds. `L` now has 64 entries, and `R` is defined as its second
+`R` followed `L` in memory. C makes no such promise, and GCC's analysis
+reports the indexing as out of bounds. `L` now has 64 entries, and `R` is defined as its second
 half (223, 224).
 
 #lines(142, 232)
