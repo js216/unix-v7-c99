@@ -134,7 +134,8 @@ user_trap_handler(int signo, int *r, unsigned a)
 	}
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
-	if(signo != SIGSEG || a+256 < (unsigned)r[R6] || grow(a) == 0)
+	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
+	    grow(a) == 0))
 		psignal(u.u_procp, signo);
 	if (issig())
 		psig();

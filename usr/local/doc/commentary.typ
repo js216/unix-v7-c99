@@ -3222,13 +3222,14 @@ it back to the routine through `nofault` (#f("mch.s")).
 
 Otherwise the signal is posted to the current process and
 the same tail as in `trap` is run, the loading of the floating point
-registers included (144, 145). A signal number of zero is passed by
-the interrupt entry, when `runrun` is set: `psignal` then posts nothing,
-and the call serves only to reach the tail, as v7's type 12 trap did.
+registers included (145, 146). A signal number of zero is passed by
+the interrupt entry, when `runrun` is set; nothing is posted then
+(137), and the call serves only to reach the tail, as v7's type 12 trap
+did.
 
 The exception is the one which v7's `trap` also made for a segmentation
 fault: if the stack can grow to cover the fault, it is grown and no
-signal is sent (137, 138), and the process resumes at the faulting
+signal is sent (137--139), and the process resumes at the faulting
 instruction, which this time succeeds. v7 grew the stack to cover the
 stack pointer, which on the PDP-11 had already been decremented when a
 push faulted. On the ARM a store multiple which pushes registers leaves
@@ -3247,7 +3248,7 @@ instruction also arrives as a prefetch abort, and gives `SIGSEG`, not
 `SIGTRC`. There are no `iot` and `emt` instructions, no floating point
 exceptions, and no parity registers.
 
-#lines(135, 146)
+#lines(135, 147)
 #source("/usr/sys/sys/sys1.c")
 
 #f("sys1.c") holds the system calls which make, change, and end
