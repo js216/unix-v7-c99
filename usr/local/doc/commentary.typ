@@ -11277,6 +11277,8 @@ and around the start of November.
 `sunday` finds the first Sunday on or after a given day of the year,
 using the day of the week known for the current day. Days from the
 end of February onwards (day 58) are moved one later in a leap year.
+`dysize` takes the whole year, so 1900 is added to `tm_year`, which
+counts from 1900 (121); v7 passed `tm_year` itself.
 
 #lines(111, 123)
 
@@ -11292,11 +11294,13 @@ number which is 4 more than a multiple of seven (1 January 1970 was a
 Thursday, day 4) and large enough to keep the sum positive for any
 day after the twentieth millennium before 1970.
 
-The year is found by subtracting the lengths of whole years. `dysize`
-treats every fourth year as a leap year; this fails first in 2100. It is
-kept as v7 had it, because `date` calls it with a whole year, 1970 and
-on, where this file passes the year less 1900, and only the test of
-every fourth year serves both.
+The year is found by subtracting the lengths of whole years. v7
+counted `d1` from 70, the year less 1900, and `date` called `dysize`
+with the whole year, 1970 and on; only v7's rule, a leap year every
+fourth year, gave the same answer for both, and it fails first in 2100.
+`d1` now counts whole years from 1970 (164--167), `tm_year` is set to
+the year less 1900 as before (168), and `dysize` (below) follows the
+Gregorian calendar.
 
 #lines(124, 184)
 
@@ -11308,10 +11312,16 @@ seconds are passed with 100 added, so that they keep a leading zero,
 and the day of the month without, so that it gets a leading space.
 
 The year is printed as its last two digits after the template's
-`19`, which is changed to `20` (209--212) for a year of 2000 or later.
-This provision is v7's own; with it `asctime` is correct until 2099.
-The port's only change in this area is to `date`, whose parsing of a
-two-digit year had no such provision.
+`19`. For a year of 2000 or later v7 changed the `19` to `20`, which
+was right until 2099; the two digits of the century are now computed
+from the year (209--212). `date`, which reads a year as two digits, now
+takes one below 70 to be in the twenty-first century; v7's took it to
+be in the twentieth.
+
+`dysize` gives the number of days in a year: 366 in a leap year, which
+in the Gregorian calendar is every fourth year except the centuries,
+of which only every fourth is one, and 365 otherwise. v7 tested only
+the first condition, which agrees with the full rule from 1901 to 2099.
 
 The extra parentheses in the copy loop (193) tell the compiler that the
 assignment in the condition is intended (`-Wparentheses`).

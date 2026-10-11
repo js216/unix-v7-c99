@@ -118,7 +118,7 @@ static int
 sunday(register struct tm *t, register int d)
 {
 	if (d >= 58)
-		d += dysize(t->tm_year) - 365;
+		d += dysize(t->tm_year+1900) - 365;
 	return(d - (d - t->tm_yday + t->tm_wday + 700) % 7);
 }
 
@@ -161,11 +161,11 @@ gmtime(time_t *tim)
 	/*
 	 * year number
 	 */
-	if (day>=0) for(d1=70; day >= dysize(d1); d1++)
+	if (day>=0) for(d1=1970; day >= dysize(d1); d1++)
 		day -= dysize(d1);
-	else for (d1=70; day<0; d1--)
+	else for (d1=1970; day<0; d1--)
 		day += dysize(d1-1);
-	xtime.tm_year = d1;
+	xtime.tm_year = d1-1900;
 	xtime.tm_yday = d0 = day;
 
 	/*
@@ -207,8 +207,8 @@ asctime(struct tm *t)
 	cp = ct_numb(cp, *--tp+100);
 	cp = ct_numb(cp, *--tp+100);
 	if (t->tm_year>=100) {
-		cp[1] = '2';
-		cp[2] = '0';
+		cp[1] = (t->tm_year+1900)/1000%10 + '0';
+		cp[2] = (t->tm_year+1900)/100%10 + '0';
 	}
 	cp += 2;
 	cp = ct_numb(cp, t->tm_year+100);
@@ -218,7 +218,7 @@ asctime(struct tm *t)
 int
 dysize(int y)
 {
-	if((y%4) == 0)
+	if((y%4) == 0 && ((y%100) != 0 || (y%400) == 0))
 		return(366);
 	return(365);
 }
