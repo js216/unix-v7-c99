@@ -1,6 +1,6 @@
 T=/tmp/cmdi U=/usr/local/test/utils
 mkdir $T; cd $T
-echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
+sleep 1; echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
 cat >f <<'X'
 the quick brown fox
 jumps over the lazy dog
