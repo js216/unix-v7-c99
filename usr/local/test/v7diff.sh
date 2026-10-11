@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,320 @@
+@@ -0,0 +1,331 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -263,7 +263,7 @@ usr/local
 +		dc	---755 0 0 bin/dc
 +		dcheck	---755 0 0 bin/dcheck
 +		dd	---755 0 0 bin/dd
-+		df	---755 0 0 bin/df
++		df	--g755 0 2 bin/df
 +		diff	---755 0 0 bin/diff
 +		deroff	---755 0 0 bin/deroff
 +		du	---755 0 0 bin/du
@@ -281,7 +281,7 @@ usr/local
 +		grep	---755 0 0 bin/grep
 +		graph	---755 0 0 bin/graph
 +		icheck	---755 0 0 bin/icheck
-+		iostat	---755 0 0 bin/iostat
++		iostat	--g755 0 2 bin/iostat
 +		join	---755 0 0 bin/join
 +		kill	---755 0 0 bin/kill
 +		ln	---755 0 0 bin/ln
@@ -301,8 +301,8 @@ usr/local
 +		pr	---755 0 0 bin/pr
 +		primes	---755 0 0 bin/primes
 +		prof	---755 0 0 bin/prof
-+		ps	---755 0 0 bin/ps
-+		pstat	---755 0 0 bin/pstat
++		ps	--g755 0 2 bin/ps
++		pstat	--g755 0 2 bin/pstat
 +		ptx	---755 0 0 bin/ptx
 +		pwd	---755 0 0 bin/pwd
 +		quot	---755 0 0 bin/quot
@@ -347,12 +347,12 @@ usr/local
 +		$
 +	dev	d--755 0 0
 +		console	c--644 0 0 0 0
-+		mem	c--644 0 0 8 0
-+		kmem	c--644 0 0 8 1
++		mem	c--640 0 2 8 0
++		kmem	c--640 0 2 8 1
 +		null	c--666 0 0 8 2
-+		root	b--644 0 0 0 0
-+		rrk0	c--644 0 0 9 0
-+		swap	b--644 0 0 0 0
++		root	b--640 0 2 0 0
++		rrk0	c--640 0 2 9 0
++		swap	b--640 0 2 0 0
 +		tty	c--666 0 0 17 0
 +		$
 +	etc	d--755 0 0
@@ -366,7 +366,7 @@ usr/local
 +		rc	---755 0 0 etc/rc
 +		ttys	---644 0 0 etc/ttys
 +		update	---755 0 0 etc/update
-+		dmesg	---755 0 0 etc/dmesg
++		dmesg	--g755 0 2 etc/dmesg
 +		mknod	---755 0 0 etc/mknod
 +		mount	---755 0 0 etc/mount
 +		umount	---755 0 0 etc/umount
@@ -438,6 +438,10 @@ usr/local
 +					cmdi3	---644 0 0 usr/local/test/cases/cmdi3
 +					cmdi3.exp	---644 0 0 usr/local/test/cases/cmdi3.exp
 +					cmdi3.sed	---644 0 0 usr/local/test/cases/cmdi3.sed
++					ddend	---644 0 0 usr/local/test/cases/ddend
++					ddend.exp	---644 0 0 usr/local/test/cases/ddend.exp
++					devperm	---644 0 0 usr/local/test/cases/devperm
++					devperm.exp	---644 0 0 usr/local/test/cases/devperm.exp
 +					exec	---644 0 0 usr/local/test/cases/exec
 +					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 +					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
@@ -460,6 +464,8 @@ usr/local
 +					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
 +					misc2	---644 0 0 usr/local/test/cases/misc2
 +					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
++					noswap	---644 0 0 usr/local/test/cases/noswap
++					noswap.exp	---644 0 0 usr/local/test/cases/noswap.exp
 +					nsig	---644 0 0 usr/local/test/cases/nsig
 +					nsig.exp	---644 0 0 usr/local/test/cases/nsig.exp
 +					nsig.sed	---644 0 0 usr/local/test/cases/nsig.sed
@@ -484,6 +490,8 @@ usr/local
 +					r5b	---644 0 0 usr/local/test/cases/r5b
 +					r5b.exp	---644 0 0 usr/local/test/cases/r5b.exp
 +					r5b.sed	---644 0 0 usr/local/test/cases/r5b.sed
++					r5f	---644 0 0 usr/local/test/cases/r5f
++					r5f.exp	---644 0 0 usr/local/test/cases/r5f.exp
 +					sh	---644 0 0 usr/local/test/cases/sh
 +					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 +					sig	---644 0 0 usr/local/test/cases/sig
@@ -509,9 +517,11 @@ usr/local
 +					argt	---755 0 0 usr/local/test/obj/argt
 +					asm	---644 0 0 usr/local/test/utils/asm
 +					bcf	---644 0 0 usr/local/test/utils/bcf
++					bigb	---755 0 0 usr/local/test/obj/bigb
 +					bigm	---755 0 0 usr/local/test/obj/bigm
 +					bigx	---755 0 0 usr/local/test/obj/bigx
 +					clock	---755 0 0 usr/local/test/obj/clock
++					cpt	---755 0 0 usr/local/test/obj/cpt
 +					ctxt	---644 0 0 usr/local/test/utils/ctxt
 +					devt	---755 0 0 usr/local/test/obj/devt
 +					dit	---755 0 0 usr/local/test/obj/dit
@@ -524,6 +534,7 @@ usr/local
 +					long	---644 0 0 usr/local/test/utils/long
 +					memt	---755 0 0 usr/local/test/obj/memt
 +					monout	---644 0 0 usr/local/test/utils/monout
++					nswp	---755 0 0 usr/local/test/obj/nswp
 +					olda	---644 0 0 usr/local/test/utils/olda
 +					physt	---755 0 0 usr/local/test/obj/physt
 +					prs	---755 0 0 usr/local/test/obj/prs
@@ -585,7 +596,7 @@ usr/local
 % usr/include/execargs.h
 @@ -1 +1 @@
 -char **execargs = (char**)(-2);
-+char **execargs = (char**)(0xC0000000-4);
++char **execargs = (char**)(USERSIZE-4);
 
 % usr/include/grp.h
 @@ -6,0 +7,2 @@
@@ -3464,6 +3475,9 @@ usr/local
 +	if(i >= (int)NINDIR) {
 
 % usr/src/cmd/dd.c
+@@ -4 +4 @@
+-#define	BIG	32767
++#define	BIG	2147483647
 @@ -21 +21,3 @@
 -char	*sbrk();
 +void	flsh(void), null(int c), stats(void), term(int sig), cnull(int cc);
@@ -3509,11 +3523,23 @@ usr/local
 -number(big)
 +int
 +number(int big)
+@@ -383 +385 @@
+-	long n;
++	long long n;
+@@ -387 +389 @@
+-	while(*cs >= '0' && *cs <= '9')
++	while(*cs >= '0' && *cs <= '9' && n < big)
+@@ -390 +392 @@
+-	switch(*cs++) {
++	switch(n < big? *cs++: '\0') {
 @@ -397 +399 @@
 -		n *= sizeof(int);
 +		n *= 2;
 @@ -407,0 +410 @@
 +		/* fallthrough */
+@@ -411 +414 @@
+-			fprintf(stderr, "dd: argument %D out of range\n", n);
++			fprintf(stderr, "dd: argument %lld out of range\n", n);
 @@ -419 +422,2 @@
 -cnull(cc)
 +void
@@ -6149,6 +6175,9 @@ usr/local
 -cpio()
 +int
 +cpio(struct anode *p)
+@@ -395 +402 @@
+-		short	h_mtime[2];
++		unsigned short	h_mtime[4];
 @@ -400 +407 @@
 -	register ifile, ct;
 +	register int ifile, ct;
@@ -6157,108 +6186,112 @@ usr/local
 +	register int i;
 @@ -403,0 +411 @@
 +	(void)p;
-@@ -421 +429 @@
+@@ -412 +420,2 @@
+-	MKSHORT(hdr.h_mtime, Statb.st_mtime);
++	for(i = 0; i < 4; i++)
++		hdr.h_mtime[i] = (unsigned long long)Statb.st_mtime >> (48-16*i);
+@@ -421 +430 @@
 -		return;
 +		return(0);
-@@ -425 +433 @@
+@@ -425 +434 @@
 -		return;
 +		return(0);
-@@ -430 +438 @@
+@@ -430 +439 @@
 -		return;
 +		return(0);
-@@ -440 +448 @@
+@@ -440 +449 @@
 -	return;
 +	return(0);
-@@ -442 +450,2 @@
+@@ -442 +451,2 @@
 -newer()
 +int
 +newer(struct anode *p)
-@@ -443,0 +453 @@
+@@ -443,0 +454 @@
 +	(void)p;
-@@ -448,3 +458,2 @@
+@@ -448,3 +459,2 @@
 -scomp(a, b, s) /* funny signed compare */
 -register a, b;
 -register char s;
 +int
 +scomp(register int a, register int b, register char s) /* funny signed compare */
-@@ -459 +468,2 @@
+@@ -459 +469,2 @@
 -doex(com)
 +int
 +doex(int com)
-@@ -461 +471 @@
+@@ -461 +472 @@
 -	register np;
 +	register int np;
-@@ -464 +474 @@
+@@ -464 +475 @@
 -	static ccode;
 +	static int ccode;
-@@ -467 +477 @@
+@@ -467 +478 @@
 -	while (na=Argv[com++]) {
 +	while ((na=Argv[com++])) {
-@@ -477 +487 @@
+@@ -477 +488 @@
 -		execvp(nargv[0], nargv, np);
 +		execvp(nargv[0], nargv);
-@@ -483,2 +493,3 @@
+@@ -483,2 +494,3 @@
 -getunum(f, s) char *f, *s; { /* find user/group name and return number */
 -	register i;
 +int
 +getunum(char *f, char *s) { /* find user/group name and return number */
 +	register int i;
-@@ -486 +497 @@
+@@ -486 +498 @@
 -	register c;
 +	register int c;
-@@ -491,0 +503,2 @@
+@@ -491,0 +504,2 @@
 +	if(pin == NULL)
 +		return(i);
-@@ -496 +509 @@
+@@ -496 +510 @@
 -			while((c = *sp++ = getc(pin)) != ':')
 +			while((*sp++ = c = getc(pin)) != ':')
-@@ -503 +516 @@
+@@ -503 +517 @@
 -				while((*sp = getc(pin)) != ':') sp++;
 +				while((*sp = c = getc(pin)) != ':' && c != EOF && sp < &str[19]) sp++;
-@@ -515,3 +528,2 @@
+@@ -515,3 +529,2 @@
 -descend(name, fname, exlist)
 -struct anode *exlist;
 -char *name, *fname;
 +int
 +descend(char *name, char *fname, struct anode *exlist)
-@@ -612,2 +624,2 @@
+@@ -612,2 +625,2 @@
 -gmatch(s, p) /* string match as in glob */
 -register char *s, *p;
 +int
 +gmatch(register char *s, register char *p) /* string match as in glob */
-@@ -619,2 +631,2 @@
+@@ -619,2 +632,2 @@
 -amatch(s, p)
 -register char *s, *p;
 +int
 +amatch(register char *s, register char *p)
-@@ -622 +634 @@
+@@ -622 +635 @@
 -	register cc;
 +	register int cc;
-@@ -632 +644 @@
+@@ -632 +645 @@
 -		while (cc = *++p) {
 +		while ((cc = *++p)) {
-@@ -642 +654 @@
+@@ -642 +655 @@
 -				k |= lc <= scc & scc <= (cc=p[1]);
 +				k |= (lc <= scc) & (scc <= (cc=p[1]));
-@@ -661,2 +673,2 @@
+@@ -661,2 +674,2 @@
 -umatch(s, p)
 -register char *s, *p;
 +int
 +umatch(register char *s, register char *p)
-@@ -670,3 +682,2 @@
+@@ -670,3 +683,2 @@
 -bwrite(rp, c)
 -register short *rp;
 -register c;
 +void
 +bwrite(register short *rp, register int c)
-@@ -693 +704,2 @@
+@@ -693 +705,2 @@
 -chgreel(x, fl)
 +int
 +chgreel(int x, int fl)
-@@ -695 +707 @@
+@@ -695 +708 @@
 -	register f;
 +	register int f;
-@@ -719,2 +731,2 @@
+@@ -719,2 +732,2 @@
 -pr(s)
 -char *s;
 +void
@@ -8891,8 +8924,8 @@ usr/local
 @@ -8 +8,3 @@
 -#include <core.h>
 +#define TXTRNDSIZ 4096L
-+#define stacktop(siz) (0xC0000000L)
-+#define stackbas(siz) (0xC0000000L-siz)
++#define stacktop(siz) (USERSIZE)
++#define stackbas(siz) (USERSIZE-siz)
 @@ -10,2 +12 @@
 -#include <sys/proc.h>
 -#include <sys/tty.h>
@@ -11337,6 +11370,9 @@ usr/local
 +LOCAL VOID	flush(INT ot)
 
 % usr/src/cmd/sh/main.c
+@@ -14 +14 @@
+-#include	<sys/types.h>
++#include	<sys/param.h>
 @@ -22,0 +23,8 @@
 +INT		ioset, dolc, wdval, wdnum, wdset, serial, peekc, flags;
 +INT		exitval, execbrk, loopcnt, breakcnt;
@@ -13295,6 +13331,12 @@ usr/local
 @@ -25 +25 @@
 -struct 	tent	{	/* Structure of a tape directory block */
 +extern struct 	tent	{	/* Structure of a tape directory block */
+@@ -33 +33 @@
+-	long	time;
++	long long	time;
+@@ -35 +35 @@
+-	short	unused[8];
++	short	unused[6];
 @@ -39 +39 @@
 -struct	dent {	/* in core version of tent with "unused" removed
 +extern struct	dent {	/* in core version of tent with "unused" removed
@@ -15026,6 +15068,9 @@ usr/local
 -register int d;
 +static int
 +sunday(register struct tm *t, register int d)
+@@ -128 +121 @@
+-		d += dysize(t->tm_year) - 365;
++		d += dysize(t->tm_year+1900) - 365;
 @@ -133,2 +126 @@
 -gmtime(tim)
 -long *tim;
@@ -15033,6 +15078,15 @@ usr/local
 @@ -137 +129 @@
 -	long hms, day;
 +	time_t hms, day;
+@@ -172 +164 @@
+-	if (day>=0) for(d1=70; day >= dysize(d1); d1++)
++	if (day>=0) for(d1=1970; day >= dysize(d1); d1++)
+@@ -174 +166 @@
+-	else for (d1=70; day<0; d1--)
++	else for (d1=1970; day<0; d1--)
+@@ -176 +168 @@
+-	xtime.tm_year = d1;
++	xtime.tm_year = d1-1900;
 @@ -195,2 +187 @@
 -asctime(t)
 -struct tm *t;
@@ -15040,10 +15094,18 @@ usr/local
 @@ -202 +193 @@
 -	for (ncp = "Day Mon 00 00:00:00 1900\n"; *cp++ = *ncp++;);
 +	for (ncp = "Day Mon 00 00:00:00 1900\n"; (*cp++ = *ncp++););
+@@ -219,2 +210,2 @@
+-		cp[1] = '2';
+-		cp[2] = '0';
++		cp[1] = (t->tm_year+1900)/1000%10 + '0';
++		cp[2] = (t->tm_year+1900)/100%10 + '0';
 @@ -227 +218,2 @@
 -dysize(y)
 +int
 +dysize(int y)
+@@ -229 +221 @@
+-	if((y%4) == 0)
++	if((y%4) == 0 && ((y%100) != 0 || (y%400) == 0))
 @@ -235,2 +227 @@
 -ct_numb(cp, n)
 -register char *cp;
@@ -18850,7 +18912,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,206 @@
+@@ -1,72 +1,208 @@
 -/ low core
 -
 -.data
@@ -19071,6 +19133,7 @@ usr/local
 +	cmp r0, #0
 +	beq 1f
 +	mov r0, #0
++	mov r2, #0
 +	mov r1, sp
 +	bl user_trap_handler
 +	cpsid i
@@ -19089,6 +19152,7 @@ usr/local
 +	sub sp, sp, #60
 +	stmia sp, {r0-r14}^
 +	mov r0, #4
++	mov r2, #0
 +	b 1f
 +pabort_entry:
 +	sub lr, lr, #4
@@ -21135,15 +21199,17 @@ usr/local
 % usr/sys/dev/mem.c
 @@ -12,0 +13 @@
 +#include "../h/systm.h"
-@@ -18 +19,2 @@
+@@ -16 +16,0 @@
+-#include "../h/seg.h"
+@@ -18 +18,2 @@
 -mmread(dev)
 +void
 +mmread(int dev)
-@@ -20,2 +22 @@
+@@ -20,2 +21 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-@@ -26,10 +27 @@
+@@ -26,10 +26 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
 -		a = UISA->r[0];
@@ -21155,22 +21221,22 @@ usr/local
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if ((c = fuibyte((caddr_t)on)) < 0)
 +		if ((c = fumem(dev, u.u_offset)) < 0)
-@@ -37,3 +28,0 @@
+@@ -37,3 +27,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
-@@ -43 +32,2 @@
+@@ -43 +31,2 @@
 -mmwrite(dev)
 +void
 +mmwrite(int dev)
-@@ -45,2 +35 @@
+@@ -45,2 +34 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-@@ -53,2 +41,0 @@
+@@ -53,2 +40,0 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
-@@ -57,8 +44 @@
+@@ -57,8 +43 @@
 -		a = UISA->r[0];
 -		d = UISD->r[0];
 -		spl7();
@@ -21180,7 +21246,7 @@ usr/local
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if (suibyte((caddr_t)on, c) < 0)
 +		if (sumem(dev, u.u_offset-1, c) < 0)
-@@ -66,3 +45,0 @@
+@@ -66,3 +44,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
@@ -21204,25 +21270,26 @@ usr/local
 +#define	RXI	020
 +#define	TXI	040
 +#define	RTI	0100
-@@ -28,3 +40,2 @@
+@@ -28,3 +40,3 @@
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
 +void	klstart(struct tty *tp);
++static void	klrint(dev_t dev);
 +int	klirq = 33;
-@@ -39,2 +50,2 @@
+@@ -39,2 +51,2 @@
 -klopen(dev, flag)
 -dev_t dev;
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +52,0 @@
+@@ -42 +53,0 @@
 -	register struct device *addr;
-@@ -44 +54 @@
+@@ -44 +55 @@
 -	register d;
 +	register int d;
-@@ -45,0 +56 @@
+@@ -45,0 +57 @@
 +	(void)flag;
-@@ -52,12 +62,0 @@
+@@ -52,12 +63,0 @@
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -21235,92 +21302,103 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +66 @@
+@@ -67 +67 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +69 @@
+@@ -70,2 +70 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
 +	UARTIMSC = RXI|TXI|RTI;
-@@ -75,3 +73,2 @@
+@@ -75,3 +74,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +78 @@
+@@ -80,0 +79 @@
 +	(void)flag;
-@@ -85,2 +83,2 @@
+@@ -85,2 +84,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -91,2 +89,2 @@
+@@ -87,0 +87,6 @@
++	register int s;
++
++	s = spl5();
++	UARTIMSC |= RXI|RTI;
++	klrint(dev);
++	splx(s);
+@@ -91,2 +96,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +95,2 @@
+@@ -97,2 +102,2 @@
 -klxint(dev)
 -dev_t dev;
 +static void
 +klxint(dev_t dev)
-@@ -105,4 +103 @@
+@@ -105,4 +110 @@
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
 +		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +106,2 @@
+@@ -111,2 +113,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
 +klrint(dev_t dev)
-@@ -115 +109,0 @@
+@@ -115 +116,0 @@
 -	register struct device *addr;
-@@ -119,4 +113,4 @@
+@@ -119,4 +120,8 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
 -	ttyinput(c, tp);
 +	while((UARTFR&RXFE) == 0) {
++		if(TTHOLD(tp)) {
++			UARTIMSC &= ~(RXI|RTI);
++			return;
++		}
 +		c = UARTDR;
 +		ttyinput(c, tp);
 +	}
-@@ -125,3 +119,2 @@
+@@ -125,3 +130,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +122,2 @@
+@@ -129 +133,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +127,2 @@
+@@ -133,2 +138,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
 +klstart(register struct tty *tp)
-@@ -136,2 +130 @@
+@@ -136,2 +141 @@
 -	register c;
 -	register struct device *addr;
 +	register int c;
-@@ -139,4 +132 @@
+@@ -139,4 +143 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 -		return;
 -	if ((c=getc(&tp->t_outq)) >= 0) {
 +	while((UARTFR&TXFF) == 0 && (c=getc(&tp->t_outq)) >= 0) {
-@@ -144 +134 @@
+@@ -144 +145 @@
 -			addr->tbuf = c;
 +			UARTDR = c;
-@@ -146 +136 @@
+@@ -146 +147 @@
 -			addr->tbuf = c | (partab[c]&0200);
 +			UARTDR = c;
-@@ -149,0 +140 @@
+@@ -149,0 +151 @@
 +			return;
-@@ -154 +145,18 @@
+@@ -154 +156,18 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klinit(void)
@@ -21340,16 +21418,16 @@ usr/local
 +	}
 +}
 +
-@@ -166,2 +174,2 @@
+@@ -166,2 +185,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +177,2 @@
+@@ -169 +188,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +185 @@
+@@ -176,6 +196 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -21357,22 +21435,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +190,2 @@
+@@ -186,2 +201,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while(UARTFR&TXFF)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +195,3 @@
+@@ -191,3 +206,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = UARTIMSC;
 +	UARTIMSC = 0;
 +	UARTDR = c;
-@@ -196,2 +199,0 @@
+@@ -196,2 +210,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +202 @@
+@@ -200 +213 @@
 -	KLADDR->tcsr = s;
 +	UARTIMSC = s;
 
@@ -21732,13 +21810,14 @@ usr/local
 +#define	RXNE	040
 +#define	TXE	0200
 +#define	FIFOEN	04000000000
-@@ -28,3 +50,2 @@
+@@ -28,3 +50,3 @@
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
 +void	klstart(struct tty *tp);
++static void	klrint(dev_t dev);
 +int	klirq = 85;
-@@ -39,2 +60,17 @@
+@@ -39,2 +61,17 @@
 -klopen(dev, flag)
 -dev_t dev;
 +void
@@ -21758,14 +21837,14 @@ usr/local
 +
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +77,0 @@
+@@ -42 +78,0 @@
 -	register struct device *addr;
-@@ -44 +79 @@
+@@ -44 +80 @@
 -	register d;
 +	register int d;
-@@ -45,0 +81 @@
+@@ -45,0 +82 @@
 +	(void)flag;
-@@ -52,12 +87,0 @@
+@@ -52,12 +88,0 @@
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -21778,93 +21857,104 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +91 @@
+@@ -67 +92 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +94 @@
+@@ -70,2 +95 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
 +	CR1 |= RXNEIE;
-@@ -75,3 +98,2 @@
+@@ -75,3 +99,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +103 @@
+@@ -80,0 +104 @@
 +	(void)flag;
-@@ -85,2 +108,2 @@
+@@ -85,2 +109,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -91,2 +114,2 @@
+@@ -87,0 +112,6 @@
++	register int s;
++
++	s = spl5();
++	CR1 |= RXNEIE;
++	klrint(dev);
++	splx(s);
+@@ -91,2 +121,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +120,2 @@
+@@ -97,2 +127,2 @@
 -klxint(dev)
 -dev_t dev;
 +static void
 +klxint(dev_t dev)
-@@ -102,0 +126 @@
+@@ -102,0 +133 @@
 +	CR1 &= ~TXEIE;
-@@ -105,4 +129 @@
+@@ -105,4 +136 @@
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
 +		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +132,2 @@
+@@ -111,2 +139,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
 +klrint(dev_t dev)
-@@ -115 +135,0 @@
+@@ -115 +142,0 @@
 -	register struct device *addr;
-@@ -119,4 +139,5 @@
+@@ -119,4 +146,9 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
 -	ttyinput(c, tp);
 +	while(ISR&RXNE) {
++		if(TTHOLD(tp)) {
++			CR1 &= ~RXNEIE;
++			break;
++		}
 +		c = RDR;
 +		ttyinput(c, tp);
 +	}
 +	ICR = 017;
-@@ -125,3 +146,2 @@
+@@ -125,3 +157,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +149,2 @@
+@@ -129 +160,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +154,2 @@
+@@ -133,2 +165,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
 +klstart(register struct tty *tp)
-@@ -136,2 +157 @@
+@@ -136,2 +168 @@
 -	register c;
 -	register struct device *addr;
 +	register int c;
-@@ -139,2 +159 @@
+@@ -139,2 +170 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 +	if((ISR&TXE) == 0)
-@@ -144 +163 @@
+@@ -144 +174 @@
 -			addr->tbuf = c;
 +			TDR = c;
-@@ -146 +165 @@
+@@ -146 +176 @@
 -			addr->tbuf = c | (partab[c]&0200);
 +			TDR = c;
-@@ -150,0 +170 @@
+@@ -150,0 +181 @@
 +		CR1 |= TXEIE;
-@@ -154 +174,9 @@
+@@ -154 +185,9 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klintr(void)
@@ -21875,16 +21965,16 @@ usr/local
 +		klxint(0);
 +}
 +
-@@ -166,2 +194,2 @@
+@@ -166,2 +205,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +197,2 @@
+@@ -169 +208,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +205 @@
+@@ -176,6 +216 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -21892,22 +21982,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +210,2 @@
+@@ -186,2 +221,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while((ISR&TXE) == 0)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +215,3 @@
+@@ -191,3 +226,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = CR1;
 +	CR1 &= ~TXEIE;
 +	TDR = c;
-@@ -196,2 +219,0 @@
+@@ -196,2 +230,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +222 @@
+@@ -200 +233 @@
 -	KLADDR->tcsr = s;
 +	CR1 = s;
 
@@ -22243,8 +22333,10 @@ usr/local
 % usr/sys/h/buf.h
 @@ -38 +37,0 @@
 -	char	b_xmem;			/* high order core address */
-@@ -55 +53,0 @@
+@@ -54,2 +53 @@
+-#define	B_PHYS	020	/* Physical IO potentially using UNIBUS map */
 -#define	B_MAP	040	/* This block has the UNIBUS map allocated */
++#define	B_PHYS	020	/* Physical IO */
 
 % usr/sys/h/callo.h
 @@ -15 +15 @@
@@ -22628,7 +22720,7 @@ usr/local
 +	creat(void),
 +	dcflush(caddr_t a, unsigned n), ddrinit(void),
 +	deverror(struct buf *bp, int o1, int o2), dmbsy(void), dup(void),
-+	exec(void), exece(void), exit(int rv), expand(int newsize), fork(void),
++	exec(void), exece(void), exit(int rv), fork(void),
 +	free(dev_t dev, daddr_t bno), fstat(void), ftime(void), getgid(void),
 +	getpid(void), getuid(void), gtime(void), gtty(void), idle(void),
 +	ifree(dev_t dev, ino_t ino), install_sigtramp(void),
@@ -22678,13 +22770,12 @@ usr/local
 +	wait(void), wakeup(caddr_t chan), wdir(struct inode *ip), write(void),
 +	writei(struct inode *ip), writep(struct file *fp),
 +	xalloc(struct inode *ip), xfree(void), xlock(struct text *xp),
-+	xrele(struct inode *ip), xswap(struct proc *p, int ff, int os),
-+	xumount(int dev), xunlock(struct text *xp);
++	xrele(struct inode *ip), xumount(int dev), xunlock(struct text *xp);
 +int	access(struct inode *ip, int mode),
 +	b_to_q(char *cp, int cc, struct clist *q), cntfrq_get(void),
 +	copyin(caddr_t f, caddr_t t, unsigned n),
 +	copyout(caddr_t f, caddr_t t, unsigned n), cpass(void), dfar(void),
-+	dfsr(void),
++	dfsr(void), expand(int newsize),
 +	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw),
 +	fsig(struct proc *p), fubyte(caddr_t a), fumem(int dev, off_t off),
 +	fuword(caddr_t a), getc(struct clist *p), getw(struct clist *p),
@@ -22697,7 +22788,8 @@ usr/local
 +	spl7(void), subyte(caddr_t a, int c), sumem(int dev, off_t off, int c),
 +	suser(void), suword(caddr_t a, int v),
 +	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
-+	ttread(struct tty *tp), ufalloc(void);
++	ttread(struct tty *tp), ufalloc(void),
++	xswap(struct proc *p, int ff, int os);
 +caddr_t	machine_init(void), ttwrite(struct tty *tp);
 +unsigned long long cntvct_get(void);
 +unsigned	vtop(caddr_t va);
@@ -22759,6 +22851,9 @@ usr/local
 @@ -64 +69 @@
 -#define	tun	tp->t_un
 +#define	tun	tp->t_un.tc
+@@ -92,0 +98,2 @@
++#define	TTHOLD(tp)	((tp)->t_rawq.c_cc >= TTYHOG && \
++	((tp)->t_delct || (tp)->t_flags&(RAW|CBREAK)))
 
 % usr/sys/h/user.h
 @@ -7 +7 @@
@@ -23090,6 +23185,9 @@ usr/local
 @@ -39 +40 @@
 -	register i;
 +	register int i, a;
+@@ -42 +43 @@
+-	 * zero and free all of core
++	 * free all of core
 @@ -45,16 +46,10 @@
 -	i = ka6->r[0] + USIZE;
 -	UISD->r[0] = 077406;
@@ -23469,6 +23567,9 @@ usr/local
 +long	tk_nin;
 +long	tk_nout;
 +struct inode *mpxip;
+@@ -20 +44 @@
+- *	clear and free user core
++ *	free user core
 @@ -30 +54,2 @@
 -main()
 +void
@@ -23833,41 +23934,47 @@ usr/local
 @@ -246 +249 @@
 -	si = (-sp)/64 - u.u_ssize + SINCR;
 +	si = (USERSIZE-sp)/ctob(1) - u.u_ssize + SINCR;
-@@ -267 +270,2 @@
+@@ -252 +255,4 @@
+-	expand(p->p_size+si);
++	if(expand(p->p_size+si) == 0) {
++		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
++		return(0);
++	}
+@@ -267 +273,2 @@
 -ptrace()
 +void
 +ptrace(void)
-@@ -313 +317,2 @@
+@@ -313 +320,2 @@
 -procxmt()
 +int
 +procxmt(void)
-@@ -316 +321 @@
+@@ -316 +324 @@
 -	register *p;
 +	register int *p;
-@@ -345 +350 @@
+@@ -345 +353 @@
 -		ipc.ip_data = ((physadr)&u)->r[i>>1];
 +		ipc.ip_data = ((physadr)&u)->r[i>>2];
-@@ -354 +359 @@
+@@ -354 +362 @@
 -		if (xp = u.u_procp->p_textp) {
 +		if ((xp = u.u_procp->p_textp)) {
-@@ -364,0 +370 @@
+@@ -364,0 +373 @@
 +		arm_sync_icache((caddr_t)ipc.ip_addr, NBPW);
-@@ -379,2 +385,2 @@
+@@ -379,2 +388,2 @@
 -		p = (int *)&((physadr)&u)->r[i>>1];
 -		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
 +		p = (int *)&((physadr)&u)->r[i>>2];
 +		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[32])
-@@ -383 +389 @@
+@@ -383 +392 @@
 -			if (p == &u.u_ar0[regloc[i]])
 +			if (p == &u.u_ar0[regloc[i]&0377])
-@@ -386 +392 @@
+@@ -386 +395 @@
 -			ipc.ip_data |= 0170000;	/* assure user space */
 +			ipc.ip_data = (ipc.ip_data&0xf80f0000) | 020;	/* assure user space */
-@@ -397,3 +402,0 @@
+@@ -397,3 +405,0 @@
 -	/*  one version causes a trace-trap */
 -	case 9:
 -		u.u_ar0[RPS] |= TBIT;
-@@ -410,0 +414 @@
+@@ -410,0 +417 @@
 +		return(1);
 
 % usr/sys/sys/slp.c
@@ -23924,64 +24031,83 @@ usr/local
 @@ -257 +260 @@
 -		if (rp->p_stat==SSLEEP&&rp->p_pri>=PZERO || rp->p_stat==SSTOP) {
 +		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) || rp->p_stat==SSTOP) {
-@@ -292,2 +295,2 @@
+@@ -278,2 +281,3 @@
+-		xswap(p, 1, 0);
+-		goto loop;
++		if (xswap(p, 1, 0))
++			goto loop;
++		p->p_flag |= SLOAD;
+@@ -292,2 +296,2 @@
 -swapin(p)
 -register struct proc *p;
 +int
 +swapin(register struct proc *p)
-@@ -301 +304 @@
+@@ -301 +305 @@
 -	if (xp = p->p_textp) {
 +	if ((xp = p->p_textp)) {
-@@ -310 +313 @@
+@@ -310 +314 @@
 -			if ((xp->x_flag&XLOAD)==0)
 +			if ((xp->x_flag&XLOAD)==0) {
-@@ -311,0 +315,2 @@
+@@ -311,0 +316,2 @@
 +				arm_sync_icache(CLKADDR(x), ctob(xp->x_size));
 +			}
-@@ -329 +334,2 @@
+@@ -329 +335,2 @@
 -qswtch()
 +void
 +qswtch(void)
-@@ -347 +353,2 @@
+@@ -347 +354,2 @@
 -swtch()
 +void
 +swtch(void)
-@@ -349 +356 @@
+@@ -349 +357 @@
 -	register n;
 +	register int n;
-@@ -412 +418,0 @@
+@@ -412 +419,0 @@
 -	spl0();
-@@ -426 +432,2 @@
+@@ -426 +433,2 @@
 -newproc()
 +int
 +newproc(void)
-@@ -431 +438 @@
+@@ -431 +439 @@
 -	register n;
 +	register int n;
-@@ -498,0 +506,4 @@
+@@ -498,0 +507,4 @@
 +	if (u.u_fpsaved==0) {
 +		savfp(&u.u_fps);
 +		u.u_fpsaved = 1;
 +	}
-@@ -526,0 +538 @@
+@@ -526,0 +539 @@
 +	sureg();
-@@ -545 +557,2 @@
+@@ -545 +558,2 @@
 -expand(newsize)
-+void
++int
 +expand(int newsize)
-@@ -547 +560 @@
+@@ -547 +561 @@
 -	register i, n;
 +	register int i, n;
-@@ -549 +562 @@
+@@ -549 +563 @@
 -	register a1, a2;
 +	register int a1, a2;
-@@ -564,0 +578,4 @@
+@@ -557 +571 @@
+-		return;
++		return(1);
+@@ -561 +575 @@
+-		return;
++		return(1);
+@@ -565 +579,8 @@
+-		xswap(p, 1, n);
 +		if (u.u_fpsaved==0) {
 +			savfp(&u.u_fps);
 +			u.u_fpsaved = 1;
 +		}
-@@ -569,0 +587 @@
++		if (xswap(p, 1, n) == 0) {
++			p->p_size = n;
++			return(0);
++		}
+@@ -569,0 +591 @@
 +	ptfree(p);
+@@ -574,0 +597 @@
++	return(1);
 
 % usr/sys/sys/subr.c
 @@ -18,3 +18 @@
@@ -24084,23 +24210,41 @@ usr/local
 -	register char *cp;
 +	register int nc;
 +	register char *cp = NULL;
-@@ -103,2 +107,2 @@
+@@ -55,2 +59,4 @@
+-	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0)
+-		panic("Out of swap");
++	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {
++		u.u_error = ENOMEM;
++		goto bad;
++	}
+@@ -103,2 +109,2 @@
 -	ucp = -nc - NBPW;
 -	ap = ucp - na*NBPW - 3*NBPW;
 +	ucp = USERSIZE - nc - NBPW;
 +	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
-@@ -144,2 +148,2 @@
+@@ -144,2 +150,2 @@
 -getxfile(ip, nargc)
 -register struct inode *ip;
 +int
 +getxfile(register struct inode *ip, int nargc)
-@@ -148 +152 @@
+@@ -148 +154 @@
 -	register sep;
 +	register int sep;
-@@ -150 +154 @@
+@@ -150 +156 @@
 -	register i, overlay;
 +	register int i, n, overlay;
-@@ -178,13 +182,12 @@
+@@ -157,5 +163,5 @@
+-	 * ux_mag = 407/410/411/405
+-	 *  407 is plain executable
+-	 *  410 is RO text
+-	 *  411 is separated ID
+-	 *  405 is overlaid text
++	 * ux_mag = 0x464c457f, ELF;
++	 *  the program headers follow,
++	 *  and the first two loadable
++	 *  segments are the text
++	 *  and the data
+@@ -178,13 +184,12 @@
 -	if(u.u_exdata.ux_mag == 0407) {
 -		lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_tsize;
 -		u.u_exdata.ux_dsize = lsize;
@@ -24126,7 +24270,7 @@ usr/local
 +			n++;
 +	}
 +	if(u.u_exdata.ux_mag != 0x464c457f || n != 2) {
-@@ -204,3 +207,4 @@
+@@ -204,3 +209,4 @@
 -	ts = btoc(u.u_exdata.ux_tsize);
 -	lsize = (long)u.u_exdata.ux_dsize + u.u_exdata.ux_bsize;
 -	if (lsize != (unsigned)lsize) {
@@ -24134,72 +24278,97 @@ usr/local
 +	lsize = (long)u.u_exdata.ux_ph[1].p_addr + u.u_exdata.ux_ph[1].p_msize;
 +	if ((unsigned)lsize < u.u_exdata.ux_ph[1].p_msize ||
 +	    u.u_exdata.ux_ph[1].p_addr < ctob(ts)) {
-@@ -210 +214 @@
+@@ -210 +216 @@
 -	ds = btoc(lsize);
 +	ds = btoc(lsize) - ts;
-@@ -213 +217 @@
+@@ -213 +219 @@
 -		if (u.u_sep==0 && ctos(ts) != ctos(u.u_tsize) || nargc) {
 +		if ((u.u_sep==0 && ctos(ts) != ctos(u.u_tsize)) || nargc) {
-@@ -245,3 +249,3 @@
+@@ -236 +242,6 @@
+-		expand(i);
++		if(expand(i) == 0) {
++			u.u_error = ENOMEM;
++			printf("out of swap space\n");
++			psignal(u.u_procp, SIGKIL);
++			goto bad;
++		}
+@@ -245,3 +256,3 @@
 -		estabur((unsigned)0, ds, (unsigned)0, 0, RO);
 -		u.u_base = 0;
 -		u.u_offset = sizeof(u.u_exdata)+u.u_exdata.ux_tsize;
 +		estabur(ts, ds, (unsigned)0, 0, RO);
 +		u.u_base = (caddr_t)u.u_exdata.ux_ph[1].p_addr;
 +		u.u_offset = u.u_exdata.ux_ph[1].p_off;
-@@ -276 +280,2 @@
+@@ -276 +287,2 @@
 -setregs()
 +void
 +setregs(void)
-@@ -279,2 +284 @@
+@@ -279,2 +291 @@
 -	register char *cp;
 -	register i;
 +	register int i;
-@@ -285,2 +289,4 @@
+@@ -285,2 +296,4 @@
 -	for(cp = &regloc[0]; cp < &regloc[6];)
 -		u.u_ar0[*cp++] = 0;
 +	for(i = 0; i < PC; i++)
 +		if(i != R6)
 +			u.u_ar0[i] = 0;
 +	u.u_r.r_val2 = 0;
-@@ -288 +294 @@
+@@ -288 +301 @@
 -	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[6];)
 +	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[32];)
-@@ -289,0 +296 @@
+@@ -289,0 +303 @@
 +	u.u_fpsaved = 1;
-@@ -308 +315,2 @@
+@@ -308 +322,2 @@
 -rexit()
 +void
 +rexit(void)
-@@ -325 +333,2 @@
+@@ -325 +340,2 @@
 -exit(rv)
 +void
 +exit(int rv)
-@@ -348,0 +358 @@
+@@ -348,0 +365 @@
 +	ptfree(p);
-@@ -377 +387,2 @@
+@@ -377 +394,2 @@
 -wait()
 +void
 +wait(void)
-@@ -379 +390 @@
+@@ -379 +397 @@
 -	register f;
 +	register int f;
-@@ -398,0 +410 @@
+@@ -398,0 +417 @@
 +			p->p_nptab = 0;
-@@ -422 +434,2 @@
+@@ -422 +441,2 @@
 -fork()
 +void
 +fork(void)
-@@ -425 +438 @@
+@@ -425 +445 @@
 -	register a;
 +	register int a;
-@@ -477 +490,2 @@
+@@ -428 +448 @@
+-	 * Make sure there's enough swap space for max
++	 * Make sure there's enough swap space for the
+@@ -431 +451 @@
+-	if ((a = malloc(swapmap, ctod(MAXMEM))) == 0) {
++	if ((a = malloc(swapmap, ctod(u.u_procp->p_size))) == 0) {
+@@ -435 +455 @@
+-	mfree(swapmap, ctod(MAXMEM), a);
++	mfree(swapmap, ctod(u.u_procp->p_size), a);
+@@ -477 +497,2 @@
 -sbreak()
 +void
 +sbreak(void)
-@@ -482 +496 @@
+@@ -482 +503 @@
 -	register a, n, d;
 +	register int a, n, d;
+@@ -514 +535,6 @@
+-	expand(n);
++	if(expand(n) == 0) {
++		u.u_dsize -= d;
++		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
++		u.u_error = ENOMEM;
++		return;
++	}
 
 % usr/sys/sys/sys2.c
 @@ -7,0 +8 @@
@@ -24678,35 +24847,61 @@ usr/local
 @@ -10,0 +11,2 @@
 +void	xexpand(struct text *xp), xccdec(struct text *xp),
 +	xuntext(struct text *xp);
+@@ -20 +22 @@
+- * panic: out of swap space
++ * Zero return: out of swap space, nothing done
 @@ -22,2 +24,2 @@
 -xswap(p, ff, os)
 -register struct proc *p;
-+void
++int
 +xswap(register struct proc *p, int ff, int os)
 @@ -25 +27 @@
 -	register a;
 +	register int a;
+@@ -31 +33 @@
+-		panic("out of swap space");
++		return(0);
 @@ -34,0 +37 @@
 +	ptfree(p);
-@@ -50 +53,2 @@
+@@ -43,0 +47 @@
++	return(1);
+@@ -50 +54,2 @@
 -xfree()
 +void
 +xfree(void)
-@@ -84,2 +88,2 @@
+@@ -84,2 +89,2 @@
 -xalloc(ip)
 -register struct inode *ip;
 +void
 +xalloc(register struct inode *ip)
-@@ -88 +92 @@
+@@ -88 +93 @@
 -	register unsigned ts;
 +	register unsigned ts, i;
-@@ -123 +127 @@
--	ts = btoc(u.u_exdata.ux_tsize);
+@@ -108,0 +114,4 @@
++			if (xp->x_ccount == 0) {
++				xp->x_count--;
++				goto noswap;
++			}
+@@ -116,0 +126,3 @@
 +	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
-@@ -128,0 +133,2 @@
++	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
++		goto noswap;
+@@ -123 +134,0 @@
+-	ts = btoc(u.u_exdata.ux_tsize);
+@@ -125,2 +135,0 @@
+-	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
+-		panic("out of swap space");
+@@ -128,0 +138,9 @@
++	if (xp->x_ccount == 0) {
++		mfree(swapmap, ctod(ts), xp->x_daddr);
++		xp->x_iptr = NULL;
++		ip->i_flag &= ~ITEXT;
++		ip->i_count--;
++		goto noswap;
++	}
 +	for(i = 0; i < ts; i++)
 +		clearseg(xp->x_caddr+i);
-@@ -131,2 +137,8 @@
+@@ -131,2 +149,8 @@
 -	u.u_offset = sizeof(u.u_exdata);
 -	u.u_base = 0;
 +	u.u_offset = u.u_exdata.ux_ph[0].p_off;
@@ -24717,49 +24912,61 @@ usr/local
 +		u.u_base += i;
 +		u.u_count -= i;
 +	}
-@@ -137,0 +150,2 @@
+@@ -137,0 +162,2 @@
 +	install_sigtramp();
 +	arm_sync_icache(CLKADDR(xp->x_caddr), ctob(ts));
-@@ -147,2 +161,2 @@
+@@ -138,0 +165,7 @@
++	return;
++
++noswap:
++	u.u_procp->p_textp = NULL;
++	u.u_error = ENOMEM;
++	printf("out of swap space\n");
++	psignal(u.u_procp, SIGKIL);
+@@ -147,2 +180,2 @@
 -xexpand(xp)
 -register struct text *xp;
 +void
 +xexpand(register struct text *xp)
-@@ -151 +165 @@
+@@ -151 +184 @@
 -		if ((xp->x_flag&XLOAD)==0)
 +		if ((xp->x_flag&XLOAD)==0) {
-@@ -152,0 +167,2 @@
+@@ -152,0 +186,2 @@
 +			arm_sync_icache(CLKADDR(xp->x_caddr), ctob(xp->x_size));
 +		}
-@@ -171,2 +187,2 @@
+@@ -161 +196,2 @@
+-	xswap(u.u_procp, 1, 0);
++	if (xswap(u.u_procp, 1, 0) == 0)
++		return;
+@@ -171,2 +207,2 @@
 -xlock(xp)
 -register struct text *xp;
 +void
 +xlock(register struct text *xp)
-@@ -182,2 +198,2 @@
+@@ -182,2 +218,2 @@
 -xunlock(xp)
 -register struct text *xp;
 +void
 +xunlock(register struct text *xp)
-@@ -195,2 +211,2 @@
+@@ -195,2 +231,2 @@
 -xccdec(xp)
 -register struct text *xp;
 +void
 +xccdec(register struct text *xp)
-@@ -216,2 +232,2 @@
+@@ -216,2 +252,2 @@
 -xumount(dev)
 -register dev;
 +void
 +xumount(register int dev)
-@@ -229,2 +245,2 @@
+@@ -229,2 +265,2 @@
 -xrele(ip)
 -register struct inode *ip;
 +void
 +xrele(register struct inode *ip)
-@@ -234 +250 @@
+@@ -234 +270 @@
 -	if (ip->i_flag&ITEXT==0)
 +	if ((ip->i_flag&ITEXT)==0)
-@@ -245,2 +261,2 @@
+@@ -245,2 +281,2 @@
 -xuntext(xp)
 -register struct text *xp;
 +void
