@@ -9883,8 +9883,8 @@ has no `unset`. A name which is not an identifier is reported by
 
 `prev` is initialised to zero (167) in the port. The loop always runs
 at least once, since `namep` is never null, and so always sets `prev`
-before the store at 188; GCC cannot see this and warned that it might
-be used unset. The cast of `alloc`'s result to `NAMPTR` (184) is new:
+before the store at 188; GCC cannot see this and would warn that it
+might be used unset. The cast of `alloc`'s result to `NAMPTR` (184) is new:
 `alloc` is `malloc`, which returns `void *`, and the cast serves the
 reader rather than the compiler.
 
@@ -10034,8 +10034,7 @@ needs no conversion.
 (#f("sh/mode.h")), which C99 does not assign to a `NAMPTR`; it is now
 zero. `v` is initialised (64) in the port. Every path assigns it or
 leaves by `error`, but `error` is an ordinary function, not declared
-to return never, and when the port began to compile with optimisation
-GCC warned that `v` might be used unset. The parentheses around the
+to return never, and GCC would warn that `v` might be used unset. The parentheses around the
 assignment to `bra` (68) mark it as intended.
 
 #lines(58, 95)
@@ -10149,9 +10148,7 @@ a substituted word to `expand`, which, if the field contains an
 unquoted `*`, `?`, or `[`, replaces it by the names of the existing
 files which match, and returns their number; if it returns zero, the
 field stands for itself. `gmatch` does the matching, for `expand` and
-for the patterns of `case` (#f("sh/xec.c")). In v7 the expansion of a
-pattern is done by the shell; earlier systems left it to a separate
-program, `/etc/glob`.
+for the patterns of `case` (#f("sh/xec.c")).
 
 v7 has no library routine to read a directory. A program which wants
 the names in one opens the directory and reads it as an ordinary file,
@@ -10238,12 +10235,11 @@ made `0200`, so that it is not taken for the end of the string.
 In a class `[...]`, a character matches itself and `a-z` matches the
 range; `lc`, the previous character, starts at a value no character can
 reach, so that a leading `-` matches nothing. Each character of the
-pattern is compared with its quote bit stripped. The upper bound of a
-range used not to be: in `[a-'c']`, the quoted `c` is `0343`, and on the
-ARM, where `char` is unsigned, every character from `a` upward fell
-within the range, while on the PDP-11, where it would have been
-negative, none did. The port masks it with `STRIP` (133), like the
-others. v7 has no negated class.
+pattern is compared with its quote bit stripped. In v7 the upper bound
+of a range was not: in `[a-'c']`, the quoted `c` is `0343`, and on the
+ARM, where `char` is unsigned, every character from `a` upward would
+fall within the range, while on the PDP-11, where it was negative, none
+did. The port masks it with `STRIP` (133), like the others. v7 has no negated class.
 
 #lines(112, 138)
 
