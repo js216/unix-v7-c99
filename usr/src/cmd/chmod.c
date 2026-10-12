@@ -89,7 +89,8 @@ newmode(unsigned nm)
 int
 abs(void)
 {
-	register int c, i;
+	register int c;
+	register unsigned i;
 
 	i = 0;
 	while ((c = *ms++) >= '0' && c <= '7')

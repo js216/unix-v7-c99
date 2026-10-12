@@ -107,7 +107,7 @@ earg:
 
 long otoi(char *s)
 {
-	long v;
+	unsigned long v;
 	int base;
 
 	v = 0;
