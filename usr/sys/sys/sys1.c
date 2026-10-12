@@ -196,7 +196,9 @@ getxfile(register struct inode *ip, int nargc)
 	}
 	if(u.u_exdata.ux_mag != 0x464c457f || n != 2 ||
 	    u.u_exdata.ux_tsize == 0 ||
-	    u.u_exdata.ux_dsize > u.u_exdata.ux_ph[1].p_msize) {
+	    u.u_exdata.ux_dsize > u.u_exdata.ux_ph[1].p_msize ||
+	    (u.u_exdata.ux_ph[0].p_off == 0 && u.u_exdata.ux_phoff +
+	    32*u.u_exdata.ux_phnum > u.u_exdata.ux_tsize)) {
 		u.u_error = ENOEXEC;
 		goto bad;
 	}
