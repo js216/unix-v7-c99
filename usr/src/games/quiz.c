@@ -8,7 +8,7 @@
 #define NA 10
 
 int tflag;
-int xx[NL];
+int xx[NL+1];
 signed char score[NL];
 int rights;
 int wrongs;
@@ -19,7 +19,7 @@ int na = NA;
 int inc;
 int ptr  = 0;
 int nc = 0;
-char line[150];
+char line[NC+2];
 char response[100];
 char *tmp[NF];
 int select[NF];
@@ -303,7 +303,7 @@ talloc(void)
 {
 	int i;
 	for(i=0;i<NF;i++)
-		tmp[i] = malloc(SL);
+		tmp[i] = malloc(SL+2);
 }
 
 int
@@ -345,7 +345,7 @@ loop:
 		instruct(info);
 	signal(SIGINT, done);
 	argv[argc] = 0;
-	if(find(&argv[1],argc-1)==0)
+	if(argc>NF+1 || find(&argv[1],argc-1)==0)
 		dunno();
 	fclose(input);
 	input = fopen(tmp[0],"r");
@@ -354,13 +354,16 @@ loop:
 	readindex();
 	if(!tflag || na>nl)
 		na = nl;
+	if(na==0)
+		dunno();
 	stdout->_flag |= _IONBF;
 	for(;;) {
 		i = next();
 		fseek(input,xx[i]+0L,0);
 		z = xx[i+1]-xx[i];
-		for(j=0;j<z;j++)
+		for(j=0;j<z&&j<NC;j++)
 			line[j] = getc(input);
+		line[j] = '\n';
 		segment(line,tmp);
 		if(*tmp[select[0]] == '\0' || *tmp[select[1]] == '\0') {
 			score[i] = 1;
@@ -398,10 +401,11 @@ query(char *r)
 {
 	char *t;
 	for(t=r;;t++) {
-		if(read(0,t,1)==0)
+	again:
+		if(read(0,t,1)<=0)
 			done(0);
-		if(*t==' '&&(t==r||t[-1]==' '))
-			t--;
+		if((*t==' '&&(t==r||t[-1]==' ')) || (t>=&r[sizeof response-1]&&*t!='\n'))
+			goto again;
 		if(*t=='\n') {
 			while(t>r&&t[-1]==' ')
 				*--t = '\n';
@@ -435,7 +439,7 @@ done(int sig)
 	printf("\nRights %d, wrongs %d, ", rights, wrongs);
 	if(guesses)
 		printf("extra guesses %d, ", guesses);
-	printf("score %d%%\n",100*rights/(rights+wrongs));
+	printf("score %d%%\n",rights+wrongs?100*rights/(rights+wrongs):0);
 	exit(0);
 }
 void
