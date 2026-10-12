@@ -6,9 +6,10 @@
 #include <sys/stat.h>
 #define A_DAY	86400L /* a day full of seconds */
 #define EQ(x, y)	(strcmp(x, y)==0)
+#define AGE(t)	(int)((time_t)((unsigned long long)Now - (t)) / A_DAY)
 
 int	Randlast;
-char	Pathname[200];
+char	Pathname[4096];
 
 struct anode {
 	int (*F)(struct anode *p);
@@ -37,7 +38,7 @@ struct	anode	*exp(void),
 		*e3(void),
 		*mk(int (*f)(struct anode *p), struct anode *l, struct anode *r);
 char	*nxtarg(void);
-char	Home[128];
+char	Home[4096];
 long	Blocks;
 void	pr(char *s), bwrite(short *rp, int c);
 int	descend(char *name, char *fname, struct anode *exlist);
@@ -59,10 +60,12 @@ main(int argc, char *argv[])
 	FILE *pwd;
 
 	time(&Now);
-	pwd = popen("pwd", "r");
-	fgets(Home, 128, pwd);
-	pclose(pwd);
-	Home[strlen(Home) - 1] = '\0';
+	if((pwd = popen("pwd", "r"))) {
+		fgets(Home, sizeof Home, pwd);
+		pclose(pwd);
+	}
+	if((cp = rindex(Home, '\n')))
+		*cp = '\0';
 	Argc = argc; Argv = argv;
 	if(argc<3) {
 usage:		pr("Usage: find path-list predicate-list\n");
@@ -84,6 +87,10 @@ usage:		pr("Usage: find path-list predicate-list\n");
 	for(Pi = 1; Pi < paths; ++Pi) {
 		sp = 0;
 		chdir(Home);
+		if(strlen(Argv[Pi]) >= (int)sizeof Pathname) {
+			pr("find: path too long-- "), pr(Argv[Pi]), pr("\n");
+			continue;
+		}
 		strcpy(Pathname, Argv[Pi]);
 		if((cp = rindex(Pathname, '/'))) {
 			sp = cp + 1;
@@ -202,7 +209,7 @@ struct anode *e3(void) { /* parse parens and predicates */
 	else if(EQ(a, "-links"))
 		return(mk(links, (struct anode *)atoi(b), (struct anode *)s));
 	else if(EQ(a, "-perm")) {
-		for(i=0; *b ; ++b) {
+		for(i=0; *b && (unsigned)i <= 07777; ++b) {
 			if(*b=='-') continue;
 			i <<= 3;
 			i = i + (*b - '0');
@@ -250,6 +257,10 @@ err:	pr("find: bad option "), pr(a), pr("\n");
 }
 struct anode *mk(int (*f)(struct anode *p), struct anode *l, struct anode *r)
 {
+	if(Nn >= 100) {
+		pr("find: too many predicates\n");
+		exit(1);
+	}
 	Node[Nn].F = f;
 	Node[Nn].L = l;
 	Node[Nn].R = r;
@@ -302,17 +313,17 @@ print(struct anode *p)
 int
 mtime(register struct anode *p)
 {
-	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), (int)p->L, (int)p->R));
+	return(scomp(AGE(Statb.st_mtime), (int)p->L, (int)p->R));
 }
 int
 atime(register struct anode *p)
 {
-	return(scomp((int)((Now - Statb.st_atime) / A_DAY), (int)p->L, (int)p->R));
+	return(scomp(AGE(Statb.st_atime), (int)p->L, (int)p->R));
 }
 int
 ctime(register struct anode *p)
 {
-	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), (int)p->L, (int)p->R));
+	return(scomp(AGE(Statb.st_ctime), (int)p->L, (int)p->R));
 }
 int
 user(register struct anode *p)
@@ -409,6 +420,10 @@ cpio(struct anode *p)
 	register int i;
 
 	(void)p;
+	if(strlen(Pathname) >= (int)sizeof hdr.h_name) {
+		pr("find: cannot copy "), pr(Pathname), pr("\n");
+		return(0);
+	}
 	hdr.h_magic = MAGIC;
 	strcpy(hdr.h_name, !strncmp(Pathname, "./", 2)? Pathname+2: Pathname);
 	hdr.h_namesize = strlen(hdr.h_name) + 1;
@@ -462,7 +477,7 @@ scomp(register int a, register int b, register char s) /* funny signed compare *
 	if(s == '+')
 		return(a > b);
 	if(s == '-')
-		return(a < (b * -1));
+		return(a < (b * -1LL));
 	return(a == b);
 }
 
@@ -477,6 +492,10 @@ doex(int com)
 	ccode = np = 0;
 	while ((na=Argv[com++])) {
 		if(strcmp(na, ";")==0) break;
+		if(np >= 49) {
+			pr("find: too many arguments\n");
+			exit(1);
+		}
 		if(strcmp(na, "{}")==0) nargv[np++] = Pathname;
 		else nargv[np++] = na;
 	}
@@ -507,9 +526,11 @@ getunum(char *f, char *s) { /* find user/group name and return number */
 	do {
 		if(c=='\n') {
 			sp = str;
-			while((*sp++ = c = getc(pin)) != ':')
+			while((*sp = c = getc(pin)) != ':') {
 				if(c == EOF) goto RET;
-			*--sp = '\0';
+				if(sp < &str[19]) sp++;
+			}
+			*sp = '\0';
 			if(EQ(str, s)) {
 				while((c=getc(pin)) != ':')
 					if(c == EOF) goto RET;
@@ -550,10 +571,14 @@ descend(char *name, char *fname, struct anode *exlist)
 		return(1);
 
 	for(c1 = name; *c1; ++c1);
-	if(*(c1-1) == '/')
+	if(c1 > name && *(c1-1) == '/')
 		--c1;
 	endofname = c1;
 	dirsize = Statb.st_size;
+	if(endofname+DIRSIZ+1 >= &Pathname[sizeof Pathname]) {
+		pr("find: path too long-- "), pr(name), pr("\n");
+		return(1);
+	}
 
 	if(chdir(fname) == -1)
 		return(0);
@@ -636,13 +661,13 @@ amatch(register char *s, register char *p)
 	int scc, k;
 	int c, lc;
 
-	scc = *s;
+	scc = *s & 0377;
 	lc = 077777;
-	switch (c = *p) {
+	switch (c = *p & 0377) {
 
 	case '[':
 		k = 0;
-		while ((cc = *++p)) {
+		while ((cc = *++p & 0377)) {
 			switch (cc) {
 
 			case ']':
@@ -652,7 +677,7 @@ amatch(register char *s, register char *p)
 					return(0);
 
 			case '-':
-				k |= (lc <= scc) & (scc <= (cc=p[1]));
+				k |= (lc <= scc) & (scc <= (cc=p[1]&0377));
 			}
 			if (scc==(lc=cc)) k++;
 		}
@@ -717,7 +742,8 @@ chgreel(int x, int fl)
 again:
 	pr("If you want to go on, type device/file name when ready\n");
 	devtty = fopen("/dev/tty", "r");
-	fgets(str, 20, devtty);
+	if(devtty == NULL || fgets(str, 20, devtty) == NULL)
+		exit(1);
 	str[strlen(str) - 1] = '\0';
 	if(!*str)
 		exit(1);
