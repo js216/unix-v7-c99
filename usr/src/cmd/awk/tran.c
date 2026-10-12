@@ -53,14 +53,15 @@ cell **makesymtab(void)
 void
 freesymtab(cell *ap)	/* free symbol table */
 {
-	cell *cp, **tp;
+	cell *cp, *np, **tp;
 	int i;
 
 	if (!(ap->tval & ARR))
 		return;
 	tp = (cell **) ap->sval;
 	for (i = 0; i < MAXSYM; i++) {
-		for (cp = tp[i]; cp != NULL; cp = cp->nextval) {
+		for (cp = tp[i]; cp != NULL; cp = np) {
+			np = cp->nextval;
 			xfree(cp->nval);
 			xfree(cp->sval);
 			free((char *)cp);
@@ -101,7 +102,7 @@ hash(register char *s)	/* form hash value for string s */
 	register int hashval;
 
 	for (hashval = 0; *s != '\0'; )
-		hashval += *s++;
+		hashval += *s++ & 0377;
 	return(hashval % MAXSYM);
 }
 
@@ -130,6 +131,8 @@ awkfloat setfval(register cell *vp, awkfloat f)
 
 char *setsval(register cell *vp, char *s)
 {
+	char *t;
+
 	dprintf("setsval: %o %s\n", vp, s, NULL);
 	checkval(vp);
 	if (vp == recloc)
@@ -138,10 +141,11 @@ char *setsval(register cell *vp, char *s)
 	vp->tval |= STR;
 	if ((vp->tval & FLD) && vp->nval == 0)
 		donerec = 0;
+	t = tostring(s);
 	if (!(vp->tval&FLD))
 		xfree(vp->sval);
 	vp->tval &= ~FLD;
-	return(vp->sval = tostring(s));
+	return(vp->sval = t);
 }
 
 awkfloat getfval(register cell *vp)

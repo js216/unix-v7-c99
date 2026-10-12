@@ -168,3 +168,22 @@ st2
 awk: trying to access field -1
  record number 1
 st2
+bcd 3
+m
+3 a c
+119
+2 120
+a%d%s|%|
+%
+5%
+   2562
+awk: string  ... too long to print
+st2
+awk: bad format item %*d|
+...
+st2
+ 3.14|7   | ab|A|
+awk: too many range patterns
+st2
+0000000   a   b  \n 351  \n 374  \n  \0
+0000007

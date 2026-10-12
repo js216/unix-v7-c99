@@ -104,6 +104,7 @@ extern node	*nullstat;
 
 extern obj	(*proctab[])(node **a, int n);
 extern obj	true, false;
+#define PA2NUM	29
 extern int	pairstack[], paircnt;
 
 #define cantexec(n)	(n->ntype == NVALUE)

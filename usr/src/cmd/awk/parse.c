@@ -116,6 +116,8 @@ node *genjump(int a)
 }
 node *pa2stat(node *a, node *b, node *c)
 {	node *x;
+	if (paircnt >= PA2NUM)
+		error(FATAL, "too many range patterns");
 	x = node3(paircnt++, a, b, c);
 	x->ntype = NPA2;
 	return(x);

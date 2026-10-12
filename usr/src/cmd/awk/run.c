@@ -15,7 +15,6 @@ struct
 } files[FILENUM];
 
 extern obj execute(node *u), nodetoobj(node *a);
-#define PA2NUM	29
 int pairstack[PA2NUM], paircnt;
 node *winner = (node *)NULL;
 #define MAXTMP 20
@@ -47,7 +46,7 @@ obj execute(node *u)
 			proc=dopa2;
 		else {
 			if (notlegal(a->nobj))
-				error(FATAL, "illegal statement %o", a);
+				error(FATAL, "illegal statement %o", a->nobj);
 			proc = proctab[a->nobj-FIRSTTOKEN];
 		}
 		x = (*proc)(a->narg,a->nobj);
@@ -86,7 +85,6 @@ obj program(node **a, int n)
 		if (isexit(x)) break;
 		tempfree(x);
 	}
-	tempfree(x);
 	if (a[2] != NULL) {
 		x = execute(a[2]);
 		if (isbreak(x) || isnext(x) || iscont(x))
@@ -136,8 +134,8 @@ obj matchop(node **a, int n)
 	x = execute(a[0]);
 	if (isstr(x)) s = x.optr->sval;
 	else	s = getsval(x.optr);
-	tempfree(x);
 	i = match((struct fa *)a[1], s);
+	tempfree(x);
 	if ((n==MATCH && i==1) || (n==NOTMATCH && i==0))
 		return(true);
 	else
@@ -253,26 +251,25 @@ obj indirect(node **a, int n)
 
 obj substr(node **a, int nnn)
 {
-	char *s, *p, temp[100];
-	obj x;
+	char *s, *p;
+	obj x, y;
 	int k, m, n;
 	(void)nnn;
 
 	x = execute(a[0]);
 	s = getsval(x.optr);
 	k = strlen(s) + 1;
-	tempfree(x);
-	x = execute(a[1]);
-	m = getfval(x.optr);
+	y = execute(a[1]);
+	m = getfval(y.optr);
 	if (m <= 0)
 		m = 1;
 	else if (m > k)
 		m = k;
-	tempfree(x);
+	tempfree(y);
 	if (a[2] != nullstat) {
-		x = execute(a[2]);
-		n = getfval(x.optr);
-		tempfree(x);
+		y = execute(a[2]);
+		n = getfval(y.optr);
+		tempfree(y);
 	}
 	else
 		n = k - 1;
@@ -281,68 +278,84 @@ obj substr(node **a, int nnn)
 	else if (n > k - m)
 		n = k - m;
 	dprintf("substr: m=%d, n=%d, s=%s\n", m, n, s);
-	p = temp;
-	s += m - 1;
-	while (n-- > 0)
-		*p++ = *s++;
-	*p = '\0';
-	x = gettemp();
-	setsval(x.optr, temp);
-	return(x);
+	y = gettemp();
+	y.optr->sval = p = tostring(s + m - 1);
+	p[n] = '\0';
+	y.optr->tval = STR;
+	tempfree(x);
+	return(y);
 }
 
 obj sindex(node **a, int nnn)
 {
-	obj x, y;
+	obj x, y, z;
 	char *s1, *s2, *p1, *p2, *q;
 	(void)nnn;
 
 	x = execute(a[0]);
 	s1 = getsval(x.optr);
-	tempfree(x);
 	y = execute(a[1]);
 	s2 = getsval(y.optr);
-	tempfree(y);
 
-	x = gettemp();
+	z = gettemp();
 	for (p1 = s1; *p1 != '\0'; p1++) {
 		for (q=p1, p2=s2; *p2 != '\0' && *q == *p2; q++, p2++)
 			;
 		if (*p2 == '\0') {
-			setfval(x.optr, (awkfloat) (p1 - s1 + 1));	/* origin 1 */
-			return(x);
+			setfval(z.optr, (awkfloat) (p1 - s1 + 1));	/* origin 1 */
+			break;
 		}
 	}
-	setfval(x.optr, 0.0);
-	return(x);
+	tempfree(x);
+	tempfree(y);
+	return(z);
+}
+
+static char *room(char **bp, int *np, char *p, int k)
+{
+	int i;
+
+	i = p - *bp;
+	if (i + k < *np)
+		return(p);
+	*np = i + k + RECSIZE;
+	if ((*bp = realloc(*bp, *np)) == NULL)
+		error(FATAL, "out of space in format");
+	return(*bp + i);
 }
 
 char *format(char *s, node *a)
 {
 	char *buf, *p, fmt[100], *t, *os;
 	obj x;
-	int flag = 0;
+	int flag = 0, n, w;
 	awkfloat xf;
 
 	os = s;
-	p = buf = (char *)malloc(RECSIZE);
+	n = RECSIZE;
+	p = buf = (char *)malloc(n);
 	while (*s) {
+		p = room(&buf, &n, p, 2);
 		if (*s != '%') {
 			*p++ = *s++;
 			continue;
 		}
 		if (*(s+1) == '%') {
 			*p++ = '%';
-			*p++ = '%';
 			s += 2;
 			continue;
 		}
-		for (t=fmt; (*t++ = *s) != '\0'; s++)
+		for (t=fmt; (*t++ = *s) != '\0'; s++) {
+			if (t >= fmt + sizeof fmt - 2)
+				error(FATAL, "format item %.20s... too long", os);
 			if (*s >= 'a' && *s <= 'z' && *s != 'l')
 				break;
+		}
 		*t = '\0';
-		if (t > fmt + 100)
-			error(FATAL, "format item %.20s... too long", os);
+		for (w = 0, t = fmt; *t != '\0'; t++)
+			if (*t == '*' || (*t >= '0' && *t <= '9' && (w = 10*w + *t - '0') > 100000))
+				error(FATAL, "bad format item %.20s...", os);
+		w += t - fmt;
 		switch (*s) {
 		case 'f': case 'e': case 'g':
 			flag = 1;
@@ -365,6 +378,7 @@ char *format(char *s, node *a)
 			break;
 		}
 		if (flag == 0) {
+			p = room(&buf, &n, p, w + 1);
 			sprintf(p, "%s", fmt);
 			p += strlen(p);
 			continue;
@@ -375,10 +389,13 @@ char *format(char *s, node *a)
 		a = a->nnext;
 		if (flag != 4)	/* watch out for converting to numbers! */
 			xf = getfval(x.optr);
+		else
+			t = x.optr->sval==NULL ? "" : getsval(x.optr);
+		p = room(&buf, &n, p, w + (flag==4 ? strlen(t) : 400));
 		if (flag==1) sprintf(p, fmt, xf);
 		else if (flag==2) sprintf(p, fmt, (long)xf);
 		else if (flag==3) sprintf(p, fmt, (int)xf);
-		else if (flag==4) sprintf(p, fmt, x.optr->sval==NULL ? "" : getsval(x.optr));
+		else if (flag==4) sprintf(p, fmt, t);
 		tempfree(x);
 		p += strlen(p);
 		s++;
@@ -579,7 +596,7 @@ obj aprintf(node **a, int n)
 
 	x = asprintf(a,n);
 	if (a[1]==NULL) {
-		printf(x.optr->sval);
+		printf("%s", x.optr->sval);
 		tempfree(x);
 		return(true);
 	}
@@ -592,13 +609,14 @@ obj split(node **a, int nnn)
 	obj x;
 	cell *ap;
 	register char *s, *p;
-	char *t, temp[100], num[5];
+	char *t, *temp, *os, num[12];
 	register int sep;
 	int n;
 	(void)nnn;
 
 	x = execute(a[0]);
-	s = getsval(x.optr);
+	s = os = tostring(getsval(x.optr));
+	temp = tostring(s);
 	tempfree(x);
 	if (a[2] == nullstat)
 		sep = **FS;
@@ -635,6 +653,8 @@ obj split(node **a, int nnn)
 			break;
 		s = p + 1;
 	}
+	xfree(temp);
+	xfree(os);
 	x = gettemp();
 	x.optr->tval = NUM;
 	x.optr->fval = n;
@@ -795,6 +815,8 @@ obj print(node **a, int n)
 	s[0] = '\0';
 	for (x=a[0]; x!=NULL; x=x->nnext) {
 		y = execute(x);
+		if (strlen(s) + strlen(getsval(y.optr)) + strlen(x->nnext==NULL ? *ORS : *OFS) >= RECSIZE)
+			error(FATAL, "string %.20s ... too long to print", s);
 		strcat(s, getsval(y.optr));
 		tempfree(y);
 		if (x->nnext==NULL)
@@ -802,8 +824,6 @@ obj print(node **a, int n)
 		else
 			strcat(s, *OFS);
 	}
-	if (strlen(s) >= RECSIZE)
-		error(FATAL, "string %.20s ... too long to print", s);
 	if (a[1]==nullstat) {
 		printf("%s", s);
 		return(true);
@@ -834,7 +854,7 @@ redirprint(char *s, int a, node *b)
 	x = execute(b);
 	getsval(x.optr);
 	for (i=0; i<FILENUM; i++)
-		if (strcmp(x.optr->sval, files[i].fname) == 0)
+		if (files[i].fname != NULL && strcmp(x.optr->sval, files[i].fname) == 0)
 			goto doit;
 	for (i=0; i<FILENUM; i++)
 		if (files[i].fp == 0)
