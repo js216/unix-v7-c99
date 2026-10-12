@@ -10841,8 +10841,10 @@ the standard input and output is in `data.c`, which initialises the first
 three entries.
 
 Note that `_flag` and `_file` are `char`. On the PDP-11 `char` was
-signed and on the ARM it is unsigned, but neither field ever holds a
-value above 0177, and the flags are confined to eight bits.
+signed and on the ARM it is unsigned. `_file` never exceeds 0177, and
+the flags fit in eight bits; `_IORW` (0200) makes `_flag` negative on
+the PDP-11, but the flags are only ever tested and changed by masks, on
+which the sign has no effect.
 
 #lines(1, 11)
 
@@ -11023,8 +11025,9 @@ will not have its output appended. Mode `r` opens an existing file. The
 #f("sys2.c")).
 
 Note that `errno` is examined (24) only after a failure, and that if
-the second `create` fails too, `lseek` is applied to -1, fails
-harmlessly, and the failure is reported below (38).
+the `open` fails for another reason, or the `create` fails too,
+`lseek` is applied to -1, fails harmlessly, and the failure is reported
+below (38).
 
 The stream is then set up: an empty buffer, the file descriptor, and
 the direction. A buffer is not allocated here; the first `getc` or
@@ -11177,9 +11180,9 @@ since the PDP-11's exponent did not exceed 38.
 
 `%f` asks `fcvt` for the given number of digits after the point. A value
 below 1 begins with `0`. The digits before the point come from the
-buffer, but `fcvt` returns no more than 79 digits in all, so a value of
-1e80 or more runs out of digits; the tests of `*s` (140, 144) then
-supply zeros in their place. A `double` carries only about seventeen
+buffer, but `fcvt` returns no more than 79 digits in all, and runs out
+when the digits before the point and the precision together need more;
+the tests of `*s` (140, 144) then supply zeros in their place. A `double` carries only about seventeen
 significant decimal digits, so nothing of value is lost.
 
 #lines(101, 147)
@@ -11259,8 +11262,8 @@ number of items stored, or -1 if the input ended before anything could
 be matched.
 
 Unlike `_doprnt` the file was C in v7, so the port's changes are
-modest. Three of them repair faults which v7 shared, and one replaces
-the way the arguments were found.
+modest. Three of them repair faults in v7's code, one replaces the way
+the arguments were found, and one adds `ll`.
 
 `_sctab` (20) classifies characters: `SPC` marks the white space which
 separates fields, and `STP` is set afresh for each `%[` conversion to
@@ -11307,10 +11310,9 @@ really passed: `char *` for strings and characters, `float *` or
 `double *` for the floating conversions, and `short *`, `int *`,
 `long *`, or `long long *` for integers. The pointer is converted to `char *` for
 `_innum`, which converts it back. Fetching every argument as an `int **`,
-as v7 in effect did, is undefined in C99 (7.15.1.1), and so is storing a
-`float` through an `int` object (6.5): under the ARM procedure call
-standard all these pointers happen to be passed alike, but the compiler
-is entitled to assume otherwise.
+as v7 in effect did, is undefined in C99 (7.15.1.1): under the ARM
+procedure call standard all these pointers happen to be passed alike,
+but the compiler is entitled to assume otherwise.
 
 `_innum` handles every conversion, passing strings on to `_instr`. If
 it stored something, and an argument was supplied for it, the count of
@@ -11321,9 +11323,10 @@ matches goes up. If the input ended, the scan ends.
 `_innum` converts a number. The field width is first cut to 62
 characters (131), since the characters of the field are copied into
 `numbuf`, of 64 bytes, for `atof`; with v7's default width of 30000 a
-long enough number overflowed the stack. 62 leaves room for an `e`
-which may be added after the count is exhausted, and for the null
-character. Leading white space is skipped, and a sign noted.
+long enough number overflowed the stack. 62 leaves room for the null
+character and for the one extra byte stored with an exponent's `e`
+(185), which takes two bytes of `numbuf` for one character of the
+count. Leading white space is skipped, and a sign noted.
 
 #lines(119, 155)
 
@@ -11453,7 +11456,8 @@ its `double` member; the break begins at the symbol `end`, which the
 linker aligns to four bytes only, so `sbrk` (`sbrk.s`) rounds the break
 up to a multiple of eight before it extends it. Since the low bits of
 every block's address are zero, the lowest is free to serve as `BUSY`.
-The cost of the alignment is at most four bytes a block.
+The cost of the alignment is four or eight bytes a block: four in the
+pointer word, and up to four more in rounding the data to eight bytes.
 
 `allocs` (54) is the initial arena of two words, `allocp` is the point
 at which the next search starts, `alloct` is the last block, an empty
@@ -11607,8 +11611,10 @@ instead, and only such an absurd time is affected.
 
 #lines(80, 110)
 
-`sunday` finds the first Sunday on or after a given day of the year,
-using the day of the week known for the current day. Days from the
+`sunday` finds the last Sunday on or before a given day of the year,
+using the day of the week known for the current day; its comment, v7's,
+says "on or after", but the subtraction can only move back. So 119, the
+last day of April in an ordinary year, yields the last Sunday in April. Days from the
 end of February onwards (day 58) are moved one later in a leap year.
 `dysize` takes the whole year, so 1900 is added to `tm_year`, which
 counts from 1900 (121); v7 passed `tm_year` itself.
@@ -11628,8 +11634,8 @@ years, and any owner can set a file's times so far (`utime`,
 #f("sys4.c")); the loops would then take hours over a single `ls -l`. The
 hours, minutes, and seconds are stored through `tp`, which walks the
 first members of `struct tm` as though it were an array of `int`; this
-depends on the members being consecutive `int`s, which they are on both
-machines.
+depends on the members being consecutive `int`s, which they are on the
+ARM as on the PDP-11.
 
 The day of the week is computed from the day count plus 7340036, a
 number which is 4 more than a multiple of seven (1 January 1970 was a
@@ -11645,8 +11651,8 @@ fails first in 2100. `d1` now counts whole years from 1970 (166--169),
 and `dysize` (below) follows the Gregorian calendar. `tm_year` is the
 year less 1900, as before (170), but the year is first reduced modulo
 10,000, which is 25 cycles, so that it lies between 0 and 9999 and
-fits the four digits of `asctime`; a year beyond them would overflow an
-`int` in any case. Being a whole number of cycles, the reduction leaves
+fits the four digits of `asctime`; the furthest years of a 64-bit time
+would not even fit an `int`. Being a whole number of cycles, the reduction leaves
 the month, the day, and the day of the week exact.
 
 #lines(124, 186)
@@ -11916,8 +11922,10 @@ as the old left half exclusive-or a function of the old right half and
 the subkey, and the old right half becomes the new left half. The
 function expands the right half with `E`, adds the subkey, reduces each
 group of six bits to four through a selection function, and permutes
-the result with `P`. The comment at (278) explains the peculiar order
-of the bits in the index of `S`.
+the result with `P`. The comment at (278) remarks on the peculiar order
+of the bits in the index of `S`: the first and last bits of each group
+of six choose one of the four rows of 16 entries, as the standard has
+it, and the middle four the column.
 
 #lines(233, 323)
 
@@ -11949,8 +11957,7 @@ it will write the command's input. `tst` (3) chooses between its two
 arguments by the mode, and so decides which end of the pipe the caller
 keeps (`myside`) and which the child gets (`hisside`). The child closes
 the caller's end, moves its own end to descriptor 0 or 1 with `dup2`,
-and executes the command through the shell, exactly as the shell would
-for `sh -c`. `_exit` (24), not `exit`, ends a child whose `execl` fails,
+and executes the command with `sh -c`. `_exit` (24), not `exit`, ends a child whose `execl` fails,
 so that the parent's stdio buffers, copied by `fork`, are not flushed a
 second time.
 
@@ -11982,8 +11989,8 @@ command, which shares the terminal, does not also kill the caller.
 
 The three saved actions are now pointers to functions of one `int`
 returning nothing (37), the type with which `signal.h` declares
-`signal` (#f("sys/signal.s")); v7 declared them, together with `f` and
-`r`, as pointers to functions returning `int`.
+`signal` (#f("sys/signal.s")); v7 declared them, in one declaration
+with the `int`s `f` and `r`, as pointers to functions returning `int`.
 
 #lines(32, 53)
 #source("/usr/src/libc/stdio/system.c")
@@ -12162,8 +12169,8 @@ one at a time, each by its own line of shell, and the larger commands
 (`sh`, `awk`, `dc`, and the rest) had makefiles of their own. None of
 these is used. The port is built on another machine, by one `make`,
 from this file and the fragments it includes: #f("sys.mk") for the
-kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"), and
-#f("games/games.mk"). A single `make` sees the whole graph of
+kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"),
+#f("games/games.mk"), and `test.mk` for the regression tests. A single `make` sees the whole graph of
 dependencies, so that a changed header recompiles exactly the files
 which include it, a new `libc.a` relinks exactly the programs which use
 it, a parallel build gives the same result as a serial one, and a
@@ -12216,7 +12223,7 @@ the assembler accepts the floating point instructions of #f("low.s"),
 convention in the objects, which therefore link with code of either
 kind. `-Os` optimizes for size; v7
 compiled with `cc -O`, and the text of the MP135 machine's kernel, its
-code and constants, is 41,571 bytes with `-Os` against 48,651 with
+code and constants, is 41,711 bytes with `-Os` against 48,850 with
 `-O`, which matters on the MP135 machine, where the whole kernel must
 fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
@@ -12225,18 +12232,23 @@ which the compiler ignores when it only compiles; they apply to the
 link of every user program (20), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
 segments: the text, with the read-only constants, readable and
-executable, and the data, readable and writable. The ELF counterpart of
-v7's 0410 file, `exec` (#f("sys1.c")) maps the first read-only and
-shares it among all the processes running the program. `max-page-size`
+executable, and the data, readable and writable. This is the ELF
+counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
+read-only and shares it among all the processes running the program. `max-page-size`
 places the data at the start of a new 4096-byte page, so that the two
 can be mapped with different permissions. `-Ttext=0x80` links the text
 at address `0x80`, which leaves room below it for the signal trampoline
-at 8 (#f("seg.h")), and for the ELF file header and the two program
-headers (116 bytes), which the linker then places at the start of the
-text segment. Linked any lower, the text would have to start at the
-same offset in its page in the file as in memory, and every program
-file would carry a page of padding; the kernel skips the headers when it
-loads the text (`xalloc`, #f("text.c")). `-MMD -MP` make the
+at 8 (#f("seg.h")), and for the ELF file header and two program headers
+(116 bytes). The linker then places the headers at the start of the
+text segment, which begins at offset 0 of the file as at address 0, and
+the kernel skips them when it loads the text (`xalloc`, #f("text.c")).
+Where the headers do not fit below the text, the text must still start
+at the same offset in its page of the file as in memory, and the file
+carries a page of padding before it. That is the case for most programs
+here: the 64-bit division of `libgcc`, which `_doprnt` needs
+(#f("stdio/doprnt.c")), brings a section of unwinding information,
+`.ARM.exidx`, to which the linker gives a program header of its own,
+and the three headers, 148 bytes, do not fit in 128. `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
 (91).
 
@@ -12273,8 +12285,8 @@ supplies.
 `unix.ld` of each machine and the output of `bison`. `.SECONDARY` keeps
 `make` from deleting them as intermediate files once the objects are
 made. Every object and generated file depends on the `Makefile`
-itself (36), and on its own fragment as well, so that a change of flags
-or of a rule remakes everything it could affect.
+itself (36), and every object on its own fragment as well, so that a
+change of flags or of a rule remakes everything it could affect.
 
 The fragments (24--29) build the parts of the system: the kernels
 (#f("sys.mk")), the two libraries, the commands, the games, and the
@@ -12305,8 +12317,8 @@ of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
 `ROOTFS_STATIC` lists the files of the image which are not compiled:
 the shell scripts `1`, `true`, `false`, and `nohup`, the files of
 #f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
-the dictionary, the fortunes, and `bc`'s library, all of which come
-from the v7 tree (80). The image also holds the regression tests, in
+the dictionary, the fortunes, and `bc`'s library. All but the files of
+`etc` are copied from the v7 tree (80). The image also holds the regression tests, in
 `/usr/local/test`: the test scripts and the data files from the
 repository, and the programs and the file system image which
 `test.mk` makes.
@@ -12354,9 +12366,9 @@ long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
 everything but `long`, which there is eight bytes, so `sed` turns each
 `typedef long` into `typedef int`, the same four bytes on every host;
 `daddr_t` and `off_t` are the types it changes. The host's own headers
-also define an `off_t` and a `time_t`, of other sizes, and C forbids
-two different definitions of one name, so the port's two are renamed
-in the copies. `mkfs` itself keeps the host's `time_t`, which `time`
+also define an `off_t` and a `time_t`, and C99 forbids a second
+definition of a type name, so the port's two are renamed in the
+copies. `mkfs` itself keeps the host's `time_t`, which `time`
 fills, and assigns it to the port's in the inodes and the super-block.
 Since `mkfs` is not one of the objects whose dependencies the compiler
 records, its headers and the `Makefile` are named as prerequisites
@@ -12502,10 +12514,11 @@ the larger address space; every program here is linked the same way.
 
 #lines(1, 9)
 
-The objects. `awk` is listed by hand, because two of its objects come
+The objects. `awk` is listed by hand, because three of its objects come
 from generated sources and one of its C files, `proc.c`, is not part of
 `awk` at all. The other directories contribute all their C files.
-`GEN` names the sources which `bison`, `flex`, and `awk`'s `proc` write.
+`GEN` names the files which `bison`, `flex`, and `awk`'s `proc` write,
+and `proc` itself.
 
 #lines(10, 16)
 
@@ -12881,8 +12894,8 @@ port adds a double indirect block (594--604): it allocates as many
 indirect blocks as the file needs, each written from the next 128
 entries of `ib`, and writes their numbers into a block of its own,
 addressed by `i_addr[11]`. This is the layout the kernel's `bmap`
-(#f("subr.c")) follows. The double indirect array `dbl` is cleared
-first, so that the unused entries are zero.
+(#f("subr.c")) follows. Each entry of the double indirect array `dbl`
+which the file does not need is set to zero.
 
 The block addresses of all files, and the device numbers of special
 files, are then packed into the disk inode by `ltol3`. The comment at
