@@ -171,10 +171,11 @@ their offsets as physical and kernel addresses respectively.
 
 A resource map is a list of the free areas of some resource. Each
 element gives the size of one area and the address of its first unit,
-both measured in whatever unit suits the resource. The system keeps two
-such lists, one for main memory and one for the swap area, and both are
-managed by the two procedures of #f("malloc.c"), which do not need to
-know which resource they are handling. Main memory is measured in
+both measured in whatever unit suits the resource. The system keeps
+three such lists, for main memory, for the swap area, and for the pool
+of user page tables, and all three are managed by the two procedures
+of #f("malloc.c"), which do not need to know which resource they are
+handling. Main memory and the pool are measured in
 _clicks_, the granule in which the memory management unit maps memory,
 and in which v7 counts all of core; the swap area is measured in
 512-byte disk blocks. On the PDP-11 a click was 64 bytes. Here, as in
@@ -185,8 +186,9 @@ The fields were `short` and `unsigned short` in v7, so that an address
 could reach 65536 clicks (four megabytes of core) or as many swap
 blocks, and a size half as far. A click number is now the physical
 address divided by 4096, as on the PDP-11 it was the address divided
-by 64, and the MP135 machine's memory lies above 0xc0000000, at click
-numbers beyond 786432. Both fields are therefore `int`.
+by 64, and the MP135 machine's memory begins at 0xc0000000, click
+786432. A size outgrows a `short` as well: 512 MB is 131072 clicks.
+Both fields are therefore `int`.
 `m_addr` is signed, although an address is never negative, because
 `malloc` and `mfree` (#f("malloc.c")) take and return an `int`; no map
 is large enough for the sign to matter.
@@ -194,8 +196,8 @@ is large enough for the sign to matter.
 #lines(1, 5)
 
 The maps themselves follow: `coremap` for main memory, `swapmap` for
-the swap area, and `ptmap` for the pool of user page tables
-(#f("ureg.c")).
+the swap area, and, new in the port, `ptmap` for the pool of user page
+tables (#f("ureg.c")).
 
 In v7 these lines defined storage, not merely declared it, and the
 header is included by six files. Each file therefore contained its own
@@ -218,9 +220,10 @@ puts one back. They know nothing of the resource itself. The same code
 hands out core to processes and to texts (the read-only instructions of
 a program, shared by every process running it) in units of 4096-byte clicks
 (`swapin`, `newproc`, and `expand` in #f("slp.c"), `xexpand` in
-#f("text.c")) and swap space in units of 512-byte disk blocks (`xswap`
+#f("text.c")), swap space in units of 512-byte disk blocks (`xswap`
 and `xalloc` in #f("text.c"), and `exece` in #f("sys1.c"), which
-borrows swap to hold its argument list).
+borrows swap to hold its argument list), and the user page tables,
+also in clicks (`ptbuild` in #f("ureg.c")).
 Despite its name, `malloc` has nothing to do with the C library routine
 of the same name.
 
@@ -244,8 +247,8 @@ be large enough never to overflow. v7 raised `NPROC` to 150 but left
 became fragmented into fifty pieces; past that, `mfree` would write
 beyond the end of the map. A sounder bound is easily had: a map can
 hold no more free areas than there are allocated areas between them,
-plus one, and it needs one entry more for the sentinel. `CMAPSIZ` and
-`SMAPSIZ` (#f("param.h")) are computed from this bound, and the
+plus one, and it needs one entry more for the sentinel. `CMAPSIZ`,
+`SMAPSIZ`, and `PMAPSIZ` (#f("param.h")) are computed from this bound, and the
 configuration of each machine gives the maps those sizes
 (#f("qemu/c.c")).
 
@@ -402,8 +405,9 @@ advances past it. The extra step for `%D` and the increment at the
 bottom of the loop are therefore gone. `va_end` (39) is called before
 the return because C99 requires each `va_start` to be matched by one.
 
-`register c` (31) becomes `register int c`, since C99 has no implicit
-`int`. The doubled parentheses at line 49 are explained in
+`fmt` is no longer `register`: C99 leaves `va_start` undefined when
+its last named parameter has that storage class. `register c` (31)
+becomes `register int c`, since C99 has no implicit `int`. The doubled parentheses at line 49 are explained in
 #f("malloc.c").
 
 The reader may wonder at `%D` (51). On the PDP-11 `int` had 16 bits
@@ -522,8 +526,8 @@ enough for one image of `MAXMEM` clicks and more.
 
 `SSIZE` and `SINCR` (11, 12) are the size of the stack which `exec`
 gives a new program and the amount by which `grow` (#f("sig.c")) enlarges
-it, both in clicks. v7 had 20 clicks of 64 bytes for each; two pages are
-the nearest equivalent in the larger click.
+it, both in clicks. v7 had 20 clicks of 64 bytes, 1280 bytes, for each;
+here each is two pages, 8192 bytes.
 
 `CMAPSIZ` and `SMAPSIZ` (15, 16) are the sizes of the two resource maps
 (#f("map.h")), which v7 left at 50 while it raised `NPROC` to 150. They
@@ -536,8 +540,8 @@ holds two images of the process it grows: `NPROC+NTEXT+1` allocated
 areas, hence `NPROC+NTEXT+3` entries. The swap area holds at most an
 image for each process, a copy of each text, and the argument list of
 each process in the middle of an `exec` (#f("sys1.c")): `2*NPROC+NTEXT`
-allocated areas, hence `2*NPROC+NTEXT+2`. With `NPROC` and `NTEXT`
-variables, so are these three sizes; only the configuration file, where
+allocated areas, hence `2*NPROC+NTEXT+2`. Since `NPROC` and `NTEXT`
+are variables, so are these sizes; only the configuration file, where
 the names are constants again, uses them to define the maps.
 
 `PMAPSIZ` and `NPTAB` (17, 18) are new. The user page tables of the
@@ -576,8 +580,8 @@ caught, and ignored by number.
 
 #lines(45, 70)
 
-`NBPW` (76), the number of bytes per word, is no longer the constant 2
-but `sizeof(int)`, which is 4.
+`NBPW` (76), the number of bytes per word, was already `sizeof(int)`
+in v7, and so is now 4 rather than 2.
 
 A disk block holds 512 bytes. Since a block number (`daddr_t`, 132)
 occupies four bytes on both machines, an indirect block holds 128 block
@@ -704,8 +708,9 @@ linker. C99 permits one external definition of an object in the whole
 program, and GCC does not merge such definitions by default. Every
 variable is therefore now declared `extern`, and defined once:
 `rootdev`, `swapdev`, `pipedev`, `swplo`, and `nswap` with their values
-in the configuration file #f("qemu/c.c"), as in v7; `msgbufp` in
-#f("machdep.c"); the rest in #f("main.c"). Since the array sizes (6,
+in the configuration file #f("qemu/c.c"), as in v7; `msgbufp` and the
+clock's variables in #f("machdep.c"); `l1tab` and `l1pa` in
+#f("ureg.c"); the rest in #f("main.c"). Since the array sizes (6,
 39) come from #f("param.h"), that file must be included first.
 
 v7's `cputype`, the model of PDP-11, and `lks`, the address of the
@@ -724,7 +729,7 @@ for the MP135 machine, and both append to the buffer, so the pointer is
 defined once in #f("machdep.c") and declared here for both.
 
 The four variables of the clock (46, 47) are new as well. `clkstart`
-(#f("machdep.c")), which defines them, sets them up, and `clock`
+(#f("machdep.c")) sets them up, and `clock`
 (#f("clock.c")) uses them to set the deadline of each tick. `l1tab` and
 `l1pa` (48, 49) locate the first-level page tables of the processes,
 one for each slot of the process table, by the kernel's address and by
@@ -761,11 +766,15 @@ handlers, which take no arguments since they find them through
 `u.u_ap`. The rest belong to the port:
 
 - `machine_init`, `install_sigtramp`, `irq`, `panictrap`,
-  `sigreturn`, and `vtop` are in #f("machdep.c"). `sigreturn` is system
+  `sigreturn`, and `vtop` are in #f("machdep.c"), and so, in the second
+  list, are `fumem` and `sumem`, which read and write a byte for the
+  memory special files. `sigreturn` is system
   call 63, which a signal handler returns through. `irq` is the
   interrupt handler. `vtop` (157) turns a kernel address into the
   physical address a device must be given.
 - `ptfree` (#f("ureg.c")) releases a process's page tables.
+- `ttyhold` and `ttyunhold` (#f("tty.c")) hold back console input
+  which the raw queue cannot take.
 - `arm_sync_icache`, `dcflush`, `dcinval`, `dmbsy`, `idle`, `restfp`, `savfp`,
   `tlbflush`, `ttbset`, and the generic timer accessors `cntv_ctl_set` and
   `cntv_cval_set` are in #f("mch.s"). There, too, are `cntfrq_get`, `dfar`, and `dfsr`, in the
@@ -773,10 +782,10 @@ handlers, which take no arguments since they find them through
   address and status of the last data abort. `savfp` and `restfp`, v7's
   names, store and load the floating point registers of the current
   process.
-- `cninit` and `clock_ddr_init` are generated by `mkconf` into each
-  machine's #f("qemu/c.c"). They call the console's initialisation
-  routine `klinit`, and on the MP135 machine also `ddrinit`
-  (#f("stm32ddr.c")).
+- `cninit`, `bdinit`, and `clock_ddr_init` are generated by `mkconf`
+  into each machine's #f("qemu/c.c"). They call the initialisation
+  routines of the console, `klinit`, and of the disk, `rkinit`, and on
+  the MP135 machine also `ddrinit` (#f("stm32ddr.c")).
 - The drivers keep v7's names. `rkstrategy` and its companions are
   defined by #f("virtio_blk.c") for the QEMU machine and by
   #f("stm32sd.c") for the MP135 machine; likewise the `kl` routines and
@@ -862,7 +871,8 @@ by the definitions which the port adds.
 `estabur` (#f("ureg.c")) for the text: read-only, or read and write.
 On the PDP-11 they were the access field of a descriptor register. Here
 they are the access permission bits of a long-format page entry, bits 6
-and 7, and `sureg` ors them into the entries which map the text: 11
+and 7, and `ptbuild` (#f("ureg.c")) ors them into the entries which
+map the text: 11
 lets user mode read the page but not write it, 01 lets it do both, and
 in either case the kernel may do both. The data and the stack are
 always mapped `RW`. The page entries' other bits come from `pguser`,
@@ -1460,8 +1470,8 @@ instruction fetch. It is called with the kernel address and length of
 what was written: by `xalloc` (#f("text.c")) after it has read in a
 text and planted the signal trampoline, by `xexpand` (#f("text.c")) and
 `swapin` (#f("slp.c")) after a text has been read back from the swap area, by
-`procxmt` (#f("sig.c")) after a debugger has stored a word into the
-text, and by `main` (#f("main.c")) after it copies out `icode`. Nothing
+`procxmt` (#f("sig.c")), with the user address instead, after a
+debugger has stored a word into the text, and by `main` (#f("main.c")) after it copies out `icode`. Nothing
 else is ever executed: a program's data and stack are not, and the
 process switch, which changes only the mapping, does not call it.
 
@@ -1562,7 +1572,7 @@ not reach directly; here both machines have the unit (#f("low.s")) and
 every register is stored directly. `FPEXC` needs no saving, since the
 unit stays enabled. v7's `stst`, which fetched the code of a floating
 exception, has no counterpart: the unit of the Cortex-A7 takes no trap
-on an arithmetic exception, so `SIGFPE` is never sent, and a program
+on an arithmetic exception, so `SIGFPT` is never sent, and a program
 finds what happened in the cumulative flags of `FPSCR`.
 
 #lines(241, 254)
@@ -1615,12 +1625,10 @@ their definitions below. v7 needed no such line, since its compiler took an
 undeclared function to return `int`; C99 does not allow the call.
 
 The definitions at 14--36 are new. v7 defined these variables in the
-headers themselves: every file which included #f("systm.h") contained
-its own `int lbolt;` and so on, and the linker merged the copies into
-one. C99 allows an object only one external definition in the whole
-program, and a modern toolchain merges such "common" symbols only when
-asked to. The headers now declare the variables `extern`, and each is
-defined here, once. `rootdev`, `swapdev`, `pipedev`, `swplo`, and
+headers themselves, in #f("systm.h") and, for `mpxip` (36), in
+#f("inode.h"), and relied on the linker to merge the copies which each
+including file made. The headers now declare them `extern`
+(#f("systm.h") gives the reason), and each is defined here, once. `rootdev`, `swapdev`, `pipedev`, `swplo`, and
 `nswap` are not among them, because the configuration file
 #f("qemu/c.c") defines them with their values; nor are the maps and the
 mount table, which v7's `main.c` defined, since their sizes are now
@@ -1679,8 +1687,8 @@ user address 0.
 separate instruction and data caches which are not kept coherent by the
 hardware: the instructions just stored may sit in the data cache, and
 stale lines may sit in the instruction cache. The routine (#f("mch.s"))
-writes the page back from the data cache, through the kernel's own
-address for it, then discards the instruction cache and the branch
+writes the copied bytes back from the data cache, through the kernel's
+own address for them, then discards the instruction cache and the branch
 predictor.
 
 #lines(93, 96)
@@ -1984,7 +1992,7 @@ default so that it is not caught in turn.
 
 The stack pointer is then lowered past the frame; the link
 register, `u_ar0[14]`, for which #f("reg.h") has no name, is set to the
-trampoline at `UENTRY_SIGTRAMP` (see `install_sigtramp`, 297); the
+trampoline at `UENTRY_SIGTRAMP` (see `install_sigtramp`, 298); the
 program counter (`R7`, which in #f("reg.h") is `r15`) to the handler; and
 `r0` to the signal number, the handler's argument. v7 also cleared the
 trace bit in the saved status, so that a traced process would not trap
@@ -2138,11 +2146,10 @@ and the reserved parts of the 2 MB blocks.
 #lines(255, 295)
 
 `install_sigtramp` writes the two-instruction signal trampoline,
-`sigreturn` by `svc`, at user address 8. It is called by `xalloc`
-(#f("text.c")) after a text has been read in, while the text is still
-mapped writable, so that it becomes part of the shared text. Address 8
-lies below `0x80`, where programs are linked to begin, so no program
-overwrites it. The stores go through `suword` (#f("mch.s")), with the
+`sigreturn` by `svc`, at user address 8 (#f("seg.h")). `xalloc`
+(#f("text.c")) calls it while the text it has just read in is still
+mapped writable, so that the trampoline becomes part of the shared
+text. The stores go through `suword` (#f("mch.s")), with the
 permissions of user mode.
 
 `panictrap` is the target of the vectors which should never be taken
@@ -2218,8 +2225,11 @@ between `exit` and the parent's `wait`.
 marks process 0, which is never swapped. `SLOCK` holds a process in
 memory temporarily: while it is being swapped out, while its text is
 read in, and while `physio` transfers directly to or from its image.
-`SULOCK` does the same at the user's request, through the `lock`
-system call (`syslock`). `STRC` and `SWTED` serve `ptrace`.
+`SSWAP` marks a process whose image was written to the swap area from
+the middle of `newproc`, `expand`, or `xexpand`, so that `swtch` (#f("slp.c"))
+resumes it through `u_ssav` rather than `u_rsav`. `SULOCK` holds a
+process in memory at the user's request, through the `lock` system call
+(`syslock`). `STRC` and `SWTED` serve `ptrace`.
 
 #lines(41, 49)
 
@@ -2422,7 +2432,8 @@ the sizes of the text, data, and stack of a new or changed image and
 records them as a _prototype_ in the `user` structure. `sureg` loads the
 hardware from the prototype, adding the physical address of the image;
 it is called whenever the image may have moved: by `estabur`, by
-`expand` (#f("slp.c")), and when a process is resumed in `swtch`.
+`newproc` and `expand` (#f("slp.c")), by `xexpand` (#f("text.c")), and
+when a process is resumed in `swtch`.
 
 The division of labour is v7's, and so is the shape of the address
 space. On the PDP-11 the prototype was a set of sixteen segmentation
@@ -2520,8 +2531,10 @@ stack in the third, so that they never overlap. `ctos`
 (#f("seg.h")) is the number of pages in a gigabyte. And the image,
 with its per process data area, must not exceed `maxmem` (122, 123),
 which `startup` (#f("machdep.c")) has limited to `MAXMEM`. The sum is
-cast to `int` for that comparison, because `maxmem` is an `int`; v7
-compared it as unsigned.
+cast to `int` for that comparison, because `maxmem` is an `int`: C99
+would otherwise compare the two as unsigned, as v7 did, and the
+compiler would warn of it. The test at line 120 has already bounded the sum, so
+the cast cannot make it negative.
 
 The prototype is then recorded (124--127), the old tables are released,
 and new ones built and loaded. Callers ask for a mapping before the
@@ -2559,13 +2572,12 @@ the stack pointer, and `resume` reloaded the kernel segmentation register
 link register, and `resume` rewrites the entries of the third-level page
 table `kl3u` which map `u` and then discards their translations.
 
-Note that `lab` is always one of `u.u_rsav`, `u.u_qsav`, or `u.u_ssav`,
-that is, an address within `u`. `resume` reads it only after the new
-process has been mapped, so that it is the incoming process's copy of
-the label which is used. The comment at (421) says as much.
+Since `lab` always lies within `u`, and `resume` reads it only after the
+new process has been mapped, it is the incoming process's copy of the
+label which is used (#f("mch.s")); the comment at line 421 says as much.
 
 The declaration of `swapin` (12) is new. `sched` (240) calls it before
-its definition (#f("prf.c")); no other file uses it, so the declaration is here and not in #f("systm.h").
+its definition, as `printf` calls `printn` (#f("prf.c")); no other file uses it, so the declaration is here and not in #f("systm.h").
 
 A process sleeps on a _channel_: an address which by convention stands
 for the event awaited, such as that of the buffer or inode concerned.
@@ -2673,8 +2685,8 @@ could rouse it, or stopped by tracing (260); failing that, the process
 which has been longest in core. The victim is swapped out only if the
 first kind was found, or if the process to be brought in has waited 3
 seconds and the victim has had 2 (279); otherwise `sched` sleeps on
-`runin`, which `clock` wakes each second and `sleep` (56) wakes when a
-candidate appears.
+`runin`, which `clock` wakes each second, `sleep` (56) when a
+candidate appears, and `mfree` (#f("malloc.c")) when core is freed.
 
 The parentheses added in (260) make explicit v7's reliance on `&&`
 binding more tightly than `||`, of which `gcc` warns otherwise; the
