@@ -693,7 +693,7 @@ file calls. In v7 it held only the former, together with a handful of
 function declarations, mostly for routines which return pointers;
 every other routine was declared implicitly by its first
 call. Strict C99 has no implicit declarations, so the file has grown
-from 81 lines to 179, nearly all of the growth being one long list.
+from 81 lines to 182, nearly all of the growth being one long list.
 
 In v7 none of the variables was declared `extern`, except those
 defined in assembler or in some particular file (`regloc`, `icode`,
@@ -709,8 +709,7 @@ in the configuration file #f("qemu/c.c"), as in v7; `msgbufp` in
 39) come from #f("param.h"), that file must be included first.
 
 v7's `cputype`, the model of PDP-11, and `lks`, the address of the
-clock's register, are gone with the hardware they described. `lbolt`
-(9) counts clock ticks up to `HZ`, not to 60 as its comment says.
+clock's register, are gone with the hardware they described.
 
 #lines(1, 26)
 
@@ -770,7 +769,7 @@ handlers, which take no arguments since they find them through
 - `arm_sync_icache`, `dcflush`, `dcinval`, `dmbsy`, `idle`, `restfp`, `savfp`,
   `tlbflush`, `ttbset`, and the generic timer accessors `cntv_ctl_set` and
   `cntv_cval_set` are in #f("mch.s"). There, too, are `cntfrq_get`, `dfar`, and `dfsr`, in the
-  second list (138--141), which return the timer frequency and the
+  second list (137--140), which return the timer frequency and the
   address and status of the last data abort. `savfp` and `restfp`, v7's
   names, store and load the floating point registers of the current
   process.
@@ -1215,8 +1214,9 @@ If the interrupted program was in user mode (the mode field of
 the saved status, at offset 64, is `0x10`) and `runrun` is set, the
 process should give up the processor before it returns. v7's `call`
 did this by calling `trap` with type 12; here `user_trap_handler`
-(#f("sysent.c")) is called with signal 0 and a zero address (149), which
-post nothing but run the same tail as a trap: `issig`, `psig`, `setpri`, and `qswtch`. The
+(#f("sysent.c")) is called with signal 0 and a zero address (149). Signal
+0 posts nothing; the call only runs the same tail as a trap: `issig`,
+`psig`, `setpri`, and `qswtch`. The
 interrupt was taken with interrupts masked; `swtch` may have unmasked
 them, so line 152 masks them again before the frame is unloaded. Without
 this test a process which never made a system call would never be
