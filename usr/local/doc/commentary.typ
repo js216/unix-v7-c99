@@ -13750,7 +13750,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/units.c")
 
-#lines(1, 471)
+#lines(1, 478)
 
 #source("/usr/src/cmd/yes.c")
 

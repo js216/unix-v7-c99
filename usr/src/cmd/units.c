@@ -185,6 +185,7 @@ loop:
 	case ' ':
 	case '\t':
 	case '\n':
+	case 0:
 		if(cp != name) {
 			*cp++ = 0;
 			cp = name;
@@ -192,11 +193,12 @@ loop:
 		}
 		if(c == '/')
 			den++;
-		if(c == '\n')
+		if(c == '\n' || c == 0)
 			return(err);
 		goto loop;
 	}
-	*cp++ = c;
+	if(cp < &name[19])
+		*cp++ = c;
 	goto loop;
 }
 
@@ -314,6 +316,10 @@ l0:
 		goto l0;
 	np = cp;
 	while(c != ' ' && c != '\t') {
+		if(cp >= &names[NTAB*10-1] || i >= NTAB-2) {
+			printf("too many units\n");
+			exit(1);
+		}
 		*cp++ = c;
 		c = get();
 		if (c==0)
@@ -395,7 +401,8 @@ l1:
 		i = 0;
 		c = get();
 		while(c >= '0' && c <= '9') {
-			i = i*10 + c-'0';
+			if(i < 10000)
+				i = i*10 + c-'0';
 			c = get();
 		}
 		if(f)
