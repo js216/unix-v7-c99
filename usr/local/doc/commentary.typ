@@ -42,7 +42,7 @@
 
 #align(center)[
   #v(4cm)
-  #text(size: 24pt, weight: "bold")[#text(size: 22pt)[UNIX]#text(weight: "regular")[#sym.dagger] Level Seven]
+  #text(size: 24pt, weight: "bold")[#text(size: 22pt)[UNIX]#text(size: 14pt, weight: "regular", baseline: -0.45em)[#sym.dagger] Level Seven]
   #v(0.5em)
   #text(size: 16pt)[Source Code and Commentary]
   #v(2em)
@@ -52,8 +52,8 @@
 
 Unix, the greatest operating system ever created, served tens of thousands of
 users with a kernel that fit in under 100 kB of core. This book presents
-the Seventh Edition system (its kernel, shell, library, and commands)
-brought up to date with C99 to run on hardware available nowadays.
+the Seventh Edition system---its kernel, shell, library, and commands---brought
+up to date with C99 to run on hardware available nowadays.
 
 #v(1em)
 *References*
