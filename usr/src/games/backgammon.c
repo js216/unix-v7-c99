@@ -84,8 +84,9 @@ retry:
 	    printf( "you've made too many moves\n");
 	    goto retry;
 	}
+	if(n<0)n=0;
 	go[n]=NIL;
-	if(*s=='-'){
+	if(*s=='-'&&n>0){
 	    go[0]= -go[0];
 	    t=die1;
 	    die1=die2;
