@@ -53,7 +53,7 @@ main(int argc, char *argv[])
 	len=80;
 	if(argc>1)
 	{	i=atoi(argv[1]);
-		if(i<0) i= -i;
+		if(i<0) i= -(unsigned)i;
 		len=(i<1?1:i);
 	}
 	else len=80;
