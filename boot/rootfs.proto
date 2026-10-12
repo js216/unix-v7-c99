@@ -186,6 +186,8 @@ d--755 0 0
 					awk	---644 0 0 usr/local/test/cases/awk
 					awk.exp	---644 0 0 usr/local/test/cases/awk.exp
 					awk.sed	---644 0 0 usr/local/test/cases/awk.sed
+					cmd2	---644 0 0 usr/local/test/cases/cmd2
+					cmd2.exp	---644 0 0 usr/local/test/cases/cmd2.exp
 					cmdg	---644 0 0 usr/local/test/cases/cmdg
 					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
