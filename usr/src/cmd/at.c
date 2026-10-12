@@ -125,7 +125,7 @@ makeutime(char *pp)
 	/* p points to a user time */
 	p = pp;
 	val = 0;
-	while(isdigit(*p&0377)) {
+	while(isdigit(*p) && val < DAY) {
 		val = val*10+(*p++ -'0');
 	}
 	if (p-pp < 3)
@@ -136,8 +136,8 @@ makeutime(char *pp)
 
 		case ':':
 			++p;
-			if (isdigit(*p&0377)) {
-				if (isdigit(p[1]&0377)) {
+			if (isdigit(*p)) {
+				if (isdigit(p[1])) {
 					val +=(10* *p + p[1] - 11*'0');
 					p += 2;
 					continue;
@@ -291,12 +291,14 @@ filename(char *dir, int y, int d, int t)
 {
 	register int i;
 
-	for (i=0; ; i += 53) {
+	for (i=0; i < 100*53; i += 53) {
 		sprintf(fname, "%s/%02d.%03d.%04d.%02d", dir, y, d, t,
 		   (getpid()+i)%100);
 		if (access(fname, 0) == -1)
 			return;
 	}
+	fprintf(stderr, "at: too many jobs queued for this time\n");
+	exit(1);
 }
 
 void

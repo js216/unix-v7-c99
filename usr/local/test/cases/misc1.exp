@@ -85,6 +85,8 @@ at: arg count
 st1
 at: bad time format
 st1
+at: bad time format
+st1
 79.002.2300.PID
 lasttimedone
 past

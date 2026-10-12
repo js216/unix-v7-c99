@@ -13,7 +13,7 @@ echo hello world | crypt sekrit | od -c | sed 2q; echo hello world | crypt sekri
 random 1 <a | wc -l; random -e 1; echo st$?
 cp $U/fs.img fs; df fs; dmesg | sed 3q
 (stty; stty -echo; stty; stty echo; stty even; stty; stty -even; stty 9600 nl0 cr1; stty; stty -a; stty bogus; echo st$? 1>&2; stty 0 even cr0) 2>&1 >/dev/tty
-at 2300 jan 3 </dev/null; echo st$?; at; echo st$?; at 9x; echo st$?; ls /usr/spool/at; rm /usr/spool/at/79.*
+at 2300 jan 3 </dev/null; echo st$?; at; echo st$?; at 9x; echo st$?; at 999999999 </dev/null; echo st$?; ls /usr/spool/at; rm /usr/spool/at/79.*
 accton; echo st$?; accton /nosuch; echo st$?
 /usr/lib/atrun; echo st$?
 clri; echo st$?
