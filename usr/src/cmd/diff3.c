@@ -25,9 +25,9 @@ struct diff {struct range old, new;};
  * the "new" component of de contains line positions
  * or byte positions depending on when you look(!?)
 */
-struct diff d13[NC];
-struct diff d23[NC];
-struct diff de[NC];
+struct diff d13[NC+1];
+struct diff d23[NC+1];
+struct diff de[NC+1];
 char line[256];
 FILE *fp[3];
 int linct[3] = {0,0,0};
@@ -54,7 +54,7 @@ int
 main(int argc, char **argv)
 {
 	register int i,m,n;
-	if(*argv[1]=='-') {
+	if(argc>1 && *argv[1]=='-') {
 		switch(argv[1][1]) {
 		default:
 			eflag = 3;
@@ -97,11 +97,14 @@ readin(char *name, struct diff *dd)
 	int a,b,c,d;
 	char kind;
 	char *p;
-	fp[0] = fopen(name,"r");
+	if((fp[0] = fopen(name,"r")) == NULL) {
+		fprintf(stderr,"diff3: can't open %s\n",name);
+		exit(1);
+	}
 	for(i=0;getchange(fp[0]);i++) {
 		if(i>=NC) {
 			fprintf(stderr,"diff3: too many changes\n");
-			exit(0);
+			exit(1);
 		}
 		p = line;
 		a = b = number(&p);
@@ -126,8 +129,10 @@ readin(char *name, struct diff *dd)
 		dd[i].new.from = c;
 		dd[i].new.to = d;
 	}
-	dd[i].old.from = dd[i-1].old.to;
-	dd[i].new.from = dd[i-1].new.to;
+	if(i>0) {
+		dd[i].old.from = dd[i-1].old.to;
+		dd[i].new.from = dd[i-1].new.to;
+	}
 	fclose(fp[0]);
 	return(i);
 }
@@ -160,16 +165,18 @@ getchange(FILE *b)
 int
 getline(FILE *b)
 {
-	register int i, c;
-	for(i=0;i<(int)sizeof(line)-1;i++) {
+	register int i, c, j;
+	for(i=j=0;;i++) {
 		c = getc(b);
 		if(c==EOF)
 			break;
-		line[i] = c;
+		line[j] = c;
 		if(c=='\n') {
-			line[++i] = 0;
-			return(i);
+			line[j+1] = 0;
+			return(i+1);
 		}
+		if(j<(int)sizeof(line)-2)
+			j++;
 	}
 	return(0);
 }
