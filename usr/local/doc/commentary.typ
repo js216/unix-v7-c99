@@ -13116,7 +13116,9 @@ into which it moves each job while it runs. There is no `/usr/bin`.
 system itself: `run.sh`, the test scripts in `cases`, each with its
 expected output, and in `utils` the programs and data files which the
 tests use, and `fs.img`, a small file system on which they run the file
-system checkers.
+system checkers; `deep.img` and `many.img`, a chain of 40 directories
+and 3001 directories side by side, give `dump` and `dumpdir` trees
+deeper and wider than their tables.
 
 `dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
 directories which #f("passwd") gives those users, owned by each user
@@ -13125,7 +13127,7 @@ whose directory does not exist, so without his `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
-#lines(139, 344)
+#lines(139, 348)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -13134,7 +13136,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(345, 346)
+#lines(349, 350)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

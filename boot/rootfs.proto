@@ -188,6 +188,8 @@ d--755 0 0
 					awk.sed	---644 0 0 usr/local/test/cases/awk.sed
 					cmd2	---644 0 0 usr/local/test/cases/cmd2
 					cmd2.exp	---644 0 0 usr/local/test/cases/cmd2.exp
+					cmd3	---644 0 0 usr/local/test/cases/cmd3
+					cmd3.exp	---644 0 0 usr/local/test/cases/cmd3.exp
 					cmdg	---644 0 0 usr/local/test/cases/cmdg
 					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -297,6 +299,7 @@ d--755 0 0
 					clock	---755 0 0 usr/local/test/obj/clock
 					cpt	---755 0 0 usr/local/test/obj/cpt
 					ctxt	---644 0 0 usr/local/test/utils/ctxt
+					deep.img	---644 0 0 usr/local/test/obj/deep.img
 					devt	---755 0 0 usr/local/test/obj/devt
 					dit	---755 0 0 usr/local/test/obj/dit
 					edscr	---644 0 0 usr/local/test/utils/edscr
@@ -308,6 +311,7 @@ d--755 0 0
 					kcmp	---755 0 0 usr/local/test/obj/kcmp
 					kmt	---755 0 0 usr/local/test/obj/kmt
 					long	---644 0 0 usr/local/test/utils/long
+					many.img	---644 0 0 usr/local/test/obj/many.img
 					memt	---755 0 0 usr/local/test/obj/memt
 					monout	---644 0 0 usr/local/test/utils/monout
 					nswp	---755 0 0 usr/local/test/obj/nswp

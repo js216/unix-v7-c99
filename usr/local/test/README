@@ -25,6 +25,8 @@ fails, run it by hand:
 utils holds the programs the tests use, compiled from utils/*.c by the
 Makefile (test.mk), the data files, and fs.img, a small file system made
 from utils/fs.proto, on which the tests run the file system checkers.
+deep.img, a chain of 40 directories, and many.img, 3001 directories,
+are file systems which test.mk makes for the tests of dump and dumpdir.
 
 Each test works in a directory of its own, /tmp/NAME, which it removes
 at the end. A test which changes anything else (the date, accounting,
