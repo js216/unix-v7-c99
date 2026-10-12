@@ -56,7 +56,7 @@ move(char *source, char *target)
 {
 	register int c, i;
 	int	status;
-	char	buf[MAXN];
+	char	buf[strlen(target)+strlen(source)+2];
 
 	if (stat(source, &s1) < 0) {
 		fprintf(stderr, "mv: cannot access %s\n", source);
@@ -127,12 +127,16 @@ mvdir(char *source, char *target)
 	register int i;
 	char buf[MAXN];
 
+	if (strlen(source) >= MAXN || strlen(target) >= MAXN) {
+		fprintf(stderr, "mv: name too long\n");
+		return(1);
+	}
 	if (stat(target, &s2) >= 0) {
 		if ((s2.st_mode&S_IFMT) != S_IFDIR) {
 			fprintf(stderr, "mv: %s exists\n", target);
 			return(1);
 		}
-		if (strlen(target) > MAXN-DIRSIZ-2) {
+		if (strlen(target)+strlen(dname(source)) > MAXN-2) {
 			fprintf(stderr, "mv :target name too long\n");
 			return(1);
 		}
@@ -195,7 +199,7 @@ mvdir(char *source, char *target)
 			unlink(target);
 			return(1);
 		}
-		strcat(dst, target);
+		strcpy(dst, target);
 		strcat(dst, "/");
 		strcat(dst, DOTDOT);
 		if (unlink(dst) < 0) {
