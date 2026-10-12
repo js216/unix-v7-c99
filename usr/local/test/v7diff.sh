@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,353 @@
+@@ -0,0 +1,357 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -428,6 +428,8 @@ usr/local
 +					cmd3.exp	---644 0 0 usr/local/test/cases/cmd3.exp
 +					cmd4	---644 0 0 usr/local/test/cases/cmd4
 +					cmd4.exp	---644 0 0 usr/local/test/cases/cmd4.exp
++					cmd5	---644 0 0 usr/local/test/cases/cmd5
++					cmd5.exp	---644 0 0 usr/local/test/cases/cmd5.exp
 +					cmdg	---644 0 0 usr/local/test/cases/cmdg
 +					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 +					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -554,6 +556,7 @@ usr/local
 +					memt	---755 0 0 usr/local/test/obj/memt
 +					monout	---644 0 0 usr/local/test/utils/monout
 +					nswp	---755 0 0 usr/local/test/obj/nswp
++					ob	---755 0 0 usr/local/test/obj/ob
 +					olda	---644 0 0 usr/local/test/utils/olda
 +					physt	---755 0 0 usr/local/test/obj/physt
 +					pidf	---755 0 0 usr/local/test/obj/pidf
@@ -568,6 +571,7 @@ usr/local
 +					regs	---755 0 0 usr/local/test/obj/regs
 +					roff	---644 0 0 usr/local/test/utils/roff
 +					sortin	---644 0 0 usr/local/test/utils/sortin
++					spd	---755 0 0 usr/local/test/obj/spd
 +					stkt	---755 0 0 usr/local/test/obj/stkt
 +					swb	---755 0 0 usr/local/test/obj/swb
 +					swpt	---755 0 0 usr/local/test/obj/swpt
@@ -9951,24 +9955,39 @@ usr/local
 @@ -83 +87 @@
 -				if(lowpc == -1)
 +				if(lowpc == (unsigned)-1)
-@@ -118,2 +122,2 @@
+@@ -103,2 +107,2 @@
+-	fread((char *)&xbuf, 1, sizeof(xbuf), nfile);
+-	if (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3) {
++	if (fread((char *)&xbuf, sizeof(xbuf), 1, nfile) != 1 ||
++	    (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3)) {
+@@ -117,3 +121,7 @@
+-	fread((char *)&h, sizeof(struct hdr), 1, pfile);
 -	lowpc = h.lowpc - (UNIT *)0;
 -	highpc = h.highpc - (UNIT *)0;
++	if (fread((char *)&h, sizeof(struct hdr), 1, pfile) != 1 ||
++	    (unsigned)h.ncount > 350 || (unsigned)h.highpc <= (unsigned)h.lowpc) {
++		fprintf(stderr, "mon.out: bad format\n");
++		done();
++	}
 +	lowpc = (unsigned)h.lowpc/sizeof(UNIT);
 +	highpc = (unsigned)h.highpc/sizeof(UNIT);
-@@ -121,0 +126 @@
+@@ -121,0 +130 @@
 +#ifdef plot
-@@ -122,0 +128 @@
+@@ -122,0 +132 @@
 +#endif
-@@ -149 +155 @@
+@@ -126 +136,2 @@
+-		fread((char *)&nbuf, sizeof(nbuf), 1, nfile);
++		if (npe >= &nl[1199] || fread((char *)&nbuf, sizeof(nbuf), 1, nfile) != 1)
++			break;
+@@ -149 +160 @@
 -	qsort(nl, nname, sizeof(struct nl), valcmp);
 +	qsort((char *)nl, nname, sizeof(struct nl), valcmp);
-@@ -153,2 +159,2 @@
+@@ -153,2 +164,2 @@
 -		register j;
 -		unsigned UNIT ccnt;
 +		register int j;
 +		unsigned short ccnt;
-@@ -162,4 +168,4 @@
+@@ -162,4 +173,4 @@
 -		ftime = ccnt;
 -		totime += ftime;
 -		if(ftime > maxtime)
@@ -9977,55 +9996,55 @@ usr/local
 +		totime += ftim;
 +		if(ftim > maxtime)
 +			maxtime = ftim;
-@@ -172 +178 @@
+@@ -172 +183 @@
 -			nl[j].time += overlap*ftime/scale;
 +			nl[j].time += overlap*ftim/scale;
-@@ -201 +207 @@
+@@ -201 +212 @@
 -		ftime = ccnt;
 +		ftim = ccnt;
-@@ -204 +210 @@
+@@ -204 +215 @@
 -		lastsx -= 2000.*ftime/totime;
 +		lastsx -= 2000.*ftim/totime;
-@@ -210 +216 @@
+@@ -210 +221 @@
 -				lastx = -ftime*2000./maxtime;
 +				lastx = -ftim*2000./maxtime;
-@@ -223 +229 @@
+@@ -223 +234 @@
 -		ftime = np->time/totime;
 +		ftim = np->time/totime;
-@@ -250 +256 @@
+@@ -250 +261 @@
 -		qsort(nl, nname, sizeof(struct nl), timcmp);
 +		qsort((char *)nl, nname, sizeof(struct nl), timcmp);
-@@ -252 +258 @@
+@@ -252 +263 @@
 -		ftime = np->time/totime;
 +		ftim = np->time/totime;
-@@ -254 +260 @@
+@@ -254 +265 @@
 -		printf("%8.8s%6.1f%9.2f", np->name, 100*ftime, actime/60);
 +		printf("%8.8s%6.1f%9.2f", np->name, 100*ftim, actime/60);
-@@ -264,2 +270,2 @@
+@@ -264,2 +275,2 @@
 -min(a, b)
 -unsigned a, b;
 +int
 +min(unsigned a, unsigned b)
-@@ -272,2 +278,2 @@
+@@ -272,2 +283,2 @@
 -max(a, b)
 -unsigned a, b;
 +int
 +max(unsigned a, unsigned b)
-@@ -280,2 +286,2 @@
+@@ -280,2 +291,2 @@
 -valcmp(p1, p2)
 -struct nl *p1, *p2;
 +int
 +valcmp(char *a, char *b)
-@@ -282,0 +289 @@
+@@ -282,0 +294 @@
 +	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
-@@ -286,2 +293,2 @@
+@@ -286,2 +298,2 @@
 -timcmp(p1, p2)
 -struct nl *p1, *p2;
 +int
 +timcmp(char *a, char *b)
-@@ -288,0 +296 @@
+@@ -288,0 +301 @@
 +	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
-@@ -299 +307,2 @@
+@@ -299 +312,2 @@
 -done()
 +void
 +done(void)
@@ -10276,6 +10295,9 @@ usr/local
 @@ -137 +164 @@
 -		printf("%4d", ip->i_count&0377);
 +		printf("%4d", ip->i_count);
+@@ -139 +166 @@
+-		printf("%6l", ip->i_number);
++		printf("%6u", ip->i_number);
 @@ -151 +178,2 @@
 -putf(v, n)
 +void
@@ -10317,41 +10339,44 @@ usr/local
 @@ -249 +278 @@
 -	if (setup[SNDH].type == -1)
 +	if (setup[SNDH].type == 0)
-@@ -260,2 +289,2 @@
+@@ -252,0 +282,2 @@
++	if ((unsigned)ndh > 48)
++		ndh = 48;
+@@ -260,2 +291,2 @@
 -ttyprt(n, atp)
 -struct tty *atp;
 +void
 +ttyprt(int n, struct tty *atp)
-@@ -271 +300 @@
+@@ -271 +302 @@
 -	printf("%8.1o", tp->t_addr);
 +	printf("%8.1o", (unsigned)tp->t_addr);
-@@ -286 +315,2 @@
+@@ -286 +317,2 @@
 -dousr()
 +void
 +dousr(void)
-@@ -288,2 +317,0 @@
+@@ -288,2 +319,0 @@
 -#include <sys/dir.h>
 -#include <sys/user.h>
-@@ -295 +323 @@
+@@ -295 +325 @@
 -	register i;
 +	register int i;
-@@ -297,2 +325,2 @@
+@@ -297,2 +327,2 @@
 -	lseek(fc, ubase<<6, 0);
 -	read(fc, (char *)&xu, sizeof(xu));
 +	lseek(fm, ctob(ubase), 0);
 +	read(fm, (char *)&xu, sizeof(xu));
-@@ -303,2 +331,2 @@
+@@ -303,2 +333,2 @@
 -	printf("procp %.1o\n", up->u_procp);
 -	printf("base, count, offset %.1o %.1o %ld\n", up->u_base,
 +	printf("procp %.1o\n", (unsigned)up->u_procp);
 +	printf("base, count, offset %.1o %.1o %ld\n", (unsigned)up->u_base,
-@@ -306 +334 @@
+@@ -306 +336 @@
 -	printf("cdir %.1o\n", up->u_cdir);
 +	printf("cdir %.1o\n", (unsigned)up->u_cdir);
-@@ -308 +336 @@
+@@ -308 +338 @@
 -	printf("dirp %.1o\n", up->u_dirp);
 +	printf("dirp %.1o\n", (unsigned)up->u_dirp);
-@@ -310,15 +338,3 @@
+@@ -310,15 +340,3 @@
 -	printf("pdir %.1o\n", up->u_pdir);
 -	printf("dseg");
 -	for (i=0; i<8; i++)
@@ -10370,45 +10395,45 @@ usr/local
 +	printf("pdir %.1o\n", (unsigned)up->u_pdir);
 +	printf("segs %.1o %.1o %.1o %.1o", up->u_ptsize, up->u_pdsize,
 +		up->u_pssize, up->u_pxrw);
-@@ -327 +343 @@
+@@ -327 +345 @@
 -		printf("%8.1o", up->u_ofile[i]);
 +		printf("%8.1o", (unsigned)up->u_ofile[i]);
-@@ -330 +346 @@
+@@ -330 +348 @@
 -		printf("%8.1o", up->u_ofile[i]);
 +		printf("%8.1o", (unsigned)up->u_ofile[i]);
-@@ -341,3 +357,3 @@
+@@ -341,3 +359,3 @@
 -	printf("\ntimes %ld %ld\n", up->u_utime/60, up->u_stime/60);
 -	printf("ctimes %ld %ld\n", up->u_cutime/60, up->u_cstime/60);
 -	printf("ar0 %.1o\n", up->u_ar0);
 +	printf("\ntimes %lld %lld\n", up->u_utime/60, up->u_stime/60);
 +	printf("ctimes %lld %lld\n", up->u_cutime/60, up->u_cstime/60);
 +	printf("ar0 %.1o\n", (unsigned)up->u_ar0);
-@@ -350 +366 @@
+@@ -350 +368 @@
 -	printf("ttyp %.1o\n", up->u_ttyp);
 +	printf("ttyp %.1o\n", (unsigned)up->u_ttyp);
-@@ -355,2 +371,2 @@
+@@ -355,2 +373,2 @@
 -oatoi(s)
 -char *s;
 +int
 +oatoi(char *s)
-@@ -358 +374 @@
+@@ -358 +376 @@
 -	register v;
-+	register int v;
-@@ -366 +382,2 @@
++	register unsigned v;
+@@ -366 +384,2 @@
 -dofil()
 +void
 +dofil(void)
-@@ -368 +384,0 @@
+@@ -368 +386,0 @@
 -#include <sys/file.h>
-@@ -371 +387 @@
+@@ -371 +389 @@
 -	register nf;
 +	register int nf;
-@@ -389,2 +405,2 @@
+@@ -389,2 +407,2 @@
 -		printf("%4d", mask(fp->f_count));
 -		printf("%8.1o", fp->f_inode);
 +		printf("%4d", fp->f_count);
 +		printf("%8.1o", (unsigned)fp->f_inode);
-@@ -392,0 +409,10 @@
+@@ -392,0 +411,13 @@
 +}
 +
 +int
@@ -10417,7 +10442,10 @@ usr/local
 +	int v;
 +
 +	lseek(fc, (long)setup[s].value, 0);
-+	read(fc, (char *)&v, sizeof(v));
++	if (read(fc, (char *)&v, sizeof(v)) != sizeof(v) || v <= 0 || v > 65536) {
++		printf("bad %.8s\n", setup[s].name);
++		exit(1);
++	}
 +	return(v);
 
 % usr/src/cmd/ptx.c
@@ -10431,8 +10459,10 @@ usr/local
 +int storeh(int num,char *strtp), hash(char *strtp,char *endp);
 +int cmpword(char *cpp,char *pend,char *hpp);
 +char *rtrim(char *a,char *c,int d), *ltrim(char *c,char *b,int d);
-@@ -41 +46 @@
+@@ -40,2 +45,2 @@
+-char line[LMAX];
 -char btable[128];
++char line[2*LMAX+4];
 +char btable[256];
 @@ -60 +65 @@
 -char *sortfile;	/* output of sort program */
@@ -10445,173 +10475,235 @@ usr/local
 +main(int argc,char **argv)
 @@ -77 +80,0 @@
 -	extern onintr();
+@@ -104 +107 @@
+-			if(argc >= 2) {
++			if(argc > 2) {
 @@ -116,0 +120 @@
 +			/* fallthrough */
-@@ -218 +222 @@
+@@ -122 +126 @@
+-			if(argc >=2) {
++			if(argc >2) {
+@@ -131 +135 @@
+-			if (argc>=2){
++			if (argc>2){
+@@ -141 +145 @@
+-			if (argc>=2){
++			if (argc>2){
+@@ -149 +153 @@
+-			if(argc>=2) {
++			if(argc>2) {
+@@ -161,0 +166,2 @@
++	if(gap < 0 || gap > LMAX || llen < gap+2)
++		diag("Wrong width",empty);
+@@ -203 +209 @@
+-			if(storeh(hash(strtbufp,bufp),strtbufp))
++			if(bufp > strtbufp && storeh(hash(strtbufp,bufp),strtbufp))
+@@ -214 +219,0 @@
+-	endbufp = --bufp;
+@@ -218 +223 @@
 -	sortfile = mktemp("/tmp/ptxsXXXXX");
 +	mktemp(sortfile);
-@@ -228 +232 @@
+@@ -228 +233 @@
 -	while(pend=getline())
 +	while((pend=getline()))
-@@ -236,0 +241 @@
+@@ -236,0 +242 @@
 +		/* fallthrough */
-@@ -239 +244 @@
+@@ -239 +245,2 @@
 -			sortfile, "-o", sortfile, 0);
 +			sortfile, "-o", sortfile, (char *)0);
-@@ -247 +252 @@
++		diag("Cannot exec", SORT);
+@@ -247 +254 @@
 -	onintr();
 +	onintr(0);
-@@ -250,3 +255,2 @@
+@@ -250,3 +257,2 @@
 -msg(s,arg)
 -char *s;
 -char *arg;
 +void
 +msg(char *s,char *arg)
-@@ -257,2 +261,2 @@
+@@ -257,2 +263,2 @@
 -diag(s,arg)
 -char *s, *arg;
 +void
 +diag(char *s,char *arg)
-@@ -266 +270 @@
+@@ -266 +272 @@
 -char *getline()
 +char *getline(void)
-@@ -269 +273 @@
+@@ -269 +275 @@
 -	register c;
 +	register int c;
-@@ -291 +295 @@
+@@ -274 +280 @@
+-	endlinep= line + mlen;
++	endlinep= line + mlen - 1;
+@@ -291 +297 @@
 -				while(isspace(*--linep));
 +				while(isspace(*--linep&0377));
-@@ -302,2 +306,2 @@
+@@ -302,2 +308,2 @@
 -cmpline(pend)
 -char *pend;
 +void
 +cmpline(char *pend)
-@@ -312 +316 @@
+@@ -312 +318 @@
 -		while(pchar<pend&&!isspace(*pchar))
 +		while(pchar<pend&&!isspace(*pchar&0377))
-@@ -316 +320 @@
+@@ -316 +322 @@
 -		if(isabreak(*pchar++))
 +		if(isabreak(*pchar++&0377))
-@@ -322 +326 @@
+@@ -322 +328 @@
 -			if(isabreak(*pchar)) {
 +			if(isabreak(*pchar&0377)) {
-@@ -325 +329 @@
+@@ -325 +331 @@
 -				while(cp = *hp++){
 +				while((cp = *hp++)){
-@@ -349,2 +353,2 @@
+@@ -349,2 +355,2 @@
 -cmpword(cpp,pend,hpp)
 -char *cpp, *pend, *hpp;
 +int
 +cmpword(char *cpp,char *pend,char *hpp)
-@@ -356 +360 @@
+@@ -356 +362 @@
 -		if((isupper(c)?tolower(c):c) != *hpp++)
 +		if((isupper(c&0377)?tolower(c):c) != *hpp++)
-@@ -363,2 +367,2 @@
+@@ -363,2 +369,2 @@
 -putline(strt, end)
 -char *strt, *end;
 +void
 +putline(char *strt, char *end)
-@@ -379 +383,2 @@
+@@ -379 +385,2 @@
 -getsort()
 +void
 +getsort(void)
-@@ -381 +386 @@
+@@ -381 +388 @@
 -	register c;
 +	register int c;
-@@ -385 +389,0 @@
+@@ -385 +391,0 @@
 -	char *rtrim(), *ltrim();
-@@ -400 +404 @@
+@@ -391 +397 @@
+-	linep = line;
++	linep = tilde = line;
+@@ -400 +406 @@
 -			while(isspace(linep[-1]))
 +			while(isspace(linep[-1]&0377))
-@@ -404 +408 @@
+@@ -404 +410 @@
 -				while(ref<linep&&!isspace(*ref))
 +				while(ref<linep&&!isspace(*ref&0377))
-@@ -416 +420 @@
+@@ -416 +422 @@
 -			p1b = rtrim(p1a=p3b+(isspace(p3b[0])!=0),tilde,
 +			p1b = rtrim(p1a=p3b+(isspace(p3b[0]&0377)!=0),tilde,
-@@ -420 +424 @@
+@@ -420 +426 @@
 -			p4a = ltrim(ref,p4b=p2a-(isspace(p2a[-1])!=0),
 +			p4a = ltrim(ref,p4b=p2a-(isspace(p2a[-1]&0377)!=0),
-@@ -452,0 +457 @@
+@@ -452 +458,3 @@
+-			*linep++ = c;
++			if(linep < &line[sizeof line - 2])
++				*linep++ = c;
 +			/* fallthrough */
-@@ -459,2 +464 @@
+@@ -454 +462,2 @@
+-			*linep++ = c;
++			if(linep < &line[sizeof line - 2])
++				*linep++ = c;
+@@ -459,2 +468 @@
 -char *rtrim(a,c,d)
 -char *a,*c;
 +char *rtrim(char *a,char *c,int d)
-@@ -465 +469 @@
+@@ -465 +473 @@
 -		if((x==c||isspace(x[0]))&&!isspace(x[-1]))
 +		if((x==c||isspace(x[0]&0377))&&!isspace(x[-1]&0377))
-@@ -467 +471 @@
+@@ -467 +475 @@
 -	if(b<c&&!isspace(b[0]))
 +	if(b<c&&!isspace(b[0]&0377))
-@@ -472,2 +476 @@
+@@ -472,2 +480 @@
 -char *ltrim(c,b,d)
 -char *c,*b;
 +char *ltrim(char *c,char *b,int d)
-@@ -478 +481 @@
+@@ -478 +485 @@
 -		if(!isspace(x[0])&&(x==c||isspace(x[-1])))
 +		if(!isspace(x[0]&0377)&&(x==c||isspace(x[-1]&0377)))
-@@ -480 +483 @@
+@@ -480 +487 @@
 -	if(a>c&&!isspace(a[-1]))
 +	if(a>c&&!isspace(a[-1]&0377))
-@@ -485,2 +488,2 @@
+@@ -485,2 +492,2 @@
 -putout(strt,end)
 -char *strt, *end;
 +void
 +putout(char *strt,char *end)
-@@ -497 +500,2 @@
+@@ -497 +504,2 @@
 -onintr()
 +void
 +onintr(int sig)
-@@ -498,0 +503 @@
+@@ -498,0 +507 @@
 +	(void)sig;
-@@ -505,2 +510,2 @@
+@@ -502 +511 @@
+-	exit(1);
++	exit(sig != 0);
+@@ -505,2 +514,2 @@
 -hash(strtp,endp)
 -char *strtp, *endp;
 +int
 +hash(char *strtp,char *endp)
-@@ -517 +522 @@
+@@ -517 +526 @@
 -	i = (isupper(c)?tolower(c):c);
 +	i = (isupper(c&0377)?tolower(c):c);
-@@ -519 +524 @@
+@@ -519 +528 @@
 -	j = (isupper(c)?tolower(c):c);
 +	j = (isupper(c&0377)?tolower(c):c);
-@@ -523 +528 @@
+@@ -523 +532 @@
 -	k = (isupper(c)?tolower(c):c);
 +	k = (isupper(c&0377)?tolower(c):c);
-@@ -525 +530 @@
+@@ -525 +534 @@
 -	j = (isupper(c)?tolower(c):c);
 +	j = (isupper(c&0377)?tolower(c):c);
-@@ -532,3 +537,2 @@
+@@ -532,3 +541,2 @@
 -storeh(num,strtp)
 -int num;
 -char *strtp;
 +int
 +storeh(int num,char *strtp)
+@@ -536,0 +545 @@
++	static int nh;
+@@ -537,0 +547,2 @@
++	if(++nh >= MAXT)
++		return(1);
 
 % usr/src/cmd/pwd.c
-@@ -17 +17,3 @@
+@@ -11 +11,2 @@
+-char	name[512];
++char	name[4096];
++char	dname[DIRSIZ+1];
+@@ -17 +18,3 @@
 -main()
 +void prname(void), cat(void);
 +int
 +main(void)
-@@ -38 +40 @@
+@@ -38 +41 @@
 -				if (read(file, (char *)&dir, sizeof(dir)) < sizeof(dir)) {
 +				if (read(file, (char *)&dir, sizeof(dir)) < (int)sizeof(dir)) {
-@@ -45 +47 @@
+@@ -45 +48 @@
 -				if(read(file, (char *)&dir, sizeof(dir)) < sizeof(dir)) {
 +				if(read(file, (char *)&dir, sizeof(dir)) < (int)sizeof(dir)) {
-@@ -56 +58,2 @@
+@@ -49 +52 @@
+-				stat(dir.d_name, &dd);
++				stat(strncpy(dname, dir.d_name, DIRSIZ), &dd);
+@@ -56 +59,2 @@
 -prname()
 +void
 +prname(void)
-@@ -66 +69,2 @@
+@@ -66 +70,2 @@
 -cat()
 +void
 +cat(void)
-@@ -68 +72 @@
+@@ -68 +73 @@
 -	register i, j;
 +	register int i, j;
+@@ -69,0 +75 @@
++	strncpy(dname, dir.d_name, DIRSIZ);
+@@ -71,2 +77,2 @@
+-	while (dir.d_name[++i] != 0);
+-	if ((off+i+2) > 511)
++	while (dname[++i] != 0);
++	if ((off+i+2) > (int)sizeof(name)-1)
+@@ -79 +85 @@
+-		name[i] = dir.d_name[i];
++		name[i] = dname[i];
 
 % usr/src/cmd/quot.c
 @@ -42,3 +42,3 @@
@@ -10626,78 +10718,134 @@ usr/local
 -char **argv;
 +int
 +main(int argc, char **argv)
+@@ -57 +57 @@
+-		if (n>NUID)
++		if (n<0 || n>=NUID)
 @@ -87,2 +87,2 @@
 -check(file)
 -char *file;
 +void
 +check(char *file)
-@@ -91 +91 @@
+@@ -91 +91,2 @@
 -	register c;
 +	register int c;
-@@ -118,2 +118,2 @@
++	struct du t;
+@@ -98,0 +100,11 @@
++	for (i=0; i<NUID; i++) {
++		while ((c = du[i].uid) != (int)i) {
++			t = du[c];
++			du[c] = du[i];
++			du[i] = t;
++		}
++		du[i].blocks = du[i].nfiles = 0;
++	}
++	for (i=0; i<TSIZE; i++)
++		sizes[i] = 0;
++	overflow = 0;
+@@ -118,2 +130,2 @@
 -acct(ip)
 -register struct dinode *ip;
 +void
 +acct(register struct dinode *ip)
-@@ -121 +121 @@
+@@ -121 +133 @@
 -	register n;
 +	register int n;
-@@ -123 +123 @@
+@@ -123 +135 @@
 -	static fino;
 +	static int fino;
-@@ -147 +147 @@
+@@ -125 +137 @@
+-	if ((ip->di_mode&IFMT) == 0)
++	if ((ip->di_mode&IFMT) == 0 || ip->di_size < 0)
+@@ -130 +142 @@
+-		n = (ip->di_size+BSIZE-1)/BSIZE;
++		n = ip->di_size/BSIZE + (ip->di_size%BSIZE != 0);
+@@ -138 +150 @@
+-	if (ip->di_uid >= NUID)
++	if ((unsigned)ip->di_uid >= NUID)
+@@ -140 +152 @@
+-	du[ip->di_uid].blocks += (ip->di_size+BSIZE-1)/BSIZE;
++	du[ip->di_uid].blocks += ip->di_size/BSIZE + (ip->di_size%BSIZE != 0);
+@@ -147 +159 @@
 -		if (fino > ino)
 +		if (fino > (int)ino)
-@@ -149 +149 @@
+@@ -149 +161 @@
 -		if (fino<ino) {
 +		if (fino<(int)ino) {
-@@ -155 +155 @@
+@@ -155 +167 @@
 -		if (np = du[ip->di_uid].name)
 +		if ((np = du[ip->di_uid].name))
-@@ -170,3 +170,2 @@
+@@ -161,3 +173 @@
+-		putchar(n);
+-		while (n!=EOF && n!='\n') {
+-			n = getchar();
++		while (n!=EOF) {
+@@ -164,0 +175,3 @@
++			if (n=='\n')
++				break;
++			n = getchar();
+@@ -170,3 +183,2 @@
 -bread(bno, buf, cnt)
 -unsigned bno;
 -char *buf;
 +void
 +bread(unsigned bno, char *buf, int cnt)
-@@ -182,2 +181,2 @@
+@@ -182,2 +194,2 @@
 -qcmp(p1, p2)
 -register struct du *p1, *p2;
 +static int
 +qcmp(char *a, char *b)
-@@ -184,0 +184 @@
+@@ -184,0 +197 @@
 +	register struct du *p1 = (struct du *)a, *p2 = (struct du *)b;
-@@ -192 +192,2 @@
+@@ -189 +202 @@
+-	return(strcmp(p1->name, p2->name));
++	return(strcmp(p1->name? p1->name: "", p2->name? p2->name: ""));
+@@ -192 +205,2 @@
 -report()
 +void
 +report(void)
-@@ -194 +195 @@
+@@ -194 +208 @@
 -	register i;
 +	register int i;
-@@ -208 +209 @@
+@@ -208 +222 @@
 -	qsort(du, NUID, sizeof(du[0]), qcmp);
 +	qsort((char *)du, NUID, sizeof(du[0]), qcmp);
-@@ -223,2 +224 @@
+@@ -223,2 +237 @@
 -copy(s)
 -char *s;
 +copy(char *s)
-@@ -227 +227 @@
+@@ -227 +240 @@
 -	register n;
 +	register int n;
-@@ -232 +232 @@
+@@ -232 +245 @@
 -	for(n=0; p[n] = s[n]; n++)
 +	for(n=0; (p[n] = s[n]); n++)
 
 % usr/src/cmd/random.c
 @@ -4 +3,0 @@
 -double	atof();
-@@ -7 +6,2 @@
+@@ -6,2 +5,3 @@
+-char ibuf[BUFSIZ],obuf[BUFSIZ],line[BUFSIZ];
 -main(argc,argv) char **argv;
++char ibuf[BUFSIZ],obuf[BUFSIZ];
 +int
 +main(int argc, char **argv)
-@@ -9 +9 @@
+@@ -9,2 +9,2 @@
 -	long tvec;
+-	int i;
 +	long long tvec;
++	int i, r;
+@@ -26,3 +26,5 @@
+-	{	gets(line);
+-		if(feof(stdin)) break;
+-		if(rand()/MAXINT*fract<1) puts(line);
++	{	if((i = getchar()) == EOF) break;
++		r = rand()/MAXINT*fract<1;
++		for(; i != EOF && i != '\n'; i = getchar())
++			if(r) putchar(i);
++		if(r) putchar('\n');
+@@ -30 +32 @@
+-	exit((int)(rand()/MAXINT*fract));
++	exit(fract < 2147483648.? (int)(rand()/MAXINT*fract): 0);
 
 % usr/src/cmd/restor.c
 @@ -84,2 +84,13 @@
@@ -10720,318 +10868,381 @@ usr/local
 -	char command;
 -	int done();
 +	char command = 0;
-@@ -143,4 +153,2 @@
+@@ -104,0 +115,2 @@
++			if (argc-- <= 0)
++				goto usage;
+@@ -106 +117,0 @@
+-			argc--;
+@@ -118,0 +130,2 @@
++	if ((command == 'r' || command == 'R') && argc <= 0)
++		goto usage;
+@@ -131,0 +145 @@
++		unlink(dirfile);
+@@ -134,2 +147,0 @@
+-	if (command == 'x')
+-		unlink(dirfile);
+@@ -143,4 +155,2 @@
 -doit(command, argc, argv)
 -char	command;
 -int	argc;
 -char	*argv[];
 +void
 +doit(char command, int argc, char *argv[])
-@@ -148,2 +156 @@
+@@ -148,2 +158 @@
 -	extern char *ctime();
 -	register i, k;
 +	register int i, k;
-@@ -151,4 +157,0 @@
+@@ -151,4 +159,0 @@
 -#ifndef STANDALONE
 -	int	xtrfile(), skip();
 -#endif
 -	int	rstrfile(), rstrskip();
-@@ -251 +254 @@
+@@ -207 +212 @@
+-		if (gets(tbf) == NULL)
++		if (fgets(tbf, sizeof tbf, stdin) == NULL)
+@@ -251 +256 @@
 -					return;
 +				return;
-@@ -300 +303 @@
+@@ -300 +305 @@
 -			if (gets(tbf) == EOF) {
-+			if (gets(tbf) == NULL) {
-@@ -405 +408,2 @@
++			if (fgets(tbf, sizeof tbf, stdin) == NULL) {
+@@ -316 +321,3 @@
+-		while (getchar() != '\n');
++		while ((i = getchar()) != '\n')
++			if (i == EOF)
++				exit(1);
+@@ -405 +412,2 @@
 -pass1()
 +void
 +pass1(void)
-@@ -407 +411 @@
+@@ -407 +415 @@
 -	register i;
 +	register int i;
-@@ -409 +412,0 @@
+@@ -409 +416,0 @@
 -	int	putdir(), null();
-@@ -446,4 +449,2 @@
+@@ -433,0 +441,4 @@
++		if (ipos >= MAXINO) {
++			printf("Too many directories\n");
++			exit(1);
++		}
+@@ -446,4 +457,2 @@
 -getfile(n, f1, f2, size)
 -ino_t	n;
 -int	(*f2)(), (*f1)();
 -long	size;
 +void
 +getfile(ino_t n, void (*f1)(char *b, long size), void (*f2)(char *b, long size), long size)
-@@ -451 +452 @@
+@@ -451 +460 @@
 -	register i;
 +	register int i;
-@@ -495,2 +496,2 @@
+@@ -469 +478 @@
+-		for (i = 0; i < addrblock.c_count; i++) {
++		for (i = 0; i < addrblock.c_count && i < BSIZE; i++) {
+@@ -495,2 +504,2 @@
 -readtape(b)
 -char *b;
 +void
 +readtape(char *b)
-@@ -498 +499 @@
+@@ -498 +507 @@
 -	register i;
 +	register int i;
-@@ -539 +540,2 @@
+@@ -518,2 +527,3 @@
+-			while (getchar() != '\n')
+-				;
++			while ((i = getchar()) != '\n')
++				if (i == EOF)
++					exit(1);
+@@ -539 +549,2 @@
 -flsht()
 +void
 +flsht(void)
-@@ -544,2 +546,2 @@
+@@ -544,2 +555,2 @@
 -copy(f, t, s)
 -register char *f, *t;
 +void
 +copy(register char *f, register char *t, int s)
-@@ -547 +549 @@
+@@ -547 +558 @@
 -	register i;
 +	register int i;
-@@ -555,2 +557,2 @@
+@@ -555,2 +566,2 @@
 -clearbuf(cp)
 -register char *cp;
 +void
 +clearbuf(register char *cp)
-@@ -558 +560 @@
+@@ -558 +569 @@
 -	register i;
 +	register int i;
-@@ -571,2 +573,2 @@
+@@ -571,2 +582,2 @@
 -putent(cp)
 -char	*cp;
 +void
 +putent(char *cp)
-@@ -574 +576 @@
+@@ -574 +585 @@
 -	register i;
 +	register int i;
-@@ -576 +578 @@
+@@ -576 +587 @@
 -	for (i = 0; i < sizeof(ino_t); i++)
 +	for (i = 0; i < (int)sizeof(ino_t); i++)
-@@ -586,2 +588,2 @@
+@@ -586,2 +597,2 @@
 -getent(bf)
 -register char *bf;
 +static void
 +getent(register char *bf)
-@@ -589 +591 @@
+@@ -589 +600 @@
 -	register i;
 +	register int i;
-@@ -591 +593 @@
+@@ -591 +602 @@
 -	for (i = 0; i < sizeof(ino_t); i++)
 +	for (i = 0; i < (int)sizeof(ino_t); i++)
-@@ -602,2 +604,2 @@
+@@ -602,2 +613,2 @@
 -writec(c)
 -char c;
 +void
 +writec(char c)
-@@ -613 +615,2 @@
+@@ -613 +624,2 @@
 -readc()
 +int
 +readc(void)
-@@ -622,2 +625,2 @@
+@@ -622,2 +634,2 @@
 -mseek(pt)
 -daddr_t pt;
 +static void
 +mseek(daddr_t pt)
-@@ -629 +632,2 @@
+@@ -629 +641,2 @@
 -flsh()
 +void
 +flsh(void)
-@@ -638,4 +642,2 @@
+@@ -638,4 +651,2 @@
 -ino_t
 -search(inum, cp)
 -ino_t	inum;
 -char	*cp;
 +static ino_t
 +search(ino_t inum, char *cp)
-@@ -643 +645 @@
+@@ -643 +654 @@
 -	register i;
 +	register int i;
-@@ -665,2 +667,2 @@
+@@ -665,2 +676,2 @@
 -psearch(n)
 -char	*n;
 +int
 +psearch(char *n)
-@@ -693,2 +695,2 @@
+@@ -675 +686 @@
+-	cp1 = cp + 1;
++	cp1 = cp;
+@@ -693,2 +704,2 @@
 -direq(s1, s2)
 -register char *s1, *s2;
 +int
 +direq(register char *s1, register char *s2)
-@@ -696 +698 @@
+@@ -696 +707 @@
 -	register i;
 +	register int i;
-@@ -712,3 +714,2 @@
+@@ -712,3 +723,2 @@
 -dwrite(bno, b)
 -daddr_t	bno;
 -char	*b;
 +void
 +dwrite(daddr_t bno, char *b)
-@@ -716 +717 @@
+@@ -716 +726 @@
 -	register i;
 +	register int i;
-@@ -738,3 +739,2 @@
+@@ -727 +737 @@
+-	lseek(fi, bno*BSIZE, 0);
++	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
+@@ -738,3 +748,2 @@
 -dread(bno, buf, cnt)
 -daddr_t bno;
 -char *buf;
 +void
 +dread(daddr_t bno, char *buf, int cnt)
-@@ -742 +742 @@
+@@ -742 +751 @@
 -	register i, j;
 +	register int i, j;
-@@ -779,2 +779,2 @@
+@@ -760 +769 @@
+-	lseek(fi, bno*BSIZE, 0);
++	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
+@@ -779,2 +788,2 @@
 -clri(ip)
 -struct dinode *ip;
 +void
 +clri(struct dinode *ip)
-@@ -793,2 +793,2 @@
+@@ -782,6 +791,3 @@
+-	int i, *p;
+-	i = sizeof(struct dinode)/sizeof(int);
+-	p = (int *)ip;
+-	do
+-		*p++ = 0;
+-	while(--i);
++	static struct dinode zino;
++
++	*ip = zino;
+@@ -793,2 +799,2 @@
 -itrunc(ip)
 -register struct dinode *ip;
 +void
 +itrunc(register struct dinode *ip)
-@@ -796 +796 @@
+@@ -796 +802 @@
 -	register i;
 +	register int i;
-@@ -829,3 +829,2 @@
+@@ -829,3 +835,2 @@
 -tloop(bn, f1, f2)
 -daddr_t	bn;
 -int	f1, f2;
 +void
 +tloop(daddr_t bn, int f1, int f2)
-@@ -833 +832 @@
+@@ -833 +838 @@
 -	register i;
 +	register int i;
-@@ -853,2 +852,2 @@
+@@ -853,2 +858,2 @@
 -bfree(bn)
 -daddr_t	bn;
 +void
 +bfree(daddr_t bn)
-@@ -856 +855 @@
+@@ -856 +861 @@
 -	register i;
 +	register int i;
-@@ -863 +862 @@
+@@ -862,2 +867,2 @@
+-	if(sblock.s_nfree >= NICFREE) {
 -		fbuf.df_nfree = sblock.s_nfree;
++	if((unsigned)sblock.s_nfree >= NICFREE) {
 +		fbuf.frees.df_nfree = sblock.s_nfree;
-@@ -865 +864 @@
+@@ -865 +870 @@
 -			fbuf.df_free[i] = sblock.s_free[i];
 +			fbuf.frees.df_free[i] = sblock.s_free[i];
-@@ -875,2 +874,2 @@
+@@ -875,2 +880,2 @@
 -daddr_t
 -balloc()
 +static daddr_t
 +balloc(void)
-@@ -879 +878 @@
+@@ -879 +884 @@
 -	register i;
 +	register int i;
-@@ -896 +895 @@
+@@ -886 +891,2 @@
+-	if(sblock.s_nfree == 0 || (bno=sblock.s_free[--sblock.s_nfree]) == 0) {
++	if(sblock.s_nfree <= 0 || sblock.s_nfree > NICFREE ||
++	    (bno=sblock.s_free[--sblock.s_nfree]) == 0) {
+@@ -896 +902 @@
 -		sblock.s_nfree = fbuf.df_nfree;
 +		sblock.s_nfree = fbuf.frees.df_nfree;
-@@ -898 +897 @@
+@@ -898 +904 @@
 -			sblock.s_free[i] = fbuf.df_free[i];
 +			sblock.s_free[i] = fbuf.frees.df_free[i];
-@@ -909,4 +908,2 @@
+@@ -909,4 +915,2 @@
 -daddr_t
 -bmap(iaddr, bn)
 -daddr_t	iaddr[NADDR];
 -daddr_t	bn;
 +static daddr_t
 +bmap(daddr_t iaddr[NADDR], daddr_t bn)
-@@ -914 +911 @@
+@@ -914 +918 @@
 -	register i;
 +	register int i;
-@@ -976,2 +973,2 @@
+@@ -976,2 +980,2 @@
 -gethead(buf)
 -struct spcl *buf;
 +int
 +gethead(struct spcl *buf)
-@@ -988,2 +985,2 @@
+@@ -988,2 +992,2 @@
 -ishead(buf)
 -struct spcl *buf;
 +int
 +ishead(struct spcl *buf)
-@@ -996,3 +993,2 @@
+@@ -996,3 +1000,2 @@
 -checktype(b, t)
 -struct	spcl *b;
 -int	t;
 +int
 +checktype(struct	spcl *b, int t)
-@@ -1004,2 +1000,2 @@
+@@ -1004,2 +1007,2 @@
 -checksum(b)
 -int *b;
 +int
 +checksum(int *b)
-@@ -1007 +1003 @@
+@@ -1007 +1010 @@
 -	register i, j;
 +	register unsigned i, j;
-@@ -1021,3 +1017,2 @@
+@@ -1021,3 +1024,2 @@
 -checkvol(b, t)
 -struct spcl *b;
 -int t;
 +int
 +checkvol(struct spcl *b, int t)
-@@ -1030,2 +1025,2 @@
+@@ -1030,2 +1032,2 @@
 -readhdr(b)
 -struct	spcl *b;
 +int
 +readhdr(struct	spcl *b)
-@@ -1045,3 +1040,2 @@
+@@ -1045,3 +1047,2 @@
 -xtrfile(b, size)
 -char	*b;
 -long	size;
 +void
 +xtrfile(char *b, long size)
-@@ -1052 +1046,2 @@
+@@ -1052 +1053,2 @@
 -null() {;}
 +void
 +null(char *b, long size) {(void)b; (void)size;}
-@@ -1054 +1049,2 @@
+@@ -1054 +1056,2 @@
 -skip()
 +void
 +skip(char *b, long size)
-@@ -1055,0 +1052 @@
+@@ -1055,0 +1059 @@
 +	(void)b; (void)size;
-@@ -1061,3 +1058,2 @@
+@@ -1061,3 +1065,2 @@
 -rstrfile(b, s)
 -char *b;
 -long s;
 +void
 +rstrfile(char *b, long s)
-@@ -1066,0 +1063 @@
+@@ -1066,0 +1070 @@
 +	(void)s;
-@@ -1072,3 +1069,2 @@
+@@ -1072,3 +1076,2 @@
 -rstrskip(b, s)
 -char *b;
 -long s;
 +void
 +rstrskip(char *b, long s)
-@@ -1075,0 +1072 @@
+@@ -1075,0 +1079 @@
 +	(void)b; (void)s;
-@@ -1080,2 +1077,2 @@
+@@ -1080,2 +1084,2 @@
 -putdir(b)
 -char *b;
 +void
 +putdir(char *b, long size)
-@@ -1084 +1081 @@
+@@ -1084 +1088 @@
 -	register i;
 +	register int i;
-@@ -1085,0 +1083 @@
+@@ -1085,0 +1090 @@
 +	(void)size;
-@@ -1097,3 +1095,2 @@
+@@ -1097,3 +1102,2 @@
 -getdino(inum, b)
 -ino_t	inum;
 -struct	dinode *b;
 +void
 +getdino(ino_t inum, struct	dinode *b)
-@@ -1110,3 +1107,2 @@
+@@ -1110,3 +1114,2 @@
 -putdino(inum, b)
 -ino_t	inum;
 -struct	dinode *b;
 +void
 +putdino(ino_t inum, struct	dinode *b)
-@@ -1126,2 +1122,2 @@
+@@ -1126,2 +1129,2 @@
 -readbits(m)
 -short	*m;
 +void
 +readbits(short *m)
-@@ -1129 +1125 @@
+@@ -1129 +1132 @@
 -	register i;
 +	register int i;
-@@ -1141 +1137,2 @@
+@@ -1131,0 +1135,2 @@
++	if ((unsigned)i > MSIZ/(BSIZE/sizeof(short)))
++		i = MSIZ/(BSIZE/sizeof(short));
+@@ -1141 +1146,2 @@
 -done()
 +void
 +done(int sig)
-@@ -1142,0 +1140 @@
+@@ -1142,0 +1149 @@
 +	(void)sig;
 
 % usr/src/cmd/rev.c
@@ -11059,64 +11270,88 @@ usr/local
 -char arg[];
 +void
 +rm(char arg[], int fflg, int rflg, int iflg, int level)
-@@ -116,2 +117,2 @@
+@@ -56 +57,2 @@
+-	char name[100];
++	char name[strlen(arg)+16];
++	long off;
+@@ -85,0 +88,2 @@
++					off = lseek(d, 0L, 1);
++					close(d);
+@@ -86,0 +91,3 @@
++					if((d=open(arg, 0)) < 0)
++						break;
++					lseek(d, off, 0);
+@@ -116,2 +123,2 @@
 -dotname(s)
 -char *s;
 +int
 +dotname(char *s)
-@@ -119 +120 @@
+@@ -119 +126 @@
 -	if(s[0] == '.')
 +	if(s[0] == '.') {
-@@ -126,0 +128 @@
+@@ -126,0 +134 @@
 +	}
-@@ -130,2 +132,2 @@
+@@ -130,2 +138,2 @@
 -rmdir(f, iflg)
 -char *f;
 +int
 +rmdir(char *f, int iflg)
-@@ -148,2 +150,2 @@
+@@ -146 +154 @@
+-		return(status);
++		return(status != 0);
+@@ -148,2 +156,2 @@
 -	execl("/bin/rmdir", "rmdir", f, 0);
 -	execl("/usr/bin/rmdir", "rmdir", f, 0);
 +	execl("/bin/rmdir", "rmdir", f, (char *)0);
 +	execl("/usr/bin/rmdir", "rmdir", f, (char *)0);
-@@ -151,0 +154 @@
+@@ -151,0 +160 @@
 +	return(1);
-@@ -154 +157,2 @@
+@@ -154 +163,2 @@
 -yes()
 +int
 +yes(void)
 
 % usr/src/cmd/rmdir.c
-@@ -11,3 +11 @@
+@@ -8,0 +9 @@
++#include <errno.h>
+@@ -11,3 +12 @@
 -char	*rindex();
 -char	*strcat();
 -char	*strcpy();
 +void	rmdir(char *d);
-@@ -15,3 +13,2 @@
+@@ -15,3 +14,2 @@
 -main(argc,argv)
 -int argc;
 -char **argv;
 +int
 +main(int argc, char **argv)
-@@ -29,2 +26,2 @@
+@@ -29,2 +27,2 @@
 -rmdir(d)
 -char *d;
 +void
 +rmdir(char *d)
-@@ -33 +30 @@
+@@ -33 +31 @@
 -	char	*np, name[500];
 +	char	*np, name[strlen(d)+4];
-@@ -39,0 +37,2 @@
+@@ -39,0 +38,2 @@
 +	else
 +		np++;
+@@ -81 +81 @@
+-	if((access(name, 0)) < 0) {		/* name/. non-existent */
++	if((access(name, 0)) < 0 && errno == ENOENT) {	/* name/. non-existent */
+@@ -86 +86 @@
+-	if((access(name, 0)) < 0)		/* name/.. non-existent */
++	if((access(name, 0)) < 0 && errno == ENOENT)	/* name/.. non-existent */
 
 % usr/src/cmd/sa.c
-@@ -9 +9 @@
+@@ -4,0 +5 @@
++#include <pwd.h>
+@@ -9 +10 @@
 -#define	NC	sizeof(acctbuf.ac_comm)
 +#define	NC	(int)sizeof(acctbuf.ac_comm)
-@@ -44,0 +45 @@
+@@ -44,0 +46 @@
 +char	other[NC] = "***other", junk[NC] = "**junk**";
-@@ -47 +48,6 @@
+@@ -47 +49,6 @@
 -time_t	expand();
 +time_t	expand(unsigned t);
 +int	tcmp(char *q1, char *q2), ncmp(char *q1, char *q2), bcmp(char *q1, char *q2);
@@ -11124,85 +11359,124 @@ usr/local
 +float	sum(struct tab *p);
 +void	init(void), doacct(char *f), strip(void), printmoney(void);
 +void	column(double n, double a, double b, double c), col(double n, double a, double m);
-@@ -49,2 +55,2 @@
+@@ -49,2 +56,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(int argc, char **argv)
-@@ -54,2 +59,0 @@
+@@ -54,2 +60,0 @@
 -	extern tcmp(), ncmp(), bcmp();
 -	extern float sum();
-@@ -143 +147 @@
+@@ -143 +148 @@
 -		return;
 +		return(0);
-@@ -163 +167 @@
+@@ -163 +168,3 @@
 -			junkp = enter("***other");
 +			junkp = enter(other);
-@@ -202 +206 @@
++		if(i == junkp)
++			continue;
+@@ -202 +209 @@
 -	qsort(tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
 +	qsort((char *)tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
-@@ -213 +217,2 @@
+@@ -213 +220,2 @@
 -printmoney()
 +void
 +printmoney(void)
-@@ -215 +220 @@
+@@ -215,3 +223,2 @@
 -	register i;
+-	char buf[128];
+-	register char *cp;
 +	register int i;
-@@ -236,2 +241,2 @@
++	register struct passwd *pw;
+@@ -221 +228 @@
+-			if (getpw(i, buf)!=0)
++			if ((pw = getpwuid(i)) == NULL)
+@@ -223,7 +230,2 @@
+-			else {
+-				cp = buf;
+-				while (*cp!=':' &&*cp!='\n' && *cp)
+-					cp++;
+-				*cp = 0;
+-				printf("%-8s", buf);
+-			}
++			else
++				printf("%-8s", pw->pw_name);
+@@ -236,2 +238,2 @@
 -column(n, a, b, c)
 -double n, a, b, c;
 +void
 +column(double n, double a, double b, double c)
-@@ -258,2 +263,2 @@
+@@ -258,2 +260,2 @@
 -col(n, a, m)
 -double n, a, m;
 +void
 +col(double n, double a, double m)
-@@ -272,2 +277,2 @@
+@@ -272,2 +274,2 @@
 -doacct(f)
 -char *f;
 +void
 +doacct(char *f)
-@@ -334,2 +339,2 @@
+@@ -277 +279 @@
+-	long x;
++	time_t x;
+@@ -334,2 +336,2 @@
 -ncmp(p1, p2)
 -struct tab *p1, *p2;
 +int
 +ncmp(char *q1, char *q2)
-@@ -336,0 +342 @@
+@@ -336,0 +339 @@
 +	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
-@@ -339 +345 @@
+@@ -339 +342 @@
 -		return(tcmp(p1, p2));
 +		return(tcmp(q1, q2));
-@@ -345,2 +351,2 @@
+@@ -345,2 +348,2 @@
 -bcmp(p1, p2)
 -struct tab *p1, *p2;
 +int
 +bcmp(char *q1, char *q2)
-@@ -347,0 +354 @@
+@@ -347,0 +351 @@
 +	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
-@@ -349 +355,0 @@
+@@ -349 +352,0 @@
 -	float sum();
-@@ -365,2 +371,2 @@
+@@ -365,2 +368,2 @@
 -tcmp(p1, p2)
 -struct tab *p1, *p2;
 +int
 +tcmp(char *q1, char *q2)
-@@ -368 +374 @@
+@@ -368 +371 @@
 -	extern float sum();
 +	struct tab *p1 = (struct tab *)q1, *p2 = (struct tab *)q2;
-@@ -386,2 +392 @@
+@@ -386,2 +389 @@
 -float sum(p)
 -struct tab *p;
 +float sum(struct tab *p)
-@@ -397 +402,2 @@
+@@ -397 +399,2 @@
 -init()
 +void
 +init(void)
-@@ -424,2 +430,2 @@
+@@ -424,2 +427,2 @@
 -enter(np)
 -char *np;
 +int
 +enter(char *np)
+@@ -427 +430,2 @@
+-	int i, j;
++	int i, j, k;
++	unsigned h;
+@@ -435,2 +439,2 @@
+-	for (i=j=0; j<NC; j++) {
+-		i = i*7 + np[j];
++	for (h=j=0; j<NC; j++) {
++		h = h*7 + (np[j]&0377);
+@@ -438,3 +442,5 @@
+-	if (i < 0)
+-		i = -i;
+-	for (i%=size; tab[i].name[0]; i = (i+1)%size) {
++	for (k=0, i=h%size; tab[i].name[0]; i = (i+1)%size) {
++		if (++k > size) {
++			printf("Too many commands\n");
++			exit(1);
++		}
 @@ -453 +459,2 @@
 -strip()
 +void
@@ -11216,6 +11490,9 @@ usr/local
 +expand(unsigned t)
 
 % usr/src/cmd/sed/sed.h
+@@ -27 +27 @@
+-#define RESIZE	5000
++#define RESIZE	10000
 @@ -34,37 +34,37 @@
 -FILE	*fin;
 -union reptr	*abuf[ABUFSIZE];
@@ -11261,7 +11538,7 @@ usr/local
 +extern char	ibuf[512];
 +extern char	*cbp;
 +extern char	*ebp;
-+extern char	genbuf[LBSIZE];
++extern char	genbuf[LBSIZE+1];
 +extern char	*loc1;
 +extern char	*loc2;
 +extern char	*locs;
@@ -11288,7 +11565,7 @@ usr/local
 +extern char	*braslist[NBRA];
 +extern long	tlno[NLINES];
 +extern int	nlno;
-+extern char	fname[12][40];
++extern char	fname[12][LBSIZE];
 +extern FILE	*fcode[12];
 +extern int	nfiles;
 @@ -100,3 +100,3 @@
@@ -11387,10 +11664,10 @@ usr/local
 +struct reptr	*abuf[ABUFSIZE], **aptr, *ptrend, ptrspace[PTRSIZE], *rep;
 +struct reptr	**cmpend[DEPTH], *pending;
 +struct label	ltab[LABSIZE], *lab, *labend;
-+char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE], *loc1, *loc2, *locs;
++char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE+1], *loc1, *loc2, *locs;
 +char	seof, *reend, *lbend, *hend, *lcomend, linebuf[LBSIZE+1];
 +char	holdsp[LBSIZE+1], *spend, *hspend, *braelist[NBRA], *braslist[NBRA];
-+char	fname[12][40], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
++char	fname[12][LBSIZE], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
 +int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag, nlno;
 +int	nfiles, f, depth, eargc;
 +long	lnum, tlno[NLINES];
@@ -11402,6 +11679,12 @@ usr/local
 -char	*argv[];
 +int
 +main(int argc, char *argv[])
+@@ -37 +50 @@
+-	reend = &respace[RESIZE];
++	reend = &respace[RESIZE-LBSIZE-ESIZE-32];
+@@ -59 +72 @@
+-			if(eargc-- <= 0)	exit(2);
++			if(eargc-- <= 0 || eargv[1] == 0)	exit(2);
 @@ -105 +118 @@
 -/*	abort();	/*DEBUG*/
 +/*	abort();	*DEBUG*/
@@ -11418,86 +11701,129 @@ usr/local
 +/*	fprintf(stdout, "cp: %s\n", cp);	*DEBUG*/
 @@ -201,0 +215 @@
 +				/* fallthrough */
-@@ -261 +275 @@
+@@ -209,0 +224,4 @@
++				if(depth >= DEPTH) {
++					fprintf(stderr, "Too many {'s\n");
++					exit(2);
++				}
+@@ -261 +279 @@
 -				if(lpt = search(lab)) {
 +				if((lpt = search(lab))) {
-@@ -345,2 +359,2 @@
+@@ -345,2 +363,2 @@
 -					if(pt = labtab->chain) {
 -						while(pt1 = pt->lb1)
 +					if((pt = labtab->chain)) {
 +						while((pt1 = pt->lb1))
-@@ -362 +376 @@
+@@ -362 +380 @@
 -				if(lpt = search(lab)) {
 +				if((lpt = search(lab))) {
-@@ -367 +381 @@
+@@ -367 +385 @@
 -						while(pt1 = pt->lb1)
 +						while((pt1 = pt->lb1))
-@@ -561,2 +575 @@
+@@ -561,2 +579 @@
 -char	*compsub(rhsbuf)
 -char	*rhsbuf;
 +char	*compsub(char *rhsbuf)
-@@ -588,2 +601 @@
+@@ -588,2 +605 @@
 -char *compile(expbuf)
 -char	*expbuf;
 +char *compile(char *expbuf)
-@@ -591 +603 @@
+@@ -591 +607 @@
 -	register c;
 +	register int c;
-@@ -719 +731 @@
+@@ -598,0 +615,2 @@
++	if(seof == '\0')
++		return(badp);
+@@ -673 +690,0 @@
+-			continue;
+@@ -719 +736 @@
 -					for (c = sp[-2]; c<*sp; c++)
 +					for (c = sp[-2]&0177; c<(*sp&0177); c++)
-@@ -730 +742 @@
+@@ -730 +747 @@
 -				ep[c >> 3] |= bittab[c & 07];
 +				ep[(c&0177) >> 3] |= bittab[c & 07];
-@@ -749,2 +761,2 @@
+@@ -749,2 +766,9 @@
 -rline(lbuf)
 -char	*lbuf;
++static void
++toolong(void)
++{
++	fprintf(stderr, "Line too long\n");
++	exit(2);
++}
++
 +int
 +rline(char *lbuf)
-@@ -753 +765 @@
+@@ -753 +777 @@
 -	register	t;
 +	register int	t;
-@@ -764 +776 @@
+@@ -761 +785 @@
+-			if(eargc-- <= 0)
++			if(eargc-- <= 0 || eargv[1] == 0)
+@@ -764 +788,3 @@
 -			while(*++p = *q++) {
 +			while((*++p = *q++)) {
-@@ -783 +795 @@
++				if(p >= lbend-2)
++					toolong();
+@@ -783 +809,3 @@
 -		while(*++p = *q++) {
 +		while((*++p = *q++)) {
-@@ -816,2 +828 @@
++			if(p >= lbend-2)
++				toolong();
+@@ -785 +813 @@
+-				if((*++p = *q++) == '0') {
++				if((*++p = *q++) == '\0') {
+@@ -801,0 +830,2 @@
++		if(p >= lbend-2)
++			toolong();
+@@ -816,2 +846 @@
 -char	*address(expbuf)
 -char	*expbuf;
 +char	*address(char *expbuf)
-@@ -855,2 +866,2 @@
+@@ -838,2 +867,4 @@
+-	while(*rcp >= '0' && *rcp <= '9')
+-		lno = lno*10 + *rcp++ - '0';
++	while(*rcp >= '0' && *rcp <= '9') {
++		lno = lno <= 214748363? lno*10 + *rcp - '0': 0x7fffffff;
++		rcp++;
++	}
+@@ -855,2 +886,2 @@
 -cmp(a, b)
 -char	*a,*b;
 +int
 +cmp(char *a, char *b)
-@@ -868,2 +879 @@
+@@ -868,2 +899 @@
 -char	*text(textbuf)
 -char	*textbuf;
 +char	*text(char *textbuf)
-@@ -892,2 +902 @@
+@@ -892,2 +922 @@
 -struct label	*search(ptr)
 -struct label	*ptr;
 +struct label	*search(struct label *ptr)
-@@ -908 +917,2 @@
+@@ -908 +937,2 @@
 -dechain()
 +void
 +dechain(void)
-@@ -911 +921 @@
+@@ -911 +941 @@
 -	union reptr	*rptr, *trptr;
 +	struct reptr	*rptr, *trptr;
-@@ -922 +932 @@
+@@ -922 +952 @@
 -			while(trptr = rptr->lb1) {
 +			while((trptr = rptr->lb1)) {
-@@ -931,2 +941 @@
+@@ -931,2 +961 @@
 -char *ycomp(expbuf)
 -char	*expbuf;
 +char *ycomp(char *expbuf)
-@@ -934 +943,2 @@
+@@ -934 +963,2 @@
 -	register char	c, *ep, *tsp;
 +	register int	c;
 +	register char	*ep, *tsp;
+@@ -936,0 +967,2 @@
++	if(seof == '\0')
++		return(badp);
+@@ -942 +974 @@
+-		if(*tsp == '\n')
++		if(*tsp == '\n' || *tsp == '\0')
 
 % usr/src/cmd/sed/sed1.c
 @@ -3,0 +4,3 @@
@@ -11512,6 +11838,12 @@ usr/local
 @@ -43 +46 @@
 -	register union reptr	*ipc;
 +	register struct reptr	*ipc;
+@@ -81 +84 @@
+-						c = p2[1];
++						c = p2[1]&0377;
+@@ -104 +107 @@
+-					c = p1[1];
++					c = p1[1]&0377;
 @@ -158,2 +161,2 @@
 -match(expbuf, gf)
 -char	*expbuf;
@@ -11542,113 +11874,152 @@ usr/local
 -		ct = braelist[*ep++] - bbeg;
 +		bbeg = braslist[*ep&0377];
 +		ct = braelist[*ep++&0377] - bbeg;
-@@ -266,2 +271,2 @@
+@@ -266,2 +271,4 @@
 -		bbeg = braslist[*ep];
 -		ct = braelist[*ep++] - bbeg;
 +		bbeg = braslist[*ep&0377];
 +		ct = braelist[*ep++&0377] - bbeg;
-@@ -315 +320 @@
++		if(ct == 0)
++			continue;
+@@ -315 +322 @@
 -			c = *(braslist[ep[1]]);
 +			c = *(braslist[ep[1]&0377]);
-@@ -336,2 +341,2 @@
+@@ -336,2 +343,2 @@
 -substitute(ipc)
 -union reptr	*ipc;
 +static int
 +substitute(struct reptr *ipc)
-@@ -353,2 +358,2 @@
+@@ -353,2 +360,2 @@
 -dosub(rhsbuf)
 -char	*rhsbuf;
 +void
 +dosub(char *rhsbuf)
-@@ -364 +369 @@
+@@ -364 +371 @@
 -	while(c = *rp++) {
 +	while((c = *rp++)) {
-@@ -373 +378 @@
+@@ -373 +380 @@
 -		if (sp >= &genbuf[LBSIZE])
 +		if (sp >= &genbuf[LBSIZE]) {
-@@ -374,0 +380,2 @@
+@@ -374,0 +382,2 @@
 +			exit(2);
 +		}
-@@ -378 +385 @@
+@@ -378 +387 @@
 -	while (*sp++ = *lp++)
 +	while ((*sp++ = *lp++))
-@@ -380,0 +388 @@
+@@ -380,0 +390 @@
 +			exit(2);
-@@ -384 +392 @@
+@@ -384 +394 @@
 -	while (*lp++ = *sp++);
 +	while ((*lp++ = *sp++));
-@@ -387,2 +395 @@
+@@ -387,2 +397 @@
 -char	*place(asp, al1, al2)
 -char	*asp, *al1, *al2;
 +char	*place(char *asp, char *al1, char *al2)
-@@ -397 +404 @@
+@@ -397 +406 @@
 -		if (sp >= &genbuf[LBSIZE])
 +		if (sp >= &genbuf[LBSIZE]) {
-@@ -398,0 +406,2 @@
+@@ -398,0 +408,2 @@
 +			exit(2);
 +		}
-@@ -403,2 +412,2 @@
+@@ -403,2 +414,2 @@
 -command(ipc)
 -union reptr	*ipc;
 +void
 +command(struct reptr *ipc)
-@@ -444 +453 @@
+@@ -417,0 +429 @@
++				aptr--;
+@@ -444 +456 @@
 -			while(*p2++ = *p1++);
 +			while((*p2++ = *p1++));
-@@ -456 +465 @@
+@@ -456 +468 @@
 -			while(*p1++ = *p2++);
 +			while((*p1++ = *p2++));
-@@ -464 +473 @@
+@@ -461 +472,0 @@
+-			*spend++ = '\n';
+@@ -464,4 +475,6 @@
 -			while(*p1++ = *p2++)
-+			while((*p1++ = *p2++))
-@@ -473 +482 @@
+-				if(p1 >= lbend)
+-					break;
+-			spend = p1-1;
++			if(p1 < lbend)
++				*p1++ = '\n';
++			while(p1 < lbend && (*p1 = *p2++))
++				p1++;
++			*p1 = 0;
++			spend = p1;
+@@ -473 +486 @@
 -			while(*p1++ = *p2++);
 +			while((*p1++ = *p2++));
-@@ -481 +490 @@
+@@ -478 +490,0 @@
+-			*hspend++ = '\n';
+@@ -481,4 +493,6 @@
 -			while(*p1++ = *p2++)
-+			while((*p1++ = *p2++))
-@@ -505 +514 @@
+-				if(p1 >= hend)
+-					break;
+-			hspend = p1-1;
++			if(p1 < hend)
++				*p1++ = '\n';
++			while(p1 < hend && (*p1 = *p2++))
++				p1++;
++			*p1 = 0;
++			hspend = p1;
+@@ -502 +516 @@
+-				if(*p1 >= 040) {
++				if((*p1&0377) >= 040) {
+@@ -505 +519 @@
 -						while(*p2++ = *p3++)
 +						while((*p2++ = *p3++))
-@@ -523 +532 @@
+@@ -523 +537 @@
 -					while(*p2++ = *p3++)
 +					while((*p2++ = *p3++))
-@@ -585,0 +595 @@
+@@ -556 +570,2 @@
+-			*spend++ = '\n';
++			if(spend < lbend)
++				*spend++ = '\n';
+@@ -585,0 +601 @@
 +			/* fallthrough */
-@@ -599 +609 @@
+@@ -589 +605 @@
+-			if(aptr >= &abuf[ABUFSIZE])
++			if(aptr >= &abuf[ABUFSIZE]) {
+@@ -591,0 +608,2 @@
++				aptr--;
++			}
+@@ -599 +617 @@
 -			if(ipc->pfl && i)
 +			if(ipc->pfl && i) {
-@@ -606,0 +617 @@
+@@ -606,0 +625 @@
 +			}
-@@ -624 +635 @@
+@@ -624 +643 @@
 -			while(*p2++ = *p1++);
 +			while((*p2++ = *p1++));
-@@ -627 +638 @@
+@@ -627 +646 @@
 -			while(*p2++ = *p1++);
 +			while((*p2++ = *p1++));
-@@ -631 +642 @@
+@@ -631 +650 @@
 -			while(*p2++ = *p1++);
 +			while((*p2++ = *p1++));
-@@ -638 +649 @@
+@@ -638 +657 @@
 -			while(*p1 = p2[*p1])	p1++;
 +			while((*p1 = *p1 & 0200 ? *p1 : p2[*p1&0377]))	p1++;
-@@ -645,2 +656 @@
+@@ -645,2 +664 @@
 -gline(addr)
 -char	*addr;
 +gline(char *addr)
-@@ -649 +659 @@
+@@ -649 +667 @@
 -	register	c;
 +	register int	c;
-@@ -683,2 +693,2 @@
+@@ -665,0 +684 @@
++					c = 0;
+@@ -683,2 +702,2 @@
 -ecmp(a, b, count)
 -char	*a, *b;
 +int
 +ecmp(char *a, char *b, int count)
-@@ -691 +701,2 @@
+@@ -691 +710,2 @@
 -arout()
 +void
 +arout(void)
-@@ -698,2 +709 @@
+@@ -698,2 +718 @@
 -	aptr = abuf - 1;
 -	while(*++aptr) {
 +	for(aptr = abuf; *aptr; aptr++) {
@@ -13283,13 +13654,28 @@ usr/local
 +#include <stdio.h>
 +int
 +main(int argc, char **argv)
+@@ -4 +5 @@
+-	int c, n;
++	unsigned c, n;
+@@ -10 +11 @@
+-		exit(0);
++		exit(1);
 @@ -13 +14 @@
 -	while(c = *s++) {
 +	while((c = *s++)) {
+@@ -16 +17 @@
+-			exit(0);
++			exit(1);
 
 % usr/src/cmd/sort.c
 @@ -5,0 +6 @@
 +#define	qsort	sort_qsort
+@@ -16,2 +17 @@
+-char	file1[30];
+-char	*file = file1;
++char	*file;
+@@ -21,0 +22 @@
++char	*tend;
 @@ -24,4 +25,3 @@
 -int	cmp(), cmpa();
 -int	(*compare)() = cmpa;
@@ -13350,190 +13736,216 @@ usr/local
 @@ -245 +251 @@
 -	nlines /= (5*(sizeof(char *)/sizeof(char)));
 +	nlines /= (5*(sizeof(char *)));
-@@ -272 +278 @@
+@@ -247,0 +254 @@
++	tend = ep - 1;
+@@ -250 +257 @@
+-		sprintf(filep=file1, "%s/stm%05uaa", *dirs, getpid());
++		sprintf(filep=file=malloc(strlen(*dirs)+16), "%s/stm%05uaa", *dirs, getpid());
+@@ -272 +279 @@
 -	for(a = mflg|cflg?0:eargc; a+N<nfiles || unsafeout&&a<eargc; a=i) {
 +	for(a = mflg|cflg?0:eargc; a+N<nfiles || (unsafeout&&a<eargc); a=i) {
-@@ -284 +290 @@
+@@ -284 +291 @@
 -	term();
 +	term(0);
-@@ -287 +293,2 @@
+@@ -287 +294,2 @@
 -sort()
 +void
 +sort(void)
-@@ -291 +298 @@
+@@ -291 +299 @@
 -	register c;
 +	register int c;
-@@ -350 +357,3 @@
+@@ -306 +314,2 @@
+-					*cp++ = c;
++					if(cp < tend)
++						*cp++ = c;
+@@ -350 +359,3 @@
 -merge(a,b)
 +int	rline(struct merg *mp);
 +void
 +merge(int a, int b)
-@@ -354 +363 @@
+@@ -354 +365 @@
 -	register	i;
 +	register int	i;
-@@ -392 +401 @@
+@@ -392 +403 @@
 -	muflg = mflg & uflg | cflg;
 +	muflg = (mflg & uflg) | cflg;
-@@ -444,2 +453,2 @@
+@@ -393,0 +405,2 @@
++	if(i == 1)
++		muflg |= uflg;
+@@ -444,2 +457,2 @@
 -rline(mp)
 -struct merg *mp;
 +int
 +rline(struct merg *mp)
-@@ -450 +459 @@
+@@ -450 +463 @@
 -	register c;
 +	register int c;
-@@ -466,2 +475,2 @@
+@@ -466,2 +479,2 @@
 -disorder(s,t)
 -char *s, *t;
 +void
 +disorder(char *s, char *t)
-@@ -473 +482 @@
+@@ -473 +486 @@
 -	term();
 +	term(0);
-@@ -476 +485,2 @@
+@@ -476 +489,2 @@
 -newfile()
 +void
 +newfile(void)
-@@ -483 +493 @@
+@@ -483 +497 @@
 -		term();
 +		term(0);
-@@ -489 +499 @@
+@@ -489 +503 @@
 -setfil(i)
 +setfil(int i)
-@@ -492 +502 @@
+@@ -492 +506 @@
 -	if(i < eargc)
 +	if(i < eargc) {
-@@ -496,0 +507 @@
+@@ -496,0 +511 @@
 +	}
-@@ -503 +514,2 @@
+@@ -503 +518,2 @@
 -oldfile()
 +void
 +oldfile(void)
-@@ -509 +521 @@
+@@ -509 +525 @@
 -			term();
 +			term(0);
-@@ -515 +527,2 @@
+@@ -515 +531,2 @@
 -safeoutfil()
 +void
 +safeoutfil(void)
-@@ -533,2 +546,2 @@
+@@ -524 +541 @@
+-	for(i=eargc-N;i<eargc;i++) {	/*-N is suff., not nec.*/
++	for(i=eargc>N?eargc-N:0;i<eargc;i++) {	/*-N is suff., not nec.*/
+@@ -533,2 +550,2 @@
 -cant(f)
 -char *f;
 +void
 +cant(char *f)
-@@ -538 +551 @@
+@@ -538 +555 @@
 -	term();
 +	term(0);
-@@ -541,2 +554,2 @@
+@@ -541,2 +558,2 @@
 -diag(s,t)
 -char *s, *t;
 +void
 +diag(char *s, char *t)
-@@ -550 +563,2 @@
+@@ -550 +567,2 @@
 -term()
 +void
 +term(int sig)
-@@ -552 +566,2 @@
+@@ -552 +570,2 @@
 -	register i;
 +	register int i;
 +	(void)sig;
-@@ -565,2 +580,2 @@
+@@ -565,2 +584,2 @@
 -cmp(i, j)
 -char *i, *j;
 +int
 +cmp(char *i, char *j)
-@@ -569,2 +584 @@
+@@ -569,2 +588 @@
 -	char *skip();
 -	char *code, *ignore;
 +	unsigned char *code, *ignore;
-@@ -606,2 +620,2 @@
+@@ -606,2 +624,2 @@
 -			for(ipa = pa; ipa<la&&isdigit(*ipa); ipa++) ;
 -			for(ipb = pb; ipb<lb&&isdigit(*ipb); ipb++) ;
 +			for(ipa = pa; ipa<la&&isdigit(*ipa&0377); ipa++) ;
 +			for(ipb = pb; ipb<lb&&isdigit(*ipb&0377); ipb++) ;
-@@ -613 +627 @@
+@@ -613 +631 @@
 -					if(b = *--ipb - *--ipa)
 +					if((b = *--ipb - *--ipa))
-@@ -627,3 +641,3 @@
+@@ -627,3 +645,3 @@
 -				while(pa<la && isdigit(*pa)
 -				   && pb<lb && isdigit(*pb))
 -					if(a = *pb++ - *pa++)
 +				while(pa<la && isdigit(*pa&0377)
 +				   && pb<lb && isdigit(*pb&0377))
 +					if((a = *pb++ - *pa++))
-@@ -631 +645 @@
+@@ -631 +649 @@
 -			while(pa<la && isdigit(*pa))
 +			while(pa<la && isdigit(*pa&0377))
-@@ -634 +648 @@
+@@ -634 +652 @@
 -			while(pb<lb && isdigit(*pb))
 +			while(pb<lb && isdigit(*pb&0377))
-@@ -642 +656 @@
+@@ -642 +660 @@
 -		while(ignore[*pa])
 +		while(ignore[(signed char)*pa])
-@@ -644 +658 @@
+@@ -644 +662 @@
 -		while(ignore[*pb])
 +		while(ignore[(signed char)*pb])
-@@ -646 +660 @@
+@@ -646 +664 @@
 -		if(pa>=la || *pa=='\n')
 +		if(pa>=la || *pa=='\n') {
-@@ -649,0 +664 @@
+@@ -649,0 +668 @@
 +		}
-@@ -652 +667 @@
+@@ -652 +671 @@
 -		if((sa = code[*pb++]-code[*pa++]) == 0)
 +		if((sa = code[(signed char)*pb++]-code[(signed char)*pa++]) == 0)
-@@ -661,2 +676,2 @@
+@@ -661,2 +680,2 @@
 -cmpa(pa, pb)
 -register char *pa, *pb;
 +int
 +cmpa(register char *pa, register char *pb)
-@@ -672 +687 @@
+@@ -672 +691 @@
 -		*pb > *pa   ? fields[0].rflg:
 +		(*pb&0377) > (*pa&0377) ? fields[0].rflg:
-@@ -678,3 +693 @@
+@@ -678,3 +697 @@
 -skip(pp, fp, j)
 -struct field *fp;
 -char *pp;
 +skip(char *pp, struct field *fp, int j)
-@@ -682 +695 @@
+@@ -682 +699 @@
 -	register i;
 +	register int i;
-@@ -718,2 +731 @@
+@@ -718,2 +735 @@
 -eol(p)
 -register char *p;
 +eol(register char *p)
-@@ -725 +737,2 @@
+@@ -725 +741,2 @@
 -copyproto()
 +void
 +copyproto(void)
-@@ -727 +740 @@
+@@ -727,7 +744 @@
 -	register i;
-+	register int i;
-@@ -732 +745 @@
+-	register int *p, *q;
+-
+-	p = (int *)&proto;
+-	q = (int *)&fields[nfields];
 -	for(i=0; i<sizeof(proto)/sizeof(*p); i++)
-+	for(i=0; i<(int)(sizeof(proto)/sizeof(*p)); i++)
-@@ -736,2 +749,2 @@
+-		*q++ = *p++;
++	fields[nfields] = proto;
+@@ -736,2 +747,2 @@
 -field(s,k)
 -char *s;
 +void
 +field(char *s, int k)
-@@ -740 +753 @@
+@@ -740 +751 @@
 -	register d;
 +	register int d;
-@@ -790,0 +804 @@
+@@ -789 +800 @@
+-			d = &fields[0].n[0]-&fields[0].m[0];
++			d = 1;
+@@ -790,0 +802 @@
 +			/* fallthrough */
-@@ -798,2 +812,2 @@
+@@ -792 +804 @@
+-			p->m[k+d] = number(&s);
++			(d? p->n: p->m)[k] = number(&s);
+@@ -798,2 +810,2 @@
 -number(ppa)
 -char **ppa;
 +int
 +number(char **ppa)
-@@ -805 +819 @@
+@@ -805,2 +817,2 @@
 -	while(isdigit(*pa)) {
+-		n = n*10 + *pa - '0';
 +	while(isdigit(*pa&0377)) {
-@@ -812 +826,2 @@
++		n = n <= 214748363? n*10 + *pa - '0': 0x7fffffff;
+@@ -812 +824,2 @@
 -blank(c)
 +int
 +blank(int c)
-@@ -822,2 +837,2 @@
+@@ -822,2 +835,2 @@
 -qsort(a,l)
 -char **a, **l;
 +void
@@ -13567,6 +13979,9 @@ usr/local
 -main(argc,argv) char *argv[];
 +int
 +main(int argc, char *argv[])
+@@ -49 +56 @@
+-		if(i<0) i= -i;
++		if(i<0) i= -(unsigned)i;
 
 % usr/src/cmd/spline.c
 @@ -140,2 +140,2 @@
@@ -13574,10 +13989,21 @@ usr/local
 -rhs(i){
 +static float
 +rhs(int i){
+@@ -146 +146 @@
+-	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i+1]-x.val[i]) - zz));
++	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i_+1]-x.val[i_]) - zz));
 @@ -149 +149,2 @@
 -spline(){
 +static int
 +spline(void){
+@@ -154,0 +156 @@
++	double dm;
+@@ -201,3 +203,2 @@
+-		m = hi1>0?ni:-ni;
+-		m = 1.001*m*hi1/(x.ub-x.lb);
+-		if(m<=0) m = 1;
++		dm = 1.001*(hi1>0?ni:-ni)*hi1/(x.ub-x.lb);
++		m = dm >= 1 && dm < 2e9? dm: 1;
 @@ -205 +206 @@
 -		for(j=m;j>0||i==0&&j==0;j--){	/* interpolate */
 +		for(j=m;j>0||(i==0&&j==0);j--){	/* interpolate */
@@ -13586,13 +14012,14 @@ usr/local
 +int	getfloat(float *p), numb(float *np, int *argcp, char ***argvp);
 +static void
 +readin(void) {
-@@ -222,2 +225,2 @@
+@@ -222,4 +225,4 @@
 -getfloat(p)
 -	float *p;{
+-	char buf[30];
+-	register c;
 +int
 +getfloat(float *p){
-@@ -225 +228 @@
--	register c;
++	char buf[31];
 +	register int c;
 @@ -227 +229,0 @@
 -	extern double atof();
@@ -13620,6 +14047,9 @@ usr/local
 +	if(!(('0'<=c&&c<='9') || c=='-' || c== '.' )) return(0);
 
 % usr/src/cmd/split.c
+@@ -5 +5 @@
+-char	fname[100];
++char	*fname;
 @@ -11,2 +11,2 @@
 -main(argc, argv)
 -char *argv[];
@@ -13628,7 +14058,15 @@ usr/local
 @@ -14 +14 @@
 -	register i, c, f;
 +	register int i, c, f;
-@@ -56 +56 @@
+@@ -35 +35,4 @@
+-				count = atoi(argv[i]+1);
++				if((count = atoi(argv[i]+1)) == 0) {
++					fprintf(stderr,"bad count\n");
++					exit(1);
++				}
+@@ -52,0 +56 @@
++	fname = malloc(strlen(ofil)+3);
+@@ -56 +60 @@
 -	for(i=0; i<count; i++)
 +	for(i=0; (unsigned)i<count; i++)
 
@@ -13860,6 +14298,12 @@ usr/local
 +void	prmodes(void), delay(int m, char *s), prspeed(char *c, int s);
 +int
 +main(int argc, char *argv[])
+@@ -197 +154 @@
+-		if (eq("erase")) {
++		if (argc > 1 && eq("erase")) {
+@@ -204 +161 @@
+-		if (eq("kill")) {
++		if (argc > 1 && eq("kill")) {
 @@ -232,2 +189,2 @@
 -eq(string)
 -char *string;
@@ -13888,6 +14332,9 @@ usr/local
 -char *c;
 +void
 +prspeed(char *c, int s)
+@@ -300 +258 @@
+-	fprintf(stderr,"%s%d baud\n", c, speed[s]);
++	fprintf(stderr,"%s%d baud\n", c, (unsigned)s < 16? speed[s]: 0);
 
 % usr/src/cmd/su.c
 @@ -4,4 +4,2 @@
@@ -13937,6 +14384,9 @@ usr/local
 -int argc; char **argv;
 +int
 +main(int argc,char **argv)
+@@ -60 +62 @@
+-	struct sgttyb tb;
++	struct sgttyb tb = {0};
 @@ -99 +101,2 @@
 -clear(n)
 +static void
@@ -13969,6 +14419,9 @@ usr/local
 -dasi450()
 +void
 +dasi450(void)
+@@ -155 +165 @@
+-	struct sgttyb t;
++	struct sgttyb t = {0};
 @@ -163 +173,2 @@
 -tty37()
 +void
@@ -13981,6 +14434,9 @@ usr/local
 -tn300()
 +void
 +tn300(void)
+@@ -175 +188 @@
+-	struct sgttyb t;
++	struct sgttyb t = {0};
 @@ -183 +196,2 @@
 -hp2645()
 +void
@@ -14009,7 +14465,17 @@ usr/local
 @@ -31 +32 @@
 -	if(argc<=1 || *arg!='-'&&*arg!='+') {
 +	if(argc<=1 || (*arg!='-'&&*arg!='+')) {
-@@ -181 +182,2 @@
+@@ -39,2 +40,4 @@
+-	while(digit(*arg))
+-		n = n*10 + *arg++ - '0';
++	while(digit(*arg)) {
++		n = n <= 214748363? n*10 + *arg - '0': 0x7fffffff;
++		arg++;
++	}
+@@ -55 +58 @@
+-		n <<= 9;
++		n = n < 4194304? n<<9: 0x7fffffff;
+@@ -181 +184,2 @@
 -digit(c)
 +int
 +digit(int c)
