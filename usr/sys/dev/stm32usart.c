@@ -231,5 +231,6 @@ putchar(register int c)
 		putchar('\r');
 	}
 	putchar(0);
-	CR1 = s;
+	if(s&TXEIE || kl11[0].t_outq.c_cc)
+		CR1 |= TXEIE;
 }

@@ -7527,14 +7527,21 @@ transmitter.
 `putchar` is `kl.c`'s with `ISR`, `TDR`, and `CR1` in place of the
 KL11's registers. Where `kl.c` cleared the transmitter status register,
 and with it the interrupt enable, this clears `TXEIE` alone, since the
-receiver's enable lives in the same register and must be kept; the
-whole of `CR1` is restored at the end. If output was in progress,
-`TXEIE` comes back set and the transmit FIFO has room, and the
-interrupt which follows restarts it. The wait for the transmitter is
+receiver's enable lives in the same register and must be kept. At the
+end `TXEIE` alone is set again (234, 235), and only if it was set at
+the start or characters wait in the output queue; `kl.c` restored the
+whole register. The receive interrupt stays enabled meanwhile, and an
+echo may pass through `klstart`, which sets `TXEIE`, between the reading
+of `CR1` and the end; a restored copy would clear that bit again, and
+leave the queue unsent until something else called `ttstart`. The test
+of the queue also covers an echo taken between the reading of `CR1` and
+the clearing of `TXEIE` (227, 228). If output was in progress, `TXEIE`
+comes back set and the transmit FIFO has room, and the interrupt which
+follows restarts it. The wait for the transmitter is
 bounded by time, and a newline is followed by a carriage return alone,
 as in #f("pl011.c").
 
-#lines(195, 235)
+#lines(195, 236)
 #source("/usr/sys/dev/stm32sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.
