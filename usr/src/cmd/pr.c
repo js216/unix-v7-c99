@@ -161,6 +161,8 @@ print(char *fp, char **argp)
 		mopen(argp);
 		ncol = nofile;
 	}
+	if (ncol < 1)
+		ncol = 1;
 	colw = width/ncol;
 	sncol = ncol;
 	sheader = header;
@@ -202,7 +204,7 @@ print(char *fp, char **argp)
 		}
 		line = 0;
 		if (ntflg==0) {
-			sprintf(linebuf, "\n\n%s %s  %s Page %d\n\n\n",
+			sprintf(linebuf, "\n\n%s %s  %.80s Page %d\n\n\n",
 				cbuf+4, cbuf+20, header, page);
 			for(cp=linebuf;*cp;) put(*cp++);
 		}
