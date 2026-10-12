@@ -29,7 +29,7 @@ estabf(REG STRING s)
 	REG FILE	f;
 
 	(f=standin)->fdes = -1;
-	f->fend=length(s)+(f->fnxt=s);
+	f->fend=(f->fnxt=s) ? s+length(s) : s;
 	f->flin=1;
 	return(f->feof=(s==0));
 }

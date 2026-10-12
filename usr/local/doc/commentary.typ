@@ -9277,7 +9277,10 @@ ahead or left in the input, belongs to the commands it starts or, with
 `estabf` makes the string `s` the input, with no file behind it
 (`fdes` is -1). The end, `fend`, is placed after the terminating null,
 since `length` (#f("sh/string.c")) counts it; `readc` sees the null and
-then finds the input exhausted. `push` and `pop` stack and unstack
+then finds the input exhausted. A null `s`, which `readc`
+(#f("sh/word.c")) passes at the end of the strings given to `eval`, is
+its own end (32); v7 added the zero which `length` returns for it to the
+null pointer, which C99 leaves undefined. `push` and `pop` stack and unstack
 inputs, for `eval` and `.` (`execexp`, #f("sh/xec.c")), the `read`
 command (#f("sh/name.c")), and the substitutions of #f("sh/macro.c").
 
