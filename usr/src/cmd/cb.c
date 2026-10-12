@@ -2,21 +2,21 @@
 #define	puts	cb_puts
 #define	gets	cb_gets
 int	getch(void), lookup(char *tab[]), getnl(void), gets(void);
-void	ptabs(void), comment(void), puts(void), gotelse(void);
-int	slevel[10];
+void	ptabs(void), comment(void), puts(void), gotelse(void), toodeep(void);
+int	slevel[20];
 int	clevel	= 0;
 int	spflg[20][10];
 int	sind[20][10];
-int	siflev[10];
-int	sifflg[10];
+int	siflev[20];
+int	sifflg[20];
 int	iflev	= 0;
 int	ifflg	= -1;
 int	level	= 0;
-int	ind[10]	= {
+int	ind[20]	= {
 	0,0,0,0,0,0,0,0,0,0 };
 int	eflg	= 0;
 int	paren	= 0;
-int	pflg[10] = {
+int	pflg[20] = {
 	0,0,0,0,0,0,0,0,0,0 };
 char	lchar;
 char	pchar;
@@ -33,7 +33,7 @@ char	*wfor[] = {
 char	*wds[] = {
 	"case","default",0};
 int	j	= 0;
-char	string[200];
+char	string[1000];
 char	cc;
 int	sflg	= 1;
 int	peek	= -1;
@@ -78,6 +78,7 @@ main(void)
 			continue;
 		case '{':
 			if(lookup(welse) == 1)gotelse();
+			if(clevel >= 19)toodeep();
 			siflev[clevel] = iflev;
 			sifflg[clevel] = ifflg;
 			iflev = ifflg = 0;
@@ -100,7 +101,7 @@ main(void)
 			}
 			continue;
 		case '}':
-			clevel--;
+			if(clevel > 0)clevel--;
 			if((iflev = siflev[clevel]-1) < 0)iflev = 0;
 			ifflg = sifflg[clevel];
 			if(pflg[level] >0 && ind[level] == 0){
@@ -249,6 +250,7 @@ cont:
 				continue;
 			}
 			if(lookup(wif) == 1){
+				if(iflev >= 9)toodeep();
 				puts();
 				stabs[clevel][iflev] = tabs;
 				spflg[clevel][iflev] = pflg[level];
@@ -271,8 +273,13 @@ ptabs(void){
 int
 getch(void){
 	if(peek < 0 && lastchar != ' ' && lastchar != '\t')pchar = lastchar;
+	if(j >= (int)sizeof string - 4)toodeep();
 	lastchar = (peek<0) ? getc(stdin):peek;
 	peek = -1;
+	if(lastchar == EOF){
+		puts();
+		exit(0);
+	}
 	return(lastchar);
 }
 void
@@ -373,4 +380,10 @@ gotstar:
 		if(c == '*')goto gotstar;
 		goto rep;
 	}
+}
+void
+toodeep(void){
+	fflush(stdout);
+	fprintf(stderr, "cb: too long or too deeply nested\n");
+	exit(1);
 }
