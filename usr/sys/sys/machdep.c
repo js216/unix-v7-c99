@@ -45,7 +45,7 @@ startup(void)
 
 	i = btoc(corebase) + USIZE;
 	l1tab = (unsigned long long *)CLKADDR(i);
-	l1pa = ctob(i);
+	l1pa = ctob((unsigned)i);
 	for(a = 0; a < 4*NPROC; a++)
 		l1tab[a] = 0;
 	i += btoc(32*NPROC);

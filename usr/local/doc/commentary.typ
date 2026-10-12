@@ -1829,7 +1829,10 @@ process 0 (see `main`), as v7 began at `*ka6 + USIZE`. Two new
 reservations follow it. The first-level user tables, 32 bytes for each
 slot of the process table, take the next clicks (47--51); `l1tab` is
 their kernel address, through which `sureg` writes them, and `l1pa` the
-physical one, which `TTBR0` needs. They are cleared, so that every
+physical one, which `TTBR0` needs. The click number is converted to
+`unsigned` before `ctob` shifts it (48): on the MP135 machine core lies
+above 0xC0000000, and the shift of a signed `int` past the largest
+`int` would be undefined. They are cleared, so that every
 process starts with an empty address space. The next `NPTAB` clicks
 (52, 53) are the pool from which `sureg` takes the lower tables, freed
 into `ptmap` as v7 freed core into `coremap`. The rest of core is freed
