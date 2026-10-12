@@ -24,7 +24,7 @@
 #define NLINES	256
 #define	DEPTH	20
 #define PTRSIZE	100
-#define RESIZE	5000
+#define RESIZE	10000
 #define	ABUFSIZE	20
 #define	LBSIZE	4000
 #define	ESIZE	256
@@ -38,7 +38,7 @@ extern char	*lastre;
 extern char	ibuf[512];
 extern char	*cbp;
 extern char	*ebp;
-extern char	genbuf[LBSIZE];
+extern char	genbuf[LBSIZE+1];
 extern char	*loc1;
 extern char	*loc2;
 extern char	*locs;
@@ -65,7 +65,7 @@ extern char	*braelist[NBRA];
 extern char	*braslist[NBRA];
 extern long	tlno[NLINES];
 extern int	nlno;
-extern char	fname[12][40];
+extern char	fname[12][LBSIZE];
 extern FILE	*fcode[12];
 extern int	nfiles;
 

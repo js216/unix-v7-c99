@@ -7,10 +7,10 @@ FILE	*fin, *fcode[12];
 struct reptr	*abuf[ABUFSIZE], **aptr, *ptrend, ptrspace[PTRSIZE], *rep;
 struct reptr	**cmpend[DEPTH], *pending;
 struct label	ltab[LABSIZE], *lab, *labend;
-char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE], *loc1, *loc2, *locs;
+char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE+1], *loc1, *loc2, *locs;
 char	seof, *reend, *lbend, *hend, *lcomend, linebuf[LBSIZE+1];
 char	holdsp[LBSIZE+1], *spend, *hspend, *braelist[NBRA], *braslist[NBRA];
-char	fname[12][40], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
+char	fname[12][LBSIZE], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
 int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag, nlno;
 int	nfiles, f, depth, eargc;
 long	lnum, tlno[NLINES];
@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	hend = &holdsp[LBSIZE];
 	lcomend = &genbuf[71];
 	ptrend = &ptrspace[PTRSIZE];
-	reend = &respace[RESIZE];
+	reend = &respace[RESIZE-LBSIZE-ESIZE-32];
 	labend = &labtab[LABSIZE];
 	lnum = 0;
 	pending = 0;
@@ -69,7 +69,7 @@ main(int argc, char *argv[])
 			continue;
 
 		case 'f':
-			if(eargc-- <= 0)	exit(2);
+			if(eargc-- <= 0 || eargv[1] == 0)	exit(2);
 
 			if((fin = fopen(*++eargv, "r")) == NULL) {
 				fprintf(stderr, "Cannot open pattern-file: %s\n", *eargv);
@@ -221,6 +221,10 @@ swit:
 			case '{':
 				rep->command = BCOM;
 				rep->negfl = !(rep->negfl);
+				if(depth >= DEPTH) {
+					fprintf(stderr, "Too many {'s\n");
+					exit(2);
+				}
 				cmpend[depth++] = &rep->lb1;
 				if(++rep >= ptrend) {
 					fprintf(stderr, "Too many commands: %s\n", linebuf);
@@ -608,6 +612,8 @@ char *compile(char *expbuf)
 	int	closed;
 	char	bracket[NBRA], *bracketp;
 
+	if(seof == '\0')
+		return(badp);
 	if(*cp == seof) {
 		cp++;
 		return(expbuf);
@@ -682,7 +688,6 @@ char *compile(char *expbuf)
 			goto defchar;
 
 		case '\0':
-			continue;
 		case '\n':
 			cp = sp;
 			return(badp);
@@ -758,6 +763,13 @@ char *compile(char *expbuf)
 		}
 	}
 }
+static void
+toolong(void)
+{
+	fprintf(stderr, "Line too long\n");
+	exit(2);
+}
+
 int
 rline(char *lbuf)
 {
@@ -770,10 +782,12 @@ rline(char *lbuf)
 	if(eflag) {
 		if(eflag > 0) {
 			eflag = -1;
-			if(eargc-- <= 0)
+			if(eargc-- <= 0 || eargv[1] == 0)
 				exit(2);
 			q = *++eargv;
 			while((*++p = *q++)) {
+				if(p >= lbend-2)
+					toolong();
 				if(*p == '\\') {
 					if((*++p = *q++) == '\0') {
 						saveq = 0;
@@ -793,8 +807,10 @@ rline(char *lbuf)
 		if((q = saveq) == 0)	return(-1);
 
 		while((*++p = *q++)) {
+			if(p >= lbend-2)
+				toolong();
 			if(*p == '\\') {
-				if((*++p = *q++) == '0') {
+				if((*++p = *q++) == '\0') {
 					saveq = 0;
 					return(-1);
 				} else
@@ -811,6 +827,8 @@ rline(char *lbuf)
 	}
 
 	while((t = getc(fin)) != EOF) {
+		if(p >= lbend-2)
+			toolong();
 		*++p = t;
 		if(*p == '\\') {
 			t = getc(fin);
@@ -846,8 +864,10 @@ char	*address(char *expbuf)
 	rcp = cp;
 	lno = 0;
 
-	while(*rcp >= '0' && *rcp <= '9')
-		lno = lno*10 + *rcp++ - '0';
+	while(*rcp >= '0' && *rcp <= '9') {
+		lno = lno <= 214748363? lno*10 + *rcp - '0': 0x7fffffff;
+		rcp++;
+	}
 
 	if(rcp > cp) {
 		*expbuf++ = CLNUM;
@@ -944,12 +964,14 @@ char *ycomp(char *expbuf)
 	register char	*ep, *tsp;
 	char	*sp;
 
+	if(seof == '\0')
+		return(badp);
 	ep = expbuf;
 	sp = cp;
 	for(tsp = cp; *tsp != seof; tsp++) {
 		if(*tsp == '\\')
 			tsp++;
-		if(*tsp == '\n')
+		if(*tsp == '\n' || *tsp == '\0')
 			return(badp);
 	}
 	tsp++;

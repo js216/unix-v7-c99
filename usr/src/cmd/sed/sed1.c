@@ -81,7 +81,7 @@ execute(char *file)
 					if(*p2 == CEND) {
 						p1 = 0;
 					} else if(*p2 == CLNUM) {
-						c = p2[1];
+						c = p2[1]&0377;
 						if(lnum > tlno[c]) {
 							ipc->inar = 0;
 							if(ipc->negfl)
@@ -104,7 +104,7 @@ execute(char *file)
 					}
 
 				} else if(*p1 == CLNUM) {
-					c = p1[1];
+					c = p1[1]&0377;
 					if(lnum != tlno[c]) {
 						if(ipc->negfl)
 							goto yes;
@@ -270,6 +270,8 @@ advance(char *alp, char *aep)
 	case CBACK|STAR:
 		bbeg = braslist[*ep&0377];
 		ct = braelist[*ep++&0377] - bbeg;
+		if(ct == 0)
+			continue;
 		curlp = lp;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
@@ -424,6 +426,7 @@ command(struct reptr *ipc)
 			if(aptr >= &abuf[ABUFSIZE]) {
 				fprintf(stderr, "Too many appends after line %ld\n",
 					lnum);
+				aptr--;
 			}
 			*aptr = 0;
 			break;
@@ -467,13 +470,14 @@ command(struct reptr *ipc)
 			break;
 
 		case CGCOM:
-			*spend++ = '\n';
 			p1 = spend;
 			p2 = holdsp;
-			while((*p1++ = *p2++))
-				if(p1 >= lbend)
-					break;
-			spend = p1-1;
+			if(p1 < lbend)
+				*p1++ = '\n';
+			while(p1 < lbend && (*p1 = *p2++))
+				p1++;
+			*p1 = 0;
+			spend = p1;
 			break;
 
 		case HCOM:
@@ -484,13 +488,14 @@ command(struct reptr *ipc)
 			break;
 
 		case CHCOM:
-			*hspend++ = '\n';
 			p1 = hspend;
 			p2 = linebuf;
-			while((*p1++ = *p2++))
-				if(p1 >= hend)
-					break;
-			hspend = p1-1;
+			if(p1 < hend)
+				*p1++ = '\n';
+			while(p1 < hend && (*p1 = *p2++))
+				p1++;
+			*p1 = 0;
+			hspend = p1;
 			break;
 
 		case ICOM:
@@ -508,7 +513,7 @@ command(struct reptr *ipc)
 			p2 = genbuf;
 			genbuf[72] = 0;
 			while(*p1)
-				if(*p1 >= 040) {
+				if((*p1&0377) >= 040) {
 					if(*p1 == 0177) {
 						p3 = rub;
 						while((*p2++ = *p3++))
@@ -562,7 +567,8 @@ command(struct reptr *ipc)
 		case CNCOM:
 			if(aptr > abuf)
 				arout();
-			*spend++ = '\n';
+			if(spend < lbend)
+				*spend++ = '\n';
 			if((execp = gline(spend)) == badp) {
 				pending = ipc;
 				delflag = 1;
@@ -596,9 +602,11 @@ command(struct reptr *ipc)
 		case RCOM:
 
 			*aptr++ = ipc;
-			if(aptr >= &abuf[ABUFSIZE])
+			if(aptr >= &abuf[ABUFSIZE]) {
 				fprintf(stderr, "Too many reads after line%ld\n",
 					lnum);
+				aptr--;
+			}
 
 			*aptr = 0;
 
@@ -673,6 +681,7 @@ gline(char *addr)
 					close(f);
 					if(eargc == 0)
 							dolflag = 1;
+					c = 0;
 				}
 
 				p2 = ibuf;
