@@ -7,8 +7,8 @@ fail=0
 for n
 do
 	if test -f $n.sed
-	then	d=`sh $n 2>&1 | sed -f $n.sed | cmp - $n.exp 2>&1`
-	else	d=`sh $n 2>&1 | cmp - $n.exp 2>&1`
+	then	d=`sh $n 2>&1 | sed -f $n.sed | (cmp - $n.exp 2>&1; cat >/dev/null)`
+	else	d=`sh $n 2>&1 | (cmp - $n.exp 2>&1; cat >/dev/null)`
 	fi
 	case "$d" in
 	"")	echo PASS $n

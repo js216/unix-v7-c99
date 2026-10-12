@@ -13,8 +13,10 @@ output, standard output and standard error together; and optionally
 cases/NAME.sed, which normalises output that legitimately varies, such
 as times, clock ticks, process ids, and kernel addresses. run.sh runs
 the script with sh, from the cases directory, passes its output through
-the .sed, and compares the result with the .exp. A test passes when cmp
-prints nothing; the exit status is not used, since sh gives a pipeline
+the .sed, and compares the result with the .exp. Once cmp has found a
+difference, the rest of the output is read and thrown away, so that a
+failing test has finished before the next one starts. A test passes
+when cmp prints nothing; the exit status is not used, since sh gives a pipeline
 the first nonzero status it reaps, which depends on timing. To see why a test
 fails, run it by hand:
 
