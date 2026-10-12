@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,350 @@
+@@ -0,0 +1,353 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -426,6 +426,8 @@ usr/local
 +					cmd2.exp	---644 0 0 usr/local/test/cases/cmd2.exp
 +					cmd3	---644 0 0 usr/local/test/cases/cmd3
 +					cmd3.exp	---644 0 0 usr/local/test/cases/cmd3.exp
++					cmd4	---644 0 0 usr/local/test/cases/cmd4
++					cmd4.exp	---644 0 0 usr/local/test/cases/cmd4.exp
 +					cmdg	---644 0 0 usr/local/test/cases/cmdg
 +					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 +					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -528,6 +530,7 @@ usr/local
 +					argt	---755 0 0 usr/local/test/obj/argt
 +					asm	---644 0 0 usr/local/test/utils/asm
 +					bcf	---644 0 0 usr/local/test/utils/bcf
++					big.img	---644 0 0 usr/local/test/obj/big.img
 +					bigb	---755 0 0 usr/local/test/obj/bigb
 +					bigm	---755 0 0 usr/local/test/obj/bigm
 +					bigv	---755 0 0 usr/local/test/obj/bigv
@@ -5950,8 +5953,10 @@ usr/local
 -#include <stdio.h>
 @@ -54 +64,0 @@
 -long atol();
-@@ -60 +69,0 @@
+@@ -59,2 +69 @@
+-char Mstring[1][128];
 -char *malloc();
++char *Mstring[1];
 @@ -63 +72,2 @@
 -main(argc, argv) char **argv; {
 +int
@@ -5973,121 +5978,184 @@ usr/local
 -	register i;
 +char *rel(int op, register char *r1, register char *r2) {
 +	register int i;
-@@ -112 +123 @@
+@@ -97,2 +108,2 @@
+-	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "[0-9]*$"))
+-		i = atol(r1) - atol(r2);
++	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "-*[0-9]*$"))
++		i = atol(r1) < atol(r2)? -1: atol(r1) > atol(r2);
+@@ -106 +117 @@
+-	case LEQ: i = i>=0; break;
++	case LEQ: i = i<=0; break;
+@@ -112,2 +123,2 @@
 -char *arith(op, r1, r2) char *r1, *r2; {
+-	long i1, i2;
 +char *arith(int op, char *r1, char *r2) {
-@@ -132,2 +143,2 @@
++	long long i1, i2;
+@@ -116 +127 @@
+-	if(!(ematch(r1, "[0-9]*$") && ematch(r2, "[0-9]*$")))
++	if(!(ematch(r1, "-*[0-9]*$") && ematch(r2, "-*[0-9]*$")))
+@@ -119,0 +131,2 @@
++	if(i2 == 0 && (op == DIV || op == REM))
++		yyerror("division by zero");
+@@ -127,0 +141,2 @@
++	if((long)i1 != i1)
++		yyerror("overflow");
+@@ -129 +144 @@
+-	sprintf(rv, "%D", i1);
++	sprintf(rv, "%D", (long)i1);
+@@ -132,2 +147,2 @@
 -char *conj(op, r1, r2) char *r1, *r2; {
 -	register char *rv;
 +char *conj(int op, char *r1, char *r2) {
 +	register char *rv = 0;
-@@ -162,2 +173,2 @@
+@@ -162,2 +177,2 @@
 -char *substr(v, s, w) char *v, *s, *w; {
 -register si, wi;
 +char *substr(char *v, char *s, char *w) {
 +register int si, wi;
-@@ -178,2 +189,2 @@
+@@ -168 +183 @@
+-	while(--si) if(*v) ++v;
++	while(--si > 0) if(*v) ++v;
+@@ -172 +187 @@
+-	while(wi--) if(*v) ++v;
++	while(wi-- > 0) if(*v) ++v;
+@@ -174,2 +189,3 @@
+-	*v = '\0';
+-	return res;
++	wi = v - res;
++	sprintf(v = malloc(wi + 1), "%.*s", wi, res);
++	return v;
+@@ -178,2 +194,2 @@
 -char *length(s) register char *s; {
 -	register i = 0;
 +char *length(register char *s) {
 +	register int i = 0;
-@@ -189,2 +200,2 @@
+@@ -189,2 +205,2 @@
 -char *index(s, t) char *s, *t; {
 -	register i, j;
 +char *index(char *s, char *t) {
 +	register int i, j;
-@@ -202 +213 @@
+@@ -202 +218 @@
 -char *match(s, p)
 +char *match(char *s, char *p)
-@@ -218,2 +229,2 @@
+@@ -218,2 +234,2 @@
 -#define RETURN(c)	return
 -#define ERROR(c)	errxx(c)
 +#define RETURN(c)	return(c)
 +#define ERROR(c)	return(errxx(c), (char *)0)
-@@ -222,3 +233,2 @@
+@@ -222,3 +238,2 @@
 -ematch(s, p)
 -char *s;
 -register char *p;
 +int
 +ematch(char *s, register char *p)
-@@ -227,2 +237 @@
+@@ -227,2 +242 @@
 -	char *compile();
 -	register num;
 +	register int num;
-@@ -231 +240 @@
+@@ -231 +245 @@
 -	compile(p, expbuf, &expbuf[512], 0);
 +	compile(p, expbuf, &expbuf[ESIZE], 0);
-@@ -246 +255,2 @@
+@@ -233,0 +248 @@
++	Mstring[0] = "";
+@@ -238 +253 @@
+-			strncpy(Mstring[0], p, num);
++			strncpy(Mstring[0] = malloc(num + 1), p, num);
+@@ -246 +261,2 @@
 -errxx(c)
 +void
 +errxx(int c)
-@@ -247,0 +258 @@
+@@ -247,0 +264 @@
 +	(void)c;
-@@ -278 +289 @@
+@@ -265 +282 @@
+-#define PLACE(c)	ep[c >> 3] |= bittab[c & 07]
++#define PLACE(c)	ep[(c & 0177) >> 3] |= bittab[c & 07]
+@@ -278 +295 @@
 -char	bittab[] = {
 +unsigned char	bittab[] = {
-@@ -290,3 +301 @@
+@@ -290,3 +307 @@
 -compile(instring, ep, endbuf, seof)
 -register char *ep;
 -char *instring, *endbuf;
 +compile(char *instring, register char *ep, char *endbuf, int seof)
-@@ -295,2 +304,2 @@
+@@ -295,2 +310,2 @@
 -	register c;
 -	register eof = seof;
 +	register int c;
 +	register int eof = seof;
-@@ -322,0 +332,2 @@
+@@ -318 +333 @@
+-		if (ep >= endbuf)
++		if (ep >= endbuf - 1)
+@@ -322,0 +338,2 @@
 +			if (bracketp != bracket)
 +				ERROR(42);
-@@ -427 +438 @@
+@@ -368,0 +386,2 @@
++					if(c == '\0' || c == '\n')
++						ERROR(49);
+@@ -380 +398,0 @@
+-				ep[0] &= 0376;
+@@ -381,0 +400 @@
++			ep[0] &= 0376;
+@@ -408,0 +428,2 @@
++				if(*lastep < CCHR || *lastep > (CCL|STAR) || *lastep & 2)
++					ERROR(44);
+@@ -419 +440 @@
+-				} while(((c = GETC()) != '\\') && (c != ','));
++				} while(((c = GETC()) != '\\') && (c != ',') && i <= 255);
+@@ -427 +448 @@
 -						*ep++ = 255;
 +						*ep++ = (char)255;
-@@ -457,0 +469 @@
+@@ -440,0 +462 @@
++			case '\0':
+@@ -457,0 +480 @@
 +			/* fallthrough */
-@@ -468,2 +480,2 @@
+@@ -468,2 +491,2 @@
 -step(p1, p2)
 -register char *p1, *p2;
 +int
 +step(register char *p1, register char *p2)
-@@ -471 +483 @@
+@@ -471 +494 @@
 -	register c;
 +	register int c;
-@@ -500,2 +512,2 @@
+@@ -500,2 +523,2 @@
 -advance(lp, ep)
 -register char *lp, *ep;
 +int
 +advance(register char *lp, register char *ep)
-@@ -537 +549 @@
+@@ -537 +560 @@
 -		braslist[*ep++] = lp;
 +		braslist[*ep++&0377] = lp;
-@@ -541 +553 @@
+@@ -541 +564 @@
 -		braelist[*ep++] = lp;
 +		braelist[*ep++&0377] = lp;
-@@ -592,2 +604,2 @@
+@@ -592,2 +615,2 @@
 -		bbeg = braslist[*ep];
 -		ct = braelist[*ep++] - bbeg;
 +		bbeg = braslist[*ep&0377];
 +		ct = braelist[*ep++&0377] - bbeg;
-@@ -602,2 +614,2 @@
+@@ -602,2 +625,2 @@
 -		bbeg = braslist[*ep];
 -		ct = braelist[*ep++] - bbeg;
 +		bbeg = braslist[*ep&0377];
 +		ct = braelist[*ep++&0377] - bbeg;
-@@ -646,2 +658,2 @@
+@@ -604,0 +628,2 @@
++		if(ct == 0)
++			continue;
+@@ -646,2 +671,2 @@
 -getrnge(str)
 -register char *str;
 +void
 +getrnge(register char *str)
-@@ -650 +662 @@
+@@ -650 +675 @@
 -	size = *str == 255 ? 20000 : (*str &0377) - low;
 +	size = (*str & 0377) == 255 ? 20000 : (*str &0377) - low;
-@@ -653,3 +665,2 @@
+@@ -653,3 +678,2 @@
 -ecmp(a, b, count)
 -register char	*a, *b;
 -register	count;
 +int
 +ecmp(register char *a, register char *b, register int count)
-@@ -664,2 +675,2 @@
+@@ -664,2 +688,2 @@
 -yyerror(s)
 -
 +void
@@ -6516,12 +6584,21 @@ usr/local
 +}
 
 % usr/src/cmd/fgrep.c
+@@ -13 +13 @@
+-#define QSIZE 400
++#define QSIZE MAXSIZ
 @@ -33,2 +33,3 @@
 -main(argc, argv)
 -char **argv;
 +void execute(char *file), cgotofn(void), overflo(void), cfail(void);
 +int
 +main(int argc, char **argv)
+@@ -81 +82 @@
+-			fprintf(stderr, "egrep: unknown flag\n");
++			fprintf(stderr, "fgrep: unknown flag\n");
+@@ -90 +91 @@
+-			fprintf(stderr, "egrep: can't open %s\n", *argv);
++			fprintf(stderr, "fgrep: can't open %s\n", *argv);
 @@ -112,2 +113,2 @@
 -execute(file)
 -char *file;
@@ -6530,6 +6607,12 @@ usr/local
 @@ -117 +118 @@
 -	register ccount;
 +	register int ccount;
+@@ -147 +148 @@
+-			if (c->inp == *p) {
++			if (*p && c->inp == *p) {
+@@ -160 +161 @@
+-					if (c->inp == *p) {
++					if (*p && c->inp == *p) {
 @@ -208 +209 @@
 -		if (*p++ == '\n')
 +		if (*p++ == '\n') {
@@ -6539,99 +6622,171 @@ usr/local
 -getargc()
 +static int
 +getargc(void)
-@@ -227 +230 @@
+@@ -227,4 +230,2 @@
 -	register c;
+-	if (wordf)
+-		return(getc(wordf));
+-	if ((c = *argptr++) == '\0')
 +	register int c;
-@@ -235,2 +238,3 @@
++	if ((c = wordf ? getc(wordf) : *argptr++ & 0377) == '\0')
+@@ -235,2 +236,3 @@
 -cgotofn() {
 -	register c;
 +void
 +cgotofn(void) {
 +	register int c;
-@@ -298 +302,2 @@
+@@ -264 +266 @@
+-		loop:	if (s->inp == c) {
++		loop:	if ((s->inp & 0377) == c) {
+@@ -298 +300,2 @@
 -overflo() {
 +void
 +overflo(void) {
-@@ -302 +307,2 @@
+@@ -302 +305,2 @@
 -cfail() {
 +void
 +cfail(void) {
+@@ -305 +309 @@
+-	struct words *state;
++	struct words *state, *t;
+@@ -325,7 +329,3 @@
+-			if (front < rear)
+-				if (rear >= &queue[QSIZE-1])
+-					if (front == queue) overflo();
+-					else rear = queue;
+-				else rear++;
+-			else
+-				if (++rear == front) overflo();
++			if (++rear == &queue[QSIZE])
++				rear = queue;
++			if (rear == front) overflo();
+@@ -333,5 +333,6 @@
+-		floop:	if (state == 0) state = w;
+-			if (state->inp == c) {
+-				q->fail = state->nst;
+-				if ((state->nst)->out == 1) q->out = 1;
+-				continue;
++		floop:	for (t = state? state: w; t != 0 && t->inp != c; t = t->link)
++				;
++			if (t != 0) {
++			qloop:	q->fail = t->nst;
++				if ((t->nst)->out == 1) q->out = 1;
++				if ((q = q->link) != 0) goto qloop;
+@@ -339 +340,2 @@
+-			else if ((state = state->link) != 0)
++			else if (state != 0) {
++				state = state->fail;
+@@ -340,0 +343 @@
++			}
 
 % usr/src/cmd/file.c
-@@ -23,2 +23,4 @@
+@@ -11 +11,2 @@
+-char buf[512];
++int ibuf[129];
++#define buf ((char *)ibuf)
+@@ -23,2 +24,4 @@
 -main(argc, argv)
 -char **argv;
 +void type(char *file);
 +int ccom(void), ascom(void), english(char *bp, int n), lookup(char *tab[]);
 +int
 +main(int argc, char **argv)
-@@ -56,2 +58,2 @@
+@@ -37 +40 @@
+-			if (l>0)
++			if (l>0 && p[l-1]=='\n')
+@@ -44 +47 @@
+-		exit(1);
++		exit(0);
+@@ -56,2 +59,2 @@
 -type(file)
 -char *file;
 +void
 +type(char *file)
-@@ -103,0 +106 @@
+@@ -92,2 +95,2 @@
+-	if(in == 0){
+-		printf("empty\n");
++	if(in <= 0){
++		printf(in? "cannot read\n": "empty\n");
+@@ -96 +99,6 @@
+-	switch(*(int *)buf) {
++	buf[in] = 0;
++	switch(*ibuf) {
++
++	case 0x464c457f:
++		printf("executable\n");
++		goto out;
+@@ -103,0 +112 @@
 +		/* fallthrough */
-@@ -143 +146 @@
+@@ -108 +117 @@
+-		if(((int *)buf)[4] != 0)
++		if(ibuf[4] != 0)
+@@ -143 +152 @@
 -		if(buf[i] <= 0)
 +		if(buf[i] == 0 || buf[i] & 0200)
-@@ -184 +187 @@
+@@ -184 +193 @@
 -		else if(buf[j] == '\n' && isalpha(buf[j+2])){
 +		else if((j < 0 || buf[j] == '\n') && isalpha(buf[j+2]&0377)){
-@@ -201 +204 @@
+@@ -201 +210 @@
 -			else if(buf[j] == '\n' && isalpha(buf[j+2])){
 +			else if(buf[j] == '\n' && isalpha(buf[j+2]&0377)){
-@@ -238 +241 @@
+@@ -238 +247 @@
 -		/*.... */
 +		.... */
-@@ -242,2 +245,2 @@
+@@ -242,2 +251,2 @@
 -lookup(tab)
 -char *tab[];
 +int
 +lookup(char *tab[])
-@@ -260 +263,2 @@
+@@ -260 +269,2 @@
 -ccom(){
 +int
 +ccom(void){
-@@ -275 +279,2 @@
+@@ -275 +285,2 @@
 -ascom(){
 +int
 +ascom(void){
-@@ -284,2 +289,2 @@
+@@ -284,2 +295,2 @@
 -english (bp, n)
 -char *bp;
 +int
 +english (char *bp, int n)
-@@ -295 +300 @@
+@@ -295 +306 @@
 -		if (bp[j]<NASC)
 +		if ((bp[j]&0377)<NASC)
 
 % usr/src/cmd/find.c
 @@ -2,0 +3 @@
 +#define	ctime	find_ctime
-@@ -13 +14 @@
+@@ -7,0 +9 @@
++#define AGE(t)	(int)((time_t)((unsigned long long)Now - (t)) / A_DAY)
+@@ -10 +12 @@
+-char	Pathname[200];
++char	Pathname[4096];
+@@ -13 +15 @@
 -	int (*F)();
 +	int (*F)(struct anode *p);
-@@ -18 +19 @@
+@@ -18 +20 @@
 -long	Now;
 +time_t	Now;
-@@ -29 +30 @@
+@@ -29 +31 @@
 -long	Newer;
 +time_t	Newer;
-@@ -33,6 +34,6 @@
+@@ -33,7 +35,7 @@
 -struct	anode	*exp(),
 -		*e1(),
 -		*e2(),
 -		*e3(),
 -		*mk();
 -char	*nxtarg();
+-char	Home[128];
 +struct	anode	*exp(void),
 +		*e1(void),
 +		*e2(void),
 +		*e3(void),
 +		*mk(int (*f)(struct anode *p), struct anode *l, struct anode *r);
 +char	*nxtarg(void);
-@@ -41,3 +42,13 @@
++char	Home[4096];
+@@ -41,3 +43,13 @@
 -char *rindex();
 -char *sbrk();
 -main(argc, argv) char *argv[];
@@ -6648,309 +6803,368 @@ usr/local
 +int	newer(struct anode *p);
 +int
 +main(int argc, char *argv[])
-@@ -48 +59 @@
+@@ -48 +60 @@
 -	FILE *pwd, *popen();
 +	FILE *pwd;
-@@ -77 +88 @@
+@@ -51,4 +63,6 @@
+-	pwd = popen("pwd", "r");
+-	fgets(Home, 128, pwd);
+-	pclose(pwd);
+-	Home[strlen(Home) - 1] = '\0';
++	if((pwd = popen("pwd", "r"))) {
++		fgets(Home, sizeof Home, pwd);
++		pclose(pwd);
++	}
++	if((cp = rindex(Home, '\n')))
++		*cp = '\0';
+@@ -75,0 +90,4 @@
++		if(strlen(Argv[Pi]) >= (int)sizeof Pathname) {
++			pr("find: path too long-- "), pr(Argv[Pi]), pr("\n");
++			continue;
++		}
+@@ -77 +95 @@
 -		if(cp = rindex(Pathname, '/')) {
 +		if((cp = rindex(Pathname, '/'))) {
-@@ -92 +103 @@
+@@ -92 +110 @@
 -		cpio();
 +		cpio(0);
-@@ -99,2 +110 @@
+@@ -99,2 +117 @@
 -struct anode *exp() { /* parse ALTERNATION (-o)  */
 -	int or();
 +struct anode *exp(void) { /* parse ALTERNATION (-o)  */
-@@ -111,2 +121 @@
+@@ -111,2 +128 @@
 -struct anode *e1() { /* parse CONCATENATION (formerly -a) */
 -	int and();
 +struct anode *e1(void) { /* parse CONCATENATION (formerly -a) */
-@@ -128,2 +137 @@
+@@ -128,2 +144 @@
 -struct anode *e2() { /* parse NOT (!) */
 -	int not();
 +struct anode *e2(void) { /* parse NOT (!) */
-@@ -141,4 +149 @@
+@@ -141,4 +156 @@
 -struct anode *e3() { /* parse parens and predicates */
 -	int exeq(), ok(), glob(),  mtime(), atime(), ctime(), user(),
 -		group(), size(), perm(), links(), print(),
 -		type(), ino(), cpio(), newer();
 +struct anode *e3(void) { /* parse parens and predicates */
-@@ -147 +152,2 @@
+@@ -147 +159,2 @@
 -	register char *a, *b, s;
 +	register char *a, *b;
 +	register int s;
-@@ -226 +232 @@
+@@ -199 +212 @@
+-		for(i=0; *b ; ++b) {
++		for(i=0; *b && (unsigned)i <= 07777; ++b) {
+@@ -226 +239 @@
 -			pr("find: cannot create "), pr(s), pr("\n");
 +			pr("find: cannot create "), pr(b), pr("\n");
-@@ -242,0 +249 @@
+@@ -242,0 +256 @@
 +	return(0);
-@@ -244,3 +251 @@
+@@ -244,3 +258 @@
 -struct anode *mk(f, l, r)
 -int (*f)();
 -struct anode *l, *r;
 +struct anode *mk(int (*f)(struct anode *p), struct anode *l, struct anode *r)
-@@ -254,2 +259,2 @@
+@@ -247,0 +260,4 @@
++	if(Nn >= 100) {
++		pr("find: too many predicates\n");
++		exit(1);
++	}
+@@ -254,2 +270,2 @@
 -char *nxtarg() { /* get next arg from command line */
 -	static strikes = 0;
 +char *nxtarg(void) { /* get next arg from command line */
 +	static int strikes = 0;
-@@ -270,2 +275,2 @@
+@@ -270,2 +286,2 @@
 -and(p)
 -register struct anode *p;
 +int
 +and(register struct anode *p)
-@@ -275,2 +280,2 @@
+@@ -275,2 +291,2 @@
 -or(p)
 -register struct anode *p;
 +int
 +or(register struct anode *p)
-@@ -280,2 +285,2 @@
+@@ -280,2 +296,2 @@
 -not(p)
 -register struct anode *p;
 +int
 +not(register struct anode *p)
-@@ -285,2 +290,2 @@
+@@ -285,2 +301,2 @@
 -glob(p)
 -register struct { int f; char *pat; } *p; 
 +int
 +glob(register struct anode *p)
-@@ -288 +293 @@
+@@ -288 +304 @@
 -	return(gmatch(Fname, p->pat));
 +	return(gmatch(Fname, (char *)p->L));
-@@ -290 +295,2 @@
+@@ -290 +306,2 @@
 -print()
 +int
 +print(struct anode *p)
-@@ -291,0 +298 @@
+@@ -291,0 +309 @@
 +	(void)p;
-@@ -295,2 +302,2 @@
+@@ -295,2 +313,2 @@
 -mtime(p)
 -register struct { int f, t, s; } *p; 
 +int
 +mtime(register struct anode *p)
-@@ -298 +305 @@
+@@ -298 +316 @@
 -	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), p->t, p->s));
-+	return(scomp((int)((Now - Statb.st_mtime) / A_DAY), (int)p->L, (int)p->R));
-@@ -300,2 +307,2 @@
++	return(scomp(AGE(Statb.st_mtime), (int)p->L, (int)p->R));
+@@ -300,2 +318,2 @@
 -atime(p)
 -register struct { int f, t, s; } *p; 
 +int
 +atime(register struct anode *p)
-@@ -303 +310 @@
+@@ -303 +321 @@
 -	return(scomp((int)((Now - Statb.st_atime) / A_DAY), p->t, p->s));
-+	return(scomp((int)((Now - Statb.st_atime) / A_DAY), (int)p->L, (int)p->R));
-@@ -305,2 +312,2 @@
++	return(scomp(AGE(Statb.st_atime), (int)p->L, (int)p->R));
+@@ -305,2 +323,2 @@
 -ctime(p)
 -register struct { int f, t, s; } *p; 
 +int
 +ctime(register struct anode *p)
-@@ -308 +315 @@
+@@ -308 +326 @@
 -	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), p->t, p->s));
-+	return(scomp((int)((Now - Statb.st_ctime) / A_DAY), (int)p->L, (int)p->R));
-@@ -310,2 +317,2 @@
++	return(scomp(AGE(Statb.st_ctime), (int)p->L, (int)p->R));
+@@ -310,2 +328,2 @@
 -user(p)
 -register struct { int f, u, s; } *p; 
 +int
 +user(register struct anode *p)
-@@ -313 +320 @@
+@@ -313 +331 @@
 -	return(scomp(Statb.st_uid, p->u, p->s));
 +	return(scomp(Statb.st_uid, (int)p->L, (int)p->R));
-@@ -315,2 +322,2 @@
+@@ -315,2 +333,2 @@
 -ino(p)
 -register struct { int f, u, s; } *p;
 +int
 +ino(register struct anode *p)
-@@ -318 +325 @@
+@@ -318 +336 @@
 -	return(scomp((int)Statb.st_ino, p->u, p->s));
 +	return(scomp((int)Statb.st_ino, (int)p->L, (int)p->R));
-@@ -320,2 +327,2 @@
+@@ -320,2 +338,2 @@
 -group(p)
 -register struct { int f, u; } *p; 
 +int
 +group(register struct anode *p)
-@@ -323 +330 @@
+@@ -323 +341 @@
 -	return(p->u == Statb.st_gid);
 +	return((int)p->L == Statb.st_gid);
-@@ -325,2 +332,2 @@
+@@ -325,2 +343,2 @@
 -links(p)
 -register struct { int f, link, s; } *p; 
 +int
 +links(register struct anode *p)
-@@ -328 +335 @@
+@@ -328 +346 @@
 -	return(scomp(Statb.st_nlink, p->link, p->s));
 +	return(scomp(Statb.st_nlink, (int)p->L, (int)p->R));
-@@ -330,2 +337,2 @@
+@@ -330,2 +348,2 @@
 -size(p)
 -register struct { int f, sz, s; } *p; 
 +int
 +size(register struct anode *p)
-@@ -333 +340 @@
+@@ -333 +351 @@
 -	return(scomp((int)((Statb.st_size+511)>>9), p->sz, p->s));
 +	return(scomp((int)((Statb.st_size+511)>>9), (int)p->L, (int)p->R));
-@@ -335,2 +342,2 @@
+@@ -335,2 +353,2 @@
 -perm(p)
 -register struct { int f, per, s; } *p; 
 +int
 +perm(register struct anode *p)
-@@ -338,3 +345,3 @@
+@@ -338,3 +356,3 @@
 -	register i;
 -	i = (p->s=='-') ? p->per : 07777; /* '-' means only arg bits */
 -	return((Statb.st_mode & i & 07777) == p->per);
 +	register int i;
 +	i = ((int)p->R=='-') ? (int)p->L : 07777; /* '-' means only arg bits */
 +	return((Statb.st_mode & i & 07777) == (int)p->L);
-@@ -342,2 +349,2 @@
+@@ -342,2 +360,2 @@
 -type(p)
 -register struct { int f, per, s; } *p;
 +int
 +type(register struct anode *p)
-@@ -345 +352 @@
+@@ -345 +363 @@
 -	return((Statb.st_mode&S_IFMT)==p->per);
 +	return((Statb.st_mode&S_IFMT)==(int)p->L);
-@@ -347,2 +354,2 @@
+@@ -347,2 +365,2 @@
 -exeq(p)
 -register struct { int f, com; } *p;
 +int
 +exeq(register struct anode *p)
-@@ -351 +358 @@
+@@ -351 +369 @@
 -	return(doex(p->com));
 +	return(doex((int)p->L));
-@@ -353,2 +360,2 @@
+@@ -353,2 +371,2 @@
 -ok(p)
 -struct { int f, com; } *p;
 +int
 +ok(struct anode *p)
-@@ -359 +366 @@
+@@ -359 +377 @@
 -	pr("< "), pr(Argv[p->com]), pr(" ... "), pr(Pathname), pr(" >?   ");
 +	pr("< "), pr(Argv[(int)p->L]), pr(" ... "), pr(Pathname), pr(" >?   ");
-@@ -367 +374 @@
+@@ -367 +385 @@
 -	if(yes) return(doex(p->com));
 +	if(yes) return(doex((int)p->L));
-@@ -373,2 +380 @@
+@@ -373,2 +391 @@
 -long mklong(v)
 -short v[];
 +static long mklong(short v[])
-@@ -383 +389,2 @@
+@@ -383 +400,2 @@
 -cpio()
 +int
 +cpio(struct anode *p)
-@@ -395 +402 @@
+@@ -395 +413 @@
 -		short	h_mtime[2];
 +		unsigned short	h_mtime[4];
-@@ -400 +407 @@
+@@ -400 +418 @@
 -	register ifile, ct;
 +	register int ifile, ct;
-@@ -402 +409 @@
+@@ -402 +420 @@
 -	register i;
 +	register int i;
-@@ -403,0 +411 @@
+@@ -403,0 +422,5 @@
 +	(void)p;
-@@ -412 +420,2 @@
++	if(strlen(Pathname) >= (int)sizeof hdr.h_name) {
++		pr("find: cannot copy "), pr(Pathname), pr("\n");
++		return(0);
++	}
+@@ -412 +435,2 @@
 -	MKSHORT(hdr.h_mtime, Statb.st_mtime);
 +	for(i = 0; i < 4; i++)
 +		hdr.h_mtime[i] = (unsigned long long)Statb.st_mtime >> (48-16*i);
-@@ -421 +430 @@
+@@ -421 +445 @@
 -		return;
 +		return(0);
-@@ -425 +434 @@
+@@ -425 +449 @@
 -		return;
 +		return(0);
-@@ -430 +439 @@
+@@ -430 +454 @@
 -		return;
 +		return(0);
-@@ -440 +449 @@
+@@ -440 +464 @@
 -	return;
 +	return(0);
-@@ -442 +451,2 @@
+@@ -442 +466,2 @@
 -newer()
 +int
 +newer(struct anode *p)
-@@ -443,0 +454 @@
+@@ -443,0 +469 @@
 +	(void)p;
-@@ -448,3 +459,2 @@
+@@ -448,3 +474,2 @@
 -scomp(a, b, s) /* funny signed compare */
 -register a, b;
 -register char s;
 +int
 +scomp(register int a, register int b, register char s) /* funny signed compare */
-@@ -459 +469,2 @@
+@@ -455 +480 @@
+-		return(a < (b * -1));
++		return(a < (b * -1LL));
+@@ -459 +484,2 @@
 -doex(com)
 +int
 +doex(int com)
-@@ -461 +472 @@
+@@ -461 +487 @@
 -	register np;
 +	register int np;
-@@ -464 +475 @@
+@@ -464 +490 @@
 -	static ccode;
 +	static int ccode;
-@@ -467 +478 @@
+@@ -467 +493 @@
 -	while (na=Argv[com++]) {
 +	while ((na=Argv[com++])) {
-@@ -477 +488 @@
+@@ -468,0 +495,4 @@
++		if(np >= 49) {
++			pr("find: too many arguments\n");
++			exit(1);
++		}
+@@ -477 +507 @@
 -		execvp(nargv[0], nargv, np);
 +		execvp(nargv[0], nargv);
-@@ -483,2 +494,3 @@
+@@ -483,2 +513,3 @@
 -getunum(f, s) char *f, *s; { /* find user/group name and return number */
 -	register i;
 +int
 +getunum(char *f, char *s) { /* find user/group name and return number */
 +	register int i;
-@@ -486 +498 @@
+@@ -486 +517 @@
 -	register c;
 +	register int c;
-@@ -491,0 +504,2 @@
+@@ -491,0 +523,2 @@
 +	if(pin == NULL)
 +		return(i);
-@@ -496 +510 @@
+@@ -496 +529 @@
 -			while((c = *sp++ = getc(pin)) != ':')
-+			while((*sp++ = c = getc(pin)) != ':')
-@@ -503 +517 @@
++			while((*sp = c = getc(pin)) != ':') {
+@@ -498 +531,3 @@
+-			*--sp = '\0';
++				if(sp < &str[19]) sp++;
++			}
++			*sp = '\0';
+@@ -503 +538 @@
 -				while((*sp = getc(pin)) != ':') sp++;
 +				while((*sp = c = getc(pin)) != ':' && c != EOF && sp < &str[19]) sp++;
-@@ -515,3 +529,2 @@
+@@ -515,3 +550,2 @@
 -descend(name, fname, exlist)
 -struct anode *exlist;
 -char *name, *fname;
 +int
 +descend(char *name, char *fname, struct anode *exlist)
-@@ -612,2 +625,2 @@
+@@ -540 +574 @@
+-	if(*(c1-1) == '/')
++	if(c1 > name && *(c1-1) == '/')
+@@ -543,0 +578,4 @@
++	if(endofname+DIRSIZ+1 >= &Pathname[sizeof Pathname]) {
++		pr("find: path too long-- "), pr(name), pr("\n");
++		return(1);
++	}
+@@ -612,2 +650,2 @@
 -gmatch(s, p) /* string match as in glob */
 -register char *s, *p;
 +int
 +gmatch(register char *s, register char *p) /* string match as in glob */
-@@ -619,2 +632,2 @@
+@@ -619,2 +657,2 @@
 -amatch(s, p)
 -register char *s, *p;
 +int
 +amatch(register char *s, register char *p)
-@@ -622 +635 @@
+@@ -622 +660 @@
 -	register cc;
 +	register int cc;
-@@ -632 +645 @@
+@@ -626 +664 @@
+-	scc = *s;
++	scc = *s & 0377;
+@@ -628 +666 @@
+-	switch (c = *p) {
++	switch (c = *p & 0377) {
+@@ -632 +670 @@
 -		while (cc = *++p) {
-+		while ((cc = *++p)) {
-@@ -642 +655 @@
++		while ((cc = *++p & 0377)) {
+@@ -642 +680 @@
 -				k |= lc <= scc & scc <= (cc=p[1]);
-+				k |= (lc <= scc) & (scc <= (cc=p[1]));
-@@ -661,2 +674,2 @@
++				k |= (lc <= scc) & (scc <= (cc=p[1]&0377));
+@@ -661,2 +699,2 @@
 -umatch(s, p)
 -register char *s, *p;
 +int
 +umatch(register char *s, register char *p)
-@@ -670,3 +683,2 @@
+@@ -670,3 +708,2 @@
 -bwrite(rp, c)
 -register short *rp;
 -register c;
 +void
 +bwrite(register short *rp, register int c)
-@@ -693 +705,2 @@
+@@ -693 +730,2 @@
 -chgreel(x, fl)
 +int
 +chgreel(int x, int fl)
-@@ -695 +708 @@
+@@ -695 +733 @@
 -	register f;
 +	register int f;
-@@ -719,2 +732,2 @@
+@@ -707 +745,2 @@
+-	fgets(str, 20, devtty);
++	if(devtty == NULL || fgets(str, 20, devtty) == NULL)
++		exit(1);
+@@ -719,2 +758,2 @@
 -pr(s)
 -char *s;
 +void
@@ -7114,121 +7328,139 @@ usr/local
 -double ident(x)
 -double x;
 +static double ident(double x)
-@@ -66,2 +74,2 @@
+@@ -66,2 +74,7 @@
 -main(argc,argv)
 -char *argv[];
++static int fix(double x)
++{
++	return(x < -32768? -32768: x < 32767? (int)x: 32767);
++}
++
 +int
 +main(int argc, char *argv[])
-@@ -92,2 +100,2 @@
+@@ -74 +87 @@
+-	xx = (struct val *)malloc((unsigned)sizeof(struct val));
++	xx = (struct val *)calloc(1, (unsigned)sizeof(struct val));
+@@ -92,2 +105,2 @@
 -init(p)
 -struct xy *p;
 +void
 +init(struct xy *p)
-@@ -99,2 +107,2 @@
+@@ -99,2 +112,2 @@
 -setopt(argc,argv)
 -char *argv[];
 +void
 +setopt(int argc, char *argv[])
-@@ -119 +127 @@
+@@ -119 +132 @@
 -				while (*p1++ = *p2++);
-+				while ((*p1++ = *p2++));
-@@ -198,4 +206,2 @@
++				while ((*p1++ = *p2++) && p1 < &titlebuf[BSIZ-1]);
+@@ -198,4 +211,2 @@
 -limread(p, argcp, argvp)
 -register struct xy *p;
 -int *argcp;
 -char ***argvp;
 +void
 +limread(register struct xy *p, int *argcp, char ***argvp)
-@@ -219,4 +225,2 @@
+@@ -219,4 +230,2 @@
 -numb(np, argcp, argvp)
 -int *argcp;
 -float *np;
 -register char ***argvp;
 +int
 +numb(float *np, int *argcp, register char ***argvp)
-@@ -230 +234 @@
+@@ -230 +239 @@
 -	if(!(isdigit(c) || c=='-'&&(*argvp)[1][1]<'A' || c=='.'))
-+	if(!(isdigit(c&0377) || (c=='-'&&(*argvp)[1][1]<'A') || c=='.'))
-@@ -238 +242,2 @@
++	if(!(isdigit(c&0377) || (c=='-'&&((*argvp)[1][1]&0377)<'A') || c=='.'))
+@@ -238 +247,2 @@
 -readin()
 +void
 +readin(void)
-@@ -240 +245 @@
+@@ -240 +250 @@
 -	register t;
 +	register int t;
-@@ -272 +277,2 @@
+@@ -272 +282,2 @@
 -transpose()
 +void
 +transpose(void)
-@@ -274 +280 @@
+@@ -274 +285 @@
 -	register i;
 +	register int i;
-@@ -285 +291,2 @@
+@@ -285 +296,2 @@
 -copystring(k)
 +int
 +copystring(int k)
-@@ -288 +295 @@
+@@ -288 +300 @@
 -	register i;
 +	register int i;
-@@ -301,3 +308,2 @@
+@@ -301,3 +313,2 @@
 -float
 -modceil(f,t)
 -float f,t;
 +static float
 +modceil(float f, float t)
-@@ -310,3 +316,2 @@
+@@ -310,3 +321,2 @@
 -float
 -modfloor(f,t)
 -float f,t;
 +static float
 +modfloor(float f, float t)
-@@ -318,3 +323,2 @@
+@@ -318,3 +328,2 @@
 -getlim(p,v)
 -register struct xy *p;
 -struct val *v;
 +static void
 +getlim(register struct xy *p, struct val *v)
-@@ -322 +326 @@
+@@ -322 +331 @@
 -	register i;
 +	register int i;
-@@ -336 +340,2 @@
+@@ -336 +345,2 @@
 -} setloglim(), setlinlim();
 +} setloglim(int lbf, int ubf, float lb, float ub),
 +	setlinlim(int lbf, int ubf, float xlb, float xub);
-@@ -338,2 +343,2 @@
+@@ -338,2 +348,2 @@
 -setlim(p)
 -register struct xy *p;
 +static void
 +setlim(register struct xy *p)
-@@ -407,2 +412 @@
+@@ -407,2 +417 @@
 -setloglim(lbf,ubf,lb,ub)
 -float lb,ub;
 +setloglim(int lbf, int ubf, float lb, float ub)
-@@ -440,3 +444 @@
+@@ -440,3 +449 @@
 -setlinlim(lbf,ubf,xlb,xub)
 -int lbf,ubf;
 -float xlb,xub;
 +setlinlim(int lbf, int ubf, float xlb, float xub)
-@@ -482,3 +484,2 @@
+@@ -482,3 +489,2 @@
 -scale(p,v)
 -register struct xy *p;
 -struct val *v;
 +void
 +scale(register struct xy *p, struct val *v)
-@@ -497 +498,2 @@
+@@ -492,2 +498,2 @@
+-	p->xbot = bot + edge*p->xoff;
+-	p->xtop = p->xbot + (top-bot)*p->xsize;
++	p->xbot = fix(bot + edge*p->xoff);
++	p->xtop = fix(p->xbot + (top-bot)*p->xsize);
+@@ -497 +503,2 @@
 -axes()
 +void
 +axes(void)
-@@ -499 +501 @@
+@@ -499 +506 @@
 -	register i;
 +	register int i;
-@@ -530,3 +532,2 @@
+@@ -530,3 +537,2 @@
 -setmark(xmark,p)
 -int *xmark;
 -register struct xy *p;
 +int
 +setmark(int *xmark, register struct xy *p)
-@@ -560,5 +561,2 @@
+@@ -555,2 +561,2 @@
+-		for(x=xl; x<=xu; x+=fabs(p->xquant))
+-			xmark[xn++] = (*p->xf)(x)*p->xa + p->xb;
++		for(x=xl; x<=xu && xn<50; x+=fabs(p->xquant))
++			xmark[xn++] = fix((*p->xf)(x)*p->xa + p->xb);
+@@ -560,5 +566,2 @@
 -submark(xmark,pxn,x,p)
 -int *xmark;
 -int *pxn;
@@ -7236,59 +7468,78 @@ usr/local
 -struct xy *p;
 +void
 +submark(int *xmark, int *pxn, float x, struct xy *p)
-@@ -570 +568,2 @@
+@@ -566,2 +569,2 @@
+-	if(1.001*p->xlb < x && .999*p->xub > x)
+-		xmark[(*pxn)++] = log10(x)*p->xa + p->xb;
++	if(*pxn < 50 && 1.001*p->xlb < x && .999*p->xub > x)
++		xmark[(*pxn)++] = fix(log10(x)*p->xa + p->xb);
+@@ -570 +573,2 @@
 -plot()
 +void
 +plot(void)
-@@ -597,4 +596,2 @@
+@@ -597,4 +601,2 @@
 -conv(xv,p,ip)
 -float xv;
 -register struct xy *p;
 -int *ip;
 +int
 +conv(float xv, register struct xy *p, int *ip)
-@@ -610,2 +607,2 @@
+@@ -602 +604 @@
+-	long ix;
++	double ix;
+@@ -604 +606 @@
+-	if(ix<p->xbot || ix>p->xtop)
++	if(!(ix>=p->xbot && ix<p->xtop+1))
+@@ -610,2 +612,2 @@
 -getfloat(p)
 -float *p;
 +int
 +getfloat(float *p)
-@@ -613 +610 @@
+@@ -613 +615 @@
 -	register i;
 +	register int i;
-@@ -619 +616,2 @@
+@@ -619 +621,2 @@
 -getstring()
 +int
 +getstring(void)
-@@ -621 +619 @@
+@@ -621 +624 @@
 -	register i;
 +	register int i;
-@@ -628 +626 @@
+@@ -628 +631 @@
 -		if(!isdigit(*labbuf)) {
 +		if(!isdigit(*labbuf&0377)) {
-@@ -632,0 +631 @@
+@@ -630 +633 @@
+-			i = scanf("%s",labbuf);
++			i = scanf("%79s",labbuf);
+@@ -632,0 +636 @@
 +		/* fallthrough */
-@@ -649 +648,2 @@
+@@ -639,2 +643,2 @@
+-		i = scanf("%[^\"\n]",labbuf);
+-		scanf("%[\"]",junk);
++		i = scanf("%79[^\"\n]",labbuf);
++		scanf("%19[\"]",junk);
+@@ -649 +653,2 @@
 -symbol(ix,iy,k)
 +int
 +symbol(int ix, int iy, int k)
-@@ -661 +661 @@
+@@ -661 +666 @@
 -		return(!brkf|k<0);
 +		return(!brkf|(k<0));
-@@ -665 +665,2 @@
+@@ -665 +670,2 @@
 -title()
 +void
 +title(void)
-@@ -679,3 +680,2 @@
+@@ -679,3 +685,2 @@
 -axlab(c,p)
 -char c;
 -struct xy *p;
 +void
 +axlab(char c, struct xy *p)
-@@ -689 +689,2 @@
+@@ -689 +694,2 @@
 -badarg()
 +void
 +badarg(void)
-@@ -692,0 +694,63 @@
+@@ -692,0 +699,63 @@
 +}
 +static void
 +putsi(int a){
@@ -7441,6 +7692,9 @@ usr/local
 +errexit(char *s, char *f)
 
 % usr/src/cmd/icheck.c
+@@ -18 +18 @@
+-daddr_t	blist[NB];
++daddr_t	blist[NB+1];
 @@ -41,5 +41,5 @@
 -long	atol();
 -daddr_t	alloc();
@@ -7460,6 +7714,9 @@ usr/local
 @@ -50 +50 @@
 -	register i;
 +	register int i;
+@@ -73 +73 @@
+-			for(i=0; i<NB; i++) {
++			for(i=0; i<NB && argc>1; i++) {
 @@ -101,2 +101,2 @@
 -check(file)
 -char *file;
@@ -7476,7 +7733,10 @@ usr/local
 +	for(i=0; i<n; i++)
 @@ -177 +177 @@
 -	while(n = alloc()) {
-+	while((n = alloc())) {
++	while(nfree < sblock.s_fsize && (n = alloc())) {
+@@ -196 +196 @@
+-	n = ndirect + nindir + niindir + niindir;
++	n = ndirect + nindir + niindir + niiindir;
 @@ -218,2 +218,2 @@
 -pass1(ip)
 -register struct dinode *ip;
@@ -7540,12 +7800,21 @@ usr/local
 @@ -395 +393 @@
 -	register i;
 +	register int i;
+@@ -397 +395 @@
+-	lseek(fi, bno*BSIZE, 0);
++	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
+@@ -404 +402 @@
+-		for(i=0; i<BSIZE; i++)
++		for(i=0; i<cnt; i++)
 @@ -409,3 +407,2 @@
 -bwrite(bno, buf)
 -daddr_t bno;
 -char	*buf;
 +void
 +bwrite(daddr_t bno, char *buf)
+@@ -414 +411 @@
+-	lseek(fi, bno*BSIZE, 0);
++	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 @@ -419 +416,2 @@
 -makefree()
 +void
@@ -7702,7 +7971,8 @@ usr/local
 +	lseek(mf, (long)nl[6].value, 0);
 +	read(mf, (char *)&s.tout, sizeof(s.tout));
 +	for(i=0; i<32; i++) {
-@@ -95,0 +113,14 @@
+@@ -96 +113,15 @@
+-	t = 0;
 +	for(i=0; i<3; i++) {
 +		t = s.numb[i];
 +		s.numb[i] -= s1.numb[i];
@@ -7717,44 +7987,54 @@ usr/local
 +	t = s.tout;
 +	s.tout -= s1.tout;
 +	s1.tout = t;
-@@ -107 +138 @@
++	etime = 0;
+@@ -98,2 +129 @@
+-		t += s.etime[i];
+-	etime = t;
++		etime += s.etime[i];
+@@ -107 +137 @@
 -		long tm;
 +		long long tm;
-@@ -149 +180,2 @@
+@@ -149 +179,2 @@
 -stats(dn)
 +void
 +stats(int dn)
-@@ -151 +183 @@
+@@ -151 +182 @@
 -	register i;
 +	register int i;
-@@ -178 +210,2 @@
+@@ -154 +185 @@
+-	long t;
++	double t;
+@@ -178 +209,2 @@
 -stat1(o)
 +void
 +stat1(int o)
-@@ -180 +213 @@
+@@ -180,2 +212,2 @@
 -	register i;
+-	long t;
 +	register int i;
-@@ -197,2 +230,2 @@
++	double t;
+@@ -197,2 +229,2 @@
 -stats2(t)
 -double t;
 +void
 +stats2(double t)
-@@ -200 +233 @@
+@@ -200 +232 @@
 -	register i, j;
 +	register int i, j;
-@@ -209,2 +242,2 @@
+@@ -209,2 +241,2 @@
 -stats3(t)
 -double t;
 +void
 +stats3(double t)
-@@ -212 +245 @@
+@@ -212 +244 @@
 -	register i;
 +	register int i;
-@@ -254 +287,2 @@
+@@ -254 +286,2 @@
 -biostats()
 +void
 +biostats(void)
-@@ -256 +290 @@
+@@ -256 +289 @@
 -register i;
 +register int i;
 
@@ -7770,43 +8050,69 @@ usr/local
 -	long top2, bot2;
 -	long ftell();
 +	long top2 = 0, bot2;
-@@ -88 +89 @@
+@@ -58 +59 @@
+-			for (no = 0; no < 2*NFLD; no++) {
++			for (no = 0; no < 2*NFLD && argc > 2; no++) {
+@@ -71,0 +73,2 @@
++			if (argc < 3)
++				break;
+@@ -86 +89,2 @@
+-		olist[i]--;	/* 0 origin */
++		if (--olist[i] < 0 || olist[i] >= NFLD)	/* 0 origin */
++			error("bad field number", "");
+@@ -88 +92 @@
 -		error("usage: join [-j1 x -j2 y] [-o list] file1 file2");
 +		error("usage: join [-j1 x -j2 y] [-o list] file1 file2", "");
-@@ -105,2 +106,2 @@
+@@ -90,0 +95,2 @@
++	if (j1 < 0 || j1 >= NFLD || j2 < 0 || j2 >= NFLD)
++		error("bad field number", "");
+@@ -105,2 +111,2 @@
 -	while(n1>0 && n2>0 || aflg!=0 && n1+n2>0) {
 -		if(n1>0 && n2>0 && comp()>0 || n1==0) {
 +	while((n1>0 && n2>0) || (aflg!=0 && n1+n2>0)) {
 +		if((n1>0 && n2>0 && comp()>0) || n1==0) {
-@@ -110 +111 @@
+@@ -110 +116 @@
 -		} else if(n1>0 && n2>0 && comp()<0 || n2==0) {
 +		} else if((n1>0 && n2>0 && comp()<0) || n2==0) {
-@@ -126 +127 @@
+@@ -126 +132 @@
 -				} else if(n1>0 && n2>0 && comp()<0 || n2==0) {
 +				} else if((n1>0 && n2>0 && comp()<0) || n2==0) {
-@@ -142 +143,2 @@
+@@ -142 +148,2 @@
 -input(n)		/* get input line and split into fields */
 +int
 +input(int n)		/* get input line and split into fields */
-@@ -170,2 +172,2 @@
+@@ -159,0 +167,2 @@
++		if (pp >= &ppi[n][NFLD])
++			error("too many fields", "");
+@@ -163,2 +172,3 @@
+-		*bp++ = '\0';	/* mark end by overwriting blank */
+-			/* fails badly if string doesn't have \n at end */
++		*bp = '\0';	/* mark end by overwriting blank */
++		if (c != '\0')
++			bp++;
+@@ -166 +176,2 @@
+-	*pp = 0;
++	while (pp < &ppi[n][NFLD])
++		*pp++ = "";
+@@ -170,2 +181,2 @@
 -output(on1, on2)	/* print items from olist */
 -int on1, on2;
 +void
 +output(int on1, int on2)	/* print items from olist */
-@@ -188,2 +190,2 @@
+@@ -188,2 +199,2 @@
 -			if(olistf[i]==F1 && on1<=olist[i] ||
 -			   olistf[i]==F2 && on2<=olist[i] ||
 +			if((olistf[i]==F1 && on1<=olist[i]) ||
 +			   (olistf[i]==F2 && on2<=olist[i]) ||
-@@ -201,2 +203,2 @@
+@@ -201,2 +212,2 @@
 -error(s1, s2, s3, s4, s5)
 -char *s1;
 +void
 +error(char *s1, char *s2)
-@@ -205 +207 @@
+@@ -205 +216 @@
 -	fprintf(stderr, s1, s2, s3, s4, s5);
 +	fprintf(stderr, s1, s2);
-@@ -210,2 +212,2 @@
+@@ -210,2 +221,2 @@
 -cmp(s1, s2)
 -char *s1, *s2;
 +int
@@ -7826,6 +8132,9 @@ usr/local
 @@ -13 +14 @@
 -	extern errno;
 +	extern int errno;
+@@ -33 +34 @@
+-			printf("%u: %s\n", pid, sys_errlist[errno]);
++			printf("%d: %s\n", pid, sys_errlist[errno]);
 
 % usr/src/cmd/ln.c
 @@ -8 +7,0 @@
@@ -7835,6 +8144,12 @@ usr/local
 -char **argv;
 +int
 +main(int argc, char **argv)
+@@ -16 +15 @@
+-	char nb[100], *name=nb, *arg2;
++	char *name, *arg2;
+@@ -48 +47 @@
+-		sprintf(name, "%s/%s", arg2, np);
++		sprintf(name = malloc(strlen(arg2)+strlen(np)+2), "%s/%s", arg2, np);
 
 % usr/src/cmd/login.c
 @@ -15 +15 @@
@@ -7872,6 +8187,9 @@ usr/local
 +	register int c;
 
 % usr/src/cmd/look.c
+@@ -12 +12 @@
+-char key[50];
++char *key;
 @@ -14,2 +14,4 @@
 -main(argc,argv)
 -char **argv;
@@ -7885,6 +8203,9 @@ usr/local
 @@ -44 +46 @@
 -		return;
 +		return(0);
+@@ -55 +57 @@
+-	canon(argv[1],key);
++	canon(argv[1],key = argv[1]);
 @@ -87 +89 @@
 -			return;
 +			return(0);
@@ -7913,12 +8234,16 @@ usr/local
 @@ -129 +131 @@
 -	register c;
 +	register int c;
-@@ -142,2 +144,2 @@
+@@ -136 +138,2 @@
+-		*w++ = c;
++		if(w < &entry[sizeof entry - 1])
++			*w++ = c;
+@@ -142,2 +145,2 @@
 -canon(old,new)
 -char *old,*new;
 +void
 +canon(char *old, char *new)
-@@ -145 +147 @@
+@@ -145 +148 @@
 -	register c;
 +	register int c;
 
@@ -7929,6 +8254,9 @@ usr/local
 @@ -31 +31 @@
 -long	year;
 +time_t	year;
+@@ -40 +40 @@
+-char	*dotp	= ".";
++char	*dotp[]	= { 0, "." };
 @@ -42,4 +42,6 @@
 -char	*makename();
 -struct	lbuf *gstat();
@@ -7947,6 +8275,9 @@ usr/local
 +main(int argc, char *argv[])
 @@ -58 +59,0 @@
 -	int compar();
+@@ -134 +135 @@
+-		argv = &dotp - 1;
++		argv = dotp;
 @@ -142 +143 @@
 -	qsort(firstp, lastp - firstp, sizeof *lastp, compar);
 +	qsort((char *)firstp, lastp - firstp, sizeof *lastp, compar);
@@ -7965,12 +8296,18 @@ usr/local
 -	struct { char dminor, dmajor;};
 -	register t;
 +	register int t;
+@@ -175 +175 @@
+-		printf("%5u ", p->lnum);
++		printf("%5u ", (ino_t)p->lnum);
 @@ -204,3 +204,2 @@
 -getname(uid, buf)
 -int uid;
 -char buf[];
 +int
 +getname(int uid, char buf[])
+@@ -227 +226 @@
+-			if (j==0)
++			if (j==0 && i < 15)
 @@ -239,2 +238 @@
 -nblock(size)
 -long size;
@@ -7988,6 +8325,9 @@ usr/local
 -makename(dir, file)
 -char *dir, *file;
 +makename(char *dir, char *file)
+@@ -281 +279 @@
+-	static char dfile[100];
++	static char dfile[NCARGS+DIRSIZ+2];
 @@ -297,2 +295,2 @@
 -readdir(dir)
 -char *dir;
@@ -7998,18 +8338,20 @@ usr/local
 -			|| dentry.d_name[1]=='.' && dentry.d_name[2]=='\0'))
 +		 || (aflg==0 && dentry.d_name[0]=='.' && (dentry.d_name[1]=='\0'
 +			|| (dentry.d_name[1]=='.' && dentry.d_name[2]=='\0'))))
-@@ -328,2 +326 @@
+@@ -322,0 +321 @@
++		ep->ln.lname[j] = 0;
+@@ -328,2 +327 @@
 -gstat(file, argfl)
 -char *file;
 +gstat(char *file, int argfl)
-@@ -331 +327,0 @@
+@@ -331 +328,0 @@
 -	extern char *malloc();
-@@ -400,2 +396,2 @@
+@@ -400,2 +397,2 @@
 -compar(pp1, pp2)
 -struct lbuf **pp1, **pp2;
 +int
 +compar(char *pp1, char *pp2)
-@@ -405,2 +401,2 @@
+@@ -405,2 +402,2 @@
 -	p1 = *pp1;
 -	p2 = *pp2;
 +	p1 = *(struct lbuf **)pp1;
@@ -8023,6 +8365,11 @@ usr/local
 -main()
 +int
 +main(void)
+@@ -12,2 +13,2 @@
+-	char key[8];
+-	char salt[2];
++	char key[8] = {0};
++	char salt[2] = {0};
 
 % usr/src/cmd/mesg.c
 @@ -17 +16,0 @@
@@ -8303,14 +8650,27 @@ usr/local
 +int number(char *s);
 +int
 +main(int argc, char **argv)
-@@ -30,2 +31,2 @@
+@@ -22 +23 @@
+-	if(mknod(argv[1], m, (a<<8)|b) < 0)
++	if(mknod(argv[1], m, (a<<8)|b) < 0) {
+@@ -23,0 +25,2 @@
++		exit(1);
++	}
+@@ -27,0 +31 @@
++	exit(1);
+@@ -30,2 +34,2 @@
 -number(s)
 -char *s;
 +int
 +number(char *s)
-@@ -36 +37 @@
+@@ -36,2 +40,2 @@
 -	while(c = *s++) {
+-		if(c<'0' || c>'9')
 +	while((c = *s++)) {
++		if(c<'0' || c>'9' || n > 255)
+@@ -41 +45 @@
+-	return(n);
++	return(n > 255? -1: n);
 
 % usr/src/cmd/mount.c
 @@ -11,2 +11,2 @@
@@ -8399,6 +8759,9 @@ usr/local
 +chkdot(register char *s)
 
 % usr/src/cmd/ncheck.c
+@@ -21 +21 @@
+-ino_t	ilist[NB];
++ino_t	ilist[NB+1];
 @@ -37,3 +37,6 @@
 -daddr_t	bmap();
 -long	atol();
@@ -8417,6 +8780,9 @@ usr/local
 @@ -44 +47 @@
 -	register i;
 +	register int i;
+@@ -57 +60 @@
+-			for(i=0; i<NB; i++) {
++			for(i=0; i<NB && argc>1; i++) {
 @@ -81,2 +84,2 @@
 -check(file)
 -char *file;
@@ -8430,6 +8796,9 @@ usr/local
 -register struct dinode *ip;
 +void
 +pass1(register struct dinode *ip)
+@@ -141 +144 @@
+-		if (sflg==0 || nxfile>=NB)
++		if (sflg==0 || nxfile>=NB-1)
 @@ -146 +149 @@
 -			return;
 +		return;
@@ -8478,15 +8847,20 @@ usr/local
 @@ -298 +299 @@
 -	register i;
 +	register int i;
-@@ -302 +303 @@
+@@ -300 +301 @@
+-	lseek(fi, bno*BSIZE, 0);
++	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
+@@ -302,2 +303,2 @@
 -		fprintf(stderr, "ncheck: read error %d\n", bno);
+-		for(i=0; i<BSIZE; i++)
 +		fprintf(stderr, "ncheck: read error %D\n", bno);
++		for(i=0; i<cnt; i++)
 @@ -309 +310 @@
 -bmap(i)
 +bmap(int i)
 @@ -316 +317 @@
 -	if(i > NINDIR) {
-+	if(i > (int)NINDIR) {
++	if(i >= (int)NINDIR) {
 
 % usr/src/cmd/newgrp.c
 @@ -5,3 +5,2 @@
@@ -8528,11 +8902,14 @@ usr/local
 +	extern int errno;
 
 % usr/src/cmd/od.c
+@@ -12 +12 @@
+-long	addr;
++unsigned long	addr;
 @@ -14,2 +14,4 @@
 -main(argc, argv)
 -char **argv;
-+void offset(char *s), line(long a, unsigned short *w, int n);
-+void putx(unsigned n, int c), cput(int c), putn(long n, int b, int c), pre(int n);
++void offset(char *s), line(unsigned long a, unsigned short *w, int n);
++void putx(unsigned n, int c), cput(int c), putn(unsigned long n, int b, int c), pre(int n);
 +int
 +main(int argc, char **argv)
 @@ -18 +20 @@
@@ -8543,7 +8920,7 @@ usr/local
 -long a;
 -unsigned short *w;
 +void
-+line(long a, unsigned short *w, int n)
++line(unsigned long a, unsigned short *w, int n)
 @@ -101 +102 @@
 -	register i, f, c;
 +	register int i, f, c;
@@ -8563,7 +8940,7 @@ usr/local
 -putn(n, b, c)
 -long n;
 +void
-+putn(long n, int b, int c)
++putn(unsigned long n, int b, int c)
 @@ -193 +195 @@
 -	register d;
 +	register int d;
@@ -8576,6 +8953,9 @@ usr/local
 -register char *s;
 +void
 +offset(register char *s)
+@@ -217 +220 @@
+-	long a;
++	unsigned long a;
 
 % usr/src/cmd/osh.c
 @@ -4,0 +5,4 @@
@@ -8608,6 +8988,10 @@ usr/local
 -	register char *acname, **v;
 +	register int f;
 +	register char **v;
+@@ -89 +98,0 @@
+-		dolc = dolc/10;
+@@ -90,0 +100 @@
++		dolc = dolc/10;
 @@ -93 +102,0 @@
 -	acname = "<none>";
 @@ -121,2 +130,2 @@
@@ -8629,220 +9013,230 @@ usr/local
 -word()
 +void
 +word(void)
-@@ -223,2 +234,2 @@
+@@ -183,0 +195,6 @@
++			if(linep > elinep) {
++				while(c != '\n')
++					c = readc();
++				err("Too many characters",255);
++				gflg++;
++			}
+@@ -223,2 +240,2 @@
 -tree(n)
 -int n;
 +static int *
 +tree(int n)
-@@ -226 +237 @@
+@@ -226 +243 @@
 -	register *t;
 +	register int *t;
-@@ -229 +240 @@
+@@ -229 +246 @@
 -	treep =+ n;
 +	treep += n;
-@@ -238 +249,2 @@
+@@ -238 +255,2 @@
 -getc()
 +int
 +getc(void)
-@@ -248 +260 @@
+@@ -248 +266 @@
 -		argp =- 10;
 +		argp -= 10;
-@@ -250 +262 @@
+@@ -250 +268 @@
 -		argp =+ 10;
 +		argp += 10;
-@@ -256 +268 @@
+@@ -256 +274 @@
 -		linep =- 10;
 +		linep -= 10;
-@@ -258 +270 @@
+@@ -258 +276 @@
 -		linep =+ 10;
 +		linep += 10;
-@@ -292 +304,2 @@
+@@ -292 +310,2 @@
 -readc()
 +int
 +readc(void)
-@@ -296 +309 @@
+@@ -296 +315 @@
 -	register c;
 +	register int c;
-@@ -299 +312 @@
+@@ -299 +318 @@
 -		if (arginp == 1)
 +		if (arginp == (char *)1)
-@@ -302 +315 @@
+@@ -302 +321 @@
 -			arginp = 1;
 +			arginp = (char *)1;
-@@ -309 +322 @@
+@@ -309 +328 @@
 -	if((rdstat = read(0, &cc, 1)) != 1)
 +	if((rdstat = read(0, &cc, 1)) != 1) {
-@@ -311,0 +325 @@
+@@ -311,0 +331 @@
 +	}
-@@ -323,2 +337,2 @@
+@@ -323,2 +343,2 @@
 -syntax(p1, p2)
 -char **p1, **p2;
 +int *
 +syntax(char **p1, char **p2)
-@@ -342,2 +356,2 @@
+@@ -342,2 +362,2 @@
 -syn1(p1, p2)
 -char **p1, **p2;
 +int *
 +syn1(char **p1, char **p2)
-@@ -346 +360 @@
+@@ -346 +366 @@
 -	register *t, *t1;
 +	register int *t, *t1;
-@@ -370 +384 @@
+@@ -370 +390 @@
 -			t[DLEF] = syn2(p1, p);
 +			t[DLEF] = (int)syn2(p1, p);
-@@ -373,2 +387,2 @@
+@@ -373,2 +393,2 @@
 -				t1 = t[DLEF];
 -				t1[DFLG] =| FAND|FPRS|FINT;
 +				t1 = (int *)t[DLEF];
 +				t1[DFLG] |= FAND|FPRS|FINT;
-@@ -376 +390 @@
+@@ -376 +396 @@
 -			t[DRIT] = syntax(p+1, p2);
 +			t[DRIT] = (int)syntax(p+1, p2);
-@@ -392,2 +406,2 @@
+@@ -392,2 +412,2 @@
 -syn2(p1, p2)
 -char **p1, **p2;
 +int *
 +syn2(char **p1, char **p2)
-@@ -415,2 +429,2 @@
+@@ -415,2 +435,2 @@
 -			t[DLEF] = syn3(p1, p);
 -			t[DRIT] = syn2(p+1, p2);
 +			t[DLEF] = (int)syn3(p1, p);
 +			t[DRIT] = (int)syn2(p+1, p2);
-@@ -430,2 +444,2 @@
+@@ -430,2 +450,2 @@
 -syn3(p1, p2)
 -char **p1, **p2;
 +int *
 +syn3(char **p1, char **p2)
-@@ -435 +449 @@
+@@ -435 +455 @@
 -	register *t;
 +	register int *t;
-@@ -440 +454 @@
+@@ -440 +460 @@
 -		flg =| FPAR;
 +		flg |= FPAR;
-@@ -468 +482 @@
+@@ -468 +488 @@
 -			flg =| FCAT; else
 +			flg |= FCAT; else
-@@ -469,0 +484 @@
+@@ -469,0 +490 @@
 +		/* fallthrough */
-@@ -483 +498 @@
+@@ -483 +504 @@
 -				i = *p;
 +				i = (int)*p;
-@@ -488 +503 @@
+@@ -488 +509 @@
 -			o = *p;
 +			o = (int)*p;
-@@ -501 +516 @@
+@@ -501 +522 @@
 -		t[DSPR] = syn1(lp, rp);
 +		t[DSPR] = (int)syn1(lp, rp);
-@@ -510 +525 @@
+@@ -510 +531 @@
 -		t[l+DCOM] = p1[l];
 +		t[l+DCOM] = (int)p1[l];
-@@ -518,3 +533,2 @@
+@@ -518,3 +539,2 @@
 -scan(at, f)
 -int *at;
 -int (*f)();
 +static void
 +scan(int *at, int (*f)(int c))
-@@ -523 +537 @@
+@@ -523 +543 @@
 -	register *t;
 +	register int *t;
-@@ -526,2 +540,2 @@
+@@ -526,2 +546,2 @@
 -	while(p = *t++)
 -		while(c = *p)
 +	while((p = (char *)*t++))
 +		while((c = *p))
-@@ -531,2 +545,2 @@
+@@ -531,2 +551,2 @@
 -tglob(c)
 -int c;
 +static int
 +tglob(int c)
-@@ -540,2 +554,2 @@
+@@ -540,2 +560,2 @@
 -trim(c)
 -int c;
 +static int
 +trim(int c)
-@@ -547,2 +561,2 @@
+@@ -547,2 +567,2 @@
 -execute(t, pf1, pf2)
 -int *t, *pf1, *pf2;
 +void
 +execute(int *t, int *pf1, int *pf2)
-@@ -551 +565 @@
+@@ -551 +571 @@
 -	register *t1;
 +	register int *t1;
-@@ -553 +566,0 @@
+@@ -553 +572,0 @@
 -	extern errno;
-@@ -559 +572 @@
+@@ -559 +578 @@
 -		cp1 = t[DCOM];
 +		cp1 = (char *)t[DCOM];
-@@ -562 +575 @@
+@@ -562 +581 @@
 -				if(chdir(t[DCOM+1]) < 0)
 +				if(chdir((char *)t[DCOM+1]) < 0)
-@@ -580 +593 @@
+@@ -580 +599 @@
 -				execv("/bin/login", t+DCOM);
 +				execv("/bin/login", (char **)(t+DCOM));
-@@ -587 +600 @@
+@@ -587 +606 @@
 -				execv("/bin/newgrp", t+DCOM);
 +				execv("/bin/newgrp", (char **)(t+DCOM));
-@@ -597,0 +611 @@
+@@ -597,0 +617 @@
 +		/* fallthrough */
-@@ -625 +639 @@
+@@ -625 +645 @@
 -			i = open(t[DLEF], 0);
 +			i = open((char *)t[DLEF], 0);
-@@ -627 +641 @@
+@@ -627 +647 @@
 -				prs(t[DLEF]);
 +				prs((char *)t[DLEF]);
-@@ -634 +648 @@
+@@ -634 +654 @@
 -				i = open(t[DRIT], 1);
 +				i = open((char *)t[DRIT], 1);
-@@ -640 +654 @@
+@@ -640 +660 @@
 -			i = creat(t[DRIT], 0666);
 +			i = creat((char *)t[DRIT], 0666);
-@@ -642 +656 @@
+@@ -642 +662 @@
 -				prs(t[DRIT]);
 +				prs((char *)t[DRIT]);
-@@ -668,2 +682,2 @@
+@@ -668,2 +688,2 @@
 -			signal(INTR, 0);
 -			signal(QUIT, 0);
 +			signal(INTR, SIG_DFL);
 +			signal(QUIT, SIG_DFL);
-@@ -672,3 +686,3 @@
+@@ -672,3 +692,3 @@
 -			if(t1 = t[DSPR])
 -				t1[DFLG] =| f&FINT;
 -			execute(t1);
 +			if((t1 = (int *)t[DSPR]))
 +				t1[DFLG] |= f&FINT;
 +			execute(t1, 0, 0);
-@@ -680,2 +694,2 @@
+@@ -680,2 +700,2 @@
 -			t[DSPR] = "/etc/glob";
 -			execv(t[DSPR], t+DSPR);
 +			t[DSPR] = (int)"/etc/glob";
 +			execv((char *)t[DSPR], (char **)(t+DSPR));
-@@ -687 +701 @@
+@@ -685,0 +706,2 @@
++		if((linep = malloc(strlen((char *)t[DCOM])+10)) == 0)
++			exit(255);
+@@ -687 +709 @@
 -		texec(t[DCOM], t);
 +		texec((char *)t[DCOM], t);
-@@ -690 +704 @@
+@@ -690 +712 @@
 -		while(*cp1 = *cp2++)
 +		while((*cp1 = *cp2++))
-@@ -692,2 +706,2 @@
+@@ -692,2 +714,2 @@
 -		cp2 = t[DCOM];
 -		while(*cp1++ = *cp2++);
 +		cp2 = (char *)t[DCOM];
 +		while((*cp1++ = *cp2++));
-@@ -696 +710 @@
+@@ -696 +718 @@
 -		prs(t[DCOM]);
 +		prs((char *)t[DCOM]);
-@@ -698,0 +713 @@
+@@ -698,0 +721 @@
 +		/* fallthrough */
-@@ -703,2 +718,2 @@
+@@ -703,2 +726,2 @@
 -		t1 = t[DLEF];
 -		t1[DFLG] =| FPOU | (f&(FPIN|FINT|FPRS));
 +		t1 = (int *)t[DLEF];
 +		t1[DFLG] |= FPOU | (f&(FPIN|FINT|FPRS));
-@@ -706,2 +721,2 @@
+@@ -706,2 +729,2 @@
 -		t1 = t[DRIT];
 -		t1[DFLG] =| FPIN | (f&(FPOU|FINT|FAND|FPRS));
 +		t1 = (int *)t[DRIT];
 +		t1[DFLG] |= FPIN | (f&(FPOU|FINT|FAND|FPRS));
-@@ -713,6 +728,6 @@
+@@ -713,6 +736,6 @@
 -		if(t1 = t[DLEF])
 -			t1[DFLG] =| f;
 -		execute(t1);
@@ -8855,78 +9249,79 @@ usr/local
 +		if((t1 = (int *)t[DRIT]))
 +			t1[DFLG] |= f;
 +		execute(t1, 0, 0);
-@@ -724,2 +739,2 @@
+@@ -724,2 +747,2 @@
 -texec(f, at)
 -int *at;
 +void
 +texec(char *f, int *at)
-@@ -727 +742 @@
+@@ -727 +750 @@
 -	extern errno;
 +	extern int errno;
-@@ -731 +746 @@
+@@ -731 +754 @@
 -	execv(f, t+DCOM);
 +	execv(f, (char **)(t+DCOM));
-@@ -734,3 +749,3 @@
+@@ -733,4 +756,3 @@
+-		if (*linep)
 -			t[DCOM] = linep;
 -		t[DSPR] = "/usr/bin/osh";
 -		execv(t[DSPR], t+DSPR);
-+			t[DCOM] = (int)linep;
-+		t[DSPR] = (int)"/usr/bin/osh";
++		t[DCOM] = (int)f;
++		t[DSPR] = (int)"/bin/osh";
 +		execv((char *)t[DSPR], (char **)(t+DSPR));
-@@ -741 +756 @@
+@@ -741 +763 @@
 -		prs(t[DCOM]);
 +		prs((char *)t[DCOM]);
-@@ -747,3 +762,2 @@
+@@ -747,3 +769,2 @@
 -err(s, exitno)
 -char *s;
 -int exitno;
 +void
 +err(char *s, int exitno)
-@@ -760,2 +774,2 @@
+@@ -760,2 +781,2 @@
 -prs(as)
 -char *as;
 +void
 +prs(char *as)
-@@ -770 +784,2 @@
+@@ -770 +791,2 @@
 -putc(c)
 +void
 +putc(int c)
-@@ -778,2 +793,2 @@
+@@ -778,2 +800,2 @@
 -prn(n)
 -int n;
 +void
 +prn(int n)
-@@ -781 +796 @@
+@@ -781 +803 @@
 -	register a;
 +	register int a;
-@@ -783 +798 @@
+@@ -783 +805 @@
 -	if (a = n/10)
 +	if ((a = n/10))
-@@ -788,3 +803,2 @@
+@@ -788,3 +810,2 @@
 -any(c, as)
 -int c;
 -char *as;
 +int
 +any(int c, char *as)
-@@ -801,2 +815,2 @@
+@@ -801,2 +822,2 @@
 -equal(as1, as2)
 -char *as1, *as2;
 +int
 +equal(char *as1, char *as2)
-@@ -814,2 +828,2 @@
+@@ -814,2 +835,2 @@
 -pwait(i, t)
 -int i, *t;
 +void
 +pwait(int i, int *t)
-@@ -817 +831 @@
+@@ -817 +838 @@
 -	register p, e;
 +	register int p, e;
-@@ -818,0 +833 @@
+@@ -818,0 +840 @@
 +	(void)t;
-@@ -840 +855 @@
+@@ -840 +862 @@
 -		if (e || s&&stoperr)
 +		if (e || (s&&stoperr))
-@@ -842 +857 @@
+@@ -842 +864 @@
 -		errval =| (s>>8);
 +		errval |= (s>>8);
 
@@ -8949,6 +9344,9 @@ usr/local
 @@ -75 +69 @@
 -	while(c = *p++){
 +	while((c = *p++)){
+@@ -163,0 +158,2 @@
++	unlink(temp);
++	exit(0);
 
 % usr/src/cmd/pr.c
 @@ -41,2 +41,3 @@
@@ -8989,41 +9387,47 @@ usr/local
 @@ -141 +143 @@
 -	register sncol;
 +	register int sncol;
-@@ -195 +197 @@
+@@ -161,0 +164,2 @@
++	if (ncol < 1)
++		ncol = 1;
+@@ -195 +199 @@
 -	while (mflg&&nofile || (!mflg)&&tpgetc(ncol)>0) {
 +	while ((mflg&&nofile) || ((!mflg)&&tpgetc(ncol)>0)) {
-@@ -218,2 +220,2 @@
+@@ -203 +207 @@
+-			sprintf(linebuf, "\n\n%s %s  %s Page %d\n\n\n",
++			sprintf(linebuf, "\n\n%s %s  %.80s Page %d\n\n\n",
+@@ -218,2 +222,2 @@
 -mopen(ap)
 -char **ap;
 +void
 +mopen(char **ap)
-@@ -238 +240,2 @@
+@@ -238 +242,2 @@
 -putpage()
 +void
 +putpage(void)
-@@ -282 +285,2 @@
+@@ -282 +287,2 @@
 -nexbuf()
 +void
 +nexbuf(void)
-@@ -294 +298 @@
+@@ -294 +300 @@
 -		*rbufp = 0376;
 +		*rbufp = (char)0376;
-@@ -300 +304 @@
+@@ -300 +306 @@
 -		*rbufp = 0375;
 +		*rbufp = (char)0375;
-@@ -305 +309,2 @@
+@@ -305 +311,2 @@
 -tpgetc(ai)
 +int
 +tpgetc(int ai)
-@@ -340 +345,2 @@
+@@ -340 +347,2 @@
 -pgetc(i)
 +int
 +pgetc(int i)
-@@ -372 +378,2 @@
+@@ -372 +380,2 @@
 -put(ac)
 +void
 +put(int ac)
-@@ -418 +425,2 @@
+@@ -418 +427,2 @@
 -putcp(c)
 +void
 +putcp(int c)
@@ -15821,6 +16225,9 @@ usr/local
 +#include <stdio.h>
 +int
 +atoi(register char *p)
+@@ -4 +5 @@
+-	register int n;
++	register unsigned n;
 @@ -15,0 +17 @@
 +			/* fallthrough */
 
@@ -15831,6 +16238,9 @@ usr/local
 -atol(p)
 -register char *p;
 +atol(register char *p)
+@@ -5 +5 @@
+-	long n;
++	unsigned long n;
 @@ -16,0 +17 @@
 +			/* fallthrough */
 
@@ -25509,6 +25919,9 @@ usr/local
 @@ -123 +134 @@
 -	register n;
 +	register int n;
+@@ -132 +143 @@
+-	n += u.u_procp->p_nice;
++	n = (n > 2*NZERO? 2*NZERO: n) + u.u_procp->p_nice;
 @@ -145 +156,2 @@
 -unlink()
 +void
