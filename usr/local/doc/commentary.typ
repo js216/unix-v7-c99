@@ -13804,11 +13804,11 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/rm.c")
 
-#lines(1, 166)
+#lines(1, 172)
 
 #source("/usr/src/cmd/rmdir.c")
 
-#lines(1, 103)
+#lines(1, 104)
 
 #source("/usr/src/cmd/find.c")
 
@@ -13870,7 +13870,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/sort.c")
 
-#lines(1, 915)
+#lines(1, 913)
 
 #source("/usr/src/cmd/uniq.c")
 
@@ -13890,7 +13890,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/tail.c")
 
-#lines(1, 186)
+#lines(1, 188)
 
 #source("/usr/src/cmd/wc.c")
 
@@ -13906,11 +13906,11 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/sed/sed0.c")
 
-#lines(1, 978)
+#lines(1, 1000)
 
 #source("/usr/src/cmd/sed/sed1.c")
 
-#lines(1, 726)
+#lines(1, 735)
 
 #source("/usr/src/cmd/tsort.c")
 
@@ -13922,7 +13922,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/split.c")
 
-#lines(1, 81)
+#lines(1, 85)
 
 #source("/usr/src/cmd/sum.c")
 
@@ -13938,7 +13938,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/ptx.c")
 
-#lines(1, 555)
+#lines(1, 562)
 
 #source("/usr/src/cmd/deroff.c")
 
@@ -14100,7 +14100,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/pwd.c")
 
-#lines(1, 84)
+#lines(1, 86)
 
 == Accounting and Status <ch-acct>
 
@@ -14114,7 +14114,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/pstat.c")
 
-#lines(1, 419)
+#lines(1, 424)
 
 #source("/usr/src/cmd/iostat.c")
 
@@ -14160,7 +14160,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/restor.c")
 
-#lines(1, 1145)
+#lines(1, 1154)
 
 #source("/usr/src/cmd/clri.c")
 
@@ -14184,7 +14184,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/quot.c")
 
-#lines(1, 235)
+#lines(1, 248)
 
 == Building the System <ch-build>
 
