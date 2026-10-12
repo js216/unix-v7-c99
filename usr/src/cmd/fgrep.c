@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #define	MAXSIZ 6000
-#define QSIZE 400
+#define QSIZE MAXSIZ
 struct words {
 	char 	inp;
 	char	out;
@@ -79,7 +79,7 @@ main(int argc, char **argv)
 			continue;
 
 		default:
-			fprintf(stderr, "egrep: unknown flag\n");
+			fprintf(stderr, "fgrep: unknown flag\n");
 			continue;
 		}
 out:
@@ -88,7 +88,7 @@ out:
 	if (fflag) {
 		wordf = fopen(*argv, "r");
 		if (wordf==NULL) {
-			fprintf(stderr, "egrep: can't open %s\n", *argv);
+			fprintf(stderr, "fgrep: can't open %s\n", *argv);
 			exit(2);
 		}
 	}
@@ -145,7 +145,7 @@ execute(char *file)
 			blkno += ccount;
 		}
 		nstate:
-			if (c->inp == *p) {
+			if (*p && c->inp == *p) {
 				c = c->nst;
 			}
 			else if (c->link != 0) {
@@ -158,7 +158,7 @@ execute(char *file)
 				if (c==0) {
 					c = w;
 					istate:
-					if (c->inp == *p) {
+					if (*p && c->inp == *p) {
 						c = c->nst;
 					}
 					else if (c->link != 0) {
@@ -228,9 +228,7 @@ static int
 getargc(void)
 {
 	register int c;
-	if (wordf)
-		return(getc(wordf));
-	if ((c = *argptr++) == '\0')
+	if ((c = wordf ? getc(wordf) : *argptr++ & 0377) == '\0')
 		return(EOF);
 	return(c);
 }
@@ -265,7 +263,7 @@ nword:	for(;;) {
 			s->out = 1;
 			s = w;
 		} else {
-		loop:	if (s->inp == c) {
+		loop:	if ((s->inp & 0377) == c) {
 				s = s->nst;
 				continue;
 			}
@@ -328,13 +326,9 @@ init:	if ((s->inp) != 0) {
 		else front++;
 	cloop:	if ((c = s->inp) != 0) {
 			*rear = (q = s->nst);
-			if (front < rear)
-				if (rear >= &queue[QSIZE-1])
-					if (front == queue) overflo();
-					else rear = queue;
-				else rear++;
-			else
-				if (++rear == front) overflo();
+			if (++rear == &queue[QSIZE])
+				rear = queue;
+			if (rear == front) overflo();
 			state = s->fail;
 		floop:	if (state == 0) state = w;
 			if (state->inp == c) {
