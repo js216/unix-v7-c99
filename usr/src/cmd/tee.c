@@ -48,7 +48,7 @@ main(int argc,char **argv)
 			lseek(openf[n++],0L,2);
 		} else
 			openf[n++] = creat(argv[1],0666);
-		if(stat(argv[1],&buf)>=0) {
+		if(fstat(openf[n-1],&buf)>=0) {
 			if((buf.st_mode&S_IFMT)==S_IFCHR)
 				t++;
 		} else {
