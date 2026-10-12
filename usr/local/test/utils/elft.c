@@ -51,6 +51,10 @@ main(int argc, char **argv)
 	d[4] = d[5] + 4096;
 	try("bigdata", len);
 	d[4] = save;
+	save = t[4];
+	t[4] = *(unsigned *)&buf[28] + 32 * *(short *)&buf[44] - 4;
+	try("bigph", len);
+	t[4] = save;
 	t[2] = 4096;
 	t[4] = 0;
 	try("notext", len);

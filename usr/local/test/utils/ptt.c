@@ -28,6 +28,8 @@ main(void)
 	printf("r0 %d pcok %d\n", r, ptrace(3, pid, (int *)(off + PC*4), 0) > 0x10);
 	printf("w %d\n", ptrace(6, pid, (int *)(off + R0*4), 40));
 	printf("wr9 %d\n", ptrace(6, pid, (int *)(off + 9*4), 1));
+	ptrace(6, pid, (int *)(off + RPS*4), -1);
+	printf("rps %x\n", ptrace(3, pid, (int *)(off + RPS*4), 0));
 	printf("wps %d\n", ptrace(6, pid, (int *)(off + RPS*4), 0x1df));
 	printf("rps %x\n", ptrace(3, pid, (int *)(off + RPS*4), 0));
 	ptrace(5, pid, &glob, 2);

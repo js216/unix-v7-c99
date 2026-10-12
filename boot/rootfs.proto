@@ -256,6 +256,8 @@ d--755 0 0
 					r5b.sed	---644 0 0 usr/local/test/cases/r5b.sed
 					r5f	---644 0 0 usr/local/test/cases/r5f
 					r5f.exp	---644 0 0 usr/local/test/cases/r5f.exp
+					r5h	---644 0 0 usr/local/test/cases/r5h
+					r5h.exp	---644 0 0 usr/local/test/cases/r5h.exp
 					sh	---644 0 0 usr/local/test/cases/sh
 					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 					sig	---644 0 0 usr/local/test/cases/sig
@@ -309,6 +311,7 @@ d--755 0 0
 					ptt	---755 0 0 usr/local/test/obj/ptt
 					ptw	---755 0 0 usr/local/test/obj/ptw
 					r12	---755 0 0 usr/local/test/obj/r12
+					r5h	---755 0 0 usr/local/test/obj/r5h
 					r5t	---755 0 0 usr/local/test/obj/r5t
 					regs	---755 0 0 usr/local/test/obj/regs
 					roff	---644 0 0 usr/local/test/utils/roff

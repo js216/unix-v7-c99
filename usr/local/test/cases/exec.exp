@@ -10,6 +10,8 @@ short: errno 8
 short: status 0
 bigdata: errno 8
 bigdata: status 0
+bigph: errno 8
+bigph: status 0
 notext: errno 8
 notext: status 0
 nested
@@ -19,6 +21,7 @@ glob 5
 r0 0 pcok 1
 w 40
 wr9 -1
+rps f80ffe30
 wps 16
 rps 10
 exit 42
