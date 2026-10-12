@@ -24,7 +24,7 @@ main(int argc, char **argv)
 			tp = index(tp+1, '/') + 1;
 		else {	/* no tty - use best guess from passwd file */
 			pw = getpwuid(getuid());
-			strcpy(utmp.ut_name, pw?pw->pw_name: "?");
+			strncpy(utmp.ut_name, pw?pw->pw_name: "?", sizeof(utmp.ut_name));
 			strcpy(utmp.ut_line, "tty??");
 			time(&utmp.ut_time);
 			putline();
