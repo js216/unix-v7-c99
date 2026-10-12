@@ -71,6 +71,11 @@ static double ident(double x)
 	return(x);
 }
 
+static int fix(double x)
+{
+	return(x < -32768? -32768: x < 32767? (int)x: 32767);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -79,7 +84,7 @@ main(int argc, char *argv[])
 	init(&xd);
 	init(&yd);
 	xd.xsize = yd.xsize = 1.;
-	xx = (struct val *)malloc((unsigned)sizeof(struct val));
+	xx = (struct val *)calloc(1, (unsigned)sizeof(struct val));
 	labs = malloc(1);
 	labs[labsiz++] = 0;
 	setopt(argc,argv);
@@ -124,7 +129,7 @@ again:		switch(argv[0][0]) {
 				argv++;
 				argc--;
 				p2 = argv[0];
-				while ((*p1++ = *p2++));
+				while ((*p1++ = *p2++) && p1 < &titlebuf[BSIZ-1]);
 			}
 			break;
 
@@ -231,7 +236,7 @@ numb(float *np, int *argcp, register char ***argvp)
 		return(0);
 	while((c=(*argvp)[1][0]) == '+')
 		(*argvp)[1]++;
-	if(!(isdigit(c&0377) || (c=='-'&&(*argvp)[1][1]<'A') || c=='.'))
+	if(!(isdigit(c&0377) || (c=='-'&&((*argvp)[1][1]&0377)<'A') || c=='.'))
 		return(0);
 	*np = atof((*argvp)[1]);
 	(*argcp)--;
@@ -490,8 +495,8 @@ scale(register struct xy *p, struct val *v)
 	setlim(p);
 	edge = top-bot;
 	p->xa = p->xsize*edge/((*p->xf)(p->xub) - (*p->xf)(p->xlb));
-	p->xbot = bot + edge*p->xoff;
-	p->xtop = p->xbot + (top-bot)*p->xsize;
+	p->xbot = fix(bot + edge*p->xoff);
+	p->xtop = fix(p->xbot + (top-bot)*p->xsize);
 	p->xb = p->xbot - (*p->xf)(p->xlb)*p->xa + .5;
 }
 
@@ -553,16 +558,16 @@ setmark(int *xmark, register struct xy *p)
 			xl = modceil(p->xub-q/6,q);
 			xu = modfloor(p->xlb+q/6,q)-q/2;
 		}
-		for(x=xl; x<=xu; x+=fabs(p->xquant))
-			xmark[xn++] = (*p->xf)(x)*p->xa + p->xb;
+		for(x=xl; x<=xu && xn<50; x+=fabs(p->xquant))
+			xmark[xn++] = fix((*p->xf)(x)*p->xa + p->xb);
 	}
 	return(xn);
 }
 void
 submark(int *xmark, int *pxn, float x, struct xy *p)
 {
-	if(1.001*p->xlb < x && .999*p->xub > x)
-		xmark[(*pxn)++] = log10(x)*p->xa + p->xb;
+	if(*pxn < 50 && 1.001*p->xlb < x && .999*p->xub > x)
+		xmark[(*pxn)++] = fix(log10(x)*p->xa + p->xb);
 }
 
 void
@@ -596,9 +601,9 @@ plot(void)
 int
 conv(float xv, register struct xy *p, int *ip)
 {
-	long ix;
+	double ix;
 	ix = p->xa*(*p->xf)(xv*p->xmult) + p->xb;
-	if(ix<p->xbot || ix>p->xtop)
+	if(!(ix>=p->xbot && ix<p->xtop+1))
 		return(0);
 	*ip = ix;
 	return(1);
@@ -625,7 +630,7 @@ getstring(void)
 	default:
 		if(!isdigit(*labbuf&0377)) {
 			ungetc(*labbuf,stdin);
-			i = scanf("%s",labbuf);
+			i = scanf("%79s",labbuf);
 			break;
 		}
 		/* fallthrough */
@@ -635,8 +640,8 @@ getstring(void)
 		ungetc(*labbuf,stdin);
 		return(0);
 	case '"':
-		i = scanf("%[^\"\n]",labbuf);
-		scanf("%[\"]",junk);
+		i = scanf("%79[^\"\n]",labbuf);
+		scanf("%19[\"]",junk);
 		break;
 	}
 	if(i==-1)
