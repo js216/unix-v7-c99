@@ -485,7 +485,7 @@ The two disk drivers pass a single status value and a zero:
 #f("param.h") is the first file which nearly every kernel source file
 includes, and most of the other `.h` files assume that it has been
 included before them. It reserves no storage, though it declares some
-(147, 148), but defines the constants and simple types upon
+(146, 147), but defines the constants and simple types upon
 which the remainder of the system is built. As elsewhere in UNIX,
 defined constants are written in upper case only.
 
@@ -506,7 +506,7 @@ sources, and each configuration gives them its own values
 (#f("qemuconf")), generous, since both have 512 MB. `NBUF`, `NINODE`,
 `NFILE`, `NMOUNT` (5--8), `NCALL`, `NPROC`, `NTEXT`, and `NCLIST` (19--22)
 are therefore the names of variables, declared at the end of the file
-(147). The configuration file which `mkconf` writes for each machine
+(146). The configuration file which `mkconf` writes for each machine
 defines the tables at the configured sizes, and the variables with them
 (#f("qemu/c.c")); everywhere else a table's size is read at run time,
 as in the loops which search the tables, `for (p = &proc[0]; p <
@@ -688,7 +688,7 @@ holds for the other headers which appear in both places, `inode.h`
 among them, except that `stat.h` and `timeb.h` add prototypes for their
 system calls (#f("stat.h")).
 
-#lines(146, 148)
+#lines(146, 147)
 #source("/usr/sys/h/systm.h")
 
 #f("systm.h") is the kernel's collection of global variables and,

@@ -145,6 +145,5 @@ typedef	long		off_t;
 #define	UMODE	0170000		/* usermode bits */
 #define	USERMODE(ps)	((ps & UMODE)==UMODE)
 
-
 extern int nbuf, ninode, nfile, nmount, ncall, nproc, ntext, nclist;
 extern unsigned corebase, coretop, coreoff, pguser, gicdbase, giccbase;
