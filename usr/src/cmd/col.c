@@ -163,6 +163,8 @@ main (int argc, char **argv)
 void
 outc (register char c)
 {
+	if (strlen(lbuff) + cp + 3 >= LINELN)
+		return;
 	if (lp > cp) {
 		line = lbuff;
 		lp = 0;
