@@ -260,6 +260,7 @@ d--755 0 0
 					r5h.exp	---644 0 0 usr/local/test/cases/r5h.exp
 					r5i	---644 0 0 usr/local/test/cases/r5i
 					r5i.exp	---644 0 0 usr/local/test/cases/r5i.exp
+					r5i.sed	---644 0 0 usr/local/test/cases/r5i.sed
 					sh	---644 0 0 usr/local/test/cases/sh
 					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 					sig	---644 0 0 usr/local/test/cases/sig

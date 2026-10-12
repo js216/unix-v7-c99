@@ -17,7 +17,7 @@
 
 UFD		output = 2;
 LOCAL BOOL	beenhere = FALSE;
-CHAR		tmpout[20] = "/tmp/sh-";
+CHAR		tmpout[24] = "/tmp/sh-";
 FILEBLK		stdfile;
 FILE		standin = &stdfile;
 INT		ioset, dolc, wdval, wdnum, wdset, serial, peekc, flags;
@@ -169,7 +169,7 @@ VOID
 settmp(void)
 {
 	itos(getpid()); serial=0;
-	tmpnam=movstr(numbuf,&tmpout[TMPNAM]);
+	tmpnam=movstr(minus,movstr(numbuf,&tmpout[TMPNAM]));
 }
 
 VOID

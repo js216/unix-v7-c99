@@ -9239,7 +9239,14 @@ a further line. `settmp` makes the prefix of the names of temporary
 files from the process id. The id is copied to `tmpout[TMPNAM]`, which is
 the `-` (#f("sh/defs.h")), so that the prefix is `/tmp/sh` followed by
 the id; `tmpnam` marks its end, where `tmpfil`
-(#f("sh/io.c")) appends a serial number.
+(#f("sh/io.c")) appends a serial number. In v7 the serial number
+followed the id directly, so that the fifth temporary file of process
+123 and the thirty-fifth of process 12 were both `/tmp/sh1234`, and
+one shell could truncate the here document which another was writing or
+reading. The port puts a `-` after the id (172). `tmpout` grows from 20
+bytes to 24 (20) to hold `/tmp/sh`, an id of up to five digits, the
+`-`, a serial number of up to ten, now that an `INT` has 32 bits, and
+the null.
 
 `Ldup` moves descriptor `fa` to `fb` and sets close-on-exec on it. v7
 wrote `dup(fa|DUPFLG, fb)`: the `dup` system call took the second
@@ -13050,7 +13057,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 338)
+#lines(139, 339)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -13059,7 +13066,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(339, 340)
+#lines(340, 341)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

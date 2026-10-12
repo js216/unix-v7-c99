@@ -1,4 +1,7 @@
 T=/tmp/r5i U=/usr/local/test/utils
 mkdir $T; chmod 777 $T; cd $T
 $U/r5i
+chmod 755 /tmp; echo 'cat <<E
+x
+E' | su dmr 2>&1; chmod 777 /tmp
 cd /; rm -rf $T
