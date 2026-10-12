@@ -24,16 +24,11 @@
 #set heading(numbering: (..n) => { let p = n.pos(); if p.len() == 2 { str(p.at(1)) } })
 #show heading.where(level: 1): set heading(numbering: none)
 #show heading.where(level: 3): set heading(numbering: none)
-#let first = state("first", 1)
 #show raw.where(block: true): set text(size: 6.8pt)
-#show raw.where(block: true): it => {
-  show raw.line: l => context box(width: 3em, align(right, text(fill: gray, str(l.number + first.get() - 1)))) + h(1em) + box(width: 1fr, l.body)
-  it
-}
 #let file = state("file", "")
 #let text-of(path) = read(path).trim("\n", at: end).split("\n")
 #let lines(a, b) = context {
-  first.update(a)
+  show raw.line: l => box(width: 3em, align(right, text(fill: gray, str(l.number + a - 1)))) + h(1em) + box(width: 1fr, l.body)
   raw(text-of(file.get()).slice(a - 1, b).join("\n"), block: true, lang: "c")
 }
 #let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
