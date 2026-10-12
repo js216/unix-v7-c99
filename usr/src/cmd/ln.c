@@ -12,7 +12,7 @@ main(int argc, char **argv)
 	struct stat statb;
 	register char *np;
 	int fflag = 0;
-	char nb[100], *name=nb, *arg2;
+	char *name, *arg2;
 	int statres;
 
 	if (argc >1 && strcmp(argv[1], "-f")==0) {
@@ -44,7 +44,7 @@ main(int argc, char **argv)
 	}
 	statres = stat(arg2, &statb);
 	if (statres>=0 && (statb.st_mode&S_IFMT) == S_IFDIR)
-		sprintf(name, "%s/%s", arg2, np);
+		sprintf(name = malloc(strlen(arg2)+strlen(np)+2), "%s/%s", arg2, np);
 	else
 		name = arg2;
 	if (link(argv[1], name)<0) {
