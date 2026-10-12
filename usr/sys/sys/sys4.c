@@ -140,7 +140,7 @@ nice(void)
 	n = uap->niceness;
 	if(n < 0 && !suser())
 		n = 0;
-	n += u.u_procp->p_nice;
+	n = (n > 2*NZERO? 2*NZERO: n) + u.u_procp->p_nice;
 	if(n >= 2*NZERO)
 		n = 2*NZERO -1;
 	if(n < 0)

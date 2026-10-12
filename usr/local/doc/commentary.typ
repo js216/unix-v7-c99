@@ -3677,7 +3677,10 @@ likewise returns the parent's id alongside.
 
 `nice` adds to `p_nice` (#f("proc.h")), the bias to the scheduling
 priority which `setpri` (#f("slp.c")) applies. Only the super-user may
-make it smaller, and the result is kept within 0 and `2*NZERO-1`.
+make it smaller, and the result is kept within 0 and `2*NZERO-1`. An
+increment above `2*NZERO` is first cut to it (143), so that the sum
+cannot overflow; in v7 a huge increment wrapped round to a negative
+sum, which the clamp then turned into the best priority of all.
 
 #lines(123, 149)
 
