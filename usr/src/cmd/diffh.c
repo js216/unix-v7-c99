@@ -77,7 +77,7 @@ int
 main(int argc, char **argv)
 {
 	char *s0,*s1;
-	if(*argv[1]=='-') {
+	if(argc>1 && *argv[1]=='-') {
 		argc--;
 		argv++;
 		while(*++argv[0])
@@ -216,7 +216,7 @@ cmp(char *s, char *t)
 FILE *dopen(char *f1, char *f2)
 {
 	FILE *f;
-	char b[100],*bptr,*eptr;
+	char b[512],*bptr,*eptr;
 	struct stat statbuf;
 	if(cmp(f1,"-")==0) {
 		if(cmp(f2,"-")==0)
@@ -227,11 +227,13 @@ FILE *dopen(char *f1, char *f2)
 	if(stat(f1,&statbuf)==-1)
 		error("can't access ",f1);
 	if((statbuf.st_mode&S_IFMT)==S_IFDIR) {
-		for(bptr=b;(*bptr= *f1++);bptr++) ;
-		*bptr++ = '/';
 		for(eptr=f2;*eptr;eptr++)
 			if(*eptr=='/'&&eptr[1]!=0&&eptr[1]!='/')
 				f2 = eptr+1;
+		if(strlen(f1)+strlen(f2)+2 > (int)sizeof b)
+			error("name too long: ",f1);
+		for(bptr=b;(*bptr= *f1++);bptr++) ;
+		*bptr++ = '/';
 		while((*bptr++= *f2++)) ;
 		f1 = b;
 	}
