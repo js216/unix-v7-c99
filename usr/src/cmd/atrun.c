@@ -6,6 +6,7 @@
 #include <sys/dir.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <pwd.h>
 
 # define DIR "/usr/spool/at"
 # define PDIR	"past"
@@ -80,6 +81,7 @@ void
 run(char *file)
 {
 	struct stat stbuf;
+	struct passwd *pw;
 	register int pid, i;
 	char sbuf[64];
 
@@ -91,9 +93,9 @@ run(char *file)
 	sprintf(sbuf, "/bin/mv %.14s %s", file, PDIR);
 	system(sbuf);
 	chdir(PDIR);
-	if (stat(file, &stbuf) == -1)
+	if (stat(file, &stbuf) == -1 || (pw = getpwuid(stbuf.st_uid)) == NULL)
 		exit(1);
-	setgid(stbuf.st_gid);
+	setgid(pw->pw_gid);
 	setuid(stbuf.st_uid);
 	if ((pid = fork())) {
 		if (pid == -1)
