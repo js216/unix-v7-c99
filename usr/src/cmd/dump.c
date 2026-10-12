@@ -96,6 +96,10 @@ main(int argc, char *argv[])
 			argv++;
 			argc--;
 			density = atoi(*argv)/10;
+			if(density <= 0) {
+				printf("bad density\n");
+				exit(1);
+			}
 		}
 		break;
 
@@ -553,7 +557,7 @@ l2:
 		close(df);
 		return;
 	}
-	for(i=0;; i++) {
+	for(i=0; i<DIRSIZ; i++) {
 		if(fname[i] != idbuf.id_name[i])
 			goto l2;
 		if(fname[i] == '\0')
@@ -596,7 +600,7 @@ l2:
 	if(i != sizeof(idbuf))
 		goto l3;
 	n++;
-	for(i=0;; i++) {
+	for(i=0; i<DIRSIZ; i++) {
 		if(fname[i] != idbuf.id_name[i])
 			goto l2;
 		if(fname[i] == '\0')
@@ -604,13 +608,15 @@ l2:
 	}
 	if(idbuf.id_incno != incno)
 		goto l2;
+	n--;
 l3:
 	lseek(df, (long)n*sizeof(idbuf), 0);
-	for(i=0;; i++) {
+	for(i=0; i<DIRSIZ; i++) {
 		idbuf.id_name[i] = fname[i];
 		if(fname[i] == '\0')
 			break;
 	}
+	idbuf.id_name[i] = '\0';
 	idbuf.id_incno = incno;
 	idbuf.id_ddate = spcl.c_date;
 	write(df, (char *)&idbuf, sizeof(idbuf));
