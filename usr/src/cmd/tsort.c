@@ -44,14 +44,14 @@ main(int argc, char **argv)
 	FILE *input = stdin;
 	register struct nodelist *i, *j;
 	int x;
-	char precedes[50], follows[50];
+	char precedes[512], follows[512];
 	if(argc>1) {
 		input = fopen(argv[1],"r");
 		if(input==NULL)
 			error("cannot open ", argv[1]);
 	}
 	for(;;) {
-		x = fscanf(input,"%s%s",precedes, follows);
+		x = fscanf(input,"%511s%511s",precedes, follows);
 		if(x==EOF)
 			break;
 		if(x!=2)
