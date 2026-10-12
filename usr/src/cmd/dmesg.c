@@ -7,7 +7,7 @@
 #include <a.out.h>
 
 char	msgbuf[MSGBUFS];
-char	*msgbufp;
+char	*msgbufp = msgbuf;
 int	sflg;
 int	of	= -1;
 
@@ -28,6 +28,7 @@ main(int argc, char **argv)
 	int mem;
 	register char *mp, *omp, *mstart;
 	int samef;
+	unsigned n = 0;
 
 	if (argc>1 && argv[1][0] == '-') {
 		sflg++;
@@ -49,10 +50,10 @@ main(int argc, char **argv)
 	lseek(mem, (long)nl[0].n_value, 0);
 	read(mem, msgbuf, MSGBUFS);
 	lseek(mem, (long)nl[1].n_value, 0);
-	read(mem, (char *)&msgbufp, sizeof(msgbufp));
-	if (msgbufp < (char *)nl[0].n_value || msgbufp >= (char *)nl[0].n_value+MSGBUFS)
+	read(mem, (char *)&n, sizeof(n));
+	if ((n -= nl[0].n_value) >= MSGBUFS)
 		done("Namelist mismatch\n");
-	msgbufp += msgbuf - (char *)nl[0].n_value;
+	msgbufp = msgbuf + n;
 	mstart = &msgbuf[omesg.omindex];
 	omp = &omesg.omsgbuf[msgbufp-msgbuf];
 	mp = msgbufp;

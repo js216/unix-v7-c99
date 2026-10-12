@@ -14206,7 +14206,7 @@ The crontab runs it so every ten minutes, appending to
 `/usr/adm/messages` (#f("cmd/cron.c")). The image provides both files,
 owned by `daemon`, and makes `dmesg` set-group-id `sys`, the group
 which may read `/dev/kmem` (#f("rootfs.proto")), since `cron` runs the
-program as `daemon`. Without `/usr/adm/msgbuf` the `open` (38) would
+program as `daemon`. Without `/usr/adm/msgbuf` the `open` (39) would
 fail, the `read` and `write` on descriptor -1 would fail harmlessly, the saved state would be all
 zeros, and the whole buffer would be printed each time.
 
@@ -14214,19 +14214,28 @@ The members `n_type` and `n_value` of `nl` (19--22) are now given
 explicitly, since a partial initializer draws a warning from
 `-Wextra`. The third element, all zeros, ends the list for `nlist`.
 `done` and `pdate` are declared before `main` (24), which uses them.
+`msgbufp` now starts at `msgbuf` (10). `done` records `msgbufp - msgbuf`
+for the next run, and when the program gave up before it had found the
+kernel's pointer, v7 subtracted from `msgbuf` a null pointer or the
+kernel's address, which C leaves undefined, and the next run took the
+result as an index into the buffer.
 
 #lines(1, 23)
 
 A file named on the command line, a core file or a namelist, makes the
-program give up group `sys` first (42--43), as in #f("cmd/ps.c").
-The two `read`s copy the buffer and the pointer. The check at (53) is the
+program give up group `sys` first (43--44), as in #f("cmd/ps.c").
+The two `read`s copy the buffer and the pointer. The check at (54) is the
 only defence against a `/unix` which is not the running kernel: if the
 pointer read at the address given for `msgbufp` does not lie within the
-address given for `msgbuf`, the names belong to some other system. The
-pointer is then moved (55) from the kernel's buffer to the program's
-copy.
+address given for `msgbuf`, the names belong to some other system. Its
+offset in the kernel's buffer then places `msgbufp` in the program's
+copy (56). v7 read the pointer into `msgbufp` and compared and
+subtracted it as a pointer, though it points into no object of the
+program's; the pointer is now read as the `unsigned` `n` (31), and the
+offset is an unsigned difference, which also makes the two tests of
+v7 one.
 
-#lines(24, 55)
+#lines(24, 56)
 
 The comparison decides where printing begins. `mstart` is set to the
 position recorded on the last run, and the copy is compared with the
@@ -14240,21 +14249,21 @@ buffer in the meantime, messages have been lost, and the program prints
 character. Null bytes, the part of the buffer never yet written, are
 skipped.
 
-#lines(56, 85)
+#lines(57, 86)
 
 `done` records the present buffer, its index, and the message which
 ended the run, and exits. The message is not printed if it is the one
-recorded last time: the test (92) compares the pointers, which works
+recorded last time: the test (93) compares the pointers, which works
 because the same program, run again, places the same string at the same
 address. A complaint such as "No mem" therefore appears once in the
-log, not every ten minutes. `sflg` was cleared at (41), so the test of
+log, not every ten minutes. `sflg` was cleared at (42), so the test of
 it is always true.
 
 `pdate` heads the output with the date, once, before the first thing
 printed. `ctime` is now declared in #f("stdio.h"), and v7's local
 declaration of it has been removed; `firstime` has gained its `int`.
 
-#lines(86, 116)
+#lines(87, 117)
 #source("/usr/src/cmd/cron.c")
 
 `cron` runs commands at stated times. It is started by #f("rc") and
