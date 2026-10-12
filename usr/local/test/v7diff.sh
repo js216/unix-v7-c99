@@ -968,6 +968,9 @@ usr/local
 @@ -173 +179 @@
 -	long t, t1;
 +	time_t t, t1;
+@@ -191 +197 @@
+-	for (up=ubuf; up < &ubuf[USIZE]; up++) {
++	for (up=ubuf; up < &ubuf[USIZE-1]; up++) {
 @@ -203 +209,2 @@
 -among(i)
 +int
@@ -1072,12 +1075,7 @@ usr/local
 +	register int val;
 @@ -127 +128 @@
 -	while(isdigit(*p)) {
-+	while(isdigit(*p&0377)) {
-@@ -138,2 +139,2 @@
--			if (isdigit(*p)) {
--				if (isdigit(p[1])) {
-+			if (isdigit(*p&0377)) {
-+				if (isdigit(p[1]&0377)) {
++	while(isdigit(*p) && val < DAY) {
 @@ -146,0 +148 @@
 +			break;
 @@ -201,2 +203,2 @@
@@ -1106,48 +1104,63 @@ usr/local
 @@ -291 +292 @@
 -	register i;
 +	register int i;
-@@ -301 +302,2 @@
+@@ -293 +294 @@
+-	for (i=0; ; i += 53) {
++	for (i=0; i < 100*53; i += 53) {
+@@ -298,0 +300,2 @@
++	fprintf(stderr, "at: too many jobs queued for this time\n");
++	exit(1);
+@@ -301 +304,2 @@
 -onintr()
 +void
 +onintr(int sig)
-@@ -302,0 +305 @@
+@@ -302,0 +307 @@
 +	(void)sig;
 
 % usr/src/cmd/atrun.c
-@@ -16,0 +17 @@
+@@ -8,0 +9 @@
++#include <pwd.h>
+@@ -16,0 +18 @@
 +void	makenowtime(void), updatetime(int t), run(char *file);
-@@ -18,2 +19,2 @@
+@@ -18,2 +20,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(void)
-@@ -52 +53,2 @@
+@@ -52 +54,2 @@
 -makenowtime()
 +void
 +makenowtime(void)
-@@ -54,2 +56 @@
+@@ -54,2 +57 @@
 -	long t;
 -	struct tm *localtime();
 +	time_t t;
-@@ -62 +63 @@
+@@ -62 +64 @@
 -	nowyear = tp->tm_year;
 +	nowyear = tp->tm_year%100;
-@@ -65 +66,2 @@
+@@ -65 +67,2 @@
 -updatetime(t)
 +void
 +updatetime(int t)
-@@ -77,2 +79,2 @@
+@@ -77,2 +80,2 @@
 -run(file)
 -char *file;
 +void
 +run(char *file)
-@@ -81 +83 @@
+@@ -81 +84,2 @@
 -	register pid, i;
++	struct passwd *pw;
 +	register int pid, i;
-@@ -96 +98 @@
+@@ -92 +96 @@
+-	if (stat(file, &stbuf) == -1)
++	if (stat(file, &stbuf) == -1 || (pw = getpwuid(stbuf.st_uid)) == NULL)
+@@ -94 +98 @@
+-	setgid(stbuf.st_gid);
++	setgid(pw->pw_gid);
+@@ -96 +100 @@
 -	if (pid = fork()) {
 +	if ((pid = fork())) {
-@@ -104,2 +106,2 @@
+@@ -104,2 +108,2 @@
 -	execl("/bin/sh", "sh", file, 0);
 -	execl("/usr/bin/sh", "sh", file, 0);
 +	execl("/bin/sh", "sh", file, (char *)0);
@@ -1294,11 +1307,25 @@ usr/local
 @@ -101 +110 @@
 -<A>{A}{B}*	{ yylval = setsymtab(yytext, tostring(""), 0.0, STR, symtab); RETURN(VAR); }
 +<A>{A}{B}*	{ yylval = (int)setsymtab(yytext, tostring(""), 0.0, STR, symtab); RETURN(VAR); }
+@@ -108 +117 @@
+-<A>.		{ yylval = yytext[0]; RETURN(yytext[0]); }
++<A>.		{ yylval = yytext[0]&0377; RETURN(yylval); }
 @@ -131 +140 @@
 -<str>\"		{ BEGIN A; cbuf[clen]=0; yylval = setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
 +<str>\"		{ BEGIN A; cbuf[clen]=0; yylval = (int)setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
-@@ -140 +149 @@
+@@ -133,4 +142,4 @@
+-<str>"\\\""	{ cbuf[clen++]='"'; }
+-<str,chc>"\\"n	{ cbuf[clen++]='\n'; }
+-<str,chc>"\\"t	{ cbuf[clen++]='\t'; }
+-<str,chc>"\\\\"	{ cbuf[clen++]='\\'; }
++<str>"\\\""	{ yytext[0]='"'; CADD; }
++<str,chc>"\\"n	{ yytext[0]='\n'; CADD; }
++<str,chc>"\\"t	{ yytext[0]='\t'; CADD; }
++<str,chc>"\\\\"	{ CADD; }
+@@ -139,2 +148,2 @@
+-<chc>"\\""]"	{ cbuf[clen++]=']'; }
 -<chc>"]"	{ BEGIN reg; cbuf[clen]=0; yylval = tostring(cbuf);
++<chc>"\\""]"	{ yytext[0]=']'; CADD; }
 +<chc>"]"	{ BEGIN reg; cbuf[clen]=0; yylval = (int)tostring(cbuf);
 @@ -148 +157,2 @@
 -input()
@@ -1336,52 +1363,63 @@ usr/local
 -node *p;
 +void
 +penter(node *p)	/* set up parent pointers and leaf indices */
-@@ -85,2 +85,2 @@
+@@ -64,0 +65,2 @@
++			if (line >= MAXLIN-1)
++				overflo();
+@@ -85,2 +87,2 @@
 -freetr(p)	/* free parse tree and follow sets */
 -node *p;
 +void
 +freetr(node *p)	/* free parse tree and follow sets */
-@@ -108,2 +108 @@
+@@ -108,2 +110 @@
 -char *cclenter(p)
 -register char *p;
 +char *cclenter(register char *p)
-@@ -111 +110 @@
+@@ -111 +112 @@
 -	register i, c;
 +	register int i, c;
-@@ -139 +138,2 @@
+@@ -119,2 +120,2 @@
+-				c = chars[i-1];
+-				while (c < *p) {
++				c = chars[i-1]&0377;
++				while (c < (*p&0377)) {
+@@ -132,0 +134,2 @@
++	if (i >= MAXLIN)
++		overflo();
+@@ -139 +142,2 @@
 -overflo()
 +void
 +overflo(void)
-@@ -144,2 +144,2 @@
+@@ -144,2 +148,2 @@
 -cfoll(v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
 -register node *v;
 +void
 +cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
-@@ -147 +147 @@
+@@ -147 +151 @@
 -	register i;
 +	register int i;
-@@ -149 +148,0 @@
+@@ -149 +152,0 @@
 -	int *add();
-@@ -176,2 +175,3 @@
+@@ -176,2 +179,3 @@
 -first(p)			/* collects initially active leaves of p into setvec */
 -register node *p;		/* returns 0 or 1 depending on whether p matches empty string */
 +int
 +first(register node *p)			/* collects initially active leaves of p into setvec */
 +				/* returns 0 or 1 depending on whether p matches empty string */
-@@ -179 +179 @@
+@@ -179 +183 @@
 -	register b;
 +	register int b;
-@@ -210,2 +210,2 @@
+@@ -210,2 +214,2 @@
 -follow(v)
 -node *v;		/* collects leaves that can follow v into setvec */
 +void
 +follow(node *v)		/* collects leaves that can follow v into setvec */
-@@ -245,2 +245,2 @@
+@@ -245,2 +249,2 @@
 -member(c, s)	/* is c in s? */
 -register char c, *s;
 +int
 +member(register char c, register char *s)	/* is c in s? */
-@@ -254,4 +254,3 @@
+@@ -254,4 +258,3 @@
 -notin(array, n, prev)		/* is setvec in array[0] thru array[n]? */
 -int **array;
 -int *prev; {
@@ -1389,65 +1427,72 @@ usr/local
 +int
 +notin(int **array, int n, int *prev) {		/* is setvec in array[0] thru array[n]? */
 +	register int i, j;
-@@ -272 +271 @@
+@@ -272 +275 @@
 -int *add(n) {		/* remember setvec */
 +int *add(int n) {		/* remember setvec */
-@@ -274 +273 @@
+@@ -274 +277 @@
 -	register i;
 +	register int i;
-@@ -288 +287 @@
+@@ -288 +291 @@
 -struct fa *cgotofn()
 +struct fa *cgotofn(void)
-@@ -290 +289 @@
+@@ -290 +293 @@
 -	register i, k;
 +	register int i, k;
-@@ -300 +299 @@
+@@ -300 +303 @@
 -	int fatab[257];
 +	int fatab[2*256+1];
-@@ -308,3 +307,3 @@
+@@ -308,3 +311,3 @@
 -	char symbol[NCHARS];
 -	char isyms[NCHARS];
 -	char ssyms[NCHARS];
 +	char symbol[256];
 +	char isyms[256];
 +	char ssyms[256];
-@@ -314 +313 @@
+@@ -314 +317 @@
 -	for (i=0; i<NCHARS; i++)  isyms[i] = symbol[i] = 0;
 +	for (i=0; i<256; i++)  isyms[i] = symbol[i] = 0;
-@@ -328 +327 @@
+@@ -328 +331 @@
 -				k = (int) right(cp);
 +				k = (int) right(cp) & 0377;
-@@ -347,2 +346,2 @@
+@@ -347,2 +350,2 @@
 -						if (isyms[*p] != 1) {
 -							isyms[*p] = 1;
 +						if (isyms[*p&0377] != 1) {
 +							isyms[*p&0377] = 1;
-@@ -389 +388 @@
+@@ -389 +392 @@
 -					k = (int) right(cp);
 +					k = (int) right(cp) & 0377;
-@@ -408,2 +407,2 @@
+@@ -408,2 +411,2 @@
 -							if (isyms[*p] == 0 && symbol[*p] == 0) {
 -								symbol[*p] = 1;
 +							if (isyms[*p&0377] == 0 && symbol[*p&0377] == 0) {
 +								symbol[*p&0377] = 1;
-@@ -428 +427 @@
+@@ -428 +431 @@
 -			symbol[c] = 0;
 +			symbol[c&0377] = 0;
-@@ -435 +434 @@
+@@ -435 +438 @@
 -					if (k == CHAR && c == (int) right(cp)
 +					if ((k == CHAR && c == (int) right(cp))
-@@ -437,2 +436,2 @@
+@@ -437,2 +440,2 @@
 -					 || k == CCL && member(c, (char *) right(cp))
 -					 || k == NCCL && !member(c, (char *) right(cp))) {
 +					 || (k == CCL && member(c, (char *) right(cp)))
 +					 || (k == NCCL && !member(c, (char *) right(cp)))) {
-@@ -507,3 +506,2 @@
+@@ -451 +454 @@
+-				if (n >= NSTATES) {
++				if (n >= NSTATES-1) {
+@@ -487 +490,2 @@
+-		xfree(state[i]);	/* free state[i] */
++		if (i > 0)
++			xfree(state[i]);	/* free state[i] */
+@@ -507,3 +511,2 @@
 -match(pfa, p)
 -register struct fa *pfa;
 -register char *p;
 +int
 +match(register struct fa *pfa, register char *p)
-@@ -511 +509 @@
+@@ -511 +514 @@
 -	register count;
 +	register int count;
 
@@ -1468,76 +1513,71 @@ usr/local
 @@ -36 +39 @@
 -	register c, sep;
 +	register int c, sep;
-@@ -87,2 +90,2 @@
+@@ -62 +65,2 @@
+-				;
++				if (rr >= record+RECSIZE-3)
++					error(FATAL, "record `%.20s...' too long", record);
+@@ -70,2 +73,0 @@
+-		if (rr > record+RECSIZE)
+-			error(FATAL, "record `%.20s...' too long", record);
+@@ -87,2 +89,2 @@
 -setclvar(s)	/* set var=value from s */
 -char *s;
 +void
 +setclvar(char *s)	/* set var=value from s */
-@@ -101 +104,2 @@
+@@ -101 +103,2 @@
 -fldbld()
 +void
 +fldbld(void)
-@@ -161 +165,2 @@
+@@ -161 +164,2 @@
 -recbld()
 +void
 +recbld(void)
-@@ -171 +176 @@
+@@ -169 +173 @@
+-	for (i = 1; i <= *NF; i++) {
++	for (i = 1; i <= *NF && i < MAXFLD; i++) {
+@@ -171 +175 @@
 -		while (*r++ = *p++)
-+		while ((*r++ = *p++))
-@@ -184 +189 @@
++		while (r < record+RECSIZE && (*r++ = *p++))
+@@ -179 +183 @@
+-	if (r > record+RECSIZE)
++	if (r >= record+RECSIZE)
+@@ -184 +188 @@
 -cell *fieldadr(n)
 +cell *fieldadr(int n)
-@@ -193 +198,2 @@
+@@ -186 +190 @@
+-	if (n >= MAXFLD)
++	if (n < 0 || n >= MAXFLD)
+@@ -193 +197,2 @@
 -yyerror(s) char *s; {
 +void
 +yyerror(char *s) {
-@@ -198 +204,3 @@
+@@ -198 +203,3 @@
 -error(f, s, a1, a2, a3, a4, a5, a6, a7) {
 +void
 +error(int f, char *s, ...) {
 +	va_list a;
-@@ -200 +208,3 @@
+@@ -200 +207,3 @@
 -	fprintf(stderr, s, a1, a2, a3, a4, a5, a6, a7);
 +	va_start(a, s);
 +	_doprnt(s, &a, stderr);
 +	va_end(a);
-@@ -208 +218,3 @@
+@@ -208 +217,3 @@
 -PUTS(s) char *s; {
 +void
 +PUTS(char *s) {
 +	(void)s;
-@@ -214,2 +226,2 @@
+@@ -214,2 +225,2 @@
 -isnumber(s)
 -register char *s;
 +int
 +isnumber(register char *s)
-@@ -217 +229 @@
+@@ -217 +228 @@
 -	register d1, d2;
 +	register int d1, d2;
-@@ -228 +240 @@
--	if (!isdigit(*s) && *s != '.')
-+	if (!isdigit(*s&0377) && *s != '.')
-@@ -230 +242 @@
--	if (isdigit(*s)) {
-+	if (isdigit(*s&0377)) {
-@@ -234 +246 @@
--		} while (isdigit(*s));
-+		} while (isdigit(*s&0377));
-@@ -242 +254 @@
--	if (isdigit(*s)) {
-+	if (isdigit(*s&0377)) {
-@@ -246 +258 @@
--		} while (isdigit(*s));
-+		} while (isdigit(*s&0377));
-@@ -248 +260 @@
+@@ -248 +259 @@
 -	if (!(d1 || point && d2))
 +	if (!(d1 || (point && d2)))
-@@ -254 +266 @@
--		if (!isdigit(*s))
-+		if (!isdigit(*s&0377))
-@@ -259 +271 @@
--		} while (isdigit(*s));
-+		} while (isdigit(*s&0377));
 
 % usr/src/cmd/awk/main.c
 @@ -3,0 +4,2 @@
@@ -1666,6 +1706,9 @@ usr/local
 @@ -76 +74 @@
 -	printf("char *printname[%d] {\n", SIZE);
 +	printf("char *printname[%d] = {\n", SIZE);
+@@ -80 +78 @@
+-		printf("/*%s*/\t\"%s\",\n",tokname(i+FIRSTTOKEN),names[i]);
++		printf("/*%s*/\t\"%s\",\n",tokname(i+FIRSTTOKEN),names[i]?names[i]:"");
 
 % usr/src/cmd/awk/run.c
 @@ -5,0 +6,3 @@
