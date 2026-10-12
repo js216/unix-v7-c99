@@ -322,7 +322,7 @@ cgotofn(void) {
 					pos++;
 				} /* end nextstate */
 				if (notin(n)) {
-					if (n >= NSTATES) overflo();
+					if (n >= NSTATES-1) overflo();
 					add(state, ++n);
 					if (tmpstat[line] == 1) out[n] = 1;
 					gotofn[s][c] = n;
@@ -391,7 +391,7 @@ notin(int n) {
 void
 add(int *array, int n) {
 	register int i;
-	if (nxtpos + count > MAXPOS) overflo();
+	if (nxtpos + count >= MAXPOS) overflo();
 	array[n] = nxtpos;
 	positions[nxtpos++] = count;
 	for (i=3; i <= line; i++) {
