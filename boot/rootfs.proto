@@ -192,6 +192,8 @@ d--755 0 0
 					cmd3.exp	---644 0 0 usr/local/test/cases/cmd3.exp
 					cmd4	---644 0 0 usr/local/test/cases/cmd4
 					cmd4.exp	---644 0 0 usr/local/test/cases/cmd4.exp
+					cmd5	---644 0 0 usr/local/test/cases/cmd5
+					cmd5.exp	---644 0 0 usr/local/test/cases/cmd5.exp
 					cmdg	---644 0 0 usr/local/test/cases/cmdg
 					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -318,6 +320,7 @@ d--755 0 0
 					memt	---755 0 0 usr/local/test/obj/memt
 					monout	---644 0 0 usr/local/test/utils/monout
 					nswp	---755 0 0 usr/local/test/obj/nswp
+					ob	---755 0 0 usr/local/test/obj/ob
 					olda	---644 0 0 usr/local/test/utils/olda
 					physt	---755 0 0 usr/local/test/obj/physt
 					pidf	---755 0 0 usr/local/test/obj/pidf
@@ -332,6 +335,7 @@ d--755 0 0
 					regs	---755 0 0 usr/local/test/obj/regs
 					roff	---644 0 0 usr/local/test/utils/roff
 					sortin	---644 0 0 usr/local/test/utils/sortin
+					spd	---755 0 0 usr/local/test/obj/spd
 					stkt	---755 0 0 usr/local/test/obj/stkt
 					swb	---755 0 0 usr/local/test/obj/swb
 					swpt	---755 0 0 usr/local/test/obj/swpt

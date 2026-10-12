@@ -1,0 +1,46 @@
+T=/tmp/cmd5 U=/usr/local/test/utils B=bbbbbbbbbbbbbb
+mkdir $T; cd $T
+mkdir r r/e r/x; chmod 700 r/e; chmod 755 r; chown dmr r/x
+echo "rmdir $T/r/e; echo st\$?; rm -r $T/r/x; echo st\$?" | su dmr 2>&1; ls r
+mkdir d; cd d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do mkdir $B; cd $B; done
+pwd | wc -c; cd $T; rm -r d; echo st$?; ls d
+pstat -i /unix; echo st$?
+cp $U/monout mon.out; cp $U/xout x.out; prof x.out >p1
+dd if=x.out bs=16 count=1 2>/dev/null >x2; $U/ob 140 0 1 0 >>x2; dd if=x.out bs=20 skip=1 2>/dev/null >>x2
+prof x2 >p2; cmp p1 p2 && echo same
+dd if=mon.out bs=8 count=1 2>/dev/null >m2; $U/ob 350 3 0 0 >>m2; dd if=/unix bs=512 count=20 2>/dev/null >>m2
+mv m2 mon.out; prof x.out; echo st$?; rm mon.out x.out x2 p1 p2
+echo zzz >ig; ptx -i ig -w </dev/null; echo st$?
+awk 'BEGIN { printf "a "; for (i = 0; i < 150; i++) printf "\""; print "" }' </dev/null | ptx -i ig | wc -c
+awk 'BEGIN { for (i = 0; i < 250; i++) printf "b"; print " c" }' </dev/null | ptx -i ig | wc -c
+echo 'a b c' | ptx -w 3 -i ig; echo st$?; echo 'a b c' | ptx -g 71 -i ig; echo st$?
+awk 'BEGIN { for (i = 0; i < 2048; i++) print "w" i }' </dev/null >ig; echo hello world | ptx -i ig; echo st$?; rm ig
+cp $U/fs.img fs; quot fs fs; echo '8 words' | tr -d '\012' | quot -n fs | od -c
+cp /etc/passwd pw; echo 'x::300:1::/:' >>/etc/passwd; quot -c fs | sed 4q; cp pw /etc/passwd
+dd if=fs bs=1924 count=1 2>/dev/null >fs3; $U/ob 100 234 2 0 0 377 377 377 >>fs3; dd if=fs bs=1932 skip=1 2>/dev/null >>fs3
+quot fs3; quot -c fs3; rm fs3
+awk 'BEGIN { for (i = 0; i < 600; i++) printf "r"; print "" }' </dev/null >rl; random 1 <rl | cmp - rl && echo same; random -e 1e30; echo st$?
+awk 'BEGIN { for (i = 0; i < 1001; i++) printf "c%04d%35s", i, "" }' </dev/null >ac; sa -i ac; echo st$?
+(echo big | tr -d '\012'; $U/ob '11*0' 377 377 '24*0') >ac; sa -i ac
+q=`awk 'BEGIN { for (i = 0; i < 200; i++) printf "q" }' </dev/null`; echo "long::9:1:$q:/:" >>/etc/passwd
+(echo cat | tr -d '\012'; $U/ob '21*0' 11 '15*0') >ac; sa -mi ac; cp pw /etc/passwd; rm pw ac
+sleep; echo st$?; sleep x; echo st$?
+echo 0 0 1 1 2 0 3 -1 4 0 | spline -p -n 8; echo 0 000000000000000000000000000001 1 1 2 4 | spline -n 2
+echo 0 0 1 1 2 4 | spline -x 5 5 | wc -l
+p=$T; for i in 1 2 3 4 5 6; do p=$p/$B; mkdir $p; done; split -1 /etc/group $p/x; ls $p | wc -l; split -0 /etc/group; echo st$?
+(stty erase; echo st$? 1>&2; stty; $U/spd 200; stty; stty ek 0) 2>&1 >/dev/tty
+tabs </dev/null | od -c; tail +4294967295c /etc/passwd | wc -c; tail +5000000b /etc/passwd | wc -c
+awk 'BEGIN { for (i = 0; i < 25; i++) printf "{"; print "p"; for (i = 0; i < 25; i++) print "}" }' </dev/null >sc; echo x | sed -n -f sc; echo st$?
+awk 'BEGIN { printf "s/x/"; for (i = 0; i < 12000; i++) printf "a"; print "/" }' </dev/null >sc; echo x | sed -f sc; echo st$?
+echo 10 | sed -n -e '$p
+s/1\0/x/p'
+echo x | sed -n -e "w $p/w" -e "s/^/y/w $p/w"; cat $p/w
+sed 's/abc' </dev/null; echo st$?; echo x | sed s; echo st$?; sed 'y/abc' </dev/null; echo st$?
+awk 'BEGIN { for (i = 0; i < 21; i++) { print "a\\"; print "t" i } }' </dev/null >sc; echo x | sed -f sc | wc -l
+awk 'BEGIN { for (i = 0; i < 300; i++) printf "%019d\n", i }' </dev/null >sl; sed -n -e :a -e '$!N' -e '$!ba' -e p sl | wc -c
+sed -n 'H;${x;p;}' sl | wc -c; echo abc | sed 's/\(x*\)\1*/y/'; echo x | sed -e; echo st$?; sed -f </dev/null; echo st$?; rm sc sl
+awk 'BEGIN { for (i = 0; i < 1587; i++) print i % 3 }' </dev/null | sort -u
+awk 'BEGIN { for (i = 0; i < 30000; i++) printf "s"; print "" }' </dev/null | sort | wc -c; sort -T $p /etc/group | wc -l
+dump 0f dmp fs >/dev/null 2>&1; restor xf /etc/passwd x </dev/null; echo st$?; ls rst* 2>&1; restor r; echo st$?; restor xf; echo st$?
+restor rf dmp fs </dev/null; echo st$?; dump 0f dmp $U/many.img >/dev/null 2>&1; restor xf dmp d1 </dev/null; echo st$?; ls rst* 2>&1
+cd /; rm -rf $T

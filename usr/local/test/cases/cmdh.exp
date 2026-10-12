@@ -388,7 +388,7 @@ st1
 /usr/lib
 /tmp/cmdh/dd
 bad character
-st0
+st1
 Cannot open /etc/utmp
 a
 b.b

@@ -1,0 +1,124 @@
+rmdir: /tmp/cmd5/r/e: no permission
+st1
+rmdir: /tmp/cmd5/r/x: no permission
+st1
+e
+x
+    612
+st0
+d not found
+bad _ninode
+st1
+same
+mon.out: bad format
+st0
+st0
+     69
+     50
+Wrong width 
+st1
+Wrong width 
+st1
+Too many words ig
+st1
+fs:
+   14	root
+    7	bin
+    1	daemon
+    1	sys
+fs:
+   14	root
+    7	bin
+    1	daemon
+    1	sys
+0000000   f   s   :  \n   s   y   s  \t   w   o   r   d   s  \0
+0000015
+fs:
+0	1	0
+1	9	9
+7	2	23
+fs3:
+   14	root
+    7	bin
+    1	daemon
+fs3:
+0	1	0
+1	8	8
+7	2	22
+499	0	22
+same
+st0
+Too many commands
+st1
+     1286296200.53     0.00
+     1286296200.53     0.00   ***other
+long        1    0.00
+arg count
+st1
+bad character
+st1
+4.000000 0.000000
+3.500000 -0.687500
+3.000000 -1.000000
+2.500000 -0.687500
+2.000000 0.000000
+1.500000 0.687500
+1.000000 1.000000
+0.500000 0.687500
+0.000000 0.000000
+2.000000 4.000000
+1.000000 1.000000
+0.000000 1.000000
+      3
+      4
+bad count
+st1
+unknown mode: erase
+st0
+speed 0 baud
+erase = '#'; kill = '@'
+even -nl echo -tabs 
+speed 0 baud
+erase = '#'; kill = '@'
+even -nl echo -tabs 
+0000000
+      0
+      0
+Too many {'s
+st2
+Line too long
+st2
+10
+x
+x
+yx
+command garbled: s/abc
+st2
+command garbled: s
+st2
+command garbled: y/abc
+st2
+Too many appends after line 1
+Too many appends after line 1
+     20
+   4001
+   4001
+yabc
+st2
+st2
+0
+1
+2
+    512
+      4
+Tape is not a dump tape
+st1
+rst* not found
+Usage: restor x file file..., restor r filesys, or restor t
+st1
+Usage: restor x file file..., restor r filesys, or restor t
+st1
+Last chance before scribbling on fs. st1
+Too many directories
+st1
+rst* not found

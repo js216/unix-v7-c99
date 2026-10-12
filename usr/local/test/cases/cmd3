@@ -31,5 +31,4 @@ awk 'BEGIN { for (i = 0; i < 300; i++) print "1Sa"; print "c Lap" }' </dev/null 
 echo '[lxx1]sx lxx c 2p' | dc
 awk 'BEGIN { printf "!echo "; for (i = 0; i < 150; i++) printf "a"; print ""; print "3p" }' </dev/null | dc
 echo '1 5:X 0sX 3p 7SY 0;Yp' | tr XY '\241\242' | dc
-cd $l/aaaaaaaaaaaaaa; for i in 1 2 3 4 5 6 7 8 9 10; do rm -r aaaaaaaaaaaaaa; cd ..; done
 cd /; rm -rf $T

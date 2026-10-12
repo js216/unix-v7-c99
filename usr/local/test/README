@@ -28,7 +28,8 @@ from utils/fs.proto, on which the tests run the file system checkers.
 deep.img, a chain of 40 directories, and many.img, 3001 directories,
 are file systems which test.mk makes for the tests of dump and dumpdir;
 big.img, holding a copy of /usr/dict/words, gives icheck a file with a
-double indirect block.
+double indirect block. ob writes the bytes named by its arguments in octal,
+N*V standing for N copies of V, so that a test can build a binary file.
 
 Each test works in a directory of its own, /tmp/NAME, which it removes
 at the end. A test which changes anything else (the date, accounting,
