@@ -14,12 +14,12 @@
 FILE	*is, *os;
 char	*dirtry[] = {"/usr/tmp", "/tmp", NULL};
 char	**dirs;
-char	file1[30];
-char	*file = file1;
+char	*file;
 char	*filep;
 int	nfiles;
 unsigned	nlines;
 unsigned	ntext;
+char	*tend;
 int	*lspace;
 char	*tspace;
 int	cmp(char *i, char *j), cmpa(char *pa, char *pb);
@@ -251,9 +251,10 @@ main(int argc, char **argv)
 	nlines /= (5*(sizeof(char *)));
 	ntext = nlines*8;
 	tspace = (char *)(lspace + nlines);
+	tend = ep - 1;
 	a = -1;
 	for(dirs=dirtry; *dirs; dirs++) {
-		sprintf(filep=file1, "%s/stm%05uaa", *dirs, getpid());
+		sprintf(filep=file=malloc(strlen(*dirs)+16), "%s/stm%05uaa", *dirs, getpid());
 		while (*filep)
 			filep++;
 		filep -= 2;
@@ -310,7 +311,8 @@ sort(void)
 			*lp++ = cp;
 			while(c != '\n') {
 				if(c != EOF) {
-					*cp++ = c;
+					if(cp < tend)
+						*cp++ = c;
 					c = getc(is);
 					continue;
 				} else if(is)
@@ -400,6 +402,8 @@ merge(int a, int b)
 
 	muflg = (mflg & uflg) | cflg;
 	i = j;
+	if(i == 1)
+		muflg |= uflg;
 	while(i > 0) {
 		cp = ibuf[i-1]->l;
 		if(!cflg && (uflg == 0 || muflg ||
@@ -534,7 +538,7 @@ safeoutfil(void)
 		return;
 	if(stat(outfil,&obuf)==-1)
 		return;
-	for(i=eargc-N;i<eargc;i++) {	/*-N is suff., not nec.*/
+	for(i=eargc>N?eargc-N:0;i<eargc;i++) {	/*-N is suff., not nec.*/
 		if(stat(eargv[i],&ibuf)==-1)
 			continue;
 		if(obuf.st_dev==ibuf.st_dev&&
@@ -737,13 +741,7 @@ eol(register char *p)
 void
 copyproto(void)
 {
-	register int i;
-	register int *p, *q;
-
-	p = (int *)&proto;
-	q = (int *)&fields[nfields];
-	for(i=0; i<(int)(sizeof(proto)/sizeof(*p)); i++)
-		*q++ = *p++;
+	fields[nfields] = proto;
 }
 
 void
@@ -799,11 +797,11 @@ field(char *s, int k)
 		case '.':
 			if(p->m[k] == -1)	/* -m.n with m missing */
 				p->m[k] = 0;
-			d = &fields[0].n[0]-&fields[0].m[0];
+			d = 1;
 
 			/* fallthrough */
 		default:
-			p->m[k+d] = number(&s);
+			(d? p->n: p->m)[k] = number(&s);
 		}
 		compare = cmp;
 	}
@@ -817,7 +815,7 @@ number(char **ppa)
 	pa = *ppa;
 	n = 0;
 	while(isdigit(*pa&0377)) {
-		n = n*10 + *pa - '0';
+		n = n <= 214748363? n*10 + *pa - '0': 0x7fffffff;
 		*ppa = pa++;
 	}
 	return(n);
