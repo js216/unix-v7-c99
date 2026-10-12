@@ -2,7 +2,7 @@
 long
 atol(register char *p)
 {
-	long n;
+	unsigned long n;
 	register int f;
 
 	n = 0;

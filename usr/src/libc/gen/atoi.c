@@ -2,7 +2,7 @@
 int
 atoi(register char *p)
 {
-	register int n;
+	register unsigned n;
 	register int f;
 
 	n = 0;
