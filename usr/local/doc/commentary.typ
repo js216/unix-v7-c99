@@ -13827,7 +13827,11 @@ file back into the file's own order.
 #lines(150, 195)
 
 If one argument is a directory, the file of the same base name within
-it is meant. An argument `-` names the standard input, which is copied
+it is meant. v7 built that name in 100 bytes, whatever the lengths of
+the two names; the port allocates what the directory, the `/`, the
+other argument, and the null need (206), the whole of the other
+argument being copied before its base name is moved down. An argument
+`-` names the standard input, which is copied
 to a temporary file, since `diff` reads each file more than once. Its
 name is made by `mktemp` (219) in the array `tempname` (105), which is
 new: v7 passed the string constant, which is now in read-only text,

@@ -203,7 +203,7 @@ filename(char **pa1, char **pa2)
 	a1 = *pa1;
 	a2 = *pa2;
 	if(stat(a1,&stbuf)!=-1 && ((stbuf.st_mode&S_IFMT)==S_IFDIR)) {
-		b1 = *pa1 = malloc(100);
+		b1 = *pa1 = malloc(strlen(a1)+strlen(a2)+2);
 		while((*b1++ = *a1++)) ;
 		b1[-1] = '/';
 		a1 = b1;
