@@ -9252,10 +9252,10 @@ parser has set `reserv`, the word is looked up among the reserved
 words.
 
 v7 used `argp`, a `char *`, as a pointer to the `argnod` as well, which
-its compiler permitted. The port adds `arg` (23), of the right type,
-and uses it from the end of the word on (45--53).
+its compiler permitted. C99 does not, and each use of `argp` as an
+`argnod` now casts it to `ARGPTR` (45--52).
 
-#lines(18, 56)
+#lines(18, 55)
 
 A character which ends a word is a symbol in itself. If it is one of
 `&;<>|` (`dipchar`) and is doubled, it becomes the doubled symbol;
@@ -9264,7 +9264,7 @@ which `readc` returns at the end of the input, becomes `EOFSYM`. At the
 end of a line, any here documents named on it are read (`copy`,
 #f("sh/io.c")), since their text begins on the next line.
 
-#lines(57, 71)
+#lines(56, 70)
 
 `nextc` deals with the backslash. Before a newline it joins the lines,
 printing the secondary prompt. Inside double quotes, where `quote` is
@@ -9273,7 +9273,7 @@ pushed back, unless that character is the quote itself or one of the
 characters `escchar` allows; anywhere else the next character is taken
 quoted.
 
-#lines(72, 86)
+#lines(71, 85)
 
 `readc` returns the next character of the input. A character pushed
 back in `peekc` comes first; the assignment to the `char` `c` drops
@@ -9287,7 +9287,7 @@ When the buffer is empty, `readb` refills it; at the end of a file the
 descriptor is closed and `EOF`, the null character, is returned
 from then on.
 
-#lines(87, 118)
+#lines(86, 117)
 
 `readb` reads again when a read is interrupted by a signal which has
 a trap set (`trapnote`). A signal without a trap (`SIGSET`) is instead
@@ -9295,7 +9295,7 @@ treated as an error by `sigchk` (#f("sh/error.c")), which ends the
 shell or, if it is interactive, abandons the command. The return type
 `INT` is a mechanical addition.
 
-#lines(119, 128)
+#lines(118, 127)
 #source("/usr/src/cmd/sh/cmd.c")
 
 The parser. It is written by recursive descent, one procedure to each

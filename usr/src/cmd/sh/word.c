@@ -20,7 +20,6 @@ word(void)
 {
 	REG CHAR	c, d;
 	REG CHAR	*argp=locstak()+BYTESPERWORD;
-	REG ARGPTR	arg;
 	INT		alpha=1;
 
 	wdnum=0; wdset=0;
@@ -42,15 +41,15 @@ word(void)
 				FI
 			FI
 		PER (c=nextc(0), !eofmeta(c)) DONE
-		arg=(ARGPTR)endstak(argp);
-		IF !letter(arg->argval[0]) THEN wdset=0 FI
+		argp=endstak(argp);
+		IF !letter(((ARGPTR)argp)->argval[0]) THEN wdset=0 FI
 
 		peekc=c|MARK;
-		IF arg->argval[1]==0 ANDF (d=arg->argval[0], digit(d)) ANDF (c=='>' ORF c=='<')
+		IF ((ARGPTR)argp)->argval[1]==0 ANDF (d=((ARGPTR)argp)->argval[0], digit(d)) ANDF (c=='>' ORF c=='<')
 		THEN	word(); wdnum=d-'0';
 		ELSE	/*check for reserved words*/
-			IF reserv==FALSE ORF (wdval=syslook(arg->argval,reserved))==0
-			THEN	wdarg=arg; wdval=0;
+			IF reserv==FALSE ORF (wdval=syslook(((ARGPTR)argp)->argval,reserved))==0
+			THEN	wdarg=(ARGPTR)argp; wdval=0;
 			FI
 		FI
 
