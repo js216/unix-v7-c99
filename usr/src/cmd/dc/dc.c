@@ -1747,7 +1747,7 @@ void
 sdump(char *s1, struct blk *hptr)
 {
 	char *p;
-	printf("%s %o rd %o wt %o beg %o last %o\n",s1,hptr,hptr->rd,hptr->wt,hptr->beg,hptr->last);
+	printf("%s %o rd %o wt %o beg %o last %o\n",s1,(unsigned)hptr,(unsigned)hptr->rd,(unsigned)hptr->wt,(unsigned)hptr->beg,(unsigned)hptr->last);
 	p = hptr->beg;
 	while(p < hptr->wt)printf("%d ",*p++);
 	printf("\n");
@@ -1850,7 +1850,7 @@ garbage(char *s)
 						if(q != 0){
 							if(((int)q->beg & 01) != 0){
 								printf("array %o elt %d odd\n",i-ARRAYST,ct);
-printf("tmps %o p %o\n",tmps,p);
+printf("tmps %o p %o\n",(unsigned)tmps,(unsigned)p);
 								sdump("elt",q);
 							}
 							redef(q);
@@ -1869,7 +1869,7 @@ redef(struct blk *p)
 	register char *newp;
 
 	if ((int)p->beg&01) {
-		printf("odd ptr %o hdr %o\n",p->beg,p);
+		printf("odd ptr %o hdr %o\n",(unsigned)p->beg,(unsigned)p);
 		ospace("redef-bad");
 	}
 	free(p->beg);

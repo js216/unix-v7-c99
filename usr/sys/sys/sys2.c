@@ -202,9 +202,9 @@ seek(void)
 		return;
 	}
 	if(uap->sbase == 1)
-		uap->off += fp->f_un.f_offset;
+		uap->off = (unsigned long)uap->off + fp->f_un.f_offset;
 	else if(uap->sbase == 2)
-		uap->off += fp->f_inode->i_size;
+		uap->off = (unsigned long)uap->off + fp->f_inode->i_size;
 	fp->f_un.f_offset = uap->off;
 	u.u_r.r_off = uap->off;
 }

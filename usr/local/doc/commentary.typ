@@ -5143,7 +5143,11 @@ occupied two argument words and the result was returned in r0 and r1
 together, by way of `r_off` (#f("user.h")), which overlays both
 `r_val1` and `r_val2`. Here an `off_t` is one word: the offset is one
 argument and the result is returned in r0 alone. The C library's
-`lseek` is built to match.
+`lseek` is built to match. The sums (205, 207) are now formed as
+`unsigned long`: an offset near 2 GB plus the present one would
+overflow a signed `long`, which C leaves undefined, while the unsigned
+sum wraps, and converted back it gives the negative offset that
+`readi` (#f("rdwri.c")) refuses.
 
 #lines(163, 210)
 
@@ -13585,7 +13589,7 @@ end; `p` is null there.
 
 `ralloc` is v7's "compacting reallocation". It frees the block, frees
 `dummy`, and allocates `dummy` again. `dummy` was the first block
-allocated (325), so it lies low in the arena; v7's `free` leaves the
+allocated (326), so it lies low in the arena; v7's `free` leaves the
 allocator's search pointer at the block just freed, and the `malloc`
 inside `realloc` therefore starts searching from the bottom of the
 arena (#f("gen/malloc.c")). The block is moved to the lowest place
@@ -13596,31 +13600,35 @@ which will hold it, and the arena is kept compact. Like `cron`'s use
 
 `sort` is a Shell sort, ordering by hash value and, among equal values,
 by serial number, so that each equivalence class ends up with its lines
-in their order in the file. The test for "wraparound" (165) guarded
+in their order in the file. The test for "wraparound" (166) guarded
 against a pointer passing the top of the PDP-11's 64 KB address space;
 it can no longer succeed.
 
-Two changes. `m` is now initialized (154): for an empty file the first
+Three changes. `m` is now initialized (154): for an empty file the first
 loop does not run, and v7 then halved an undefined `m`, which the
-compiler's analysis at `-Os` reports. The parentheses at 168 and 169
-are new, as in #f("slp.c").
+compiler's analysis at `-Os` reports. The inner loop counts with an
+index `i` (163, 164), where v7 stepped the pointer `ai` down by `m`
+until it was no longer above `a`. The last step took `ai` below the
+start of the array, and C defines neither such a pointer nor its
+comparison; the index may go below zero freely. The parentheses at 169
+and 170 are new, as in #f("slp.c").
 
 `unsort` uses the serial numbers to put the class indices of the first
 file back into the file's own order.
 
-#lines(150, 194)
+#lines(150, 195)
 
 If one argument is a directory, the file of the same base name within
 it is meant. An argument `-` names the standard input, which is copied
 to a temporary file, since `diff` reads each file more than once. Its
-name is made by `mktemp` (218) in the array `tempname` (105), which is
+name is made by `mktemp` (219) in the array `tempname` (105), which is
 new: v7 passed the string constant, which is now in read-only text,
 where `mktemp` cannot write.
 
 `prepare` reads a file, storing one hash per line from index 1 up, and
 grows the array by one element per line with `ralloc`.
 
-#lines(195, 247)
+#lines(196, 248)
 
 `prune` counts the identical lines at the start and at the end of the
 two files, and renumbers the lines in between from 1; `sfile` and
@@ -13634,7 +13642,7 @@ equivalence classes, each listing its lines in increasing order, are
 simply concatenated, and the first element of each class is negated to
 mark its start. A final -1 stops the scan of the last class.
 
-#lines(248, 292)
+#lines(249, 293)
 
 `main`. Memory is reused as soon as it is free: `member` is written
 over the array of the second file, and `class` over that of the first,
@@ -13643,7 +13651,7 @@ the `struct line` it replaces. The comment's estimate of six words per
 line was made for the PDP-11; with four-byte `int`s and `long`s the
 proportions are much the same.
 
-#lines(293, 361)
+#lines(294, 362)
 
 `stone` is the heart of the program. A k-candidate is a match `(x, y)`,
 line `x` of the first file with line `y` of the second, which ends a
@@ -13661,8 +13669,8 @@ by bisection, the length `l` of the shortest candidate whose `y` is at
 least `y`. If that candidate's `y` equals `y`, nothing is gained.
 Otherwise `(i, y)` extends the candidate of length `l-1` to a common
 subsequence of length `l` ending lower in the second file than the
-present one, and replaces it (388). If `l` exceeds every length so far,
-the table grows by one (392--394), and the rest of the class, whose
+present one, and replaces it (389). If `l` exceeds every length so far,
+the table grows by one (393--395), and the rest of the class, whose
 `y`s are larger, cannot do better.
 
 The subtle part is `oldc`. Several members of the same class may
@@ -13670,13 +13678,13 @@ replace entries during one line `i`, at increasing lengths. The
 predecessor of a new candidate must come from an earlier line of the
 first file, so when `l` is one more than the length just replaced,
 the predecessor must be the candidate which was there before the
-replacement, saved in `tc` (387, 389), not the new one, whose `x` is
+replacement, saved in `tc` (388, 390), not the new one, whose `x` is
 `i` itself. Likewise a `y` no greater than the `y` of that saved
-predecessor (379) cannot extend it, and is passed over. Note that
-`continue` in a `do`-`while` goes to the test (396), which advances to
+predecessor (380) cannot extend it, and is passed over. Note that
+`continue` in a `do`-`while` goes to the test (397), which advances to
 the next member of the class.
 
-#lines(362, 400)
+#lines(363, 401)
 
 `newcand` adds a candidate to `clist`, a store from which nothing is
 ever removed, growing it by one element at a time. `search` first tries
@@ -13686,7 +13694,7 @@ the commonest case, a `y` beyond every candidate.
 lines their counterparts, and the rest are filled in by following
 `pred` back from the longest candidate.
 
-#lines(401, 446)
+#lines(402, 447)
 
 `check` reads both files again, line by line in step with `J`. Each
 pair of lines which `J` claims to match is compared character by
@@ -13700,26 +13708,26 @@ the same time the byte offset of the end of every line is recorded in
 `ixold` and `ixnew`, so that `fetch` can later seek straight to any
 line.
 
-`c` and `d` (458) are now `int`, where v7 had `char`, for two reasons.
+`c` and `d` (459) are now `int`, where v7 had `char`, for two reasons.
 `isspace` is a macro which indexes a table, and a `char` subscript draws
 a warning from `-Wall`. And on the ARM, whose `char` is unsigned, the
 `EOF` returned by `getc` would become 255, which with `-b` indexes
 `isspace`'s table beyond its end; the PDP-11's signed `char` kept it
 -1, as the `int` now does.
 
-#lines(447, 523)
+#lines(448, 524)
 
 `output` scans `J` for runs of unmatched lines and reports each run as
 a `change`: lines `a` to `b` of the first file are replaced by lines `c`
 to `d` of the second. An empty first range means an addition, an empty
-second range a deletion. The sentinels `J[0]` and `J[m+1]` (533--534)
+second range a deletion. The sentinels `J[0]` and `J[m+1]` (534--535)
 spare the loops tests for the ends. With `-e` the commands form an
 `ed` script, and are produced from the end of the file backwards, so
 that the line numbers in each command are not disturbed by the
 commands already applied. `-f` gives the same commands in forward
 order and a different form, for reading, not for `ed`.
 
-#lines(524, 600)
+#lines(525, 601)
 
 `readhash` computes a line's hash: each character is added to a
 `long` after a shift of seven bits more than the last, taken modulo 16,
@@ -13734,7 +13742,7 @@ sum of the two `short` halves is kept in 32 bits. Two results which
 differ by 65536, and which the PDP-11 would have reduced to the same
 value, now stay distinct; otherwise only the values change.
 
-#lines(601, 649)
+#lines(602, 650)
 #source("/usr/src/cmd/ps.c")
 
 `ps` reports on processes, and it has no system call to ask. It reads
@@ -13889,7 +13897,9 @@ MP135 machine's memory reaches click 917504, 03400000; `SZ` from four
 columns to five, since a large image is thousands of blocks, which
 v7's `%4d` would run into the address; and
 `WCHAN`, a kernel address in octal, from seven columns to twelve, room
-for eleven digits and a space. `SZ` is the image in blocks of 512 bytes:
+for eleven digits and a space. `p_wchan` is a pointer, and `%o` takes an
+`unsigned`; passing the pointer as it stands, as v7 did, is undefined,
+so it is converted (259). `SZ` is the image in blocks of 512 bytes:
 v7 converted its 64-byte clicks with `(p_size+7)>>3`, and the port with
 `ctod` (#f("param.h")), which serves 4096-byte clicks. The times
 assume `HZ`

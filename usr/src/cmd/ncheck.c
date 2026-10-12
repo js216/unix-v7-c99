@@ -300,7 +300,7 @@ bread(daddr_t bno, char *buf, int cnt)
 
 	lseek(fi, bno*BSIZE, 0);
 	if (read(fi, buf, cnt) != cnt) {
-		fprintf(stderr, "ncheck: read error %d\n", bno);
+		fprintf(stderr, "ncheck: read error %D\n", bno);
 		for(i=0; i<BSIZE; i++)
 			buf[i] = 0;
 	}

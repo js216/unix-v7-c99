@@ -256,7 +256,7 @@ prcom(int puid)
 			mproc.p_nice,
 			mproc.p_addr, ctod(mproc.p_size));
 		if (mproc.p_wchan)
-			printf("%12o", mproc.p_wchan);
+			printf("%12o", (unsigned)mproc.p_wchan);
 		else
 			printf("            ");
 	}

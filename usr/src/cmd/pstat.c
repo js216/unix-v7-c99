@@ -214,7 +214,7 @@ dotext(void)
 		printf("%5u", xp->x_daddr);
 		printf("%7.1o", xp->x_caddr);
 		printf("%5d", xp->x_size);
-		printf("%8.1o", xp->x_iptr);
+		printf("%8.1o", (unsigned)xp->x_iptr);
 		printf("%4d", xp->x_count);
 		printf("%4d", xp->x_ccount);
 		printf("\n");
@@ -253,9 +253,9 @@ doproc(void)
 		printf("%6d", pp->p_ppid);
 		printf("%5o", pp->p_addr);
 		printf("%5o", pp->p_size);
-		printf("%7o", pp->p_wchan);
-		printf("%7o", pp->p_link);
-		printf("%7o", pp->p_textp);
+		printf("%7o", (unsigned)pp->p_wchan);
+		printf("%7o", (unsigned)pp->p_link);
+		printf("%7o", (unsigned)pp->p_textp);
 		printf(" %u", pp->p_clktim);
 		printf("\n");
 	}
@@ -297,7 +297,7 @@ ttyprt(int n, struct tty *atp)
 	printf("%4d", tp->t_canq.c_cc);
 	printf("%4d", tp->t_outq.c_cc);
 	printf("%8.1o", tp->t_flags);
-	printf("%8.1o", tp->t_addr);
+	printf("%8.1o", (unsigned)tp->t_addr);
 	printf("%3d", tp->t_delct);
 	printf("%4d ", tp->t_col);
 	putf(tp->t_state&TIMEOUT, 'T');
@@ -328,22 +328,22 @@ dousr(void)
 	printf("rsav %.1o %.1o\n", up->u_rsav[0], up->u_rsav[1]);
 	printf("segflg, error %d, %d\n", up->u_segflg, up->u_error);
 	printf("uids %d,%d,%d,%d\n", up->u_uid,up->u_gid,up->u_ruid,up->u_rgid);
-	printf("procp %.1o\n", up->u_procp);
-	printf("base, count, offset %.1o %.1o %ld\n", up->u_base,
+	printf("procp %.1o\n", (unsigned)up->u_procp);
+	printf("base, count, offset %.1o %.1o %ld\n", (unsigned)up->u_base,
 		up->u_count, up->u_offset);
-	printf("cdir %.1o\n", up->u_cdir);
+	printf("cdir %.1o\n", (unsigned)up->u_cdir);
 	printf("dbuf %.14s\n", up->u_dbuf);
-	printf("dirp %.1o\n", up->u_dirp);
+	printf("dirp %.1o\n", (unsigned)up->u_dirp);
 	printf("dent %d %.14s\n", up->u_dent.d_ino, up->u_dent.d_name);
-	printf("pdir %.1o\n", up->u_pdir);
+	printf("pdir %.1o\n", (unsigned)up->u_pdir);
 	printf("segs %.1o %.1o %.1o %.1o", up->u_ptsize, up->u_pdsize,
 		up->u_pssize, up->u_pxrw);
 	printf("\nfile");
 	for (i=0; i<10; i++)
-		printf("%8.1o", up->u_ofile[i]);
+		printf("%8.1o", (unsigned)up->u_ofile[i]);
 	printf("\n    ");
 	for (i=10; i<NOFILE; i++)
-		printf("%8.1o", up->u_ofile[i]);
+		printf("%8.1o", (unsigned)up->u_ofile[i]);
 	printf("\nargs");
 	for (i=0; i<5; i++)
 		printf(" %.1o", up->u_arg[i]);
@@ -356,14 +356,14 @@ dousr(void)
 		printf(" %.1o", up->u_signal[i]);
 	printf("\ntimes %lld %lld\n", up->u_utime/60, up->u_stime/60);
 	printf("ctimes %lld %lld\n", up->u_cutime/60, up->u_cstime/60);
-	printf("ar0 %.1o\n", up->u_ar0);
+	printf("ar0 %.1o\n", (unsigned)up->u_ar0);
 /*
 	printf("prof");
 	for (i=0; i<4; i++)
 		printf(" %.1o", up->u_prof[i]);
 */
 	printf("\nintflg %d\n", up->u_intflg);
-	printf("ttyp %.1o\n", up->u_ttyp);
+	printf("ttyp %.1o\n", (unsigned)up->u_ttyp);
 	printf("ttydev %d,%d\n", major(up->u_ttyd), minor(up->u_ttyd));
 	printf("comm %.14s\n", up->u_comm);
 }
@@ -403,7 +403,7 @@ dofil(void)
 		putf(fp->f_flag&FWRITE, 'W');
 		putf(fp->f_flag&FPIPE, 'P');
 		printf("%4d", fp->f_count);
-		printf("%8.1o", fp->f_inode);
+		printf("%8.1o", (unsigned)fp->f_inode);
 		printf(" %ld\n", fp->f_un.f_offset);
 	}
 }

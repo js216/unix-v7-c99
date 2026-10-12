@@ -151,7 +151,7 @@ static void
 sort(struct line *a,int n)	/*shellsort CACM #201*/
 {
 	struct line w;
-	register int j,m = 0;
+	register int i,j,m = 0;
 	struct line *ai;
 	register struct line *aim;
 	int k;
@@ -160,7 +160,8 @@ sort(struct line *a,int n)	/*shellsort CACM #201*/
 	for(m/=2;m!=0;m/=2) {
 		k = n-m;
 		for(j=1;j<=k;j++) {
-			for(ai = &a[j]; ai > a; ai -= m) {
+			for(i = j; i > 0; i -= m) {
+				ai = &a[i];
 				aim = &ai[m];
 				if(aim < ai)
 					break;	/*wraparound*/
