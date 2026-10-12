@@ -80,7 +80,7 @@ number(char *str)
 	n = 0;
 	s = str;
 	while((c = *s++)) {
-		if(c<'0' || c>'9')
+		if(c<'0' || c>'9' || n>9999)
 			return(0);
 		n = n*10 + c-'0';
 	}
