@@ -8,8 +8,8 @@
 #define	NMOUNT	nmount		/* number of mountable file systems */
 #define	MAXMEM	32768		/* max core per process */
 #define	MAXUPRC	25		/* max processes per user */
-#define	SSIZE	2		/* initial stack size (*4096 bytes) */
-#define	SINCR	2		/* increment of stack (*4096 bytes) */
+#define	SSIZE	1		/* initial stack size (*4096 bytes) */
+#define	SINCR	1		/* increment of stack (*4096 bytes) */
 #define	NOFILE	20		/* max open files per process */
 #define	CANBSIZ	256		/* max size of typewriter line */
 #define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */

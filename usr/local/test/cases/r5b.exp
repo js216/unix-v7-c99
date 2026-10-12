@@ -1,5 +1,5 @@
-48
-48
+40
+40
 r5b: PID Alarm call
 read gap: -1 errno 14
 read kernel: -1 errno 14
@@ -13,15 +13,15 @@ read stack: 16
 read data: 16
 r5b: PID Memory fault - core dumped
 st139
-  28672 core
+  24576 core
 sum 49271 caught 401
 data 512 stack 512 same
 gap: -1 errno 14
 across end of data: -1 errno 14
 negative offset: -1 errno 14
-64
+56
 found
-1216
+1208
 read into text: -1 errno 14, text text
 store into text: signal 11
 2 2

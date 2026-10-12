@@ -527,7 +527,8 @@ enough for one image of `MAXMEM` clicks and more.
 `SSIZE` and `SINCR` (11, 12) are the size of the stack which `exec`
 gives a new program and the amount by which `grow` (#f("sig.c")) enlarges
 it, both in clicks. v7 had 20 clicks of 64 bytes, 1280 bytes, for each;
-here each is two pages, 8192 bytes.
+here each is one page, 4096 bytes, the least whole number of clicks
+which holds v7's amount.
 
 `CMAPSIZ` and `SMAPSIZ` (15, 16) are the sizes of the two resource maps
 (#f("map.h")), which v7 left at 50 while it raised `NPROC` to 150. They
@@ -3353,7 +3354,7 @@ below them, the argument count, a pointer to each string, and two
 zeros. v7 passed the strings alone. When the vector did not fit in the
 `SSIZE` clicks left over, the `suword`s below the stack failed unseen,
 and the program began with an argument count of zero; with 4-byte
-pointers and an 8 KB `SSIZE`, some 2,050 short arguments would have
+pointers and a 4 KB `SSIZE`, some 1,360 short arguments would have
 been enough.
 
 #lines(52, 103)
