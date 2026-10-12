@@ -165,3 +165,6 @@ C< 2
 3
 awk: illegal statement ADDR
 st2
+awk: trying to access field -1
+ record number 1
+st2

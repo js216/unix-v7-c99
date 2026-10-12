@@ -62,7 +62,8 @@ getrec(void)
 			sep = '\n';
 		for (rr = record; ; ) {
 			for (; (c=getc(infile)) != sep && c != EOF; *rr++ = c)
-				;
+				if (rr >= record+RECSIZE-3)
+					error(FATAL, "record `%.20s...' too long", record);
 			if (**RS == sep || c == EOF)
 				break;
 			if ((c = getc(infile)) == '\n' || c == EOF)	/* 2 in a row */
@@ -70,8 +71,6 @@ getrec(void)
 			*rr++ = '\n';
 			*rr++ = c;
 		}
-		if (rr > record+RECSIZE)
-			error(FATAL, "record `%.20s...' too long", record);
 		*rr = 0;
 		if (mustfld)
 			fldbld();
@@ -171,9 +170,9 @@ recbld(void)
 	if (donefld == 0 || donerec == 1)
 		return;
 	r = record;
-	for (i = 1; i <= *NF; i++) {
+	for (i = 1; i <= *NF && i < MAXFLD; i++) {
 		p = getsval(&fldtab[i]);
-		while ((*r++ = *p++))
+		while (r < record+RECSIZE && (*r++ = *p++))
 			;
 		*(r-1) = **OFS;
 	}
@@ -181,14 +180,14 @@ recbld(void)
 	dprintf("in recbld FS=%o, recloc=%o\n", **FS, recloc, NULL);
 	recloc->tval = STR | FLD;
 	dprintf("in recbld FS=%o, recloc=%o\n", **FS, recloc, NULL);
-	if (r > record+RECSIZE)
+	if (r >= record+RECSIZE)
 		error(FATAL, "built giant record `%.20s...'", record);
 	dprintf("recbld = |%s|\n", record, NULL, NULL);
 }
 
 cell *fieldadr(int n)
 {
-	if (n >= MAXFLD)
+	if (n < 0 || n >= MAXFLD)
 		error(FATAL, "trying to access field %d", n);
 	return(&fldtab[n]);
 }
@@ -237,13 +236,13 @@ isnumber(register char *s)
 		return(0);	/* empty stuff isn't number */
 	if (*s == '+' || *s == '-')
 		s++;
-	if (!isdigit(*s&0377) && *s != '.')
+	if (!isdigit(*s) && *s != '.')
 		return(0);
-	if (isdigit(*s&0377)) {
+	if (isdigit(*s)) {
 		d1++;
 		do {
 			s++;
-		} while (isdigit(*s&0377));
+		} while (isdigit(*s));
 	}
 	if (*s == '.') {
 		point++;
@@ -251,11 +250,11 @@ isnumber(register char *s)
 	}
 	if (d1 == 0 && point == 0)
 		return(0);
-	if (isdigit(*s&0377)) {
+	if (isdigit(*s)) {
 		d2++;
 		do {
 			s++;
-		} while (isdigit(*s&0377));
+		} while (isdigit(*s));
 	}
 	if (!(d1 || (point && d2)))
 		return(0);
@@ -263,12 +262,12 @@ isnumber(register char *s)
 		s++;
 		if (*s == '+' || *s == '-')
 			s++;
-		if (!isdigit(*s&0377))
+		if (!isdigit(*s))
 			return(0);
 		es = s;
 		do {
 			s++;
-		} while (isdigit(*s&0377));
+		} while (isdigit(*s));
 		if (s - es > 2)
 			return(0);
 		else if (s - es == 2 && 10 * (*es-'0') + *(es+1)-'0' >= MAXEXPON)

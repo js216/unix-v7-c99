@@ -44,4 +44,5 @@ echo 'é ü' | awk '{ print $2, length($1) }'
 awk '{ print NR ": " $1 ; next; print "no" }' a
 awk 'BEGIN { while (i++ < 3) { if (i == 2) continue; print i } }' </dev/null
 awk 'BEGIN { x["a"] = 1; delete; print }' </dev/null; echo st$?
+awk '{ print $(-1) }' a; echo st$?
 cd /; rm -rf $T

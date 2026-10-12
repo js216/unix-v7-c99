@@ -62,6 +62,8 @@ penter(node *p)	/* set up parent pointers and leaf indices */
 {
 	switch(type(p)) {
 		LEAF
+			if (line >= MAXLIN-1)
+				overflo();
 			left(p) = (node *) line;
 			point[line++] = p;
 			break;
@@ -115,8 +117,8 @@ char *cclenter(register char *p)
 	while ((c = *p++) != 0) {
 		if (c == '-' && i > 0 && chars[i-1] != 0) {
 			if (*p != 0) {
-				c = chars[i-1];
-				while (c < *p) {
+				c = chars[i-1]&0377;
+				while (c < (*p&0377)) {
 					if (i >= MAXLIN)
 						overflo();
 					chars[i++] = ++c;
@@ -129,6 +131,8 @@ char *cclenter(register char *p)
 			overflo();
 		chars[i++] = c;
 	}
+	if (i >= MAXLIN)
+		overflo();
 	chars[i++] = '\0';
 	dprintf("cclenter: in = |%s|, out = |%s|\n", op, chars, NULL);
 	xfree(op);
@@ -447,7 +451,7 @@ struct fa *cgotofn(void)
 					}
 			} /* end nextstate */
 			if (notin(state, n, &prev)) {
-				if (n >= NSTATES) {
+				if (n >= NSTATES-1) {
 					dprintf("cgotofn: notin; state = %d, n = %d\n", state, n, NULL);
 					overflo();
 				}
@@ -483,7 +487,8 @@ struct fa *cgotofn(void)
 		}
 	}
 	for (i=0; i<=n; i++) {
-		xfree(state[i]);	/* free state[i] */
+		if (i > 0)
+			xfree(state[i]);	/* free state[i] */
 		pfa = where[i];
 		pfa->st = where[0];
 		dprintf("state %d: (%o)\n", i, pfa, NULL);

@@ -114,7 +114,7 @@ WS	[ \t]
 <comment>\n	{ BEGIN A; lineno++; RETURN(NL); }
 <comment>.	;
 
-<A>.		{ yylval = yytext[0]; RETURN(yytext[0]); }
+<A>.		{ yylval = yytext[0]&0377; RETURN(yylval); }
 
 <reg>"["	{ BEGIN chc; clen=0; cflag=0; }
 <reg>"[^"	{ BEGIN chc; clen=0; cflag=1; }
@@ -139,13 +139,13 @@ WS	[ \t]
 
 <str>\"		{ BEGIN A; cbuf[clen]=0; yylval = (int)setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
 <str>\n		{ yyerror("newline in string"); lineno++; BEGIN A; }
-<str>"\\\""	{ cbuf[clen++]='"'; }
-<str,chc>"\\"n	{ cbuf[clen++]='\n'; }
-<str,chc>"\\"t	{ cbuf[clen++]='\t'; }
-<str,chc>"\\\\"	{ cbuf[clen++]='\\'; }
+<str>"\\\""	{ yytext[0]='"'; CADD; }
+<str,chc>"\\"n	{ yytext[0]='\n'; CADD; }
+<str,chc>"\\"t	{ yytext[0]='\t'; CADD; }
+<str,chc>"\\\\"	{ CADD; }
 <str>.		{ CADD; }
 
-<chc>"\\""]"	{ cbuf[clen++]=']'; }
+<chc>"\\""]"	{ yytext[0]=']'; CADD; }
 <chc>"]"	{ BEGIN reg; cbuf[clen]=0; yylval = (int)tostring(cbuf);
 		if (cflag==0) { RETURN(CCL); }
 		else { RETURN(NCCL); } }
