@@ -13722,7 +13722,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/games/wump.c")
 
-#lines(1, 383)
+#lines(1, 384)
 
 #source("/usr/src/games/fortune.c")
 

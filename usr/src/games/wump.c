@@ -355,7 +355,8 @@ rin(void)
 			}
 			return(0);
 		}
-		n = n*10 + c-'0';
+		if(n < 1000)
+			n = n*10 + c-'0';
 		c = getchar();
 	}
 	return(n);
