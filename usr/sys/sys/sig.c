@@ -392,7 +392,7 @@ procxmt(void)
 			if (p == &u.u_ar0[regloc[i]&0377])
 				goto ok;
 		if (p == &u.u_ar0[RPS]) {
-			ipc.ip_data = (ipc.ip_data&0xf80ffe20) | 020;	/* assure user space */
+			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;	/* assure user space */
 			goto ok;
 		}
 		goto error;

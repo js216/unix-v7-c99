@@ -248,7 +248,7 @@ sigreturn(void)
 	u.u_fpsaved = 1;
 	for(i = 0; i < RPS; i++)
 		u.u_ar0[i] = f[i];
-	u.u_ar0[RPS] = (f[RPS] & 0xf80ffe20) | 0x10;
+	u.u_ar0[RPS] = (f[RPS] & 0xfe0ffe20) | 0x10;
 	u.u_r.r_val1 = f[R0];
 	u.u_r.r_val2 = f[R1];
 }

@@ -3982,10 +3982,8 @@ mode, `0x10` (octal 020), and everything else is discarded, the
 interrupt masks among them, except the condition flags (bits 27 to 31),
 the `GE` flags (16 to 19), and the Thumb state as `sigreturn` keeps it
 (#f("machdep.c")): the `T` bit (5), the `E` bit (9), and the `IT` bits
-10 to 15. The other two `IT` bits, 25 and 26, are not kept, so a child
-stopped early in a Thumb `if-then` block of three or four instructions
-could resume with the rest of the block misread. Elsewhere in Thumb
-code a debugger may stop a child and resume it there.
+10 to 15, 25, and 26. A debugger may therefore stop a child anywhere in
+Thumb code, inside an `if-then` block too, and resume it there.
 
 #lines(394, 402)
 
@@ -13015,7 +13013,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 335)
+#lines(139, 338)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -13024,7 +13022,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(336, 337)
+#lines(339, 340)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
