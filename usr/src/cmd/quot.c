@@ -54,7 +54,7 @@ main(int argc, char **argv)
 		du[n].uid = n;
 	while((lp=getpwent()) != 0) {
 		n = lp->pw_uid;
-		if (n>NUID)
+		if (n<0 || n>=NUID)
 			continue;
 		if(du[n].name)
 			continue;
@@ -89,6 +89,7 @@ check(char *file)
 {
 	register unsigned i, j;
 	register int c;
+	struct du t;
 
 	fi = open(file, 0);
 	if (fi < 0) {
@@ -96,6 +97,17 @@ check(char *file)
 		return;
 	}
 	printf("%s:\n", file);
+	for (i=0; i<NUID; i++) {
+		while ((c = du[i].uid) != (int)i) {
+			t = du[c];
+			du[c] = du[i];
+			du[i] = t;
+		}
+		du[i].blocks = du[i].nfiles = 0;
+	}
+	for (i=0; i<TSIZE; i++)
+		sizes[i] = 0;
+	overflow = 0;
 	sync();
 	bread(1, (char *)&sblock, sizeof sblock);
 	nfiles = (sblock.s_isize-2)*(BSIZE/sizeof(struct dinode));
@@ -122,12 +134,12 @@ acct(register struct dinode *ip)
 	register char *np;
 	static int fino;
 
-	if ((ip->di_mode&IFMT) == 0)
+	if ((ip->di_mode&IFMT) == 0 || ip->di_size < 0)
 		return;
 	if (cflg) {
 		if ((ip->di_mode&IFMT)!=IFDIR && (ip->di_mode&IFMT)!=IFREG)
 			return;
-		n = (ip->di_size+BSIZE-1)/BSIZE;
+		n = ip->di_size/BSIZE + (ip->di_size%BSIZE != 0);
 		if (n >= TSIZE) {
 			overflow += n;
 			n = TSIZE-1;
@@ -135,9 +147,9 @@ acct(register struct dinode *ip)
 		sizes[n]++;
 		return;
 	}
-	if (ip->di_uid >= NUID)
+	if ((unsigned)ip->di_uid >= NUID)
 		return;
-	du[ip->di_uid].blocks += (ip->di_size+BSIZE-1)/BSIZE;
+	du[ip->di_uid].blocks += ip->di_size/BSIZE + (ip->di_size%BSIZE != 0);
 	du[ip->di_uid].nfiles++;
 	if (nflg) {
 	tryagain:
@@ -158,10 +170,11 @@ acct(register struct dinode *ip)
 			printf("%d	", ip->di_uid);
 		while ((n = getchar())==' ' || n=='\t')
 			;
-		putchar(n);
-		while (n!=EOF && n!='\n') {
-			n = getchar();
+		while (n!=EOF) {
 			putchar(n);
+			if (n=='\n')
+				break;
+			n = getchar();
 		}
 		fino = 0;
 	}
@@ -186,7 +199,7 @@ qcmp(char *a, char *b)
 		return(-1);
 	if (p1->blocks < p2->blocks)
 		return(1);
-	return(strcmp(p1->name, p2->name));
+	return(strcmp(p1->name? p1->name: "", p2->name? p2->name: ""));
 }
 
 void
