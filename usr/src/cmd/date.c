@@ -118,11 +118,9 @@ gtime(void)
 	day = gp(L->tm_mday);
 	month = gp(L->tm_mon+1);
 	year = gp(L->tm_year);
-	if(year < 70)
-		year += 100;
 	if(*sp)
 		return(1);
-	if( month<1 || month>12 ||
+	if( year<0 || month<1 || month>12 ||
 	    day<1 || day>31 ||
 	    mins<0 || mins>59 ||
 	    secs<0 || secs>59)
@@ -132,6 +130,8 @@ gtime(void)
 	}
 	if (hour<0 || hour>23)
 		return(1);
+	if(year < 70)
+		year += 100;
 	timbuf = 0;
 	year += 1900;
 	for(i=1970; i<year; i++)
