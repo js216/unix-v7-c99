@@ -11540,6 +11540,12 @@ Since 2007 the American rule has been different, so the time printed
 here is an hour wrong for some weeks of each year, in March and April
 and around the start of November.
 
+The subtraction (91) and the addition (105) are done in `unsigned long
+long`, and the result converted back: a time within hours of the
+largest or smallest `time_t` would otherwise overflow a signed
+`long long`, which C leaves undefined. The unsigned arithmetic wraps
+instead, and only such an absurd time is affected.
+
 #lines(80, 110)
 
 `sunday` finds the first Sunday on or after a given day of the year,

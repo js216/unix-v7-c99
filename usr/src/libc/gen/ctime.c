@@ -88,7 +88,7 @@ localtime(time_t *tim)
 	struct timeb systime;
 
 	ftime(&systime);
-	copyt = *tim - (long)systime.timezone*60;
+	copyt = (unsigned long long)*tim - (long)systime.timezone*60;
 	ct = gmtime(&copyt);
 	dayno = ct->tm_yday;
 	daylbegin = 119;	/* last Sun in Apr */
@@ -102,7 +102,7 @@ localtime(time_t *tim)
 	if (systime.dstflag &&
 	    (dayno>daylbegin || (dayno==daylbegin && ct->tm_hour>=2)) &&
 	    (dayno<daylend || (dayno==daylend && ct->tm_hour<1))) {
-		copyt += 1*60*60;
+		copyt = (unsigned long long)copyt + 1*60*60;
 		ct = gmtime(&copyt);
 		ct->tm_isdst++;
 	}
