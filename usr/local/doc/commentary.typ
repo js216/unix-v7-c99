@@ -6168,7 +6168,8 @@ redirected.
 The controlling terminal is recorded in `u.u_ttyp` and `u.u_ttyd` by
 `ttyopen` (#f("tty.c")) when a process with no process group opens a
 terminal, and is inherited across `fork`. Each routine here ignores its
-own device number and calls the corresponding routine of the real
+own device number, casting it to `void` to say so (16), and calls the
+corresponding routine of the real
 driver with `u.u_ttyd` in its place, so that the real driver sees its
 own minor device. A process without a controlling terminal is refused
 with `ENXIO` (18).
@@ -6344,9 +6345,9 @@ and an unconfigured one fails in `nodev`.
 #lines(264, 286)
 
 `getw` and `putw` move a 16-bit quantity, as the comment says; the
-words of this machine are wider, but the procedures were only ever
-used by the multiplexed files, to queue events and their values, and
-they are unused here.
+words of this machine are wider, but it does not matter. In v7 only
+the multiplexed files called `putw`, to queue events and their values,
+and nothing called `getw`; here neither is used.
 
 #lines(287, 318)
 #source("/usr/sys/dev/partab.c")
@@ -6446,8 +6447,8 @@ reader can take, a complete line or, in `RAW` and `CBREAK` modes, any
 character. The console's drivers then hold further input on
 `t_holdq` (`ttyhold`, #f("tty.c"); #f("pl011.c")), so that a long paste
 waits instead of being lost. `TTHOLDQ` (101), also new, bounds that
-queue at two thirds of the character blocks (`NCLIST`, #f("param.h")),
-the rest being left for the other queues.
+queue at two thirds of the characters which the `NCLIST` blocks
+(#f("param.h")) can hold, the rest being left for the other queues.
 
 The modes are those of `stty`. `NLDELAY`, `TBDELAY`, `CRDELAY`, and
 `VTDELAY` are fields which select a terminal type for the output delays
@@ -6510,9 +6511,9 @@ and "transmit FIFO full"; `RXI`, `TXI`, and `RTI` are the receive,
 transmit, and receive timeout interrupt bits.
 
 The other definitions are v7's. `KLBASE` and `DLBASE`, the addresses of
-further KL11s and DL11s, and the receiver bits `DSRDY` and `RDRENB` are
-no longer used, nor were the delay bits `NL1` to `TAB1` used even in
-v7; they remain because they still compile. `DLDELAY` is still added to
+further KL11s and DL11s, the receiver bits `DSRDY` and `RDRENB`, and
+the delay bits `NL1` to `TAB1` are no longer used (of the delay bits v7
+used only `CR2`, in `klopen`); they remain because they still compile. `DLDELAY` is still added to
 every output delay (150).
 
 #lines(11, 38)
@@ -6580,8 +6581,8 @@ reader to catch up.
 
 `klxint` and `klrint` were reached in v7 through separate interrupt
 vectors, whose processor status words carried the minor device number.
-Here they are called only from `klintr` below, with minor device 0, and
-are `static`.
+Here they are called from `klintr` below, with minor device 0, and
+`klrint` also from `klread`; both are `static`.
 
 `klxint` restarts output and wakes a writer once the queue has drained
 to `TTLOWAT`. v7 first asked whether the line was attached to a
@@ -6724,8 +6725,11 @@ case terminal: `\(` stands for `{`, `\!` for `|`, and `\a` (typed as
 `\A`, since such a terminal's input is folded to lower case) for a real
 capital. `canon` makes an escaped erase or kill character, whatever it has been
 set to, stand for itself (376, 377).
-The table has only 128 entries, which suffices since `canon` consults
-it only for characters already cut to seven bits.
+The table has only 128 entries. `canon` consults it only outside `RAW`
+mode, in which `ttyinput` cuts every character to seven bits; but a
+change of modes by `TIOCSETN`, which keeps the raw queue, can leave
+eight-bit characters typed in `RAW` mode for `canon` to find, and an
+escaped one is then looked up beyond the end of the table, as in v7.
 
 #lines(20, 55)
 
@@ -6912,12 +6916,13 @@ the character `c|0200`, which the driver recognises as a delay rather
 than a character to send (`klstart`, #f("pl011.c")); since ordinary
 characters were cut to seven bits above, there is no confusion.
 
-For the tab of a Model 37 teletype, `1 - (*colp | ~07)` is the
-number of columns to the next tab stop. `t_col` is a plain `char`,
-signed or not as the compiler chooses; it is promoted to `int` before
-the `|`, and since the column never reaches 128, the result is the
-same either way. The comment at (627) is
-new, as at (223).
+For the tab of a Model 37 teletype, the delay `1 - (*colp | ~07)` is
+one more than the number of columns to the next tab stop, and a delay
+below 5 ticks is dropped. `t_col` is a plain `char`, signed or not as
+the compiler chooses; it is promoted to `int` before the `|`, which
+with `~07` sets every bit above the low three, so the result depends
+on those three alone and is the same either way. The comment at (627)
+is new, as at (223).
 
 #lines(611, 683)
 
@@ -7168,7 +7173,8 @@ terminating `0` is now `{0}`.
 declarations of `nulldev` and `nodev`; those are in #f("systm.h"), and
 their place is taken by the include of #f("seg.h"), which defines
 `struct memregion` and the block attributes used at the end of
-`c.c`.
+`c.c`, and by those of #f("map.h"), #f("mount.h"), and #f("callo.h"),
+for the tables which `strg3` (below) defines.
 
 #lines(422, 443)
 
@@ -7414,7 +7420,7 @@ on that state. In turn: the clock of `GPIOD` is enabled (64), and pins
 PD6 and PD8 are switched to their alternate function 8 (66--68), which
 connects them to UART4's transmitter and receiver. The clock of UART4
 is enabled on its bus (69), and HSI, the internal 64 MHz oscillator,
-which runs from reset, is chosen as its kernel clock (72). `BRR` (71)
+which runs from reset, is chosen as its kernel clock (71). `BRR` (72)
 divides that clock to 115200 baud: 64000000/115200 is 555.6. Lastly
 the unit, the transmitter, and the receiver are enabled, and with them
 the FIFOs (`FIFOEN`, 73), which hold several characters in each
@@ -7450,10 +7456,9 @@ remains asserted. With nothing more to send, an enabled interrupt would
 be taken again the moment it was returned from.
 
 `klrint` takes characters from `RDR` for as long as `RXNE` says the
-receive FIFO holds one (147), unless the raw queue is full and holds a
-line, when it clears `RXNEIE` and leaves the characters where they are
-(148--151), as #f("pl011.c") explains, with `t_holdq` and `ttyhold` as
-there. The interrupt is a condition too, asserted
+receive FIFO holds one (147), and hands each to `ttyhold`, unless
+`t_holdq` is full, when it clears `RXNEIE` and leaves the characters
+where they are (148--151), as #f("pl011.c") explains. The interrupt is a condition too, asserted
 while any character waits, so it comes with the first character, and
 the loop takes that one and any which arrive behind it. A receive
 timeout, which the PL011 needs (#f("pl011.c")), is not wanted here.
@@ -7549,7 +7554,7 @@ which end at block 458752. The card itself is larger, but its size could
 be read only with a command which the card accepts in another state
 than the one the ROM leaves it in. `NRK` and the RK11's bits are kept
 although unused, as in #f("virtio_blk.c"), but four of the names are
-given new values and used. `RCOM` and `WCOM` (17, 18) are the command numbers 17 and 24.
+given new values and used. `WCOM` and `RCOM` (17, 18) are the command numbers 24 and 17.
 `GO` (19) holds the bits of the command register which start a
 command: `CPSMEN` (`0x1000`), which enables the command path;
 `WAITRESP` equal to 1 (`0x100`), which asks for a short response; and
@@ -7589,7 +7594,8 @@ blocks or whose buffer is not on a word boundary, neither of which the
 card and the IDMA can do: the IDMA's address register ignores the two
 low bits. The buffer cache and the swap area always move whole blocks
 from aligned addresses, so these two tests can fail only for raw I/O, which `physio` (#f("bio.c")) lets through
-with an even address and count.
+with an even address and count. v7's call of `mapalloc` is gone, as in
+#f("virtio_blk.c").
 
 #lines(58, 78)
 
@@ -7684,12 +7690,13 @@ values below are explained in the text.
 `ddrc` is a list of pairs, register offset and value, for the memory
 controller, ended by `0xFFFF`. In turn they set: the type and width of
 the memory (`MSTR`, at offset 0); the mode register access, derating,
-power saving, and refresh controls (`0x10`--`0x60`); the impedance
+power saving, and refresh controls (`0x10`--`0x60`); the parity and
+CRC control (`0xc0`); the impedance
 calibration (`0x180`); the timing of the interface to the PHY, the "DFI"
 (`0x190`--`0x1c4`); on-die termination (`0x244`); debugging and the port
 configuration (`0x300`--`0x400`); the refresh timing (`0x64`); the
-timings of the DRAM itself, the `DRAMTMG` registers (`0x100`--`0x138`);
-the mapping of address bits to bank, row, and column (`0x204`--`0x22c`);
+timings of the DRAM itself, the `DRAMTMG` registers (`0x100`--`0x138`),
+and the timing of on-die termination (`0x240`); the mapping of address bits to bank, row, and column (`0x204`--`0x22c`);
 `INIT0` (`0xd0`), whose value says, among other things, that the PHY
 and not the controller will initialise the DRAM; and the scheduling and
 quality of service of the port (`0x250`--`0x4a0`). The order is that of
@@ -8098,8 +8105,9 @@ process id of the process serving it, 0 if none.
 `main` is the outer loop: kill everything, run a single-user shell, run
 `/etc/rc`, read `/etc/ttys` and start the `getty`s, then wait for
 children until `wait` fails. `wait` fails only when `init` has no
-children at all, which happens when every `getty` has been killed;
-`multiple` then returns, and the cycle starts again from the shutdown.
+children at all. Since a dead `getty` is at once replaced, that happens
+only when no terminal is served: none is enabled in `/etc/ttys`, or
+`fork` failed for each. `multiple` then returns, and the cycle starts again from the shutdown.
 
 The `setjmp` (46) marks the point to which `reset` (311) returns when a
 hangup arrives. `reset` was declared locally in v7 (deleted), as a
@@ -8205,7 +8213,7 @@ given a `getty`.
 the signals which `init` catches are reset to the default (they would
 be reset by `exec` in any case, but `chown` and `open` come first). The
 terminal is given back to the super-user, with mode 0622, writable by
-all so that `write` and `mail` can reach it; `login` will give it to the
+all so that `write` can reach it; `login` will give it to the
 user. Opening it (267) makes the child the leader of the terminal's
 process group, as in `single`. In v7 the open of a dial-up
 line slept until the modem reported a call, so that this is where an
@@ -8465,8 +8473,8 @@ The environment is replaced by `envinit` (100): `HOME`, completed from
 the password entry (101), and `PATH`. `minusnam` becomes `-` followed by
 the last component of the shell's name, so that `/bin/sh` is called
 `-sh` and reads the user's `.profile` (#f("sh/main.c")). The file mode
-creation mask is set to 02, so that new files are not writable by the
-other members of the group.
+creation mask is set to 02, so that new files are not writable by
+users outside the file's group.
 
 The message of the day is shown, then a note if the user's mailbox is
 not empty, and the shell is executed with `execlp` (#f("gen/execvp.c")),
@@ -8547,8 +8555,8 @@ in the file at all and are set to 0 and the empty string.
 
 Note that every call reuses the same `line` and the same `passwd`, so
 the result of one call is destroyed by the next. A caller which needs
-two entries at once must copy the first. And, since `fgets` reads at
-most `BUFSIZ` characters, a longer line would be split and its tail
+two entries at once must copy the first. And, since `fgets` (46) reads at
+most `BUFSIZ` − 1 characters, a longer line would be split and its tail
 read as an entry of its own; a password file has no such lines.
 
 #lines(27, 67)
