@@ -66,7 +66,7 @@ char	**Av;
 int	Ac;
 int	Argi;
 
-char Mstring[1][128];
+char *Mstring[1];
 extern int nbra;
 
 int
@@ -105,8 +105,8 @@ yylex(void) {
 char *rel(int op, register char *r1, register char *r2) {
 	register int i;
 
-	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "[0-9]*$"))
-		i = atol(r1) - atol(r2);
+	if(ematch(r1, "-*[0-9]*$") && ematch(r2, "-*[0-9]*$"))
+		i = atol(r1) < atol(r2)? -1: atol(r1) > atol(r2);
 	else
 		i = strcmp(r1, r2);
 	switch(op) {
@@ -114,20 +114,22 @@ char *rel(int op, register char *r1, register char *r2) {
 	case GT: i = i>0; break;
 	case GEQ: i = i>=0; break;
 	case LT: i = i<0; break;
-	case LEQ: i = i>=0; break;
+	case LEQ: i = i<=0; break;
 	case NEQ: i = i!=0; break;
 	}
 	return i? "1": "0";
 }
 
 char *arith(int op, char *r1, char *r2) {
-	long i1, i2;
+	long long i1, i2;
 	register char *rv;
 
-	if(!(ematch(r1, "[0-9]*$") && ematch(r2, "[0-9]*$")))
+	if(!(ematch(r1, "-*[0-9]*$") && ematch(r2, "-*[0-9]*$")))
 		yyerror("non-numeric argument");
 	i1 = atol(r1);
 	i2 = atol(r2);
+	if(i2 == 0 && (op == DIV || op == REM))
+		yyerror("division by zero");
 
 	switch(op) {
 	case ADD: i1 = i1 + i2; break;
@@ -136,8 +138,10 @@ char *arith(int op, char *r1, char *r2) {
 	case DIV: i1 = i1 / i2; break;
 	case REM: i1 = i1 % i2; break;
 	}
+	if((long)i1 != i1)
+		yyerror("overflow");
 	rv = malloc(16);
-	sprintf(rv, "%D", i1);
+	sprintf(rv, "%D", (long)i1);
 	return rv;
 }
 char *conj(int op, char *r1, char *r2) {
@@ -176,14 +180,15 @@ register char *res;
 
 	si = atol(s);
 	wi = atol(w);
-	while(--si) if(*v) ++v;
+	while(--si > 0) if(*v) ++v;
 
 	res = v;
 
-	while(wi--) if(*v) ++v;
+	while(wi-- > 0) if(*v) ++v;
 
-	*v = '\0';
-	return res;
+	wi = v - res;
+	sprintf(v = malloc(wi + 1), "%.*s", wi, res);
+	return v;
 }
 
 char *length(register char *s) {
@@ -240,11 +245,12 @@ ematch(char *s, register char *p)
 	compile(p, expbuf, &expbuf[ESIZE], 0);
 	if(nbra > 1)
 		yyerror("Too many '\\('s");
+	Mstring[0] = "";
 	if(advance(s, expbuf)) {
 		if(nbra == 1) {
 			p = braslist[0];
 			num = braelist[0] - p;
-			strncpy(Mstring[0], p, num);
+			strncpy(Mstring[0] = malloc(num + 1), p, num);
 			Mstring[0][num] = '\0';
 		}
 		return(loc2-s);
@@ -273,7 +279,7 @@ errxx(int c)
 
 #define	NBRA	9
 
-#define PLACE(c)	ep[c >> 3] |= bittab[c & 07]
+#define PLACE(c)	ep[(c & 0177) >> 3] |= bittab[c & 07]
 #define ISTHERE(c)	(ep[c >> 3] & bittab[c & 07])
 
 char	*braslist[NBRA];
@@ -324,7 +330,7 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 	else
 		UNGETC(c);
 	for (;;) {
-		if (ep >= endbuf)
+		if (ep >= endbuf - 1)
 			ERROR(50);
 		if((c = GETC()) != '*' && ((c != '\\') || (PEEKC() != '{')))
 			lastep = ep;
@@ -377,6 +383,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 						PLACE('-');
 						break;
 					}
+					if(c == '\0' || c == '\n')
+						ERROR(49);
 					while(lc < c) {
 						PLACE(lc);
 						lc++;
@@ -388,8 +396,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 			if(neg) {
 				for(cclcnt = 0; cclcnt < 16; cclcnt++)
 					ep[cclcnt] ^= -1;
-				ep[0] &= 0376;
 			}
+			ep[0] &= 0376;
 
 			ep += 16;
 
@@ -417,6 +425,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 			case '{':
 				if(lastep == (char *) (0))
 					goto defchar;
+				if(*lastep < CCHR || *lastep > (CCL|STAR) || *lastep & 2)
+					ERROR(44);
 				*lastep |= RNGE;
 				cflg = 0;
 			nlim:
@@ -427,7 +437,7 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 						i = 10 * i + c - '0';
 					else
 						ERROR(16);
-				} while(((c = GETC()) != '\\') && (c != ','));
+				} while(((c = GETC()) != '\\') && (c != ',') && i <= 255);
 				if (i > 255)
 					ERROR(11);
 				*ep++ = i;
@@ -449,6 +459,7 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 					ERROR(46);
 				continue;
 
+			case '\0':
 			case '\n':
 				ERROR(36);
 
@@ -614,6 +625,8 @@ advance(register char *lp, register char *ep)
 		bbeg = braslist[*ep&0377];
 		ct = braelist[*ep++&0377] - bbeg;
 		curlp = lp;
+		if(ct == 0)
+			continue;
 		while(ecmp(bbeg, lp, ct))
 			lp += ct;
 
