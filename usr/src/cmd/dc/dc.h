@@ -57,7 +57,7 @@ struct	blk *morehd(void);
 
 struct	blk *arg1, *arg2;
 int	svargc;
-char	savk;
+int	savk;
 char	**svargv;
 int	dbg;
 int	ifile;

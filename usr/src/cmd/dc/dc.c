@@ -243,7 +243,7 @@ casediv:
 					l = c = sbackc(q);
 				}
 				if(n != 1){
-					while(sfbeg(q) == 0)l = l*100+sbackc(q);
+					while(sfbeg(q) == 0 && l < 10000000)l = l*100+sbackc(q);
 				}
 			}
 			logo = log2(l);
@@ -393,16 +393,16 @@ casediv:
 				error("save: args\n");
 			}
 			c = readc() & 0377;
+			if(sfree == 0)goto sempty;
 			sptr = stable[c];
 			sp = stable[c] = sfree;
 			sfree = sfree->next;
-			if(sfree == 0)goto sempty;
 			sp->next = sptr;
 			p = pop();
 			EMPTY;
 			if(c >= ARRAYST){
-				q = copy(p,PTRSZ);
-				for(n = 0;n < (int)PTRSZ-1;n++)sputc(q,0);
+				q = salloc(PTRSZ);
+				putwd(q, (struct blk *)0);
 				release(p);
 				p = q;
 			}
@@ -420,14 +420,15 @@ sempty:
 				p = sptr->val;
 				if(c >= ARRAYST){
 					rewind(p);
-					while(sfeof(p) == 0)release(getwd(p));
+					while(sfeof(p) == 0)
+						if((q = getwd(p)) != 0)release(q);
 				}
 				release(p);
 			}
 			else{
+				if(sfree == 0)goto sempty;
 				sptr = stable[c] = sfree;
 				sfree = sfree->next;
-				if(sfree == 0)goto sempty;
 				sptr->next = 0;
 			}
 			p = pop();
@@ -475,16 +476,16 @@ sempty:
 			n = readc() & 0377;
 			sptr = stable[n];
 			if(sptr == 0){
+				if(sfree == 0)goto sempty;
 				sptr = stable[n] = sfree;
 				sfree = sfree->next;
-				if(sfree == 0)goto sempty;
 				sptr->next = 0;
 				p = salloc((c+PTRSZ)*PTRSZ);
 				zero(p);
 			}
 			else{
 				p = sptr->val;
-				if(length(p)-PTRSZ < c*PTRSZ){
+				if(length(p) < (c+1)*(int)PTRSZ){
 					q = copy(p,(c+PTRSZ)*PTRSZ);
 					release(p);
 					p = q;
@@ -519,7 +520,7 @@ sempty:
 			sptr = stable[n];
 			if(sptr != 0){
 				p = sptr->val;
-				if(length(p)-PTRSZ >= c*PTRSZ){
+				if(length(p) >= (c+1)*(int)PTRSZ){
 					seekc(p,c*PTRSZ);
 					s = getwd(p);
 					if(s != 0){
@@ -529,24 +530,21 @@ sempty:
 					}
 				}
 			}
-			q = salloc(PTRSZ);
-			putwd(q, (struct blk *)0);
+			q = salloc(1);
+			sputc(q,0);
 			pushp(q);
 			continue;
 		case 'x':
 execute:
 			p = pop();
 			EMPTY;
-			if((readptr != &readstk[0]) && (*readptr != 0)){
-				if((*readptr)->rd == (*readptr)->wt)
-					release(*readptr);
-				else{
-					if(readptr++ == &readstk[RDSKSZ]){
-						error("nesting depth\n");
-					}
-				}
+			if((readptr != &readstk[0]) && (*readptr != 0) &&
+			    ((*readptr)->rd == (*readptr)->wt))
+				release(*readptr);
+			else if(++readptr == &readstk[RDSKSZ]){
+				readptr--;
+				error("nesting depth\n");
 			}
-			else readptr++;
 			*readptr = p;
 			if(p != 0)rewind(p);
 			else{
@@ -555,6 +553,7 @@ execute:
 			continue;
 		case '?':
 			if(++readptr == &readstk[RDSKSZ]){
+				readptr--;
 				error("nesting depth\n");
 			}
 			*readptr = 0;
@@ -916,7 +915,7 @@ init(int argc, char *argv[])
 	readptr = &readstk[0];
 	k=0;
 	sp = sptr = &symlst[0];
-	while(sptr < &symlst[TBLSZ]){
+	while(sptr < &symlst[TBLSZ-1]){
 		sptr->next = ++sp;
 		sptr++;
 	}
@@ -1572,7 +1571,12 @@ command(void){
 	default:
 		sl = line;
 		*sl++ = c;
-		while((c = readc()) != '\n')*sl++ = c;
+		while((c = readc()) != '\n')
+			if(sl < &line[sizeof line])*sl++ = c;
+		if(sl == &line[sizeof line]){
+			printf("command too long\n");
+			return(0);
+		}
 		*sl = 0;
 		if((pid = fork()) == 0){
 			execl("/bin/sh","sh","-c",line,(char *)0);
@@ -1668,7 +1672,10 @@ log2(long n)
 	if(n == 0)return(0);
 	i=31;
 	if(n<0)return(i);
-	while((n= n<<1) >0)i--;
+	while(n < 0x40000000L){
+		n <<= 1;
+		i--;
+	}
 	return(--i);
 }
 
