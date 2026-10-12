@@ -205,7 +205,7 @@ main(int argc, char **argv)
 		if(railmag != 03)k = asctab[i];
 		else k = spectab[i];
 		if(alpha)sendpt();
-		if(*k!='\0'){
+		if(k && *k!='\0'){
 			oput(US);
 			while(*k & 0377)oput(*k++);
 			alpha++;
@@ -282,7 +282,7 @@ kwait(void){
 	if(pgskip) return;
 next:
 	bptr=buf;
-	while((c=readch())&&(c!='\n')) *bptr++=c;
+	while((c=readch())&&(c!='\n')) if(bptr<&buf[127]) *bptr++=c;
 	*bptr=0;
 	if(bptr!=buf){
 		bptr = buf;
@@ -361,6 +361,7 @@ atoi(void)
 	field = digits = acc = 0;
 a1:
 	while(((j = (i = getch()) - '0') >= 0) && (j <= 9)){
+		if(acc >= 100000)continue;
 		field++;
 		digits++;
 		acc = 10*acc + j;
