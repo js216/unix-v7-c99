@@ -6745,11 +6745,13 @@ case terminal: `\(` stands for `{`, `\!` for `|`, and `\a` (typed as
 `\A`, since such a terminal's input is folded to lower case) for a real
 capital. `canon` makes an escaped erase or kill character, whatever it has been
 set to, stand for itself (376, 377).
-The table has only 128 entries. `canon` consults it only outside `RAW`
-mode, in which `ttyinput` cuts every character to seven bits; but a
-change of modes by `TIOCSETN`, which keeps the raw queue, can leave
-eight-bit characters typed in `RAW` mode for `canon` to find, and an
-escaped one is then looked up beyond the end of the table, as in v7.
+`canon` consults it only outside `RAW` mode, in which `ttyinput` cuts
+every character to seven bits; but a change of modes by `TIOCSETN`,
+which keeps the raw queue, can leave eight-bit characters typed in
+`RAW` mode for `canon` to find. v7's table had 128 entries, and an
+escaped one was then looked up beyond its end. The port gives it 256
+(28), the upper half zero, so that such a character stands for
+itself.
 
 #lines(20, 55)
 
@@ -6844,8 +6846,10 @@ character, a kill restarts the line, and the end of file character is
 dropped, so that one typed at the start of a line yields a read of no
 bytes. After a backslash, `maptab` is consulted; if the pair is to be
 replaced, `bp` steps back over the backslash, unless the backslash was
-itself escaped. The delimiter `0377` cannot be mistaken for a typed
-character, since in the normal mode `ttyinput` keeps only seven bits.
+itself escaped. The delimiter `0377` cannot be mistaken for a
+character typed in the normal mode, in which `ttyinput` keeps only seven
+bits; only one typed in `RAW` mode and left in the queue by `TIOCSETN`
+could be, as in v7.
 
 When the queue has emptied below a fifth of `TTYHOG`, a terminal which
 was told to stop sending (`TBLOCK`, see `ttyblock`) is sent the start

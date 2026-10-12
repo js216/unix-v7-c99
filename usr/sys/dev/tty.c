@@ -25,7 +25,7 @@ void	wflushtty(struct tty *tp), flushtty(struct tty *tp),
  * upper-case only terminals.
  */
 
-char	maptab[] ={
+char	maptab[256] ={
 	000,000,000,000,000,000,000,000,
 	000,000,000,000,000,000,000,000,
 	000,000,000,000,000,000,000,000,
