@@ -1,6 +1,6 @@
 thumb it4: 2 hits 1
 scan 7766279631452241919 37777777777
-[][2][2.e+00][ab][a][1]
+[abc][1.500000][1.500000e+00][ab][a][1]
 /bin/echo
 su: /tmp/shN-0: cannot create
 ./s: /nonexistent: bad directory

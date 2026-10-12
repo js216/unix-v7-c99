@@ -44,9 +44,9 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 		width = gnum(&fmt, argp);
 		ndigit = ndfnd = 0;
 		if (*fmt == '.') {
-			fmt++;
+			s = ++fmt;
 			ndigit = gnum(&fmt, argp);
-			ndfnd++;
+			ndfnd = fmt > s;
 		}
 		p = s = buf;
 		ll = 0;

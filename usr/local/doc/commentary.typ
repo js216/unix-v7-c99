@@ -11190,7 +11190,10 @@ A `-` asks for the result to be left-justified in its field; the
 variable which records it is called `rjust`, after v7's assembly
 variable of the same name and meaning. A leading `0` in the width asks
 for zeros instead of spaces as padding. A precision is recorded with
-`ndfnd` set, so that a precision of zero can be told from none.
+`ndfnd` set, so that a precision of zero can be told from none. As in
+v7's `gnum`, `ndfnd` is set only if digits or `*` follow the `.` (47--49): `%.s` prints the whole string and `%.f` six decimals, as if no
+precision had been given. `s` marks the place, and is free until the
+conversion sets it.
 
 In v7 a long argument was asked for by a capital letter, `%D`, `%O`,
 `%X`, or `%U`, or by `l` (or `L`) before the lower-case letter; `%l`
