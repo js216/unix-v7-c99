@@ -2994,7 +2994,7 @@ second has lost its code.
 v7 restarted the KW11-L line clock by writing 0115 to its status
 register (`lks`), and on the larger PDP-11s then copied the console
 switch register to the display lights (`display`). There are no
-lights, and the second comment has gone with its code.
+lights, and the `display register` comment has gone with the call.
 
 The ARM generic timer interrupts when its counter reaches the value in
 the compare register `CNTV_CVAL`, and the port restarts it, under v7's
@@ -3353,7 +3353,8 @@ below them, the argument count, a pointer to each string, and two
 zeros. v7 passed the strings alone. When the vector did not fit in the
 `SSIZE` clicks left over, the `suword`s below the stack failed unseen,
 and the program began with an argument count of zero; with 4-byte
-pointers and an 8 KB `SSIZE`, some 2,900 arguments are enough.
+pointers and an 8 KB `SSIZE`, some 2,050 short arguments would have
+been enough.
 
 #lines(52, 103)
 
@@ -3376,7 +3377,7 @@ without adjusting it.
 
 The new stack, from `ap` upwards, holds the argument count, the
 argument pointers and a zero, the environment pointers and a zero, and
-then the strings, followed by a zero word at 133. The `0377` mask at 132
+then the strings, followed by a zero word (135). The `0377` mask at 132
 is v7's; here `c` is never negative.
 
 #lines(112, 135)
@@ -3396,9 +3397,11 @@ v7's formats.
 
 #lines(144, 169)
 
-The first 52 bytes of the file, the ELF header, are read
-into `u.u_exdata`, whose fields have been rearranged to match it
-(#f("user.h")).
+The start of the file is read into `u.u_exdata`, whose fields have
+been rearranged to match the 52-byte ELF header (#f("user.h")). The
+read fills the whole structure, 100 bytes, so a shorter file is
+refused (178); the two program header slots `ux_ph` at its end receive
+whatever follows the header, and are overwritten below.
 
 #lines(170, 183)
 
@@ -3454,7 +3457,7 @@ given `SSIZE` clicks plus room for the strings and the pointer vector,
 `nargc` bytes.
 
 The overlay branch (224--235) is dead, since `overlay` is never set; it
-is kept as v7 wrote it, but for the parentheses at 223, as in #f("slp.c").
+is kept as v7 wrote it, but for the parentheses at 225, as in #f("slp.c").
 
 #lines(210, 238)
 
@@ -3567,9 +3570,8 @@ harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
 clicks, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
-to the swap device, is the size of the caller's. The comment (452,
-453) is changed to match. The
-last slot of `proc` is reserved for the super-user, so that he can
+to the swap device, is the size of the caller's. The comment (454) is
+changed to match. The last slot of `proc` is reserved for the super-user, so that he can
 still log in and kill something when the table is full.
 
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
@@ -3615,9 +3617,9 @@ image would exceed `maxmem`; v7 panicked.
 
 #f("sys4.c") is a collection of small system calls: those concerned
 with time, user and group identity, signals, and a few file operations
-which fitted nowhere else. Apart from the dressing of C99 it is v7's.
-The one addition is the declaration of `chdirec` (9), which `chdir`
-calls before its definition.
+which fitted nowhere else. Apart from the dressing of C99 it is v7's,
+but for the declaration of `chdirec` (9), which `chdir` calls before
+its definition, and one fix in `utime`, described below.
 
 Every routine here follows the pattern of a system call: the arguments
 are found through `u.u_ap`, overlaid by a local structure `a` which
@@ -3896,7 +3898,8 @@ On the PDP-11 the stack lay at the top of the 64 KB address space, so
 16-bit number, and `-sp` the depth of `sp` below the top. In 32 bits
 the top of the address space is `USERSIZE` (#f("param.h")), and the two
 expressions become `USERSIZE-ctob(u.u_ssize)` and `USERSIZE-sp`
-(247--249); the rest is v7's. The new stack size is the depth of `sp` in
+(247--249); the divisor 64, the PDP-11's click in bytes, becomes
+`ctob(1)`. The rest is v7's. The new stack size is the depth of `sp` in
 clicks, rounded down, plus `SINCR` clicks of room; `estabur` refuses it
 if the stack would meet the data. `expand` enlarges the image, and the
 stack, which lies at the end of the image, is copied up by the number
@@ -3943,7 +3946,7 @@ shares it, or it is sticky, the request fails. The inode loses `ITEXT`,
 so that the altered text is never attached by a later `exec`, and the
 text is mapped writable for the one store (`RW`, #f("seg.h")) and then
 read-only again; `XWRIT` makes sure the altered text, not the file's,
-is what is swapped back in. The doubled parentheses at 359 are those of
+is what is swapped back in. The doubled parentheses at 362 are those of
 #f("malloc.c").
 
 The word is stored through the data cache, and the processor fetches
@@ -3974,12 +3977,15 @@ written: `regloc` names no other.
 A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
 "user" by or-ing in 0170000, and cleared the priority bits 5 to 7 on
-the next line. Here one line does both: everything is discarded except
-the condition flags (bits 27 to 31), the `GE` flags (16 to 19), and the
-Thumb state (the `T`, `IT`, and `E` bits, as `sigreturn` keeps them in
-#f("machdep.c")), so that the interrupt masks are clear, and the mode
-field is set to user mode, `0x10` (octal 020). A debugger may thus stop
-a child in Thumb code and resume it there.
+the next line. Here one line does both: the mode field is set to user
+mode, `0x10` (octal 020), and everything else is discarded, the
+interrupt masks among them, except the condition flags (bits 27 to 31),
+the `GE` flags (16 to 19), and the Thumb state as `sigreturn` keeps it
+(#f("machdep.c")): the `T` bit (5), the `E` bit (9), and the `IT` bits
+10 to 15. The other two `IT` bits, 25 and 26, are not kept, so a child
+stopped early in a Thumb `if-then` block of three or four instructions
+could resume with the rest of the block misread. Elsewhere in Thumb
+code a debugger may stop a child and resume it there.
 
 #lines(394, 402)
 
@@ -4193,9 +4199,9 @@ only the in-core count is decremented (76).
 #lines(49, 77)
 
 `xalloc` is called by `exec` after the new program's header has been
-read into `u.u_exdata`. A program without a text returns at once (97);
-since `getxfile` accepts only programs with one, only the dead overlay
-branch of `getxfile` could call it so.
+read into `u.u_exdata`. A program without a text would return at once
+(96, 97), but `getxfile` refuses such a program before calling
+`xalloc` (#f("sys1.c")), so the test is never true.
 
 #lines(78, 98)
 
@@ -4303,13 +4309,14 @@ searched the table. The search finds nothing for an inode without
 #lines(247, 300)
 #source("/usr/sys/h/buf.h")
 
-Apart from two deletions, described below, #f("buf.h") is v7's. Each
+Apart from two deletions and a shortened comment, described below,
+#f("buf.h") is v7's. Each
 `buf` is a header which describes
 a block transfer: the device and block number, the core address, and the
 byte count, and the state of the operation in `b_flags`. The data itself
 lies elsewhere: for an entry of the array `buf`, which forms the buffer
-cache, in the rows of `buffers` (#f("main.c")), to which
-`binit` points `b_addr`; for the headers used by `swap` and `physio`
+cache, in the rows of `buffers` (#f("qemu/c.c")), to which `binit`
+(#f("main.c")) points `b_addr`; for the headers used by `swap` and `physio`
 (#f("bio.c")), in the process image being transferred.
 
 Two lists thread the cache. `b_forw` and `b_back` link every buffer to
@@ -4463,7 +4470,8 @@ The one line discipline, that of #f("tty.c"). In v7 the row was
 `ttstart` in the seventh slot, `l_rend`, though the structure names a
 later slot `l_start` for it. Nothing calls either slot for this
 discipline, so the mistake was harmless; the port puts `ttstart` where
-its name says. `nolioctl` replaces `nodev` in `l_ioctl`.
+its name says. `nulltty` replaces `nulldev` in `l_close`, and
+`nolioctl` replaces `nodev` in `l_ioctl`.
 
 #lines(58, 62)
 
@@ -5081,7 +5089,8 @@ position files, together with `link`, `mknod`, and `access`. They are
 thin: each decodes its arguments from `u.u_ap`, finds the inode or the
 `file` concerned, and passes the real work to the routines of
 #f("fio.c"), #f("rdwri.c"), #f("nami.c"), and #f("iget.c"). Apart from
-the C99 dressing the file is v7's.
+the C99 dressing and the two sums in `seek`, described below, the file
+is v7's.
 
 The declaration (8) is new. `rdwr` and `open1` are called before their
 definitions and from no other file, so they are declared here rather
@@ -5192,7 +5201,7 @@ directory. The `mkdir` command, which runs as the super-user, calls
 third argument, the device number, goes into the first block address
 (289). Nothing checks that a non-special inode receives a zero there.
 
-Note the way an error from `suser` is handled: the test at (284) also
+Note the way an error from `suser` is handled: the test at 284 also
 catches it, so that the `goto out` path is taken only when `ip` has been
 set.
 
@@ -5253,8 +5262,8 @@ by `iput` (70); only its address is compared.
 
 `openi` calls the open routine of a special file's driver, after
 checking that the major device number is within the switch table. `maj`
-is `unsigned` while `nchrdev` and `nblkdev` are `int`; the casts at
-(111) and (118) state the comparison as unsigned, as it was in v7 by the
+is `unsigned` while `nchrdev` and `nblkdev` are `int`; the casts (111,
+118) state the comparison as unsigned, as it was in v7 by the
 rules of C, and keep the compiler from warning of a comparison between
 signed and unsigned. Since the counts are small and positive, the
 meaning is unchanged. Opening an ordinary file or directory needs no
@@ -5387,7 +5396,7 @@ On the PDP-11 the test was for evenness, `NBPW` being 2, and the
 machine-language routines moved words. Here `NBPW` is 4, and `copyin`
 and `copyout` (#f("mch.s")) likewise move words when both addresses
 and the count are multiples of it, so the test is v7's and keeps its
-purpose.
+purpose; the comment's "even" is now to be read as a multiple of four.
 
 `u_segflg` 2 meant user instruction space, which the PDP-11/45 and /70
 kept apart from data space. The ARM has no such division, and
@@ -5454,14 +5463,14 @@ blocks of a disk made here are not those of a PDP-11 disk, although
 there are 128 to a block on both.
 
 `NINDIR` is computed with `sizeof` and is therefore unsigned; the cast
-at (115) makes the comparison with the `int` `i` explicitly unsigned, as
+(115) makes the comparison with the `int` `i` explicitly unsigned, as
 in #f("fio.c"). Since `i` is never negative, the meaning is v7's.
 
 #lines(85, 118)
 
 `passc` delivers one character to the place described by `u_base` and
 `u_segflg`, and counts it. A `u_segflg` of 1 means a kernel address,
-which is stored into directly. Note the conditional expression at
+which is stored into directly. Note the conditional expression
 (134): `<` binds more tightly than `?:`, so that only `subyte`'s result
 is compared with zero, while `suibyte`'s is tested for being nonzero.
 Both return −1 on a fault and zero otherwise, so the two readings agree
@@ -5488,7 +5497,9 @@ switch tables were arrays of `int (*)()` and C did not check the
 arguments. Now each slot has a prototype, and a function put in it must
 have that type. `nodev` and `nulldev` take a device and a flag, the
 arguments of an open or close routine, and so can occupy only those
-slots; the parameters are unused.
+slots. The parameters are unused, and each is cast to `void` to say
+so; otherwise `-Wextra` would warn of an unused parameter. The new
+routines below do the same.
 
 #lines(170, 191)
 
