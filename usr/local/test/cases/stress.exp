@@ -12,7 +12,7 @@ glob 5
 r0 0 pcok 1
 w 40
 wr9 -1
-rps f80ffe30
+rps fe0ffe30
 wps 16
 rps 10
 exit 42
