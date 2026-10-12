@@ -4666,11 +4666,15 @@ data.
 
 #lines(73, 83)
 
-`rkstrategy` is v7's. A block number beyond the end of the disk is
-rejected at once (88--92), as v7 rejected one beyond the end of the
-pack. Such requests arise: `breada` (#f("bio.c")) reads ahead the block
-after the last, and without the check the device would fail the
-request and `rkintr` would report and retry it ten times.
+`rkstrategy` is v7's, with more in its test. A block number beyond the
+end of the disk is rejected at once (88--92), as v7 rejected one beyond
+the end of the pack. Such requests arise: `breada` (#f("bio.c")) reads
+ahead the block after the last, and without the check the device would
+fail the request and `rkintr` would report and retry it ten times. A count which
+is not a whole number of blocks is rejected too: the RK11 moved any
+number of words, but a virtio disk moves only whole 512-byte sectors and
+fails such a request, so that a raw read of 510 bytes, which `physio`
+lets through as an even count, would otherwise be tried eleven times.
 
 v7's call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is gone
 with the map. The priority is raised with `spl5` and lowered with `spl0`, as in v7: the
