@@ -37,7 +37,7 @@ int	statreq;
 struct	lbuf	*flist[NFILES];
 struct	lbuf	**lastp = flist;
 struct	lbuf	**firstp = flist;
-char	*dotp	= ".";
+char	*dotp[]	= { 0, "." };
 
 char	*makename(char *dir, char *file);
 struct	lbuf *gstat(char *file, int argfl);
@@ -132,7 +132,7 @@ main(int argc, char *argv[])
 	}
 	if (argc==0) {
 		argc++;
-		argv = &dotp - 1;
+		argv = dotp;
 	}
 	for (i=0; i < argc; i++) {
 		if ((ep = gstat(*++argv, 1))==NULL)
@@ -172,7 +172,7 @@ pentry(struct lbuf *ap)
 	if (p->lnum == -1)
 		return;
 	if (iflg)
-		printf("%5u ", p->lnum);
+		printf("%5u ", (ino_t)p->lnum);
 	if (sflg)
 	printf("%4D ", nblock(p->lsize));
 	if (lflg) {
@@ -223,7 +223,7 @@ getname(int uid, char buf[])
 				j++;
 				c = '0';
 			}
-			if (j==0)
+			if (j==0 && i < 15)
 				buf[i++] = c;
 			if (j==2)
 				n = n*10 + c - '0';
@@ -276,7 +276,7 @@ select(register int *pairp)
 char *
 makename(char *dir, char *file)
 {
-	static char dfile[100];
+	static char dfile[NCARGS+DIRSIZ+2];
 	register char *dp, *fp;
 	register int i;
 
@@ -318,6 +318,7 @@ readdir(char *dir)
 			ep->lnum = dentry.d_ino;
 		for (j=0; j<DIRSIZ; j++)
 			ep->ln.lname[j] = dentry.d_name[j];
+		ep->ln.lname[j] = 0;
 	}
 	fclose(dirf);
 }
