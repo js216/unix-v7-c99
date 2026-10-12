@@ -54,7 +54,8 @@ rm(char arg[], int fflg, int rflg, int iflg, int level)
 {
 	struct stat buf;
 	struct direct direct;
-	char name[100];
+	char name[strlen(arg)+16];
+	long off;
 	int d;
 
 	if(stat(arg, &buf)) {
@@ -84,7 +85,12 @@ rm(char arg[], int fflg, int rflg, int iflg, int level)
 			while(read(d, (char *)&direct, sizeof(direct)) == sizeof(direct)) {
 				if(direct.d_ino != 0 && !dotname(direct.d_name)) {
 					sprintf(name, "%s/%.14s", arg, direct.d_name);
+					off = lseek(d, 0L, 1);
+					close(d);
 					rm(name, fflg, rflg, iflg, level+1);
+					if((d=open(arg, 0)) < 0)
+						break;
+					lseek(d, off, 0);
 				}
 			}
 			close(d);
@@ -145,7 +151,7 @@ rmdir(char *f, int iflg)
 		sleep(3);
 	if(i) {
 		wait(&status);
-		return(status);
+		return(status != 0);
 	}
 	execl("/bin/rmdir", "rmdir", f, (char *)0);
 	execl("/usr/bin/rmdir", "rmdir", f, (char *)0);
