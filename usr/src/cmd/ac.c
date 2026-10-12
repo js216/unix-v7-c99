@@ -194,7 +194,7 @@ update(struct tbuf *tp, int f)
 		tp->userp = 0;
 		return;
 	}
-	for (up=ubuf; up < &ubuf[USIZE]; up++) {
+	for (up=ubuf; up < &ubuf[USIZE-1]; up++) {
 		if (up->uname[0] == '\0')
 			break;
 		for (j=0; j<8 && up->uname[j]==ibuf.ut_name[j]; j++);
