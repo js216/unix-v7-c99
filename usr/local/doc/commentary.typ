@@ -5,22 +5,25 @@
   let k = p - locate(<main>).page() + 1
   let n = str(k)
   let here-p(h) = h.location().page() == p
-  if query(heading.where(level: 1)).any(here-p) {
+  if query(heading.where(level: 1)).any(here-p) or query(heading.where(level: 2)).any(here-p) {
     if calc.even(k) { n } else { align(right, n) }
   } else if calc.even(k) {
-    let sec = query(heading.where(level: 1).before(here())).last()
-    n + h(1fr) + emph(numbering("1", ..counter(heading).at(sec.location())) + h(1em) + sec.body)
+    let sec = query(heading.where(level: 2).before(here())).last()
+    n + h(1fr) + emph(str(counter(heading).at(sec.location()).at(1)) + h(1em) + sec.body)
   } else {
-    let on = query(heading.where(level: 2)).filter(here-p)
-    let sub = if on.len() > 0 { on.first() } else { query(heading.where(level: 2).before(here())).last() }
-    emph(sub.body) + h(1fr) + n
+    let on = query(heading.where(level: 3)).filter(here-p)
+    let prev = query(heading.where(level: 3).before(here()))
+    let sub = if on.len() > 0 { on.first() } else if prev.len() > 0 { prev.last() } else { none }
+    if sub == none { align(right, n) } else { emph(sub.body) + h(1fr) + n }
   }
 }
 #set raw(tab-size: 8)
 #show heading: set block(below: 1em)
-#show heading.where(level: 1): it => { pagebreak(weak: true); it }
-#set heading(numbering: "1")
-#show heading.where(level: 2): set heading(numbering: none)
+#show heading.where(level: 1): it => { pagebreak(weak: true); v(1fr); align(center, text(size: 1.6em, it.body)); v(2fr); pagebreak(weak: true) }
+#show heading.where(level: 2): it => { pagebreak(weak: true); it }
+#set heading(numbering: (..n) => { let p = n.pos(); if p.len() == 2 { str(p.at(1)) } })
+#show heading.where(level: 1): set heading(numbering: none)
+#show heading.where(level: 3): set heading(numbering: none)
 #let first = state("first", 1)
 #show raw.where(block: true): set text(size: 6.8pt)
 #show raw.where(block: true): it => {
@@ -33,7 +36,7 @@
   first.update(a)
   raw(text-of(file.get()).slice(a - 1, b).join("\n"), block: true, lang: "c")
 }
-#let source(path) = { file.update(path); [#heading(level: 2, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
+#let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
 #let f(name) = link(label(name), raw(name))
 #let listing(path) = { source(path); lines(1, text-of(path).len()) }
 
@@ -70,6 +73,8 @@ hardware available nowadays.
 #pagebreak()
 #show outline.entry.where(level: 1): set block(above: 1.4em)
 #show outline.entry.where(level: 1): set text(weight: "bold")
+#show outline.entry.where(level: 2): set block(above: 1.4em)
+#show outline.entry.where(level: 2): set text(weight: "bold")
 #block(below: 1.2em, text(size: 1.4em, weight: "bold")[Contents])
 #columns(2, outline(title: none))
 #pagebreak()
@@ -77,7 +82,9 @@ hardware available nowadays.
 #counter(page).update(1)
 #metadata(none) <main>
 
-= Startup and Processes
+= Part One: The Kernel
+
+== Startup and Processes <ch-startup>
 
 The system described here runs on two machines, and the book names them
 throughout as follows.
@@ -119,7 +126,7 @@ priority, and so mask interrupts), segmentation registers, and trap
 vectors are described where the code uses them: in #f("low.s"),
 #f("mch.s"), and #f("machdep.c"). The differences between the machines,
 the addresses above in particular, are confined to the configuration
-files of Section 6 and to the drivers, one set for each machine. Main memory
+files of @ch-drivers and to the drivers, one set for each machine. Main memory
 is called _core_ throughout, as v7 called it after the magnetic core
 memories of its day.
 
@@ -607,12 +614,12 @@ less to spare. The measurement is not part of the build. `UBASE` (86) is the add
 which the data area of the current process always appears, so that the
 kernel may refer to it simply as `u`. It lies in the topmost megabyte
 of the kernel's part of the address space, above everything else the
-kernel maps (Section 1).
+kernel maps (@ch-startup).
 
 `USERSIZE` (87) is new: the size of the user's virtual address space,
 which begins at address zero. It is the counterpart of the PDP-11's
 64 KB. It is three gigabytes, all of the address space below the
-kernel's (Section 1).
+kernel's (@ch-startup).
 
 A character list ("clist") is built of blocks, each holding a pointer
 to the next block and `CBSIZE` (97) characters. With a four byte
@@ -899,7 +906,7 @@ PDP-11, a click number was a physical address divided by 64, and the
 kernel reached it by loading a segmentation register. Here a click
 number is a physical address divided by 4096, a page number, and all of
 core is mapped into the kernel's address space at a fixed distance,
-`coreoff`, from its physical address (Section 1), so the conversion is
+`coreoff`, from its physical address (@ch-startup), so the conversion is
 a shift and an addition. The shift is done on an `unsigned` value, since
 the MP135 machine's memory lies above 0x80000000, where an `int` would
 overflow. Every place where v7 manipulated memory by click
@@ -987,7 +994,7 @@ switched on, the kernel now runs on physical addresses with no cache.
 new setting.
 
 The kernel is linked to run at its kernel addresses, above 0xc0000000
-(Section 1), but the loader has put it at its physical address and
+(@ch-startup), but the loader has put it at its physical address and
 started it there (#f("qemu/unix.ld")). Until the MMU is on, an absolute
 address taken from the program is therefore wrong by a constant, and
 the code up to line 91 must be position-independent: it may branch
@@ -1773,7 +1780,7 @@ The ARM, in the long-descriptor format which the port uses
 (#f("low.s")), likewise translates the address space through two
 tables: the low three gigabytes, 0 to `USERSIZE`, through the table in
 `TTBR0`, and the top gigabyte through the table in `TTBR1`. The port
-uses them thus (Section 1 gives the addresses):
+uses them thus (@ch-startup gives the addresses):
 
 - The top gigabyte is the kernel's. Its table, `kl2`, maps the kernel
   image, the whole of core, and the device registers by 2 MB blocks,
@@ -2916,7 +2923,7 @@ used.
 
 #lines(544, 598)
 
-= Entering the Kernel
+== Entering the Kernel <ch-entering>
 
 #source("/usr/sys/h/reg.h")
 
@@ -4094,7 +4101,7 @@ out. Only the super-user may use it. `exit` clears the flag.
 
 #lines(110, 131)
 
-= Disks and Shared Text
+== Disks and Shared Text <ch-disks>
 
 #source("/usr/sys/h/text.h")
 
@@ -4549,7 +4556,7 @@ controller.
 physical bounds, and its attributes: all 512 MB of memory, at
 0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
 machine's devices (the interrupt controller, the UART, and the virtio transports),
-from 0xf0000000, as device memory which may not be executed (Section 1).
+from 0xf0000000, as device memory which may not be executed (@ch-startup).
 Since a kernel address is not a physical one, a device performing DMA
 must be given the latter, which `vtop` (#f("machdep.c")) finds in this
 table (#f("virtio_blk.c")).
@@ -4987,7 +4994,7 @@ neither disk driver sets `b_error`.
 
 #lines(544, 558)
 
-= File System
+== File System <ch-fs>
 
 #source("/usr/sys/h/file.h")
 
@@ -6194,7 +6201,7 @@ sleep.
 
 #lines(184, 217)
 
-= Character Devices
+== Character Devices <ch-chardev>
 
 #source("/usr/sys/dev/sys.c")
 
@@ -7004,7 +7011,7 @@ is always `NULL`, it returns `NULL`.
 
 #lines(716, 759)
 
-= More Drivers
+== More Drivers <ch-drivers>
 
 #source("/usr/sys/conf/qemuconf")
 
@@ -7049,7 +7056,7 @@ its devices. All the numbers are hexadecimal, without the `0x`.
 `ram` gives the kernel address at which the kernel is linked, the
 physical address at which it is loaded, and the length of the region:
 the first 64 MB of the QEMU machine's memory, at `0x40000000`, far more than the
-kernel needs, linked at 0xc0000000 (Section 1). The difference of the
+kernel needs, linked at 0xc0000000 (@ch-startup). The difference of the
 two addresses must be a multiple of 2 MB, the size of the blocks by
 which #f("low.s") maps the kernel. `core` gives the physical end of the
 memory which holds process images: the end of the 512 MB with which
@@ -7090,10 +7097,10 @@ the MP135 machine has 512 MB of memory as well. They are far larger than SYSRAM,
 
 The memory of the MP135 machine is in two pieces which are not
 contiguous. The kernel runs in the 128 KB of on-chip SYSRAM at
-`0x2ffe0000` (Section 1); this is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
+`0x2ffe0000` (@ch-startup); this is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
 images, and anything else too large for SYSRAM, live in the 512 MB of
 external DDR memory at `0xc0000000`, which the kernel maps 2 MB higher,
-at 0xc0200000, just above the block of SYSRAM (Section 1).
+at 0xc0200000, just above the block of SYSRAM (@ch-startup).
 
 `tables` is a keyword which only this configuration uses. It names a second
 region for the linker, by kernel address, physical address, and
@@ -7412,7 +7419,7 @@ the kernel reaches at `0xf0821000` and `0xf0822000` (112).
 
 `board_map` maps eight regions: the 2 MB block which contains SYSRAM,
 cached, for the kernel, at 0xc0000000; DDR, cached likewise, just above
-it; and six blocks of peripherals, from 0xf0000000 (Section 1).
+it; and six blocks of peripherals, from 0xf0000000 (@ch-startup).
 
 #lines(110, 125)
 
@@ -7870,7 +7877,9 @@ restored (188). DDR may now be used.
 
 #lines(170, 189)
 
-= User Space
+= Part Two: Into User Space
+
+== User Space <ch-user>
 
 #source("/usr/src/libc/csu/crt0.s")
 
@@ -8627,7 +8636,9 @@ read as an entry of its own; a password file has no such lines.
 
 #lines(27, 67)
 
-= Reading Commands
+= Part Three: The Shell
+
+== Reading Commands <ch-reading>
 
 #source("/usr/src/cmd/sh/defs.h")
 
@@ -9606,7 +9617,7 @@ tables (70, 89, 126), which v7's compiler did not require.
 
 #lines(68, 151)
 
-= Running Commands
+== Running Commands <ch-running>
 
 #source("/usr/src/cmd/sh/dup.h")
 
@@ -10188,7 +10199,7 @@ those newer than `base` (`tdystak`, #f("sh/stak.c")). `done` passes
 
 #lines(67, 86)
 
-= Words and Variables
+== Words and Variables <ch-words>
 
 #source("/usr/src/cmd/sh/name.h")
 
@@ -10917,7 +10928,9 @@ at 48 are new.
 
 #lines(43, 50)
 
-= The C Library
+= Part Four: The Library
+
+== The C Library <ch-libc>
 
 #source("/usr/include/stdio.h")
 
@@ -12266,954 +12279,99 @@ and after.
 
 #lines(1, 14)
 
-= Building the System
-
-#source("/Makefile")
-
-v7 was built on itself, by a collection of shell scripts and small
-makefiles, one per directory: `conf/makefile` linked the kernel from
-the archives `LIB1` and `LIB2` which the `mklib` scripts of `sys` and
-`dev` had made; `compall` and `mklib` compiled and archived the C
-library and the mathematical library; `cmake` compiled the commands
-one at a time, each by its own line of shell, and the larger commands
-(`sh`, `awk`, `dc`, and the rest) had makefiles of their own. None of
-these is used. The port is built on another machine, by one `make`,
-from this file and the fragments it includes: #f("sys.mk") for the
-kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"),
-#f("games/games.mk"), and `test.mk` for the regression tests. A single `make` sees the whole graph of
-dependencies, so that a changed header recompiles exactly the files
-which include it, a new `libc.a` relinks exactly the programs which use
-it, a parallel build gives the same result as a serial one, and a
-second `make` finds nothing to do. There is no compiler on the target
-system; everything which runs there is compiled here.
-
-The tools. `CROSS_COMPILE` is the prefix, in the manner of Linux's makefiles, of
-the cross compiler for the target, a bare-metal ARM toolchain. `HOSTCC` compiles
-the three programs which run during the build rather than on the
-target: `mkconf` (#f("mkconf.c")), `mkfs` (#f("cmd/mkfs.c")), and the
-`proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
-compiler, `cc`, and the programs it makes run there directly, so the
-build needs no more than a cross compiler for the target and the
-host's ordinary tools. `flex` takes the place of v7's `lex`.
-
-#lines(1, 6)
-
-`W` is the set of warnings, shared by the target and the host programs.
-Every file is compiled as strict C99 (`-std=c99 -Wpedantic`), and
-`-Werror` makes every warning an error, so the build is free of
-warnings or does not finish. The last three options insist on full
-prototypes: no old-style definitions, no empty parameter lists, and no
-external function without a prior declaration.
-
-The flags for the target (`CFLAGS`). `-ffreestanding` tells the compiler
-that there is no hosted C library behind the program. Among other
-things it implies `-fno-builtin`, so that calls of `printf` or `strcpy`
-remain calls of the port's own library rather than being replaced by
-code the compiler supplies. `-nostdlib` keeps the
-toolchain's own start-up file and libraries out of every link.
-`-mcpu=cortex-a7 -marm` selects the processor of both machines, and the
-ARM instruction set rather than Thumb.
-
-`-mfloat-abi=hard` makes the programs compute with the floating point
-unit, the VFPv4 with the Advanced SIMD extension that `-mcpu=cortex-a7`
-implies, and pass `double` arguments and results in its registers. Of
-the ARM's three conventions, `soft` computes with library routines in
-the integer registers; `softfp` uses the unit, but passes a `double` in
-a pair of integer registers, so that its code can be linked with `soft`
-code; and `hard` uses the unit and its registers for both. `hard` is
-chosen because every program on the system is built here from source,
-so there is no older code to be linked with, and a value stays in the
-register it was computed in, with no moves at each call and return. The
-kernel computes nothing in floating point, and the compiler must not use
-the unit's registers for anything else either, since they hold the
-state of the current user process; #f("sys.mk") gives the kernel
-`-mfloat-abi=soft`. `ASFLAGS` names the unit, `-mfpu=neon-vfpv4`, so that
-the assembler accepts the floating point instructions of #f("low.s"),
-#f("mch.s"), and `setjmp` (#f("gen/setjmp.s")); it marks no calling
-convention in the objects, which therefore link with code of either
-kind. `-Os` optimizes for size; v7
-compiled with `cc -O`, and the text of the MP135 machine's kernel, its
-code and constants, is 41,711 bytes with `-Os` against 48,850 with
-`-O`, which matters on the MP135 machine, where the whole kernel must
-fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
-
-`-Wl,-z,max-page-size=4096,-Ttext=0xa0` are options for the linker,
-which the compiler ignores when it only compiles; they apply to the
-link of every user program (20), never to the kernel, which is linked by
-its own line in #f("sys.mk"). The linker makes a program two loadable
-segments: the text, with the read-only constants, readable and
-executable, and the data, readable and writable. This is the ELF
-counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
-read-only and shares it among all the processes running the program. `max-page-size`
-places the data at the start of a new 4096-byte page, so that the two
-can be mapped with different permissions. `-Ttext=0xa0` links the text
-at address `0xa0`, which leaves room below it for the signal trampoline
-at 8 (#f("seg.h")), and for the ELF file header and up to three program
-headers (148 bytes). Most programs have three: the 64-bit division of
-`libgcc`, which `_doprnt` needs (#f("stdio/doprnt.c")), brings a section
-of unwinding information, `.ARM.exidx`, to which the linker gives a
-program header of its own beside the two loadable segments. The linker
-places the headers at the start of the text segment, which begins at
-offset 0 of the file as at address 0, and the kernel skips them when it
-loads the text (`xalloc`, #f("text.c")). Were there no room for them
-below the text, the text would still have to start at the same offset
-in its page of the file as in memory, and the file would carry a page
-of padding before it. `-MMD -MP` make the
-compiler write, beside each object, a file of its header dependencies
-(91).
-
-`HOSTCFLAGS` are the warnings alone: the host programs are compiled
-as any other program of the build machine.
-
-#lines(7, 14)
-
-`T` and `Q` shorten the output. `T` prints the name of a tool and the
-target in place of the whole command, and `Q` silences commands which
-are only housekeeping; with `V=1` on the command line both are empty
-and every command is shown. `COMPILE.c` and `COMPILE.s` are the
-variables used by `make`'s built-in rules, so redefining them is enough
-for every object in the tree to be compiled in place by those rules.
-
-`LINK` links a user program from the objects and archives among its
-prerequisites, in the order given there: `crt0.o` first, then the
-program, then `libm.a` and `libc.a`. `-s` strips the symbol table, as
-v7's `cc -s` did. `-lgcc` brings in the compiler's helper routines,
-such as the 64-bit division and the conversions between `double` and
-`long long`, which take more than one instruction; the compiler picks
-the library's variant for hard floating point from the same flags. That
-variant is compiled to Thumb code, so a user program does sometimes run
-in Thumb state (see `sendsig`, #f("machdep.c")).
-
-#lines(15, 20)
-
-`all` is the default goal: the QEMU machine's kernel and the root file system
-images of both machines, and, after the fragments are read (31), the
-kernels of both machines, whose names `KERNELS` only #f("sys.mk")
-supplies.
-
-`GEN` collects the generated sources, among them the `c.c` and
-`unix.ld` of each machine and the output of `bison`. `.SECONDARY` keeps
-`make` from deleting them as intermediate files once the objects are
-made. Every object and generated file depends on the `Makefile`
-itself (36), and every object on its own fragment as well, so that a
-change of flags or of a rule remakes everything it could affect.
-
-The fragments (24--29) build the parts of the system: the kernels
-(#f("sys.mk")), the two libraries, the commands, the games, and the
-regression tests, whose fragment `test.mk` compiles the test programs
-and makes the small file system on which the tests run the file system
-checkers; the tests themselves run on the target, from
-`/usr/local/test`.
-
-#lines(21, 36)
-
-`bison` replaces v7's `yacc`. It is run as itself, not in its POSIX
-mode, since the grammars use both v7's `%term` and some of `bison`'s
-own declarations.
-
-`boot/unix` is a copy of the QEMU machine's kernel, which `make qemu` boots. QEMU
-loads the ELF file at its link address and starts it at its entry,
-`_start` (#f("low.s")); the disk is the root image, on a virtio block
-device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
-on the standard input and output. `-m 512M` gives the machine the 512 MB of
-memory which #f("qemuconf") describes; QEMU's default is 128 MB.
-
-#lines(37, 47)
-
-The tree is built in place, and the programs are made where they will
-lie in the target's file system: `bin/cat`, `etc/init`,
-`usr/games/fortune`. The prototype file names them relative to the top
-of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
-`ROOTFS_STATIC` lists the files of the image which are not compiled:
-the shell scripts `1`, `true`, `false`, and `nohup`, the files of
-#f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
-the dictionary, the fortunes, `bc`'s library, and `cron`'s table. All
-but the files of `etc` and the table `usr/lib/crontab` are copied from
-the v7 tree (80). The image also holds the regression tests, in
-`/usr/local/test`: the test scripts and the data files from the
-repository, and the programs and the file system image which
-`test.mk` makes.
-
-Each machine has an image of its own, which differs from the other only
-in `/unix`: `boot/rootfs.img` for the QEMU machine, which `make qemu`
-boots, and `boot/rootfs-mp135.img` for the MP135 machine. The first two lines name each
-image's kernel and configuration, which `filter` picks out again from
-the prerequisites (`$^`) in the recipe. The prototype names the kernel
-as `boot/unix`, the copy of the QEMU machine's kernel; `sed` puts the machine's own
-kernel in its place, and passes the prototype to `mkfs` on its standard
-input, which `mkfs` reads as the file `/dev/stdin`. For the QEMU
-machine the substitution changes nothing.
-
-An image is rebuilt whenever its kernel, `mkfs`, the prototype, or any
-file in it changes. `V7_MKFS_TIME` gives `mkfs` the time to stamp on
-every file and on the super-block: 284774400 seconds, 10 January 1979,
-the date of the files on v7's own distribution tape. Two things depend
-on it. `cron`, like v7's, never reads a crontab dated zero, and would
-go on using the empty list it had not read; and the kernel takes its
-first idea of the date from the super-block of the root file system
-(`iinit`, #f("main.c")).
-
-`mkfs` writes only the blocks which it uses. The image is then extended
-to the end of the swap area, whose first block and length `awk` reads
-from the machine's configuration (#f("qemuconf"), #f("mp135conf")),
-since QEMU will not read or write a block beyond the end of the file. The swap area is 160 MB, but `truncate` only sets
-the length of the file, and the host stores no blocks for the part
-never written.
-
-#lines(48, 64)
-
-`mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
-the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
-`-Iusr/include` would also bring in v7's `<stdio.h>`. Instead a
-temporary directory is made, holding copies of the six headers `mkfs`
-needs, and put on the search path; `$$$$`, which reaches the shell as
-`$$`, makes its name unique, and the `trap` removes it however the
-compile ends.
-
-The copies are not exact. `mkfs` writes super-blocks, inodes, and free
-lists as structures, which the kernel must read as the ARM lays them
-out: least significant byte first, `int` and `long` four bytes, `long
-long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
-everything but `long`, which there is eight bytes, so `sed` turns each
-`typedef long` into `typedef int`, the same four bytes on every host;
-`daddr_t` and `off_t` are the types it changes. The host's own headers
-also define an `off_t` and a `time_t`, and C99 forbids a second
-definition of a type name, so the port's two are renamed in the
-copies. `mkfs` itself keeps the host's `time_t`, which `time`
-fills, and assigns it to the port's in the inodes and the super-block.
-Since `mkfs` is not one of the objects whose dependencies the compiler
-records, its headers and the `Makefile` are named as prerequisites
-explicitly: a `mkfs` built from stale headers would write a file system
-which the kernel misreads.
-
-#lines(65, 75)
-
-The directories of the image which hold built programs or copied files,
-and the copying of the files from the v7 tree. `etc` is left out: its
-files are kept in the repository, where the image expects them. So is
-`usr/lib/crontab`, v7's table without its last line (#f("cmd/cron.c")). `cp -f`
-replaces a previous copy, which is read-only like its original.
-
-#lines(76, 81)
-
-`clean` removes everything the build has made except the copied files
-and their directories. `.DELETE_ON_ERROR` removes a target whose
-command fails, so that a half-written image or object is never taken
-for a finished one; `mkfs` can therefore write the image in place.
-
-The dependency files are read only for sources which still exist (91).
-When a file in C is replaced by one in assembler, its old `.d` file
-still names the `.c` file as a prerequisite of the object, and `make`
-would otherwise stop for want of a rule to make it.
-
-#lines(82, 91)
-#source("/usr/sys/sys.mk")
-
-#f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
-the two `mklib` scripts, and follows their plan: the files of `sys` are
-archived as `LIB1`, those of `dev` as `LIB2`, and a kernel is linked
-from the machine-language files and the configuration followed by the
-two archives, so that only the procedures which something calls are
-taken from them. As in v7, the objects are made by the compiler with
-`-O` (here `-Os`) and the common `CFLAGS`; the kernel sources need no
-search path, since they name their headers relative to themselves, as
-`"../h/param.h"`.
-
-`LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
-machine only are kept out of `LIB2`: the UART and the disk of the QEMU
-machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
-machine (#f("stm32usart.c"), #f("stm32sd.c"), #f("stm32ddr.c")). The two sets
-take the same v7 names, such as `klopen` and `rkstrategy`, and so could
-not share one archive; each kernel is instead linked with its own
-machine's drivers (30, 31). `SYS_OBJ` names every kernel object, so that
-the `Makefile` can make them all depend on itself.
-
-v7's `conf/makefile` had a target `allsystems`, which ran `mkconf` and
-`make` once for each of six configurations and renamed each `unix`
-in turn. Here `BOARDS` lists the two configurations, and each kernel is
-made in a directory of its own, `conf/qemu/unix` and `conf/mp135/unix`,
-so that both are built by one `make`.
-
-#lines(1, 12)
-
-Every kernel object depends on #f("sys.mk") (13), and is compiled with
-`-mfloat-abi=soft` (14), which overrides the `hard` of the common
-`CFLAGS`: the compiler then uses no floating point instruction or
-register in the kernel, and the registers are left to the user
-processes (#f("Makefile")).
-
-The archives are remade from scratch each time, since `ar rc` would
-keep a member which had been deleted from the sources. v7's `mklib`
-named the members one by one, in a fixed order; GNU `ar` writes an index
-of the symbols, and the order no longer matters.
-
-#lines(13, 19)
-
-`mkconf` is a host program, built with the host compiler and the strict
-flags. It is run, as in v7, in the directory which is to receive its
-output, reading the configuration on its standard input; v7's
-`conf` held one `c.c` at a time, which is why `allsystems` had to
-build its kernels one after the other. A pattern rule with two targets
-is made by one run of its recipe, which suits `mkconf`, since it writes
-`c.c` and `unix.ld` together.
-
-`c.c` lies one directory deeper than v7's, but `mkconf` still writes
-v7's `#include "../h/param.h"`; the search path `-I$S/conf` (28) lets
-`"../h/..."` be found from `conf`.
-
-#lines(20, 29)
-
-The link. In place of v7's `ld -X -i l.o mch.o c.o ../sys/LIB1
-../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
-the machine's drivers, then the two archives, with no start-up file or
-library of the toolchain's (`-nostdlib`) and with the machine's linker
-script (#f("qemu/unix.ld")). `-i`, which gave the PDP-11 kernel separate
-instruction and data spaces, has no meaning on the ARM, and `-X`, which
-kept the local symbols, is not needed, since the GNU linker keeps them
-unless told otherwise. The kernel is not stripped:
-`ps`, `pstat`, and `iostat` look up the addresses of kernel variables
-in the symbol table of `/unix`. `low.o` comes first, so that its
-`_start` is the first instruction of the text, at the origin of `RAM`.
-
-#lines(30, 33)
-#source("/usr/src/libc/lib.mk")
-
-#f("libc/lib.mk") builds the C library, `libc.a`, and the start-up file
-`crt0.o` (#f("csu/crt0.s")), which every program is linked with first
-but which is not a member of the library. It replaces v7's `compall`,
-a list of `cc -c -O` commands, one per source file, and `mklib`, a
-single `ar` command naming every object. Here the members are simply
-all the C and assembler files of the library's four directories: the
-top, which holds `syscall.s` (#f("libc/syscall.s")) and `memcpy.c`;
-`gen`; `stdio`; and `sys`, the system call stubs, one per call as in
-v7 (#f("sys/read.s")). `memcpy.c` has no v7 original. It defines
-`memcpy` and `memset`, which GCC may call, even in freestanding code,
-to copy or clear a structure. As in #f("sys.mk"), the archive is
-remade from nothing, and its order does not matter.
-
-The search path puts the port's `usr/include` ahead of the toolchain's
-headers, so that `<stdio.h>` and the rest are v7's, while `<stdarg.h>`,
-which v7 did not have, comes from the compiler.
-
-#lines(1, 12)
-#source("/usr/src/libm/lib.mk")
-
-#f("libm/lib.mk") builds the mathematical library, `libm.a`, from every
-C file of `libm`, in place of v7's `compall` and `mklib` for the same
-directory. The functions are v7's, in C; v7's own `libm` already had no
-assembler. Commands are linked with it before `libc.a`
-(#f("cmd/cmd.mk")), since its functions call `frexp`, `ldexp`, and
-`modf` from the C library.
-
-#lines(1, 9)
-#source("/usr/src/cmd/cmd.mk")
-
-#f("cmd/cmd.mk") builds the commands. In v7 this was the work of
-`cmake`, a shell script with a line for each command, giving its
-compiler options and the directory in which it was installed, and of
-the makefiles in the directories of the larger commands. Here the
-single-file commands need no line each: every C or `yacc` file in
-`cmd` is a command (6), and it is installed in `/bin` unless it is one
-of those which v7's `cmake` put elsewhere. `CMD_ETC` and `CMD_USRLIB`
-are those exceptions, `/etc` and `/usr/lib`. `CMD_DIRS` are the
-commands of several files, each in a directory of its own.
-
-`mkfs` is left out (6): it is compiled for the build machine by the
-`Makefile` (#f("Makefile")), and the target has no copy. v7's `cmake`
-also distinguished commands linked with `-n`, shared pure text, from
-those linked with `-i`, separate instruction and data, which needed
-the larger address space; every program here is linked the same way.
-
-#lines(1, 9)
-
-The objects. `awk` is listed by hand, because three of its objects come
-from generated sources and one of its C files, `proc.c`, is not part of
-`awk` at all. The other directories contribute all their C files.
-`GEN` names the files which `bison`, `flex`, and `awk`'s `proc` write,
-and `proc` itself.
-
-#lines(10, 16)
-
-Commands are compiled with v7's headers ahead of the toolchain's.
-
-`YYSTACK_USE_ALLOCA` (20) is for the four parsers which `bison`
-writes. With it, the parser grows its stack with the compiler's built-in
-`alloca`; without it, it calls `malloc` and `free`, and, finding no
-`<stdlib.h>`, declares them itself, with types which need not agree
-with those of v7's library.
-
-#lines(17, 20)
-
-The links. Each command is linked from `crt0.o`, its own object, and the
-libraries, by `LINK` (#f("Makefile")). The commands of `/bin` all get
-`libm.a`, which only those calling its functions take anything from;
-`graph` is one. A command's directory is an order-only prerequisite,
-after the `|`: it must exist before the link, but its date, which
-changes whenever a file is added to it, must not make every command in
-it out of date.
-
-#lines(21, 40)
-
-`awk`. `bison` writes the parser and, with `--defines`, the header of
-token numbers (`awk.h`), as v7's `yacc -d` wrote `y.tab.h`; the `&:`
-says that one run makes both. `proc` is a program run during the build:
-compiled with the token numbers of `awk.h`, it writes `proctab.c`, the table of the
-procedures which evaluate each kind of node, as in v7. Being run here,
-it is compiled by the host compiler, without v7's headers, with
-`token.c`, whose table of token names it uses; both include `awk.h` and
-`awk.def`, and are recompiled when either changes.
-
-The lexical analyser is written by `flex` and edited on its way out by
-`sed`. `flex` marks its `yy_fatal_error` as a function which never
-returns, but the function ends with a call of `exit`, which v7's headers
-do not declare in that way, and the compiler rejects the combination;
-the attribute is dropped. The generated file includes `<string.h>` and
-`<stdlib.h>`, which v7 did not have and which would bring in the
-toolchain's declarations; `<stddef.h>` is included instead, for
-`size_t`.
-
-#lines(41, 50)
-#source("/usr/src/games/games.mk")
-
-#f("games/games.mk") builds the games, each from a single C file of
-`usr/src/games`, and links them with the C library into `/usr/games`.
-v7 had no script for them; its `games` directory held only the sources.
-The games use v7's headers and nothing else from the tree, and none of
-them needs `libm.a`. v7's `chess`, a directory of files partly in PDP-11 assembler, is not
-among them.
-
-#lines(1, 8)
-#source("/usr/sys/conf/qemu/unix.ld")
-
-#f("qemu/unix.ld") is the linker script for the QEMU machine's kernel. It is
-written by `mkconf` (#f("mkconf.c")) from the `ram` line of
-#f("qemuconf"), in the pass which in v7 wrote `l.s`, and is used by the
-link in #f("sys.mk").
-
-v7 needed no script. Its kernel was linked with `ld -i`: instruction
-and data in two separate spaces of 64 KB, each beginning at address
-zero, with `l.s`, the interrupt vectors, at the bottom. The loader
-defined `_etext`, `_edata`, and `_end`, and the start-up code in
-`mch.s` used them to move the text to its resting place above the data
-and to clear the memory from `_edata` to `_end`, before it turned on the
-memory management unit. The ARM kernel is one image, linked at the
-kernel address at which it runs, 0xc0000000 (Section 1), and loaded at
-the physical address which that address maps to; there is nothing to
-move.
-
-`MEMORY` declares the one region, `RAM`: the first 64 MB of the QEMU
-machine's memory, by its kernel address. The kernel takes only its start; process
-images are kept in the `core` above it (#f("qemuconf")), which the
-linker is not told about.
-
-`u` (5) is the per process data area, at `UBASE` (#f("param.h")): the
-assignment defines the symbol which #f("user.h") declares, as v7's
-`_u = 140000` did in `mch.s`. Its address lies outside `RAM`, in the
-top 2 MB which `machine_init` (#f("machdep.c")) maps through `kl3u`.
-
-`start` (7) is the physical address of `_start`, and the entry point
-(6): QEMU loads the file itself, and begins execution at the entry
-point with the MMU off, so it must be given the physical address. The
-first input file is `low.o` (#f("sys.mk")), so `_start` (#f("low.s")) is
-the first instruction of the image.
-
-#lines(1, 7)
-
-The kernel's text, read-only data, and initialised data follow one
-another from the origin of `RAM`. `AT` gives each section its load
-address, the kernel address less 0x80000000, which the ELF file
-records as the physical address of its segment and QEMU loads it at,
-0x40000000 onwards.
-
-`__bss_start` and `__bss_end` bound the uninitialised data, and play the
-part of v7's `_edata` and `_end`: `_start` clears the memory between
-them, a word at a time, before it calls any C. That is done with the
-memory management unit off, when the processor faults on a store to an
-unaligned word, hence the `ALIGN(4)`. `*(COMMON)` would collect
-tentative definitions left as common symbols; GCC makes them only when
-asked with `-fcommon`, which the port does not use, so it collects
-nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
-kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
-
-#lines(8, 16)
-
-`.ddrbss` holds the table `kl3u` reserved in #f("mch.s"), which must
-lie on a 4 KB boundary. `NOLOAD` makes it like `.bss`: it occupies
-memory but nothing in the file. It is cleared, not by `_start`, but by
-`machine_init` (#f("machdep.c")), between the symbols `__ddrbss_start`
-and `__ddrbss_end`. On the QEMU machine the distinction serves nothing,
-and the section simply follows `.bss` in `RAM`; it exists for the MP135
-machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
-written until `machine_init` has started it.
-
-#lines(17, 22)
-#source("/usr/sys/conf/mp135/unix.ld")
-
-#f("mp135/unix.ld") is the MP135 machine's linker script, written by `mkconf`
-from #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
-regions, in the difference between kernel and physical addresses, and
-in where it puts `.ddrbss` and what it puts there; `u` and `start` are
-defined in the same way.
-
-`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, in
-which the kernel runs, by its kernel address 0xc01e0000.
-The text, data, and `.bss` of the kernel must all fit there; the linker
-reports an overflow of the region, so a kernel which has outgrown SYSRAM
-fails to link rather than to boot. `TAB` is the DDR memory, at
-physical `0xc0000000` and kernel address 0xc0200000, which holds the
-table `kl3u` in `.ddrbss`, at its very start, and after it the tables
-of the configuration; `core` follows them (#f("mp135conf")). The first
-byte of the text, at the start of SYSRAM, is `_start`. The build makes
-only this ELF file; the image which the boot ROM would load, with its
-header, is not made.
-
-Here the separation of `.ddrbss` from `.bss` matters. The DDR is dead
-until `ddrinit` (#f("stm32ddr.c")) has started it, so `_start`
-(#f("low.s")) may clear only `.bss`, in SYSRAM; `machine_init`
-(#f("machdep.c")) clears `.ddrbss` after the DDR is running. `NOLOAD`
-gives the section no contents in the file, so that nothing has to be
-loaded into DDR before it is running.
-
-The tables of the configuration, from `buf` to `cfree`
-(#f("mp135/c.c")), are the uninitialised data of `c.o`. At the sizes
-which #f("mp135conf") gives them they take some three quarters of a
-megabyte, six times SYSRAM, so `EXCLUDE_FILE` (16) keeps them out of
-`.bss`, and the pattern `*/c.o` (21) puts them into `.ddrbss` after
-`kl3u`. Nothing in `c.o`'s uninitialised data is used before
-`machine_init` has started the DDR and cleared the section: `corebase`
-and `coreoff` are set only after that.
-
-#lines(1, 24)
-#source("/usr/src/cmd/mkfs.c")
-
-`mkfs` makes an empty file system, or, given a prototype file, one
-already populated with directories, files, and special files. In v7 it
-was an ordinary command, kept in `/etc`, which the administrator ran on
-the PDP-11 against a disk partition. Here it never runs on the target:
-it is compiled by the `Makefile` (#f("Makefile")) for the build
-machine, where it writes the images of the root file system,
-`boot/rootfs.img` and `boot/rootfs-mp135.img`, from #f("rootfs.proto"), taking the files from the
-tree in which the system was built.
-
-Since the image must be read by the ARM kernel, `mkfs` must lay out
-every structure exactly as the kernel does. It does so by being compiled
-from the port's own headers, copied with every `long` type made an
-`int` (#f("Makefile")), so that on a 64-bit build machine
-the super-block (#f("filsys.h")), the inodes (#f("ino.h")),
-the free-list blocks (#f("fblk.h")), the directory entries
-(#f("dir.h")), and the indirect blocks all come out with the ARM's
-sizes, alignment, and byte order, without a line of conversion. The
-changes from v7 are therefore few: those needed to compile it as a
-program of the host, those of strict C99, the packing of block
-addresses, a bigger limit on the size of a file, and the loss of the
-bootstrap block.
-
-`NIPB`, `NINDIR`, and `NDIRECT` are the numbers of inodes, block
-addresses, and directory entries in a block: 4, 128, and 32. `MAXFILEBLK`
-(9) is new: the largest number of blocks a file may have when ten are
-addressed directly, 128 through the indirect block, and 128 times 128
-through the double indirect block. `itoo` is the position of an inode in
-its block, to go with the `itod` of #f("param.h"); like it, it is now
-for four inodes to a block, masking with 3 where v7 masked with 7.
-
-The headers of the host's library (14--17) replace v7's `<a.out.h>`,
-which was needed for the bootstrap; `<stdio.h>` too is the host's. The
-headers of `<sys/...>` are the port's; the `Makefile` arranges for them
-to be found without v7's `<stdio.h>`.
-
-#lines(1, 24)
-
-`ltol3` packs `n` block addresses, each held in a `daddr_t`, into three
-bytes apiece, the form they take in an inode on the disk
-(#f("ino.h")). v7 took it from the C library. That library is not
-available to a program of the host, and v7's version was in any case
-written for the PDP-11, which stores the high half of a `long` first:
-it copied the bytes at offsets 0, 2, and 3 of the `long`. On the ARM
-those would be bits 0 to 7, 16 to 23, and 24 to 31, and bits 8 to 15
-would be lost. The private version takes the bits by shifting, least
-significant byte first, which is the order in which `iexpand`
-(#f("iget.c")) unpacks them. It is `static`, being defined before its
-one use.
-
-#lines(25, 34)
-
-The global variables. `buf` is a scratch block. `fbuf` and `filsys` are
-unions of a structure with a block-sized array, so that `wtfs` and
-`rdfs`, which always transfer a whole block, never run off the end of
-the structure. v7 then referred to the structure's members as though
-they belonged to the union, as in `filsys.s_fsize`; early C compilers
-allowed it, since member names were global, but C99 does not. The two
-`#define`s (49, 55) turn every such use into a reference through the
-member, `filsys.fs.s_fsize`, while the unions keep their v7 names: a
-macro is not expanded again within its own expansion. v7's `struct exec
-head`, the header of the bootstrap program, is gone with the bootstrap.
-
-#lines(35, 69)
-
-`main`. The time stamped on every file and on the super-block is taken
-from the environment variable `V7_MKFS_TIME` if it is set, so that the
-build gives the same image every time, and every file the date of the
-v7 distribution (#f("Makefile")). `fsys` serves as a temporary for the
-purpose before it receives its proper value.
-
-The arguments are the file to be written and the prototype. Under
-`STANDALONE`, never defined in this system, v7 could build `mkfs` as a
-program for the bare machine, asking for its arguments on the console;
-that code is kept but never compiled.
-
-#lines(70, 122)
-
-If the second argument is not a file which can be opened, it must be a
-number, the size of an empty file system in blocks, with one inode for
-every 25 blocks, up to the limit of 65500 inodes which a two-byte
-`ino_t` allows. The casts here and below to `unsigned` make explicit
-that an `int` or a `long` is compared with a value of type `size_t`,
-which the `sizeof` in `NIPB` gives, as an unsigned number
-(#f("fio.c")). v7 printed a `long` with its own
-`%D`; C99 spells it `%ld`. The doubled parentheses at 125, and in
-`getnum` at 338, are those of #f("malloc.c").
-
-#lines(123, 142)
-
-From a prototype, the first word names a bootstrap program. v7 copied
-its text and data into block 0, which the PDP-11's boot ROMs read to
-start the system. QEMU loads the kernel from its ELF file, and reads no
-bootstrap from the disk; the prototype names `/dev/null`, and the file
-is opened only to be closed again. The `else` and the blank
-line which follow (153, 154) are what is left of v7's code around the
-deleted lines, as is the comment, which has lost its second line.
-
-The next two words are the size of the file system in blocks and the
-number of inodes.
-
-#lines(143, 167)
-
-`s_m` and `s_n` describe the interleaving of the free list, three and
-500 unless the command line says otherwise (see `bflist`). The i-list
-is cleared, the free list built, the files made by `cfile`, and the
-super-block written last, since `alloc` and `bfree` keep it up to date
-as they go. In the message for a bad ratio, `s_isize - 2` is an `int`,
-since `s_isize` is an `unsigned short`, and the format is corrected to
-`%d`. `s_fsize` is a `daddr_t`, an `int` in the copied headers, and is
-cast to the `long` which `%ld` expects; so is `bno` in the messages of
-`rdfs` and `wtfs`.
-
-#lines(168, 201)
-
-`cfile` makes one file, from the next entry of the prototype, and, if
-the file is a directory, all the files within it, by calling itself.
-The entry begins with the mode, as in `d--755`: the type, a `u` for
-set-user-id, a `g` for set-group-id, and three octal digits; then the
-owner and the group. The file is assembled in the kernel's in-core
-inode structure (#f("inode.h")), which `mkfs` uses as a convenient
-container.
-
-`ib` holds the numbers of the file's blocks as they are allocated, and
-now has room for `MAXFILEBLK` of them, not `NINDIR`. It lies on the
-stack and takes 66 KB in every level of the recursion, which on the
-host is of no consequence.
-
-#lines(202, 253)
-
-A regular file is copied from the named file a block at a time, each
-block written as soon as it is full (`newblk`). A special file's
-address field holds its major and minor device numbers. A directory
-receives its entries `.` and `..`, and then one entry for each name up
-to the `$` which ends it, each followed by the description of the file
-to which it refers; the inode number in the entry is `ino+1`, the
-number which `cfile` will give that file. The first call, with `par`
-zero, makes the root, whose `..` is itself.
-
-#lines(254, 313)
-
-`gmode` translates a character of the mode by its position in `s`. v7
-returned `(&m0)[i]`, taking the four arguments `m0` to `m3` to lie one
-after another on the stack, as they did on the PDP-11. The ARM passes
-the first four arguments of a call in registers and only the rest on
-the stack, so the four are copied into an array (319).
-
-#lines(314, 327)
-
-`getnum` and `getstr` read a number and a word of the prototype; a `:`
-begins a comment which runs to the end of the line.
-
-#lines(328, 378)
-
-`rdfs` and `wtfs` read and write block `bno` of the image, through the
-host's `lseek`, `read`, and `write`. `rdfs` is now `static`: nothing
-calls it before its definition, so it needs no separate declaration,
-which `-Wmissing-prototypes` would demand of an external function.
-`wtfs`, called first by `main`, is declared at (64). Its message (401)
-had v7's `%D`, now `%ld`, which `rdfs` already used.
-
-#lines(379, 404)
-
-`alloc` and `bfree` take blocks from the free list and return them to it
-exactly as the kernel's `alloc` and `free` do (#f("alloc.c")):
-the super-block holds up to `NICFREE` free blocks, and when it is
-exhausted or full, the list is read from or written to the block at
-hand. `bfree` is `static` for the same reason as `rdfs`.
-
-#lines(405, 441)
-
-`entry` adds a directory entry to the directory's current block and,
-when the block is full, writes it with `newblk`. `newblk` allocates and
-writes a block of the current file, records its number in `ib`, and
-clears the buffer. v7 reported "indirect block full" when `ib` held
-`NINDIR` numbers; the limit is now `MAXFILEBLK`, but the message is
-v7's.
-
-#lines(442, 480)
-
-`getch` reads the prototype, or, for an empty file system, the string
-in `charp` which describes its root directory.
-
-#lines(481, 493)
-
-`bflist` builds the free list, and makes inode 1, which holds the bad
-blocks of the disk; `badblk` reports none, so it is empty. The root is
-therefore inode 2, as the kernel expects (`ROOTINO`, #f("param.h")).
-
-The blocks are freed in an interleaved order: each group of `s_n`
-blocks is freed in the order given by `adr`, which takes every
-`s_m`-th block. Since the list is a stack, consecutive allocations then
-fall `s_m` blocks apart, which on a rotating disk gave the processor
-time to ask for the next block before it passed under the head. The
-order is harmless on an SD card or a file. Block 0 is freed first and
-so lies at the bottom of the stack, where `alloc` takes it as the sign
-that no space is left.
-
-The braces added around the inner `if` (537--548) only make explicit
-that the `else` belongs to it, as it always did; without them GCC warns
-of an ambiguous `else`.
-
-#lines(494, 551)
-
-`iput` writes a file's inode into the i-list. If the i-list is full, it
-is the prototype's fault, and an error is reported. All three times are
-the time of the build.
-
-#lines(552, 580)
-
-The block addresses. The first `LADDR` (ten) are copied into the inode.
-If there are ten or more, an indirect block is allocated and written
-straight from `ib`, starting at `ib[LADDR]`; a file of exactly ten
-blocks, as in v7, thus gets an indirect block of zeros. v7 stopped
-there: it moved the remaining numbers down to the start of `ib` and
-wrote them, so no file could exceed `NINDIR` blocks, 64 KB. The kernel
-itself, installed as `/unix`, and the dictionary are larger than that, so the
-port adds a double indirect block (594--604): it allocates as many
-indirect blocks as the file needs, each written from the next 128
-entries of `ib`, and writes their numbers into a block of its own,
-addressed by `i_addr[11]`. This is the layout the kernel's `bmap`
-(#f("subr.c")) follows. Each entry of the double indirect array `dbl`
-which the file does not need is set to zero.
-
-The block addresses of all files, and the device numbers of special
-files, are then packed into the disk inode by `ltol3`. The comment at
-(605) tells GCC that the fall into the next case is intended, which it
-would otherwise warn about.
-
-#lines(581, 617)
-
-`badblk` says that no block is bad; v7 left the parameter unused.
-
-#lines(618, 625)
-#source("/boot/rootfs.proto")
-
-#f("rootfs.proto") is the prototype from which `mkfs` (#f("cmd/mkfs.c"))
-makes the root file system, the only file system of the port. v7 was
-distributed as an image of a whole disk; a site which made a new file
-system from a prototype did so on the PDP-11 itself. Here the image is
-made on the build machine, every time the system is built
-(#f("Makefile")).
-
-The format is v7's. The first word names the program to be written
-into block 0 as a bootstrap: here `/dev/null`, since QEMU loads the
-kernel from its ELF file, and nothing is written for the MP135
-machine's boot ROM (Section 1).
-The second line gives the size of the file system, 131072 blocks of 512
-bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
-gives the i-list blocks 2 to 4098. The system's own files take some 3
-MB of it; the rest is room for the users. The size is bounded by
-nothing but the configuration: three-byte block addresses
-(#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
-block 131072 (#f("qemuconf")). Then comes the root directory, described like
-every other file: its mode, as `d--755`, its owner, and its group.
-
-#lines(1, 3)
-
-Within a directory, each line names an entry and describes the file:
-the mode, the owner and the group, and, for a regular file, the file
-on the build machine from which its contents are copied, relative to
-the top of the tree. A `$` ends the directory. `mkfs` cannot make
-links, so `[`, which `test` recognizes as its own
-name, is a second copy of it. `1` is one of v7's shell scripts, like
-`true`, `false`, and `nohup`; `osh` is the old shell.
-
-Every file is owned by root but two in `/usr/adm` and the three home
-directories below. A `u` in the second
-place of a mode sets the set-user-id bit. It is given to the programs
-which were set-user-id root in v7's distribution, because they must act
-as the super-user whoever runs them: `login`, `mkdir`, `mv`, `newgrp`,
-`passwd`, `rmdir`, and `su` here, and `atrun` in `/usr/lib`. A `g` in
-the third place sets the set-group-id bit. `df`, `iostat`, `ps`, and
-`pstat` here, and `dmesg` in `/etc`, belong to group `sys` (2,
-#f("group")) and are set-group-id, so that they may read the memory and
-disk special files below, which only that group may read; `exec` gives
-the process the file's group (`getxfile`, #f("sys1.c")). v7 made the
-special files readable by anyone instead, and these programs plain.
-`dmesg`, `ps`, and `pstat` also accept a core file or a namelist named
-on the command line, and each gives up the group with
-`setgid(getgid())` before it uses one (#f("cmd/ps.c"),
-#f("cmd/dmesg.c")); otherwise any user could read `/dev/rrk0` or
-`/dev/mem` through them. Nor can a user stop one of them with a signal
-which dumps core and read the image, with whatever it had read from
-`/dev/kmem`, in the core file: `core` (#f("sig.c")) makes no file at all
-for a process whose user or group was changed by `exec`.
-
-#lines(4, 111)
-
-The special files. Each gives a type (`b` or `c`), and the major and
-minor device numbers, which are v7's (#f("qemu/c.c")): the console is
-character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
-and 2 of device 8 (#f("mem.c")), and `tty` is device 17. `ps`,
-`pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
-and `ps` reads process images through `mem` (#f("mem.c")); `cron` runs
-`dmesg` as `daemon` (#f("cmd/cron.c")). `root` and `swap` are the same
-block device, the one disk, since the swap area lies on it beyond the
-file system; `ps` reads `/dev/swap` for the images of processes which
-are swapped out, and `df` reads the free list of `/dev/root`. `rrk0` is
-the raw disk, character device 9 (#f("virtio_blk.c")), the same disk
-read without the buffer cache; v7's makefile made a raw node beside
-every block one. All five belong to group `sys` and have mode 640, so
-that besides root only the set-group-id programs above may read them,
-and no one but root may write them. v7's `/dev/makefile` made them
-readable by anyone, mode 644, which let any user read every file on
-the disk and every process's memory. There are no other terminals, so the
-lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
-
-#lines(112, 121)
-
-`/etc` holds the programs which v7 installed there, and its data:
-#f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
-`ddate`, an empty file in which `dump` records the dates of dumps.
-`mtab` and `utmp` are not made here: `mount` writes the first when it
-mounts something, and #f("rc") empties the second, creating it on the
-first boot.
-
-#lines(122, 138)
-
-`/tmp` may be written by anyone. Under `/usr`, `adm` holds three empty
-files. `messages` and `msgbuf` belong to `daemon`, so that `dmesg`, run
-by `cron` as `daemon` every ten minutes (#f("cmd/cron.c")), can append the
-kernel's new messages to the first and keep its copy of the message
-buffer in the second; `/usr/adm` itself may be written only by root.
-`wtmp` exists because `login` and `init` add their records to it only
-if it exists; then the dictionary, the games and their fortunes, and the
-programs and data of `/usr/lib`, among them `bc`'s library `lib.b` and
-the table of `units`; and the spool directory of `at`, with the file in
-which `atrun` keeps the time of its last run and the directory `past`
-into which it moves each job while it runs. There is no `/usr/bin`.
-`/usr/local/test` holds the regression tests, which are run on the
-system itself: `run.sh`, the test scripts in `cases`, each with its
-expected output, and in `utils` the programs and data files which the
-tests use, and `fs.img`, a small file system on which they run the file
-system checkers; `deep.img` and `many.img`, a chain of 40 directories
-and 3001 directories side by side, give `dump` and `dumpdir` trees
-deeper and wider than their tables, and `big.img` holds one file large
-enough to need a double indirect block.
-
-`dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
-directories which #f("passwd") gives those users, owned by each user
-and his group. `login` changes to the home directory and refuses a user
-whose directory does not exist, so without his `dmr` could not log in;
-`sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
-directories v7 gave them.
-
-#lines(139, 351)
-
-`/unix` is the kernel of the machine whose image this is: `boot/unix`,
-the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
-puts in its place for that machine's image (#f("Makefile")). It is not
-booted from here, since neither machine loads its kernel from the file
-system; it is there for its symbol table, which `ps`, `pstat`, and
-`iostat` read, and which must therefore be that of the running kernel.
-
-#lines(352, 353)
-#source("/etc/rc")
-
-#f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
-the shell when the system comes up, and waits for before it starts the
-terminals. Its standard input, output, and error are the root
-directory, opened for reading, so whatever is to be seen must be sent
-to `/dev/console` explicitly, as the notice and the date are. It
-removes the table of mounted file systems, since nothing is mounted
-yet, and empties `/etc/utmp`, the record of who is logged in, creating
-it on the first boot; it clears the temporary directories, and starts
-`update` (#f("cmd/update.c")), which calls `sync` every thirty seconds,
-and `cron` (#f("cmd/cron.c")). The line beginning with `:` is a comment,
-as in v7, where accounting was likewise left off.
-
-The file is v7's, less one line: v7 mounted `/usr` from a second disk
-partition, `/dev/rp3`, of which this system has none. The lines for the
-printer's lock and `/usr/tmp`, which do not exist here, are kept, since
-they do no harm. Since nothing here creates `/etc/mtab`, the `rm`
-complains on every boot that it does not exist; the complaint is lost,
-since the standard error cannot be written.
-
-#lines(1, 13)
-#source("/etc/ttys")
-
-#f("ttys") is v7's, unchanged. `init` (#f("cmd/init.c")) reads it to
-learn which terminals to serve: on each line the first character is
-`1` if a `getty` is to be run on the terminal and `0` if not, the
-second chooses the table with which `getty` (#f("cmd/getty.c")) begins,
-and the rest is the terminal's name in `/dev`. Only the console is
-enabled, with table `4`, that of v7's console DECwriter. The 32 lines
-`tty00` to `tty31` name the further terminal lines of a v7
-installation; they are disabled here, and since the image has no such
-special files (#f("rootfs.proto")), `init` would treat them as disabled
-even if they were enabled. A line may be enabled while the system runs
-by editing the file and sending `init` an interrupt, `kill -2 1`.
-
-#lines(1, 33)
-#source("/etc/passwd")
-
-#f("passwd") is v7's, but for two passwords. Each line describes one user, in
-fields separated by colons: the login name, the encrypted password, the
-user and group ids, a comment, the home directory, and the program to
-run in place of the shell, `/bin/sh` if the field is empty. `login`
-(#f("cmd/login.c")) finds a user by `getpwnam`, which reads the file
-through `getpwent` (#f("stdio/getpwent.c")), and compares the
-encryption by `crypt` (#f("gen/crypt.c")) of what is typed with the
-second field. `root` keeps the password of the v7 distribution.
-`daemon`'s `x` is not a value `crypt` can produce, so no one can log in
-by that name or become `daemon` with `su`. v7 gave `sys` and `bin` no
-password; here they have `daemon`'s `x`, since group `sys` may read the
-memory and disk special files (#f("rootfs.proto")), and `bin` may join
-that group with `newgrp` (#f("group")), so that any user could have
-read them through `su sys`. The accounts remain, and own their files.
-`dmr` and `uucp` have no password, and `dmr` can log in, but `uucp`'s
-program, `/usr/lib/uucico`, is not in the image.
-
-#lines(1, 6)
-#source("/etc/group")
-
-#f("group") is v7's, unchanged. Each line names a group, gives its
-password (none here), its group id, and the users who may join it with
-`newgrp`. `ls -lg` and `find -group` read it themselves to translate
-between names and numbers; `chgrp` and `newgrp` use `getgrnam` and its
-companions from the C library. Note that
-the users of #f("passwd") have group ids 1 to 4, so that `root` and
-`daemon` belong to `other`; there is no group 0, though most files of
-the image have group id 0 (#f("rootfs.proto")), and `ls -lg` therefore
-shows those files' group as a number. The memory and disk special
-files, and the programs which read them, have group `sys`.
-
-#lines(1, 4)
-
-= Classic Programs
+== Library and Mathematics <ch-libm>
+
+#source("/usr/src/libc/gen/getenv.c")
+
+#lines(1, 39)
+
+#source("/usr/src/libc/gen/ttyname.c")
+
+#lines(1, 48)
+
+#source("/usr/src/libc/gen/nlist.c")
+
+#lines(1, 61)
+
+#source("/usr/src/libc/stdio/fseek.c")
+
+#lines(1, 46)
+
+#source("/usr/src/libm/sqrt.c")
+
+#lines(1, 54)
+
+#source("/usr/src/libm/log.c")
+
+#lines(1, 58)
+
+#source("/usr/src/libc/gen/atoi.c")
+
+#lines(1, 26)
+
+#source("/usr/src/libc/gen/atol.c")
+
+#lines(1, 26)
+
+#source("/usr/src/libc/gen/calloc.c")
+
+#lines(1, 31)
+
+#source("/usr/src/libc/gen/perror.c")
+
+#lines(1, 26)
+
+#source("/usr/src/libc/gen/errlst.c")
+
+#lines(1, 38)
+
+#source("/usr/src/libc/gen/rand.c")
+
+#lines(1, 14)
+
+#source("/usr/src/libc/gen/sleep.c")
+
+#lines(1, 42)
+
+#source("/usr/src/libc/gen/ttyslot.c")
+
+#lines(1, 58)
+
+#source("/usr/src/libc/stdio/fgets.c")
+
+#lines(1, 19)
+
+#source("/usr/src/libc/stdio/ftell.c")
+
+#lines(1, 29)
+
+#source("/usr/src/libc/stdio/gcvt.c")
+
+#lines(1, 64)
+
+#source("/usr/src/libm/exp.c")
+
+#lines(1, 43)
+
+#source("/usr/src/libm/sin.c")
+
+#lines(1, 69)
+
+#source("/usr/src/libm/atan.c")
+
+#lines(1, 106)
+
+#source("/usr/src/libm/pow.c")
+
+#lines(1, 34)
+
+#source("/usr/src/libm/floor.c")
+
+#lines(1, 28)
+
+= Part Five: The Commands
+
+== Classic Programs <ch-classic>
 
 #source("/usr/src/cmd/ed.c")
 
@@ -14048,7 +13206,7 @@ from `/dev/mem` (`swmem`), at their physical ones; with `k`, both come
 from the core file. v7 opened `/dev/mem` twice, for the same two
 purposes, since on the PDP-11 a kernel address of its data was also a
 physical one. The kernel's addresses differ from the physical ones on
-both machines here (Section 1), and the two files do the translating
+both machines here (@ch-startup), and the two files do the translating
 (#f("mem.c")).
 
 `ps` first reads three kernel variables. `swapdev` is read into
@@ -14526,3 +13684,1392 @@ directory was left with a count of one, from its own ".", and no name,
 an inode lost until `icheck` or `clri` attended to it.
 
 #lines(48, 70)
+
+#source("/usr/src/games/wump.c")
+
+#lines(1, 383)
+
+#source("/usr/src/games/fortune.c")
+
+#lines(1, 32)
+
+#source("/usr/src/cmd/echo.c")
+
+#lines(1, 22)
+
+#source("/usr/src/cmd/cal.c")
+
+#lines(1, 208)
+
+#source("/usr/src/cmd/date.c")
+
+#lines(1, 164)
+
+#source("/usr/src/cmd/factor.c")
+
+#lines(1, 72)
+
+#source("/usr/src/cmd/primes.c")
+
+#lines(1, 137)
+
+#source("/usr/src/cmd/units.c")
+
+#lines(1, 471)
+
+#source("/usr/src/cmd/osh.c")
+
+#lines(1, 866)
+
+#source("/usr/src/games/arithmetic.c")
+
+#lines(1, 200)
+
+#source("/usr/src/games/hangman.c")
+
+#lines(1, 159)
+
+#source("/usr/src/games/quiz.c")
+
+#lines(1, 489)
+
+== Maintaining File Systems <ch-fsmaint>
+
+#source("/usr/src/cmd/icheck.c")
+
+#lines(1, 473)
+
+#source("/usr/src/cmd/dcheck.c")
+
+#lines(1, 215)
+
+#source("/usr/src/cmd/ncheck.c")
+
+#lines(1, 323)
+
+#source("/usr/src/cmd/clri.c")
+
+#lines(1, 81)
+
+#source("/usr/src/cmd/df.c")
+
+#lines(1, 95)
+
+#source("/usr/src/cmd/du.c")
+
+#lines(1, 172)
+
+#source("/usr/src/cmd/mount.c")
+
+#lines(1, 65)
+
+#source("/usr/src/cmd/umount.c")
+
+#lines(1, 55)
+
+#source("/usr/src/cmd/dump.c")
+
+#lines(1, 655)
+
+#source("/usr/src/cmd/restor.c")
+
+#lines(1, 1145)
+
+#source("/usr/src/cmd/quot.c")
+
+#lines(1, 235)
+
+#source("/usr/src/cmd/mknod.c")
+
+#lines(1, 46)
+
+#source("/usr/src/cmd/dd.c")
+
+#lines(1, 553)
+
+== Users and Privilege <ch-users>
+
+#source("/usr/src/cmd/su.c")
+
+#lines(1, 47)
+
+#source("/usr/src/cmd/passwd.c")
+
+#lines(1, 166)
+
+#source("/usr/src/cmd/newgrp.c")
+
+#lines(1, 55)
+
+#source("/usr/src/cmd/chmod.c")
+
+#lines(1, 182)
+
+#source("/usr/src/cmd/chown.c")
+
+#lines(1, 56)
+
+#source("/usr/src/cmd/who.c")
+
+#lines(1, 62)
+
+#source("/usr/src/cmd/write.c")
+
+#lines(1, 184)
+
+#source("/usr/src/cmd/wall.c")
+
+#lines(1, 67)
+
+#source("/usr/src/cmd/mesg.c")
+
+#lines(1, 56)
+
+#source("/usr/src/cmd/at.c")
+
+#lines(1, 310)
+
+#source("/usr/src/cmd/atrun.c")
+
+#lines(1, 112)
+
+#source("/usr/src/cmd/kill.c")
+
+#lines(1, 41)
+
+#source("/usr/src/cmd/chgrp.c")
+
+#lines(1, 54)
+
+#source("/usr/src/cmd/nice.c")
+
+#lines(1, 25)
+
+#source("/usr/src/cmd/stty.c")
+
+#lines(1, 259)
+
+#source("/usr/src/cmd/tty.c")
+
+#lines(1, 18)
+
+#source("/usr/src/cmd/pwd.c")
+
+#lines(1, 84)
+
+== Accounting and Status <ch-acct>
+
+#source("/usr/src/cmd/accton.c")
+
+#lines(1, 16)
+
+#source("/usr/src/cmd/ac.c")
+
+#lines(1, 256)
+
+#source("/usr/src/cmd/sa.c")
+
+#lines(1, 493)
+
+#source("/usr/src/cmd/pstat.c")
+
+#lines(1, 419)
+
+#source("/usr/src/cmd/iostat.c")
+
+#lines(1, 304)
+
+#source("/usr/src/cmd/time.c")
+
+#lines(1, 78)
+
+#source("/usr/src/cmd/prof.c")
+
+#lines(1, 318)
+
+== Files and Directories <ch-files>
+
+#source("/usr/src/cmd/ls.c")
+
+#lines(1, 422)
+
+#source("/usr/src/cmd/cp.c")
+
+#lines(1, 95)
+
+#source("/usr/src/cmd/mv.c")
+
+#lines(1, 299)
+
+#source("/usr/src/cmd/ln.c")
+
+#lines(1, 55)
+
+#source("/usr/src/cmd/rm.c")
+
+#lines(1, 166)
+
+#source("/usr/src/cmd/rmdir.c")
+
+#lines(1, 103)
+
+#source("/usr/src/cmd/find.c")
+
+#lines(1, 762)
+
+#source("/usr/src/cmd/od.c")
+
+#lines(1, 253)
+
+#source("/usr/src/cmd/file.c")
+
+#lines(1, 332)
+
+#source("/usr/src/cmd/cat.c")
+
+#lines(1, 63)
+
+#source("/usr/src/cmd/tee.c")
+
+#lines(1, 97)
+
+#source("/usr/src/cmd/tar/tar.c")
+
+#lines(1, 942)
+
+#source("/usr/src/cmd/cmp.c")
+
+#lines(1, 120)
+
+#source("/usr/src/cmd/touch.c")
+
+#lines(1, 70)
+
+#source("/usr/src/cmd/tp/tp.h")
+
+#lines(1, 84)
+
+#source("/usr/src/cmd/tp/tp_defs.h")
+
+#lines(1, 5)
+
+#source("/usr/src/cmd/tp/tp0.c")
+
+#lines(1, 9)
+
+#source("/usr/src/cmd/tp/tp1.c")
+
+#lines(1, 196)
+
+#source("/usr/src/cmd/tp/tp2.c")
+
+#lines(1, 361)
+
+#source("/usr/src/cmd/tp/tp3.c")
+
+#lines(1, 255)
+
+== Text Tools <ch-text>
+
+#source("/usr/src/cmd/sort.c")
+
+#lines(1, 915)
+
+#source("/usr/src/cmd/uniq.c")
+
+#lines(1, 144)
+
+#source("/usr/src/cmd/comm.c")
+
+#lines(1, 166)
+
+#source("/usr/src/cmd/join.c")
+
+#lines(1, 225)
+
+#source("/usr/src/cmd/tr.c")
+
+#lines(1, 133)
+
+#source("/usr/src/cmd/tail.c")
+
+#lines(1, 186)
+
+#source("/usr/src/cmd/wc.c")
+
+#lines(1, 86)
+
+#source("/usr/src/cmd/pr.c")
+
+#lines(1, 432)
+
+#source("/usr/src/cmd/tsort.c")
+
+#lines(1, 196)
+
+#source("/usr/src/cmd/sed/sed.h")
+
+#lines(1, 152)
+
+#source("/usr/src/cmd/sed/sed0.c")
+
+#lines(1, 978)
+
+#source("/usr/src/cmd/sed/sed1.c")
+
+#lines(1, 726)
+
+#source("/usr/src/cmd/rev.c")
+
+#lines(1, 44)
+
+#source("/usr/src/cmd/split.c")
+
+#lines(1, 81)
+
+#source("/usr/src/cmd/sum.c")
+
+#lines(1, 48)
+
+#source("/usr/src/cmd/look.c")
+
+#lines(1, 165)
+
+#source("/usr/src/cmd/col.c")
+
+#lines(1, 319)
+
+#source("/usr/src/cmd/ptx.c")
+
+#lines(1, 555)
+
+#source("/usr/src/cmd/deroff.c")
+
+#lines(1, 510)
+
+#source("/usr/src/cmd/diff3.c")
+
+#lines(1, 441)
+
+#source("/usr/src/cmd/fgrep.c")
+
+#lines(1, 348)
+
+#source("/usr/src/cmd/crypt.c")
+
+#lines(1, 91)
+
+== Little Languages <ch-lang>
+
+#source("/usr/src/cmd/test.c")
+
+#lines(1, 197)
+
+#source("/usr/src/cmd/expr.y")
+
+#lines(1, 693)
+
+#source("/usr/src/cmd/bc.y")
+
+#lines(1, 616)
+
+#source("/usr/src/cmd/dc/dc.h")
+
+#lines(1, 116)
+
+#source("/usr/src/cmd/dc/dc.c")
+
+#lines(1, 1947)
+
+#source("/usr/src/cmd/egrep.y")
+
+#lines(1, 616)
+
+#source("/usr/src/cmd/awk/awk.g.y")
+
+#lines(1, 285)
+
+#source("/usr/src/cmd/awk/awk.lx.l")
+
+#lines(1, 178)
+
+#source("/usr/src/cmd/awk/main.c")
+
+#lines(1, 147)
+
+#source("/usr/src/cmd/awk/b.c")
+
+#lines(1, 538)
+
+#source("/usr/src/cmd/awk/lib.c")
+
+#lines(1, 285)
+
+#source("/usr/src/cmd/awk/run.c")
+
+#lines(1, 876)
+
+#source("/usr/src/cmd/awk/tran.c")
+
+#lines(1, 233)
+
+#source("/usr/src/cmd/awk/token.c")
+
+#lines(1, 100)
+
+#source("/usr/src/cmd/awk/parse.c")
+
+#lines(1, 137)
+
+#source("/usr/src/cmd/awk/proc.c")
+
+#lines(1, 80)
+
+= Part Six: Building the System
+
+== Building the System <ch-build>
+
+#source("/Makefile")
+
+v7 was built on itself, by a collection of shell scripts and small
+makefiles, one per directory: `conf/makefile` linked the kernel from
+the archives `LIB1` and `LIB2` which the `mklib` scripts of `sys` and
+`dev` had made; `compall` and `mklib` compiled and archived the C
+library and the mathematical library; `cmake` compiled the commands
+one at a time, each by its own line of shell, and the larger commands
+(`sh`, `awk`, `dc`, and the rest) had makefiles of their own. None of
+these is used. The port is built on another machine, by one `make`,
+from this file and the fragments it includes: #f("sys.mk") for the
+kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"),
+#f("games/games.mk"), and `test.mk` for the regression tests. A single `make` sees the whole graph of
+dependencies, so that a changed header recompiles exactly the files
+which include it, a new `libc.a` relinks exactly the programs which use
+it, a parallel build gives the same result as a serial one, and a
+second `make` finds nothing to do. There is no compiler on the target
+system; everything which runs there is compiled here.
+
+The tools. `CROSS_COMPILE` is the prefix, in the manner of Linux's makefiles, of
+the cross compiler for the target, a bare-metal ARM toolchain. `HOSTCC` compiles
+the three programs which run during the build rather than on the
+target: `mkconf` (#f("mkconf.c")), `mkfs` (#f("cmd/mkfs.c")), and the
+`proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
+compiler, `cc`, and the programs it makes run there directly, so the
+build needs no more than a cross compiler for the target and the
+host's ordinary tools. `flex` takes the place of v7's `lex`.
+
+#lines(1, 6)
+
+`W` is the set of warnings, shared by the target and the host programs.
+Every file is compiled as strict C99 (`-std=c99 -Wpedantic`), and
+`-Werror` makes every warning an error, so the build is free of
+warnings or does not finish. The last three options insist on full
+prototypes: no old-style definitions, no empty parameter lists, and no
+external function without a prior declaration.
+
+The flags for the target (`CFLAGS`). `-ffreestanding` tells the compiler
+that there is no hosted C library behind the program. Among other
+things it implies `-fno-builtin`, so that calls of `printf` or `strcpy`
+remain calls of the port's own library rather than being replaced by
+code the compiler supplies. `-nostdlib` keeps the
+toolchain's own start-up file and libraries out of every link.
+`-mcpu=cortex-a7 -marm` selects the processor of both machines, and the
+ARM instruction set rather than Thumb.
+
+`-mfloat-abi=hard` makes the programs compute with the floating point
+unit, the VFPv4 with the Advanced SIMD extension that `-mcpu=cortex-a7`
+implies, and pass `double` arguments and results in its registers. Of
+the ARM's three conventions, `soft` computes with library routines in
+the integer registers; `softfp` uses the unit, but passes a `double` in
+a pair of integer registers, so that its code can be linked with `soft`
+code; and `hard` uses the unit and its registers for both. `hard` is
+chosen because every program on the system is built here from source,
+so there is no older code to be linked with, and a value stays in the
+register it was computed in, with no moves at each call and return. The
+kernel computes nothing in floating point, and the compiler must not use
+the unit's registers for anything else either, since they hold the
+state of the current user process; #f("sys.mk") gives the kernel
+`-mfloat-abi=soft`. `ASFLAGS` names the unit, `-mfpu=neon-vfpv4`, so that
+the assembler accepts the floating point instructions of #f("low.s"),
+#f("mch.s"), and `setjmp` (#f("gen/setjmp.s")); it marks no calling
+convention in the objects, which therefore link with code of either
+kind. `-Os` optimizes for size; v7
+compiled with `cc -O`, and the text of the MP135 machine's kernel, its
+code and constants, is 41,711 bytes with `-Os` against 48,850 with
+`-O`, which matters on the MP135 machine, where the whole kernel must
+fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
+
+`-Wl,-z,max-page-size=4096,-Ttext=0xa0` are options for the linker,
+which the compiler ignores when it only compiles; they apply to the
+link of every user program (20), never to the kernel, which is linked by
+its own line in #f("sys.mk"). The linker makes a program two loadable
+segments: the text, with the read-only constants, readable and
+executable, and the data, readable and writable. This is the ELF
+counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
+read-only and shares it among all the processes running the program. `max-page-size`
+places the data at the start of a new 4096-byte page, so that the two
+can be mapped with different permissions. `-Ttext=0xa0` links the text
+at address `0xa0`, which leaves room below it for the signal trampoline
+at 8 (#f("seg.h")), and for the ELF file header and up to three program
+headers (148 bytes). Most programs have three: the 64-bit division of
+`libgcc`, which `_doprnt` needs (#f("stdio/doprnt.c")), brings a section
+of unwinding information, `.ARM.exidx`, to which the linker gives a
+program header of its own beside the two loadable segments. The linker
+places the headers at the start of the text segment, which begins at
+offset 0 of the file as at address 0, and the kernel skips them when it
+loads the text (`xalloc`, #f("text.c")). Were there no room for them
+below the text, the text would still have to start at the same offset
+in its page of the file as in memory, and the file would carry a page
+of padding before it. `-MMD -MP` make the
+compiler write, beside each object, a file of its header dependencies
+(91).
+
+`HOSTCFLAGS` are the warnings alone: the host programs are compiled
+as any other program of the build machine.
+
+#lines(7, 14)
+
+`T` and `Q` shorten the output. `T` prints the name of a tool and the
+target in place of the whole command, and `Q` silences commands which
+are only housekeeping; with `V=1` on the command line both are empty
+and every command is shown. `COMPILE.c` and `COMPILE.s` are the
+variables used by `make`'s built-in rules, so redefining them is enough
+for every object in the tree to be compiled in place by those rules.
+
+`LINK` links a user program from the objects and archives among its
+prerequisites, in the order given there: `crt0.o` first, then the
+program, then `libm.a` and `libc.a`. `-s` strips the symbol table, as
+v7's `cc -s` did. `-lgcc` brings in the compiler's helper routines,
+such as the 64-bit division and the conversions between `double` and
+`long long`, which take more than one instruction; the compiler picks
+the library's variant for hard floating point from the same flags. That
+variant is compiled to Thumb code, so a user program does sometimes run
+in Thumb state (see `sendsig`, #f("machdep.c")).
+
+#lines(15, 20)
+
+`all` is the default goal: the QEMU machine's kernel and the root file system
+images of both machines, and, after the fragments are read (31), the
+kernels of both machines, whose names `KERNELS` only #f("sys.mk")
+supplies.
+
+`GEN` collects the generated sources, among them the `c.c` and
+`unix.ld` of each machine and the output of `bison`. `.SECONDARY` keeps
+`make` from deleting them as intermediate files once the objects are
+made. Every object and generated file depends on the `Makefile`
+itself (36), and every object on its own fragment as well, so that a
+change of flags or of a rule remakes everything it could affect.
+
+The fragments (24--29) build the parts of the system: the kernels
+(#f("sys.mk")), the two libraries, the commands, the games, and the
+regression tests, whose fragment `test.mk` compiles the test programs
+and makes the small file system on which the tests run the file system
+checkers; the tests themselves run on the target, from
+`/usr/local/test`.
+
+#lines(21, 36)
+
+`bison` replaces v7's `yacc`. It is run as itself, not in its POSIX
+mode, since the grammars use both v7's `%term` and some of `bison`'s
+own declarations.
+
+`boot/unix` is a copy of the QEMU machine's kernel, which `make qemu` boots. QEMU
+loads the ELF file at its link address and starts it at its entry,
+`_start` (#f("low.s")); the disk is the root image, on a virtio block
+device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
+on the standard input and output. `-m 512M` gives the machine the 512 MB of
+memory which #f("qemuconf") describes; QEMU's default is 128 MB.
+
+#lines(37, 47)
+
+The tree is built in place, and the programs are made where they will
+lie in the target's file system: `bin/cat`, `etc/init`,
+`usr/games/fortune`. The prototype file names them relative to the top
+of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
+`ROOTFS_STATIC` lists the files of the image which are not compiled:
+the shell scripts `1`, `true`, `false`, and `nohup`, the files of
+#f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
+the dictionary, the fortunes, `bc`'s library, and `cron`'s table. All
+but the files of `etc` and the table `usr/lib/crontab` are copied from
+the v7 tree (80). The image also holds the regression tests, in
+`/usr/local/test`: the test scripts and the data files from the
+repository, and the programs and the file system image which
+`test.mk` makes.
+
+Each machine has an image of its own, which differs from the other only
+in `/unix`: `boot/rootfs.img` for the QEMU machine, which `make qemu`
+boots, and `boot/rootfs-mp135.img` for the MP135 machine. The first two lines name each
+image's kernel and configuration, which `filter` picks out again from
+the prerequisites (`$^`) in the recipe. The prototype names the kernel
+as `boot/unix`, the copy of the QEMU machine's kernel; `sed` puts the machine's own
+kernel in its place, and passes the prototype to `mkfs` on its standard
+input, which `mkfs` reads as the file `/dev/stdin`. For the QEMU
+machine the substitution changes nothing.
+
+An image is rebuilt whenever its kernel, `mkfs`, the prototype, or any
+file in it changes. `V7_MKFS_TIME` gives `mkfs` the time to stamp on
+every file and on the super-block: 284774400 seconds, 10 January 1979,
+the date of the files on v7's own distribution tape. Two things depend
+on it. `cron`, like v7's, never reads a crontab dated zero, and would
+go on using the empty list it had not read; and the kernel takes its
+first idea of the date from the super-block of the root file system
+(`iinit`, #f("main.c")).
+
+`mkfs` writes only the blocks which it uses. The image is then extended
+to the end of the swap area, whose first block and length `awk` reads
+from the machine's configuration (#f("qemuconf"), #f("mp135conf")),
+since QEMU will not read or write a block beyond the end of the file. The swap area is 160 MB, but `truncate` only sets
+the length of the file, and the host stores no blocks for the part
+never written.
+
+#lines(48, 64)
+
+`mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
+the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
+`-Iusr/include` would also bring in v7's `<stdio.h>`. Instead a
+temporary directory is made, holding copies of the six headers `mkfs`
+needs, and put on the search path; `$$$$`, which reaches the shell as
+`$$`, makes its name unique, and the `trap` removes it however the
+compile ends.
+
+The copies are not exact. `mkfs` writes super-blocks, inodes, and free
+lists as structures, which the kernel must read as the ARM lays them
+out: least significant byte first, `int` and `long` four bytes, `long
+long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
+everything but `long`, which there is eight bytes, so `sed` turns each
+`typedef long` into `typedef int`, the same four bytes on every host;
+`daddr_t` and `off_t` are the types it changes. The host's own headers
+also define an `off_t` and a `time_t`, and C99 forbids a second
+definition of a type name, so the port's two are renamed in the
+copies. `mkfs` itself keeps the host's `time_t`, which `time`
+fills, and assigns it to the port's in the inodes and the super-block.
+Since `mkfs` is not one of the objects whose dependencies the compiler
+records, its headers and the `Makefile` are named as prerequisites
+explicitly: a `mkfs` built from stale headers would write a file system
+which the kernel misreads.
+
+#lines(65, 75)
+
+The directories of the image which hold built programs or copied files,
+and the copying of the files from the v7 tree. `etc` is left out: its
+files are kept in the repository, where the image expects them. So is
+`usr/lib/crontab`, v7's table without its last line (#f("cmd/cron.c")). `cp -f`
+replaces a previous copy, which is read-only like its original.
+
+#lines(76, 81)
+
+`clean` removes everything the build has made except the copied files
+and their directories. `.DELETE_ON_ERROR` removes a target whose
+command fails, so that a half-written image or object is never taken
+for a finished one; `mkfs` can therefore write the image in place.
+
+The dependency files are read only for sources which still exist (91).
+When a file in C is replaced by one in assembler, its old `.d` file
+still names the `.c` file as a prerequisite of the object, and `make`
+would otherwise stop for want of a rule to make it.
+
+#lines(82, 91)
+#source("/usr/sys/sys.mk")
+
+#f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
+the two `mklib` scripts, and follows their plan: the files of `sys` are
+archived as `LIB1`, those of `dev` as `LIB2`, and a kernel is linked
+from the machine-language files and the configuration followed by the
+two archives, so that only the procedures which something calls are
+taken from them. As in v7, the objects are made by the compiler with
+`-O` (here `-Os`) and the common `CFLAGS`; the kernel sources need no
+search path, since they name their headers relative to themselves, as
+`"../h/param.h"`.
+
+`LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
+machine only are kept out of `LIB2`: the UART and the disk of the QEMU
+machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
+machine (#f("stm32usart.c"), #f("stm32sd.c"), #f("stm32ddr.c")). The two sets
+take the same v7 names, such as `klopen` and `rkstrategy`, and so could
+not share one archive; each kernel is instead linked with its own
+machine's drivers (30, 31). `SYS_OBJ` names every kernel object, so that
+the `Makefile` can make them all depend on itself.
+
+v7's `conf/makefile` had a target `allsystems`, which ran `mkconf` and
+`make` once for each of six configurations and renamed each `unix`
+in turn. Here `BOARDS` lists the two configurations, and each kernel is
+made in a directory of its own, `conf/qemu/unix` and `conf/mp135/unix`,
+so that both are built by one `make`.
+
+#lines(1, 12)
+
+Every kernel object depends on #f("sys.mk") (13), and is compiled with
+`-mfloat-abi=soft` (14), which overrides the `hard` of the common
+`CFLAGS`: the compiler then uses no floating point instruction or
+register in the kernel, and the registers are left to the user
+processes (#f("Makefile")).
+
+The archives are remade from scratch each time, since `ar rc` would
+keep a member which had been deleted from the sources. v7's `mklib`
+named the members one by one, in a fixed order; GNU `ar` writes an index
+of the symbols, and the order no longer matters.
+
+#lines(13, 19)
+
+`mkconf` is a host program, built with the host compiler and the strict
+flags. It is run, as in v7, in the directory which is to receive its
+output, reading the configuration on its standard input; v7's
+`conf` held one `c.c` at a time, which is why `allsystems` had to
+build its kernels one after the other. A pattern rule with two targets
+is made by one run of its recipe, which suits `mkconf`, since it writes
+`c.c` and `unix.ld` together.
+
+`c.c` lies one directory deeper than v7's, but `mkconf` still writes
+v7's `#include "../h/param.h"`; the search path `-I$S/conf` (28) lets
+`"../h/..."` be found from `conf`.
+
+#lines(20, 29)
+
+The link. In place of v7's `ld -X -i l.o mch.o c.o ../sys/LIB1
+../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
+the machine's drivers, then the two archives, with no start-up file or
+library of the toolchain's (`-nostdlib`) and with the machine's linker
+script (#f("qemu/unix.ld")). `-i`, which gave the PDP-11 kernel separate
+instruction and data spaces, has no meaning on the ARM, and `-X`, which
+kept the local symbols, is not needed, since the GNU linker keeps them
+unless told otherwise. The kernel is not stripped:
+`ps`, `pstat`, and `iostat` look up the addresses of kernel variables
+in the symbol table of `/unix`. `low.o` comes first, so that its
+`_start` is the first instruction of the text, at the origin of `RAM`.
+
+#lines(30, 33)
+#source("/usr/src/libc/lib.mk")
+
+#f("libc/lib.mk") builds the C library, `libc.a`, and the start-up file
+`crt0.o` (#f("csu/crt0.s")), which every program is linked with first
+but which is not a member of the library. It replaces v7's `compall`,
+a list of `cc -c -O` commands, one per source file, and `mklib`, a
+single `ar` command naming every object. Here the members are simply
+all the C and assembler files of the library's four directories: the
+top, which holds `syscall.s` (#f("libc/syscall.s")) and `memcpy.c`;
+`gen`; `stdio`; and `sys`, the system call stubs, one per call as in
+v7 (#f("sys/read.s")). `memcpy.c` has no v7 original. It defines
+`memcpy` and `memset`, which GCC may call, even in freestanding code,
+to copy or clear a structure. As in #f("sys.mk"), the archive is
+remade from nothing, and its order does not matter.
+
+The search path puts the port's `usr/include` ahead of the toolchain's
+headers, so that `<stdio.h>` and the rest are v7's, while `<stdarg.h>`,
+which v7 did not have, comes from the compiler.
+
+#lines(1, 12)
+#source("/usr/src/libm/lib.mk")
+
+#f("libm/lib.mk") builds the mathematical library, `libm.a`, from every
+C file of `libm`, in place of v7's `compall` and `mklib` for the same
+directory. The functions are v7's, in C; v7's own `libm` already had no
+assembler. Commands are linked with it before `libc.a`
+(#f("cmd/cmd.mk")), since its functions call `frexp`, `ldexp`, and
+`modf` from the C library.
+
+#lines(1, 9)
+#source("/usr/src/cmd/cmd.mk")
+
+#f("cmd/cmd.mk") builds the commands. In v7 this was the work of
+`cmake`, a shell script with a line for each command, giving its
+compiler options and the directory in which it was installed, and of
+the makefiles in the directories of the larger commands. Here the
+single-file commands need no line each: every C or `yacc` file in
+`cmd` is a command (6), and it is installed in `/bin` unless it is one
+of those which v7's `cmake` put elsewhere. `CMD_ETC` and `CMD_USRLIB`
+are those exceptions, `/etc` and `/usr/lib`. `CMD_DIRS` are the
+commands of several files, each in a directory of its own.
+
+`mkfs` is left out (6): it is compiled for the build machine by the
+`Makefile` (#f("Makefile")), and the target has no copy. v7's `cmake`
+also distinguished commands linked with `-n`, shared pure text, from
+those linked with `-i`, separate instruction and data, which needed
+the larger address space; every program here is linked the same way.
+
+#lines(1, 9)
+
+The objects. `awk` is listed by hand, because three of its objects come
+from generated sources and one of its C files, `proc.c`, is not part of
+`awk` at all. The other directories contribute all their C files.
+`GEN` names the files which `bison`, `flex`, and `awk`'s `proc` write,
+and `proc` itself.
+
+#lines(10, 16)
+
+Commands are compiled with v7's headers ahead of the toolchain's.
+
+`YYSTACK_USE_ALLOCA` (20) is for the four parsers which `bison`
+writes. With it, the parser grows its stack with the compiler's built-in
+`alloca`; without it, it calls `malloc` and `free`, and, finding no
+`<stdlib.h>`, declares them itself, with types which need not agree
+with those of v7's library.
+
+#lines(17, 20)
+
+The links. Each command is linked from `crt0.o`, its own object, and the
+libraries, by `LINK` (#f("Makefile")). The commands of `/bin` all get
+`libm.a`, which only those calling its functions take anything from;
+`graph` is one. A command's directory is an order-only prerequisite,
+after the `|`: it must exist before the link, but its date, which
+changes whenever a file is added to it, must not make every command in
+it out of date.
+
+#lines(21, 40)
+
+`awk`. `bison` writes the parser and, with `--defines`, the header of
+token numbers (`awk.h`), as v7's `yacc -d` wrote `y.tab.h`; the `&:`
+says that one run makes both. `proc` is a program run during the build:
+compiled with the token numbers of `awk.h`, it writes `proctab.c`, the table of the
+procedures which evaluate each kind of node, as in v7. Being run here,
+it is compiled by the host compiler, without v7's headers, with
+`token.c`, whose table of token names it uses; both include `awk.h` and
+`awk.def`, and are recompiled when either changes.
+
+The lexical analyser is written by `flex` and edited on its way out by
+`sed`. `flex` marks its `yy_fatal_error` as a function which never
+returns, but the function ends with a call of `exit`, which v7's headers
+do not declare in that way, and the compiler rejects the combination;
+the attribute is dropped. The generated file includes `<string.h>` and
+`<stdlib.h>`, which v7 did not have and which would bring in the
+toolchain's declarations; `<stddef.h>` is included instead, for
+`size_t`.
+
+#lines(41, 50)
+#source("/usr/src/games/games.mk")
+
+#f("games/games.mk") builds the games, each from a single C file of
+`usr/src/games`, and links them with the C library into `/usr/games`.
+v7 had no script for them; its `games` directory held only the sources.
+The games use v7's headers and nothing else from the tree, and none of
+them needs `libm.a`. v7's `chess`, a directory of files partly in PDP-11 assembler, is not
+among them.
+
+#lines(1, 8)
+#source("/usr/sys/conf/qemu/unix.ld")
+
+#f("qemu/unix.ld") is the linker script for the QEMU machine's kernel. It is
+written by `mkconf` (#f("mkconf.c")) from the `ram` line of
+#f("qemuconf"), in the pass which in v7 wrote `l.s`, and is used by the
+link in #f("sys.mk").
+
+v7 needed no script. Its kernel was linked with `ld -i`: instruction
+and data in two separate spaces of 64 KB, each beginning at address
+zero, with `l.s`, the interrupt vectors, at the bottom. The loader
+defined `_etext`, `_edata`, and `_end`, and the start-up code in
+`mch.s` used them to move the text to its resting place above the data
+and to clear the memory from `_edata` to `_end`, before it turned on the
+memory management unit. The ARM kernel is one image, linked at the
+kernel address at which it runs, 0xc0000000 (@ch-startup), and loaded at
+the physical address which that address maps to; there is nothing to
+move.
+
+`MEMORY` declares the one region, `RAM`: the first 64 MB of the QEMU
+machine's memory, by its kernel address. The kernel takes only its start; process
+images are kept in the `core` above it (#f("qemuconf")), which the
+linker is not told about.
+
+`u` (5) is the per process data area, at `UBASE` (#f("param.h")): the
+assignment defines the symbol which #f("user.h") declares, as v7's
+`_u = 140000` did in `mch.s`. Its address lies outside `RAM`, in the
+top 2 MB which `machine_init` (#f("machdep.c")) maps through `kl3u`.
+
+`start` (7) is the physical address of `_start`, and the entry point
+(6): QEMU loads the file itself, and begins execution at the entry
+point with the MMU off, so it must be given the physical address. The
+first input file is `low.o` (#f("sys.mk")), so `_start` (#f("low.s")) is
+the first instruction of the image.
+
+#lines(1, 7)
+
+The kernel's text, read-only data, and initialised data follow one
+another from the origin of `RAM`. `AT` gives each section its load
+address, the kernel address less 0x80000000, which the ELF file
+records as the physical address of its segment and QEMU loads it at,
+0x40000000 onwards.
+
+`__bss_start` and `__bss_end` bound the uninitialised data, and play the
+part of v7's `_edata` and `_end`: `_start` clears the memory between
+them, a word at a time, before it calls any C. That is done with the
+memory management unit off, when the processor faults on a store to an
+unaligned word, hence the `ALIGN(4)`. `*(COMMON)` would collect
+tentative definitions left as common symbols; GCC makes them only when
+asked with `-fcommon`, which the port does not use, so it collects
+nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
+kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
+
+#lines(8, 16)
+
+`.ddrbss` holds the table `kl3u` reserved in #f("mch.s"), which must
+lie on a 4 KB boundary. `NOLOAD` makes it like `.bss`: it occupies
+memory but nothing in the file. It is cleared, not by `_start`, but by
+`machine_init` (#f("machdep.c")), between the symbols `__ddrbss_start`
+and `__ddrbss_end`. On the QEMU machine the distinction serves nothing,
+and the section simply follows `.bss` in `RAM`; it exists for the MP135
+machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
+written until `machine_init` has started it.
+
+#lines(17, 22)
+#source("/usr/sys/conf/mp135/unix.ld")
+
+#f("mp135/unix.ld") is the MP135 machine's linker script, written by `mkconf`
+from #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
+regions, in the difference between kernel and physical addresses, and
+in where it puts `.ddrbss` and what it puts there; `u` and `start` are
+defined in the same way.
+
+`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, in
+which the kernel runs, by its kernel address 0xc01e0000.
+The text, data, and `.bss` of the kernel must all fit there; the linker
+reports an overflow of the region, so a kernel which has outgrown SYSRAM
+fails to link rather than to boot. `TAB` is the DDR memory, at
+physical `0xc0000000` and kernel address 0xc0200000, which holds the
+table `kl3u` in `.ddrbss`, at its very start, and after it the tables
+of the configuration; `core` follows them (#f("mp135conf")). The first
+byte of the text, at the start of SYSRAM, is `_start`. The build makes
+only this ELF file; the image which the boot ROM would load, with its
+header, is not made.
+
+Here the separation of `.ddrbss` from `.bss` matters. The DDR is dead
+until `ddrinit` (#f("stm32ddr.c")) has started it, so `_start`
+(#f("low.s")) may clear only `.bss`, in SYSRAM; `machine_init`
+(#f("machdep.c")) clears `.ddrbss` after the DDR is running. `NOLOAD`
+gives the section no contents in the file, so that nothing has to be
+loaded into DDR before it is running.
+
+The tables of the configuration, from `buf` to `cfree`
+(#f("mp135/c.c")), are the uninitialised data of `c.o`. At the sizes
+which #f("mp135conf") gives them they take some three quarters of a
+megabyte, six times SYSRAM, so `EXCLUDE_FILE` (16) keeps them out of
+`.bss`, and the pattern `*/c.o` (21) puts them into `.ddrbss` after
+`kl3u`. Nothing in `c.o`'s uninitialised data is used before
+`machine_init` has started the DDR and cleared the section: `corebase`
+and `coreoff` are set only after that.
+
+#lines(1, 24)
+#source("/usr/src/cmd/mkfs.c")
+
+`mkfs` makes an empty file system, or, given a prototype file, one
+already populated with directories, files, and special files. In v7 it
+was an ordinary command, kept in `/etc`, which the administrator ran on
+the PDP-11 against a disk partition. Here it never runs on the target:
+it is compiled by the `Makefile` (#f("Makefile")) for the build
+machine, where it writes the images of the root file system,
+`boot/rootfs.img` and `boot/rootfs-mp135.img`, from #f("rootfs.proto"), taking the files from the
+tree in which the system was built.
+
+Since the image must be read by the ARM kernel, `mkfs` must lay out
+every structure exactly as the kernel does. It does so by being compiled
+from the port's own headers, copied with every `long` type made an
+`int` (#f("Makefile")), so that on a 64-bit build machine
+the super-block (#f("filsys.h")), the inodes (#f("ino.h")),
+the free-list blocks (#f("fblk.h")), the directory entries
+(#f("dir.h")), and the indirect blocks all come out with the ARM's
+sizes, alignment, and byte order, without a line of conversion. The
+changes from v7 are therefore few: those needed to compile it as a
+program of the host, those of strict C99, the packing of block
+addresses, a bigger limit on the size of a file, and the loss of the
+bootstrap block.
+
+`NIPB`, `NINDIR`, and `NDIRECT` are the numbers of inodes, block
+addresses, and directory entries in a block: 4, 128, and 32. `MAXFILEBLK`
+(9) is new: the largest number of blocks a file may have when ten are
+addressed directly, 128 through the indirect block, and 128 times 128
+through the double indirect block. `itoo` is the position of an inode in
+its block, to go with the `itod` of #f("param.h"); like it, it is now
+for four inodes to a block, masking with 3 where v7 masked with 7.
+
+The headers of the host's library (14--17) replace v7's `<a.out.h>`,
+which was needed for the bootstrap; `<stdio.h>` too is the host's. The
+headers of `<sys/...>` are the port's; the `Makefile` arranges for them
+to be found without v7's `<stdio.h>`.
+
+#lines(1, 24)
+
+`ltol3` packs `n` block addresses, each held in a `daddr_t`, into three
+bytes apiece, the form they take in an inode on the disk
+(#f("ino.h")). v7 took it from the C library. That library is not
+available to a program of the host, and v7's version was in any case
+written for the PDP-11, which stores the high half of a `long` first:
+it copied the bytes at offsets 0, 2, and 3 of the `long`. On the ARM
+those would be bits 0 to 7, 16 to 23, and 24 to 31, and bits 8 to 15
+would be lost. The private version takes the bits by shifting, least
+significant byte first, which is the order in which `iexpand`
+(#f("iget.c")) unpacks them. It is `static`, being defined before its
+one use.
+
+#lines(25, 34)
+
+The global variables. `buf` is a scratch block. `fbuf` and `filsys` are
+unions of a structure with a block-sized array, so that `wtfs` and
+`rdfs`, which always transfer a whole block, never run off the end of
+the structure. v7 then referred to the structure's members as though
+they belonged to the union, as in `filsys.s_fsize`; early C compilers
+allowed it, since member names were global, but C99 does not. The two
+`#define`s (49, 55) turn every such use into a reference through the
+member, `filsys.fs.s_fsize`, while the unions keep their v7 names: a
+macro is not expanded again within its own expansion. v7's `struct exec
+head`, the header of the bootstrap program, is gone with the bootstrap.
+
+#lines(35, 69)
+
+`main`. The time stamped on every file and on the super-block is taken
+from the environment variable `V7_MKFS_TIME` if it is set, so that the
+build gives the same image every time, and every file the date of the
+v7 distribution (#f("Makefile")). `fsys` serves as a temporary for the
+purpose before it receives its proper value.
+
+The arguments are the file to be written and the prototype. Under
+`STANDALONE`, never defined in this system, v7 could build `mkfs` as a
+program for the bare machine, asking for its arguments on the console;
+that code is kept but never compiled.
+
+#lines(70, 122)
+
+If the second argument is not a file which can be opened, it must be a
+number, the size of an empty file system in blocks, with one inode for
+every 25 blocks, up to the limit of 65500 inodes which a two-byte
+`ino_t` allows. The casts here and below to `unsigned` make explicit
+that an `int` or a `long` is compared with a value of type `size_t`,
+which the `sizeof` in `NIPB` gives, as an unsigned number
+(#f("fio.c")). v7 printed a `long` with its own
+`%D`; C99 spells it `%ld`. The doubled parentheses at 125, and in
+`getnum` at 338, are those of #f("malloc.c").
+
+#lines(123, 142)
+
+From a prototype, the first word names a bootstrap program. v7 copied
+its text and data into block 0, which the PDP-11's boot ROMs read to
+start the system. QEMU loads the kernel from its ELF file, and reads no
+bootstrap from the disk; the prototype names `/dev/null`, and the file
+is opened only to be closed again. The `else` and the blank
+line which follow (153, 154) are what is left of v7's code around the
+deleted lines, as is the comment, which has lost its second line.
+
+The next two words are the size of the file system in blocks and the
+number of inodes.
+
+#lines(143, 167)
+
+`s_m` and `s_n` describe the interleaving of the free list, three and
+500 unless the command line says otherwise (see `bflist`). The i-list
+is cleared, the free list built, the files made by `cfile`, and the
+super-block written last, since `alloc` and `bfree` keep it up to date
+as they go. In the message for a bad ratio, `s_isize - 2` is an `int`,
+since `s_isize` is an `unsigned short`, and the format is corrected to
+`%d`. `s_fsize` is a `daddr_t`, an `int` in the copied headers, and is
+cast to the `long` which `%ld` expects; so is `bno` in the messages of
+`rdfs` and `wtfs`.
+
+#lines(168, 201)
+
+`cfile` makes one file, from the next entry of the prototype, and, if
+the file is a directory, all the files within it, by calling itself.
+The entry begins with the mode, as in `d--755`: the type, a `u` for
+set-user-id, a `g` for set-group-id, and three octal digits; then the
+owner and the group. The file is assembled in the kernel's in-core
+inode structure (#f("inode.h")), which `mkfs` uses as a convenient
+container.
+
+`ib` holds the numbers of the file's blocks as they are allocated, and
+now has room for `MAXFILEBLK` of them, not `NINDIR`. It lies on the
+stack and takes 66 KB in every level of the recursion, which on the
+host is of no consequence.
+
+#lines(202, 253)
+
+A regular file is copied from the named file a block at a time, each
+block written as soon as it is full (`newblk`). A special file's
+address field holds its major and minor device numbers. A directory
+receives its entries `.` and `..`, and then one entry for each name up
+to the `$` which ends it, each followed by the description of the file
+to which it refers; the inode number in the entry is `ino+1`, the
+number which `cfile` will give that file. The first call, with `par`
+zero, makes the root, whose `..` is itself.
+
+#lines(254, 313)
+
+`gmode` translates a character of the mode by its position in `s`. v7
+returned `(&m0)[i]`, taking the four arguments `m0` to `m3` to lie one
+after another on the stack, as they did on the PDP-11. The ARM passes
+the first four arguments of a call in registers and only the rest on
+the stack, so the four are copied into an array (319).
+
+#lines(314, 327)
+
+`getnum` and `getstr` read a number and a word of the prototype; a `:`
+begins a comment which runs to the end of the line.
+
+#lines(328, 378)
+
+`rdfs` and `wtfs` read and write block `bno` of the image, through the
+host's `lseek`, `read`, and `write`. `rdfs` is now `static`: nothing
+calls it before its definition, so it needs no separate declaration,
+which `-Wmissing-prototypes` would demand of an external function.
+`wtfs`, called first by `main`, is declared at (64). Its message (401)
+had v7's `%D`, now `%ld`, which `rdfs` already used.
+
+#lines(379, 404)
+
+`alloc` and `bfree` take blocks from the free list and return them to it
+exactly as the kernel's `alloc` and `free` do (#f("alloc.c")):
+the super-block holds up to `NICFREE` free blocks, and when it is
+exhausted or full, the list is read from or written to the block at
+hand. `bfree` is `static` for the same reason as `rdfs`.
+
+#lines(405, 441)
+
+`entry` adds a directory entry to the directory's current block and,
+when the block is full, writes it with `newblk`. `newblk` allocates and
+writes a block of the current file, records its number in `ib`, and
+clears the buffer. v7 reported "indirect block full" when `ib` held
+`NINDIR` numbers; the limit is now `MAXFILEBLK`, but the message is
+v7's.
+
+#lines(442, 480)
+
+`getch` reads the prototype, or, for an empty file system, the string
+in `charp` which describes its root directory.
+
+#lines(481, 493)
+
+`bflist` builds the free list, and makes inode 1, which holds the bad
+blocks of the disk; `badblk` reports none, so it is empty. The root is
+therefore inode 2, as the kernel expects (`ROOTINO`, #f("param.h")).
+
+The blocks are freed in an interleaved order: each group of `s_n`
+blocks is freed in the order given by `adr`, which takes every
+`s_m`-th block. Since the list is a stack, consecutive allocations then
+fall `s_m` blocks apart, which on a rotating disk gave the processor
+time to ask for the next block before it passed under the head. The
+order is harmless on an SD card or a file. Block 0 is freed first and
+so lies at the bottom of the stack, where `alloc` takes it as the sign
+that no space is left.
+
+The braces added around the inner `if` (537--548) only make explicit
+that the `else` belongs to it, as it always did; without them GCC warns
+of an ambiguous `else`.
+
+#lines(494, 551)
+
+`iput` writes a file's inode into the i-list. If the i-list is full, it
+is the prototype's fault, and an error is reported. All three times are
+the time of the build.
+
+#lines(552, 580)
+
+The block addresses. The first `LADDR` (ten) are copied into the inode.
+If there are ten or more, an indirect block is allocated and written
+straight from `ib`, starting at `ib[LADDR]`; a file of exactly ten
+blocks, as in v7, thus gets an indirect block of zeros. v7 stopped
+there: it moved the remaining numbers down to the start of `ib` and
+wrote them, so no file could exceed `NINDIR` blocks, 64 KB. The kernel
+itself, installed as `/unix`, and the dictionary are larger than that, so the
+port adds a double indirect block (594--604): it allocates as many
+indirect blocks as the file needs, each written from the next 128
+entries of `ib`, and writes their numbers into a block of its own,
+addressed by `i_addr[11]`. This is the layout the kernel's `bmap`
+(#f("subr.c")) follows. Each entry of the double indirect array `dbl`
+which the file does not need is set to zero.
+
+The block addresses of all files, and the device numbers of special
+files, are then packed into the disk inode by `ltol3`. The comment at
+(605) tells GCC that the fall into the next case is intended, which it
+would otherwise warn about.
+
+#lines(581, 617)
+
+`badblk` says that no block is bad; v7 left the parameter unused.
+
+#lines(618, 625)
+#source("/boot/rootfs.proto")
+
+#f("rootfs.proto") is the prototype from which `mkfs` (#f("cmd/mkfs.c"))
+makes the root file system, the only file system of the port. v7 was
+distributed as an image of a whole disk; a site which made a new file
+system from a prototype did so on the PDP-11 itself. Here the image is
+made on the build machine, every time the system is built
+(#f("Makefile")).
+
+The format is v7's. The first word names the program to be written
+into block 0 as a bootstrap: here `/dev/null`, since QEMU loads the
+kernel from its ELF file, and nothing is written for the MP135
+machine's boot ROM (@ch-startup).
+The second line gives the size of the file system, 131072 blocks of 512
+bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
+gives the i-list blocks 2 to 4098. The system's own files take some 3
+MB of it; the rest is room for the users. The size is bounded by
+nothing but the configuration: three-byte block addresses
+(#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
+block 131072 (#f("qemuconf")). Then comes the root directory, described like
+every other file: its mode, as `d--755`, its owner, and its group.
+
+#lines(1, 3)
+
+Within a directory, each line names an entry and describes the file:
+the mode, the owner and the group, and, for a regular file, the file
+on the build machine from which its contents are copied, relative to
+the top of the tree. A `$` ends the directory. `mkfs` cannot make
+links, so `[`, which `test` recognizes as its own
+name, is a second copy of it. `1` is one of v7's shell scripts, like
+`true`, `false`, and `nohup`; `osh` is the old shell.
+
+Every file is owned by root but two in `/usr/adm` and the three home
+directories below. A `u` in the second
+place of a mode sets the set-user-id bit. It is given to the programs
+which were set-user-id root in v7's distribution, because they must act
+as the super-user whoever runs them: `login`, `mkdir`, `mv`, `newgrp`,
+`passwd`, `rmdir`, and `su` here, and `atrun` in `/usr/lib`. A `g` in
+the third place sets the set-group-id bit. `df`, `iostat`, `ps`, and
+`pstat` here, and `dmesg` in `/etc`, belong to group `sys` (2,
+#f("group")) and are set-group-id, so that they may read the memory and
+disk special files below, which only that group may read; `exec` gives
+the process the file's group (`getxfile`, #f("sys1.c")). v7 made the
+special files readable by anyone instead, and these programs plain.
+`dmesg`, `ps`, and `pstat` also accept a core file or a namelist named
+on the command line, and each gives up the group with
+`setgid(getgid())` before it uses one (#f("cmd/ps.c"),
+#f("cmd/dmesg.c")); otherwise any user could read `/dev/rrk0` or
+`/dev/mem` through them. Nor can a user stop one of them with a signal
+which dumps core and read the image, with whatever it had read from
+`/dev/kmem`, in the core file: `core` (#f("sig.c")) makes no file at all
+for a process whose user or group was changed by `exec`.
+
+#lines(4, 111)
+
+The special files. Each gives a type (`b` or `c`), and the major and
+minor device numbers, which are v7's (#f("qemu/c.c")): the console is
+character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
+and 2 of device 8 (#f("mem.c")), and `tty` is device 17. `ps`,
+`pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
+and `ps` reads process images through `mem` (#f("mem.c")); `cron` runs
+`dmesg` as `daemon` (#f("cmd/cron.c")). `root` and `swap` are the same
+block device, the one disk, since the swap area lies on it beyond the
+file system; `ps` reads `/dev/swap` for the images of processes which
+are swapped out, and `df` reads the free list of `/dev/root`. `rrk0` is
+the raw disk, character device 9 (#f("virtio_blk.c")), the same disk
+read without the buffer cache; v7's makefile made a raw node beside
+every block one. All five belong to group `sys` and have mode 640, so
+that besides root only the set-group-id programs above may read them,
+and no one but root may write them. v7's `/dev/makefile` made them
+readable by anyone, mode 644, which let any user read every file on
+the disk and every process's memory. There are no other terminals, so the
+lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
+
+#lines(112, 121)
+
+`/etc` holds the programs which v7 installed there, and its data:
+#f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
+`ddate`, an empty file in which `dump` records the dates of dumps.
+`mtab` and `utmp` are not made here: `mount` writes the first when it
+mounts something, and #f("rc") empties the second, creating it on the
+first boot.
+
+#lines(122, 138)
+
+`/tmp` may be written by anyone. Under `/usr`, `adm` holds three empty
+files. `messages` and `msgbuf` belong to `daemon`, so that `dmesg`, run
+by `cron` as `daemon` every ten minutes (#f("cmd/cron.c")), can append the
+kernel's new messages to the first and keep its copy of the message
+buffer in the second; `/usr/adm` itself may be written only by root.
+`wtmp` exists because `login` and `init` add their records to it only
+if it exists; then the dictionary, the games and their fortunes, and the
+programs and data of `/usr/lib`, among them `bc`'s library `lib.b` and
+the table of `units`; and the spool directory of `at`, with the file in
+which `atrun` keeps the time of its last run and the directory `past`
+into which it moves each job while it runs. There is no `/usr/bin`.
+`/usr/local/test` holds the regression tests, which are run on the
+system itself: `run.sh`, the test scripts in `cases`, each with its
+expected output, and in `utils` the programs and data files which the
+tests use, and `fs.img`, a small file system on which they run the file
+system checkers; `deep.img` and `many.img`, a chain of 40 directories
+and 3001 directories side by side, give `dump` and `dumpdir` trees
+deeper and wider than their tables, and `big.img` holds one file large
+enough to need a double indirect block.
+
+`dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
+directories which #f("passwd") gives those users, owned by each user
+and his group. `login` changes to the home directory and refuses a user
+whose directory does not exist, so without his `dmr` could not log in;
+`sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
+directories v7 gave them.
+
+#lines(139, 351)
+
+`/unix` is the kernel of the machine whose image this is: `boot/unix`,
+the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
+puts in its place for that machine's image (#f("Makefile")). It is not
+booted from here, since neither machine loads its kernel from the file
+system; it is there for its symbol table, which `ps`, `pstat`, and
+`iostat` read, and which must therefore be that of the running kernel.
+
+#lines(352, 353)
+#source("/etc/rc")
+
+#f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
+the shell when the system comes up, and waits for before it starts the
+terminals. Its standard input, output, and error are the root
+directory, opened for reading, so whatever is to be seen must be sent
+to `/dev/console` explicitly, as the notice and the date are. It
+removes the table of mounted file systems, since nothing is mounted
+yet, and empties `/etc/utmp`, the record of who is logged in, creating
+it on the first boot; it clears the temporary directories, and starts
+`update` (#f("cmd/update.c")), which calls `sync` every thirty seconds,
+and `cron` (#f("cmd/cron.c")). The line beginning with `:` is a comment,
+as in v7, where accounting was likewise left off.
+
+The file is v7's, less one line: v7 mounted `/usr` from a second disk
+partition, `/dev/rp3`, of which this system has none. The lines for the
+printer's lock and `/usr/tmp`, which do not exist here, are kept, since
+they do no harm. Since nothing here creates `/etc/mtab`, the `rm`
+complains on every boot that it does not exist; the complaint is lost,
+since the standard error cannot be written.
+
+#lines(1, 13)
+#source("/etc/ttys")
+
+#f("ttys") is v7's, unchanged. `init` (#f("cmd/init.c")) reads it to
+learn which terminals to serve: on each line the first character is
+`1` if a `getty` is to be run on the terminal and `0` if not, the
+second chooses the table with which `getty` (#f("cmd/getty.c")) begins,
+and the rest is the terminal's name in `/dev`. Only the console is
+enabled, with table `4`, that of v7's console DECwriter. The 32 lines
+`tty00` to `tty31` name the further terminal lines of a v7
+installation; they are disabled here, and since the image has no such
+special files (#f("rootfs.proto")), `init` would treat them as disabled
+even if they were enabled. A line may be enabled while the system runs
+by editing the file and sending `init` an interrupt, `kill -2 1`.
+
+#lines(1, 33)
+#source("/etc/passwd")
+
+#f("passwd") is v7's, but for two passwords. Each line describes one user, in
+fields separated by colons: the login name, the encrypted password, the
+user and group ids, a comment, the home directory, and the program to
+run in place of the shell, `/bin/sh` if the field is empty. `login`
+(#f("cmd/login.c")) finds a user by `getpwnam`, which reads the file
+through `getpwent` (#f("stdio/getpwent.c")), and compares the
+encryption by `crypt` (#f("gen/crypt.c")) of what is typed with the
+second field. `root` keeps the password of the v7 distribution.
+`daemon`'s `x` is not a value `crypt` can produce, so no one can log in
+by that name or become `daemon` with `su`. v7 gave `sys` and `bin` no
+password; here they have `daemon`'s `x`, since group `sys` may read the
+memory and disk special files (#f("rootfs.proto")), and `bin` may join
+that group with `newgrp` (#f("group")), so that any user could have
+read them through `su sys`. The accounts remain, and own their files.
+`dmr` and `uucp` have no password, and `dmr` can log in, but `uucp`'s
+program, `/usr/lib/uucico`, is not in the image.
+
+#lines(1, 6)
+#source("/etc/group")
+
+#f("group") is v7's, unchanged. Each line names a group, gives its
+password (none here), its group id, and the users who may join it with
+`newgrp`. `ls -lg` and `find -group` read it themselves to translate
+between names and numbers; `chgrp` and `newgrp` use `getgrnam` and its
+companions from the C library. Note that
+the users of #f("passwd") have group ids 1 to 4, so that `root` and
+`daemon` belong to `other`; there is no group 0, though most files of
+the image have group id 0 (#f("rootfs.proto")), and `ls -lg` therefore
+shows those files' group as a number. The memory and disk special
+files, and the programs which read them, have group `sys`.
+
+#lines(1, 4)
