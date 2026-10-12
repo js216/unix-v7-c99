@@ -27,13 +27,15 @@ void
 rmdir(char *d)
 {
 	int	fd;
-	char	*np, name[500];
+	char	*np, name[strlen(d)+4];
 	struct	stat	st, cst;
 	struct	direct	dir;
 
 	strcpy(name, d);
 	if((np = rindex(name, '/')) == NULL)
 		np = name;
+	else
+		np++;
 	if(stat(name,&st) < 0) {
 		fprintf(stderr, "rmdir: %s non-existent\n", name);
 		++Errors;
