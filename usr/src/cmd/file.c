@@ -8,7 +8,8 @@
 #include <ctype.h>
 int in;
 int i  = 0;
-char buf[512];
+int ibuf[129];
+#define buf ((char *)ibuf)
 char *fort[] = {
 	"function","subroutine","common","dimension","block","integer",
 	"real","data","double",0};
@@ -36,14 +37,14 @@ main(int argc, char **argv)
 		}
 		while ((p = fgets(ap, 128, fl)) != NULL) {
 			int l = strlen(p);
-			if (l>0)
+			if (l>0 && p[l-1]=='\n')
 				p[l-1] = '\0';
 			printf("%s:	", p);
 			type(p);
 			if (ifile>=0)
 				close(ifile);
 		}
-		exit(1);
+		exit(0);
 	}
 	while(argc > 1) {
 		printf("%s:	", argv[1]);
@@ -91,11 +92,16 @@ spcl:
 		return;
 	}
 	in = read(ifile, buf, 512);
-	if(in == 0){
-		printf("empty\n");
+	if(in <= 0){
+		printf(in? "cannot read\n": "empty\n");
 		return;
 	}
-	switch(*(int *)buf) {
+	buf[in] = 0;
+	switch(*ibuf) {
+
+	case 0x464c457f:
+		printf("executable\n");
+		goto out;
 
 	case 0410:
 		printf("pure ");
@@ -108,7 +114,7 @@ spcl:
 	case 0407:
 exec:
 		printf("executable");
-		if(((int *)buf)[4] != 0)
+		if(ibuf[4] != 0)
 			printf(" not stripped");
 		printf("\n");
 		goto out;
