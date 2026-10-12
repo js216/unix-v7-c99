@@ -177,8 +177,10 @@ encode(char *pname, struct dent *dptr)	/* pname points to the pathname
 		} else
 			top += BRKINCR;
 	}
-	if((n=strlen(pname)) > NAMELEN) {
-		printf("Pathname too long - %s\nFile ignored\n",pname);
+	for(n=0; n<NAMELEN && pname[n]; n++)
+		;
+	if(n >= NAMELEN) {
+		printf("Pathname too long - %.32s\nFile ignored\n",pname);
 		clrent(dptr);
 	}
 	else {

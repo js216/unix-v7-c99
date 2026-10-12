@@ -50,7 +50,7 @@ extern struct	dent {	/* in core version of tent with "unused" removed
 }  dir[MDIRENT];
 
 extern char	map[MAPSIZE];
-extern char	name[NAMELEN];
+extern char	name[2*NAMELEN];
 extern char	name1[NAMELEN];
 extern	char mt[];
 extern	char tc[];

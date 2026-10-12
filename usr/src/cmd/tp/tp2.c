@@ -15,7 +15,7 @@ clrdir(void)
 	j = ndirent * (DIRSZ/sizeof(int));
 	p = (int *)dir;
 	do (*p++ = 0);  while (--j);
-	lastd = 0;
+	lastd = dir;
 }
 
 void
@@ -27,12 +27,9 @@ clrent(struct dent *ptr)
 	j = DIRSZ/sizeof(int);
 	do *p++ = 0;
 	   while (--j);
-	if (++ptr == lastd) do {
-		if (--lastd < dir) {
-			lastd = 0;
-			return;
-		}
-	} while (lastd->d_namep == 0);
+	if (ptr == lastd)
+		while (lastd > dir && (--lastd)->d_namep == 0)
+			;
 }
 
 
@@ -250,7 +247,7 @@ getfiles(void)
 		strcpy(name, ".");
 		callout();
 	} else while (--narg >= 0) {
-		strcpy(name, *parg++);
+		strncpy(name, *parg++, 2*NAMELEN-1);
 		callout();
 	}
 }
@@ -280,7 +277,8 @@ expand(void)
 		save0 = --p0;		/* save loc of \0 */
 		if (p0[-1] != '/')
 			*p0++ = '/';
-		strcpy(p0, direct.d_name);
+		strncpy(p0, direct.d_name, DIRSIZ);
+		p0[DIRSIZ] = 0;
 			callout();
 		*save0 = 0;		/* restore */
 	}
@@ -301,6 +299,10 @@ callout(void)
 	struct dent *empty;
 	int mode;
 
+	if (strlen(name) >= NAMELEN) {
+		printf("Pathname too long - %s\nFile ignored\n", name);
+		return;
+	}
 	if (stat(name,&statb) < 0)	fserr();
 	mode = statb.st_mode;
 	if ((mode &= S_IFMT) != 0) {

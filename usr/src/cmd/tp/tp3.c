@@ -1,5 +1,6 @@
 #include "tp.h"
 #include <stdio.h>
+#include <time.h>
 
 void
 gettape(void (*how)(struct dent *d))
@@ -198,7 +199,7 @@ void
 taboc(struct dent *dd)
 {
 	register int  mode;
-	register int *m;
+	register struct tm *m;
 	register char *s;
 	int count;
 	char work[20];
@@ -219,8 +220,8 @@ taboc(struct dent *dd)
 		if (mode&4)		s[2] = 's';
 		if (mode&2)		s[5] = 's';
 		printf("%s%4d%4d%5d%9D ",s,dd->d_uid, dd->d_gid,dd->d_tapea,dd->d_size);
-		m = (int *)localtime(&dd->d_time);
-		printf("%2d/%2d/%2d %2d:%2d ",m[5],m[4]+1,m[3],m[2],m[1]);
+		m = localtime(&dd->d_time);
+		printf("%2d/%2d/%2d %2d:%2d ",m->tm_year,m->tm_mon+1,m->tm_mday,m->tm_hour,m->tm_min);
 	}
 	printf("%s\n", name);
 }

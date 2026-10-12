@@ -13856,15 +13856,15 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/tp/tp1.c")
 
-#lines(1, 196)
+#lines(1, 198)
 
 #source("/usr/src/cmd/tp/tp2.c")
 
-#lines(1, 361)
+#lines(1, 363)
 
 #source("/usr/src/cmd/tp/tp3.c")
 
-#lines(1, 255)
+#lines(1, 256)
 
 == Text Tools <ch-text>
 
