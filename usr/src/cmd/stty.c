@@ -151,14 +151,14 @@ main(int argc, char *argv[])
 			mode.sg_erase = '#';
 			mode.sg_kill = '@';
 		}
-		if (eq("erase")) {
+		if (argc > 1 && eq("erase")) {
 			if (**++argv == '^')
 				mode.sg_erase = (*argv)[1] & 037;
 			else
 				mode.sg_erase = **argv;
 			argc--;
 		}
-		if (eq("kill")) {
+		if (argc > 1 && eq("kill")) {
 			if (**++argv == '^')
 				mode.sg_kill = (*argv)[1] & 037;
 			else
@@ -255,5 +255,5 @@ void
 prspeed(char *c, int s)
 {
 
-	fprintf(stderr,"%s%d baud\n", c, speed[s]);
+	fprintf(stderr,"%s%d baud\n", c, (unsigned)s < 16? speed[s]: 0);
 }
