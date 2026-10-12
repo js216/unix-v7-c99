@@ -1,0 +1,34 @@
+T=/tmp/r5j U=/usr/local/test/utils
+mkdir $T; chmod 777 $T; cd $T
+cp /bin/sh ush; chmod 4755 ush; mkdir ro
+cat >s1 <<\E
+cd /tmp/r5j
+l=`awk 'BEGIN { for (i = 0; i < 300; i++) printf "aa" }' </dev/null`
+rmdir $l 2>&1 | sed 's/aa*/A/'
+mkdir e; rmdir e/.; echo st$?; rmdir e/..; echo st$?; ls -a e; ls -ld . | awk '{ print $2 }'; rmdir e
+x=`awk 'BEGIN { for (i = 0; i < 150; i++) printf "x" }' </dev/null`
+mkdir t abcdefghijklmn; mv abcdefghijklmn$x t; echo st$?
+z=`awk 'BEGIN { for (i = 0; i < 70; i++) printf "z" }' </dev/null`
+w=`awk 'BEGIN { for (i = 0; i < 16; i++) printf "x" }' </dev/null`
+mkdir $z; mv abcdefghijklmn$w $z; echo st$?; ls $z; ls -d abcdefghijklmn
+d=`awk 'BEGIN { for (i = 0; i < 1000; i++) printf "./" }' </dev/null`
+mkdir dd; mv ${d}dd ee; echo st$?; ls -d dd ee
+mkdir p q p/d; mv p/d q/d; echo st$?; ls -a p q/d
+test `ls -id q | awk '{ print $1 }'` = `ls -id q/d/.. | awk '{ print $1 }'` && echo q/d/.. is q
+cd ro; umask 0; ../ush -c 'kill -12 $$'; ls core
+E
+su dmr <s1 2>&1
+mv /dev/tty /dev/r5jtty
+echo '(echo; echo echo logged in) | su sys' | su dmr 2>&1
+mv /dev/r5jtty /dev/tty
+/etc/dmesg | sed 1,2d >m1; dd if=/dev/rrk0 bs=510 count=1 2>&1 | wc -l
+/etc/dmesg | sed 1,2d >m2; cmp -s m1 m2 && echo no retries
+/usr/games/arithmetic </dev/null >/dev/null; echo st$?
+echo | /usr/games/arithmetic >/dev/null; echo st$?
+/usr/games/wump </dev/null >/dev/null; echo st$?
+/usr/games/fish </dev/null >/dev/null; echo st$?
+awk 'BEGIN { printf "%c\nb\nA\n%c\na\n", 201, 129 }' </dev/null >h
+sort h | od -c; sort -f h | od -c; sort -r h | od -c
+sort h >h2; sed -n '2p; 4p' h2 >h3; comm h2 h3 | od -c
+join h2 h2 | od -c
+cd /; rm -rf $T

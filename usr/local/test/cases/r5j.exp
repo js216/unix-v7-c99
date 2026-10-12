@@ -1,0 +1,47 @@
+rmdir: A non-existent
+rmdir: cannot remove . or ..
+st1
+rmdir: cannot remove current directory
+st1
+.
+..
+4
+mv: name too long
+st1
+mv :target name too long
+st1
+abcdefghijklmn
+mv: name too long
+st1
+ee not found
+dd
+st0
+
+p:
+.
+..
+
+q/d:
+.
+..
+q/d/.. is q
+su: PID Bad system call
+core not found
+Password:
+Sorry
+      3
+no retries
+st0
+st0
+st0
+st0
+0000000   A  \n   a  \n   b  \n 201  \n 311  \n
+0000012
+0000000   A  \n   a  \n   b  \n 201  \n 311  \n
+0000012
+0000000 311  \n 201  \n   b  \n   a  \n   A  \n
+0000012
+0000000   A  \n  \t  \t   a  \n   b  \n  \t  \t 201  \n 311  \n
+0000016
+0000000   A  \n   a  \n   b  \n 201  \n 311  \n
+0000012
