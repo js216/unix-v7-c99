@@ -64,7 +64,7 @@ main(INT c, STRING v[])
 
 	/* number of positional parameters */
 	assnum(&dolladr,dolc);
-	cmdadr=dolv[0];
+	cmdadr=make(dolv[0]);
 
 	/* set pidname */
 	assnum(&pidadr, getpid());

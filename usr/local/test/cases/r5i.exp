@@ -1,3 +1,4 @@
 thumb it4: 2 hits 1
 /bin/echo
 su: /tmp/shN-0: cannot create
+./s: /nonexistent: bad directory

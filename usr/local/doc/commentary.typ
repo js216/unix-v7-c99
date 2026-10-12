@@ -9174,6 +9174,15 @@ which was to have executed it. The shell then starts afresh, from the
 setting of `$#`, `$0`, `$$`, and the temporary file names, but skips
 the profile.
 
+`$0`, `cmdadr`, is a copy of `dolv[0]` (67), which also names the
+shell in its error messages. v7 kept the pointer itself. For a command
+file, `dolv` lies in a block which `setargs` (#f("sh/args.c")) made, and
+which the next `set` with arguments frees, strings and all; `cmdadr`
+then pointed into freed storage, and a script which gave `set` the
+names in `/bin`, by command substitution, reported its next error under
+an empty or garbled name.
+The copy is never freed.
+
 The profile is read only by a login shell, which `login` (#f("cmd/login.c")) starts with a `-` before its
 name. While it is read, `exfile` is given `ttyflg` as `prof`; see
 below. A command string given with `-c` is set up as the input by
