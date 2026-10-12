@@ -1240,6 +1240,10 @@ four bytes past the instruction, and is left so: as after the PDP-11's
 trap, the saved PC addresses the next instruction, and a handler of the
 signal which returns, an emulator of a missing instruction, for
 example, continues there instead of meeting the same instruction again.
+In Thumb state, which the library's arithmetic routines use, `lr` is
+only two bytes past the instruction, the next one only if the
+instruction was 16 bits long; `user_trap_handler` (#f("sysent.c"))
+adds the other two for a 32-bit one.
 An undefined instruction yields signal 4 (`SIGINS`), either abort
 signal 11 (`SIGSEG`). The PDP-11's illegal instruction and segmentation traps
 gave the same signals; its bus error (`SIGBUS`) has no counterpart here.
@@ -1982,26 +1986,33 @@ program counter (`R7`, which in #f("reg.h") is `r15`) to the handler; and
 `r0` to the signal number, the handler's argument. v7 also cleared the
 trace bit in the saved status, so that a traced process would not trap
 on the handler's first instruction; the ARM status register has no
-trace bit.
+trace bit. What is cleared instead (154) is the Thumb state: the `T`
+bit (5), the `IT` bits (10 to 15, 25, and 26), which make the next
+instructions of a Thumb `if-then` block conditional, and the `E` bit
+(9), big-endian data. Every program here is compiled to ARM code, but
+the compiler's support library `libgcc`, which supplies the 64-bit
+division `__aeabi_ldivmod` and its relatives, is the Thumb build, so a
+signal may well interrupt Thumb code. The handler is ARM code and must
+be entered in ARM state, with no `if-then` block pending.
 
 When the handler returns, it returns to the trampoline, with the stack
-pointer at the frame, and the trampoline issues `sigreturn` (234).
+pointer at the frame, and the trampoline issues `sigreturn` (235).
 
-#lines(150, 155)
+#lines(150, 156)
 
 The remainder of the file is new.
 
-`board_map` (156) comes from #f("qemu/c.c"): the regions which the
+`board_map` (157) comes from #f("qemu/c.c"): the regions which the
 machine's configuration file asks to be mapped, each with its kernel
 address, its physical bounds, and the attribute bits of its block
-descriptors. The `__` symbols (157) are defined by the linker script.
+descriptors. The `__` symbols (158) are defined by the linker script.
 `.ddrbss` is a second, uninitialised data section: on the MP135 machine
 the kernel image runs from SYSRAM, and the large tables are placed in
 the DDR memory, which is useless until it has been set up. On the QEMU
-machine it is ordinary memory. The tables (158) are reserved in
+machine it is ordinary memory. The tables (159) are reserved in
 #f("low.s") and #f("mch.s").
 
-`msgbufp` (159), the pointer into the circular buffer of console
+`msgbufp` (160), the pointer into the circular buffer of console
 output read by `dmesg`, was defined in v7's console driver `kl.c`. It
 is here because either of two console drivers may be configured
 (#f("pl011.c") or #f("stm32usart.c")), and both use it.
@@ -2010,7 +2021,7 @@ is here because either of two console drivers may be configured
 `kl2`, 2 MB at a time: those of device registers if `dev` is set, the
 others if not. The entry for a kernel address is its block number, the
 address shifted right by 21, less the 0x600 blocks below 0xc0000000,
-which the mask (170) takes away. The attributes, spelled `BLK_KERN` and
+which the mask (171) takes away. The attributes, spelled `BLK_KERN` and
 `BLK_DEV` in the configuration files, are defined in #f("seg.h"):
 kernel memory is normal, cacheable, and accessible only from the
 kernel; device memory is device memory, never executable, and likewise
@@ -2018,7 +2029,7 @@ closed to user mode. Since entries which were invalid are made valid,
 no stale translation can exist; `tlbflush` (#f("mch.s")) is called all
 the same, since a region may be entered twice, as the kernel's own is.
 
-`vtop` (175) is the inverse of the kernel's mapping: it finds the
+`vtop` (176) is the inverse of the kernel's mapping: it finds the
 region of memory which holds a kernel address, and returns the physical
 address. A device which reads or writes memory by itself (the virtio
 disk of the QEMU machine, the SD card controller of the MP135 machine) must be
@@ -2028,42 +2039,42 @@ v7's drivers turned a segment and an offset into the 18-bit address of
 the UNIBUS. A device region has no physical memory behind it, and an
 address found in no region is an error.
 
-#lines(156, 187)
+#lines(157, 188)
 
 `machine_init` is called from `_start` (#f("low.s")), running at its
 kernel address on a small stack in the bss, with only the kernel image
 mapped. It first maps the device registers and initialises the console
-(194, 195), so that `printf` and `panic` work from here on.
+(195, 196), so that `printf` and `panic` work from here on.
 
 On the MP135 machine it then starts the DDR controller
-(`clock_ddr_init` is empty on the QEMU machine). Only then are the other regions mapped (197), the
+(`clock_ddr_init` is empty on the QEMU machine). Only then are the other regions mapped (198), the
 DDR memory among them: a mapping of memory which does not yet work
 would invite the processor to touch it speculatively. `.ddrbss`, which
-`_start` could not clear, is cleared (198, 199).
+`_start` could not clear, is cleared (199, 200).
 
 Core begins at the first page boundary after `.ddrbss`, the last part
 of the kernel to be placed (#f("qemu/unix.ld")). On the QEMU machine
 that is just past the kernel image; on the MP135 machine, whose kernel
 runs from SYSRAM, it is just past the tables in DDR. Neither needs to be
 stated in the configuration, which gives only the top of core.
-`corebase` is the physical address (201), and `coreoff` (200) the
+`corebase` is the physical address (202), and `coreoff` (201) the
 difference between the kernel and physical addresses of all of core,
 which lies in one region; `CLKADDR` (#f("seg.h")) adds it to turn a
 click into a kernel address.
 
 The `USIZE` pages of the per process data area of process 0, the first
-of core, are entered in `kl3u` at `UBASE` (202, 203), with the attributes
+of core, are entered in `kl3u` at `UBASE` (203, 204), with the attributes
 of a kernel page, as in `resume` (#f("mch.s")), and `kl3u` is hooked
-into the last entry of `kl2` (204), which covers the top 2 MB of the
+into the last entry of `kl2` (205), which covers the top 2 MB of the
 address space; no region of `board_map` reaches so high. The identity
-mapping of `bootl1` (#f("low.s")) is removed (205): from here on
+mapping of `bootl1` (#f("low.s")) is removed (206): from here on
 nothing below `USERSIZE` is mapped but the user's. The area of process 0
-is then cleared (207, 208); v7's `start` did the same for process 0.
+is then cleared (208, 209); v7's `start` did the same for process 0.
 
-The address returned (209) is the top of the u-area, where #f("low.s")
+The address returned (210) is the top of the u-area, where #f("low.s")
 puts the kernel stack.
 
-#lines(188, 210)
+#lines(189, 211)
 
 `copyseg` and `clearseg` copy and clear one click, a page of 1024
 words. In v7 they were in `mch.s`, and had to borrow a user segment to
@@ -2073,34 +2084,38 @@ pointer. The routines which move data between the kernel and the user,
 `fubyte`, `copyin`, and the rest, are in #f("mch.s"), as they were in
 v7.
 
-#lines(211, 231)
+#lines(212, 232)
 
 `sigreturn`, system call 63, undoes `sendsig`. It is called by the
 trampoline, at which point the user stack pointer addresses the saved
 frame.
 
-#lines(232, 239)
+#lines(233, 240)
 
 The frame is copied in through `copyin`, which fails unless it lies in
 the process's memory; a bad stack pointer earns `SIGSEG`. The floating
-point part goes straight to `u.u_fps`, and `u_fpsaved` (247) makes the
+point part goes straight to `u.u_fps`, and `u_fpsaved` (248) makes the
 return to user mode load it (#f("sysent.c")). A forged `FPSCR` can do
 no harm: it holds nothing but the user's own modes and flags.
 
-#lines(240, 247)
+#lines(241, 248)
 
-`r0` to `r15` are restored (248, 249).
+`r0` to `r15` are restored (249, 250).
 
-Of the saved status register (250), only the condition flags (bits 27
-to 31) and the `GE` flags (16 to 19) are taken. The mode bits are not:
-otherwise a forged frame could return the process to the processor in
-a privileged mode.
+Of the saved status register (251), only the condition flags (bits 27
+to 31), the `GE` flags (16 to 19), and the Thumb state that `sendsig`
+cleared (the `T`, `IT`, and `E` bits) are taken; the mode is set to user
+mode, `0x10`, with the interrupt masks `A`, `I`, and `F` clear. A forged
+frame therefore cannot return the process to the processor in a
+privileged mode, nor with interrupts masked, while a signal which
+interrupted Thumb code, in the middle of a 64-bit division, say,
+returns to it in Thumb state and inside its `if-then` block.
 
 `trap` (#f("sysent.c")) will store `r_val1` and `r_val2` into
 `r0` and `r1` as the results of this system call; setting them to the
-saved values (251, 252) makes the return restore those two registers too.
+saved values (252, 253) makes the return restore those two registers too.
 
-#lines(248, 253)
+#lines(249, 254)
 
 `fumem` and `sumem` serve the memory special files (#f("mem.c")) one byte
 at a time, in the role that `fuibyte` and `suibyte`, with a user segment
@@ -2109,15 +2124,15 @@ pointed at physical memory, played in v7's `mem.c`.
 `memaddr` translates a file offset to a kernel address. For `/dev/kmem`
 (minor 1) the offset is a kernel address; for `/dev/mem` (minor 0) it
 is a physical address, which is moved into the kernel's addresses by
-the difference between them (268). Two stretches of memory may be read:
+the difference between them (269). Two stretches of memory may be read:
 the kernel image, from `_start` to the end of `bss`, and everything from
 `.ddrbss` to the top of core, which on both machines lie in one region
 each; `/dev/kmem` may also read the u-area of the current process at
-`UBASE` (261). Anything else returns -1, and the driver sets `ENXIO`:
+`UBASE` (262). Anything else returns -1, and the driver sets `ENXIO`:
 in particular the device registers, whose reading could have effects,
 and the reserved parts of the 2 MB blocks.
 
-#lines(254, 294)
+#lines(255, 295)
 
 `install_sigtramp` writes the two-instruction signal trampoline,
 `sigreturn` by `svc`, at user address 8. It is called by `xalloc`
@@ -2130,7 +2145,7 @@ permissions of user mode.
 `panictrap` is the target of the vectors which should never be taken
 (#f("low.s")).
 
-#lines(295, 307)
+#lines(296, 308)
 #source("/usr/sys/h/proc.h")
 
 A process is represented in two places. Its `proc` structure, one
@@ -3238,16 +3253,26 @@ it back to the routine through `nofault` (#f("mch.s")).
 
 #lines(127, 134)
 
-Otherwise the signal is posted to the current process and
+An undefined instruction in Thumb code (the `T` bit, `0x20`, of the
+saved status) leaves the saved PC two bytes past the start of the
+instruction (#f("low.s")). The top five bits of the instruction's first
+halfword, read with `fubyte` from its upper byte, tell whether it is 32
+bits long (`0xe8` and above); if so, the PC is moved past the second
+halfword (137, 138), so that a handler which returns resumes at the next
+instruction, not in the middle of this one. Such code comes only from
+the C compiler's support library (#f("machdep.c") has more on Thumb
+state).
+
+The signal is then posted to the current process and
 the same tail as in `trap` is run, the loading of the floating point
-registers included (145, 146). A signal number of zero is passed by
+registers included (147, 148). A signal number of zero is passed by
 the interrupt entry, when `runrun` is set; nothing is posted then
-(137), and the call serves only to reach the tail, as v7's type 12 trap
+(139), and the call serves only to reach the tail, as v7's type 12 trap
 did.
 
 The exception is the one which v7's `trap` also made for a segmentation
 fault: if the stack can grow to cover the fault, it is grown and no
-signal is sent (137--139), and the process resumes at the faulting
+signal is sent (139--141), and the process resumes at the faulting
 instruction, which this time succeeds. v7 grew the stack to cover the
 stack pointer, which on the PDP-11 had already been decremented when a
 push faulted. On the ARM a store multiple which pushes registers leaves
@@ -3266,7 +3291,7 @@ instruction also arrives as a prefetch abort, and gives `SIGSEG`, not
 `SIGTRC`. There are no `iot` and `emt` instructions, no floating point
 exceptions, and no parity registers.
 
-#lines(135, 147)
+#lines(135, 149)
 #source("/usr/sys/sys/sys1.c")
 
 #f("sys1.c") holds the system calls which make, change, and end
@@ -3922,14 +3947,15 @@ written: `regloc` names no other.
 
 A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
-"user" by or-ing in 0170000. Here everything is discarded except the
-condition flags (bits 27 to 31) and the `GE` flags (16 to 19), and the
-mode field is set to user mode, `0x10` (octal 020). v7's following line, which
-cleared the priority bits 5 to 7, is kept; on the ARM it clears the
-Thumb bit and the two interrupt masks, which the previous line has
-already cleared.
+"user" by or-ing in 0170000, and cleared the priority bits 5 to 7 on
+the next line. Here one line does both: everything is discarded except
+the condition flags (bits 27 to 31), the `GE` flags (16 to 19), and the
+Thumb state (the `T`, `IT`, and `E` bits, as `sigreturn` keeps them in
+#f("machdep.c")), so that the interrupt masks are clear, and the mode
+field is set to user mode, `0x10` (octal 020). A debugger may thus stop
+a child in Thumb code and resume it there.
 
-#lines(394, 403)
+#lines(394, 402)
 
 Request 7 resumes the child, optionally at a new `pc`, with the
 pending signals replaced by the one given (or none). v7's request 9,
@@ -3945,7 +3971,7 @@ Request 8 makes the child exit. The `return` added after `exit` is
 never reached; it keeps the compiler, which does not know that `exit`
 does not return, from warning that control falls into the next case.
 
-#lines(404, 424)
+#lines(403, 423)
 #source("/usr/sys/h/acct.h")
 
 The record which the kernel appends to the accounting file when a
@@ -7967,7 +7993,10 @@ Note that the convention that an odd action means "ignore" survives
 only because no handler can have an odd address. On the PDP-11
 instructions were at even addresses. On the ARM an odd function address
 denotes Thumb code; every program here is compiled with `-marm`, so
-every function lies on a word boundary.
+every function which could be a handler lies on a word boundary. Only
+the routines linked from the compiler's library `libgcc` are Thumb
+code, and `sendsig` and `sigreturn` (#f("machdep.c")) take care of a
+signal which interrupts one of them.
 
 #lines(1, 4)
 #source("/usr/src/cmd/init.c")
@@ -12133,7 +12162,9 @@ program, then `libm.a` and `libc.a`. `-s` strips the symbol table, as
 v7's `cc -s` did. `-lgcc` brings in the compiler's helper routines,
 such as the 64-bit division and the conversions between `double` and
 `long long`, which take more than one instruction; the compiler picks
-the library's variant for hard floating point from the same flags.
+the library's variant for hard floating point from the same flags. That
+variant is compiled to Thumb code, so a user program does sometimes run
+in Thumb state (see `sendsig`, #f("machdep.c")).
 
 #lines(15, 20)
 

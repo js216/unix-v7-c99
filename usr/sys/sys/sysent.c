@@ -134,6 +134,8 @@ user_trap_handler(int signo, int *r, unsigned a)
 	}
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
+	if(signo == SIGINS && r[RPS]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
+		r[PC] += 2;
 	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
 	    grow(a) == 0))
 		psignal(u.u_procp, signo);

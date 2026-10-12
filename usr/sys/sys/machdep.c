@@ -151,6 +151,7 @@ sendsig(caddr_t p, int signo)
 	u.u_ar0[14] = UENTRY_SIGTRAMP;
 	u.u_ar0[R7] = (int)p;
 	u.u_ar0[R0] = signo;
+	u.u_ar0[RPS] &= ~0x0600fe20;
 }
 
 extern struct memregion board_map[];
@@ -247,7 +248,7 @@ sigreturn(void)
 	u.u_fpsaved = 1;
 	for(i = 0; i < RPS; i++)
 		u.u_ar0[i] = f[i];
-	u.u_ar0[RPS] = (u.u_ar0[RPS] & ~0xf80f0000) | (f[RPS] & 0xf80f0000);
+	u.u_ar0[RPS] = (f[RPS] & 0xf80ffe20) | 0x10;
 	u.u_r.r_val1 = f[R0];
 	u.u_r.r_val2 = f[R1];
 }
