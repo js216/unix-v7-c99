@@ -9,7 +9,7 @@ int dict;
 int tab;
 char entry[250];
 char word[250];
-char key[50];
+char *key;
 
 void canon(char *old, char *new);
 int compare(char *s, char *t), getword(char *w);
@@ -54,7 +54,7 @@ main(int argc, char **argv)
 		fprintf(stderr,"look: can't open %s\n",filenam);
 		exit(2);
 	}
-	canon(argv[1],key);
+	canon(argv[1],key = argv[1]);
 	bot = 0;
 	fseek(dfile,0L,2);
 	top = ftell(dfile);
@@ -135,7 +135,8 @@ getword(char *w)
 			return(0);
 		if(c=='\n')
 			break;
-		*w++ = c;
+		if(w < &entry[sizeof entry - 1])
+			*w++ = c;
 	}
 	*w = 0;
 	return(1);
