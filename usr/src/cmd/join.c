@@ -56,7 +56,7 @@ main(int argc, char *argv[])
 			sep1 = sep2 = argv[1][2];
 			break;
 		case 'o':
-			for (no = 0; no < 2*NFLD; no++) {
+			for (no = 0; no < 2*NFLD && argc > 2; no++) {
 				if (argv[2][0] == '1' && argv[2][1] == '.') {
 					olistf[no] = F1;
 					olist[no] = atoi(&argv[2][2]);
@@ -70,6 +70,8 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'j':
+			if (argc < 3)
+				break;
 			if (argv[1][2] == '1')
 				j1 = atoi(argv[2]);
 			else if (argv[1][2] == '2')
@@ -84,11 +86,14 @@ main(int argc, char *argv[])
 		argv++;
 	}
 	for (i = 0; i < no; i++)
-		olist[i]--;	/* 0 origin */
+		if (--olist[i] < 0 || olist[i] >= NFLD)	/* 0 origin */
+			error("bad field number", "");
 	if (argc != 3)
 		error("usage: join [-j1 x -j2 y] [-o list] file1 file2", "");
 	j1--;
 	j2--;	/* everyone else believes in 0 origin */
+	if (j1 < 0 || j1 >= NFLD || j2 < 0 || j2 >= NFLD)
+		error("bad field number", "");
 	s1 = ppi[F1][j1];
 	s2 = ppi[F2][j2];
 	if (argv[1][0] == '-')
@@ -159,13 +164,17 @@ input(int n)		/* get input line and split into fields */
 			c = *bp;
 		if (c == '\n' || c == '\0')
 			break;
+		if (pp >= &ppi[n][NFLD])
+			error("too many fields", "");
 		*pp++ = bp;	/* record beginning */
 		while ((c = *bp) != sep1 && c != '\n' && c != sep2 && c != '\0')
 			bp++;
-		*bp++ = '\0';	/* mark end by overwriting blank */
-			/* fails badly if string doesn't have \n at end */
+		*bp = '\0';	/* mark end by overwriting blank */
+		if (c != '\0')
+			bp++;
 	}
-	*pp = 0;
+	while (pp < &ppi[n][NFLD])
+		*pp++ = "";
 	return(i);
 }
 
