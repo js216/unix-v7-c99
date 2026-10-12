@@ -77,7 +77,7 @@ etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 $(DIRS):
 	$Qmkdir -p $@
 
-$(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
+$(filter-out etc/% usr/lib/crontab,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 	$(call T,CP)cp -f $< $@
 
 clean:

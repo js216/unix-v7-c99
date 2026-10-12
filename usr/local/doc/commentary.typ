@@ -12387,8 +12387,9 @@ of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
 `ROOTFS_STATIC` lists the files of the image which are not compiled:
 the shell scripts `1`, `true`, `false`, and `nohup`, the files of
 #f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
-the dictionary, the fortunes, and `bc`'s library. All but the files of
-`etc` are copied from the v7 tree (80). The image also holds the regression tests, in
+the dictionary, the fortunes, `bc`'s library, and `cron`'s table. All
+but the files of `etc` and the table `usr/lib/crontab` are copied from
+the v7 tree (80). The image also holds the regression tests, in
 `/usr/local/test`: the test scripts and the data files from the
 repository, and the programs and the file system image which
 `test.mk` makes.
@@ -12449,7 +12450,8 @@ which the kernel misreads.
 
 The directories of the image which hold built programs or copied files,
 and the copying of the files from the v7 tree. `etc` is left out: its
-files are kept in the repository, where the image expects them. `cp -f`
+files are kept in the repository, where the image expects them. So is
+`usr/lib/crontab`, v7's table without its last line (#f("cmd/cron.c")). `cp -f`
 replaces a previous copy, which is read-only like its original.
 
 #lines(76, 81)
@@ -13085,7 +13087,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 339)
+#lines(139, 338)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -13094,7 +13096,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(340, 341)
+#lines(339, 340)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
@@ -14218,11 +14220,12 @@ declaration of it has been removed; `firstime` has gained its `int`.
 `cron` runs commands at stated times. It is started by #f("rc") and
 never stops. Once a minute it compares the time with each line of the
 table `/usr/lib/crontab`, and starts the commands whose times have
-come. The image's table (from v7's tape) runs `dmesg` (#f("cmd/dmesg.c"))
-every ten minutes and `atrun`, which starts the jobs queued by `at`,
-every five. Its third entry names `/usr/bin/calendar` once a day at
-1:20, which the image does not have, so that the shell's complaint goes
-to "/" (below) and nothing else happens. Since the commands run as
+come. The image's table runs `dmesg` (#f("cmd/dmesg.c")) every ten
+minutes and `atrun`, which starts the jobs queued by `at`, every five.
+v7's table had a third entry, which ran `/usr/bin/calendar` once a day
+to mail each user his reminders; with no mail, the command and its
+helper `/usr/lib/calendar` are gone, and the entry with them. Since the
+commands run as
 the user `daemon` (31), the first entry works only because `dmesg` is
 set-group-id `sys`, the group which may read `/dev/kmem`, and
 `/usr/adm/messages` and `/usr/adm/msgbuf` belong to `daemon`

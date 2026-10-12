@@ -167,7 +167,6 @@ d--755 0 0
 			lib.b	---644 0 0 usr/lib/lib.b
 			makekey	---755 0 0 usr/lib/makekey
 			units	---644 0 0 usr/lib/units
-			calendar	---755 0 0 usr/lib/calendar
 			diff3	---755 0 0 usr/lib/diff3
 			atrun	-u-755 0 0 usr/lib/atrun
 			uucp	d--755 4 4

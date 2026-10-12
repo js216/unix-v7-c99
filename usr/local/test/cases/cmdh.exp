@@ -324,8 +324,6 @@ Bad argument
 
 
 
-(^|[ (,;])(([Jj]an[^ ]* *|1/)0*9)([^0123456789]|$)
-(^|[ (,;])(([Jj]an[^ ]* *|1/)0*10)([^0123456789]|$)
 eq:
    Unfinished EQ
 eq2:
@@ -357,7 +355,7 @@ Deroff: Invalid flag m
 1	/tmp/cmdh/a
 1	/tmp/cmdh/b.b
 1	/tmp/cmdh/c.b
-362	/tmp/cmdh
+361	/tmp/cmdh
 2	/tmp/cmdh/dd
 2	/tmp/cmdh/rx
 abc
@@ -396,7 +394,6 @@ a
 b.b
 br
 c.b
-calendar
 d1
 d2
 d3

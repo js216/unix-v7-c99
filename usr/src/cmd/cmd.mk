@@ -1,6 +1,6 @@
 C = usr/src/cmd
 CMD_ETC = accton cron dmesg getty init mknod mount umount update wall
-CMD_USRLIB = atrun calendar diff3 diffh makekey
+CMD_USRLIB = atrun diff3 diffh makekey
 CMD_DIRS = awk dc sed sh tar tp
 
 CMD_ONE := $(sort $(filter-out mkfs,$(basename $(notdir $(wildcard $C/*.[cy])))))
