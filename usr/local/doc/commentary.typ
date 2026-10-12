@@ -7692,7 +7692,13 @@ request is active.
 
 On an error the status is reported by `deverror` (#f("prf.c")) and the
 same block retried, up to v7's ten times. v7 also reset the RK11 and
-waited for it to be ready; there is no reset here. On success the next
+waited for it to be ready; there is no reset here. Only the controller's
+flags are tested, not the card's status in its response to the command:
+a command which the card refused would move no data, and end only when
+the data timeout expired. After a write, the data path waits in its busy
+state until the card releases its data line, so the end of the data
+also means that the card has finished writing the block and will take
+the next command. On success the next
 block of the request is started if there is one (130), and the request
 is otherwise complete. After a read, the cache is invalidated once more
 over the whole buffer (136), so that any line which the processor may
