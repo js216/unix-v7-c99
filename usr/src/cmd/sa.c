@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/acct.h>
 #include <signal.h>
+#include <pwd.h>
 
 /* interpret command time accounting */
 
@@ -165,6 +166,8 @@ main(int argc, char **argv)
 	yes:
 		if(junkp == -1)
 			junkp = enter(other);
+		if(i == junkp)
+			continue;
 		tab[junkp].count += tab[i].count;
 		tab[junkp].realt += tab[i].realt;
 		tab[junkp].cput += tab[i].cput;
@@ -218,20 +221,14 @@ void
 printmoney(void)
 {
 	register int i;
-	char buf[128];
-	register char *cp;
+	register struct passwd *pw;
 
 	for (i=0; i<256; i++) {
 		if (user[i].ncomm) {
-			if (getpw(i, buf)!=0)
+			if ((pw = getpwuid(i)) == NULL)
 				printf("%-8d", i);
-			else {
-				cp = buf;
-				while (*cp!=':' &&*cp!='\n' && *cp)
-					cp++;
-				*cp = 0;
-				printf("%-8s", buf);
-			}
+			else
+				printf("%-8s", pw->pw_name);
 			printf("%5u %7.2f\n",
 			    user[i].ncomm, user[i].fctime/60);
 		}
@@ -279,7 +276,7 @@ doacct(char *f)
 {
 	int i;
 	FILE *ff;
-	long x;
+	time_t x;
 	struct acct fbuf;
 	register char *cp;
 	register int c;
@@ -430,7 +427,8 @@ init(void)
 int
 enter(char *np)
 {
-	int i, j;
+	int i, j, k;
+	unsigned h;
 
 	for (i=j=0; i<NC; i++) {
 		if (np[i]==0)
@@ -438,12 +436,14 @@ enter(char *np)
 		if (j)
 			np[i] = 0;
 	}
-	for (i=j=0; j<NC; j++) {
-		i = i*7 + np[j];
+	for (h=j=0; j<NC; j++) {
+		h = h*7 + (np[j]&0377);
 	}
-	if (i < 0)
-		i = -i;
-	for (i%=size; tab[i].name[0]; i = (i+1)%size) {
+	for (k=0, i=h%size; tab[i].name[0]; i = (i+1)%size) {
+		if (++k > size) {
+			printf("Too many commands\n");
+			exit(1);
+		}
 		for (j=0; j<NC; j++)
 			if (tab[i].name[j]!=np[j])
 				goto no;
