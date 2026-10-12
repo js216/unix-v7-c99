@@ -163,7 +163,7 @@ doinode(void)
 		putf(ip->i_flag&ITEXT, 'T');
 		printf("%4d", ip->i_count);
 		printf("%3d,%3d", major(ip->i_dev), minor(ip->i_dev));
-		printf("%6l", ip->i_number);
+		printf("%6u", ip->i_number);
 		printf("%7o", ip->i_mode);
 		printf("%4d", ip->i_nlink);
 		printf("%4d", ip->i_uid);
@@ -279,6 +279,8 @@ dotty(void)
 		return;
 	lseek(fc, (long)setup[SNDH].value, 0);
 	read(fc, (char *)&ndh, sizeof(ndh));
+	if ((unsigned)ndh > 48)
+		ndh = 48;
 	printf("%d dh lines\n", ndh);
 	lseek(fc, (long)setup[SDH].value, 0);
 	read(fc, (char *)dh11, sizeof(dh11));
@@ -371,7 +373,7 @@ dousr(void)
 int
 oatoi(char *s)
 {
-	register int v;
+	register unsigned v;
 
 	v = 0;
 	while (*s)
@@ -414,6 +416,9 @@ kint(int s)
 	int v;
 
 	lseek(fc, (long)setup[s].value, 0);
-	read(fc, (char *)&v, sizeof(v));
+	if (read(fc, (char *)&v, sizeof(v)) != sizeof(v) || v <= 0 || v > 65536) {
+		printf("bad %.8s\n", setup[s].name);
+		exit(1);
+	}
 	return(v);
 }
