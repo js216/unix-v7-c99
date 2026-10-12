@@ -321,6 +321,8 @@ flushtty(register struct tty *tp)
 		;
 	while (getc(&tp->t_rawq) >= 0)
 		;
+	while (getc(&tp->t_holdq) >= 0)
+		;
 	tp->t_delct = 0;
 	splx(s);
 }
@@ -448,8 +450,6 @@ ttyinput(register int c, register struct tty *tp)
 			}
 			if (c==tun.t_stopc)
 				return;
-			tp->t_state &= ~TTSTOP;
-			ttstart(tp);
 		} else {
 			if (c==tun.t_stopc) {
 				tp->t_state |= TTSTOP;
@@ -490,37 +490,40 @@ ttyinput(register int c, register struct tty *tp)
 
 /*
  * Called by a console driver for each character received.
+ * Any character but stop and start restarts stopped output.
  * While the raw queue is held (TTHOLD), or characters wait
- * in the driver's queue q, the character is put on q,
+ * in t_holdq, the character is put on t_holdq,
  * unless it is one which stops, starts, or interrupts.
  */
 void
-ttyhold(register int c, register struct tty *tp, register struct clist *q)
+ttyhold(register int c, register struct tty *tp)
 {
 	register int x;
 
 	x = c&0177;
+	if ((tp->t_flags&RAW)==0 && tp->t_state&TTSTOP &&
+	    x!=tun.t_stopc && x!=tun.t_startc) {
+		tp->t_state &= ~TTSTOP;
+		ttstart(tp);
+	}
 	if ((tp->t_flags&RAW)==0 && (x==tun.t_intrc || x==tun.t_quitc ||
-	    x==tun.t_stopc || x==tun.t_startc)) {
-		if (x==tun.t_intrc || x==tun.t_quitc)
-			while (getc(q) >= 0)
-				;
+	    x==tun.t_stopc || x==tun.t_startc))
 		ttyinput(c, tp);
-	} else if (q->c_cc || TTHOLD(tp))
-		putc(c, q);
+	else if (tp->t_holdq.c_cc || TTHOLD(tp))
+		putc(c, &tp->t_holdq);
 	else
 		ttyinput(c, tp);
 }
 
 /*
- * Move characters from the driver's queue to the raw queue
+ * Move characters from t_holdq to the raw queue
  * until it is held again.
  */
 void
-ttyunhold(register struct tty *tp, register struct clist *q)
+ttyunhold(register struct tty *tp)
 {
-	while (q->c_cc && !TTHOLD(tp))
-		ttyinput(getc(q), tp);
+	while (tp->t_holdq.c_cc && !TTHOLD(tp))
+		ttyinput(getc(&tp->t_holdq), tp);
 }
 
 

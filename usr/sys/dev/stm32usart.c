@@ -47,7 +47,6 @@
 #define	TAB1	002000
 
 struct	tty kl11[NKL11+NDL11];
-struct	clist klhold;
 void	klstart(struct tty *tp);
 static void	klrint(dev_t dev);
 int	klirq = 85;
@@ -113,7 +112,7 @@ klread(dev_t dev)
 	register int s;
 
 	s = spl5();
-	ttyunhold(&kl11[minor(dev)], &klhold);
+	ttyunhold(&kl11[minor(dev)]);
 	CR1 |= RXNEIE;
 	klrint(dev);
 	splx(s);
@@ -146,12 +145,12 @@ klrint(dev_t dev)
 
 	tp = &kl11[minor(dev)];
 	while(ISR&RXNE) {
-		if(klhold.c_cc >= TTHOLDQ) {
+		if(tp->t_holdq.c_cc >= TTHOLDQ) {
 			CR1 &= ~RXNEIE;
 			break;
 		}
 		c = RDR;
-		ttyhold(c, tp, &klhold);
+		ttyhold(c, tp);
 	}
 	ICR = 017;
 }
