@@ -10,8 +10,8 @@
 int
 main(void)
 {
-	char key[8];
-	char salt[2];
+	char key[8] = {0};
+	char salt[2] = {0};
 	
 	read(0, key, 8);
 	read(0, salt, 2);
