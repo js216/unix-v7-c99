@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 	mytty = index(mytty+1, '/') + 1;
 	if (histtya) {
 		strcpy(histty, "/dev/");
-		strcat(histty, histtya);
+		strncat(histty, histtya, sizeof histty - 6);
 	}
 	while (fread((char *)&ubuf, sizeof(ubuf), 1, uf) == 1) {
 		if (strcmp(ubuf.ut_line, mytty)==0) {
@@ -116,7 +116,7 @@ cont:
 	fprintf(tf, "%s %s...\n", me, mytty);
 	fflush(tf);
 	for(;;) {
-		char buf[128];
+		char buf[129];
 		i = read(0, buf, 128);
 		if(i <= 0)
 			eof(0);
