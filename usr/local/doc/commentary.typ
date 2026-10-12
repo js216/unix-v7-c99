@@ -5813,7 +5813,8 @@ declaration, so they agree on its layout, which is not the PDP-11's:
 brings an inode into it, `iput` lets it go, and `iupdat` writes it back.
 `itrunc` frees a file's blocks, and `maknode` and `wdir` create a file
 and its directory entry. The file is v7's apart from the C99 dressing
-and one real change: the order in which a block address is packed into
+and two real changes: the release of an entry whose inode could not be
+read, in `iget`, and the order in which a block address is packed into
 three bytes, in `iexpand` and `iupdat`.
 
 The declarations (11, 12) are new: `iexpand` and `tloop` are used before
@@ -5849,7 +5850,15 @@ and the block of the i-list which holds the inode is read. If the read
 fails, the entry is released and `NULL` is returned; the caller finds
 the error in `u.u_error`, set by the buffer routines.
 
-#lines(65, 90)
+The entry still holds the link count, mode, and addresses of its
+previous inode, nothing yet having been read into it. In v7 a count of
+zero, left by a deleted file or never set in an unused entry, made
+`iput` treat the inode which could not be read as one with no links:
+it would free `ino` to the super-block's list, and write a cleared
+inode over it if a second attempt to read the block succeeded. Setting
+the count to one (82) first makes `iput` simply release the entry.
+
+#lines(65, 91)
 
 `iexpand` copies the disk inode (#f("ino.h")) into the table entry,
 unpacking each three-byte block address into a four-byte `daddr_t`.
@@ -5864,7 +5873,7 @@ zero having moved from second place to last. The disk format of the
 addresses has changed with it: bits 0 to 7 come first. `mkfs` builds
 file systems in the same order (#f("cmd/mkfs.c")).
 
-#lines(91, 112)
+#lines(92, 113)
 
 `iput` releases a reference. The last reference does the real work. If
 the file has no links left, its blocks are freed by `itrunc`, its mode
@@ -5878,7 +5887,7 @@ waited on the dying entry, and once for every release. A file which is
 unlinked while open thus survives until its last close, which is the
 basis of the convention for temporary files.
 
-#lines(113, 140)
+#lines(114, 141)
 
 `iupdat` writes an in-core inode back into its block, provided that one
 of the flags says it has changed and the file system is not mounted
@@ -5894,7 +5903,7 @@ value there means a block number too large to record. For a
 multiplexed file the addresses held other data and were exempt; such
 files do not exist here.
 
-#lines(141, 191)
+#lines(142, 192)
 
 `itrunc` frees every block of a regular file or directory; a special
 file's first address is its device number and the rest are meaningless.
@@ -5903,7 +5912,7 @@ are pushed onto the free list in reverse and will be allocated again in
 their original order, as the comment explains. The three indirect
 addresses are handed to `tloop` with flags which give their depth.
 
-#lines(192, 238)
+#lines(193, 239)
 
 `tloop` frees the blocks listed in an indirect block, recursively if
 `f1` says that they are themselves indirect, and then the indirect
@@ -5915,7 +5924,7 @@ second reading costs little.
 The entries of an indirect block are read as `daddr_t`s in the ARM's
 byte order, as `bmap` (#f("subr.c")) wrote them.
 
-#lines(239, 271)
+#lines(240, 272)
 
 `maknode` creates a file for `creat`, `mknod`, and `core`, after a call
 of `namei` with flag 1 has left the parent directory in `u.u_pdir`. The
@@ -5923,7 +5932,7 @@ inode is allocated on the parent's device, given the requested mode
 less the bits in the process's `umask`, and entered in the directory by
 `wdir`. A mode with no type makes a regular file.
 
-#lines(272, 295)
+#lines(273, 296)
 
 `wdir` writes the directory entry: the new inode number and the name
 which `namei` left in `u.u_dbuf`, at the offset which `namei` left in
@@ -5931,7 +5940,7 @@ which `namei` left in `u.u_dbuf`, at the offset which `namei` left in
 has been removed since it was searched, it has no links, and the entry
 is refused. Either way the directory is released.
 
-#lines(296, 318)
+#lines(297, 319)
 #source("/usr/sys/h/fblk.h")
 
 #f("fblk.h") is unchanged from v7. It describes the first words of a

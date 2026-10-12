@@ -79,6 +79,7 @@ loop:
 	 */
 	if((bp->b_flags&B_ERROR) != 0) {
 		brelse(bp);
+		ip->i_nlink = 1;
 		iput(ip);
 		return(NULL);
 	}
