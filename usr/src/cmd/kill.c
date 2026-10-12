@@ -31,7 +31,7 @@ main(int argc, char **argv)
 			goto usage;
 		res = kill(pid = atoi(*argv), signo);
 		if (res<0) {
-			printf("%u: %s\n", pid, sys_errlist[errno]);
+			printf("%d: %s\n", pid, sys_errlist[errno]);
 			errlev = 1;
 		}
 		argc--;
