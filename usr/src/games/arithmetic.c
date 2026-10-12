@@ -31,7 +31,7 @@ main(int argc, char *argv[])
 		case '-':
 		case 'x':
 		case '/':
-			while((types[dif] = argv[1][dif]))
+			for(k = 0; dif < 9 && (types[dif] = argv[1][k]); k++)
 				dif++;
 			break;
 
@@ -149,7 +149,8 @@ getnum(char *s)
 
 	a = 0;
 	while((c = *s++) >= '0' && c <= '9') {
-		a = a*10 + c - '0';
+		if(a < 100000)
+			a = a*10 + c - '0';
 	}
 	return(a);
 }

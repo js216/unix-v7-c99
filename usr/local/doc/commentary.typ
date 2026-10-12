@@ -13770,7 +13770,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/games/arithmetic.c")
 
-#lines(1, 200)
+#lines(1, 201)
 
 #source("/usr/src/games/hangman.c")
 
