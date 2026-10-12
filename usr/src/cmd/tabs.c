@@ -59,7 +59,7 @@ syslook(char *w)
 int
 main(int argc,char **argv)
 {
-	struct sgttyb tb;
+	struct sgttyb tb = {0};
 	int type;
 
 	type=0;
@@ -162,7 +162,7 @@ nl(void)
 void
 dasi450(void)
 {
-	struct sgttyb t;
+	struct sgttyb t = {0};
 	gtty(0,&t);
 	t.sg_flags &= ~ALLDELAY;
 	stty(0,&t);
@@ -185,7 +185,7 @@ dasi300(void)
 void
 tn300(void)
 {
-	struct sgttyb t;
+	struct sgttyb t = {0};
 	gtty(0,&t);
 	t.sg_flags &= ~ALLDELAY;
 	t.sg_flags |= CR1|BS1;
