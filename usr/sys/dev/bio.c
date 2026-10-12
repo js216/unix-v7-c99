@@ -502,7 +502,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * the end is in the data or the start is in the stack
 	 * (remember wraparound was already checked).
 	 */
-	if (((base+u.u_count)>>12) >= ts+u.u_dsize
+	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
 	    && nb < (int)(btoc(USERSIZE)-u.u_ssize))
 		goto bad;
 	spl6();

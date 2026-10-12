@@ -4952,9 +4952,11 @@ space which are mapped, and which lie in different places in core. The
 check is v7's, with the click size changed and the top of the address
 space, which v7 wrote as 1024 clicks, now `btoc(USERSIZE)`. v7 also
 masked the addresses with `01777` to keep them within the 64 KB address
-space; the test at 487 has already done that here. Like v7's, the test
-of the end is a little strict: a transfer which ends exactly at the end
-of the data is refused.
+space; the test at 487 has already done that here. v7 tested the click
+of the byte after the transfer, so that a transfer which ended exactly
+at the end of the data was refused. With clicks of 4096 bytes in place
+of 64, such a buffer is 64 times as likely, and the test is now of the
+click of the transfer's last byte (505).
 
 #lines(486, 514)
 
