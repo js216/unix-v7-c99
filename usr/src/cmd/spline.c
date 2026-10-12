@@ -143,7 +143,7 @@ rhs(int i){
 	double zz;
 	i_ = i==n-1?0:i;
 	zz = (y.val[i]-y.val[i-1])/(x.val[i]-x.val[i-1]);
-	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i+1]-x.val[i]) - zz));
+	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i_+1]-x.val[i_]) - zz));
 }
 
 static int
@@ -153,6 +153,7 @@ spline(void){
 	float D2yi,D2yi1,D2yn1,x0,x1,yy,a;
 	int end;
 	float corr;
+	double dm;
 	int i,j,m;
 	if(n<3) return(0);
 	if(periodic) konst = 0;
@@ -199,9 +200,8 @@ spline(void){
 			if(i==n-2) D2yi1 = konst*D2yi;
 			}
 		if(end) continue;
-		m = hi1>0?ni:-ni;
-		m = 1.001*m*hi1/(x.ub-x.lb);
-		if(m<=0) m = 1;
+		dm = 1.001*(hi1>0?ni:-ni)*hi1/(x.ub-x.lb);
+		m = dm >= 1 && dm < 2e9? dm: 1;
 		h = hi1/m;
 		for(j=m;j>0||(i==0&&j==0);j--){	/* interpolate */
 			x0 = (m-j)*h/hi1;
@@ -224,7 +224,7 @@ readin(void) {
 
 int
 getfloat(float *p){
-	char buf[30];
+	char buf[31];
 	register int c;
 	int i;
 	for(;;){
