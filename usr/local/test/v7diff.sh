@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,340 @@
+@@ -0,0 +1,344 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -496,6 +496,9 @@ usr/local
 +					r5i	---644 0 0 usr/local/test/cases/r5i
 +					r5i.exp	---644 0 0 usr/local/test/cases/r5i.exp
 +					r5i.sed	---644 0 0 usr/local/test/cases/r5i.sed
++					r5j	---644 0 0 usr/local/test/cases/r5j
++					r5j.exp	---644 0 0 usr/local/test/cases/r5j.exp
++					r5j.sed	---644 0 0 usr/local/test/cases/r5j.sed
 +					sh	---644 0 0 usr/local/test/cases/sh
 +					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 +					sig	---644 0 0 usr/local/test/cases/sig
@@ -533,6 +536,7 @@ usr/local
 +					edscr	---644 0 0 usr/local/test/utils/edscr
 +					elft	---755 0 0 usr/local/test/obj/elft
 +					forkt	---755 0 0 usr/local/test/obj/forkt
++					fmode	---755 0 0 usr/local/test/obj/fmode
 +					fpt	---755 0 0 usr/local/test/obj/fpt
 +					fs.img	---644 0 0 usr/local/test/obj/fs.img
 +					kcmp	---755 0 0 usr/local/test/obj/kcmp
@@ -578,6 +582,11 @@ usr/local
 % etc/group
 
 % etc/passwd
+@@ -3,2 +3,2 @@
+-sys::2:2::/usr/sys:
+-bin::3:3::/bin:
++sys:x:2:2::/usr/sys:
++bin:x:3:3::/bin:
 
 % etc/rc
 @@ -7 +6,0 @@
@@ -595,6 +604,27 @@ usr/local
 +	long long	ar_date;
 
 % usr/include/ctype.h
+@@ -11,10 +11,10 @@
+-#define	isalpha(c)	((_ctype_+1)[c]&(_U|_L))
+-#define	isupper(c)	((_ctype_+1)[c]&_U)
+-#define	islower(c)	((_ctype_+1)[c]&_L)
+-#define	isdigit(c)	((_ctype_+1)[c]&_N)
+-#define	isxdigit(c)	((_ctype_+1)[c]&(_N|_X))
+-#define	isspace(c)	((_ctype_+1)[c]&_S)
+-#define ispunct(c)	((_ctype_+1)[c]&_P)
+-#define isalnum(c)	((_ctype_+1)[c]&(_U|_L|_N))
+-#define isprint(c)	((_ctype_+1)[c]&(_P|_U|_L|_N))
+-#define iscntrl(c)	((_ctype_+1)[c]&_C)
++#define	isalpha(c)	((_ctype_+1)[(c)&0377]&(_U|_L))
++#define	isupper(c)	((_ctype_+1)[(c)&0377]&_U)
++#define	islower(c)	((_ctype_+1)[(c)&0377]&_L)
++#define	isdigit(c)	((_ctype_+1)[(c)&0377]&_N)
++#define	isxdigit(c)	((_ctype_+1)[(c)&0377]&(_N|_X))
++#define	isspace(c)	((_ctype_+1)[(c)&0377]&_S)
++#define ispunct(c)	((_ctype_+1)[(c)&0377]&_P)
++#define isalnum(c)	((_ctype_+1)[(c)&0377]&(_U|_L|_N))
++#define isprint(c)	((_ctype_+1)[(c)&0377]&(_P|_U|_L|_N))
++#define iscntrl(c)	((_ctype_+1)[(c)&0377]&_C)
 
 % usr/include/dumprestor.h
 
@@ -2449,6 +2479,9 @@ usr/local
 @@ -324 +336 @@
 -		={ $$ = geta($1); }
 +		{ $$ = geta($1); }
+@@ -338 +350 @@
+-char atab[52] = {
++unsigned char atab[52] = {
 @@ -347 +359 @@
 -yylex(){
 +int yylex(void){
@@ -2541,11 +2574,13 @@ usr/local
 -getf(p) char *p;{
 +char *
 +getf(char *p){
-@@ -557,2 +572,2 @@
+@@ -557,3 +572,3 @@
 -int *
 -geta(p) char *p;{
+-	return(&atab[2*(*p - 0141)]);
 +char *
 +geta(char *p){
++	return((char *)&atab[2*(*p - 0141)]);
 @@ -562,2 +577,2 @@
 -main(argc, argv)
 -char **argv;
@@ -2923,6 +2958,17 @@ usr/local
 -	char	*a,*b;
 +int
 +compare(char *a,char *b)
+@@ -148,5 +149,5 @@
+-	ra = --a;
+-	rb = --b;
+-	while(*++ra == *++rb)
+-		if(*ra == '\0')	return(0);
+-	if(*ra < *rb)	return(1);
++	ra = a;
++	rb = b;
++	while(*ra == *rb++)
++		if(*ra++ == '\0')	return(0);
++	if((*ra&0377) < (*--rb&0377))	return(1);
 @@ -155,2 +156 @@
 -FILE *openfil(s)
 -char *s;
@@ -3474,6 +3520,9 @@ usr/local
 @@ -142 +142 @@
 -		for(j=0; j<NDIR; j++) {
 +		for(j=0; j<(int)NDIR; j++) {
+@@ -162 +162 @@
+-				ecount[kno] = 0377;
++				ecount[kno] = (char)0377;
 @@ -167,2 +167,2 @@
 -pass2(ip)
 -register struct dinode *ip;
@@ -3507,6 +3556,15 @@ usr/local
 +void	flsh(void), null(int c), stats(void), term(int sig), cnull(int cc);
 +void	ascii(int cc), ebcdic(int cc), ibm(int cc);
 +int	match(char *s), number(int big);
+@@ -38 +40 @@
+-char	etoa[] = {
++unsigned char	etoa[] = {
+@@ -72 +74 @@
+-char	atoe[] = {
++unsigned char	atoe[] = {
+@@ -106 +108 @@
+-char	atoibm[] =
++unsigned char	atoibm[] =
 @@ -143,8 +145,6 @@
 -main(argc, argv)
 -int	argc;
@@ -4196,6 +4254,9 @@ usr/local
 +hardsynch(void)
 
 % usr/src/cmd/dmesg.c
+@@ -10 +10 @@
+-char	*msgbufp;
++char	*msgbufp = msgbuf;
 @@ -20,2 +20,2 @@
 -	{"_msgbuf"},
 -	{"_msgbufp"}
@@ -4207,22 +4268,32 @@ usr/local
 +void done(char *s), pdate(void);
 +int
 +main(int argc, char **argv)
-@@ -40,0 +42,2 @@
+@@ -29,0 +31 @@
++	unsigned n = 0;
+@@ -40,0 +43,2 @@
 +	if (argc>1)
 +		setgid(getgid());
-@@ -44 +47 @@
+@@ -44 +48 @@
 -	if ((mem = open((argc>1? argv[1]: "/dev/mem"), 0)) < 0)
 +	if ((mem = open((argc>1? argv[1]: "/dev/kmem"), 0)) < 0)
-@@ -84,2 +87,2 @@
+@@ -49,2 +53,2 @@
+-	read(mem, (char *)&msgbufp, sizeof(msgbufp));
+-	if (msgbufp < (char *)nl[0].n_value || msgbufp >= (char *)nl[0].n_value+MSGBUFS)
++	read(mem, (char *)&n, sizeof(n));
++	if ((n -= nl[0].n_value) >= MSGBUFS)
+@@ -52 +56 @@
+-	msgbufp += msgbuf - (char *)nl[0].n_value;
++	msgbufp = msgbuf + n;
+@@ -84,2 +88,2 @@
 -done(s)
 -char *s;
 +void
 +done(char *s)
-@@ -102 +105,2 @@
+@@ -102 +106,2 @@
 -pdate()
 +void
 +pdate(void)
-@@ -104,2 +108 @@
+@@ -104,2 +109 @@
 -	extern char *ctime();
 -	static firstime;
 +	static int firstime;
@@ -5421,6 +5492,9 @@ usr/local
 +errxx(int c)
 @@ -247,0 +258 @@
 +	(void)c;
+@@ -278 +289 @@
+-char	bittab[] = {
++unsigned char	bittab[] = {
 @@ -290,3 +301 @@
 -compile(instring, ep, endbuf, seof)
 -register char *ep;
@@ -5434,6 +5508,9 @@ usr/local
 @@ -322,0 +332,2 @@
 +			if (bracketp != bracket)
 +				ERROR(42);
+@@ -427 +438 @@
+-						*ep++ = 255;
++						*ep++ = (char)255;
 @@ -457,0 +469 @@
 +			/* fallthrough */
 @@ -468,2 +480,2 @@
@@ -6746,6 +6823,9 @@ usr/local
 +	fflush(stdout);
 
 % usr/src/cmd/grep.c
+@@ -48 +48 @@
+-char	bittab[] = {
++unsigned char	bittab[] = {
 @@ -59,2 +59,5 @@
 -main(argc, argv)
 -char **argv;
@@ -7291,6 +7371,9 @@ usr/local
 -register char *s,*t;
 +int
 +compare(register char *s, register char *t)
+@@ -122 +124 @@
+-		*s<*t? -2:
++		(*s&0377)<(*t&0377)? -2:
 @@ -126,2 +128,2 @@
 -getword(w)
 -char *w;
@@ -7419,6 +7502,9 @@ usr/local
 +void error(char *s), newmode(int m);
 +int
 +main(int argc, char *argv[])
+@@ -24 +24 @@
+-	if(stat(tty, &sbuf) < 0) error("cannot stat");
++	if(tty == NULL || stat(tty, &sbuf) < 0) error("cannot stat");
 @@ -44,2 +44,2 @@
 -error(s)
 -char *s;
@@ -7727,6 +7813,9 @@ usr/local
 @@ -56 +57 @@
 -	register c, i;
 +	register int c, i;
+@@ -58 +59 @@
+-	char	buf[MAXN];
++	char	buf[strlen(target)+strlen(source)+2];
 @@ -105 +106 @@
 -			execl("/bin/cp", "cp", source, target, 0);
 +			execl("/bin/cp", "cp", source, target, (char *)0);
@@ -7738,30 +7827,41 @@ usr/local
 @@ -126 +127 @@
 -	register i;
 +	register int i;
-@@ -229,2 +230 @@
+@@ -128,0 +130,4 @@
++	if (strlen(source) >= MAXN || strlen(target) >= MAXN) {
++		fprintf(stderr, "mv: name too long\n");
++		return(1);
++	}
+@@ -134 +139 @@
+-		if (strlen(target) > MAXN-DIRSIZ-2) {
++		if (strlen(target)+strlen(dname(source)) > MAXN-2) {
+@@ -197 +202 @@
+-		strcat(dst, target);
++		strcpy(dst, target);
+@@ -229,2 +234 @@
 -pname(name)
 -register char *name;
 +pname(register char *name)
-@@ -232 +232 @@
+@@ -232 +236 @@
 -	register c;
 +	register int c;
-@@ -237 +237 @@
+@@ -237 +241 @@
 -	while (c = *p++ = *name++)
 +	while ((c = *p++ = *name++))
-@@ -247,2 +247 @@
+@@ -247,2 +251 @@
 -dname(name)
 -register char *name;
 +dname(register char *name)
-@@ -259,3 +258,2 @@
+@@ -259,3 +262,2 @@
 -check(spth, dinode)
 -char *spth;
 -ino_t dinode;
 +int
 +check(char *spth, ino_t dinode)
-@@ -278 +276 @@
+@@ -278 +280 @@
 -		if (strlen(nspth) > MAXN-2-sizeof(DOTDOT)) {
 +		if (strlen(nspth) > MAXN-2-(int)sizeof(DOTDOT)) {
-@@ -288,2 +286,2 @@
+@@ -288,2 +290,2 @@
 -chkdot(s)
 -register char *s;
 +int
@@ -8374,6 +8474,12 @@ usr/local
 -nexbuf()
 +void
 +nexbuf(void)
+@@ -294 +298 @@
+-		*rbufp = 0376;
++		*rbufp = (char)0376;
+@@ -300 +304 @@
+-		*rbufp = 0375;
++		*rbufp = (char)0375;
 @@ -305 +309,2 @@
 -tpgetc(ai)
 +int
@@ -10062,6 +10168,12 @@ usr/local
 -char *d;
 +void
 +rmdir(char *d)
+@@ -33 +30 @@
+-	char	*np, name[500];
++	char	*np, name[strlen(d)+4];
+@@ -39,0 +37,2 @@
++	else
++		np++;
 
 % usr/src/cmd/sa.c
 @@ -9 +9 @@
@@ -10297,7 +10409,9 @@ usr/local
 -char	**eargv;
 +extern int	eargc;
 +extern char	**eargv;
-@@ -151,14 +138,15 @@
+@@ -149,16 +136,17 @@
+-extern	char	bittab[];
+-
 -union reptr	**cmpend[DEPTH];
 -int	depth;
 -union reptr	*pending;
@@ -10312,6 +10426,8 @@ usr/local
 -char	*gline();
 -char	*place();
 -char	compfl;
++extern	unsigned char	bittab[];
++
 +extern struct reptr	**cmpend[DEPTH];
 +extern int	depth;
 +extern struct reptr	*pending;
@@ -10343,6 +10459,9 @@ usr/local
 +int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag, nlno;
 +int	nfiles, f, depth, eargc;
 +long	lnum, tlno[NLINES];
+@@ -10 +23 @@
+-char	bittab[]  = {
++unsigned char	bittab[]  = {
 @@ -21,2 +34,2 @@
 -main(argc, argv)
 -char	*argv[];
@@ -10870,15 +10989,15 @@ usr/local
 % usr/src/cmd/sh/ctype.c
 @@ -12 +12 @@
 -char	_ctype1[] {
-+char	_ctype1[] = {
++unsigned char	_ctype1[] = {
 @@ -61 +61 @@
 -char	_ctype2[] {
-+char	_ctype2[] = {
++unsigned char	_ctype2[] = {
 
 % usr/src/cmd/sh/ctype.h
 @@ -69 +69 @@
 -char	_ctype1[];
-+extern char	_ctype1[];
++extern unsigned char	_ctype1[];
 @@ -72,7 +72,7 @@
 -#define	space(c)	(((c)&QUOTE)==0 ANDF _ctype1[c]&(T_SPC))
 -#define eofmeta(c)	(((c)&QUOTE)==0 ANDF _ctype1[c]&(_META|T_EOF))
@@ -10896,7 +11015,7 @@ usr/local
 +#define escchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_ESC))
 @@ -80 +80 @@
 -char	_ctype2[];
-+extern char	_ctype2[];
++extern unsigned char	_ctype2[];
 @@ -82,9 +82,9 @@
 -#define	digit(c)	(((c)&QUOTE)==0 ANDF _ctype2[c]&(T_DIG))
 -#define fngchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c]&(T_FNG))
@@ -11273,6 +11392,9 @@ usr/local
 @@ -68 +67 @@
 -	    ANDF (dirf=open(s,0))>0
 +	    ANDF (dirf=open(s,0))>=0
+@@ -72 +71 @@
+-	IF *cs==0 THEN *cs++=0200 FI
++	IF *cs==0 THEN *cs++=(char)0200 FI
 @@ -80 +79 @@
 -		WHILE read(dirf, &entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
 +		WHILE read(dirf, (char *)&entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
@@ -11471,6 +11593,9 @@ usr/local
 @@ -158 +156 @@
 -	push(&fb); estabf(as);
 +	push((FILE)&fb); estabf(as);
+@@ -163 +161 @@
+-	IF quoted ANDF (stakbot==staktop) THEN pushstak(QUOTE) FI
++	IF quoted ANDF (stakbot==staktop) THEN pushstak((char)QUOTE) FI
 @@ -168 +166 @@
 -LOCAL	comsubst()
 +LOCAL VOID	comsubst(void)
@@ -12238,6 +12363,26 @@ usr/local
 +int	cmp(char *i, char *j), cmpa(char *pa, char *pb);
 +int	(*compare)(char *a, char *b) = cmpa;
 +char	*eol(char *p);
+@@ -37 +37 @@
+-char zero[256];
++unsigned char zero[256];
+@@ -39 +39 @@
+-char	fold[256] = {
++unsigned char	fold[256] = {
+@@ -73 +73 @@
+-char nofold[256] = {
++unsigned char nofold[256] = {
+@@ -108 +108 @@
+-char	nonprint[256] = {
++unsigned char	nonprint[256] = {
+@@ -127 +127 @@
+-char	dict[256] = {
++unsigned char	dict[256] = {
+@@ -147,2 +147,2 @@
+-	char *code;
+-	char *ignore;
++	unsigned char *code;
++	unsigned char *ignore;
 @@ -160,3 +160,3 @@
 -	0,0,
 -	0,-1,
@@ -12362,8 +12507,10 @@ usr/local
 -char *i, *j;
 +int
 +cmp(char *i, char *j)
-@@ -569 +583,0 @@
+@@ -569,2 +584 @@
 -	char *skip();
+-	char *code, *ignore;
++	unsigned char *code, *ignore;
 @@ -606,2 +620,2 @@
 -			for(ipa = pa; ipa<la&&isdigit(*ipa); ipa++) ;
 -			for(ipb = pb; ipb<lb&&isdigit(*ipb); ipb++) ;
@@ -12404,6 +12551,9 @@ usr/local
 -register char *pa, *pb;
 +int
 +cmpa(register char *pa, register char *pb)
+@@ -672 +687 @@
+-		*pb > *pa   ? fields[0].rflg:
++		(*pb&0377) > (*pa&0377) ? fields[0].rflg:
 @@ -678,3 +693 @@
 -skip(pp, fp, j)
 -struct field *fp;
@@ -14162,7 +14312,7 @@ usr/local
 % usr/src/cmd/vpr.c
 @@ -24 +24 @@
 -char	chrtab[][16];
-+char	chrtab[];
++unsigned char	chrtab[];
 @@ -26 +26 @@
 -char	*ctime();
 +int	send(void), getline(void); void putline(int ff), banner(char *s);
@@ -14185,6 +14335,16 @@ usr/local
 @@ -99 +101 @@
 -	register col, maxcol, c;
 +	register int col, maxcol, c;
+@@ -118,2 +120,2 @@
+-					ovbuf[2*col] = 0377;
+-					ovbuf[2*col+1] = 0377;
++					ovbuf[2*col] = (char)0377;
++					ovbuf[2*col+1] = (char)0377;
+@@ -152,2 +154,2 @@
+-			ovbuf[2*col] = 0377;
+-			ovbuf[2*col+1] = 0377;
++			ovbuf[2*col] = (char)0377;
++			ovbuf[2*col+1] = (char)0377;
 @@ -175 +177,2 @@
 -putline(ff)
 +void
@@ -14210,7 +14370,7 @@ usr/local
 +			t = chrtab[(*sp - ' ')*16 + i];
 @@ -235 +238 @@
 -char	chrtab[][16] = {
-+char	chrtab[] = {
++unsigned char	chrtab[] = {
 
 % usr/src/cmd/wall.c
 @@ -8,2 +7,0 @@
@@ -14355,6 +14515,15 @@ usr/local
 -char *s;
 +void
 +getline(char *s)
+@@ -130 +132 @@
+-		if(*rs == 0)
++		if(feof(stdin))
+@@ -134 +136 @@
+-				if(*rs == '\0')	exit(0);
++				if(feof(stdin))	exit(0);
+@@ -138 +140 @@
+-	while(*--rs == ' ')
++	while(rs > s && *--rs == ' ')
 @@ -142,2 +144,2 @@
 -getnum(s)
 -char *s;
@@ -14638,6 +14807,9 @@ usr/local
 @@ -159 +174 @@
 -	register c;
 +	register int c;
+@@ -172 +187 @@
+-		while( getchar() != '\n' );
++		while( (c=getchar()) != '\n' && c != EOF );
 @@ -180 +195 @@
 -char *inst[] {
 +char *inst[] = {
@@ -14676,36 +14848,43 @@ usr/local
 @@ -352 +373 @@
 -	register g, go;
 +	register int g, go;
-@@ -427 +448 @@
+@@ -414,0 +436,3 @@
++		case EOF:
++			exit( 0 );
++
+@@ -417 +441 @@
+-			while( g != '\n' ) g = getchar();
++			while( g != '\n' && g != EOF ) g = getchar();
+@@ -427 +451 @@
 -char ntry;
 +int ntry;
-@@ -432 +453,3 @@
+@@ -432 +456,3 @@
 -start( h ) HAND h; {
 +void
 +start( HAND h ){
 +	(void)h;
-@@ -436 +459,2 @@
+@@ -436 +462,2 @@
 -hedrew( d ){
 +void
 +hedrew( int d ){
-@@ -440 +464,2 @@
+@@ -440 +467,2 @@
 -heguessed( d ){
 +void
 +heguessed( int d ){
-@@ -444 +469,2 @@
+@@ -444 +472,2 @@
 -myguess(){
 +int
 +myguess(void){
-@@ -446 +472 @@
+@@ -446 +475 @@
 -	register i, lg, t;
 +	register int i, lg, t;
-@@ -465 +491 @@
+@@ -465 +494 @@
 -		if( hehas[try[i]] ) {
 +		if( hehas[try[i]&0377] ) {
-@@ -474 +500 @@
+@@ -474 +503 @@
 -		if( haveguessed[try[i]] < lg ) lg = haveguessed[try[i]];
 +		if( haveguessed[try[i]&0377] < lg ) lg = haveguessed[try[i]&0377];
-@@ -480 +506 @@
+@@ -480 +509 @@
 -		if( haveguessed[try[i]] == lg ) try[t++] = try[i];
 +		if( haveguessed[try[i]&0377] == lg ) try[t++] = try[i];
 
@@ -14796,6 +14975,9 @@ usr/local
 @@ -31 +37 @@
 -	register c;
 +	register int c;
+@@ -38 +44 @@
+-			if(t[-1]=='\\')		/*inexact test*/
++			if(t>line&&t[-1]=='\\')		/*inexact test*/
 @@ -49 +55 @@
 -				if(*line==0377)
 +				if((*line&0377)==0377)
@@ -14959,8 +15141,10 @@ usr/local
 -rline()
 +int
 +rline(void)
-@@ -317 +323 @@
+@@ -316,2 +322,2 @@
+-		if(c == '\0')
 -			exit();
++		if(feof(stdin))
 +			exit(0);
 @@ -324 +330,2 @@
 -rnum(n)
@@ -14983,8 +15167,10 @@ usr/local
 @@ -337 +345 @@
 -	register n, c;
 +	register int n, c;
-@@ -345 +353 @@
+@@ -344,2 +352,2 @@
+-				if(c == 0)
 -					exit();
++				if(c == EOF)
 +					exit(0);
 @@ -356,2 +364,2 @@
 -near(ap, ahaz)
@@ -15906,6 +16092,9 @@ usr/local
 -register char *s1, *s2;
 +int
 +strcmp(register char *s1, register char *s2)
+@@ -12 +13 @@
+-	return(*s1 - *--s2);
++	return((*s1&0377) - (*--s2&0377));
 
 % usr/src/libc/gen/strcpy.c
 @@ -0,0 +1 @@
@@ -15951,6 +16140,9 @@ usr/local
 -register n;
 +int
 +strncmp(register char *s1, register char *s2, register int n)
+@@ -13 +13 @@
+-	return(n<0 ? 0 : *s1 - *--s2);
++	return(n<0 ? 0 : (*s1&0377) - (*--s2&0377));
 
 % usr/src/libc/gen/strncpy.c
 @@ -0,0 +1 @@
@@ -21357,7 +21549,7 @@ usr/local
 @@ -514,2 +505,2 @@
 -	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
 -	    && nb < 1024-u.u_ssize)
-+	if (((base+u.u_count)>>12) >= ts+u.u_dsize
++	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
 +	    && nb < (int)(btoc(USERSIZE)-u.u_ssize))
 @@ -528,3 +519,6 @@
 -	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
@@ -21431,6 +21623,9 @@ usr/local
 -		spl0();
 
 % usr/sys/dev/partab.c
+@@ -4 +4 @@
+-char partab[] = {
++unsigned char partab[] = {
 
 % usr/sys/dev/pl011.c usr/sys/dev/kl.c
 @@ -12 +12 @@
@@ -22217,7 +22412,7 @@ usr/local
 -#include "../h/mx.h"
 @@ -17 +16,3 @@
 -char	partab[];
-+extern char	partab[];
++extern unsigned char	partab[];
 +void	wflushtty(struct tty *tp), flushtty(struct tty *tp),
 +	ttyblock(struct tty *tp), ttyoutput(int c, struct tty *tp);
 @@ -27 +28 @@
@@ -22487,9 +22682,11 @@ usr/local
 +
 +void
 +rkstrategy(register struct buf *bp)
-@@ -49,2 +87,0 @@
+@@ -49,3 +88 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
+-	if (bp->b_blkno >= NRKBLK) {
++	if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK) {
 @@ -68 +105,2 @@
 -rkstart()
 +void
@@ -23088,6 +23285,9 @@ usr/local
 @@ -64 +70 @@
 -#define	tun	tp->t_un
 +#define	tun	tp->t_un.tc
+@@ -87 +93 @@
+-#define	CBRK	0377
++#define	CBRK	(char)0377
 @@ -92,0 +99,3 @@
 +#define	TTHOLD(tp)	((tp)->t_rawq.c_cc >= TTYHOG && \
 +	((tp)->t_delct || (tp)->t_flags&(RAW|CBREAK)))
@@ -24100,6 +24300,9 @@ usr/local
 @@ -177 +178 @@
 -	register t;
 +	register int t;
+@@ -200 +201 @@
+-		u.u_offset += n;
++		u.u_offset = (unsigned long)u.u_offset + n;
 
 % usr/sys/sys/sig.c
 @@ -9,0 +10 @@
@@ -24147,68 +24350,72 @@ usr/local
 +core(void)
 @@ -200 +203,0 @@
 -	extern schar();
-@@ -214 +217 @@
+@@ -201,0 +205,2 @@
++	if(u.u_uid != u.u_ruid || u.u_gid != u.u_rgid)
++		return(0);
+@@ -213,2 +218 @@
+-	   (ip->i_mode&IFMT) == IFREG &&
 -	   u.u_uid == u.u_ruid) {
-+	   u.u_uid == u.u_ruid && u.u_gid == u.u_rgid) {
-@@ -237,2 +240,2 @@
++	   (ip->i_mode&IFMT) == IFREG) {
+@@ -237,2 +241,2 @@
 -grow(sp)
 -unsigned sp;
 +int
 +grow(unsigned sp)
-@@ -240 +243 @@
+@@ -240 +244 @@
 -	register si, i;
 +	register int si, i;
-@@ -242 +245 @@
+@@ -242 +246 @@
 -	register a;
 +	register int a;
-@@ -244 +247 @@
+@@ -244 +248 @@
 -	if(sp >= -ctob(u.u_ssize))
 +	if(sp >= USERSIZE-ctob(u.u_ssize))
-@@ -246 +249 @@
+@@ -246 +250 @@
 -	si = (-sp)/64 - u.u_ssize + SINCR;
 +	si = (USERSIZE-sp)/ctob(1) - u.u_ssize + SINCR;
-@@ -252 +255,4 @@
+@@ -252 +256,4 @@
 -	expand(p->p_size+si);
 +	if(expand(p->p_size+si) == 0) {
 +		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
 +		return(0);
 +	}
-@@ -267 +273,2 @@
+@@ -267 +274,2 @@
 -ptrace()
 +void
 +ptrace(void)
-@@ -313 +320,2 @@
+@@ -313 +321,2 @@
 -procxmt()
 +int
 +procxmt(void)
-@@ -316 +324 @@
+@@ -316 +325 @@
 -	register *p;
 +	register int *p;
-@@ -345 +353 @@
+@@ -345 +354 @@
 -		ipc.ip_data = ((physadr)&u)->r[i>>1];
 +		ipc.ip_data = ((physadr)&u)->r[i>>2];
-@@ -354 +362 @@
+@@ -354 +363 @@
 -		if (xp = u.u_procp->p_textp) {
 +		if ((xp = u.u_procp->p_textp)) {
-@@ -364,0 +373 @@
+@@ -364,0 +374 @@
 +		arm_sync_icache((caddr_t)ipc.ip_addr, NBPW);
-@@ -379,2 +388,2 @@
+@@ -379,2 +389,2 @@
 -		p = (int *)&((physadr)&u)->r[i>>1];
 -		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[6])
 +		p = (int *)&((physadr)&u)->r[i>>2];
 +		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[32])
-@@ -383 +392 @@
+@@ -383 +393 @@
 -			if (p == &u.u_ar0[regloc[i]])
 +			if (p == &u.u_ar0[regloc[i]&0377])
-@@ -386,2 +395 @@
+@@ -386,2 +396 @@
 -			ipc.ip_data |= 0170000;	/* assure user space */
 -			ipc.ip_data &= ~0340;	/* priority 0 */
 +			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;	/* assure user space */
-@@ -397,3 +404,0 @@
+@@ -397,3 +405,0 @@
 -	/*  one version causes a trace-trap */
 -	case 9:
 -		u.u_ar0[RPS] |= TBIT;
-@@ -410,0 +416 @@
+@@ -410,0 +417 @@
 +		return(1);
 
 % usr/sys/sys/slp.c
@@ -24363,6 +24570,9 @@ usr/local
 @@ -131 +129 @@
 -	register id;
 +	register int id;
+@@ -141 +139 @@
+-	u.u_offset++;
++	u.u_offset = (unsigned long)u.u_offset + 1;
 @@ -153 +151,2 @@
 -cpass()
 +int
@@ -24370,6 +24580,9 @@ usr/local
 @@ -155 +154 @@
 -	register c, id;
 +	register int c, id;
+@@ -167 +166 @@
+-	u.u_offset++;
++	u.u_offset = (unsigned long)u.u_offset + 1;
 @@ -176 +175,2 @@
 -nodev()
 +void
