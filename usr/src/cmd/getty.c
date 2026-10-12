@@ -153,7 +153,7 @@ main(int argc, char **argv)
 				tmode.sg_flags &= ~LCASE;
 			stty(0, &tmode);
 			putchr('\n');
-			execl("/bin/login", "login", name, 0);
+			execl("/bin/login", "login", name, (char *)0);
 			exit(1);
 		}
 		tname = tabp->nname;

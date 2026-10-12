@@ -164,7 +164,7 @@ ex(char *bp)
 	}
 	if(i == 0) {
 		sigs(SIG_DFL);
-		execl("/bin/sh", "sh", "-c", bp+1, 0);
+		execl("/bin/sh", "sh", "-c", bp+1, (char *)0);
 		exit(0);
 	}
 	while(wait((int *)NULL) != i)

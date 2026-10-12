@@ -607,6 +607,6 @@ main(int argc, char **argv)
 	dup(p[0]);
 	close(p[0]);
 	close(p[1]);
-	execl("/bin/dc", "dc", "-", 0);
-	execl("/usr/bin/dc", "dc", "-", 0);
+	execl("/bin/dc", "dc", "-", (char *)0);
+	execl("/usr/bin/dc", "dc", "-", (char *)0);
 }

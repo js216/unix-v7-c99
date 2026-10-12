@@ -103,7 +103,7 @@ move(char *source, char *target)
 			return(1);
 		}
 		if (i == 0) {
-			execl("/bin/cp", "cp", source, target, 0);
+			execl("/bin/cp", "cp", source, target, (char *)0);
 			fprintf(stderr, "mv: cannot exec cp\n");
 			exit(1);
 		}

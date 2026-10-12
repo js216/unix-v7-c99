@@ -217,7 +217,7 @@ execom(void)
 		if (freopen("/dev/tty", "r", stdin)==NULL)
 			freopen("/dev/null", "r", stdin);
 	}
-	execl("/bin/sh", "sh", "-t", 0);
+	execl("/bin/sh", "sh", "-t", (char *)0);
 }
 
 void

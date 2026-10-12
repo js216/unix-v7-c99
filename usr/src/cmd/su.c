@@ -41,7 +41,7 @@ ok:
 			break;
 		}
 	}
-	execl(shell, "su", 0);
+	execl(shell, "su", (char *)0);
 	printf("No shell\n");
 	exit(3);
 }

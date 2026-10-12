@@ -610,8 +610,8 @@ checkdir(register char *name)
 			*cp = '\0';
 			if (access(name, 01) < 0) {
 				if (fork() == 0) {
-					execl("/bin/mkdir", "mkdir", name, 0);
-					execl("/usr/bin/mkdir", "mkdir", name, 0);
+					execl("/bin/mkdir", "mkdir", name, (char *)0);
+					execl("/usr/bin/mkdir", "mkdir", name, (char *)0);
 					fprintf(stderr, "tar: cannot find mkdir!\n");
 					done(0);
 				}
@@ -759,8 +759,8 @@ getwdir(char *s)
 	if ((i = fork()) == 0) {
 		close(1);
 		dup(pipdes[1]);
-		execl("/bin/pwd", "pwd", 0);
-		execl("/usr/bin/pwd", "pwd", 0);
+		execl("/bin/pwd", "pwd", (char *)0);
+		execl("/usr/bin/pwd", "pwd", (char *)0);
 		fprintf(stderr, "pwd failed!\n");
 		printf("/\n");
 		exit(1);

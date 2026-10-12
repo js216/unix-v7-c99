@@ -116,7 +116,7 @@ main(int argc, char **argv)
 	}
 	signal(SIGQUIT, SIG_DFL);
 	signal(SIGINT, SIG_DFL);
-	execlp(pwd->pw_shell, minusnam, 0);
+	execlp(pwd->pw_shell, minusnam, (char *)0);
 	printf("No shell\n");
 	exit(0);
 }

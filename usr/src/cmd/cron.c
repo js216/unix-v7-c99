@@ -130,7 +130,7 @@ ex(char *s)
 	if(fork())
 		exit(0);
 	freopen("/", "r", stdin);
-	execl("/bin/sh", "sh", "-c", s, 0);
+	execl("/bin/sh", "sh", "-c", s, (char *)0);
 	exit(0);
 }
 

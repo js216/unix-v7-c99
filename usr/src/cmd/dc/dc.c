@@ -1575,7 +1575,7 @@ command(void){
 		while((c = readc()) != '\n')*sl++ = c;
 		*sl = 0;
 		if((pid = fork()) == 0){
-			execl("/bin/sh","sh","-c",line,0);
+			execl("/bin/sh","sh","-c",line,(char *)0);
 			exit(0100);
 		}
 		savint = signal(SIGINT, SIG_IGN);

@@ -147,8 +147,8 @@ rmdir(char *f, int iflg)
 		wait(&status);
 		return(status);
 	}
-	execl("/bin/rmdir", "rmdir", f, 0);
-	execl("/usr/bin/rmdir", "rmdir", f, 0);
+	execl("/bin/rmdir", "rmdir", f, (char *)0);
+	execl("/usr/bin/rmdir", "rmdir", f, (char *)0);
 	printf("rm: can't find rmdir\n");
 	exit(1);
 	return(1);

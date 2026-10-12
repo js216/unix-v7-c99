@@ -241,7 +241,7 @@ main(int argc,char **argv)
 		/* fallthrough */
 	case 0:		/* child */
 		execl(SORT, SORT, sortopt, "+0", "-1", "+1",
-			sortfile, "-o", sortfile, 0);
+			sortfile, "-o", sortfile, (char *)0);
 
 	default:	/* parent */
 		while(wait(&status) != pid);

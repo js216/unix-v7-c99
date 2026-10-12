@@ -103,8 +103,8 @@ run(char *file)
 		exit(0);
 	}
 	nice(3);
-	execl("/bin/sh", "sh", file, 0);
-	execl("/usr/bin/sh", "sh", file, 0);
+	execl("/bin/sh", "sh", file, (char *)0);
+	execl("/usr/bin/sh", "sh", file, (char *)0);
 	fprintf(stderr, "Can't execl shell\n");
 	exit(1);
 }

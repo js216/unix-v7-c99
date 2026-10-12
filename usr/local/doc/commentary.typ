@@ -8295,10 +8295,12 @@ by what `getname` learnt about the terminal, and `login` executed with
 the name as its argument. The modes are set by `stty`, which is `ioctl`
 with `TIOCSETP`. Otherwise the next table is tried.
 
-Note that the list of arguments to `execl` (156) ends with an `int` 0
-where a null pointer is meant. The function is variadic, so the
-compiler does not convert it; the call works because an `int` and a
-pointer are the same size, two bytes on the PDP-11 and four on the ARM.
+The list of arguments to `execl` (156) ends with `(char *)0`, where v7
+wrote a plain 0. The function is variadic, so the compiler does not
+convert the argument to the pointer which `execl` takes it to be. An
+`int` 0 works only because an `int` and a pointer are the same size, two
+bytes on the PDP-11 and four on the ARM, and C leaves the call
+undefined; every such list in the system now ends with the cast.
 
 #lines(132, 161)
 
@@ -8426,8 +8428,8 @@ The message of the day is shown, then a note if the user's mailbox is
 not empty, and the shell is executed with `execlp` (#f("gen/execvp.c")),
 interrupt and quit restored to the default first. If it cannot be
 executed, the process exits, and `init` starts a new `getty`. As in
-`getty`, the `0` ending the argument list of `execlp` (119) is an `int`
-standing for a null pointer.
+`getty` (#f("cmd/getty.c")), the argument list of `execlp` (119) now
+ends with `(char *)0`, not an `int` 0.
 
 #lines(95, 122)
 
@@ -11874,9 +11876,8 @@ second time.
 and the kernel's `dup` (#f("sys3.c")) then takes the second argument as
 the descriptor wanted, closing it first if it is open.
 
-The terminating 0 of `execl`'s arguments (23) is an `int` where a
-pointer is meant. On the ARM, as on the PDP-11, an `int` and a pointer
-both occupy one word, and `execl` sees a null pointer. `execl` (`execl.s`)
+The terminating 0 of `execl`'s arguments (23) is cast to `char *`, as
+in #f("cmd/getty.c"). `execl` (`execl.s`)
 is one of the few places where the PDP-11's way with arguments survives:
 it pushes `r1` to `r3` just below any arguments which the caller
 stacked, so that the arguments after the name lie in memory as a vector
@@ -11922,7 +11923,8 @@ The include of #f("stdio.h") (1) is new: v7's `system.c` included only
 declarations, which C99 does not allow. The saved actions are now
 pointers to functions of one `int` returning nothing (8), the type of
 handler which `signal` takes and returns (#f("sys/signal.s")); v7's were
-pointers to functions returning `int`.
+pointers to functions returning `int`. The `execl` (11) ends with
+`(char *)0`, as in #f("cmd/getty.c").
 
 #lines(1, 23)
 #source("/usr/src/libc/gen/execvp.c")
@@ -13176,7 +13178,8 @@ warning from `-Wextra`.
 #lines(763, 795)
 
 `callunix` runs `sh -t`, which reads one line of input, the rest of the
-`!` command, executes it, and exits. `savint` now has the type of a
+`!` command, executes it, and exits; its `execl` (807) ends with
+`(char *)0`, as in #f("cmd/getty.c"). `savint` now has the type of a
 signal handler, and `pid` is declared separately, since it is not a
 function pointer. `quit` refuses to leave a modified buffer once,
 unless `vflag` is clear; a second `q` succeeds.
@@ -13370,7 +13373,8 @@ of a counter, so that
 encryption and decryption are the same operation. This is the cipher
 of the `crypt` command. For the temporary file, `makekey` at the end
 mixes the time and the process id into the key, so that each session's
-file is encrypted differently.
+file is encrypted differently. The `execl` calls (1749, 1750) end with
+`(char *)0`, as in #f("cmd/getty.c").
 
 The signal handler pointer in `getkey` (1695) has the new type of a
 handler.
@@ -14089,7 +14093,7 @@ code.
 belongs to `init` (#f("cmd/init.c")), which collects it when it ends.
 `cron` thus never waits for a command, and leaves no zombies. The
 command is given to the shell with `-c`, with its standard input on
-"/".
+"/". The `execl` (133) ends with `(char *)0`, as in #f("cmd/getty.c").
 
 #lines(108, 135)
 

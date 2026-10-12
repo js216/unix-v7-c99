@@ -49,7 +49,7 @@ done(void)
 	setuid(getuid());
 	for (i=3; i<15; i++)
 		close(i);
-	execl("/bin/sh", "sh", 0);
+	execl("/bin/sh", "sh", (char *)0);
 	printf("No shell!\n");
 	exit(0);
 }

@@ -30,8 +30,8 @@ setup(char *pw)
 		close(1);
 		dup(pf[0]);
 		dup(pf[1]);
-		execl("/usr/lib/makekey", "-", 0);
-		execl("/lib/makekey", "-", 0);
+		execl("/usr/lib/makekey", "-", (char *)0);
+		execl("/lib/makekey", "-", (char *)0);
 		exit(1);
 	}
 	write(pf[1], buf, 10);

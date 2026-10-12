@@ -8,7 +8,7 @@ system(char *s)
 	register void (*istat)(int sig), (*qstat)(int sig);
 
 	if ((pid = fork()) == 0) {
-		execl("/bin/sh", "sh", "-c", s, 0);
+		execl("/bin/sh", "sh", "-c", s, (char *)0);
 		_exit(127);
 	}
 	istat = signal(SIGINT, SIG_IGN);

@@ -804,7 +804,7 @@ callunix(void)
 	if ((pid = fork()) == 0) {
 		signal(SIGHUP, oldhup);
 		signal(SIGQUIT, oldquit);
-		execl("/bin/sh", "sh", "-t", 0);
+		execl("/bin/sh", "sh", "-t", (char *)0);
 		exit(0100);
 	}
 	savint = signal(SIGINT, SIG_IGN);
@@ -1746,8 +1746,8 @@ crinit(char *keyp, char *permp)
 		close(1);
 		dup(pf[0]);
 		dup(pf[1]);
-		execl("/usr/lib/makekey", "-", 0);
-		execl("/lib/makekey", "-", 0);
+		execl("/usr/lib/makekey", "-", (char *)0);
+		execl("/lib/makekey", "-", (char *)0);
 		exit(1);
 	}
 	write(pf[1], buf, 10);

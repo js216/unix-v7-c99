@@ -311,7 +311,7 @@ callunix(char line[])
 	if( (unixpid=fork())==0 ) {
 		signal(SIGINT,sigint); signal(SIGQUIT,sigquit);
 		close(0); dup(2);
-		execl("/bin/sh", "-sh", "-c", line, 0);
+		execl("/bin/sh", "-sh", "-c", line, (char *)0);
 		exit(255);
 	}
 	else if(unixpid == -1)
