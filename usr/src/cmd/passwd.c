@@ -155,6 +155,8 @@ tryagn:
 		goto out;
 	}
 	while((u=read(fi,buf,sizeof(buf))) > 0) write(fo,buf,u);
+	unlink(temp);
+	exit(0);
 
 out:
 	unlink(temp);
