@@ -753,8 +753,7 @@ texec(char *f, int *at)
 	t = at;
 	execv(f, (char **)(t+DCOM));
 	if (errno==ENOEXEC) {
-		if (*linep)
-			t[DCOM] = (int)linep;
+		t[DCOM] = (int)f;
 		t[DSPR] = (int)"/bin/osh";
 		execv((char *)t[DSPR], (char **)(t+DSPR));
 		prs("No shell!\n");
