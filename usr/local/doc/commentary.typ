@@ -9175,8 +9175,10 @@ The profile is read only by a login shell, which `login` (#f("cmd/login.c")) sta
 name. While it is read, `exfile` is given `ttyflg` as `prof`; see
 below. A command string given with `-c` is set up as the input by
 `estabf` (#f("sh/io.c")); otherwise the input is the standard input or
-the named file. `comdiv--` makes a null `comdiv` non-null, so that a
-later `set -c` is not taken as a command string (`options`, #f("sh/args.c")).
+the named file. `comdiv` is then made non-null, so that a later
+`set -c` is not taken as a command string (`options`, #f("sh/args.c")).
+v7 wrote `comdiv--`, a decrement of the null pointer, which C99 leaves
+undefined; the port points it at `minus`, the string `-`, instead (90).
 
 On re-entry for a command file (92), the shell stores `dolv` through
 `execargs`, at the top of its user stack. That word is where `ps`

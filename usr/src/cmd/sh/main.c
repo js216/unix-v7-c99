@@ -87,7 +87,7 @@ main(INT c, STRING v[])
 		IF comdiv
 		THEN	estabf(comdiv); input = -1;
 		ELSE	input=((flags&stdflg) ? 0 : chkopen(cmdadr));
-			comdiv--;
+			comdiv=minus;
 		FI
 	ELSE	*execargs=(char *)dolv;	/* for `ps' cmd */
 	FI
