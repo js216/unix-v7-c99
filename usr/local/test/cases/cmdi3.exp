@@ -84,8 +84,11 @@ sys::2:bin,sys
 bin::3:sys,bin
 uucp::4:
 /dev/console
-is n
-is y
+st1
+st0
+st0
+st1
+st1
 who: cannot open utmp
 who: cannot open utmp
 st0

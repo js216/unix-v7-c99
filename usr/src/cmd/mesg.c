@@ -21,7 +21,7 @@ main(int argc, char *argv[])
 {
 	int r=0;
 	tty = ttyname(2);
-	if(stat(tty, &sbuf) < 0) error("cannot stat");
+	if(tty == NULL || stat(tty, &sbuf) < 0) error("cannot stat");
 	if(argc < 2) {
 		if(sbuf.st_mode & 02)
 			fprintf(stderr,"is y\n");

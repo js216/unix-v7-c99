@@ -13090,7 +13090,7 @@ and his group. `login` changes to the home directory and refuses a user
 whose directory does not exist, so without them none of the three
 could log in.
 
-#lines(139, 338)
+#lines(139, 339)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -13099,7 +13099,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(339, 340)
+#lines(340, 341)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

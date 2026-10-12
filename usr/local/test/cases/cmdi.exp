@@ -186,4 +186,5 @@ fs:
 Can't open /usr/adm/acct
      0     0.00     0.00
 Can't open /usr/adm/acct
-is y
+st255
+drwxr-xr-x

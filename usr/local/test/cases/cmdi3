@@ -10,7 +10,8 @@ echo one two three four five six seven | sp; echo hi there | tc -t | od -c | sed
 for f in -a -ab -ac -aj -al -an -ar -at -u; do sa $f | sed -n '/ accton$/p; / ls$/p; / date$/p; / cat$/p' | awk '{ print $1, $NF }' | sort; done
 rm /usr/adm/acct
 cp $U/fs.img fs; dcheck fs; ncheck fs | sed 6q; ncheck -i 1 fs; ncheck -s fs; cat /etc/group
-tty; mesg n; mesg; mesg y; mesg
+tty; m=`$U/fmode /dev/console`; chmod 600 /dev/console
+for a in '' y '' n ''; do mesg $a 2</dev/console; echo st$?; done; chmod $m /dev/console
 who; who am i; ac; ac -p; ac -d; ac -w /usr/adm/wtmp tst
 sh -c 'newgrp nosuch' </dev/null; echo st$?; sh -c 'newgrp sys' </dev/null; echo st$?
 cd /; rm -rf $T

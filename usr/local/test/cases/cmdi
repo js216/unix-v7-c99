@@ -63,5 +63,6 @@ basename /usr/lib/makekey; basename foo.c .c; tty; yes | sed 2q; cp f h; cmp f h
 osh -c 'echo osh works; echo a b | wc'
 mknod $T/nod c 0 0; ls -l $T/nod; rm $T/nod; mkdir rd; >rd/x; rm -r rd; ls; sync; kill -0 1; echo k$?
 cp $U/fs.img fs; ncheck fs; dcheck fs
-ac -p | sed 3q; sa | sed 3q; sa -m | sed 3q; mesg
+ac -p | sed 3q; sa | sed 3q; sa -m | sed 3q
+mkdir m; chmod 755 m; cd m; mesg n 2>/dev/null; echo st$?; cd ..; ls -ld m | awk '{ print $1 }'
 cd /; rm -rf $T

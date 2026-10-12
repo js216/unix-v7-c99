@@ -297,6 +297,7 @@ d--755 0 0
 					edscr	---644 0 0 usr/local/test/utils/edscr
 					elft	---755 0 0 usr/local/test/obj/elft
 					forkt	---755 0 0 usr/local/test/obj/forkt
+					fmode	---755 0 0 usr/local/test/obj/fmode
 					fpt	---755 0 0 usr/local/test/obj/fpt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img
 					kcmp	---755 0 0 usr/local/test/obj/kcmp
