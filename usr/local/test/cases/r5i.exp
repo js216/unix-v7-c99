@@ -2,6 +2,10 @@ thumb it4: 2 hits 1
 scan 7766279631452241919 37777777777
 [abc][1.500000][1.500000e+00][ab][a][1]
 padded 0
+2c2
+< x
+---
+> y
 /bin/echo
 su: /tmp/shN-0: cannot create
 ./s: /nonexistent: bad directory

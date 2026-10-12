@@ -2,6 +2,7 @@ T=/tmp/r5i U=/usr/local/test/utils
 mkdir $T; chmod 777 $T; cd $T
 $U/r5i
 $U/r5i e /bin/* /etc/* /usr/lib/* /usr/games/* $U/*
+$U/r5i a 16384 >a; cp a b; echo x >>a; echo y >>b; diff a b
 sh -c 'exec <&-; echo /bin/ech*'
 chmod 755 /tmp; echo 'cat <<E
 x

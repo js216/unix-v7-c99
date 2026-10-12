@@ -607,7 +607,7 @@ fetch(long *f,int a,int b,FILE *lb,char *s)
 int
 readhash(FILE *f)
 {
-	long sum;
+	unsigned long sum;
 	register unsigned shift;
 	register int space;
 	register int t;
@@ -639,7 +639,7 @@ readhash(FILE *f)
 		}
 		break;
 	}
-	sum = low(sum) + high(sum);
+	sum = low(sum) + high(sum) + (sum == 0);
 	return((short)low(sum) + (short)high(sum));
 }
 
