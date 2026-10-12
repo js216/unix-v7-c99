@@ -24,7 +24,7 @@ char	*magtape = tapename;
 
 daddr_t	seekpt;
 int	ofile;
-FILE	*df;
+FILE	*df, *tf;
 char	dirfile[] = "rstXXXXXX";
 
 struct {
@@ -67,10 +67,11 @@ main(int argc, char *argv[])
 	if (argc>=3 && *argv[0] == 'f')
 		magtape = *++argv;
 	df = fopen(dirfile, "w");
-	if (df == NULL) {
+	if (df == NULL || (tf = fopen(dirfile, "r")) == NULL) {
 		printf("dumpdir: %s - cannot create directory temporary\n", dirfile);
 		exit(1);
 	}
+	unlink(dirfile);
 
 	if ((mt = open(magtape, 0)) < 0) {
 		printf("%s: cannot open tape\n", magtape);
@@ -87,7 +88,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	pass1();  /* This sets the various maps on the way by */
-	freopen(dirfile, "r", df);
+	df = tf;
 	strcpy(prebuf, "/");
 	printem(prebuf, (ino_t) 2);
 	exit(0);
@@ -126,6 +127,10 @@ finish:
 		if (i != IFDIR) {
 			goto finish;
 		}
+		if (ipos >= MAXINO) {
+			printf("Too many directories\n");
+			exit(1);
+		}
 		inotab[ipos].t_ino = spcl.c_inumber;
 		inotab[ipos++].t_seekpt = seekpt;
 		getfile(spcl.c_inumber, putdir, null, spcl.c_dinode.di_size);
@@ -153,17 +158,19 @@ found:
 			return;
 		if (search(dir.d_ino) != 0 && direq(dir.d_name, ".") == 0 && direq(dir.d_name, "..") == 0) {
 			int len;
-			FILE *tdf;
+			long pos;
 
-			tdf = df;
-			df = fopen(dirfile, "r");
 			len = strlen(prefix);
+			if (len + DIRSIZ + 2 > (int)sizeof(prebuf)) {
+				printf("%s%-.14s: name too long\n", prefix, dir.d_name);
+				continue;
+			}
+			pos = ftell(df);
 			strncat(prefix, dir.d_name, sizeof(dir.d_name));
 			strcat(prefix, "/");
 			printem(prefix, dir.d_ino);
 			prefix[len] = '\0';
-			fclose(df);
-			df = tdf;
+			mseek(pos);
 		}
 		else
 			if (BIT(dir.d_ino, dumpmap))
@@ -195,7 +202,7 @@ getfile(ino_t n, void (*f1)(char *b, long size),
 			return;
 		}
 start:
-		for (i = 0; i < addrblock.c_count; i++) {
+		for (i = 0; i < addrblock.c_count && i < BSIZE; i++) {
 			if (addrblock.c_addr[i]) {
 				readtape(buf);
 				(*f1)(buf, size > BSIZE ? (long) BSIZE : size);
@@ -240,8 +247,9 @@ loop:
 			flsht();
 			close(mt);
 			printf("Mount volume %d\n", volno);
-			while (getchar() != '\n')
-				;
+			while ((i = getchar()) != '\n')
+				if (i == EOF)
+					exit(1);
 			if ((mt = open(magtape, 0)) == -1) {
 				printf("Cannot open tape!\n");
 			}
@@ -471,7 +479,8 @@ readbits(short *m)
 	register int i;
 
 	i = spcl.c_count;
-
+	if ((unsigned)i > MSIZ/(BSIZE/sizeof(short)))
+		i = MSIZ/(BSIZE/sizeof(short));
 	while (i--) {
 		readtape((char *) m);
 		m += (BSIZE/(MLEN/BITS));
