@@ -42,7 +42,7 @@ int status;
 
 
 char *hasht[MAXT];
-char line[LMAX];
+char line[2*LMAX+4];
 char btable[256];
 int ignore;
 int only;
@@ -104,7 +104,7 @@ main(int argc,char **argv)
 			break;
 
 		case 'w':
-			if(argc >= 2) {
+			if(argc > 2) {
 				argc--;
 				wlen++;
 				llen = atoi(*++argv);
@@ -123,7 +123,7 @@ main(int argc,char **argv)
 				llen = 100;
 			break;
 		case 'g':
-			if(argc >=2) {
+			if(argc >2) {
 				argc--;
 				gap = gutter = atoi(*++argv);
 			}
@@ -132,7 +132,7 @@ main(int argc,char **argv)
 		case 'i':
 			if(only) 
 				diag("Only file already given.",empty);
-			if (argc>=2){
+			if (argc>2){
 				argc--;
 				ignore++;
 				xfile = *++argv;
@@ -142,7 +142,7 @@ main(int argc,char **argv)
 		case 'o':
 			if(ignore)
 				diag("Ignore file already given",empty);
-			if (argc>=2){
+			if (argc>2){
 				only++;
 				argc--;
 				xfile = *++argv;
@@ -150,7 +150,7 @@ main(int argc,char **argv)
 			break;
 
 		case 'b':
-			if(argc>=2) {
+			if(argc>2) {
 				argc--;
 				bfile = *++argv;
 			}
@@ -163,6 +163,8 @@ main(int argc,char **argv)
 		argv++;
 	}
 
+	if(gap < 0 || gap > LMAX || llen < gap+2)
+		diag("Wrong width",empty);
 	if(argc>3)
 		diag("Too many filenames",empty);
 	else if(argc==3){
@@ -204,7 +206,7 @@ main(int argc,char **argv)
 
 	while(bufp < endbufp && (c = getc(xptr)) != EOF) {
 		if(isabreak(c)) {
-			if(storeh(hash(strtbufp,bufp),strtbufp))
+			if(bufp > strtbufp && storeh(hash(strtbufp,bufp),strtbufp))
 				diag("Too many words",xfile);
 			*bufp++ = '\0';
 			strtbufp = bufp;
@@ -215,7 +217,6 @@ main(int argc,char **argv)
 	}
 	if (bufp >= endbufp)
 		diag("Too many words in file",xfile);
-	endbufp = --bufp;
 
 	/* open output file for sorting */
 
@@ -242,6 +243,7 @@ main(int argc,char **argv)
 	case 0:		/* child */
 		execl(SORT, SORT, sortopt, "+0", "-1", "+1",
 			sortfile, "-o", sortfile, (char *)0);
+		diag("Cannot exec", SORT);
 
 	default:	/* parent */
 		while(wait(&status) != pid);
@@ -275,7 +277,7 @@ char *getline(void)
 	char *endlinep;
 
 
-	endlinep= line + mlen;
+	endlinep= line + mlen - 1;
 	linep = line;
 	/* Throw away leading white space */
 
@@ -392,7 +394,7 @@ getsort(void)
 		diag("Cannot open sorted data:",sortfile);
 
 	halflen = (llen-gutter)/2;
-	linep = line;
+	linep = tilde = line;
 	while((c = getc(sortptr)) != EOF) {
 		switch(c) {
 
@@ -453,10 +455,12 @@ getsort(void)
 
 		case '"':
 	/* put double " for "  */
-			*linep++ = c;
+			if(linep < &line[sizeof line - 2])
+				*linep++ = c;
 			/* fallthrough */
 		default:
-			*linep++ = c;
+			if(linep < &line[sizeof line - 2])
+				*linep++ = c;
 		}
 	}
 }
@@ -504,7 +508,7 @@ onintr(int sig)
 
 	if(*sortfile)
 		unlink(sortfile);
-	exit(1);
+	exit(sig != 0);
 }
 
 int
@@ -538,7 +542,10 @@ int
 storeh(int num,char *strtp)
 {
 	int i;
+	static int nh;
 
+	if(++nh >= MAXT)
+		return(1);
 	for(i=num; i<MAXT; i++) {
 		if(hasht[i] == 0) {
 			hasht[i] = strtp;
