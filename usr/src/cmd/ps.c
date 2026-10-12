@@ -74,7 +74,7 @@ main(int argc, char **argv)
 			if(*ap)
 				tptr = ap;
 			aflg++;
-			if (*tptr == '?')
+			if (tptr && *tptr == '?')
 				xflg++;
 			goto bbreak;
 

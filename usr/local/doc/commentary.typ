@@ -13977,7 +13977,9 @@ for all users' processes, `x` for those without a terminal, `l` for
 the long listing, `t` followed by a terminal name, `v` for the
 children's times, `k` to read a core image of memory from
 `/usr/sys/core` instead of the live system, and a number for a single
-process.
+process. A `t` at the end of the letters names no terminal; v7 then
+tested the first character of the name through the null `tptr`, which
+the port first checks (77), and `ps t` means `ps a`.
 
 #lines(54, 102)
 

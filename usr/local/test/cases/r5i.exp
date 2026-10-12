@@ -9,3 +9,4 @@ padded 0
 /bin/echo
 su: /tmp/shN-0: cannot create
 ./s: /nonexistent: bad directory
+   PID TTY TIME CMD

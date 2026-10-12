@@ -8,4 +8,5 @@ chmod 755 /tmp; echo 'cat <<E
 x
 E' | su dmr 2>&1; chmod 777 /tmp
 echo 'set `ls /bin`; cd /nonexistent' >s; chmod 755 s; ./s 2>&1
+ps t | sed 1q
 cd /; rm -rf $T
