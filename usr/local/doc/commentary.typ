@@ -13547,7 +13547,12 @@ file is encrypted differently. The `execl` calls (1749, 1750) end with
 The signal handler pointer in `getkey` (1695) has the new type of a
 handler. `t` in `makekey` (1789) is now a `long long`, the 64-bit time
 which `time` stores (#f("param.h")); as before, only its low 32 bits
-reach the key.
+reach the key. `seed` in `crinit` (1730) is now `unsigned long`, as in
+the `crypt` command: multiplied by thirteen characters, it overflows 32
+bits within a few steps, which is undefined for v7's signed `long`. The
+unsigned product wraps round to the same bits, and the cast at 1767
+keeps v7's signed remainder, so that a file encrypted by `crypt` can
+still be read with `ed -x`.
 
 #lines(1663, 1799)
 #source("/usr/src/cmd/grep.c")

@@ -1727,7 +1727,7 @@ crinit(char *keyp, char *permp)
 	int ic, k, temp, pf[2];
 	unsigned random;
 	char buf[13];
-	long seed;
+	unsigned long seed;
 
 	t1 = permp;
 	t2 = &permp[256];
@@ -1764,7 +1764,7 @@ crinit(char *keyp, char *permp)
 	}
 	for(i=0; i<256; i++) {
 		seed = 5*seed + buf[i%13];
-		random = seed % 65521;
+		random = (long)seed % 65521;
 		k = 256-1 - i;
 		ic = (random&0377) % (k+1);
 		random >>= 8;
