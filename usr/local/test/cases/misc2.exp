@@ -111,7 +111,7 @@ int f(x) {
 		break;
 	} 
 }
-/bin/ls:	data
+/bin/ls:	executable
 /etc/passwd:	ascii text
 /tmp/misc2/1:	ascii text
 /bin:	directory

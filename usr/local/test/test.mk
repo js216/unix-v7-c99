@@ -1,7 +1,7 @@
 TS = usr/local/test
 TEST_BIN := $(patsubst $(TS)/utils/%.c,$(TS)/obj/%,$(wildcard $(TS)/utils/*.c))
 TEST_OBJ = $(TEST_BIN:%=%.o)
-TEST_IMG = $(TS)/obj/fs.img $(TS)/obj/deep.img $(TS)/obj/many.img
+TEST_IMG = $(TS)/obj/fs.img $(TS)/obj/deep.img $(TS)/obj/many.img $(TS)/obj/big.img
 TEST_DATA := $(wildcard $(TS)/run.sh $(TS)/cases/* $(filter-out %.c,$(wildcard $(TS)/utils/*)))
 
 $(TEST_OBJ): CPPFLAGS = -Iusr/include -Iusr/sys
@@ -21,6 +21,9 @@ $(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj
 $(TS)/obj/many.img: etc/mkfs $(TS)/test.mk | $(TS)/obj
 	$(call T,MKFS)awk 'BEGIN { print "/dev/null"; print "5000 3010"; print "d--755 0 0"; \
 	    for (i = 0; i < 3001; i++) { print "d" i " d--755 0 0"; print "$$" } print "$$" }' | \
+	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null
+$(TS)/obj/big.img: etc/mkfs usr/dict/words $(TS)/test.mk | $(TS)/obj
+	$(call T,MKFS)printf '/dev/null\n600 32\nd--755 0 0\nwords ---644 0 0 usr/dict/words\n$$\n' | \
 	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null
 $(TS)/obj:
 	$Qmkdir -p $@

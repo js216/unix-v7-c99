@@ -190,6 +190,8 @@ d--755 0 0
 					cmd2.exp	---644 0 0 usr/local/test/cases/cmd2.exp
 					cmd3	---644 0 0 usr/local/test/cases/cmd3
 					cmd3.exp	---644 0 0 usr/local/test/cases/cmd3.exp
+					cmd4	---644 0 0 usr/local/test/cases/cmd4
+					cmd4.exp	---644 0 0 usr/local/test/cases/cmd4.exp
 					cmdg	---644 0 0 usr/local/test/cases/cmdg
 					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -292,6 +294,7 @@ d--755 0 0
 					argt	---755 0 0 usr/local/test/obj/argt
 					asm	---644 0 0 usr/local/test/utils/asm
 					bcf	---644 0 0 usr/local/test/utils/bcf
+					big.img	---644 0 0 usr/local/test/obj/big.img
 					bigb	---755 0 0 usr/local/test/obj/bigb
 					bigm	---755 0 0 usr/local/test/obj/bigm
 					bigv	---755 0 0 usr/local/test/obj/bigv
