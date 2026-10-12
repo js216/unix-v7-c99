@@ -17,7 +17,7 @@
 struct	filsys	sblock;
 struct	dinode	itab[INOPB*NI];
 daddr_t	iaddr[NADDR];
-ino_t	ilist[NB];
+ino_t	ilist[NB+1];
 
 int	fi;
 ino_t	ino;
@@ -42,7 +42,7 @@ main(int argc, char *argv[])
 		switch ((*argv)[1]) {
 
 		case 'i':
-			for(i=0; i<NB; i++) {
+			for(i=0; i<NB && argc>1; i++) {
 				n = atol(argv[1]);
 				if(n == 0)
 					break;
@@ -192,7 +192,7 @@ bread(daddr_t bno, char *buf, int cnt)
 	lseek(fi, bno*BSIZE, 0);
 	if (read(fi, buf, cnt) != cnt) {
 		printf("read error %D\n", bno);
-		for(i=0; i<BSIZE; i++)
+		for(i=0; i<cnt; i++)
 			buf[i] = 0;
 	}
 }
