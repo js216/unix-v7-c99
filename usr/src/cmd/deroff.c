@@ -43,7 +43,7 @@ int rdelim	= NOCHAR;
 int argc;
 char **argv;
 
-char fname[50];
+char fname[256];
 FILE *files[15];
 FILE **filesp;
 FILE *infile;
@@ -169,7 +169,7 @@ static struct chain *namechain	= NULL;
 
 while(C == ' ') ;
 
-for(p = fname ; (*p=c)!= '\n' && c!=' ' && c!='\t' && c!='\\' ; ++p)
+for(p = fname ; p<&fname[sizeof fname-1] && (*p=c)!= '\n' && c!=' ' && c!='\t' && c!='\\' ; ++p)
 	C;
 *p = '\0';
 while(c != '\n')
@@ -224,6 +224,8 @@ line[0] = c;
 lp = line;
 for( ; ; )
 	{
+	if(lp >= &line[sizeof line-2])
+		--lp;
 	if(c == '\\')
 		{
 		*lp = ' ';
@@ -341,6 +343,8 @@ else if(!inmacro && c1=='a' && c2 == 'm')
 else if(c1=='s' && c2=='o')
 	{
 	getfname();
+	if( fname[0] && filesp == &files[14] )
+		fatal("Too many nested files at %s\n", fname);
 	if( fname[0] )
 		infile = *++filesp = opn( fname );
 	}
@@ -449,7 +453,8 @@ sw:  switch(C)
 			ungetc(c,infile);
 			c = '0';
 			}
-		--lp;
+		if(lp > line)
+			--lp;
 		return;
 
 	case 'f':
