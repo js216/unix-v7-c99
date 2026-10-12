@@ -96,8 +96,8 @@ main(int c, char **av)
 		close(f);
 	dolc = getpid();
 	for(f=4; f>=0; f--) {
-		dolc = dolc/10;
 		pidp[f] = dolc%10 + '0';
+		dolc = dolc/10;
 	}
 	v = av;
 	promp = "% ";
@@ -192,6 +192,12 @@ loop:
 	case '"':
 		c1 = c;
 		while((c=readc()) != c1) {
+			if(linep > elinep) {
+				while(c != '\n')
+					c = readc();
+				err("Too many characters",255);
+				gflg++;
+			}
 			if(c == '\n') {
 				error++;
 				peekc = c;
@@ -697,6 +703,8 @@ execute(int *t, int *pf1, int *pf2)
 			exit(255);
 		}
 		scan(t, trim);
+		if((linep = malloc(strlen((char *)t[DCOM])+10)) == 0)
+			exit(255);
 		*linep = 0;
 		texec((char *)t[DCOM], t);
 		cp1 = linep;
@@ -747,7 +755,7 @@ texec(char *f, int *at)
 	if (errno==ENOEXEC) {
 		if (*linep)
 			t[DCOM] = (int)linep;
-		t[DSPR] = (int)"/usr/bin/osh";
+		t[DSPR] = (int)"/bin/osh";
 		execv((char *)t[DSPR], (char **)(t+DSPR));
 		prs("No shell!\n");
 		exit(255);
