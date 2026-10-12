@@ -3716,9 +3716,12 @@ abandons the system call through `u.u_qsav`.
 old one. `utime` sets the access and modification times of a file,
 through `iupdat` (#f("iget.c")), from two times in user memory. `ICHG`
 makes `iupdat` stamp the change time with the present; that is the one
-time which `utime` cannot set, as its comment says.
+time which `utime` cannot set, as its comment says. If the times
+cannot be fetched, v7 returned with the inode still locked, and the
+next reference to the file, by any process, slept for good; the
+`iput` before the return (441) is new.
 
-#lines(392, 446)
+#lines(392, 447)
 #source("/usr/sys/h/timeb.h")
 
 The structure filled in by `ftime` (#f("sys4.c")): the time in seconds,

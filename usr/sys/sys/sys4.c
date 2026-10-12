@@ -438,6 +438,7 @@ utime(void)
 		return;
 	if (copyin((caddr_t)uap->tptr, (caddr_t)tv, sizeof(tv))) {
 		u.u_error = EFAULT;
+		iput(ip);
 		return;
 	}
 	ip->i_flag |= IACC|IUPD|ICHG;
