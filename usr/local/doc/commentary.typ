@@ -9112,7 +9112,10 @@ would not compile under C99.
 be negative, and records the new end in `brkend`. It returns the old
 end, or `-1` cast to a pointer if the kernel refused; `fault`
 (#f("sh/fault.c")) tests for that, now by comparing with `(BYTPTR)-1`;
-v7, whose `setbrk` returned an `int`, compared with `-1`. `sbrk` is the library's (`sbrk.s`), which calls the `break`
+v7, whose `setbrk` returned an `int`, compared with `-1`. v7 set
+`brkend` even after a refusal, to `incr` bytes beyond that `-1`, an
+address of nothing reached by arithmetic which C99 leaves undefined;
+the port keeps the old end then (16). `sbrk` is the library's (`sbrk.s`), which calls the `break`
 system call, `sbreak` in #f("sys1.c").
 
 The return type `BYTPTR` (12) is new. v7 left `setbrk` to default to
