@@ -37,8 +37,10 @@ main(int argc, char **argv)
 	fromend = *arg=='-';
 	arg++;
 	n = 0;
-	while(digit(*arg))
-		n = n*10 + *arg++ - '0';
+	while(digit(*arg)) {
+		n = n <= 214748363? n*10 + *arg - '0': 0x7fffffff;
+		arg++;
+	}
 	if(!fromend&&n>0)
 		n--;
 	if(argc>2) {
@@ -53,7 +55,7 @@ main(int argc, char **argv)
 	bylines = 0; bkwds = 0;
 	switch(*arg) {
 	case 'b':
-		n <<= 9;
+		n = n < 4194304? n<<9: 0x7fffffff;
 		break;
 	case 'c':
 		break;
