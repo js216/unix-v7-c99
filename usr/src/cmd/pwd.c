@@ -8,7 +8,8 @@
 
 char	dot[]	= ".";
 char	dotdot[] = "..";
-char	name[512];
+char	name[4096];
+char	dname[DIRSIZ+1];
 int	file;
 int	off	= -1;
 struct	stat	d, dd;
@@ -48,7 +49,7 @@ main(void)
 					fprintf(stderr,"read error in ..\n");
 					exit(1);
 				}
-				stat(dir.d_name, &dd);
+				stat(strncpy(dname, dir.d_name, DIRSIZ), &dd);
 			} while(dd.st_ino != d.st_ino || dd.st_dev != d.st_dev);
 		close(file);
 		cat();
@@ -71,14 +72,15 @@ cat(void)
 {
 	register int i, j;
 
+	strncpy(dname, dir.d_name, DIRSIZ);
 	i = -1;
-	while (dir.d_name[++i] != 0);
-	if ((off+i+2) > 511)
+	while (dname[++i] != 0);
+	if ((off+i+2) > (int)sizeof(name)-1)
 		prname();
 	for(j=off+1; j>=0; --j)
 		name[j+i+1] = name[j];
 	off=i+off+1;
 	name[i] = '/';
 	for(--i; i>=0; --i)
-		name[i] = dir.d_name[i];
+		name[i] = dname[i];
 }
