@@ -129,15 +129,15 @@ getline(char *s)
 
 	while((*rs = getchar()) == ' ');
 	while(*rs != '\n')
-		if(*rs == 0)
+		if(feof(stdin))
 			exit(0);
 		else if(rs >= &s[99]) {
 			while((*rs = getchar()) != '\n')
-				if(*rs == '\0')	exit(0);
+				if(feof(stdin))	exit(0);
 		}
 		else
 			*++rs = getchar();
-	while(*--rs == ' ')
+	while(rs > s && *--rs == ' ')
 		*rs = '\n';
 }
 

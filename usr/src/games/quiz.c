@@ -41,7 +41,7 @@ loop:
 		if(*t==' '&&(t==line||t[-1]==' '))
 			t--;
 		if(*t=='\n') {
-			if(t[-1]=='\\')		/*inexact test*/
+			if(t>line&&t[-1]=='\\')		/*inexact test*/
 				continue;
 			while(t>line&&t[-1]==' ')
 				*--t = '\n';

@@ -184,7 +184,7 @@ main( int argc, char * argv[] ){
 	printf( "instructions?\n" );
 	if( (c=getchar()) != '\n' ){
 		if( c != 'n' ) instruct();
-		while( getchar() != '\n' );
+		while( (c=getchar()) != '\n' && c != EOF );
 		}
 
 	game();
@@ -433,9 +433,12 @@ guess(void){
 		case '\t':
 			continue;
 
+		case EOF:
+			exit( 0 );
+
 		default:
 			err:
-			while( g != '\n' ) g = getchar();
+			while( g != '\n' && g != EOF ) g = getchar();
 			printf( "what?\n" );
 			continue;
 			}

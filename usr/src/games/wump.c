@@ -319,7 +319,7 @@ rline(void)
 	while((c=getchar()) == ' ');
 	r = c;
 	while(c != '\n' && c != ' ') {
-		if(c == '\0')
+		if(feof(stdin))
 			exit(0);
 		c = getchar();
 	}
@@ -349,7 +349,7 @@ rin(void)
 	while(c != '\n' && c != ' ') {
 		if(c<'0' || c>'9') {
 			while(c != '\n') {
-				if(c == 0)
+				if(c == EOF)
 					exit(0);
 				c = getchar();
 			}
