@@ -13774,7 +13774,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/games/hangman.c")
 
-#lines(1, 159)
+#lines(1, 160)
 
 #source("/usr/src/games/quiz.c")
 

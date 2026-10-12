@@ -55,7 +55,7 @@ startnew(void)
 	for(i=0;i<26;i++) word[i]=alph[i]=realword[i]=0;
 	pos=frand()*dictlen;
 	fseek(dict,pos,0);
-	fscanf(dict,"%s\n",buf);
+	fscanf(dict,"%127s\n",buf);
 	getword();
 	alive=MAXERR;
 	lost=0;
@@ -75,7 +75,7 @@ getguess(void)
 	int ok=0,i;
 loop:
 	printf("guess: ");
-	if(gets(gbuf)==NULL)
+	if(fgets(gbuf,sizeof gbuf,stdin)==NULL)
 	{	putchar('\n');
 		exit(0);
 	}
@@ -125,10 +125,11 @@ fatal(char *s)
 void
 getword(void)
 {	char wbuf[128],c;
-	int i,j;
+	int i,j,n=0;
 loop:
-	if(fscanf(dict,"%s\n",wbuf)==EOF)
-	{	fseek(dict,0L,0);
+	if(fscanf(dict,"%127s\n",wbuf)==EOF)
+	{	if(n++) fatal("no words");
+		fseek(dict,0L,0);
 		goto loop;
 	}
 	if((c=wbuf[0])>'z' || c<'a') goto loop;
@@ -137,7 +138,7 @@ loop:
 		wbuf[i]=wbuf[j];
 	}
 	wbuf[i]=0;
-	if(i<MINLEN) goto loop;
+	if(i<MINLEN || i>25) goto loop;
 	for(j=0;j<i;j++)
 		if((c=wbuf[j])<'a' || c>'z') goto loop;
 	pscore();
