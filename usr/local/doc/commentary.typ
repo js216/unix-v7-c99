@@ -13886,7 +13886,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/tr.c")
 
-#lines(1, 133)
+#lines(1, 132)
 
 #source("/usr/src/cmd/tail.c")
 

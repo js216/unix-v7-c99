@@ -100,7 +100,6 @@ again:
 		nextc(s);
 		s->max = nextc(s);
 		if(s->max==0) {
-			s->p--;
 			return('-');
 		}
 		if(s->max < s->last)  {
