@@ -13087,8 +13087,9 @@ system checkers.
 `dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
 directories which #f("passwd") gives those users, owned by each user
 and his group. `login` changes to the home directory and refuses a user
-whose directory does not exist, so without them none of the three
-could log in.
+whose directory does not exist, so without his `dmr` could not log in;
+`sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
+directories v7 gave them.
 
 #lines(139, 339)
 
@@ -13139,7 +13140,7 @@ by editing the file and sending `init` an interrupt, `kill -2 1`.
 #lines(1, 33)
 #source("/etc/passwd")
 
-#f("passwd") is v7's, unchanged. Each line describes one user, in
+#f("passwd") is v7's, but for two passwords. Each line describes one user, in
 fields separated by colons: the login name, the encrypted password, the
 user and group ids, a comment, the home directory, and the program to
 run in place of the shell, `/bin/sh` if the field is empty. `login`
@@ -13148,9 +13149,13 @@ through `getpwent` (#f("stdio/getpwent.c")), and compares the
 encryption by `crypt` (#f("gen/crypt.c")) of what is typed with the
 second field. `root` keeps the password of the v7 distribution.
 `daemon`'s `x` is not a value `crypt` can produce, so no one can log in
-by that name; the other users have no password. Of these, all but
-`uucp` can log in: their home directories are in the image
-(#f("rootfs.proto")), but `uucp`'s program, `/usr/lib/uucico`, is not.
+by that name or become `daemon` with `su`. v7 gave `sys` and `bin` no
+password; here they have `daemon`'s `x`, since group `sys` may read the
+memory and disk special files (#f("rootfs.proto")), and `bin` may join
+that group with `newgrp` (#f("group")), so that any user could have
+read them through `su sys`. The accounts remain, and own their files.
+`dmr` and `uucp` have no password, and `dmr` can log in, but `uucp`'s
+program, `/usr/lib/uucico`, is not in the image.
 
 #lines(1, 6)
 #source("/etc/group")

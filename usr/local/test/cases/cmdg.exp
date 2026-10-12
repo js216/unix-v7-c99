@@ -45,8 +45,8 @@ Jan  9 HH:MM 1979  HDR Page 1
 
 root:VwL97VCAx1Qhs:0:1::/:
 daemon:x:1:1::/:
-sys::2:2::/usr/sys:
-bin::3:3::/bin:
+sys:x:2:2::/usr/sys:
+bin:x:3:3::/bin:
 uucp::4:4::/usr/lib/uucp:/usr/lib/uu
 dmr::7:3::/usr/dmr:
 
@@ -131,8 +131,8 @@ Jan  9 HH:MM 1979  /etc/passwd Page 1
 
 root:VwL97VCAx1Qhs:0:1::/:
 daemon:x:1:1::/:
-sys::2:2::/usr/sys:
-bin::3:3::/bin:
+sys:x:2:2::/usr/sys:
+bin:x:3:3::/bin:
 uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
 dmr::7:3::/usr/dmr:
 
@@ -255,20 +255,20 @@ st0
 xx
 root:VwL97VCAx1Qhs:0:1::/:
 daemon:x:1:1::/:
-sys::2:2::/usr/sys:
-bin::3:3::/bin:
+sys:x:2:2::/usr/sys:
+bin:x:3:3::/bin:
 uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
 dmr::7:3::/usr/dmr:
 0000000   a   b  \b   c   u   p  \n                   d   n  \n
 0000016
 :/::1:0:shQ1xACV79LwV:toor
 :/::1:1:x:nomead
-:sys/rsu/::2:2::sys
-:nib/::3:3::nib
+:sys/rsu/::2:2:x:sys
+:nib/::3:3:x:nib
 ocicuu/bil/rsu/:pcuu/bil/rsu/::4:4::pcuu
 :rmd/rsu/::3:7::rmd
-10874     1
-bin::3:3::/bin:
+45119     1
+bin:x:3:3::/bin:
 uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
 dmr::7:3::/usr/dmr:
 her::1:
@@ -277,11 +277,11 @@ bin::3:sys,bin
 uucp::4:
 uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
 dmr::7:3::/usr/dmr:
-      6      6     141 /etc/passwd
+      6      6     143 /etc/passwd
       4 /etc/group
-      6     141 /etc/passwd
+      6     143 /etc/passwd
       4      49 /etc/group
-     10     190 total
+     10     192 total
 root:VwL97VCAx1Qhs:0:1::/:
 other::1:
 sys::2:bin,sys
@@ -290,7 +290,7 @@ uucp::4:
 1
 1:other::1:
 /etc/passwd:root:VwL97VCAx1Qhs:0:1::/:
-/etc/passwd:bin::3:3::/bin:
+/etc/passwd:bin:x:3:3::/bin:
 /etc/group:sys::2:bin,sys
 /etc/group:bin::3:sys,bin
 -rwxr-x--x 1 root       49 Jan  9 HH:MM g

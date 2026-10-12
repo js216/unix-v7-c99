@@ -114,7 +114,7 @@ line three 123
 2
 line three 123
 the quick brown fox
--rw-r--r-- 1 root      141 Jan  9 HH:MM /etc/passwd
+-rw-r--r-- 1 root      143 Jan  9 HH:MM /etc/passwd
 total 6
 drwxrwxrwx 2 root       96 Jan  9 HH:MM .
 total 0

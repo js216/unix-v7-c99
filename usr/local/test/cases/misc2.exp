@@ -36,8 +36,8 @@ misc2: diff3: not found
 1,$c1,$
 < root:VwL97VCAx1Qhs:0:1::/:
 < daemon:x:1:1::/:
-< sys::2:2::/usr/sys:
-< bin::3:3::/bin:
+< sys:x:2:2::/usr/sys:
+< bin:x:3:3::/bin:
 < uucp::4:4::/usr/lib/uucp:/usr/lib/uucico
 < dmr::7:3::/usr/dmr:
 ---
@@ -57,7 +57,7 @@ misc2: diff3: not found
 > d
 ROOT:VWL97VCAX1QHS:0:1::/:
 DAEMON:X:1:1::/:
-SYS::2:2::/USR/SYS:
+SYS:X:2:2::/USR/SYS:
 ortov:lw79cvxaq1sh0:1::::/d
 eaom:n:x:1:1/:
 0+1 records in
@@ -74,7 +74,7 @@ daemon:x:1:1::/:
     144
 0+1 records in
 0+1 records out
-    141
+    143
 bad arg: bogus=1
 st0
 437 units; 3191 bytes
