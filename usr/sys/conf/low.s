@@ -137,22 +137,18 @@ irq_entry:
 	mov r5, lr
 	mov r0, sp
 	bl irq
+	mov lr, r5
 	ldr r0, [sp, #64]
 	and r0, r0, #0x1f
 	cmp r0, #0x10
-	bne 1f
+	bne 2f
 	ldr r0, =runrun
 	ldrb r0, [r0]
 	cmp r0, #0
-	beq 1f
+	beq 2f
 	mov r0, #0
 	mov r2, #0
-	mov r1, sp
-	bl user_trap_handler
-	cpsid i
-1:
-	mov lr, r5
-	b 2f
+	b 1f
 
 badtrap:
 	bl panictrap
@@ -190,7 +186,9 @@ dabort_entry:
 	mrc p15, 0, r2, c6, c0, 0
 1:
 	mov r1, sp
+	cpsie i
 	bl user_trap_handler
+	cpsid i
 2:
 	ldmia sp, {r0-r14}^
 	add sp, sp, #60

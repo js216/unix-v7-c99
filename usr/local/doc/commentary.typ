@@ -1153,11 +1153,11 @@ branch. In order they serve reset, undefined instruction, supervisor call
 fetch from an unmapped or forbidden address), data abort (the same for a
 load or store), a reserved slot, IRQ, and FIQ. Reset simply restarts the
 system. The reserved slot and FIQ should never be taken, and lead to
-`badtrap` (157).
+`badtrap` (153).
 
 Note that the PDP-11 distinguished its traps by vector, and wrote the
 trap type into the low bits of the new PS (`br7+n` in `l.s`) for `trap`
-to recover. On the ARM the vector, and the signal chosen at 166, 175, or 189,
+to recover. On the ARM the vector, and the signal chosen at 162, 171, or 185,
 carry the same information.
 
 #lines(109, 119)
@@ -1188,7 +1188,7 @@ at 52, the user `lr` at 56, the return PC at 60, and the saved status at
 which it saves in `u.u_ar0`. Interrupts are enabled for the duration of
 the system call and masked again afterwards. v7's `trap` routine also
 lowered the priority (`spl 0` in `call1`) before calling C. The return
-is shared with the other traps (194).
+is shared with the other traps (192).
 
 #lines(125, 129)
 
@@ -1213,7 +1213,7 @@ own `sp` is the frame pointer itself.
 
 The one register in danger is SVC's `lr`. When the kernel is
 interrupted, it may hold a live return address, and the `bl` at 139
-would destroy it. It is kept in `r5` (137, 154), which the C calling
+would destroy it. It is kept in `r5` (137, 140), which the C calling
 convention obliges `irq` to preserve.
 
 `irq` (#f("machdep.c")) asks the GIC for the interrupt number,
@@ -1224,22 +1224,21 @@ and calls `clock` or the device handler.
 If the interrupted program was in user mode (the mode field of
 the saved status, at offset 64, is `0x10`) and `runrun` is set, the
 process should give up the processor before it returns. v7's `call`
-did this by calling `trap` with type 12; here `user_trap_handler`
-(#f("sysent.c")) is called with signal 0 and a zero address (149). Signal
-0 posts nothing; the call only runs the same tail as a trap: `issig`,
-`psig`, `setpri`, and `qswtch`. The
-interrupt was taken with interrupts masked; `swtch` may have unmasked
-them, so line 152 masks them again before the frame is unloaded. Without
-this test a process which never made a system call would never be
-preempted, nor see a signal.
+did this by calling `trap` with type 12; here the code joins the traps'
+call of `user_trap_handler` (#f("sysent.c")) below (187), with signal 0
+and a zero address (149, 150). Signal 0 posts nothing; the call only
+runs the same tail as a trap: `issig`, `psig`, `setpri`, and `qswtch`.
+Otherwise the frame is unloaded at once (192). Without this test a
+process which never made a system call would never be preempted, nor
+see a signal.
 
-#lines(140, 155)
+#lines(140, 151)
 
 `badtrap` catches the two vectors which should never be used. It calls
 `panictrap` (#f("machdep.c")), which panics. It runs in whatever mode
 the stray exception selected, on a stack which was never set up.
 
-#lines(156, 159)
+#lines(152, 155)
 
 The remaining exceptions all become signals to the process. The three
 entries differ in the correction to `lr` and in the signal number. For
@@ -1259,14 +1258,14 @@ An undefined instruction yields signal 4 (`SIGINS`), either abort
 signal 11 (`SIGSEG`). The PDP-11's illegal instruction and segmentation traps
 gave the same signals; its bus error (`SIGBUS`) has no counterpart here.
 
-The frame is built exactly as for an interrupt (162--165, 171--174,
-180--183). Only then is the signal number loaded, into `r0` (166, 175,
-189), and `user_trap_handler` receives the signal, the frame, and in
-`r2` an address (191--193). For a data abort the address is the one the
+The frame is built exactly as for an interrupt (158--161, 167--170,
+176--179). Only then is the signal number loaded, into `r0` (162, 171,
+185), and `user_trap_handler` receives the signal, the frame, and in
+`r2` an address (187--190). For a data abort the address is the one the
 instruction failed to reach, read from the fault address register
-`DFAR` (190), by which the handler decides whether the stack should
-grow (#f("sysent.c")); a prefetch abort passes zero (176), and so does
-an undefined instruction (167). The handler reads the address only for
+`DFAR` (186), by which the handler decides whether the stack should
+grow (#f("sysent.c")); a prefetch abort passes zero (172), and so does
+an undefined instruction (163). The handler reads the address only for
 `SIGSEG`, but it is given a defined value in every case, never the
 user's `r2`, which the `stmia` has saved but left in the register. The handler
 panics, after printing the fault address and status (`dfar`, `dfsr`,
@@ -1276,7 +1275,7 @@ A data abort taken by the kernel may be one which it expects. While one
 of the routines which reach user memory runs, `nofault` (#f("mch.s"))
 holds the address at which it wants to continue if a user reference
 fails, as v7's `trap` found it in `nofault` on the PDP-11. That address
-is then written over the saved PC (184--188), and the exception returns
+is then written over the saved PC (180--184), and the exception returns
 there at once, by the common return below, without calling C. The
 saved registers are restored as they were at the fault, and SVC mode's
 own `lr`, which C would have destroyed, is never touched. A fault in
@@ -1289,22 +1288,34 @@ register is free to carry the signal number to a common save: `r0` to
 and `lr` of the abort and undefined modes are left behind by the change
 to SVC mode.
 
-#lines(160, 193)
+`user_trap_handler` runs with interrupts enabled (189), as `trap` does
+for a system call, and as v7's `trap` ran at priority 0 (`spl 0` in
+`call1`). The work it may do, the copying of a grown stack or the
+writing of a core image, would otherwise hold off the clock and the
+console for its whole length. The call made for `runrun` is treated
+alike, though v7's `call` stayed at the priority of the interrupt: the
+interrupt has been acknowledged (#f("machdep.c")), and a further one
+nests on the SVC stack as it would over any other kernel code.
+Interrupts are masked again before the frame is unloaded (191), since
+the saved state must not be disturbed between the `ldmia` and the
+`rfeia`.
+
+#lines(156, 191)
 
 The common return, the counterpart of the `rtt` at the end of v7's
-`call`. `ldmia ... ^` (195), without the PC in the list, loads the user
-mode's banked registers, as the `stmia` stored them. `rfeia sp!` (197),
+`call`. `ldmia ... ^` (193), without the PC in the list, loads the user
+mode's banked registers, as the `stmia` stored them. `rfeia sp!` (195),
 "return from exception", pops the PC and the saved status together into
 `pc` and `cpsr`, so the mode, the interrupt mask, and the condition flags
 of the interrupted program are restored with its PC in one step.
 
-#lines(194, 197)
+#lines(192, 195)
 
 The boot stack, 8192 bytes, which is used only until line 103, and the
 two boot tables. `kl2` must be aligned on 4 KB, and goes on serving as
 the kernel's table; `bootl1`, which needs 32, follows it.
 
-#lines(198, 207)
+#lines(196, 205)
 #source("/usr/sys/conf/mch.s")
 
 v7's `mch.s` held, besides the startup code, every operation which C
@@ -1949,8 +1960,9 @@ All interrupts share one level. The PDP-11's priorities have collapsed
 into "masked" and "unmasked", and until the end of interrupt is written
 the controller delivers no other interrupt, even to a handler which
 unmasks the IRQ, as `clock` does with `spl1` (#f("clock.c")). After
-that, an IRQ left unmasked lets a second interrupt in, in the tail of
-`irq_entry` (#f("low.s")), before the first frame is unloaded. It nests
+that, an IRQ left unmasked, or unmasked again for the call of
+`user_trap_handler` in the tail of `irq_entry` (#f("low.s")), lets a
+second interrupt in before the first frame is unloaded. It nests
 as any interrupt of the kernel does: its frame goes below the first,
 and the `r5` saved in it, which carries the first entry's `lr`, is
 restored before the first entry uses it.
