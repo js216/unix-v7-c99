@@ -7879,7 +7879,7 @@ restored (188). DDR may now be used.
 
 #lines(170, 189)
 
-= Part Two: Into User Space
+= Part Two: The Shell
 
 == User Space <ch-user>
 
@@ -8637,8 +8637,6 @@ most `BUFSIZ` − 1 characters, a longer line would be split and its tail
 read as an entry of its own; a password file has no such lines.
 
 #lines(27, 67)
-
-= Part Three: The Shell
 
 == Reading Commands <ch-reading>
 
@@ -10930,7 +10928,7 @@ at 48 are new.
 
 #lines(43, 50)
 
-= Part Four: The Library
+= Part Three: The Library
 
 == The C Library <ch-libc>
 
@@ -12307,7 +12305,7 @@ and after.
 
 #lines(1, 58)
 
-= Part Five: The Commands
+= Part Four: The Commands
 
 == Classic Programs <ch-classic>
 
@@ -13631,92 +13629,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 32)
 
-== Maintaining File Systems <ch-fsmaint>
-
-#source("/usr/src/cmd/icheck.c")
-
-#lines(1, 473)
-
-#source("/usr/src/cmd/dcheck.c")
-
-#lines(1, 215)
-
-#source("/usr/src/cmd/ncheck.c")
-
-#lines(1, 323)
-
-#source("/usr/src/cmd/df.c")
-
-#lines(1, 95)
-
-#source("/usr/src/cmd/du.c")
-
-#lines(1, 172)
-
-#source("/usr/src/cmd/mount.c")
-
-#lines(1, 65)
-
-#source("/usr/src/cmd/dump.c")
-
-#lines(1, 655)
-
-#source("/usr/src/cmd/restor.c")
-
-#lines(1, 1145)
-
-== Users and Privilege <ch-users>
-
-#source("/usr/src/cmd/su.c")
-
-#lines(1, 47)
-
-#source("/usr/src/cmd/passwd.c")
-
-#lines(1, 166)
-
-#source("/usr/src/cmd/chmod.c")
-
-#lines(1, 182)
-
-#source("/usr/src/cmd/who.c")
-
-#lines(1, 62)
-
-#source("/usr/src/cmd/write.c")
-
-#lines(1, 184)
-
-#source("/usr/src/cmd/mesg.c")
-
-#lines(1, 56)
-
-#source("/usr/src/cmd/at.c")
-
-#lines(1, 310)
-
-#source("/usr/src/cmd/atrun.c")
-
-#lines(1, 112)
-
-== Accounting and Status <ch-acct>
-
-#source("/usr/src/cmd/ac.c")
-
-#lines(1, 256)
-
-#source("/usr/src/cmd/sa.c")
-
-#lines(1, 493)
-
-#source("/usr/src/cmd/pstat.c")
-
-#lines(1, 419)
-
-#source("/usr/src/cmd/iostat.c")
-
-#lines(1, 304)
-
 == Files and Directories <ch-files>
 
 #source("/usr/src/cmd/ls.c")
@@ -13730,6 +13642,10 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/mv.c")
 
 #lines(1, 299)
+
+#source("/usr/src/cmd/ln.c")
+
+#lines(1, 55)
 
 #source("/usr/src/cmd/rm.c")
 
@@ -13750,6 +13666,10 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/cat.c")
 
 #lines(1, 63)
+
+#source("/usr/src/cmd/tee.c")
+
+#lines(1, 97)
 
 #source("/usr/src/cmd/tar/tar.c")
 
@@ -13855,7 +13775,93 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 233)
 
-= Part Six: Building the System
+= Part Five: Administration
+
+== Users and Privilege <ch-users>
+
+#source("/usr/src/cmd/su.c")
+
+#lines(1, 47)
+
+#source("/usr/src/cmd/passwd.c")
+
+#lines(1, 166)
+
+#source("/usr/src/cmd/chmod.c")
+
+#lines(1, 182)
+
+#source("/usr/src/cmd/who.c")
+
+#lines(1, 62)
+
+#source("/usr/src/cmd/write.c")
+
+#lines(1, 184)
+
+#source("/usr/src/cmd/mesg.c")
+
+#lines(1, 56)
+
+#source("/usr/src/cmd/at.c")
+
+#lines(1, 310)
+
+#source("/usr/src/cmd/atrun.c")
+
+#lines(1, 112)
+
+== Accounting and Status <ch-acct>
+
+#source("/usr/src/cmd/ac.c")
+
+#lines(1, 256)
+
+#source("/usr/src/cmd/sa.c")
+
+#lines(1, 493)
+
+#source("/usr/src/cmd/pstat.c")
+
+#lines(1, 419)
+
+#source("/usr/src/cmd/iostat.c")
+
+#lines(1, 304)
+
+== Maintaining File Systems <ch-fsmaint>
+
+#source("/usr/src/cmd/icheck.c")
+
+#lines(1, 473)
+
+#source("/usr/src/cmd/dcheck.c")
+
+#lines(1, 215)
+
+#source("/usr/src/cmd/ncheck.c")
+
+#lines(1, 323)
+
+#source("/usr/src/cmd/df.c")
+
+#lines(1, 95)
+
+#source("/usr/src/cmd/du.c")
+
+#lines(1, 172)
+
+#source("/usr/src/cmd/mount.c")
+
+#lines(1, 65)
+
+#source("/usr/src/cmd/dump.c")
+
+#lines(1, 655)
+
+#source("/usr/src/cmd/restor.c")
+
+#lines(1, 1145)
 
 == Building the System <ch-build>
 
