@@ -214,7 +214,7 @@ core(void)
 	}
 	if(!access(ip, IWRITE) &&
 	   (ip->i_mode&IFMT) == IFREG &&
-	   u.u_uid == u.u_ruid) {
+	   u.u_uid == u.u_ruid && u.u_gid == u.u_rgid) {
 		itrunc(ip);
 		u.u_offset = 0;
 		u.u_base = (caddr_t)&u;

@@ -3841,7 +3841,11 @@ bit `n-1` of `p_sig`.
 per-process area, `USIZE` clicks, which contains the saved registers,
 then the user's memory. It refuses unless the file is an ordinary one
 which the user may write, and unless the effective user id equals the
-real one, so that a set-user-id program leaves no core image. The
+real one, so that a set-user-id program leaves no core image. The test
+of the group ids beside it (217) is new, as in 32V: v7 let a
+set-group-id program dump its image, and here the set-group-id programs
+are those which read `/dev/kmem` (#f("rootfs.proto")). As for a
+set-user-id program, an empty file `core` may be left behind. The
 comment above admits that the protection is not thorough.
 
 #lines(188, 223)
@@ -12846,7 +12850,10 @@ special files readable by anyone instead, and these programs plain.
 on the command line, and each gives up the group with
 `setgid(getgid())` before it uses one (#f("cmd/ps.c"),
 #f("cmd/dmesg.c")); otherwise any user could read `/dev/rrk0` or
-`/dev/mem` through them.
+`/dev/mem` through them. Nor can a user stop one of them with a signal
+which dumps core and read the image, with whatever it had read from
+`/dev/kmem`, in the core file: `core` (#f("sig.c")) writes no image for a
+process whose group was changed by `exec`.
 
 #lines(4, 111)
 
