@@ -136,7 +136,7 @@ passc(register int c)
 			return(-1);
 		}
 	u.u_count--;
-	u.u_offset++;
+	u.u_offset = (unsigned long)u.u_offset + 1;
 	u.u_base++;
 	return(u.u_count == 0? -1: 0);
 }
@@ -163,7 +163,7 @@ cpass(void)
 			return(-1);
 		}
 	u.u_count--;
-	u.u_offset++;
+	u.u_offset = (unsigned long)u.u_offset + 1;
 	u.u_base++;
 	return(c&0377);
 }

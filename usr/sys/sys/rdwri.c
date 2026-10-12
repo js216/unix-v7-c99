@@ -198,7 +198,7 @@ iomove(register caddr_t cp, register int n, int flag)
 			return;
 		}
 		u.u_base += n;
-		u.u_offset += n;
+		u.u_offset = (unsigned long)u.u_offset + n;
 		u.u_count -= n;
 		return;
 	}

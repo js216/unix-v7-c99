@@ -5424,6 +5424,11 @@ kept apart from data space. The ARM has no such division, and
 as macros in #f("systm.h"), so that v7's text is unchanged here and in
 `passc` and `cpass`.
 
+The offset is advanced as an unsigned sum (201), as `seek` computes it
+(#f("sys2.c")). A character device may be read or written at any offset
+up to the largest `off_t`, and a signed sum which passes it overflows,
+which C leaves undefined; the unsigned one wraps to a negative offset.
+
 #lines(159, 216)
 #source("/usr/sys/sys/subr.c")
 
@@ -5497,7 +5502,9 @@ Both return −1 on a fault and zero otherwise, so the two readings agree
 and the line, which is v7's, works.
 
 The return of −1 on the last character lets a driver's read routine
-stop as soon as the request is satisfied.
+stop as soon as the request is satisfied. The offset is counted as an
+unsigned sum (139), as in `iomove` (#f("rdwri.c")), where the reason is
+given; `cpass` does the same (166).
 
 #lines(119, 142)
 
