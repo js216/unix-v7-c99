@@ -18,7 +18,7 @@
 struct	filsys	sblock;
 struct	dinode	itab[INOPB*NI];
 daddr_t	iaddr[NADDR];
-ino_t	ilist[NB];
+ino_t	ilist[NB+1];
 struct	htab
 {
 	ino_t	h_ino;
@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 			continue;
 
 		case 'i':
-			for(i=0; i<NB; i++) {
+			for(i=0; i<NB && argc>1; i++) {
 				n = atol(argv[1]);
 				if(n == 0)
 					break;
@@ -141,7 +141,7 @@ void
 pass1(register struct dinode *ip)
 {
 	if((ip->di_mode & IFMT) != IFDIR) {
-		if (sflg==0 || nxfile>=NB)
+		if (sflg==0 || nxfile>=NB-1)
 			return;
 		if ((ip->di_mode&IFMT)==IFBLK || (ip->di_mode&IFMT)==IFCHR
 		  || ip->di_mode&(ISUID|ISGID))
@@ -298,10 +298,10 @@ bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if (read(fi, buf, cnt) != cnt) {
 		fprintf(stderr, "ncheck: read error %D\n", bno);
-		for(i=0; i<BSIZE; i++)
+		for(i=0; i<cnt; i++)
 			buf[i] = 0;
 	}
 }
@@ -314,7 +314,7 @@ bmap(int i)
 	if(i < NADDR-3)
 		return(iaddr[i]);
 	i -= NADDR-3;
-	if(i > (int)NINDIR) {
+	if(i >= (int)NINDIR) {
 		fprintf(stderr, "ncheck: %u - huge directory\n", ino);
 		return((daddr_t)0);
 	}
