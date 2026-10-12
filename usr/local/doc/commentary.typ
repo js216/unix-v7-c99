@@ -11390,9 +11390,14 @@ count. Leading white space is skipped, and a sign noted.
 
 #lines(119, 155)
 
-Digits are accumulated in `lcval`, now a `long long`, as they are read, by shifts for octal
-and hexadecimal, and for decimal by `((lcval<<2) + lcval)<<1`, which
-is ten times `lcval` without a multiplication, a saving on the PDP-11. A floating number is accumulated in the same way, uselessly,
+Digits are accumulated in `lcval`, now an `unsigned long long`, as
+they are read, by shifts for octal and hexadecimal, and for decimal by
+`((lcval<<2) + lcval)<<1`, which is ten times `lcval` without a
+multiplication, a saving on the PDP-11. The field may hold 62 digits,
+far more than 64 bits take; v7's `long` overflowed, which C99 leaves
+undefined for a signed type. Unsigned, the value wraps round, and the
+negation of a negative number (193) is defined too. A floating number
+is accumulated in the same way, uselessly,
 but its characters are also kept in `numbuf`. A point is accepted only
 in a floating conversion, and an exponent only after a digit has been
 seen. The parentheses at 158 are new, as in #f("slp.c").
@@ -11403,7 +11408,9 @@ The character which ended the number is put back with `ungetc`, unless
 it was `EOF`, which `*eofptr` reports. Nothing is stored if no
 characters were taken or the assignment was suppressed. Otherwise the
 value is stored according to the scale and size, now through a pointer
-of the right type (204--227) rather than v7's double indirection. A
+of the right type (204--227) rather than v7's double indirection. The
+conversion of a large unsigned value to a signed type is
+implementation-defined, not undefined: GCC keeps the low bits. A
 `float` is produced by converting the `double` from `atof`; v7's
 declaration of `atof` has gone to #f("stdio.h").
 

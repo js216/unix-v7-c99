@@ -124,7 +124,7 @@ _innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 	char numbuf[64];
 	register int c, base;
 	int expseen, scale, negflg, c1, ndigit;
-	long long lcval;
+	unsigned long long lcval;
 
 	if (type=='c' || type=='s' || type=='[')
 		return(_instr(ptr, type, len, iop, eofptr));
