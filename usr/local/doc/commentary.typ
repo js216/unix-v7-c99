@@ -10578,7 +10578,10 @@ The `/` is overwritten by a null, so that `s` is a string by itself, or
 `s` becomes `/` if the pattern began there, or the empty string if the
 pattern contained no `/` before the metacharacter. An empty name refers
 to the current directory (`namei`, #f("nami.c")). The directory is
-examined with `stat` and opened for reading.
+examined with `stat` and opened for reading. v7 took only a descriptor
+above 0 as success; with the standard input closed, `open` returns 0,
+and the pattern then matched nothing and the directory stayed open as
+the standard input of later commands. The port accepts 0 (67).
 
 The null which divided the two is then replaced by `0200` (71), a
 character which is not a null but whose seven bits are zero, and `cs`

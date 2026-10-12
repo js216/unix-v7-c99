@@ -64,7 +64,7 @@ INT	expand(STRING as, INT rflg)
 	POOL
 	IF stat(s,&statb)>=0
 	    ANDF (statb.st_mode&S_IFMT)==S_IFDIR
-	    ANDF (dirf=open(s,0))>0
+	    ANDF (dirf=open(s,0))>=0
 	THEN	dir++;
 	FI
 	count=0;
