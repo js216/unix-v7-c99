@@ -2,7 +2,7 @@
 
 unsigned count = 1000;
 int	fnumber;
-char	fname[100];
+char	*fname;
 char	*ifil;
 char	*ofil;
 FILE	*is;
@@ -32,7 +32,10 @@ main(int argc, char *argv[])
 			case '7':
 			case '8':
 			case '9':
-				count = atoi(argv[i]+1);
+				if((count = atoi(argv[i]+1)) == 0) {
+					fprintf(stderr,"bad count\n");
+					exit(1);
+				}
 				continue;
 			}
 		else if(iflg)
@@ -50,6 +53,7 @@ main(int argc, char *argv[])
 		}
 	if(ofil == 0)
 		ofil = "x";
+	fname = malloc(strlen(ofil)+3);
 
 loop:
 	f = 1;
