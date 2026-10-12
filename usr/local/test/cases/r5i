@@ -1,6 +1,7 @@
 T=/tmp/r5i U=/usr/local/test/utils
 mkdir $T; chmod 777 $T; cd $T
 $U/r5i
+$U/r5i e /bin/* /etc/* /usr/lib/* /usr/games/* $U/*
 sh -c 'exec <&-; echo /bin/ech*'
 chmod 755 /tmp; echo 'cat <<E
 x

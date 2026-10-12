@@ -128,7 +128,7 @@ virtual addresses, and the four gigabytes of them are divided as on the
 PDP-11, where each mode had its own: the user's address space is the
 lower three gigabytes, from 0 to 0xbfffffff (`USERSIZE`,
 #f("param.h")), and the kernel's is the top gigabyte, which user mode
-cannot touch. A process's text begins at the bottom, at 0x80, its data
+cannot touch. A process's text begins at the bottom, at 0xa0, its data
 follows, and its stack ends at 0xc0000000; nothing else is mapped there
 (#f("ureg.c")). The kernel's gigabyte is laid out alike on both
 machines, by the `map` lines of their configurations (#f("qemuconf"),
@@ -891,7 +891,7 @@ such help: it pushed the old program counter and status word onto the
 user stack, and the catcher in the C library returned with `rtt`. In
 the port the kernel restores the interrupted registers itself, in
 `sigreturn`. Address 8 lies below the point at which programs begin
-(0x80, #f("Makefile")), so it can never collide with a program, and
+(0xa0, #f("Makefile")), so it can never collide with a program, and
 location 0 still reads as zero.
 
 `CLKADDR` (8) converts a click number into a kernel address. On the
@@ -7905,7 +7905,7 @@ routine which sets it (#f("libc/syscall.s")).
 v7's file ended by reserving two bytes at the start of `.data`. In a
 program with separate instruction and data spaces, data location 0
 would otherwise have held a variable, whose address would then compare
-equal to a null pointer. The port's programs are linked at `0x80`, with
+equal to a null pointer. The port's programs are linked at `0xa0`, with
 the signal trampoline at 8 (#f("seg.h")), so no object of the program can
 lie at address 0, and the padding is gone.
 
@@ -12297,7 +12297,7 @@ code and constants, is 41,711 bytes with `-Os` against 48,850 with
 `-O`, which matters on the MP135 machine, where the whole kernel must
 fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
-`-Wl,-z,max-page-size=4096,-Ttext=0x80` are options for the linker,
+`-Wl,-z,max-page-size=4096,-Ttext=0xa0` are options for the linker,
 which the compiler ignores when it only compiles; they apply to the
 link of every user program (20), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
@@ -12306,19 +12306,19 @@ executable, and the data, readable and writable. This is the ELF
 counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
 read-only and shares it among all the processes running the program. `max-page-size`
 places the data at the start of a new 4096-byte page, so that the two
-can be mapped with different permissions. `-Ttext=0x80` links the text
-at address `0x80`, which leaves room below it for the signal trampoline
-at 8 (#f("seg.h")), and for the ELF file header and two program headers
-(116 bytes). The linker then places the headers at the start of the
-text segment, which begins at offset 0 of the file as at address 0, and
-the kernel skips them when it loads the text (`xalloc`, #f("text.c")).
-Where the headers do not fit below the text, the text must still start
-at the same offset in its page of the file as in memory, and the file
-carries a page of padding before it. That is the case for most programs
-here: the 64-bit division of `libgcc`, which `_doprnt` needs
-(#f("stdio/doprnt.c")), brings a section of unwinding information,
-`.ARM.exidx`, to which the linker gives a program header of its own,
-and the three headers, 148 bytes, do not fit in 128. `-MMD -MP` make the
+can be mapped with different permissions. `-Ttext=0xa0` links the text
+at address `0xa0`, which leaves room below it for the signal trampoline
+at 8 (#f("seg.h")), and for the ELF file header and up to three program
+headers (148 bytes). Most programs have three: the 64-bit division of
+`libgcc`, which `_doprnt` needs (#f("stdio/doprnt.c")), brings a section
+of unwinding information, `.ARM.exidx`, to which the linker gives a
+program header of its own beside the two loadable segments. The linker
+places the headers at the start of the text segment, which begins at
+offset 0 of the file as at address 0, and the kernel skips them when it
+loads the text (`xalloc`, #f("text.c")). Were there no room for them
+below the text, the text would still have to start at the same offset
+in its page of the file as in memory, and the file would carry a page
+of padding before it. `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
 (91).
 
