@@ -1,0 +1,31 @@
+T=/tmp/cmd6 U=/usr/local/test/utils B=bbbbbbbbbbbbbb D=dddddddddddddd
+mkdir $T; cd $T
+echo wrong >g; tar cf t.tar nx/g; tar tf t.tar
+p=$T; for i in 1 2 3 4 5; do p=$p/$B; mkdir $p; done; cd $p; echo x >f; mkdir d; echo y >d/g; tar cf $T/t.tar d/g f; echo st$?; tar tf $T/t.tar
+for i in 1 2 3 4 5 6; do for j in 1 2 3 4 5; do p=$p/$B; mkdir $p; done; done; cd $p; echo x >f; tar cf $T/t.tar f; echo st$?; cd $T; rm -r $B
+mkdir d; p=d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35; do p=$p/$B; mkdir $p; done; echo z >$p/z
+tar cf t.tar d; echo st$?; rm -r d
+mkdir w r; chmod 777 w; echo z >r/z; echo wrong >z; chmod 644 r; chown dmr r
+echo "cd $T; tar cf w/u.tar r; echo st\$?; tar tf w/u.tar" | su dmr 2>&1; chmod 755 r; rm -r w r z
+echo x >f; tar cf t.tar f; dd if=t.tar of=t2 bs=512 count=2 2>/dev/null; tar tf t2 2>&1 | sed 3q
+$U/ob 141 99*0 3*40 66 2*64 40 0 5*40 60 40 0 5*40 60 40 0 61 10*67 11*40 60 3*40 64 61 64 66 0 40 356*0 >h; tar tf h 2>&1 | sed 3q
+($U/ob 100*156 3*40 66 2*64 40 0 5*40 60 40 0 5*40 60 40 0 10*40 60 11*40 60 2*40 63 61 60 62 66 0 40 356*0; $U/ob 1024*0) >h; tar tf h
+echo 1 >'a b'; tar cf t.tar 'a b'; echo 2 >a; tar uf t.tar a; tar tf t.tar; rm 'a b' a f g h t2 t.tar
+mkdir td td/$D; echo q >td/$B; echo q >td/$D/$D; >t.tp; tp rmf t.tp td; tp tmf t.tp; rm -r td t.tp
+>/dev/tap7; echo a >a; echo b >b; tp rc7 a b; tp d7 a b; tp t7; rm /dev/tap7 a b
+$U/ob 106 60 | tc -t | od -c
+awk 'BEGIN { for (i = 0; i < 300; i++) printf "e"; print "" }' </dev/null >kw; $U/ob 100 100 | tc 2<kw | od -c; rm kw
+echo x | tee / / / / / / / / / / / / / / / / / / / / / / 2>&1 | uniq -c
+echo a-b | tr a- xy; echo a-b | tr ab x-
+echo cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc x | tsort
+echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | units
+(echo m '*a*'; echo xx 2 m | tr -d '\012') >uf; (echo 3 xx; echo m) | units uf
+awk 'BEGIN { for (i = 0; i < 400; i++) printf "u%019d 1\n", i }' </dev/null >uf; units uf </dev/null; echo st$?; rm uf
+/usr/games/arithmetic 4294967295 </dev/null; /usr/games/arithmetic +-x/+-x/+-x/+- 5 </dev/null >/dev/null; echo st$?
+echo abcdefghijklmnopqrstuvwxyzabcd >hw; /usr/games/hangman hw </dev/null; echo st$?; rm hw
+awk 'BEGIN { printf "qz:"; for (i = 0; i < 180; i++) printf "c"; print "" }' </dev/null >idx; echo 'qi:aa:bb' >>idx; echo 'x:y' >qi; >qe
+/usr/games/quiz -i idx aa aa aa aa aa aa aa aa aa aa aa </dev/null
+awk 'BEGIN { for (i = 0; i < 300; i++) printf "z"; print "" }' </dev/null | /usr/games/quiz -i idx aa bb
+echo 'qe:cc:dd' >>idx; /usr/games/quiz -i idx cc dd </dev/null; rm idx qi qe
+(echo n; echo b; echo y; echo -; echo '  ') | /usr/games/backgammon >/dev/null; echo st$?
+cd /; rm -rf $T

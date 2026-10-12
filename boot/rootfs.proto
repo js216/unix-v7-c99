@@ -194,6 +194,8 @@ d--755 0 0
 					cmd4.exp	---644 0 0 usr/local/test/cases/cmd4.exp
 					cmd5	---644 0 0 usr/local/test/cases/cmd5
 					cmd5.exp	---644 0 0 usr/local/test/cases/cmd5.exp
+					cmd6	---644 0 0 usr/local/test/cases/cmd6
+					cmd6.exp	---644 0 0 usr/local/test/cases/cmd6.exp
 					cmdg	---644 0 0 usr/local/test/cases/cmdg
 					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
