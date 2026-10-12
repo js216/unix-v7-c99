@@ -306,7 +306,7 @@ void
 cfail(void) {
 	struct words *queue[QSIZE];
 	struct words **front, **rear;
-	struct words *state;
+	struct words *state, *t;
 	register char c;
 	register struct words *s;
 	s = w;
@@ -330,14 +330,17 @@ init:	if ((s->inp) != 0) {
 				rear = queue;
 			if (rear == front) overflo();
 			state = s->fail;
-		floop:	if (state == 0) state = w;
-			if (state->inp == c) {
-				q->fail = state->nst;
-				if ((state->nst)->out == 1) q->out = 1;
-				continue;
+		floop:	for (t = state? state: w; t != 0 && t->inp != c; t = t->link)
+				;
+			if (t != 0) {
+			qloop:	q->fail = t->nst;
+				if ((t->nst)->out == 1) q->out = 1;
+				if ((q = q->link) != 0) goto qloop;
 			}
-			else if ((state = state->link) != 0)
+			else if (state != 0) {
+				state = state->fail;
 				goto floop;
+			}
 		}
 		if ((s = s->link) != 0)
 			goto cloop;
