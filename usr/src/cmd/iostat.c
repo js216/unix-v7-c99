@@ -124,10 +124,9 @@ loop:
 	t = s.tout;
 	s.tout -= s1.tout;
 	s1.tout = t;
-	t = 0;
+	etime = 0;
 	for(i=0; i<32; i++)
-		t += s.etime[i];
-	etime = t;
+		etime += s.etime[i];
 	if(etime == 0.)
 		etime = 1.;
 	if (bflg) {
@@ -183,7 +182,7 @@ stats(int dn)
 	register int i;
 	double f1, f2, f3;
 	double f4, f5, f6;
-	long t;
+	double t;
 
 	t = 0;
 	for(i=0; i<32; i++)
@@ -211,7 +210,7 @@ void
 stat1(int o)
 {
 	register int i;
-	long t;
+	double t;
 	double f1, f2;
 
 	t = 0;
