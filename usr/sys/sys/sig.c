@@ -202,6 +202,8 @@ core(void)
 	register struct inode *ip;
 	register unsigned s;
 
+	if(u.u_uid != u.u_ruid || u.u_gid != u.u_rgid)
+		return(0);
 	u.u_error = 0;
 	u.u_dirp = "core";
 	ip = namei(schar, 1);
@@ -213,8 +215,7 @@ core(void)
 			return(0);
 	}
 	if(!access(ip, IWRITE) &&
-	   (ip->i_mode&IFMT) == IFREG &&
-	   u.u_uid == u.u_ruid && u.u_gid == u.u_rgid) {
+	   (ip->i_mode&IFMT) == IFREG) {
 		itrunc(ip);
 		u.u_offset = 0;
 		u.u_base = (caddr_t)&u;

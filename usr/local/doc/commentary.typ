@@ -3876,16 +3876,19 @@ bit `n-1` of `p_sig`.
 
 `core` writes the file `core` in the current directory: first the whole
 per-process area, `USIZE` clicks, which contains the saved registers,
-then the user's memory. It refuses unless the file is an ordinary one
-which the user may write, and unless the effective user id equals the
-real one, so that a set-user-id program leaves no core image. The test
-of the group ids beside it (217) is new, as in 32V: v7 let a
-set-group-id program dump its image, and here the set-group-id programs
-are those which read `/dev/kmem` (#f("rootfs.proto")). As for a
-set-user-id program, an empty file `core` may be left behind. The
-comment above admits that the protection is not thorough.
+then the user's memory. Before it looks the name up, it gives up unless
+the effective user and group ids equal the real ones (205), so that a
+set-user-id or set-group-id program leaves neither an image nor a file.
+v7 tested only the user ids, and only after `namei` and `maknode` had
+found or made the file, so that a set-user-id program which crashed left
+an empty `core` owned by root, of mode 0666 less the user's mask, in any
+directory, even one the user could not write; 32V moved the test first,
+as here. The group test matters because the set-group-id programs are
+those which read `/dev/kmem` (#f("rootfs.proto")). The file must then be
+an ordinary one which the user may write. The comment above admits that
+the protection is not thorough.
 
-#lines(188, 223)
+#lines(188, 224)
 
 For the second write `estabur` maps the whole image as
 data, so that `writei` may copy it from user space. That is the data
@@ -3898,7 +3901,7 @@ back.
 `schar` was declared here in v7; it is now declared in #f("systm.h"),
 and the line is deleted.
 
-#lines(224, 233)
+#lines(225, 234)
 
 `grow` extends the stack downward, so that it includes the address
 `sp`. A reference below the stack is a fault, and `user_trap_handler`
@@ -3920,13 +3923,13 @@ of clicks added, from the top down so that it does not overwrite
 itself, and the clicks freed at its bottom are cleared.
 
 If `expand` fails, for want of both core and swap space (#f("slp.c")),
-the mapping is set back to the old sizes (256) and `grow` fails as it
+the mapping is set back to the old sizes (257) and `grow` fails as it
 does when the stack would meet the data: the fault becomes `SIGSEG`.
 This test is new; v7 panicked inside `expand`.
 
-#lines(234, 268)
+#lines(235, 269)
 
-`ptrace` is the parent's side of tracing. A request of 0 (285) is made
+`ptrace` is the parent's side of tracing. A request of 0 (286) is made
 by the child, which asks to be traced; usually it does so between `fork`
 and `exec`, so that the `exec` stops it (`getxfile`, #f("sys1.c")).
 Otherwise the parent names a stopped child of its own. The request is
@@ -3934,7 +3937,7 @@ placed in `ipc`, the child is set running, and the parent sleeps until
 the child has taken it (`ip_req` reaches 0) or refused it (-1). The
 answer comes back in `ip_data`.
 
-#lines(269, 313)
+#lines(270, 314)
 
 `procxmt` is the child's side, run in the child's context from `stop`,
 so that the child's own address space is the one mapped. It returns 1
@@ -3944,14 +3947,14 @@ Requests 1 and 2 read a word of the child's instruction and data space.
 On the ARM the two are one, and `fuiword` is merely another name for
 `fuword` (#f("systm.h")).
 
-#lines(314, 347)
+#lines(315, 348)
 
 Request 3 reads a word of the per-process area, at a byte offset. The
 offset is turned into an index of `int`s by `>>2`, where v7 had `>>1`,
 since an `int` is now four bytes, not two. The limit `ctob(USIZE)` has
 grown with `USIZE` (#f("param.h")).
 
-#lines(348, 354)
+#lines(349, 355)
 
 Request 4 writes a word into the program's text, to plant a breakpoint
 for instance. As in v7, the text must be private: if another process
@@ -3970,14 +3973,14 @@ and discards the instruction cache, so the planted instruction is the
 one executed. It is given the user address, which is mapped, since the
 process is the one being traced.
 
-#lines(355, 376)
+#lines(356, 377)
 
 Request 5 writes a word of data. Request 6 writes a word of the
 per-process area, but only in three places: the floating point save
-area, now 32 registers long (389), a saved register named by `regloc`, or
+area, now 32 registers long (390), a saved register named by `regloc`, or
 the saved status register.
 
-The `&0377` (392) is new. In v7 the values of `regloc` were negative,
+The `&0377` (393) is new. In v7 the values of `regloc` were negative,
 and the PDP-11's signed `char` gave the right index. On the ARM they are
 all positive and `char` is unsigned; the mask converts the `char` to an
 `int` before it is used as an index, of which the compiler would
@@ -3985,7 +3988,7 @@ otherwise warn, and changes nothing. Note that, as on the PDP-11, only
 the registers `r0` to `r5`, the stack pointer, and the `pc` can be
 written: `regloc` names no other.
 
-#lines(377, 393)
+#lines(378, 394)
 
 A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
@@ -3998,7 +4001,7 @@ the `GE` flags (16 to 19), and the Thumb state as `sigreturn` keeps it
 10 to 15, 25, and 26. A debugger may therefore stop a child anywhere in
 Thumb code, inside an `if-then` block too, and resume it there.
 
-#lines(394, 402)
+#lines(395, 403)
 
 Request 7 resumes the child, optionally at a new `pc`, with the
 pending signals replaced by the one given (or none). v7's request 9,
@@ -4007,14 +4010,14 @@ that the child would trap again after one instruction. The ARM's status
 register has no such bit, and single-stepping would need the debug
 hardware, so request 9 has been removed, with the comment which
 described it: it now reaches `error` like any unknown request, and
-`ptrace` (310) fails with `EIO` rather than letting the child
+`ptrace` (311) fails with `EIO` rather than letting the child
 run on as if it had asked for request 7.
 
 Request 8 makes the child exit. The `return` added after `exit` is
 never reached; it keeps the compiler, which does not know that `exit`
 does not return, from warning that control falls into the next case.
 
-#lines(403, 423)
+#lines(404, 424)
 #source("/usr/sys/h/acct.h")
 
 The record which the kernel appends to the accounting file when a
@@ -13029,8 +13032,8 @@ on the command line, and each gives up the group with
 #f("cmd/dmesg.c")); otherwise any user could read `/dev/rrk0` or
 `/dev/mem` through them. Nor can a user stop one of them with a signal
 which dumps core and read the image, with whatever it had read from
-`/dev/kmem`, in the core file: `core` (#f("sig.c")) writes no image for a
-process whose group was changed by `exec`.
+`/dev/kmem`, in the core file: `core` (#f("sig.c")) makes no file at all
+for a process whose user or group was changed by `exec`.
 
 #lines(4, 111)
 

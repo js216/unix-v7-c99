@@ -3,5 +3,5 @@ mkdir $T; chmod 777 $T; cd $T
 $U/r5h
 echo x >f; $U/r5h u f; cat f
 cp /bin/sh gsh; chmod 2755 gsh
-echo 'cd /tmp/r5h; ./gsh -c "kill -12 \$\$"; ls -l core | awk "{ print \$1, \$3, \$4 }"' | su dmr 2>/dev/null
+echo 'cd /tmp/r5h; ./gsh -c "kill -12 \$\$"; ls core 2>&1' | su dmr 2>/dev/null
 cd /; rm -rf $T
