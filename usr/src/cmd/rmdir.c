@@ -6,6 +6,7 @@
 #include <sys/dir.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <errno.h>
 
 int	Errors = 0;
 void	rmdir(char *d);
@@ -77,12 +78,12 @@ rmdir(char *d)
 		return;
 	}
 	strcat(name, "/.");
-	if((access(name, 0)) < 0) {		/* name/. non-existent */
+	if((access(name, 0)) < 0 && errno == ENOENT) {	/* name/. non-existent */
 		strcat(name, ".");
 		goto unl;
 	}
 	strcat(name, ".");
-	if((access(name, 0)) < 0)		/* name/.. non-existent */
+	if((access(name, 0)) < 0 && errno == ENOENT)	/* name/.. non-existent */
 		goto unl2;
 	if(access(name, 02)) {
 		name[strlen(name)-3] = '\0';
