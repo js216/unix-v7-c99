@@ -6319,9 +6319,11 @@ they are equally safe here, where both are 32.
 `q_to_b` moves up to `cc` characters from a queue to a buffer, freeing
 blocks as it goes, and returns the number moved. It was used by v7's
 multiplexed files (`mx2.c`), which are not part of this system; nothing
-here calls it.
+here calls it. v7's version returned from an empty queue with
+interrupts still masked by `spl6`; the port restores the caller's level
+first (63).
 
-#lines(45, 88)
+#lines(45, 89)
 
 `ndqb` and `ndflush` serve a driver which transmits by DMA, such as
 v7's DH11 driver `dh.c`. `ndqb` returns the number of characters which
@@ -6333,27 +6335,27 @@ accept belong to v7's packet driver (`pk1.c`, `pk2.c`), which used them
 to record how many bytes it still expected. None of these drivers is
 part of this system, and neither procedure is called.
 
-#lines(89, 183)
+#lines(90, 184)
 
 `putc` appends a character to a queue, returning 0, or −1 if no block
-is free. A new block is needed if the queue is empty (192), or if
-`c_cl` lies just past the end of the last block (200). In the second
+is free. A new block is needed if the queue is empty (193), or if
+`c_cl` lies just past the end of the last block (201). In the second
 case the free block is linked into the chain through the old block's
 link before `cfreelist` is tested, so that a failure leaves the old
 block's link `NULL` as before. The callers in #f("tty.c") mostly ignore
 the result; a character for which there is no room is lost.
 
-#lines(184, 216)
+#lines(185, 217)
 
 `b_to_q` appends `cc` characters from a buffer and returns the number
 which did not fit. `canon` (#f("tty.c")) uses it to move an edited line
 to the canonical queue.
 
-#lines(217, 263)
+#lines(218, 264)
 
 `cinit` is called once by `main`. The C compiler aligns `cfree` only as
 strictly as a pointer requires, so its start is rounded up to a
-16-byte boundary (277) and as many whole blocks as fit are put on the
+16-byte boundary (278) and as many whole blocks as fit are put on the
 free list; when `cfree` was not already aligned, one block is lost.
 
 The second loop counts the entries of `cdevsw` (#f("qemu/c.c")) up to
@@ -6362,14 +6364,14 @@ filled with `nodev`, which is not zero, so `nchrdev` counts them too;
 `openi` (#f("fio.c")) uses it to reject an impossible major number,
 and an unconfigured one fails in `nodev`.
 
-#lines(264, 286)
+#lines(265, 287)
 
 `getw` and `putw` move a 16-bit quantity, as the comment says; the
 words of this machine are wider, but it does not matter. In v7 only
 the multiplexed files called `putw`, to queue events and their values,
 and nothing called `getw`; here neither is used.
 
-#lines(287, 318)
+#lines(288, 319)
 #source("/usr/sys/dev/partab.c")
 
 #f("partab.c") is v7's, unchanged. `partab` has one entry for each of

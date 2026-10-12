@@ -60,6 +60,7 @@ q_to_b(register struct clist *q, register char *cp, int cc)
 	if (q->c_cc <= 0) {
 		q->c_cc = 0;
 		q->c_cf = q->c_cl = NULL;
+		splx(s);
 		return(0);
 	}
 	acp = cp;
