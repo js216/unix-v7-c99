@@ -233,7 +233,7 @@ main(int argc, char **argv)
 			}
 		}
 		fprintf(stderr,"bad arg: %s\n", string);
-		exit(0);
+		exit(1);
 	}
 	if(conv == null && cflag&(LCASE|UCASE))
 		conv = cnull;
@@ -243,7 +243,7 @@ main(int argc, char **argv)
 		ibf = dup(0);
 	if(ibf < 0) {
 		fprintf(stderr,"cannot open: %s\n", ifile);
-		exit(0);
+		exit(1);
 	}
 	if (ofile)
 		obf = creat(ofile, 0666);
@@ -251,7 +251,7 @@ main(int argc, char **argv)
 		obf = dup(1);
 	if(obf < 0) {
 		fprintf(stderr,"cannot create: %s\n", ofile);
-		exit(0);
+		exit(1);
 	}
 	if (bs) {
 		ibs = obs = bs;
@@ -260,7 +260,7 @@ main(int argc, char **argv)
 	}
 	if(ibs == 0 || obs == 0) {
 		fprintf(stderr,"counts: cannot be zero\n");
-		exit(0);
+		exit(1);
 	}
 	ibuf = sbrk(ibs);
 	if (fflag)
@@ -270,7 +270,7 @@ main(int argc, char **argv)
 	sbrk(64);	/* For good measure */
 	if(ibuf == (char *)-1 || obuf == (char *)-1) {
 		fprintf(stderr, "not enough memory\n");
-		exit(0);
+		exit(1);
 	}
 	ibc = 0;
 	obc = 0;
@@ -280,7 +280,8 @@ main(int argc, char **argv)
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
 		signal(SIGINT, term);
 	while(skip) {
-		read(ibf, ibuf, ibs);
+		if(read(ibf, ibuf, ibs) <= 0)
+			break;
 		skip--;
 	}
 	while(seekn) {
@@ -301,7 +302,7 @@ loop:
 			perror("read");
 			if((cflag&NERR) == 0) {
 				flsh();
-				term(0);
+				term(1);
 			}
 			ibc = 0;
 			for(c=0; c<ibs; c++)
@@ -354,7 +355,7 @@ flsh(void)
 		c = write(obf, obuf, obc);
 		if(c != obc) {
 			perror("write");
-			term(0);
+			term(1);
 		}
 		obc = 0;
 	}
@@ -538,7 +539,7 @@ term(int sig)
 	(void)sig;
 
 	stats();
-	exit(0);
+	exit(sig);
 }
 
 void

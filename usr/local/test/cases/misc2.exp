@@ -76,7 +76,7 @@ daemon:x:1:1::/:
 0+1 records out
     143
 bad arg: bogus=1
-st0
+st1
 437 units; 3191 bytes
 
 you have: you want: 	* 2.540000e+00
