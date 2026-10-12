@@ -49,7 +49,12 @@ copy(char *from, char *to)
 	   (stbuf2.st_mode&S_IFMT) == S_IFDIR) {
 		p1 = from;
 		p2 = to;
-		bp = iobuf;
+		if ((bp = malloc(strlen(from) + strlen(to) + 2)) == NULL) {
+			fprintf(stderr, "cp: out of memory\n");
+			close(fold);
+			return(1);
+		}
+		to = bp;
 		while((*bp++ = *p2++))
 			;
 		bp[-1] = '/';
@@ -57,7 +62,6 @@ copy(char *from, char *to)
 		while((*bp = *p1++))
 			if (*bp++ == '/')
 				bp = p2;
-		to = iobuf;
 	}
 	if (stat(to, &stbuf2) >= 0) {
 		if (stbuf1.st_dev == stbuf2.st_dev &&
