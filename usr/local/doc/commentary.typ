@@ -8602,8 +8602,9 @@ the process id (`FPRS`), ignore interrupts (`FINT`), do not wait
 
 #lines(1, 34)
 
-The codes of the built-in commands, which `builtin` looks up in the
-table `commands` (#f("sh/msg.c")) and `execute` switches on.
+The codes of the built-in commands, which `syslook` (#f("sh/name.c"))
+finds in the table `commands` (#f("sh/msg.c")) and `execute` switches
+on.
 
 `INIO` and `OTIO` (57, 58) are the descriptors to which the shell moves
 its own input and output (#f("sh/main.c")), so that they are out of the
@@ -8613,8 +8614,9 @@ I/O node's `iofile` holds the descriptor in its low four bits
 
 #lines(35, 77)
 
-In v7 this block declared, without arguments, only the functions which
-returned something other than `int` (81--104); every other function,
+In v7 this block declared, without arguments, a selection of the
+functions (81--104), chiefly those which returned something other than
+`int`; every other function,
 and every system call, was declared implicitly by its first call. C99
 has no implicit declarations. The port gives each of v7's declarations
 a prototype and adds the rest (105--139): every function the shell
@@ -8630,27 +8632,31 @@ Four v7 declarations are gone. `expr`, of type `REAL`, was declared and
 never defined. `execs`, `copyto`, and `staknam` are `LOCAL` (that is,
 `static`) in their own files, and C99 does not allow a `static`
 definition to follow a declaration with external linkage; they are
-declared in their files instead.
+declared, or simply defined before their first use, in their own files.
 
 `alloc` (80) is defined as `malloc`. The shell's own allocator
 (#f("sh/blok.c")) is therefore the program's `malloc`, and the library's
-(#f("gen/malloc.c")) is never loaded. `free` takes `void *`, to agree
-with the library's declaration of the same name.
+(#f("gen/malloc.c")) is never loaded. `free` takes `void *`, where v7's
+took a `BLKPTR`: its callers pass a `STRING`, a `DOLPTR`, or a
+`BLKPTR`, and only a `void *` parameter accepts them all without a
+cast.
 
 #lines(78, 139)
 
 `round(a,b)` rounds the address `a` up to a multiple of `b`, a power of
 two. It converts the pointer to `int` and returns an `int`, which works
-because on the ARM, as on the PDP-11, the two are the same size; the
-callers in #f("sh/stak.c") and #f("sh/blok.c") now cast the result back
-to a pointer, as C99 requires. `assert` is defined away.
+because on the ARM, as on the PDP-11, the two are the same size; where
+the result is wanted as a pointer, the callers in #f("sh/stak.c") and
+#f("sh/blok.c") now cast it back, as C99 requires. `assert` is defined
+away.
 
 From here on most of the lines declare variables. In v7 they were
 written without `extern`: each was a tentative definition in every file
 that included #f("sh/defs.h"), and the loader merged the copies into a
 single "common" symbol. C99 permits one definition only, and the port
-does not compile with `-fcommon`, so the header now declares them
-`extern`, and #f("sh/main.c") and #f("sh/stak.c") define them.
+is not compiled with `-fcommon`, which would restore the merging, so
+the header now declares them `extern`. Those which v7 defined nowhere
+else are now defined in #f("sh/main.c").
 
 #lines(140, 167)
 
@@ -8731,8 +8737,10 @@ The "cheats" convert a pointer to an `int`, so that the shell can set
 and clear a flag in its low bit (#f("sh/blok.c"), #f("sh/service.c")).
 `Rcheat` is a cast, and depends only on an `int` being as wide as a
 pointer, which holds on the ARM. `Lcheat` gave an lvalue, through the
-member `_cheat` of the union v7 declared at this point (deleted). That
-declaration declares nothing, and C99 rejects it. Its two uses violated
+member `_cheat` of the union v7 declared at this point (deleted): v7's
+compiler kept all member names in one table and let `.` apply any of
+them to any lvalue. That declaration declares nothing, and C99 rejects
+it. Its two uses violated
 the aliasing rules of C99, writing a pointer through an `int` lvalue,
 and have been rewritten as plain assignments with `Rcheat`; the macro
 stays, unused.
@@ -8751,8 +8759,8 @@ A heap block (`struct blk`) is a single word: a pointer to the next
 block, the user's data following it (#f("sh/blok.c")).
 
 `struct fileblk` is an input file: its descriptor, line number,
-end-of-file flag, the size of a read, the next and last characters of
-the buffer, a list of further strings to be read in turn (`feval`), and
+end-of-file flag, the size of a read, pointers to the next character
+and to the end of the characters buffered, a list of further strings to be read in turn (`feval`), and
 a link to the input it interrupted (`fstak`). The shell's `BUFSIZ` is 64,
 not the library's 512. `struct filehdr` is the same with a buffer of
 one byte, used when the input is a string in memory and needs no
@@ -8763,8 +8771,9 @@ A `sysnod` pairs a name with a code. `reserved` and `commands`
 
 #lines(72, 111)
 
-The nodes of the tree. Every node begins with its `INT` type, so that a
-`TREPTR` can stand for any of them until the type has been examined;
+The nodes of the tree. Every node but a `regnod` begins with its `INT`
+type, so that a `TREPTR` can stand for any of them until the type has
+been examined;
 #f("sh/xec.c") then converts the pointer to the specific kind. The fork
 and command nodes, like `struct trenod`, follow the type with an I/O
 list, which is how `item` can attach redirections to a fork node
@@ -8895,7 +8904,7 @@ expanded arguments. Allocation from the stack costs an addition, and
 nothing on it is ever freed singly; at the top of its command loop the
 shell simply resets the stack to its base (`tdystak`, #f("sh/main.c")).
 
-Five pointers describe the stack. `stakbas` is its base and `brkend`
+Four pointers describe the stack. `stakbas` is its base and `brkend`
 the current end of the data segment. Items already allocated lie
 between `stakbas` and `stakbot`; the item being built runs from
 `stakbot` to `staktop`. A string of unknown length, such as a word, is
@@ -8911,8 +8920,8 @@ lookup during substitution, therefore keeps an offset from `stakbot`
 (`relstak`) and converts it back afterwards (`absstak`, `setstak`), as
 the first comment explains.
 
-The declarations of the five pointers are `extern` (61--73); they are
-defined in #f("sh/stak.c"). The functions have prototypes.
+The declarations of these pointers, and of `stakbsy` (#f("sh/stak.c")),
+are `extern` (61--73); they are defined in #f("sh/stak.c"). The functions have prototypes.
 
 #lines(1, 76)
 #source("/usr/src/cmd/sh/stak.c")
@@ -8920,8 +8929,8 @@ defined in #f("sh/stak.c"). The functions have prototypes.
 The procedures of the stack described in #f("sh/stak.h").
 
 The definitions of `stakbsy`, `stakbas`, `brkend`, and `staktop`
-(13, 14) are new; in v7 the header's tentative definitions served
-(#f("sh/defs.h")). `stakbot` starts at `nullstr`, an empty string, so
+(13, 14) are new; in v7 the tentative definitions in
+#f("sh/stak.h") served (#f("sh/defs.h")). `stakbot` starts at `nullstr`, an empty string, so
 that it is a valid pointer before `main` has set up storage.
 
 #lines(1, 16)
@@ -8930,7 +8939,7 @@ that it is a valid pointer before `main` has set up storage.
 size is rounded up to `BYTESPERWORD`, so that the next item, and every
 node, begins on a four byte boundary. Note that nothing checks that the
 item fits below `brkend`. That is the business of `locstak`, below,
-and, in v7, of a signal.
+and of a signal.
 
 #lines(17, 29)
 
@@ -8954,8 +8963,9 @@ ability to restart an instruction after a fault.
 The ARM restarts an instruction after a data abort without help: the
 registers are left as they were before it, and the saved program
 counter addresses it (#f("low.s")). The kernel maps a process's data
-only up to its break (#f("ureg.c")), so a store beyond `brkend` faults
-here as it did on the PDP-11, and the shell grows in the same way.
+in whole pages, up to the page which holds its break (#f("ureg.c")), so
+a store past the end of that page faults here as a store past the
+break did on the PDP-11, and the shell grows in the same way.
 
 #lines(30, 42)
 
@@ -8980,7 +8990,7 @@ nodes were also allocated on the stack, above `x`. The cast of `x` to
 
 `stakchk`, called from the command loop, gives back data space when
 more than two increments of it lie above the stack's base; `sbreak`
-(#f("sys1.c")) returns the pages to core and unmaps them.
+(#f("sys1.c")) returns to core, and unmaps, any whole page so freed.
 
 `cpystak` copies a string to a new item.
 
@@ -9025,7 +9035,10 @@ the item under construction, becomes a busy block of the heap: the old
 `bloktop` now points past it, and its first word, the one just below
 `stakbas`, links it into the chain `stakbsy`, so that `tdystak`
 (#f("sh/stak.c")) can free it later. The arena then grows by `reqd`
-rounded up to a multiple of `brkincr`; the new `bloktop` points back to
+plus `brkincr`, with the bits of `brkincr-1` cleared: more than `reqd`,
+and a multiple of `brkincr` when that is a power of two. Since
+`locstak` raises `brkincr` in steps of 256, it often is not, but the
+growth is always a multiple of 256. The new `bloktop` points back to
 `end`, busy (67). Finally the item under construction is copied to the
 new base of the stack, two words above `bloktop`, one for the
 `bloktop` header and one to serve as the `stakbsy` link when the stack
@@ -9046,8 +9059,8 @@ the stack, or among the arguments and environment strings which `exec`
 placed at the top of memory, and the callers (`freeargs`, for one, in
 #f("sh/args.c")) free values without asking where they came from.
 
-The argument is `void *`, where v7 had `BLKPTR`, to match the standard
-declaration of `free` (#f("sh/defs.h")). v7 cleared the bit in place
+The argument is `void *`, where v7 had `BLKPTR`, so that the callers
+may pass pointers of their several types (#f("sh/defs.h")). v7 cleared the bit in place
 through `Lcheat`, writing the pointer through an `int` lvalue. That
 breaks the aliasing rules of C99, under which the optimiser may assume
 that a store to an `int` does not change a pointer; the port reads the
@@ -9098,8 +9111,8 @@ definition after a declaration with external linkage.
 #lines(1, 37)
 
 The storage is set up first: `stdsigs` (#f("sh/fault.c")) arranges,
-among other things, to catch `SIGSEGV`, by which v7 grew the data
-segment (#f("sh/stak.c")); `setbrk` gives the shell its first
+among other things, to catch `SIGSEGV`, by which the shell grows its
+data segment (#f("sh/stak.c")); `setbrk` gives the shell its first
 `BRKINCR` bytes; and `addblok` makes the first heap block and places
 the stack above it (#f("sh/blok.c")). Only then can anything be
 allocated. `getenv` (#f("sh/name.c")) turns the environment into shell
@@ -9150,8 +9163,9 @@ be closed on `exec` (`Ldup`, below).
 The shell is interactive if `-i` was given, or if input and output are
 both terminals, as `gtty` succeeding shows. An interactive shell sets
 the prompts and ignores `SIGTERM` (`KILL` in #f("sh/defs.h") is 15).
-`statb` serves only as a buffer for `gtty`, and the port casts its
-address to the type that `gtty`'s prototype demands.
+`statb`, a `struct stat` for the mail check below, serves here only as
+a buffer for `gtty`, and the port casts its address to the type that
+`gtty`'s prototype demands.
 
 Errors return to `errshell`, through `exitsh` (#f("sh/error.c")), but
 only in an interactive shell; any other exits. That is why the profile
@@ -9187,7 +9201,10 @@ demands all four, and the port passes zeros. The option `-t`
 
 `chkpr` prints the secondary prompt, `PS2`, when a command continues on
 a further line. `settmp` makes the prefix of the names of temporary
-files from the process id: `/tmp/sh-` followed by the id.
+files from the process id. The id is copied to `tmpout[TMPNAM]`, which is
+the `-` (#f("sh/defs.h")), so that the prefix is `/tmp/sh` followed by
+the id; `tmpnam` marks its end, where `tmpfil`
+(#f("sh/io.c")) appends a serial number.
 
 `Ldup` moves descriptor `fa` to `fb` and sets close-on-exec on it. v7
 wrote `dup(fa|DUPFLG, fb)`: the `dup` system call took the second
@@ -9564,9 +9581,10 @@ global chain `gchain`, which is saved and restored around it because
 expanding a word may itself execute a command, by command substitution
 (#f("sh/macro.c")), and so re-enter `execute`.
 
-Note that the parser never wraps a simple command in a fork node: only
-now, after expansion, can the shell tell whether the name is one of its
-own commands (`syslook`). The assignments which precede a built-in
+Note that the parser wraps a simple command in a fork node only for
+`&` or a pipeline. Otherwise the decision to fork is made here, after
+expansion, for only now can the shell tell whether the name is one of
+its own commands (`syslook`). The assignments which precede a built-in
 command, or stand alone, are made in the shell itself (54); those
 before a program are made in the child for that program only (299).
 The option `-x` (`execpr`) prints the expanded command.
@@ -9583,7 +9601,7 @@ The built-in commands. `.` reads commands from a file in the current
 shell by way of `execexp` (421). `times` prints the user and system
 times of the shell's children, which the kernel accumulates in
 `u_cutime` and `u_cstime` (`times`, #f("sys4.c")); `prt` converts ticks
-to minutes and seconds assuming 60 to the second, which is still `HZ`
+to hours, minutes, and seconds assuming 60 to the second, which is still `HZ`
 (#f("param.h")). The kernel copies out four `time_t`s, so the array
 `t` (81) is of `long long`; as v7's `L_INT`, a `long`, it would hold
 only half of what is copied into it, and the rest would overwrite the
@@ -9807,7 +9825,9 @@ in v7, rather than taken from `errno.h`.
 process. A here document has already been copied to a temporary file
 when its line was read (#f("sh/io.c")); `subst` (#f("sh/macro.c")) copies it again,
 substituting parameters, into a second temporary file, which is opened
-for reading and at once unlinked, so that it vanishes when closed. `<&`
+for reading and at once unlinked, so that it vanishes when closed. A
+document whose terminating word was quoted has lost `IODOC` in `copy`,
+and its first file is opened as it is. `<&`
 and `>&` duplicate a descriptor, or with `-` close it; the others open
 or create the named file. The new descriptor is moved to the one being
 redirected by `rename` (#f("sh/io.c")). A restricted shell may not
@@ -9827,7 +9847,8 @@ empty first entry stands for the current directory. `return(0)`
 there passes through `failed`; v7 let control run off the end of the
 function, of which GCC warns.
 
-`pathopen` opens a file found by the search, for `.`. `catpath` builds
+`pathopen` opens a file found by the search, for `.` and for the
+profile (#f("sh/main.c")). `catpath` builds
 on the stack the next candidate, the first directory of `path` joined to
 `name`, and returns the rest of the list, or 0 when it is exhausted.
 
@@ -9971,8 +9992,9 @@ On the ARM the trick works unchanged: a data abort leaves the saved
 `pc` at the faulting instruction (#f("low.s")), so that returning from
 the handler retries it, and the kernel maps the data only up to the
 break (#f("ureg.c")). A wild reference which extending the break cannot
-cure faults again and again, until `sbreak` refuses to let the data
-meet the stack, whereupon `error` reports `nospace`.
+cure faults again and again, each time extending the break, until
+`sbreak` refuses to grow the data further (`estabur`, #f("ureg.c")),
+whereupon `error` reports `nospace`.
 
 `ALARM` ends a shell which is waiting at its prompt
 (#f("sh/timeout.h")). Other alarms, such as the one with which a failed
@@ -9983,8 +10005,8 @@ command.
 #lines(19, 37)
 
 `stdsigs` sets up the signals for the main shell: quit is ignored,
-interrupt is caught, and so are `SIGSEGV`, for v7's growth of the
-data segment, and the alarm.
+interrupt is caught, and so are `SIGSEGV`, for the growth of the data
+segment, and the alarm.
 
 `ignsig` ignores a signal and returns 1 if it was already ignored. A
 signal the shell inherited as ignored, as an interrupt is in a command
@@ -10045,8 +10067,8 @@ status is then `SIGFAIL`.
 command file when the shell is not interactive (`prp`, #f("sh/print.c")), and ends the
 command with the status `ERROR`. Neither it nor `error` returns; the
 compiler is not told so, which is why some callers in
-#f("sh/service.c") carry statements that are never reached, to quiet
-its warnings.
+#f("sh/io.c"), #f("sh/service.c"), and #f("sh/print.c") carry
+statements that are never reached, to quiet its warnings.
 
 #lines(33, 48)
 
@@ -10178,9 +10200,10 @@ duplicate of descriptor 0 pushed as a new input file (#f("sh/io.c")).
 `read` must not consume more than the line, or the commands which
 follow it in a script read from the same descriptor would lose their
 input. If the descriptor can be repositioned, the buffer is filled as
-`initf` chose; if it cannot, as for a terminal or a pipe, `lseek`
-fails, and `fsiz` is set to one, so that `readb` reads a single
-character at a time.
+`initf` chose; if it cannot, as for a pipe, `lseek` fails, and `fsiz`
+is set to one, so that `readb` reads a single character at a time. A
+terminal can be repositioned, to no effect, but no read from it returns
+more than a line.
 
 #lines(106, 120)
 
@@ -10211,9 +10234,9 @@ has no `unset`. A name which is not an identifier is reported by
 `prev` is initialised to zero (167) in the port. The loop always runs
 at least once, since `namep` is never null, and so always sets `prev`
 before the store at 188; GCC cannot see this and would warn that it
-might be used unset. The cast of `alloc`'s result to `NAMPTR` (184) is new:
-`alloc` is `malloc`, which returns `void *`, and the cast serves the
-reader rather than the compiler.
+might be used unset. The cast of `alloc`'s result to `NAMPTR` (184) is
+new: `alloc` returns an `ADDRESS`, a `char *` (#f("sh/defs.h")), which
+C99 does not assign to another pointer type without a cast.
 
 #lines(162, 189)
 
@@ -10451,7 +10474,9 @@ through `readc`. Only after the end of the output does the shell wait
 for the child (`await`, #f("sh/service.c")). The order matters: a pipe
 holds at most `PIPSIZ` bytes (#f("pipe.c")), and a child with more to
 say would block forever if the shell waited for it first. Trailing
-newlines are then removed from the result, and `pop` closes the pipe.
+newlines are then removed from the result, and `pop` restores the
+input; the reading end of the pipe was closed by `readc` when it met
+the end of the output (#f("sh/word.c")).
 
 The parentheses at 195 are new.
 
@@ -10666,8 +10691,8 @@ v7 treated `np`, a `STRING *`, as a `DOLPTR` where it suited it,
 writing `np->doluse` and `np->dolarg` and assigning the result to
 `dolh`; its compiler allowed `->` on any pointer, and any pointer to be
 assigned to any other. C99 allows neither, and the port casts between
-the two types at each such place (76, 90, 100, 104, 105). The layout
-is unchanged.
+the two types at each such place (76, 104, 105), as it does where a
+`char *` becomes a `STRING *` (90, 100). The layout is unchanged.
 
 #lines(97, 112)
 
