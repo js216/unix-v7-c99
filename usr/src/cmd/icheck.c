@@ -15,7 +15,7 @@
 struct	filsys	sblock;
 struct	dinode	itab[INOPB*NI];
 daddr_t	iaddr[NADDR];
-daddr_t	blist[NB];
+daddr_t	blist[NB+1];
 char	*bmap;
 
 int	sflg;
@@ -70,7 +70,7 @@ main(int argc, char *argv[])
 			continue;
 
 		case 'b':
-			for(i=0; i<NB; i++) {
+			for(i=0; i<NB && argc>1; i++) {
 				n = atol(argv[1]);
 				if(n == 0)
 					break;
@@ -174,7 +174,7 @@ check(char *file)
 		return;
 	}
 	nfree = 0;
-	while((n = alloc())) {
+	while(nfree < sblock.s_fsize && (n = alloc())) {
 		if (chk(n, "free"))
 			break;
 		nfree++;
@@ -193,7 +193,7 @@ check(char *file)
 	printf("files %u (r=%u,d=%u,b=%u,c=%u)\n",
 		i, nrfile, ndfile, nbfile, ncfile);
 #endif
-	n = ndirect + nindir + niindir + niindir;
+	n = ndirect + nindir + niindir + niiindir;
 #ifdef STANDALONE
 	printf("used %ld (i=%ld,ii=%ld,iii=%ld,d=%ld)\n",
 		n, nindir, niindir, niiindir, ndirect);
@@ -392,14 +392,14 @@ bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if (read(fi, buf, cnt) != cnt) {
 		printf("read error %ld\n", bno);
 		if (sflg) {
 			printf("No update\n");
 			sflg = 0;
 		}
-		for(i=0; i<BSIZE; i++)
+		for(i=0; i<cnt; i++)
 			buf[i] = 0;
 	}
 }
@@ -408,7 +408,7 @@ void
 bwrite(daddr_t bno, char *buf)
 {
 
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if (write(fi, buf, BSIZE) != BSIZE)
 		printf("write error %ld\n", bno);
 }
