@@ -34,7 +34,7 @@ int bindx = 0;
 int lev = 0;
 int ln;
 char *ss;
-int bstack[10] = { 0 };
+int bstack[15] = { 0 };
 char *numb[15] = {
   " 0", " 1", " 2", " 3", " 4", " 5",
   " 6", " 7", " 8", " 9", " 10", " 11",
@@ -73,7 +73,8 @@ stat	:  ex
 	|  LETTER '[' e ']' EQOP e
 		{ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
 	|  _BREAK
-		{ bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
+		{ if(bindx == 0){ yyerror("break outside loop"); bundle(1, "" ); }
+		  else bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
 	|  _RETURN '(' e ')'
 		{ bundle(4, $3, post, numb[lev], "Q" ); }
 	|  _RETURN '(' ')'
@@ -125,7 +126,7 @@ EQOP	:  EQPL
 	|  EQDIV
 		{ $$ = "/"; }
 	|  EQREM
-		{ $$ = "%%"; }
+		{ $$ = "%"; }
 	|  EQEXP
 		{ $$ = "^"; }
 	;
@@ -175,7 +176,7 @@ ex	:  e '+' e
 	|  e '/' e
 		{ bundle(3, $1, $3, "/" ); }
 	|  e '%' e
-		{ bundle(3, $1, $3, "%%" ); }
+		{ bundle(3, $1, $3, "%" ); }
 	|  e '^' e
 		{ bundle(3, $1, $3, "^" ); }
 	|  LETTER '[' e ']'
@@ -304,7 +305,7 @@ CRS	:
 		{ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 			if(crs == '[')crs+=3;
 			if(crs == 'a')crs='{';
-			if(crs >= 0241){yyerror("program too big");
+			if(crs >= 0241 || lev >= 14){yyerror("program too big");
 				getout();
 			}
 			bstack[bindx++] = lev++; }
@@ -358,6 +359,9 @@ char *letr[26] = {
 char *dot = { "." };
 int yylex(void){
 	int c, ch;
+	if(cp >= &cary[990]){yyerror("program too big");
+		getout();
+	}
 restart:
 	c = getch();
 	peekc = -1;
@@ -485,7 +489,7 @@ char *(bundle)(int i, ...){
 	q = b_sp_nxt;
 	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)q );
 	while(i-- > 0){
-		if( b_sp_nxt >= & b_space[b_sp_max] ) yyerror( "bundling space exceeded" );
+		if( b_sp_nxt >= & b_space[b_sp_max-1] ) yyerror( "bundling space exceeded" );
 		* b_sp_nxt++ = va_arg(p, char *);
 	}
 	va_end(p);
@@ -501,7 +505,7 @@ static void routput(char *p){
 		char **q = (char **)p;
 		while( *q != 0 ) routput( *q++ );
 	}
-	else printf( p );	 /* character string */
+	else printf( "%s", p );	 /* character string */
 }
 
 void output( char *p ){
