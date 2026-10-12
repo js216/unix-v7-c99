@@ -2,12 +2,12 @@
 #define MAXINT 32768.
 float fract = 2;
 char rflag,eflag,c;
-char ibuf[BUFSIZ],obuf[BUFSIZ],line[BUFSIZ];
+char ibuf[BUFSIZ],obuf[BUFSIZ];
 int
 main(int argc, char **argv)
 {
 	long long tvec;
-	int i;
+	int i, r;
 	for(i=1;i<argc;i++)
 	{	if(*argv[i]!='-')
 			fract=atof(argv[i]);
@@ -23,9 +23,11 @@ main(int argc, char **argv)
 		setbuf(stdout,obuf);
 	}
 	for(;eflag==0;)
-	{	gets(line);
-		if(feof(stdin)) break;
-		if(rand()/MAXINT*fract<1) puts(line);
+	{	if((i = getchar()) == EOF) break;
+		r = rand()/MAXINT*fract<1;
+		for(; i != EOF && i != '\n'; i = getchar())
+			if(r) putchar(i);
+		if(r) putchar('\n');
 	}
-	exit((int)(rand()/MAXINT*fract));
+	exit(fract < 2147483648.? (int)(rand()/MAXINT*fract): 0);
 }
