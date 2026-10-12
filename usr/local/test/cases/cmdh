@@ -20,7 +20,7 @@ tabs | od -c; tabs 37 | od -c; tabs hp | od -c; tabs xyz | od -c; tabs 300 | od 
 echo hi | tee t1 t2; cat t1 t2; echo there | tee -a t1 >/dev/null; cat t1; echo y | tee /nonexist/z; echo st$?; echo ii | tee -i t3; cat t3
 who; who am i; echo st$?
 cp $U/fs.img fs; quot fs; quot -n fs </dev/null; quot -c fs | sed 5q; quot -f fs
-pstat -i >u; sed -n 2p u; pstat -t >u; sed 2q u; pstat -p >u; sed -n 2p u; pstat -f >u; sed -n 2p u; pstat -x >u; sed -n 2p u; pstat -u `ps -l | awk '$NF == "cmdh" { print $9 }' | sed 1q` >u; sed -n 2,3p u
+pstat -i >u; sed -n 2p u; pstat -t >u; sed 2q u; pstat -p >u; sed -n 2p u; pstat -f >u; sed -n 2p u; pstat -x >u; sed -n 2p u; pstat -u `ps -l | awk '$(NF-1) == "sh" && $NF == "cmdh" { print $9 }'` >u; sed -n 2,3p u
 iostat >ios; wc -l ios; iostat -b >ios; wc -l ios; iostat -i >ios; wc -l ios
 primes 100 | sed 5q; primes 7900 | sed 4q; primes 1000000000 | sed 3q; echo 3.9 | primes | sed 2q; echo 99999999999999999999 | primes; echo st$?
 primes 4294967290 | sed 3q; primes 999999999999 | sed 3q; primes 72057594037927936; echo st$?; primes 0; echo st$?; (primes 1 | sed 30q) | tail -6
