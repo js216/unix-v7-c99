@@ -13287,7 +13287,8 @@ down. The text stays in the temporary file. `gdelete`, used for the
 common case `g/.../d`, compacts the array in one pass over the lines
 marked by `global`, instead of one call of `rdelete`, and so one pass,
 per line. It is now `static`, since nothing calls it before its
-definition, and a static procedure needs no prototype.
+definition, and `-Wmissing-prototypes` asks no prototype of a static
+procedure.
 
 #lines(829, 878)
 
@@ -13369,8 +13370,8 @@ and `append` with `getsub` adds the remainder as further lines.
 its top bit set, which is how `dosub` tells `\&` and `\1` from `&` and
 `1`; `ed` refuses characters with the top bit set in its text, so the
 bit is free for the purpose. The `&0377` at (1179), v7's, kept such a
-character positive where `char` was signed. The local declaration of `getsub` has been
-removed, as the prototype now precedes it.
+character positive where `char` was signed. The local declaration of
+`getsub` has been removed, as the prototype now precedes it.
 
 #lines(1079, 1213)
 
@@ -13389,7 +13390,8 @@ the delimiter `aeof`, into `expbuf`. An empty expression reuses the
 previous one. Each item becomes a code followed by its operand, if any:
 `CCHR` with the character; `CDOT` alone; `CCL` or `NCCL` with a class;
 `CBRA` and `CKET` with the number of a group; and `CBACK` with the
-number of the group referred to. `$` is `CDOL` only at the end; `^` sets `circfl` only at the start.
+number of the group referred to. `$` is `CDOL` only at the end; `^`
+sets `circfl` only at the start.
 
 `lastep` is the address of the last item compiled, so that a `*` can
 be applied to it after the fact, by setting `STAR` in its code. The
@@ -13473,7 +13475,9 @@ file is encrypted differently. The `execl` calls (1749, 1750) end with
 `(char *)0`, as in #f("cmd/getty.c").
 
 The signal handler pointer in `getkey` (1695) has the new type of a
-handler.
+handler. `t` in `makekey` (1789) is now a `long long`, the 64-bit time
+which `time` stores (#f("param.h")); as before, only its low 32 bits
+reach the key.
 
 #lines(1663, 1799)
 #source("/usr/src/cmd/grep.c")
@@ -13488,8 +13492,8 @@ in `ed` will find the same three procedures here, with the same codes
 and the same recursive treatment of the closure `*`. The differences
 are noted below as they occur.
 
-The whole file is v7's apart from C99 declarations and the masks
-discussed below. The `&0377` masks on subscripts of type `char`
+The whole file is v7's apart from C99 declarations, a `goto`, and the
+masks, all discussed below. The `&0377` masks on subscripts of type `char`
 (122, 364--386) are new: such a subscript draws a warning from `-Wall`,
 and the mask makes it an `int`. On the PDP-11, where `char` was signed,
 v7's `islower(*p)` (122) would have indexed the character table with a
@@ -13501,8 +13505,8 @@ unsigned and the masks change no value.
 The codes (14--22) are `ed`'s, with one difference: `CBACK` is 18
 where `ed` has 14. `STAR` is or'ed into a code to mark a closure; the
 codes of the items which may be starred are even, so that each closure
-has the odd code next above its item's.
-`NCCL` (18) is defined but never used, since a negated class is
+has the odd code next above its item's. `NCCL` is defined but never
+used, since a negated class is
 compiled as an ordinary class with its bits inverted.
 
 The buffers are larger than `ed`'s: `ESIZE` 256 against 128, and nine
@@ -13550,7 +13554,8 @@ and the ends of a range.
 Parentheses `\(` and `\)` compile to `CBRA` and `CKET` with the number
 of the subexpression; `\1` to `\9` to `CBACK`. Unlike `ed`, `grep`
 checks at compile time that at least that many subexpressions have
-been closed (`closed`, 248). Any other escaped character stands for itself.
+been closed (`closed`, 248). Any other escaped character stands for
+itself.
 
 The `goto defchar` (254) is new. v7 fell through from the escape case
 into the default case below; the jump says so explicitly, which
@@ -13608,7 +13613,8 @@ file name, the block number (counted in `BSIZE` units of 512 bytes from
 `-l` it prints the name of the file and seeks to its end, so that the
 next read ends the file at once. `printf("%D")` (286) is v7's form for
 a `long`, which the port's `printf` still accepts
-(#f("stdio/doprnt.c")).
+(#f("stdio/doprnt.c")). v7's local declaration of `ftell` in `succeed`
+has gone, since #f("stdio.h") declares it.
 
 #lines(443, 481)
 #source("/usr/src/cmd/diff.c")
@@ -13661,16 +13667,19 @@ have been made `static` instead, which spares them a prototype.
 
 `done` is also the handler for the signals caught while a temporary
 file exists, and now takes the signal number; the direct calls of it
-pass 0. `talloc` gains a `return(p)` (128) after `noroom`, which never
-returns, because a function returning a value must not run off its
-end; `p` is null there.
+pass 0. `talloc` gains a `return(p)` (128) after `noroom`. `noroom`
+never returns, but the compiler is not told so, and would otherwise
+warn that control reaches the end of a function which returns a value;
+`p` is null there. The local declarations of `malloc` in `talloc` and
+`realloc` in `ralloc` have gone, since #f("stdio.h") declares both.
 
 `ralloc` is v7's "compacting reallocation". It frees the block, frees
 `dummy`, and allocates `dummy` again. `dummy` was the first block
-allocated (326), so it lies low in the arena; v7's `free` leaves the
-allocator's search pointer at the block just freed, and the `malloc`
-inside `realloc` therefore starts searching from the bottom of the
-arena (#f("gen/malloc.c")). The block is moved to the lowest place
+allocated (326), so it lies low in the arena. v7's `free` leaves the
+allocator's search pointer at the block just freed, `malloc(1)` takes
+that block again and leaves the pointer just beyond it, and the
+`malloc` inside `realloc` therefore starts searching from near the
+bottom of the arena (#f("gen/malloc.c")). The block is moved to the lowest place
 which will hold it, and the arena is kept compact. Like `cron`'s use
 (#f("cmd/cron.c")), it relies on `realloc` of a freed block.
 
@@ -13888,7 +13897,7 @@ any part of the kernel's memory, so `ps` then gives up group `sys`
 (108--109, #f("rootfs.proto")) and runs with the user's own
 permissions.
 
-`ps` opens two files (112--120). The kernel's variables are read from
+`ps` opens two files (115--122). The kernel's variables are read from
 `/dev/kmem` (`mem`), at their kernel addresses, and the process images
 from `/dev/mem` (`swmem`), at their physical ones; with `k`, both come
 from the core file. v7 opened `/dev/mem` twice, for the same two
@@ -13948,8 +13957,7 @@ negative.
 is a physical page number (#f("proc.h")), so v7's `ctob` of the click
 number gives the physical address, the offset in `/dev/mem`. It is
 computed as an `unsigned long`, and `addr` is one, for the reason just
-given. If the
-process is swapped out, `p_addr` is a block number in the swap area,
+given. If the process is swapped out, `p_addr` is a block number in the swap area,
 and `swplo` is added. The `user` structure is at the start of the image
 in both cases.
 
@@ -13980,8 +13988,7 @@ for eleven digits and a space. `p_wchan` is a pointer, and `%o` takes an
 so it is converted (259). `SZ` is the image in blocks of 512 bytes:
 v7 converted its 64-byte clicks with `(p_size+7)>>3`, and the port with
 `ctod` (#f("param.h")), which serves 4096-byte clicks. The times
-assume `HZ`
-of 60, which holds (#f("param.h")).
+assume `HZ` of 60, which holds (#f("param.h")).
 
 #lines(245, 287)
 
@@ -14009,8 +14016,8 @@ gone. Reading a `char` array through an `int` pointer is undefined in
 C99, which allows an object to be accessed only through its own type or
 as characters, and nothing guarantees that a `char` array is aligned
 for `int` accesses. The present compiler happens to place v7's array
-on a word boundary, but `-Wcast-align=strict` rejects both casts. An
-`int` array may be read as characters, as the rest of the loop does.
+on a word boundary, but nothing requires it to. An `int` array may be
+read as characters, as the rest of the loop does.
 
 #lines(311, 345)
 
@@ -14020,8 +14027,8 @@ device number `u_ttyd`, dropping the prefix "tty".
 #lines(346, 364)
 
 `getptr` assembles a pointer from the image byte by byte, through
-`getbyte`. Its counter is now `unsigned`, so that
-the comparison with `sizeof` is between unsigned values. `getbyte`
+`getbyte`. Its counter is now `unsigned`, so that the comparison with
+`sizeof` is between unsigned values. `getbyte`
 finds the offset of a user address through the two maps and reads one
 byte; an address in neither map reads as zero.
 
@@ -14038,7 +14045,8 @@ The bounds are therefore `unsigned long`, and the address is cast to
 Everything the kernel prints with `printf` (#f("prf.c")) passes through
 the console driver's `putchar`, which keeps a copy of each character in
 the circular buffer `msgbuf`, 128 bytes (`MSGBUFS`) long, with
-`msgbufp` pointing at the next place to be written (#f("pl011.c")). The
+`msgbufp` pointing at the next place to be written (#f("pl011.c"),
+#f("stm32usart.c")). The
 buffer is defined in #f("main.c") and the pointer in #f("machdep.c").
 `dmesg` copies the two out of the running kernel and prints the
 buffer, oldest character first, so that messages which went to the
@@ -14051,8 +14059,8 @@ reads memory at those addresses through `/dev/kmem`. Both halves needed
 work in the port, though none of it is in this file. v7's `nlist` read
 the symbol table of an `a.out` file; the port's kernel, like its
 programs (#f("sys1.c")), is an ELF file (#f("Makefile")), installed as
-`/unix` in the image (#f("rootfs.proto")), and the port's `nlist` (`nlist.c`, in the C library) finds
-the ELF symbol table instead, compares only the first eight characters
+`/unix` in the image (#f("rootfs.proto")), and the port's `nlist`
+(`nlist.c`, in the C library) finds the ELF symbol table instead, compares only the first eight characters
 that `struct nlist` (in `a.out.h`) has room for, and puts back the
 leading underscore with which the PDP-11 C compiler prefixed every
 external name and which ELF compilers do not add. So `"_msgbuf"` (20)
@@ -14069,9 +14077,8 @@ The crontab runs it so every ten minutes, appending to
 `/usr/adm/messages` (#f("cmd/cron.c")). The image provides both files,
 owned by `daemon`, and makes `dmesg` set-group-id `sys`, the group
 which may read `/dev/kmem` (#f("rootfs.proto")), since `cron` runs the
-program as `daemon`. Without
-`/usr/adm/msgbuf` the `open` (38) would fail, the `read` and `write` on
-descriptor -1 would fail harmlessly, the saved state would be all
+program as `daemon`. Without `/usr/adm/msgbuf` the `open` (38) would
+fail, the `read` and `write` on descriptor -1 would fail harmlessly, the saved state would be all
 zeros, and the whole buffer would be printed each time.
 
 The members `n_type` and `n_value` of `nl` (19--22) are now given
@@ -14125,8 +14132,10 @@ declaration of it has been removed; `firstime` has gained its `int`.
 never stops. Once a minute it compares the time with each line of the
 table `/usr/lib/crontab`, and starts the commands whose times have
 come. The image's table (from v7's tape) runs `dmesg` (#f("cmd/dmesg.c"))
-every ten minutes, `atrun`, which starts the jobs queued by `at`, every
-five, and `calendar` once a day at 1:20. Since the commands run as
+every ten minutes and `atrun`, which starts the jobs queued by `at`,
+every five. Its third entry names `/usr/bin/calendar` once a day at
+1:20, which the image does not have, so that the shell's complaint goes
+to "/" (below) and nothing else happens. Since the commands run as
 the user `daemon` (31), the first entry works only because `dmesg` is
 set-group-id `sys`, the group which may read `/dev/kmem`, and
 `/usr/adm/messages` and `/usr/adm/msgbuf` belong to `daemon`
@@ -14139,8 +14148,8 @@ the machine was busy, and never examined twice.
 
 The declarations of `localtime`, `malloc`, and `realloc` (deleted after
 17) are now in #f("stdio.h"). The procedures are declared at (21--23):
-those used before their definitions need it (#f("prf.c")), and `cmp`, which v7
-declared inside `main`, is declared at file scope so that
+those used before their definitions need it (#f("prf.c")), and `cmp`,
+which v7 declared inside `main`, is declared at file scope so that
 `-Wmissing-prototypes` sees the declaration before the definition.
 
 #lines(1, 24)
@@ -14150,8 +14159,8 @@ pseudo-user `daemon` of #f("passwd"), so that the table cannot be used
 to do anything as root. The parent returns to #f("rc"). The `freopen`s
 of "/" put the standard output and error on the root directory, opened
 for reading: the descriptors are occupied, and anything a command
-writes to them without a redirection fails harmlessly. The standard input is closed
-again (43); `init` opens it on the table whenever it is read.
+writes to them without a redirection fails harmlessly. The standard
+input is closed again (43); `init` opens it on the table whenever it is read.
 
 `itime` starts at the beginning of the current minute.
 
@@ -14166,8 +14175,9 @@ effect within a minute, without a signal to `cron` or a restart.
 table dated zero is therefore never read at all, and `list`, still null,
 is then scanned at (56). The image therefore dates every file 284774400
 seconds, 10 January 1979, the date of v7's own files (#f("Makefile"),
-#f("cmd/mkfs.c")), and the table is read on the first pass. The same test means that a table replaced by an
-older file is ignored until it is touched.
+#f("cmd/mkfs.c")), and the table is read on the first pass. The same
+test means that a table replaced by an older file is ignored until it
+is touched.
 
 For each entry, `cmp` checks the five fields in order against the
 minute, hour, day of the month, month (made 1 to 12 at (55), since
@@ -14179,7 +14189,7 @@ The `slp` before it (64) makes sure the minute has really come, and the
 #lines(45, 71)
 
 `init` compiles each field into a code and its operands. The codes are
-100 to 104, and every number is less than 100 (`number`, 250), so a code
+100 to 104, and every number is less than 100 (`number`, 255), so a code
 cannot be mistaken for a value. `EXACT` is followed by the value, `ANY`
 by nothing, `LIST` by the values and a closing `LIST`, `RANGE` by the
 two bounds. `cmp` returns the position of the next field. The code
@@ -14267,8 +14277,8 @@ arrives.
 
 `dosync` is declared before `main` (16) because it is used there before
 its definition. v7 called it with no argument; it is a signal handler
-and now takes the signal number, as the prototype of `signal`
-(#f("sys/signal.s")) requires, so the direct call passes 0.
+and now takes the signal number, as the prototype of `signal` in
+`signal.h` requires (#f("sys/signal.s")), so the direct call passes 0.
 
 #lines(16, 32)
 
@@ -14283,12 +14293,13 @@ reaches zero.
 The thirty-second `sync` also keeps the date on the disk. `update`
 (#f("alloc.c")) stamps each modified super-block with the current
 `time` before writing it, and `iinit` (#f("main.c")) takes the time of
-day at boot from the root file system's `s_time`, since the kernel reads no
-battery-backed clock on either machine. A newly booted system therefore starts
-from the last moment at which `update` found the super-block modified,
-at most thirty seconds after the last allocation or release of a block
-or inode, rather than from the 10 January 1979 of the image (#f("Makefile")). A system which has changed nothing on its disk
-leaves `s_time` alone, since the stamp is written only together with a
+day at boot from the root file system's `s_time`, since the kernel
+reads no battery-backed clock on either machine. A newly booted system
+therefore starts from the last moment at which `update` found the
+super-block modified, at most thirty seconds after the last allocation
+or release of a block or inode, rather than from the 10 January 1979 of
+the image (#f("Makefile")). A system which has changed nothing on its
+disk leaves `s_time` alone, since the stamp is written only together with a
 modified super-block.
 
 #lines(33, 41)
@@ -14302,8 +14313,8 @@ to the super-user. The new directory is then empty: it lacks even the
 entries "." and "..", which the kernel does not supply, but which
 `namei` (#f("nami.c")) expects to find, since apart from one test for
 ".." at the root of a mounted file system it looks them up as ordinary
-names. `mkdir` adds them with two calls of `link`,
-and `link` too refuses a directory to anyone but the super-user
+names. `mkdir` adds them with two calls of `link`, and `link` too
+refuses a directory to anyone but the super-user
 (#f("sys2.c")). These restrictions protect the shape of the tree: a
 directory linked into two places, or one without a correct "..", would
 confuse `namei` and the programs which walk the file system.
@@ -14312,13 +14323,12 @@ The program is therefore installed set-user-id to root, mode 4755, as
 on v7's distribution tape (#f("rootfs.proto")), and does its own
 checking on behalf of the real user.
 
-The signals which might stop the program are ignored (15--19) so that it
-cannot be interrupted between the `mknod` and the second `link`, which
+The signals which might stop the program are ignored (15--19) so that
+it cannot be interrupted between the `mknod` and the second `link`, which
 would leave a directory without its "..".
 
 The declarations of `strcat` and `strcpy` (deleted after 8) are gone,
-since the port's `stdio.h` declares the string routines with
-prototypes (#f("stdio.h")). `mkdir` is declared before `main` (10)
+since #f("stdio.h") declares the string routines with prototypes. `mkdir` is declared before `main` (10)
 because `main` calls it first.
 
 #lines(1, 28)
