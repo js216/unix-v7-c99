@@ -13940,15 +13940,15 @@ never hashes to 0: the sum starts at 1, so that after the fold the
 halves can never cancel. A last line without a newline is dropped, as
 in v7.
 
-v7's sum was a signed `long` (610). A line of some 4,000 characters
-overflows it, which C99 leaves undefined; and where the sum wrapped to
+v7's sum was a signed `long` (610). A line of some 2,000 bytes of
+`0377`, or of some 5,000 letters, overflows it, which C99 leaves undefined; and where the sum wrapped to
 a negative number, `high` shifted its sign in, and the halves could
 cancel after all. 16,384 `@` characters sum to `0xFFFF0001`, which
 folds to 0, and `diff` took the line for the end of the file and
 compared nothing after it. Unsigned, the sum wraps round and `high`
 brings in zeros, so the halves cancel only if the whole sum has wrapped
-to exactly 0; a line of some 4,100 bytes of `0377` could still do
-that, and the first fold then adds one (642). A first fold of 1 to
+to exactly 0. A line built for the purpose could still do that, and the
+first fold then adds one (642). A first fold of 1 to
 131070 cannot fold to 0.
 
 On the PDP-11 the result was reduced to a 16-bit `int`; on the ARM the
