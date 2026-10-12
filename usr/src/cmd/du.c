@@ -6,7 +6,7 @@
 #define ML	1000
 
 struct stat Statb;
-char	path[256], name[256];
+char	path[4096], name[4096];
 int	Aflag = 0,
 	Sflag = 0,
 	Noarg = 0;
@@ -36,6 +36,10 @@ main(int argc, char **argv)
 		++Noarg;
 
 	do {
+		if(!Noarg && strlen(argv[i]) >= (int)sizeof path) {
+			fprintf(stderr, "--name too long < %s >\n", argv[i]);
+			continue;
+		}
 		strcpy(path, Noarg? ".": argv[i]);
 		strcpy(name, path);
 		if((np = rindex(name, '/'))) {
@@ -77,7 +81,7 @@ descend(char *np, char *fname)
 	if(Statb.st_nlink > 1 && (Statb.st_mode&S_IFMT)!=S_IFDIR) {
 		static int linked = 0;
 
-		for(i = 0; i <= linked; ++i) {
+		for(i = 0; i < linked; ++i) {
 			if(ml[i].ino==Statb.st_ino && ml[i].dev==Statb.st_dev)
 				return 0;
 		}
@@ -96,12 +100,16 @@ descend(char *np, char *fname)
 	}
 
 	for(c1 = np; *c1; ++c1);
-	if(*(c1-1) == '/')
+	if(c1 > np && *(c1-1) == '/')
 		--c1;
 	endofname = c1;
 	dirsize = Statb.st_size;
 	if(chdir(fname) == -1)
 		return 0;
+	if(endofname-np >= (int)sizeof path-DIRSIZ-1) {
+		fprintf(stderr, "--name too long < %s >\n", np);
+		goto ret;
+	}
 	for(offset=0; offset < dirsize; offset += 512) { /* each block */
 		dsize = 512<(dirsize-offset)? 512: (dirsize-offset);
 		if(!dir) {
