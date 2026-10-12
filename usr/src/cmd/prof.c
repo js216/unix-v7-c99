@@ -104,8 +104,8 @@ main(int argc, char **argv)
 		fprintf(stderr, "%s: not found\n", namfil);
 		done();
 	}
-	fread((char *)&xbuf, 1, sizeof(xbuf), nfile);
-	if (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3) {
+	if (fread((char *)&xbuf, sizeof(xbuf), 1, nfile) != 1 ||
+	    (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3)) {
 		fprintf(stderr, "%s: bad format\n", namfil);
 		done();
 	}
@@ -118,7 +118,11 @@ main(int argc, char **argv)
 		done();
 	}
 	fstat(fileno(pfile), &stbuf);
-	fread((char *)&h, sizeof(struct hdr), 1, pfile);
+	if (fread((char *)&h, sizeof(struct hdr), 1, pfile) != 1 ||
+	    (unsigned)h.ncount > 350 || (unsigned)h.highpc <= (unsigned)h.lowpc) {
+		fprintf(stderr, "mon.out: bad format\n");
+		done();
+	}
 	lowpc = (unsigned)h.lowpc/sizeof(UNIT);
 	highpc = (unsigned)h.highpc/sizeof(UNIT);
 	bufs = stbuf.st_size - sizeof(struct hdr) - h.ncount*sizeof(struct cnt);
@@ -129,7 +133,8 @@ main(int argc, char **argv)
 	npe = nl;
 	for (nname = 0; xbuf.a_syms > 0; xbuf.a_syms -= sizeof(struct nlist)) {
 		struct nlist nbuf;
-		fread((char *)&nbuf, sizeof(nbuf), 1, nfile);
+		if (npe >= &nl[1199] || fread((char *)&nbuf, sizeof(nbuf), 1, nfile) != 1)
+			break;
 		if (nbuf.n_type!=N_TEXT && nbuf.n_type!=N_TEXT+N_EXT)
 			continue;
 		if (aflg==0 && nbuf.n_type!=N_TEXT+N_EXT)
