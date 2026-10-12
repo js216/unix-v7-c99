@@ -81,7 +81,7 @@ $(filter-out etc/%,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
 	$(call T,CP)cp -f $< $@
 
 clean:
-	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN)
+	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) $(TEST_IMG)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
 	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img
 
