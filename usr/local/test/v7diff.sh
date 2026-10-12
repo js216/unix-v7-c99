@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,344 @@
+@@ -0,0 +1,346 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -422,6 +422,8 @@ usr/local
 +					awk	---644 0 0 usr/local/test/cases/awk
 +					awk.exp	---644 0 0 usr/local/test/cases/awk.exp
 +					awk.sed	---644 0 0 usr/local/test/cases/awk.sed
++					cmd2	---644 0 0 usr/local/test/cases/cmd2
++					cmd2.exp	---644 0 0 usr/local/test/cases/cmd2.exp
 +					cmdg	---644 0 0 usr/local/test/cases/cmdg
 +					cmdg.exp	---644 0 0 usr/local/test/cases/cmdg.exp
 +					cmdg.sed	---644 0 0 usr/local/test/cases/cmdg.sed
@@ -1185,7 +1187,9 @@ usr/local
 @@ -105 +105 @@
 -extern obj	(*proctab[])();
 +extern obj	(*proctab[])(node **a, int n);
-@@ -122,2 +122,22 @@
+@@ -106,0 +107 @@
++#define PA2NUM	29
+@@ -122,2 +123,22 @@
 -obj	nullproc();
 -obj	relop();
 +obj	nullproc(node **a, int n);
@@ -1672,10 +1676,13 @@ usr/local
 @@ -117 +117 @@
 -node *pa2stat(a,b,c) node *a, *b, *c;
 +node *pa2stat(node *a, node *b, node *c)
-@@ -123 +123 @@
+@@ -118,0 +119,2 @@
++	if (paircnt >= PA2NUM)
++		error(FATAL, "too many range patterns");
+@@ -123 +125 @@
 -node *linkum(a,b) node *a, *b;
 +node *linkum(node *a, node *b)
-@@ -131 +131 @@
+@@ -131 +133 @@
 -node *genprint()
 +node *genprint(void)
 
@@ -1717,187 +1724,320 @@ usr/local
 +obj gettemp(void), arrayel(node *a, obj b);
 @@ -13 +15,0 @@
 -FILE *popen();
-@@ -15 +17 @@
+@@ -15,2 +17 @@
 -extern obj execute(), nodetoobj(), fieldel(), dopa2();
+-#define PA2NUM	29
 +extern obj execute(node *u), nodetoobj(node *a);
-@@ -25 +27,2 @@
+@@ -25 +26,2 @@
 -run()
 +int
 +run(void)
-@@ -30 +33 @@
+@@ -30 +32 @@
 -obj execute(u) node *u;
 +obj execute(node *u)
-@@ -32 +35 @@
+@@ -32 +34 @@
 -	register obj (*proc)();
 +	register obj (*proc)(node **a, int n);
-@@ -35,0 +39 @@
+@@ -35,0 +38 @@
 +	(void)printname;
-@@ -62 +66 @@
+@@ -46 +49 @@
+-				error(FATAL, "illegal statement %o", a);
++				error(FATAL, "illegal statement %o", a->nobj);
+@@ -62 +65 @@
 -obj program(a, n) node **a;
 +obj program(node **a, int n)
-@@ -64,0 +69 @@
+@@ -64,0 +68 @@
 +	(void)n;
-@@ -94 +99 @@
+@@ -84 +87,0 @@
+-	tempfree(x);
+@@ -94 +97 @@
 -obj array(a,n) node **a;
 +obj array(node **a, int n)
-@@ -97 +102 @@
+@@ -97 +100 @@
 -	extern obj arrayel();
 +	(void)n;
-@@ -105 +110 @@
+@@ -105 +108 @@
 -obj arrayel(a,b) node *a; obj b;
 +obj arrayel(node *a, obj b)
-@@ -109 +113,0 @@
+@@ -109 +111,0 @@
 -	int i;
-@@ -120 +124 @@
+@@ -120 +122 @@
 -	y.optr = setsymtab(s, tostring(""), 0.0, STR, x->sval);
 +	y.optr = setsymtab(s, tostring(""), 0.0, STR, (cell **)x->sval);
-@@ -126 +130 @@
+@@ -126 +128 @@
 -obj matchop(a,n) node **a;
 +obj matchop(node **a, int n)
-@@ -136,2 +140,2 @@
+@@ -134,0 +137 @@
++	i = match((struct fa *)a[1], s);
+@@ -136,2 +139 @@
 -	i = match(a[1], s);
 -	if (n==MATCH && i==1 || n==NOTMATCH && i==0)
-+	i = match((struct fa *)a[1], s);
 +	if ((n==MATCH && i==1) || (n==NOTMATCH && i==0))
-@@ -143 +147 @@
+@@ -143 +145 @@
 -obj boolop(a,n) node **a;
 +obj boolop(node **a, int n)
-@@ -153,0 +158 @@
+@@ -153,0 +156 @@
 +		/* fallthrough */
-@@ -174 +179 @@
+@@ -174 +177 @@
 -obj relop(a,n) node **a;
 +obj relop(node **a, int n)
-@@ -192,0 +198 @@
+@@ -192,0 +196 @@
 +		/* fallthrough */
-@@ -208 +214,2 @@
+@@ -208 +212,2 @@
 -tempfree(a) obj a;
 +void
 +tempfree(obj a)
-@@ -215 +222 @@
+@@ -215 +220 @@
 -obj gettemp()
 +obj gettemp(void)
-@@ -232 +239 @@
+@@ -232 +237 @@
 -obj indirect(a,n) node **a;
 +obj indirect(node **a, int n)
-@@ -236 +243 @@
+@@ -236 +241 @@
 -	cell *fieldadr();
 +	(void)n;
-@@ -247 +254 @@
+@@ -247 +252 @@
 -obj substr(a, nnn) node **a;
 +obj substr(node **a, int nnn)
-@@ -251,0 +259 @@
+@@ -249,2 +254,2 @@
+-	char *s, *p, temp[100];
+-	obj x;
++	char *s, *p;
++	obj x, y;
+@@ -251,0 +257 @@
 +	(void)nnn;
-@@ -286 +294 @@
+@@ -256,3 +262,2 @@
+-	tempfree(x);
+-	x = execute(a[1]);
+-	m = getfval(x.optr);
++	y = execute(a[1]);
++	m = getfval(y.optr);
+@@ -263 +268 @@
+-	tempfree(x);
++	tempfree(y);
+@@ -265,3 +270,3 @@
+-		x = execute(a[2]);
+-		n = getfval(x.optr);
+-		tempfree(x);
++		y = execute(a[2]);
++		n = getfval(y.optr);
++		tempfree(y);
+@@ -276,8 +281,6 @@
+-	p = temp;
+-	s += m - 1;
+-	while (n-- > 0)
+-		*p++ = *s++;
+-	*p = '\0';
+-	x = gettemp();
+-	setsval(x.optr, temp);
+-	return(x);
++	y = gettemp();
++	y.optr->sval = p = tostring(s + m - 1);
++	p[n] = '\0';
++	y.optr->tval = STR;
++	tempfree(x);
++	return(y);
+@@ -286 +289 @@
 -obj sindex(a, nnn) node **a;
 +obj sindex(node **a, int nnn)
-@@ -289,0 +298 @@
+@@ -288 +291 @@
+-	obj x, y;
++	obj x, y, z;
+@@ -289,0 +293 @@
 +	(void)nnn;
-@@ -311 +320 @@
+@@ -293 +296,0 @@
+-	tempfree(x);
+@@ -296 +298,0 @@
+-	tempfree(y);
+@@ -298 +300 @@
+-	x = gettemp();
++	z = gettemp();
+@@ -303,2 +305,2 @@
+-			setfval(x.optr, (awkfloat) (p1 - s1 + 1));	/* origin 1 */
+-			return(x);
++			setfval(z.optr, (awkfloat) (p1 - s1 + 1));	/* origin 1 */
++			break;
+@@ -307,2 +309,3 @@
+-	setfval(x.optr, 0.0);
+-	return(x);
++	tempfree(x);
++	tempfree(y);
++	return(z);
+@@ -311 +314,14 @@
 -char *format(s,a) char *s; node *a;
++static char *room(char **bp, int *np, char *p, int k)
++{
++	int i;
++
++	i = p - *bp;
++	if (i + k < *np)
++		return(p);
++	*np = i + k + RECSIZE;
++	if ((*bp = realloc(*bp, *np)) == NULL)
++		error(FATAL, "out of space in format");
++	return(*bp + i);
++}
++
 +char *format(char *s, node *a)
-@@ -348 +357 @@
+@@ -315 +331 @@
+-	int flag = 0;
++	int flag = 0, n, w;
+@@ -319 +335,2 @@
+-	p = buf = (char *)malloc(RECSIZE);
++	n = RECSIZE;
++	p = buf = (char *)malloc(n);
+@@ -320,0 +338 @@
++		p = room(&buf, &n, p, 2);
+@@ -327 +344,0 @@
+-			*p++ = '%';
+@@ -331 +348,3 @@
+-		for (t=fmt; (*t++ = *s) != '\0'; s++)
++		for (t=fmt; (*t++ = *s) != '\0'; s++) {
++			if (t >= fmt + sizeof fmt - 2)
++				error(FATAL, "format item %.20s... too long", os);
+@@ -333,0 +353 @@
++		}
+@@ -335,2 +355,4 @@
+-		if (t > fmt + 100)
+-			error(FATAL, "format item %.20s... too long", os);
++		for (w = 0, t = fmt; *t != '\0'; t++)
++			if (*t == '*' || (*t >= '0' && *t <= '9' && (w = 10*w + *t - '0') > 100000))
++				error(FATAL, "bad format item %.20s...", os);
++		w += t - fmt;
+@@ -348 +370 @@
 -		case 'o': case 'x':
 +		case 'o': case 'x': case 'c':
-@@ -381 +390 @@
+@@ -358,0 +381 @@
++			p = room(&buf, &n, p, w + 1);
+@@ -368,0 +392,3 @@
++		else
++			t = x.optr->sval==NULL ? "" : getsval(x.optr);
++		p = room(&buf, &n, p, w + (flag==4 ? strlen(t) : 400));
+@@ -372 +398 @@
+-		else if (flag==4) sprintf(p, fmt, x.optr->sval==NULL ? "" : getsval(x.optr));
++		else if (flag==4) sprintf(p, fmt, t);
+@@ -381 +407 @@
 -obj asprintf(a,n) node **a;
 +obj asprintf(node **a, int n)
-@@ -385,0 +395 @@
+@@ -385,0 +412 @@
 +	(void)n;
-@@ -397 +407 @@
+@@ -397 +424 @@
 -obj arith(a,n) node **a;
 +obj arith(node **a, int n)
-@@ -399 +409 @@
+@@ -399 +426 @@
 -	awkfloat i,j;
 +	awkfloat i,j=0;
-@@ -413,0 +424 @@
+@@ -413,0 +441 @@
 +		/* fallthrough */
-@@ -440 +451 @@
+@@ -440 +468 @@
 -obj incrdecr(a, n) node **a;
 +obj incrdecr(node **a, int n)
-@@ -461 +472 @@
+@@ -461 +489 @@
 -obj assign(a,n) node **a;
 +obj assign(node **a, int n)
-@@ -504 +515 @@
+@@ -504 +532 @@
 -obj cat(a,q) node **a;
 +obj cat(node **a, int q)
-@@ -508,0 +520 @@
+@@ -508,0 +537 @@
 +	(void)q;
-@@ -526 +538 @@
+@@ -526 +555 @@
 -obj pastat(a,n) node **a;
 +obj pastat(node **a, int n)
-@@ -528,0 +541 @@
+@@ -528,0 +558 @@
 +	(void)n;
-@@ -541 +554 @@
+@@ -541 +571 @@
 -obj dopa2(a,n) node **a;
 +obj dopa2(node **a, int n)
-@@ -562 +575 @@
+@@ -562 +592 @@
 -obj aprintf(a,n) node **a;
 +obj aprintf(node **a, int n)
-@@ -564,0 +578 @@
+@@ -564,0 +595 @@
 +	(void)n;
-@@ -576 +590 @@
+@@ -568 +599 @@
+-		printf(x.optr->sval);
++		printf("%s", x.optr->sval);
+@@ -576 +607 @@
 -obj split(a,nnn) node **a;
 +obj split(node **a, int nnn)
-@@ -583,0 +598 @@
+@@ -581 +612 @@
+-	char *t, temp[100], num[5];
++	char *t, *temp, *os, num[12];
+@@ -583,0 +615 @@
 +	(void)nnn;
-@@ -612,2 +627,2 @@
+@@ -586 +618,2 @@
+-	s = getsval(x.optr);
++	s = os = tostring(getsval(x.optr));
++	temp = tostring(s);
+@@ -612,2 +645,2 @@
 -			  || sep == ' ' && (*p == '\t' || *p == '\n')
 -			  || sep == '\t' && *p == '\n')
 +			  || (sep == ' ' && (*p == '\t' || *p == '\n'))
 +			  || (sep == '\t' && *p == '\n'))
-@@ -618 +633 @@
+@@ -618 +651 @@
 -		setsymtab(num, tostring(temp), 0.0, STR, ap->sval);
 +		setsymtab(num, tostring(temp), 0.0, STR, (cell **)ap->sval);
-@@ -629 +644 @@
+@@ -622,0 +656,2 @@
++	xfree(temp);
++	xfree(os);
+@@ -629 +664 @@
 -obj ifstat(a,n) node **a;
 +obj ifstat(node **a, int n)
-@@ -631,0 +647 @@
+@@ -631,0 +667 @@
 +	(void)n;
-@@ -645 +661 @@
+@@ -645 +681 @@
 -obj whilestat(a,n) node **a;
 +obj whilestat(node **a, int n)
-@@ -647,0 +664 @@
+@@ -647,0 +684 @@
 +	(void)n;
-@@ -664 +681 @@
+@@ -664 +701 @@
 -obj forstat(a,n) node **a;
 +obj forstat(node **a, int n)
-@@ -666,0 +684 @@
+@@ -666,0 +704 @@
 +	(void)n;
-@@ -687 +705 @@
+@@ -687 +725 @@
 -obj instat(a, n) node **a;
 +obj instat(node **a, int n)
-@@ -691,0 +710 @@
+@@ -691,0 +730 @@
 +	(void)n;
-@@ -712,0 +732 @@
+@@ -712,0 +752 @@
 +	return(true);
-@@ -715 +735 @@
+@@ -715 +755 @@
 -obj jump(a,n) node **a;
 +obj jump(node **a, int n)
-@@ -717,0 +738 @@
+@@ -717,0 +758 @@
 +	(void)a;
-@@ -740 +761 @@
+@@ -740 +781 @@
 -obj fncn(a,n) node **a;
 +obj fncn(node **a, int n)
-@@ -743 +764 @@
+@@ -743 +784 @@
 -	awkfloat u;
 +	awkfloat u=0;
-@@ -744,0 +766 @@
+@@ -744,0 +786 @@
 +	(void)n;
-@@ -766 +788 @@
+@@ -766 +808 @@
 -obj print(a,n) node **a;
 +obj print(node **a, int n)
-@@ -770,0 +793 @@
+@@ -770,0 +813 @@
 +	(void)n;
-@@ -792 +815 @@
+@@ -774,0 +818,2 @@
++		if (strlen(s) + strlen(getsval(y.optr)) + strlen(x->nnext==NULL ? *ORS : *OFS) >= RECSIZE)
++			error(FATAL, "string %.20s ... too long to print", s);
+@@ -782,2 +826,0 @@
+-	if (strlen(s) >= RECSIZE)
+-		error(FATAL, "string %.20s ... too long to print", s);
+@@ -792 +835 @@
 -obj nullproc() {}
 +obj nullproc(node **a, int n) { (void)a; (void)n; return(true); }
-@@ -794 +817 @@
+@@ -794 +837 @@
 -obj nodetoobj(a) node *a;
 +obj nodetoobj(node *a)
-@@ -805 +828,2 @@
+@@ -805 +848,2 @@
 -redirprint(s, a, b) char *s; node *b;
 +void
 +redirprint(char *s, int a, node *b)
+@@ -813 +857 @@
+-		if (strcmp(x.optr->sval, files[i].fname) == 0)
++		if (files[i].fname != NULL && strcmp(x.optr->sval, files[i].fname) == 0)
 
 % usr/src/cmd/awk/token.c
 @@ -0,0 +1,2 @@
@@ -2089,57 +2229,75 @@ usr/local
 -cell *ap;
 +void
 +freesymtab(cell *ap)	/* free symbol table */
-@@ -63 +66 @@
+@@ -53 +56 @@
+-	cell *cp, **tp;
++	cell *cp, *np, **tp;
+@@ -60 +63,2 @@
+-		for (cp = tp[i]; cp != NULL; cp = cp->nextval) {
++		for (cp = tp[i]; cp != NULL; cp = np) {
++			np = cp->nextval;
+@@ -63 +67 @@
 -			free(cp);
 +			free((char *)cp);
-@@ -69,5 +72 @@
+@@ -69,5 +73 @@
 -cell *setsymtab(n, s, f, t, tab)
 -char *n, *s;
 -awkfloat f;
 -unsigned t;
 -cell **tab;
 +cell *setsymtab(char *n, char *s, awkfloat f, unsigned t, cell **tab)
-@@ -75 +74 @@
+@@ -75 +75 @@
 -	register h;
 +	register int h;
-@@ -77 +75,0 @@
+@@ -77 +76,0 @@
 -	cell *lookup();
-@@ -100,2 +98,2 @@
+@@ -100,2 +99,2 @@
 -hash(s)	/* form hash value for string s */
 -register char *s;
 +int
 +hash(register char *s)	/* form hash value for string s */
-@@ -110,3 +108 @@
+@@ -106 +105 @@
+-		hashval += *s++;
++		hashval += *s++ & 0377;
+@@ -110,3 +109 @@
 -cell *lookup(s, tab)	/* look for s in tab */
 -register char *s;
 -cell **tab;
 +cell *lookup(register char *s, cell **tab)	/* look for s in tab */
-@@ -122,3 +118 @@
+@@ -122,3 +119 @@
 -awkfloat setfval(vp, f)
 -register cell *vp;
 -awkfloat f;
 +awkfloat setfval(register cell *vp, awkfloat f)
-@@ -137,3 +131 @@
+@@ -137,3 +132 @@
 -char *setsval(vp, s)
 -register cell *vp;
 -char *s;
 +char *setsval(register cell *vp, char *s)
-@@ -155,2 +147 @@
+@@ -140,0 +134,2 @@
++	char *t;
++
+@@ -148,0 +144 @@
++	t = tostring(s);
+@@ -152 +148 @@
+-	return(vp->sval = tostring(s));
++	return(vp->sval = t);
+@@ -155,2 +151 @@
 -awkfloat getfval(vp)
 -register cell *vp;
 +awkfloat getfval(register cell *vp)
-@@ -158 +148,0 @@
+@@ -158 +152,0 @@
 -	awkfloat atof();
-@@ -181,2 +171 @@
+@@ -181,2 +175 @@
 -char *getsval(vp)
 -register cell *vp;
 +char *getsval(register cell *vp)
-@@ -205,2 +194,2 @@
+@@ -205,2 +198,2 @@
 -checkval(vp)
 -register cell *vp;
 +void
 +checkval(register cell *vp)
-@@ -215,2 +204 @@
+@@ -215,2 +208 @@
 -char *tostring(s)
 -register char *s;
 +char *tostring(register char *s)
@@ -2170,6 +2328,9 @@ usr/local
 +char *getf(char *p), *geta(char *p);
 +int yylex(void), cpeek(int c, int yes, int no), getch(void);
 +FILE *in;
+@@ -28 +37 @@
+-int bstack[10] = { 0 };
++int bstack[15] = { 0 };
 @@ -33 +42 @@
 -int *pre, *post;
 +char *pre, *post;
@@ -2202,216 +2363,217 @@ usr/local
 @@ -65 +74 @@
 -		={ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
 +		{ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
-@@ -67 +76 @@
+@@ -67 +76,2 @@
 -		={ bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
-+		{ bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
-@@ -69 +78 @@
++		{ if(bindx == 0){ yyerror("break outside loop"); bundle(1, "" ); }
++		  else bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
+@@ -69 +79 @@
 -		= bundle(4, $3, post, numb[lev], "Q" );
 +		{ bundle(4, $3, post, numb[lev], "Q" ); }
-@@ -71 +80 @@
+@@ -71 +81 @@
 -		= bundle(4, "0", post, numb[lev], "Q" );
 +		{ bundle(4, "0", post, numb[lev], "Q" ); }
-@@ -73 +82 @@
+@@ -73 +83 @@
 -		= bundle(4,"0",post,numb[lev],"Q");
 +		{ bundle(4,"0",post,numb[lev],"Q"); }
-@@ -75 +84 @@
+@@ -75 +85 @@
 -		= bundle(2, $3, "k");
 +		{ bundle(2, $3, "k"); }
-@@ -77 +86 @@
+@@ -77 +87 @@
 -		= bundle(4,"K",$3,$2,"k");
 +		{ bundle(4,"K",$3,$2,"k"); }
-@@ -79 +88 @@
+@@ -79 +89 @@
 -		= bundle(2,$3, "i");
 +		{ bundle(2,$3, "i"); }
-@@ -81 +90 @@
+@@ -81 +91 @@
 -		= bundle(4,"I",$3,$2,"i");
 +		{ bundle(4,"I",$3,$2,"i"); }
-@@ -83 +92 @@
+@@ -83 +93 @@
 -		= bundle(2,$3,"o");
 +		{ bundle(2,$3,"o"); }
-@@ -85 +94 @@
+@@ -85 +95 @@
 -		= bundle(4,"O",$3,$2,"o");
 +		{ bundle(4,"O",$3,$2,"o"); }
-@@ -87 +96 @@
+@@ -87 +97 @@
 -		={ $$ = $2; }
 +		{ $$ = $2; }
-@@ -89 +98 @@
+@@ -89 +99 @@
 -		={ bundle(1,"fY"); }
 +		{ bundle(1,"fY"); }
-@@ -91 +100 @@
+@@ -91 +101 @@
 -		={ bundle(1,"c"); }
 +		{ bundle(1,"c"); }
-@@ -93 +102 @@
+@@ -93 +103 @@
 -		={	conout( $7, $2 );
 +		{	conout( $7, $2 );
-@@ -97 +106 @@
+@@ -97 +107 @@
 -		={	bundle(3, $6, $4, $2 );
 +		{	bundle(3, $6, $4, $2 );
-@@ -102 +111 @@
+@@ -102 +112 @@
 -		={	bundle(5, $7, $5, "s.", $3, $2 );
 +		{	bundle(5, $7, $5, "s.", $3, $2 );
-@@ -107 +116 @@
+@@ -107 +117 @@
 -		={	bundle(3,$4,"S",$2); }
 +		{	bundle(3,$4,"S",$2); }
-@@ -111 +120 @@
+@@ -111 +121 @@
 -		={ $$ = "+"; }
 +		{ $$ = "+"; }
-@@ -113 +122 @@
+@@ -113 +123 @@
 -		={ $$ = "-"; }
 +		{ $$ = "-"; }
-@@ -115 +124 @@
+@@ -115 +125 @@
 -		={ $$ = "*"; }
 +		{ $$ = "*"; }
-@@ -117 +126 @@
+@@ -117 +127 @@
 -		={ $$ = "/"; }
 +		{ $$ = "/"; }
-@@ -119 +128 @@
+@@ -119 +129 @@
 -		={ $$ = "%%"; }
-+		{ $$ = "%%"; }
-@@ -121 +130 @@
++		{ $$ = "%"; }
+@@ -121 +131 @@
 -		={ $$ = "^"; }
 +		{ $$ = "^"; }
-@@ -125 +134 @@
+@@ -125 +135 @@
 -		={ $$ = $3; }
 +		{ $$ = $3; }
-@@ -129 +138 @@
+@@ -129 +139 @@
 -		={ --bindx; }
 +		{ --bindx; }
-@@ -134 +143 @@
+@@ -134 +144 @@
 -		={ bundle(2, $1, $3 ); }
 +		{ bundle(2, $1, $3 ); }
-@@ -138 +147 @@
+@@ -138 +148 @@
 -		={ln++;}
 +		{ln++;}
-@@ -143 +152 @@
+@@ -143 +153 @@
 -		= bundle(3, $1, $3, "=" );
 +		{ bundle(3, $1, $3, "=" ); }
-@@ -145 +154 @@
+@@ -145 +155 @@
 -		= bundle(3, $1, $3, ">" );
 +		{ bundle(3, $1, $3, ">" ); }
-@@ -147 +156 @@
+@@ -147 +157 @@
 -		= bundle(3, $1, $3, "<" );
 +		{ bundle(3, $1, $3, "<" ); }
-@@ -149 +158 @@
+@@ -149 +159 @@
 -		= bundle(3, $1, $3, "!=" );
 +		{ bundle(3, $1, $3, "!=" ); }
-@@ -151 +160 @@
+@@ -151 +161 @@
 -		= bundle(3, $1, $3, "!>" );
 +		{ bundle(3, $1, $3, "!>" ); }
-@@ -153 +162 @@
+@@ -153 +163 @@
 -		= bundle(3, $1, $3, "!<" );
 +		{ bundle(3, $1, $3, "!<" ); }
-@@ -155 +164 @@
+@@ -155 +165 @@
 -		= bundle(2, $1, " 0!=" );
 +		{ bundle(2, $1, " 0!=" ); }
-@@ -158,2 +167,2 @@
+@@ -158,2 +168,2 @@
 -e	:  e '+' e
 -		= bundle(3, $1, $3, "+" );
 +ex	:  e '+' e
 +		{ bundle(3, $1, $3, "+" ); }
-@@ -161 +170 @@
+@@ -161 +171 @@
 -		= bundle(3, $1, $3, "-" );
 +		{ bundle(3, $1, $3, "-" ); }
-@@ -163 +172 @@
+@@ -163 +173 @@
 -		= bundle(3, " 0", $2, "-" );
 +		{ bundle(3, " 0", $2, "-" ); }
-@@ -165 +174 @@
+@@ -165 +175 @@
 -		= bundle(3, $1, $3, "*" );
 +		{ bundle(3, $1, $3, "*" ); }
-@@ -167 +176 @@
+@@ -167 +177 @@
 -		= bundle(3, $1, $3, "/" );
 +		{ bundle(3, $1, $3, "/" ); }
-@@ -169 +178 @@
+@@ -169 +179 @@
 -		= bundle(3, $1, $3, "%%" );
-+		{ bundle(3, $1, $3, "%%" ); }
-@@ -171 +180 @@
++		{ bundle(3, $1, $3, "%" ); }
+@@ -171 +181 @@
 -		= bundle(3, $1, $3, "^" );
 +		{ bundle(3, $1, $3, "^" ); }
-@@ -173 +182 @@
+@@ -173 +183 @@
 -		={ bundle(3,$3, ";", geta($1)); }
 +		{ bundle(3,$3, ";", geta($1)); }
-@@ -175 +184 @@
+@@ -175 +185 @@
 -		= bundle(4, "l", $1, "d1+s", $1 );
 +		{ bundle(4, "l", $1, "d1+s", $1 ); }
-@@ -177 +186 @@
+@@ -177 +187 @@
 -		= bundle(4, "l", $2, "1+ds", $2 );
 +		{ bundle(4, "l", $2, "1+ds", $2 ); }
-@@ -179 +188 @@
+@@ -179 +189 @@
 -		= bundle(4, "l", $2, "1-ds", $2 );
 +		{ bundle(4, "l", $2, "1-ds", $2 ); }
-@@ -181 +190 @@
+@@ -181 +191 @@
 -		= bundle(4, "l", $1, "d1-s", $1 );
 +		{ bundle(4, "l", $1, "d1-s", $1 ); }
-@@ -183 +192 @@
+@@ -183 +193 @@
 -		= bundle(7,$3,";",geta($1),"d1+",$3,":",geta($1));
 +		{ bundle(7,$3,";",geta($1),"d1+",$3,":",geta($1)); }
-@@ -185 +194 @@
+@@ -185 +195 @@
 -		= bundle(7,$4,";",geta($2),"1+d",$4,":",geta($2));
 +		{ bundle(7,$4,";",geta($2),"1+d",$4,":",geta($2)); }
-@@ -187 +196 @@
+@@ -187 +197 @@
 -		= bundle(7,$3,";",geta($1),"d1-",$3,":",geta($1));
 +		{ bundle(7,$3,";",geta($1),"d1-",$3,":",geta($1)); }
-@@ -189 +198 @@
+@@ -189 +199 @@
 -		= bundle(7,$4,";",geta($2),"1-d",$4,":",geta($2));
 +		{ bundle(7,$4,";",geta($2),"1-d",$4,":",geta($2)); }
-@@ -191 +200 @@
+@@ -191 +201 @@
 -		= bundle(1,"Kd1+k");
 +		{ bundle(1,"Kd1+k"); }
-@@ -193 +202 @@
+@@ -193 +203 @@
 -		= bundle(1,"K1+dk");
 +		{ bundle(1,"K1+dk"); }
-@@ -195 +204 @@
+@@ -195 +205 @@
 -		= bundle(1,"Kd1-k");
 +		{ bundle(1,"Kd1-k"); }
-@@ -197 +206 @@
+@@ -197 +207 @@
 -		= bundle(1,"K1-dk");
 +		{ bundle(1,"K1-dk"); }
-@@ -199 +208 @@
+@@ -199 +209 @@
 -		= bundle(1,"Id1+i");
 +		{ bundle(1,"Id1+i"); }
-@@ -201 +210 @@
+@@ -201 +211 @@
 -		= bundle(1,"I1+di");
 +		{ bundle(1,"I1+di"); }
-@@ -203 +212 @@
+@@ -203 +213 @@
 -		= bundle(1,"Id1-i");
 +		{ bundle(1,"Id1-i"); }
-@@ -205 +214 @@
+@@ -205 +215 @@
 -		= bundle(1,"I1-di");
 +		{ bundle(1,"I1-di"); }
-@@ -207 +216 @@
+@@ -207 +217 @@
 -		= bundle(1,"Od1+o");
 +		{ bundle(1,"Od1+o"); }
-@@ -209 +218 @@
+@@ -209 +219 @@
 -		= bundle(1,"O1+do");
 +		{ bundle(1,"O1+do"); }
-@@ -211 +220 @@
+@@ -211 +221 @@
 -		= bundle(1,"Od1-o");
 +		{ bundle(1,"Od1-o"); }
-@@ -213 +222 @@
+@@ -213 +223 @@
 -		= bundle(1,"O1-do");
 +		{ bundle(1,"O1-do"); }
-@@ -215 +224 @@
+@@ -215 +225 @@
 -		= bundle(4, $3, "l", getf($1), "x" );
 +		{ bundle(4, $3, "l", getf($1), "x" ); }
-@@ -217 +226 @@
+@@ -217 +227 @@
 -		= bundle(3, "l", getf($1), "x" );
 +		{ bundle(3, "l", getf($1), "x" ); }
-@@ -219 +228 @@
+@@ -219 +229 @@
 -		={ bundle(2, " ", $1 ); }
 +		{ bundle(2, " ", $1 ); }
-@@ -221 +230 @@
+@@ -221 +231 @@
 -		={ bundle(2, " .", $2 ); }
 +		{ bundle(2, " .", $2 ); }
-@@ -223 +232 @@
+@@ -223 +233 @@
 -		={ bundle(4, " ", $1, ".", $3 ); }
 +		{ bundle(4, " ", $1, ".", $3 ); }
-@@ -225 +234 @@
+@@ -225 +235 @@
 -		={ bundle(3, " ", $1, "." ); }
 +		{ bundle(3, " ", $1, "." ); }
-@@ -227 +236 @@
+@@ -227 +237 @@
 -		={ $$ = "l."; }
 +		{ $$ = "l."; }
-@@ -229,9 +238 @@
+@@ -229,9 +239 @@
 -		= { bundle(2, "l", $1 ); }
 -	|  LETTER '=' e
 -		={ bundle(3, $3, "ds", $1 ); }
@@ -2422,22 +2584,22 @@ usr/local
 -	| LETTER '[' e ']' EQOP e
 -		= { bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
 +		{ bundle(2, "l", $1 ); }
-@@ -239 +240 @@
+@@ -239 +241 @@
 -		= bundle(2,$3,"Z");
 +		{ bundle(2,$3,"Z"); }
-@@ -241 +242 @@
+@@ -241 +243 @@
 -		= bundle(2,$3,"X");	/* must be before '(' e ')' */
 +		{ bundle(2,$3,"X"); }	/* must be before '(' e ')' */
-@@ -243 +244 @@
+@@ -243 +245 @@
 -		= { $$ = $2; }
 +		{ $$ = $2; }
-@@ -245 +246 @@
+@@ -245 +247 @@
 -		={ bundle(1, "?" ); }
 +		{ bundle(1, "?" ); }
-@@ -247 +248 @@
+@@ -247 +249 @@
 -		={ bundle(2, $3, "v" ); }
 +		{ bundle(2, $3, "v" ); }
-@@ -249 +250,18 @@
+@@ -249 +251,18 @@
 -		={ bundle(2,"L",$2); }
 +		{ bundle(2,"L",$2); }
 +	| SCALE
@@ -2457,22 +2619,22 @@ usr/local
 +		{ bundle(5,$6,"d",$3,":",geta($1)); }
 +	| LETTER '[' e ']' EQOP e	%prec '='
 +		{ bundle(9,$3,";",geta($1),$6,$5,"d",$3,":",geta($1)); }
-@@ -251 +269 @@
+@@ -251 +270 @@
 -		= bundle(2,$3,"dk");
 +		{ bundle(2,$3,"dk"); }
-@@ -253 +271 @@
+@@ -253 +272 @@
 -		= bundle(4,"K",$3,$2,"dk");
 +		{ bundle(4,"K",$3,$2,"dk"); }
-@@ -255 +273 @@
+@@ -255 +274 @@
 -		= bundle(2,$3,"di");
 +		{ bundle(2,$3,"di"); }
-@@ -257 +275 @@
+@@ -257 +276 @@
 -		= bundle(4,"I",$3,$2,"di");
 +		{ bundle(4,"I",$3,$2,"di"); }
-@@ -259 +277 @@
+@@ -259 +278 @@
 -		= bundle(2,$3,"do");
 +		{ bundle(2,$3,"do"); }
-@@ -261,7 +279 @@
+@@ -261,7 +280 @@
 -		= bundle(4,"O",$3,$2,"do");
 -	| SCALE
 -		= bundle(1,"K");
@@ -2481,164 +2643,176 @@ usr/local
 -	| OBASE
 -		= bundle(1,"O");
 +		{ bundle(4,"O",$3,$2,"do"); }
-@@ -272 +284 @@
+@@ -272 +285 @@
 -		= bundle(2, $1, $3 );
 +		{ bundle(2, $1, $3 ); }
-@@ -276 +288 @@
+@@ -276 +289 @@
 -		=bundle(2,"l",geta($1));
 +		{ bundle(2,"l",geta($1)); }
-@@ -280 +292 @@
+@@ -280 +293 @@
 -		={ *cp++ = '\0'; }
 +		{ *cp++ = '\0'; }
-@@ -284 +296 @@
+@@ -284 +297 @@
 -		={ $$ = cp; *cp++ = '_'; }
 +		{ $$ = cp; *cp++ = '_'; }
-@@ -286 +298 @@
+@@ -286 +299 @@
 -		={ $$ = cp; *cp++ = $1; }
 +		{ $$ = cp; *cp++ = *$1; }
-@@ -288 +300 @@
+@@ -288 +301 @@
 -		={ *cp++ = $2; }
 +		{ *cp++ = *$2; }
-@@ -292,2 +304,2 @@
+@@ -292,2 +305,2 @@
 -		={ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 -			if(crs == '[')crs=+3;
 +		{ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 +			if(crs == '[')crs+=3;
-@@ -302 +314 @@
+@@ -295 +308 @@
+-			if(crs >= 0241){yyerror("program too big");
++			if(crs >= 0241 || lev >= 14){yyerror("program too big");
+@@ -302 +315 @@
 -		={	$$ = getf($2);
 +		{	$$ = getf($2);
-@@ -312 +324 @@
+@@ -312 +325 @@
 -		={ pp( $1 ); }
 +		{ pp( $1 ); }
-@@ -314 +326 @@
+@@ -314 +327 @@
 -		={ pp( $3 ); }
 +		{ pp( $3 ); }
-@@ -318 +330 @@
+@@ -318 +331 @@
 -		={ tp($1); }
 +		{ tp($1); }
-@@ -320 +332 @@
+@@ -320 +333 @@
 -		={ tp($3); }
 +		{ tp($3); }
-@@ -324 +336 @@
+@@ -324 +337 @@
 -		={ $$ = geta($1); }
 +		{ $$ = geta($1); }
-@@ -338 +350 @@
+@@ -338 +351 @@
 -char atab[52] = {
 +unsigned char atab[52] = {
-@@ -347 +359 @@
+@@ -347 +360 @@
 -yylex(){
 +int yylex(void){
-@@ -390,2 +402,2 @@
+@@ -348,0 +362,3 @@
++	if(cp >= &cary[990]){yyerror("program too big");
++		getout();
++	}
+@@ -390,2 +406,2 @@
 -	if( c>= '0' && c <= '9' || c>= 'A' && c<= 'F' ){
 -		yylval = c;
 +	if( (c>= '0' && c <= '9') || (c>= 'A' && c<= 'F') ){
 +		yylval = index("0123456789ABCDEF", c);
-@@ -434 +446 @@
+@@ -434 +450 @@
 -cpeek( c, yes, no ){
 +int cpeek( int c, int yes, int no ){
-@@ -442 +454 @@
+@@ -442 +458 @@
 -getch(){
 +int getch(void){
-@@ -445 +457 @@
+@@ -445 +461 @@
 -	ch = (peekc < 0) ? getc(in) : peekc;
 +	ch = (peekc < 0) ? in == NULL ? EOF : getc(in) : peekc;
-@@ -454 +466 @@
+@@ -454 +470 @@
 -	fclose(in);
 +	if(in != NULL)fclose(in);
-@@ -460,0 +473 @@
+@@ -460,0 +477 @@
 +	goto loop;
-@@ -463,2 +476,2 @@
+@@ -463,2 +480,2 @@
 -int b_space [ b_sp_max ];
 -int * b_sp_nxt = { b_space };
 +char *b_space [ b_sp_max ];
 +char ** b_sp_nxt = { b_space };
-@@ -467,2 +480,3 @@
+@@ -467,2 +484,3 @@
 -bundle(a){
 -	int i, *p, *q;
 +char *(bundle)(int i, ...){
 +	va_list p;
 +	char **q;
-@@ -470,2 +484 @@
+@@ -470,2 +488 @@
 -	p = &a;
 -	i = *p++;
 +	va_start(p, i);
-@@ -473 +486 @@
+@@ -473 +490 @@
 -	if( bdebug ) printf("bundle %d elements at %o\n",i,  q );
 +	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)q );
-@@ -476 +489 @@
+@@ -475,2 +492,2 @@
+-		if( b_sp_nxt >= & b_space[b_sp_max] ) yyerror( "bundling space exceeded" );
 -		* b_sp_nxt++ = *p++;
++		if( b_sp_nxt >= & b_space[b_sp_max-1] ) yyerror( "bundling space exceeded" );
 +		* b_sp_nxt++ = va_arg(p, char *);
-@@ -477,0 +491 @@
+@@ -477,0 +495 @@
 +	va_end(p);
-@@ -479,2 +493,2 @@
+@@ -479,2 +497,2 @@
 -	yyval = q;
 -	return( q );
 +	yyval = (char *)q;
 +	return( yyval );
-@@ -483,3 +497,3 @@
+@@ -483,3 +501,3 @@
 -routput(p) int *p; {
 -	if( bdebug ) printf("routput(%o)\n", p );
 -	if( p >= &b_space[0] && p < &b_space[b_sp_max]){
 +static void routput(char *p){
 +	if( bdebug ) printf("routput(%o)\n", (unsigned)p );
 +	if( (char **)p >= &b_space[0] && (char **)p < &b_space[b_sp_max]){
-@@ -487 +501,2 @@
+@@ -487 +505,2 @@
 -		while( *p != 0 ) routput( *p++ );
 +		char **q = (char **)p;
 +		while( *q != 0 ) routput( *q++ );
-@@ -492 +507 @@
+@@ -489 +508 @@
+-	else printf( p );	 /* character string */
++	else printf( "%s", p );	 /* character string */
+@@ -492 +511 @@
 -output( p ) int *p; {
 +void output( char *p ){
-@@ -501 +516 @@
+@@ -501 +520 @@
 -conout( p, s ) int *p; char *s; {
 +void conout( char *p, char *s ){
-@@ -509 +524 @@
+@@ -509 +528 @@
 -yyerror( s ) char *s; {
 +void yyerror( char *s ){
-@@ -520 +535 @@
+@@ -520 +539 @@
 -pp( s ) char *s; {
 +void pp( char *s ){
-@@ -529 +544 @@
+@@ -529 +548 @@
 -tp( s ) char *s; { /* same as pp, but for temps */
 +void tp( char *s ){ /* same as pp, but for temps */
-@@ -536,2 +551,2 @@
+@@ -536,2 +555,2 @@
 -yyinit(argc,argv) int argc; char *argv[];{
 -	signal( 2, (int(*)())1 );	/* ignore all interrupts */
 +static void yyinit(int argc,char *argv[]){
 +	signal( 2, SIG_IGN );	/* ignore all interrupts */
-@@ -547 +562 @@
+@@ -547 +566 @@
 -int *getout(){
 +void getout(void){
-@@ -550 +565 @@
+@@ -550 +569 @@
 -	exit();
 +	exit(0);
-@@ -553,2 +568,2 @@
+@@ -553,2 +572,2 @@
 -int *
 -getf(p) char *p;{
 +char *
 +getf(char *p){
-@@ -557,3 +572,3 @@
+@@ -557,3 +576,3 @@
 -int *
 -geta(p) char *p;{
 -	return(&atab[2*(*p - 0141)]);
 +char *
 +geta(char *p){
 +	return((char *)&atab[2*(*p - 0141)]);
-@@ -562,2 +577,2 @@
+@@ -562,2 +581,2 @@
 -main(argc, argv)
 -char **argv;
 +int
 +main(int argc, char **argv)
-@@ -572 +587 @@
+@@ -572 +591 @@
 -			exit();
 +			exit(0);
-@@ -577 +592 @@
+@@ -577 +596 @@
 -			exit();
 +			exit(0);
-@@ -589 +604 @@
+@@ -589 +608 @@
 -		exit();
 +		exit(0);
-@@ -595,2 +610,2 @@
+@@ -595,2 +614,2 @@
 -	execl("/bin/dc", "dc", "-", 0);
 -	execl("/usr/bin/dc", "dc", "-", 0);
 +	execl("/bin/dc", "dc", "-", (char *)0);
@@ -2668,9 +2842,11 @@ usr/local
 @@ -74 +77 @@
 -	register n, c;
 +	register int n, c;
-@@ -79 +82 @@
+@@ -79,2 +82,2 @@
 -	while(c = *s++) {
+-		if(c<'0' || c>'9')
 +	while((c = *s++)) {
++		if(c<'0' || c>'9' || n>9999)
 @@ -87,2 +90,2 @@
 -pstr(str, n)
 -char *str;
@@ -2711,54 +2887,91 @@ usr/local
 +		if (fflg || ((*++argv)[0]=='-' && (*argv)[1]=='\0'))
 
 % usr/src/cmd/cb.c
-@@ -1,0 +2,4 @@
+@@ -2 +2,5 @@
+-int	slevel[10];
 +#define	puts	cb_puts
 +#define	gets	cb_gets
 +int	getch(void), lookup(char *tab[]), getnl(void), gets(void);
-+void	ptabs(void), comment(void), puts(void), gotelse(void);
++void	ptabs(void), comment(void), puts(void), gotelse(void), toodeep(void);
++int	slevel[20];
+@@ -6,2 +10,2 @@
+-int	siflev[10];
+-int	sifflg[10];
++int	siflev[20];
++int	sifflg[20];
+@@ -11 +15 @@
+-int	ind[10]	= {
++int	ind[20]	= {
+@@ -15 +19 @@
+-int	pflg[10] = {
++int	pflg[20] = {
+@@ -32 +36 @@
+-char	string[200];
++char	string[1000];
 @@ -39,2 +43,2 @@
 -main(argc,argv) int argc;
 -char argv[];
 +int
 +main(void)
-@@ -155 +159 @@
+@@ -76,0 +81 @@
++			if(clevel >= 19)toodeep();
+@@ -99 +104 @@
+-			clevel--;
++			if(clevel > 0)clevel--;
+@@ -155 +160 @@
 -			if(iflev > 0)
 +			if(iflev > 0) {
-@@ -159,0 +164 @@
+@@ -159,0 +165 @@
 +			}
-@@ -261 +266,2 @@
+@@ -246,0 +253 @@
++				if(iflev >= 9)toodeep();
+@@ -261 +268,2 @@
 -ptabs(){
 +void
 +ptabs(void){
-@@ -265 +271,2 @@
+@@ -265 +273,2 @@
 -getch(){
 +int
 +getch(void){
-@@ -271 +278,2 @@
+@@ -266,0 +276 @@
++	if(j >= (int)sizeof string - 4)toodeep();
+@@ -268,0 +279,4 @@
++	if(lastchar == EOF){
++		puts();
++		exit(0);
++	}
+@@ -271 +285,2 @@
 -puts(){
 +void
 +puts(void){
-@@ -292,2 +300,2 @@
+@@ -292,2 +307,2 @@
 -lookup(tab)
 -char *tab[];
 +int
 +lookup(char *tab[])
-@@ -307 +315,2 @@
+@@ -307 +322,2 @@
 -gets(){
 +int
 +gets(void){
-@@ -325 +334,2 @@
+@@ -325 +341,2 @@
 -gotelse(){
 +void
 +gotelse(void){
-@@ -331 +341,2 @@
+@@ -331 +348,2 @@
 -getnl(){
 +int
 +getnl(void){
-@@ -352 +363,2 @@
+@@ -352 +370,2 @@
 -comment(){
 +void
 +comment(void){
+@@ -363,0 +383,6 @@
++}
++void
++toodeep(void){
++	fflush(stdout);
++	fprintf(stderr, "cb: too long or too deeply nested\n");
++	exit(1);
 
 % usr/src/cmd/checkeq.c
 @@ -8 +8,3 @@
@@ -2824,26 +3037,27 @@ usr/local
 -abs()
 +int
 +abs(void)
-@@ -90 +92 @@
+@@ -90 +92,2 @@
 -	register c, i;
-+	register int c, i;
-@@ -99 +101,2 @@
++	register int c;
++	register unsigned i;
+@@ -99 +102,2 @@
 -who()
 +int
 +who(void)
-@@ -101 +104 @@
+@@ -101 +105 @@
 -	register m;
 +	register int m;
-@@ -125 +128,2 @@
+@@ -125 +129,2 @@
 -what()
 +int
 +what(void)
-@@ -136,2 +140,2 @@
+@@ -136,2 +141,2 @@
 -where(om)
 -register om;
 +int
 +where(register int om)
-@@ -139 +143 @@
+@@ -139 +144 @@
 -	register m;
 +	register int m;
 
@@ -2918,6 +3132,9 @@ usr/local
 -long otoi(s)
 -char *s;
 +long otoi(char *s)
+@@ -111 +110 @@
+-	long v;
++	unsigned long v;
 @@ -118 +117 @@
 -	while(isdigit(*s))
 +	while(isdigit(*s&0377))
@@ -2937,27 +3154,30 @@ usr/local
 -	register char c;
 +void
 +outc (register char c)
-@@ -208 +209,2 @@
+@@ -164,0 +166,2 @@
++	if (strlen(lbuff) + cp + 3 >= LINELN)
++		return;
+@@ -208 +211,2 @@
 -store (lno)
 +static void
 +store (int lno)
-@@ -210 +211,0 @@
+@@ -210 +213,0 @@
 -	char *malloc();
-@@ -223 +224,2 @@
+@@ -223 +226,2 @@
 -fetch(lno)
 +static void
 +fetch(int lno)
-@@ -236,3 +238,2 @@
+@@ -236,3 +240,2 @@
 -emit (s, lineno)
 -	char *s;
 -	int lineno;
 +void
 +emit (char *s, int lineno)
-@@ -294 +295,2 @@
+@@ -294 +297,2 @@
 -incr()
 +void
 +incr(void)
-@@ -308 +310,2 @@
+@@ -308 +312,2 @@
 -decr()
 +void
 +decr(void)
@@ -3032,13 +3252,22 @@ usr/local
 -char *from, *to;
 +int
 +copy(char *from, char *to)
-@@ -52 +53 @@
+@@ -51,2 +52,7 @@
+-		bp = iobuf;
 -		while(*bp++ = *p2++)
++		if ((bp = malloc(strlen(from) + strlen(to) + 2)) == NULL) {
++			fprintf(stderr, "cp: out of memory\n");
++			close(fold);
++			return(1);
++		}
++		to = bp;
 +		while((*bp++ = *p2++))
-@@ -56 +57 @@
+@@ -56 +62 @@
 -		while(*bp = *p1++)
 +		while((*bp = *p1++))
-@@ -73 +74 @@
+@@ -59 +64,0 @@
+-		to = iobuf;
+@@ -73 +78 @@
 -	while(n = read(fold,  iobuf,  BSIZE)) {
 +	while((n = read(fold,  iobuf,  BSIZE))) {
 
@@ -3164,7 +3393,10 @@ usr/local
 -gtime()
 +int
 +gtime(void)
-@@ -122,0 +121,2 @@
+@@ -125 +123 @@
+-	if( month<1 || month>12 ||
++	if( year<0 || month<1 || month>12 ||
+@@ -134,0 +133,2 @@
 +	if(year < 70)
 +		year += 100;
 @@ -152 +152,2 @@
