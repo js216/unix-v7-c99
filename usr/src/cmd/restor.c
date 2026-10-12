@@ -112,8 +112,9 @@ usage:
 		case '-':
 			break;
 		case 'f':
+			if (argc-- <= 0)
+				goto usage;
 			magtape = *argv++;
-			argc--;
 			break;
 		case 'r':
 		case 'R':
@@ -126,6 +127,8 @@ usage:
 			goto usage;
 		}
 	}
+	if ((command == 'r' || command == 'R') && argc <= 0)
+		goto usage;
 	if (command == 'x') {
 		if (signal(SIGINT, done) == SIG_IGN)
 			signal(SIGINT, SIG_IGN);
@@ -139,10 +142,9 @@ usage:
 		}
 		close(df);
 		df = open(dirfile, 2);
+		unlink(dirfile);
 	}
 	doit(command, argc, argv);
-	if (command == 'x')
-		unlink(dirfile);
 	exit(0);
 #else
 	magtape = "tape";
@@ -207,7 +209,7 @@ newvol:
 		close(mt);
 getvol:
 		printf("Mount desired tape volume: Specify volume #: ");
-		if (gets(tbf) == NULL)
+		if (fgets(tbf, sizeof tbf, stdin) == NULL)
 			return;
 		volno = atoi(tbf);
 		if (volno <= 0) {
@@ -300,7 +302,7 @@ done:
 #ifndef STANDALONE
 		if (command == 'R') {
 			printf("Enter starting volume number: ");
-			if (gets(tbf) == NULL) {
+			if (fgets(tbf, sizeof tbf, stdin) == NULL) {
 				volno = 1;
 				printf("\n");
 			}
@@ -316,7 +318,9 @@ done:
 #else
 								*argv);
 #endif
-		while (getchar() != '\n');
+		while ((i = getchar()) != '\n')
+			if (i == EOF)
+				exit(1);
 		dread((daddr_t)1, (char *)&sblock, sizeof(sblock));
 		maxi = (sblock.s_isize-2)*INOPB;
 		if (readhdr(&spcl) == 0) {
@@ -434,6 +438,10 @@ finish:
 		if (i != IFDIR) {
 			goto finish;
 		}
+		if (ipos >= MAXINO) {
+			printf("Too many directories\n");
+			exit(1);
+		}
 		inotab[ipos].t_ino = spcl.c_inumber;
 		inotab[ipos++].t_seekpt = seekpt;
 		getfile(spcl.c_inumber, putdir, null, spcl.c_dinode.di_size);
@@ -467,7 +475,7 @@ getfile(ino_t n, void (*f1)(char *b, long size), void (*f2)(char *b, long size),
 			return;
 		}
 start:
-		for (i = 0; i < addrblock.c_count; i++) {
+		for (i = 0; i < addrblock.c_count && i < BSIZE; i++) {
 			if (addrblock.c_addr[i]) {
 				readtape(buf);
 				(*f1)(buf, size > BSIZE ? (long) BSIZE : size);
@@ -516,8 +524,9 @@ loop:
 			flsht();
 			close(mt);
 			printf("Mount volume %d\n", volno);
-			while (getchar() != '\n')
-				;
+			while ((i = getchar()) != '\n')
+				if (i == EOF)
+					exit(1);
 			if ((mt = open(magtape, 0)) == -1) {
 				printf("Cannot open tape!\n");
 				goto loop;
@@ -674,7 +683,7 @@ psearch(char *n)
 	if (*(cp = n) == '/')
 		cp++;
 next:
-	cp1 = cp + 1;
+	cp1 = cp;
 	while (*cp1 != '/' && *cp1)
 		cp1++;
 	c = *cp1;
@@ -725,7 +734,7 @@ dwrite(daddr_t bno, char *b)
 		else
 			cache[i].c_time++;
 	}
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if(write(fi, b, BSIZE) != BSIZE) {
 #ifdef STANDALONE
 		printf("disk write error %D\n", bno);
@@ -757,7 +766,7 @@ dread(daddr_t bno, char *buf, int cnt)
 		}
 	}
 
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if (read(fi, cache[j].c_block, BSIZE) != BSIZE) {
 #ifdef STANDALONE
 		printf("read error %D\n", bno);
@@ -779,12 +788,9 @@ dread(daddr_t bno, char *buf, int cnt)
 void
 clri(struct dinode *ip)
 {
-	int i, *p;
-	i = sizeof(struct dinode)/sizeof(int);
-	p = (int *)ip;
-	do
-		*p++ = 0;
-	while(--i);
+	static struct dinode zino;
+
+	*ip = zino;
 }
 
 /*
@@ -858,7 +864,7 @@ bfree(daddr_t bn)
 		struct	fblk frees;
 	} fbuf;
 
-	if(sblock.s_nfree >= NICFREE) {
+	if((unsigned)sblock.s_nfree >= NICFREE) {
 		fbuf.frees.df_nfree = sblock.s_nfree;
 		for(i=0;i<NICFREE;i++)
 			fbuf.frees.df_free[i] = sblock.s_free[i];
@@ -882,7 +888,8 @@ balloc(void)
 		struct	fblk frees;
 	} fbuf;
 
-	if(sblock.s_nfree == 0 || (bno=sblock.s_free[--sblock.s_nfree]) == 0) {
+	if(sblock.s_nfree <= 0 || sblock.s_nfree > NICFREE ||
+	    (bno=sblock.s_free[--sblock.s_nfree]) == 0) {
 #ifdef STANDALONE
 		printf("Out of space\n");
 #else
@@ -1125,6 +1132,8 @@ readbits(short *m)
 	register int i;
 
 	i = spcl.c_count;
+	if ((unsigned)i > MSIZ/(BSIZE/sizeof(short)))
+		i = MSIZ/(BSIZE/sizeof(short));
 
 	while (i--) {
 		readtape((char *) m);
