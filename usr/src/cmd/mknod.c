@@ -20,12 +20,15 @@ main(int argc, char **argv)
 	b = number(argv[4]);
 	if(b < 0)
 		goto usage;
-	if(mknod(argv[1], m, (a<<8)|b) < 0)
+	if(mknod(argv[1], m, (a<<8)|b) < 0) {
 		perror("mknod");
+		exit(1);
+	}
 	exit(0);
 
 usage:
 	printf("usage: mknod name b/c major minor\n");
+	exit(1);
 }
 
 int
@@ -35,9 +38,9 @@ number(char *s)
 
 	n = 0;
 	while((c = *s++)) {
-		if(c<'0' || c>'9')
+		if(c<'0' || c>'9' || n > 255)
 			return(-1);
 		n = n*10 + c-'0';
 	}
-	return(n);
+	return(n > 255? -1: n);
 }
