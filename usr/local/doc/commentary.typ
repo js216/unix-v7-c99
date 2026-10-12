@@ -52,8 +52,8 @@
 
 Unix, the greatest operating system ever created, served tens of thousands of
 users with a kernel that fit in under 100 kB of core. This book presents
-the Seventh Edition kernel brought up to date with C99 to run on
-hardware available nowadays.
+the Seventh Edition system (its kernel, shell, library, and commands)
+brought up to date with C99 to run on hardware available nowadays.
 
 #v(1em)
 *References*
@@ -76,6 +76,8 @@ hardware available nowadays.
 #show outline.entry.where(level: 2): set block(above: 1.4em)
 #show outline.entry.where(level: 2): set text(weight: "bold")
 #block(below: 1.2em, text(size: 1.4em, weight: "bold")[Contents])
+#show outline.entry.where(level: 2): it => pad(left: -1.2em, it)
+#show outline.entry.where(level: 3): it => pad(left: -1.2em, it)
 #columns(2, outline(title: none))
 #pagebreak()
 #set page(numbering: "1", header: running, footer: [])
@@ -12305,70 +12307,6 @@ and after.
 
 #lines(1, 58)
 
-#source("/usr/src/libc/gen/atoi.c")
-
-#lines(1, 26)
-
-#source("/usr/src/libc/gen/atol.c")
-
-#lines(1, 26)
-
-#source("/usr/src/libc/gen/calloc.c")
-
-#lines(1, 31)
-
-#source("/usr/src/libc/gen/perror.c")
-
-#lines(1, 26)
-
-#source("/usr/src/libc/gen/errlst.c")
-
-#lines(1, 38)
-
-#source("/usr/src/libc/gen/rand.c")
-
-#lines(1, 14)
-
-#source("/usr/src/libc/gen/sleep.c")
-
-#lines(1, 42)
-
-#source("/usr/src/libc/gen/ttyslot.c")
-
-#lines(1, 58)
-
-#source("/usr/src/libc/stdio/fgets.c")
-
-#lines(1, 19)
-
-#source("/usr/src/libc/stdio/ftell.c")
-
-#lines(1, 29)
-
-#source("/usr/src/libc/stdio/gcvt.c")
-
-#lines(1, 64)
-
-#source("/usr/src/libm/exp.c")
-
-#lines(1, 43)
-
-#source("/usr/src/libm/sin.c")
-
-#lines(1, 69)
-
-#source("/usr/src/libm/atan.c")
-
-#lines(1, 106)
-
-#source("/usr/src/libm/pow.c")
-
-#lines(1, 34)
-
-#source("/usr/src/libm/floor.c")
-
-#lines(1, 28)
-
 = Part Five: The Commands
 
 == Classic Programs <ch-classic>
@@ -13693,46 +13631,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 32)
 
-#source("/usr/src/cmd/echo.c")
-
-#lines(1, 22)
-
-#source("/usr/src/cmd/cal.c")
-
-#lines(1, 208)
-
-#source("/usr/src/cmd/date.c")
-
-#lines(1, 164)
-
-#source("/usr/src/cmd/factor.c")
-
-#lines(1, 72)
-
-#source("/usr/src/cmd/primes.c")
-
-#lines(1, 137)
-
-#source("/usr/src/cmd/units.c")
-
-#lines(1, 471)
-
-#source("/usr/src/cmd/osh.c")
-
-#lines(1, 866)
-
-#source("/usr/src/games/arithmetic.c")
-
-#lines(1, 200)
-
-#source("/usr/src/games/hangman.c")
-
-#lines(1, 159)
-
-#source("/usr/src/games/quiz.c")
-
-#lines(1, 489)
-
 == Maintaining File Systems <ch-fsmaint>
 
 #source("/usr/src/cmd/icheck.c")
@@ -13747,10 +13645,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 323)
 
-#source("/usr/src/cmd/clri.c")
-
-#lines(1, 81)
-
 #source("/usr/src/cmd/df.c")
 
 #lines(1, 95)
@@ -13763,10 +13657,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 65)
 
-#source("/usr/src/cmd/umount.c")
-
-#lines(1, 55)
-
 #source("/usr/src/cmd/dump.c")
 
 #lines(1, 655)
@@ -13774,18 +13664,6 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/restor.c")
 
 #lines(1, 1145)
-
-#source("/usr/src/cmd/quot.c")
-
-#lines(1, 235)
-
-#source("/usr/src/cmd/mknod.c")
-
-#lines(1, 46)
-
-#source("/usr/src/cmd/dd.c")
-
-#lines(1, 553)
 
 == Users and Privilege <ch-users>
 
@@ -13797,17 +13675,9 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 166)
 
-#source("/usr/src/cmd/newgrp.c")
-
-#lines(1, 55)
-
 #source("/usr/src/cmd/chmod.c")
 
 #lines(1, 182)
-
-#source("/usr/src/cmd/chown.c")
-
-#lines(1, 56)
 
 #source("/usr/src/cmd/who.c")
 
@@ -13816,10 +13686,6 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/write.c")
 
 #lines(1, 184)
-
-#source("/usr/src/cmd/wall.c")
-
-#lines(1, 67)
 
 #source("/usr/src/cmd/mesg.c")
 
@@ -13833,35 +13699,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 112)
 
-#source("/usr/src/cmd/kill.c")
-
-#lines(1, 41)
-
-#source("/usr/src/cmd/chgrp.c")
-
-#lines(1, 54)
-
-#source("/usr/src/cmd/nice.c")
-
-#lines(1, 25)
-
-#source("/usr/src/cmd/stty.c")
-
-#lines(1, 259)
-
-#source("/usr/src/cmd/tty.c")
-
-#lines(1, 18)
-
-#source("/usr/src/cmd/pwd.c")
-
-#lines(1, 84)
-
 == Accounting and Status <ch-acct>
-
-#source("/usr/src/cmd/accton.c")
-
-#lines(1, 16)
 
 #source("/usr/src/cmd/ac.c")
 
@@ -13879,14 +13717,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 304)
 
-#source("/usr/src/cmd/time.c")
-
-#lines(1, 78)
-
-#source("/usr/src/cmd/prof.c")
-
-#lines(1, 318)
-
 == Files and Directories <ch-files>
 
 #source("/usr/src/cmd/ls.c")
@@ -13900,10 +13730,6 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/mv.c")
 
 #lines(1, 299)
-
-#source("/usr/src/cmd/ln.c")
-
-#lines(1, 55)
 
 #source("/usr/src/cmd/rm.c")
 
@@ -13921,53 +13747,13 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 253)
 
-#source("/usr/src/cmd/file.c")
-
-#lines(1, 332)
-
 #source("/usr/src/cmd/cat.c")
 
 #lines(1, 63)
 
-#source("/usr/src/cmd/tee.c")
-
-#lines(1, 97)
-
 #source("/usr/src/cmd/tar/tar.c")
 
 #lines(1, 942)
-
-#source("/usr/src/cmd/cmp.c")
-
-#lines(1, 120)
-
-#source("/usr/src/cmd/touch.c")
-
-#lines(1, 70)
-
-#source("/usr/src/cmd/tp/tp.h")
-
-#lines(1, 84)
-
-#source("/usr/src/cmd/tp/tp_defs.h")
-
-#lines(1, 5)
-
-#source("/usr/src/cmd/tp/tp0.c")
-
-#lines(1, 9)
-
-#source("/usr/src/cmd/tp/tp1.c")
-
-#lines(1, 196)
-
-#source("/usr/src/cmd/tp/tp2.c")
-
-#lines(1, 361)
-
-#source("/usr/src/cmd/tp/tp3.c")
-
-#lines(1, 255)
 
 == Text Tools <ch-text>
 
@@ -14003,10 +13789,6 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #lines(1, 432)
 
-#source("/usr/src/cmd/tsort.c")
-
-#lines(1, 196)
-
 #source("/usr/src/cmd/sed/sed.h")
 
 #lines(1, 152)
@@ -14018,46 +13800,6 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/sed/sed1.c")
 
 #lines(1, 726)
-
-#source("/usr/src/cmd/rev.c")
-
-#lines(1, 44)
-
-#source("/usr/src/cmd/split.c")
-
-#lines(1, 81)
-
-#source("/usr/src/cmd/sum.c")
-
-#lines(1, 48)
-
-#source("/usr/src/cmd/look.c")
-
-#lines(1, 165)
-
-#source("/usr/src/cmd/col.c")
-
-#lines(1, 319)
-
-#source("/usr/src/cmd/ptx.c")
-
-#lines(1, 555)
-
-#source("/usr/src/cmd/deroff.c")
-
-#lines(1, 510)
-
-#source("/usr/src/cmd/diff3.c")
-
-#lines(1, 441)
-
-#source("/usr/src/cmd/fgrep.c")
-
-#lines(1, 348)
-
-#source("/usr/src/cmd/crypt.c")
-
-#lines(1, 91)
 
 == Little Languages <ch-lang>
 
@@ -14112,18 +13854,6 @@ an inode lost until `icheck` or `clri` attended to it.
 #source("/usr/src/cmd/awk/tran.c")
 
 #lines(1, 233)
-
-#source("/usr/src/cmd/awk/token.c")
-
-#lines(1, 100)
-
-#source("/usr/src/cmd/awk/parse.c")
-
-#lines(1, 137)
-
-#source("/usr/src/cmd/awk/proc.c")
-
-#lines(1, 80)
 
 = Part Six: Building the System
 
