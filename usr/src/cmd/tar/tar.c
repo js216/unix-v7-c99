@@ -200,7 +200,7 @@ void
 dorep(char *argv[])
 {
 	register char *cp, *cp2;
-	char wdir[60];
+	char wdir[512];
 
 	if (!cflag) {
 		getdir();
@@ -211,7 +211,7 @@ dorep(char *argv[])
 			getdir();
 		} while (!endtape());
 		if (tfile != NULL) {
-			char buf[200];
+			char buf[200] = "";
 
 			strcat(buf, "sort +0 -1 +1nr ");
 			strcat(buf, tname);
@@ -235,9 +235,9 @@ dorep(char *argv[])
 				cp2 = cp;
 		if (cp2 != *argv) {
 			*cp2 = '\0';
-			chdir(*argv);
+			cp = chdir(*argv) < 0 ? *argv : cp2 + 1;
 			*cp2 = '/';
-			cp2++;
+			cp2 = cp;
 		}
 		putfile(*argv++, cp2);
 		chdir(wdir);
@@ -266,7 +266,7 @@ void
 getdir(void)
 {
 	register struct stat *sp;
-	int i;
+	int i = 0;
 
 	readtape( (char *) &dblock);
 	if (dblock.dbuf.name[0] == '\0')
@@ -281,12 +281,13 @@ getdir(void)
 	sscanf(dblock.dbuf.size, "%lo", &sp->st_size);
 	sscanf(dblock.dbuf.mtime, "%llo", &sp->st_mtime);
 	sscanf(dblock.dbuf.chksum, "%o", &chksum);
-	if (chksum != checksum()) {
+	if (chksum != checksum() || sp->st_size < 0 || sp->st_size > 017777777000) {
 		fprintf(stderr, "directory checksum error\n");
 		done(2);
 	}
+	dblock.dbuf.name[NAMSIZ-1] = dblock.dbuf.linkname[NAMSIZ-1] = '\0';
 	if (tfile != NULL)
-		fprintf(tfile, "%s %s\n", dblock.dbuf.name, dblock.dbuf.mtime);
+		fprintf(tfile, "%s %.12s\n", dblock.dbuf.name, dblock.dbuf.mtime);
 }
 
 void
@@ -333,11 +334,20 @@ putfile(char *longname, char *shortname)
 	}
 
 	if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
+		if (strlen(longname) >= NAMSIZ) {
+			fprintf(stderr, "%s: file name too long\n", longname);
+			close(infile);
+			return;
+		}
+		if (chdir(shortname) < 0) {
+			fprintf(stderr, "tar: %s: cannot search\n", longname);
+			close(infile);
+			return;
+		}
 		for (i = 0, cp = buf; (*cp++ = longname[i++]););
 		*--cp = '/';
 		cp++;
 		i = 0;
-		chdir(shortname);
 		while (read(infile, (char *)&dbuf, sizeof(dbuf)) > 0 && !term) {
 			if (dbuf.d_ino == 0) {
 				i++;
@@ -715,7 +725,7 @@ int
 checkupdate(char *arg)
 {
 	char name[100];
-	time_t	mtime;
+	time_t	mtime = 0;
 	daddr_t seekp;
 
 	rewind(tfile);
@@ -767,15 +777,18 @@ getwdir(char *s)
 	}
 	while (wait((int *)NULL) != -1)
 			;
-	read(pipdes[0], s, 50);
-	while(*s != '\n')
+	for (i = read(pipdes[0], s, 512); i > 0 && *s != '\n'; i--)
 		s++;
+	if (i <= 0) {
+		fprintf(stderr, "tar: cannot find current directory\n");
+		done(1);
+	}
 	*s = '\0';
 	close(pipdes[0]);
 	close(pipdes[1]);
 }
 
-#define	N	200
+#define	N	256
 int	njab;
 daddr_t
 lookup(char *s)
@@ -860,7 +873,7 @@ readtape(char *buffer)
 			j = NBLOCK;
 		else
 			j = nblock;
-		if ((i = read(mt, (char *)tbuf, TBLOCK*j)) < 0) {
+		if ((i = read(mt, (char *)tbuf, TBLOCK*j)) <= 0) {
 			fprintf(stderr, "Tar: tape read error\n");
 			done(3);
 		}

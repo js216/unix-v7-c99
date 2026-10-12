@@ -13828,7 +13828,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/tar/tar.c")
 
-#lines(1, 942)
+#lines(1, 955)
 
 #source("/usr/src/cmd/file.c")
 
