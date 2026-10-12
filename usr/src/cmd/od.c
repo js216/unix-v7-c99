@@ -9,10 +9,10 @@ unsigned short	lastword[8];
 int	conv;
 int	base =	010;
 int	max;
-long	addr;
+unsigned long	addr;
 
-void offset(char *s), line(long a, unsigned short *w, int n);
-void putx(unsigned n, int c), cput(int c), putn(long n, int b, int c), pre(int n);
+void offset(char *s), line(unsigned long a, unsigned short *w, int n);
+void putx(unsigned n, int c), cput(int c), putn(unsigned long n, int b, int c), pre(int n);
 int
 main(int argc, char **argv)
 {
@@ -97,7 +97,7 @@ main(int argc, char **argv)
 }
 
 void
-line(long a, unsigned short *w, int n)
+line(unsigned long a, unsigned short *w, int n)
 {
 	register int i, f, c;
 
@@ -190,7 +190,7 @@ cput(int c)
 }
 
 void
-putn(long n, int b, int c)
+putn(unsigned long n, int b, int c)
 {
 	register int d;
 
@@ -217,7 +217,7 @@ void
 offset(register char *s)
 {
 	register char *p;
-	long a;
+	unsigned long a;
 	register int d;
 
 	if (*s=='+')
