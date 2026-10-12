@@ -45,7 +45,7 @@ long	tln;
 int	nsucc;
 char	*braslist[NBRA];
 char	*braelist[NBRA];
-char	bittab[] = {
+unsigned char	bittab[] = {
 	1,
 	2,
 	4,

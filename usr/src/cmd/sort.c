@@ -34,9 +34,9 @@ char	tabchar;
 int 	eargc;
 char	**eargv;
 
-char zero[256];
+unsigned char zero[256];
 
-char	fold[256] = {
+unsigned char	fold[256] = {
 	0200,0201,0202,0203,0204,0205,0206,0207,
 	0210,0211,0212,0213,0214,0215,0216,0217,
 	0220,0221,0222,0223,0224,0225,0226,0227,
@@ -70,7 +70,7 @@ char	fold[256] = {
 	0120,0121,0122,0123,0124,0125,0126,0127,
 	0130,0131,0132,0173,0174,0175,0176,0177
 };
-char nofold[256] = {
+unsigned char nofold[256] = {
 	0200,0201,0202,0203,0204,0205,0206,0207,
 	0210,0211,0212,0213,0214,0215,0216,0217,
 	0220,0221,0222,0223,0224,0225,0226,0227,
@@ -105,7 +105,7 @@ char nofold[256] = {
 	0170,0171,0172,0173,0174,0175,0176,0177
 };
 
-char	nonprint[256] = {
+unsigned char	nonprint[256] = {
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -124,7 +124,7 @@ char	nonprint[256] = {
 	0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
 };
 
-char	dict[256] = {
+unsigned char	dict[256] = {
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
 	1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -144,8 +144,8 @@ char	dict[256] = {
 };
 
 struct	field {
-	char *code;
-	char *ignore;
+	unsigned char *code;
+	unsigned char *ignore;
 	int nflg;
 	int rflg;
 	int bflg[2];
@@ -581,7 +581,7 @@ int
 cmp(char *i, char *j)
 {
 	register char *pa, *pb;
-	char *code, *ignore;
+	unsigned char *code, *ignore;
 	int a, b;
 	int k;
 	char *la, *lb;
@@ -684,7 +684,7 @@ cmpa(register char *pa, register char *pb)
 	return(
 		*pa == '\n' ? fields[0].rflg:
 		*pb == '\n' ?-fields[0].rflg:
-		*pb > *pa   ? fields[0].rflg:
+		(*pb&0377) > (*pa&0377) ? fields[0].rflg:
 		-fields[0].rflg
 	);
 }

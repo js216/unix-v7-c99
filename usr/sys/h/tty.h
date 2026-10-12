@@ -90,7 +90,7 @@ struct	ttiocb {
 #define	CINTR	0177		/* DEL */
 #define	CSTOP	023		/* Stop output: ctl-s */
 #define	CSTART	021		/* Start output: ctl-q */
-#define	CBRK	0377
+#define	CBRK	(char)0377
 
 /* limits */
 #define	TTHIWAT	100

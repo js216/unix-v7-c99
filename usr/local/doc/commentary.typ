@@ -5499,7 +5499,8 @@ stop as soon as the request is satisfied.
 (168) mattered on the PDP-11, where the direct fetch for a kernel
 address sign-extended the `char`. On the ARM a `char` is unsigned and
 `fubyte` (#f("mch.s")) already returns a value from 0 to 255, so the
-mask changes nothing.
+mask changes nothing, but it keeps the result right for a compiler whose
+`char` is signed.
 
 #lines(143, 169)
 
@@ -6377,7 +6378,7 @@ and nothing called `getw`; here neither is used.
 #lines(288, 319)
 #source("/usr/sys/dev/partab.c")
 
-#f("partab.c") is v7's, unchanged. `partab` has one entry for each of
+#f("partab.c") is v7's, but for its type. `partab` has one entry for each of
 the 128 ASCII characters, and each entry carries two pieces of
 information. The top bit, `0200`, is the bit which gives the character
 even parity. The low bits classify the character for `ttyoutput`
@@ -6390,9 +6391,10 @@ classed as non-printing.
 v7's `kl.c` added the parity bit to each character as it sent it. The
 port's console drivers send the character as it is (#f("pl011.c")), so
 only the classification is used now. On the PDP-11 an entry with the
-top bit set was a negative `char`; here `char` is unsigned, and since
-`ttyoutput` masks the entry with `077` before using it, the difference
-does not arise.
+top bit set was a negative `char`. The table is now `unsigned char`, so
+that its values, 0200 and above, need no change whether or not the
+compiler's `char` is signed; `ttyoutput` masks the entry with `077`
+before using it in any case.
 
 #lines(1, 21)
 #source("/usr/sys/h/tty.h")
@@ -6474,6 +6476,11 @@ character. The console's drivers then hold further input on
 waits instead of being lost. `TTHOLDQ` (101), also new, bounds that
 queue at two thirds of the characters which the `NCLIST` blocks
 (#f("param.h")) can hold, the rest being left for the other queues.
+`CBRK` (93), the default extra delimiter, is a byte of all ones, which
+matches no character: input is tested against the delimiters only in
+cooked mode, after its top bit has been stripped. The value is now cast
+to `char`, the type of `t_brkc`, since a compiler whose `char` is signed
+must otherwise change the constant 0377 to store it.
 
 The modes are those of `stty`. `NLDELAY`, `TBDELAY`, `CRDELAY`, and
 `VTDELAY` are fields which select a terminal type for the output delays
@@ -6736,7 +6743,8 @@ three places below which handed characters or signals to a multiplexed
 channel, have gone. The tests of `t_chan` which remain (349, 748) still
 compile, and always find it `NULL`.
 
-`partab` (16) is now declared `extern`. In v7 `char partab[];` at file
+`partab` (16) is now declared `extern`, and `unsigned` as in
+#f("partab.c"). In v7 `char partab[];` at file
 level was taken as a reference to the array in #f("partab.c"); in C99
 it is a tentative definition, which would give this file an array of
 its own. The four procedures declared at (17, 18) are used before they
@@ -8899,15 +8907,19 @@ negative; the port treats every warning as an error. The mask makes the
 subscript an `int`. It does not change a character's value, and the
 quote test has already excluded the values above 0177, so the subscript
 stays within the 128 entries of the table. The declarations of the tables have become `extern`
-(69, 80); in v7 they were tentative definitions in every file.
+(69, 80); in v7 they were tentative definitions in every file. They are
+also `unsigned char` now, as in #f("sh/ctype.c").
 
 #lines(69, 90)
 #source("/usr/src/cmd/sh/ctype.c")
 
 The two tables of character classes, laid out one row for each eight
-ASCII codes. The only changes are the `=` before each initialiser (12,
-61). v7's compiler still accepted the older form without it, which C99
-does not.
+ASCII codes. Two things have changed (12, 61): the `=` before each
+initialiser, which v7's compiler did not yet require but C99 does, and
+the type, now `unsigned char`. Some classes, such as `_LQU`, include the
+bit `0200` (#f("sh/ctype.h")), which a signed `char` cannot hold
+without a change of value; as `unsigned char` the tables are the same
+whichever kind of `char` the compiler has.
 
 In the first table, note that the null character is `_EOF`, the
 shell's end of file, and that only space, tab, and newline separate
@@ -10495,7 +10507,9 @@ double quotes and nothing more, such as `""`, would leave an empty
 result, and `split` drops empty fields (#f("sh/service.c")). A single
 `QUOTE` character is therefore pushed (161): it is not a separator, and
 `trim` later reduces it to the empty string, so that the word survives
-as an empty argument.
+as an empty argument. The cast to `char` is new: `QUOTE` is 0200, which
+a compiler whose `char` is signed must change to store, and the cast
+says that the byte, not the number, is meant.
 
 The input block is a `FILEHDR` rather than a `FILEBLK`, the same
 structure without the buffer, which is all a string needs, since
@@ -10603,7 +10617,8 @@ the standard input of later commands. The port accepts 0 (67).
 
 The null which divided the two is then replaced by `0200` (71), a
 character which is not a null but whose seven bits are zero, and `cs`
-moves past it. The directory part thus remains distinguishable for
+moves past it. The value is cast to `char`, as `QUOTE` is in
+#f("sh/macro.c"). The directory part thus remains distinguishable for
 `addg`, which stops at it, while the word as a whole stays one string,
 to be repaired at the end.
 
@@ -13596,7 +13611,9 @@ compiled as an ordinary class with its bits inverted.
 
 The buffers are larger than `ed`'s: `ESIZE` 256 against 128, and nine
 bracketed subexpressions (`NBRA`) against five. `bittab` gives the bit
-for each of the eight positions within a byte.
+for each of the eight positions within a byte; it is now `unsigned
+char` (48), since the last of them, 128, is not a value a signed `char`
+can hold.
 
 `main` collects the flags. With `-y`, each lower-case letter outside
 brackets is replaced by a class matching both cases, so that `abc`

@@ -10,5 +10,5 @@ strncmp(register char *s1, register char *s2, register int n)
 	while (--n >= 0 && *s1 == *s2++)
 		if (*s1++ == '\0')
 			return(0);
-	return(n<0 ? 0 : *s1 - *--s2);
+	return(n<0 ? 0 : (*s1&0377) - (*--s2&0377));
 }

@@ -146,11 +146,11 @@ compare(char *a,char *b)
 {
 	register char *ra,*rb;
 
-	ra = --a;
-	rb = --b;
-	while(*++ra == *++rb)
-		if(*ra == '\0')	return(0);
-	if(*ra < *rb)	return(1);
+	ra = a;
+	rb = b;
+	while(*ra == *rb++)
+		if(*ra++ == '\0')	return(0);
+	if((*ra&0377) < (*--rb&0377))	return(1);
 	return(2);
 }
 FILE *openfil(char *s)

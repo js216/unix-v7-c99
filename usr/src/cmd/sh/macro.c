@@ -158,7 +158,7 @@ STRING	macro(STRING as)
 	quote=0; quoted=0;
 	copyto(0);
 	pop();
-	IF quoted ANDF (stakbot==staktop) THEN pushstak(QUOTE) FI
+	IF quoted ANDF (stakbot==staktop) THEN pushstak((char)QUOTE) FI
 	quote=savq; quoted=savqu;
 	return(fixstak());
 }

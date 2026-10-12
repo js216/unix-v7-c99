@@ -286,7 +286,7 @@ int	circf;
 int	low;
 int	size;
 
-char	bittab[] = {
+unsigned char	bittab[] = {
 	1,
 	2,
 	4,
@@ -435,7 +435,7 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 					if(cflg++)
 						ERROR(44);
 					if((c = GETC()) == '\\')
-						*ep++ = 255;
+						*ep++ = (char)255;
 					else {
 						UNGETC(c);
 						goto nlim; /* get 2'nd number */

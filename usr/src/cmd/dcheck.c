@@ -159,7 +159,7 @@ pass1(register struct dinode *ip)
 				}
 			ecount[kno]++;
 			if (ecount[kno] == 0)
-				ecount[kno] = 0377;
+				ecount[kno] = (char)0377;
 		}
 	}
 }

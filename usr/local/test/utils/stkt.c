@@ -15,7 +15,7 @@ catch(int sig)
 int
 f(int n)
 {
-	char buf[1000];
+	unsigned char buf[1000];
 	int i;
 
 	for (i = 0; i < 1000; i++)

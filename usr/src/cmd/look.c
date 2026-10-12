@@ -121,7 +121,7 @@ compare(register char *s, register char *t)
 			return(0);
 	return(*s==0? -1:
 		*t==0? 1:
-		*s<*t? -2:
+		(*s&0377)<(*t&0377)? -2:
 		2);
 }
 

@@ -133,7 +133,7 @@ extern int	depth;
 extern int	eargc;
 extern char	**eargv;
 
-extern	char	bittab[];
+extern	unsigned char	bittab[];
 
 extern struct reptr	**cmpend[DEPTH];
 extern int	depth;

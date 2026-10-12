@@ -13,7 +13,7 @@
 #include "../h/reg.h"
 #include "../h/conf.h"
 
-extern char	partab[];
+extern unsigned char	partab[];
 void	wflushtty(struct tty *tp), flushtty(struct tty *tp),
 	ttyblock(struct tty *tp), ttyoutput(int c, struct tty *tp);
 

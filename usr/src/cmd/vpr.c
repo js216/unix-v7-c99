@@ -21,7 +21,7 @@ FILE	*in	= stdin;
 FILE	*out;
 char	*ban;
 int	npages	= 1;
-char	chrtab[];
+unsigned char	chrtab[];
 int	lineno;
 int	send(void), getline(void); void putline(int ff), banner(char *s);
 
@@ -117,8 +117,8 @@ getline(void)
 			if (col < LINELN) {
 				if (linebuf[col]=='_') {
 					ov++;
-					ovbuf[2*col] = 0377;
-					ovbuf[2*col+1] = 0377;
+					ovbuf[2*col] = (char)0377;
+					ovbuf[2*col+1] = (char)0377;
 				}
 				linebuf[col++] = c;
 				if (col > maxcol)
@@ -151,8 +151,8 @@ getline(void)
 			continue;
 		}
 		if (linebuf[col]!=' ') {
-			ovbuf[2*col] = 0377;
-			ovbuf[2*col+1] = 0377;
+			ovbuf[2*col] = (char)0377;
+			ovbuf[2*col+1] = (char)0377;
 			ov++;
 		} else
 			linebuf[col] = c;
@@ -235,7 +235,7 @@ banner(char *s)
 	fprintf(out, "\014");
 }
 
-char	chrtab[] = {
+unsigned char	chrtab[] = {
 0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000, /*, sp, */
 0010,0010,0010,0010,0010,0010,0010,0010,0000,0000,0010,0000,0000,0000,0000,0000, /*, !, */
 0024,0024,0024,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000,0000, /*, ", */

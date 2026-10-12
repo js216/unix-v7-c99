@@ -68,7 +68,7 @@ INT	expand(STRING as, INT rflg)
 	THEN	dir++;
 	FI
 	count=0;
-	IF *cs==0 THEN *cs++=0200 FI
+	IF *cs==0 THEN *cs++=(char)0200 FI
 	IF dir
 	THEN	/* check for rescan */
 		REG STRING rs; rs=cs;

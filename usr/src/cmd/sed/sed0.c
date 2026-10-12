@@ -20,7 +20,7 @@ char	TMMES[]	= "Too much text: %s\n";
 char	LTL[]	= "Label too long: %s\n";
 char	AD0MES[]	= "No addresses allowed: %s\n";
 char	AD1MES[]	= "Only one address allowed: %s\n";
-char	bittab[]  = {
+unsigned char	bittab[]  = {
 		1,
 		2,
 		4,

@@ -295,13 +295,13 @@ nexbuf(void)
 	if(feof(file) ||
 	   (n=fread(rbufp,1,n,file)) <= 0){
 		fclose(file);
-		*rbufp = 0376;
+		*rbufp = (char)0376;
 	}
 	else {
 		rbufp += n;
 		if (rbufp >= &buffer[BUFS])
 			rbufp = buffer;
-		*rbufp = 0375;
+		*rbufp = (char)0375;
 	}
 	bufp = rbufp;
 }
