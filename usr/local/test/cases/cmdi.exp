@@ -123,7 +123,7 @@ total 0
 -rw-rw-rw- 1 root        0 Jan  9 HH:MM c
   125 /etc/passwd
    1 /etc/passwd
-drwxr-xr-x 2 root      272 Jan  9 HH:MM /etc
+drwxr-xr-x 2 root      304 Jan  9 HH:MM /etc
 crw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/console
 0000000 064164 020145 072561 061551 020153 071142 073557 020156
 0000020 067546 005170 072552 070155 020163 073157 071145 072040

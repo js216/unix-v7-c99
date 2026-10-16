@@ -33,6 +33,8 @@ etc/cron
 etc/getty
 etc/init
 etc/update
+etc/wdog
+etc/reset
 etc/utmp
 etc/mkfs
 etc/mknod
