@@ -3229,7 +3229,10 @@ lists. The `return` after `panic`, which never returns, is v7's.
 `update` is called by the `sync` system call (#f("sys4.c")), by
 `sumount` (#f("sys3.c")), and by `panic` (#f("prf.c")). In normal
 running the program `/etc/update` calls `sync` every thirty seconds.
-`updlock` keeps two updates from running at once.
+`updlock` keeps two updates from running at once. It starts locked,
+and `main` (#f("main.c")) clears it once `binit` has made the buffers,
+so that a panic during startup does not walk lists which do not yet
+exist; on the MP135 machine they are in DDR, which may not yet work.
 
 Each modified super-block is stamped with the time and written: the
 whole block is copied from the private buffer of the mount table into a

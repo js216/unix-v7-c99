@@ -24,7 +24,7 @@ char	runout;
 char	runrun;
 char	curpri;
 int	maxmem;
-int	updlock;
+int	updlock = 1;
 daddr_t	rablock;
 char	msgbuf[MSGBUFS];
 int	dk_busy;
@@ -76,6 +76,7 @@ main(void)
 	clkstart();
 	cinit();
 	binit();
+	updlock = 0;
 	iinit();
 	rootdir = iget(rootdev, (ino_t)ROOTINO);
 	rootdir->i_flag &= ~ILOCK;
