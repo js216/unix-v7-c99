@@ -17,18 +17,18 @@ same16384
 1
 0+1 records in
 1+0 records out
-1+0 records in
-1+0 records out
+32+0 records in
+32+0 records out
 0000000   h   e   l   l   o       r   a   w       w   o   r   l   d  \n
 0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
-1+0 records in
-1+0 records out
+32+0 records in
+32+0 records out
 0000000   h   e   l   l   o       r   a   w       w   o   r   l   d  \n
 0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
 0+1 records in
 1+0 records out
-1+0 records in
-1+0 records out
+32+0 records in
+32+0 records out
 0000000   s   e   c   o   n   d  \n  \0  \0  \0  \0  \0  \0  \0  \0  \0
 0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
 read: Bad address
