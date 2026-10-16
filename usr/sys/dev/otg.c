@@ -10,7 +10,7 @@
 #include "../h/tty.h"
 #include "../h/systm.h"
 
-#define	OTGADDR	0xF0C00000
+#define	OTGADDR	0xF0A00000
 #define	R(o)	(*(volatile unsigned *)(OTGADDR+(o)))
 #define	FIFO(n)	R(0x1000+(n)*0x1000)
 #define	GOTGCTL	R(0x000)

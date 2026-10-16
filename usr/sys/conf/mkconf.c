@@ -546,7 +546,7 @@ int	pack;
 int	nldisp = 1;
 int	ddr;
 unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, gicd, gicc;
-#define	NMAP	10
+#define	NMAP	9
 unsigned long	mapv[NMAP], mapb[NMAP], mape[NMAP];
 char	mapa[NMAP][100];
 int	nmap;
