@@ -8,7 +8,7 @@ LIB2_OBJ := $(filter-out $(QEMU_DRV) $(MP135_DRV),$(patsubst %.c,%.o,$(wildcard 
 BOARDS = qemu mp135
 KERNELS = $(BOARDS:%=$S/conf/%/unix)
 SYS_OBJ = $(LIB1_OBJ) $(LIB2_OBJ) $(QEMU_DRV) $(MP135_DRV) $S/conf/low.o $S/conf/mch.o $(BOARDS:%=$S/conf/%/c.o)
-GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf
+GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf $S/conf/mkstm32
 
 $(SYS_OBJ): $S/sys.mk
 $(SYS_OBJ): CFLAGS += -mfloat-abi=soft
@@ -21,6 +21,9 @@ $(LIB1) $(LIB2):
 $S/conf/mkconf: $S/conf/mkconf.c
 	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
 
+$S/conf/mkstm32: $S/conf/mkstm32.c
+	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
+
 $S/conf/%/c.c $S/conf/%/unix.ld: $S/conf/%conf $S/conf/mkconf
 	$Qmkdir -p $(@D)
 	$(call T,MKCONF)cd $(@D) && ../mkconf <../$*conf
@@ -31,3 +34,9 @@ $S/conf/qemu/unix: $(QEMU_DRV)
 $S/conf/mp135/unix: $(MP135_DRV)
 $S/conf/%/unix: $S/conf/low.o $S/conf/mch.o $S/conf/%/c.o $(LIB1) $(LIB2) $S/conf/%/unix.ld
 	$(call T,LD)$(CC) -nostdlib -T $(@D)/unix.ld -o $@ $(filter %.o,$^) $(LIB1) $(LIB2)
+
+all: boot/unix-mp135.stm32
+boot/unix-mp135.bin: $S/conf/mp135/unix
+	$(call T,OBJCOPY)$(CROSS_COMPILE)objcopy -O binary $< $@
+boot/unix-mp135.stm32: boot/unix-mp135.bin $S/conf/mkstm32
+	$(call T,MKSTM32)$S/conf/mkstm32 $< $@

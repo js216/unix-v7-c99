@@ -21,6 +21,8 @@ boot/unix.tsv
 boot/rootfs.img
 boot/rootfs-mp135.img
 boot/qemu.img
+boot/unix-mp135.bin
+boot/unix-mp135.stm32
 bin/
 usr/adm/
 usr/spool/
@@ -71,6 +73,7 @@ usr/src/cmd/expr.c
 LIB1
 LIB2
 usr/sys/conf/mkconf
+usr/sys/conf/mkstm32
 usr/sys/conf/qemu/
 usr/sys/conf/mp135/
 *.elf
