@@ -26075,61 +26075,71 @@ usr/local
 -	register unsigned int *adx;
 +	register int c;
 +	va_list adx;
-@@ -34 +35 @@
+@@ -32,0 +34 @@
++	long l;
+@@ -34 +36 @@
 -	adx = &x1;
 +	va_start(adx, fmt);
-@@ -37 +38,2 @@
+@@ -37 +39,2 @@
 -		if(c == '\0')
 +		if(c == '\0') {
 +			va_end(adx);
-@@ -38,0 +41 @@
+@@ -38,0 +42 @@
 +		}
-@@ -41,0 +45,4 @@
+@@ -41,0 +46,4 @@
 +	if(c == '\0') {
 +		va_end(adx);
 +		return;
 +	}
-@@ -43 +50 @@
+@@ -43 +51 @@
 -		printn((long)*adx, c=='o'? 8: (c=='x'? 16:10));
 +		printn(va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
-@@ -45,2 +52,2 @@
+@@ -45,2 +53,2 @@
 -		s = (char *)*adx;
 -		while(c = *s++)
 +		s = va_arg(adx, char *);
 +		while((c = *s++))
-@@ -49,2 +56,4 @@
+@@ -49,2 +57,9 @@
 -		printn(*(long *)adx, 10);
 -		adx += (sizeof(long) / sizeof(int)) - 1;
-+		printn(va_arg(adx, long), 10);
++		l = va_arg(adx, long);
++		if(l < 0) {
++			putchar('-');
++			printn(-(unsigned long)l, 10);
++		} else
++			printn(l, 10);
 +	} else {
 +		putchar('%');
 +		putchar(c);
-@@ -52 +60,0 @@
+@@ -52 +66,0 @@
 -	adx++;
-@@ -59,2 +67,2 @@
+@@ -59,2 +73,2 @@
 -printn(n, b)
 -long n;
 +void
 +printn(unsigned long n, int b)
-@@ -64,5 +72 @@
+@@ -64,5 +78 @@
 -	if (n<0) {	/* shouldn't happen */
 -		putchar('-');
 -		n = -n;
 -	}
 -	if(a = n/b)
 +	if((a = n/b))
-@@ -79,2 +83,2 @@
+@@ -79,2 +89,2 @@
 -panic(s)
 -char *s;
 +void
 +panic(char *s)
-@@ -95,3 +99,2 @@
+@@ -95,3 +105,2 @@
 -prdev(str, dev)
 -char *str;
 -dev_t dev;
 +void
 +prdev(char *str, dev_t dev)
-@@ -110,2 +113,2 @@
+@@ -104 +113 @@
+- * deverr prints a diagnostic from
++ * deverror prints a diagnostic from
+@@ -110,2 +119,2 @@
 -deverror(bp, o1, o2)
 -register struct buf *bp;
 +void
