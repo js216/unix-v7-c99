@@ -41,10 +41,15 @@ $(OBJ) $(GEN): Makefile
 boot/unix: usr/sys/conf/qemu/unix
 	$(call T,CP)cp $< $@
 
-qemu: boot/unix boot/rootfs.img
+qemu: boot/unix boot/qemu.img
 	qemu-system-arm -machine virt -cpu cortex-a7 -m 512M -nographic \
-	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
+	    -kernel boot/unix -drive if=none,file=boot/qemu.img,format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0
+
+boot/qemu.img: boot/rootfs.img $S/conf/qemuconf
+	$(call T,CP)cp --sparse=always $< $@
+	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
+	    $S/conf/qemuconf) $@
 
 ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 	etc/passwd etc/group etc/ttys etc/rc \
@@ -55,13 +60,11 @@ ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) $(TEST_DATA)
 
 DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
-boot/rootfs.img: boot/unix $S/conf/qemuconf
-boot/rootfs-mp135.img: $S/conf/mp135/unix $S/conf/mp135conf
+boot/rootfs.img: boot/unix
+boot/rootfs-mp135.img: $S/conf/mp135/unix
 boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto $(ROOT)
 	$(call T,MKFS)sed 's| boot/unix$$| $(filter boot/unix $S/conf/%/unix,$^)|' boot/rootfs.proto | \
 	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin
-	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
-	    $(filter $S/conf/%conf,$^)) $@
 
 etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
@@ -83,7 +86,7 @@ $(filter-out etc/% usr/lib/crontab,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $
 clean:
 	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) $(TEST_IMG)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
-	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img
+	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img boot/qemu.img
 
 .PHONY: all clean qemu
 .DELETE_ON_ERROR:

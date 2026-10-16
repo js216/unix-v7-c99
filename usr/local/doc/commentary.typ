@@ -1634,8 +1634,8 @@ its name says. `nulltty` replaces `nulldev` in `l_close`, and
 #lines(58, 62)
 
 Root, swap, and pipe devices are all minor device 0 of major device 0,
-the one disk. The file system occupies its first 131072 blocks
-(#f("rootfs.proto")), and the swap area is the 327680 blocks after it,
+the one disk. The file system occupies its first 32768 blocks
+(#f("rootfs.proto")), and the swap area is the 1048576 blocks after it,
 from `swplo`. This is the arrangement of v7's own RK05 configuration,
 where `swplo` was 4000 and the swap area ended at block 4872, the end
 of the pack; putting the swap area after the file system keeps it clear
@@ -4150,13 +4150,12 @@ only a device name (`rk`) configures one such device; `root` and `swap`
 name the device and minor device of the root file system and of the
 swap area; `swplo` and `nswap` give the first block and the length of
 the swap area. v7's `rktmconf` put the swap area at block 4000 of the
-RK05; here it starts at block 131072, just after the root file system
-of 64 MB (#f("rootfs.proto")). v7 gave it 872 blocks, 436 KB, which held
-several of its largest images, `MAXMEM`. Here it holds 327680 blocks,
-160 MB: the largest image, `MAXMEM` (#f("param.h")), of 128 MB, and
-32 MB more, so that besides one such image there is room for smaller
-ones, for the copies of shared texts, and for the argument lists of
-`exec`. v7 also configured a magnetic tape, `tm`, of which this system has
+RK05; here it starts at block 32768, just after the root file system
+of 16 MB (#f("rootfs.proto")). v7 gave it 872 blocks, 436 KB, which held
+several of its largest images, `MAXMEM`. Here it holds 1048576 blocks,
+512 MB, as much as the memory, so that whatever the memory holds can be
+swapped out, with room besides for the copies of shared texts and for
+the argument lists of `exec`. v7 also configured a magnetic tape, `tm`, of which this system has
 none.
 
 The console, `mem`, and `tty` are not named, since `mkconf` configures
@@ -12172,6 +12171,18 @@ memory which #f("qemuconf") describes; QEMU's default is 128 MB.
 
 #lines(37, 47)
 
+The disk which `make qemu` gives the machine is not the root image
+itself but a copy of it, `boot/qemu.img`, so the image stays as `mkfs`
+made it. The copy is extended to the end of the swap area, whose first
+block and length `awk` reads from #f("qemuconf"), since QEMU will not
+read or write a block beyond the end of the file. The swap area is
+512 MB, but `cp --sparse=always` and `truncate` store nothing on the
+host for the blocks never written. The copy is made again only when the
+image or the configuration changes, so what one session writes on its
+disk is there for the next.
+
+#lines(48, 52)
+
 The tree is built in place, and the programs are made where they will
 lie in the target's file system: `bin/cat`, `etc/init`,
 `usr/games/fortune`. The prototype file names them relative to the top
@@ -12187,9 +12198,11 @@ repository, and the programs and the file system image which
 `test.mk` makes.
 
 Each machine has an image of its own, which differs from the other only
-in `/unix`: `boot/rootfs.img` for the QEMU machine, which `make qemu`
-boots, and `boot/rootfs-mp135.img` for the MP135 machine. The first two lines name each
-image's kernel and configuration, which `filter` picks out again from
+in `/unix`: `boot/rootfs.img` for the QEMU machine, and
+`boot/rootfs-mp135.img` for the MP135 machine. Each holds only the
+root file system, and the MP135 machine's swap area is the part of its
+card beyond it (#f("mp135conf")). The first two lines name each
+image's kernel, which `filter` picks out again from
 the prerequisites (`$^`) in the recipe. The prototype names the kernel
 as `boot/unix`, the copy of the QEMU machine's kernel; `sed` puts the machine's own
 kernel in its place, and passes the prototype to `mkfs` on its standard
@@ -12205,14 +12218,7 @@ go on using the empty list it had not read; and the kernel takes its
 first idea of the date from the super-block of the root file system
 (`iinit`, #f("main.c")).
 
-`mkfs` writes only the blocks which it uses. The image is then extended
-to the end of the swap area, whose first block and length `awk` reads
-from the machine's configuration (#f("qemuconf"), #f("mp135conf")),
-since QEMU will not read or write a block beyond the end of the file. The swap area is 160 MB, but `truncate` only sets
-the length of the file, and the host stores no blocks for the part
-never written.
-
-#lines(48, 64)
+#lines(53, 67)
 
 `mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
 the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
@@ -12238,7 +12244,7 @@ records, its headers and the `Makefile` are named as prerequisites
 explicitly: a `mkfs` built from stale headers would write a file system
 which the kernel misreads.
 
-#lines(65, 75)
+#lines(68, 78)
 
 The directories of the image which hold built programs or copied files,
 and the copying of the files from the v7 tree. `etc` is left out: its
@@ -12246,7 +12252,7 @@ files are kept in the repository, where the image expects them. So is
 `usr/lib/crontab`, v7's table without its last line (#f("cmd/cron.c")). `cp -f`
 replaces a previous copy, which is read-only like its original.
 
-#lines(76, 81)
+#lines(79, 84)
 
 `clean` removes everything the build has made except the copied files
 and their directories. `.DELETE_ON_ERROR` removes a target whose
@@ -12258,7 +12264,7 @@ When a file in C is replaced by one in assembler, its old `.d` file
 still names the `.c` file as a prerequisite of the object, and `make`
 would otherwise stop for want of a rule to make it.
 
-#lines(82, 91)
+#lines(85, 94)
 #source("/usr/sys/sys.mk")
 
 #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
@@ -12784,13 +12790,13 @@ The format is v7's. The first word names the program to be written
 into block 0 as a bootstrap: here `/dev/null`, since QEMU loads the
 kernel from its ELF file, and nothing is written for the MP135
 machine's boot ROM (@ch-startup).
-The second line gives the size of the file system, 131072 blocks of 512
-bytes, 64 MB, and the number of inodes, 16384, four to a block; `mkfs`
-gives the i-list blocks 2 to 4098. The system's own files take some 3
+The second line gives the size of the file system, 32768 blocks of 512
+bytes, 16 MB, and the number of inodes, 1024, one for each 16 KB, four
+to a block; `mkfs` gives the i-list blocks 2 to 257. The system's own files take some 3
 MB of it; the rest is room for the users. The size is bounded by
 nothing but the configuration: three-byte block addresses
 (#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
-block 131072 (#f("qemuconf")). Then comes the root directory, described like
+block 32768 (#f("qemuconf")). Then comes the root directory, described like
 every other file: its mode, as `d--755`, its owner, and its group.
 
 #lines(1, 3)

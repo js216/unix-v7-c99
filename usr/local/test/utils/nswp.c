@@ -7,6 +7,7 @@
 struct nlist nl[] = {
 	{ "_proc", 0, 0 },
 	{ "_coremap", 0, 0 },
+	{ "_swapmap", 0, 0 },
 	{ "", 0, 0 },
 };
 struct proc pr;
@@ -30,13 +31,13 @@ getproc(int id)
 }
 
 static int
-corefree(void)
+mapfree(int i)
 {
 	struct map m;
 	int k, n;
 
 	k = open("/dev/kmem", 0);
-	lseek(k, (long)nl[1].n_value, 0);
+	lseek(k, (long)nl[i].n_value, 0);
 	n = 0;
 	while (read(k, (char *)&m, sizeof(m)) == sizeof(m) && m.m_size)
 		n += m.m_size;
@@ -83,14 +84,17 @@ main(int argc, char **argv)
 		p[j] = 1;
 	getproc(getpid());
 	size = pr.p_size;
-	for (n = 0; n < 64 && corefree() >= size; n++)
+	for (n = 0; n < 64; n++) {
+		if (mapfree(1) < size && mapfree(2) < 2*ptod(size))
+			break;
 		if ((pid[n] = fork()) == 0)
 			child(argv[2][0]);
+	}
 	if ((c = fork()) == 0)
 		child(0);
 	pid[n++] = c;
 	getproc(c);
-	printf("core full %d, child swapped %d\n", corefree() < size,
+	printf("core full %d, child swapped %d\n", mapfree(1) < size,
 	    c > 0 && (pr.p_flag & SLOAD) == 0);
 	switch (argv[2][0]) {
 	case 's':
