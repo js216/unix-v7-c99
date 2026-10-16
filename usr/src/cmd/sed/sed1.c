@@ -278,6 +278,7 @@ advance(char *alp, char *aep)
 
 		while(lp >= curlp) {
 			if(advance(lp, ep))	return(1);
+			if(lp - curlp < ct)	break;
 			lp -= ct;
 		}
 		return(0);
@@ -314,7 +315,7 @@ advance(char *alp, char *aep)
 					continue;
 				if(advance(lp, ep))
 					return(1);
-			} while(lp-- > curlp);
+			} while(lp > curlp && lp--);
 			return(0);
 		}
 
@@ -325,7 +326,7 @@ advance(char *alp, char *aep)
 					continue;
 				if(advance(lp, ep))
 					return(1);
-			} while(lp-- > curlp);
+			} while(lp > curlp && lp--);
 			return(0);
 		}
 
@@ -333,7 +334,7 @@ advance(char *alp, char *aep)
 			if(lp == locs)	break;
 			if (advance(lp, ep))
 				return(1);
-		} while (lp-- > curlp);
+		} while (lp > curlp && lp--);
 		return(0);
 
 	default:

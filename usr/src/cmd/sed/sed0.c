@@ -777,7 +777,7 @@ rline(char *lbuf)
 	register int	t;
 	static char	*saveq;
 
-	p = lbuf - 1;
+	p = lbuf;
 
 	if(eflag) {
 		if(eflag > 0) {
@@ -785,18 +785,18 @@ rline(char *lbuf)
 			if(eargc-- <= 0 || eargv[1] == 0)
 				exit(2);
 			q = *++eargv;
-			while((*++p = *q++)) {
-				if(p >= lbend-2)
+			while((*p++ = *q++)) {
+				if(p >= lbend-1)
 					toolong();
-				if(*p == '\\') {
-					if((*++p = *q++) == '\0') {
+				if(p[-1] == '\\') {
+					if((*p++ = *q++) == '\0') {
 						saveq = 0;
 						return(-1);
 					} else
 						continue;
 				}
-				if(*p == '\n') {
-					*p = '\0';
+				if(p[-1] == '\n') {
+					p[-1] = '\0';
 					saveq = q;
 					return(1);
 				}
@@ -806,18 +806,18 @@ rline(char *lbuf)
 		}
 		if((q = saveq) == 0)	return(-1);
 
-		while((*++p = *q++)) {
-			if(p >= lbend-2)
+		while((*p++ = *q++)) {
+			if(p >= lbend-1)
 				toolong();
-			if(*p == '\\') {
-				if((*++p = *q++) == '\0') {
+			if(p[-1] == '\\') {
+				if((*p++ = *q++) == '\0') {
 					saveq = 0;
 					return(-1);
 				} else
 					continue;
 			}
-			if(*p == '\n') {
-				*p = '\0';
+			if(p[-1] == '\n') {
+				p[-1] = '\0';
 				saveq = q;
 				return(1);
 			}
@@ -827,19 +827,19 @@ rline(char *lbuf)
 	}
 
 	while((t = getc(fin)) != EOF) {
-		if(p >= lbend-2)
+		if(p >= lbend-1)
 			toolong();
-		*++p = t;
-		if(*p == '\\') {
+		*p++ = t;
+		if(p[-1] == '\\') {
 			t = getc(fin);
-			*++p = t;
+			*p++ = t;
 		}
-		else if(*p == '\n') {
-			*p = '\0';
+		else if(p[-1] == '\n') {
+			p[-1] = '\0';
 			return(1);
 		}
 	}
-	*++p = '\0';
+	*p = '\0';
 	return(-1);
 }
 
@@ -888,11 +888,11 @@ cmp(char *a, char *b)
 {
 	register char	*ra, *rb;
 
-	ra = a - 1;
-	rb = b - 1;
+	ra = a;
+	rb = b;
 
-	while(*++ra == *++rb)
-		if(*ra == '\0')	return(0);
+	while(*ra++ == *rb++)
+		if(ra[-1] == '\0')	return(0);
 	return(1);
 }
 
