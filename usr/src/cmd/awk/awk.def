@@ -45,6 +45,8 @@ extern cell	*nfloc;		/* NF */
 #define	ARR	020	/* this is an array */
 
 awkfloat setfval(cell *vp, awkfloat f), getfval(cell *vp);
+long ftol(awkfloat f);
+awkfloat ipart(awkfloat f);
 char	*setsval(cell *vp, char *s), *getsval(cell *vp);
 char	*tostring(char *s), *tokname(int n), *cclenter(char *p);
 

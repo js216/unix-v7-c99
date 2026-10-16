@@ -241,7 +241,7 @@ obj indirect(node **a, int n)
 	(void)n;
 
 	x = execute(a[0]);
-	m = getfval(x.optr);
+	m = ftol(getfval(x.optr));
 	tempfree(x);
 	x.optr = fieldadr(m);
 	x.otype = OCELL;
@@ -260,7 +260,7 @@ obj substr(node **a, int nnn)
 	s = getsval(x.optr);
 	k = strlen(s) + 1;
 	y = execute(a[1]);
-	m = getfval(y.optr);
+	m = ftol(getfval(y.optr));
 	if (m <= 0)
 		m = 1;
 	else if (m > k)
@@ -268,7 +268,7 @@ obj substr(node **a, int nnn)
 	tempfree(y);
 	if (a[2] != nullstat) {
 		y = execute(a[2]);
-		n = getfval(y.optr);
+		n = ftol(getfval(y.optr));
 		tempfree(y);
 	}
 	else
@@ -393,8 +393,8 @@ char *format(char *s, node *a)
 			t = x.optr->sval==NULL ? "" : getsval(x.optr);
 		p = room(&buf, &n, p, w + (flag==4 ? strlen(t) : 400));
 		if (flag==1) sprintf(p, fmt, xf);
-		else if (flag==2) sprintf(p, fmt, (long)xf);
-		else if (flag==3) sprintf(p, fmt, (int)xf);
+		else if (flag==2) sprintf(p, fmt, ftol(xf));
+		else if (flag==3) sprintf(p, fmt, (int)ftol(xf));
 		else if (flag==4) sprintf(p, fmt, t);
 		tempfree(x);
 		p += strlen(p);
@@ -456,7 +456,7 @@ obj arith(node **a, int n)
 	case MOD:
 		if (j == 0)
 			error(FATAL, "division by zero");
-		setfval(z.optr, i-j*(long)(i/j));
+		setfval(z.optr, i-j*ipart(i/j));
 		break;
 	case UMINUS:
 		setfval(z.optr, -i);
@@ -519,7 +519,7 @@ obj assign(node **a, int n)
 	case MODEQ:
 		if (yf == 0)
 			error(FATAL, "division by zero");
-		setfval(x.optr, xf - yf*(long)(xf/yf));
+		setfval(x.optr, xf - yf*ipart(xf/yf));
 		break;
 	default:
 		error(FATAL, "illegal assignment operator %d", n);
@@ -792,7 +792,7 @@ obj fncn(node **a, int n)
 	else if (t == FLOG)
 		u = log(getfval(x.optr));
 	else if (t == FINT)
-		u = (awkfloat) (long) getfval(x.optr);
+		u = ipart(getfval(x.optr));
 	else if (t == FEXP)
 		u = exp(getfval(x.optr));
 	else if (t == FSQRT)

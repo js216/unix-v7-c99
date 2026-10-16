@@ -11150,11 +11150,11 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/awk/tran.c")
 
-#lines(1, 233)
+#lines(1, 253)
 
 #source("/usr/src/cmd/awk/awk.def")
 
-#lines(1, 148)
+#lines(1, 150)
 
 #source("/usr/src/cmd/awk/token.c")
 

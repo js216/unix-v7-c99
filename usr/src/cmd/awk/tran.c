@@ -1,4 +1,5 @@
 #include "stdio.h"
+#include "math.h"
 #include "awk.def"
 #include "awk.h"
 
@@ -183,7 +184,7 @@ char *getsval(register cell *vp)
 	if ((vp->tval & STR) == 0) {
 		if (!(vp->tval&FLD))
 			xfree(vp->sval);
-		if ((long)vp->fval==vp->fval)
+		if (ftol(vp->fval)==vp->fval)
 			sprintf(s, "%.20g", vp->fval);
 		else
 			sprintf(s, *OFMT, vp->fval);
@@ -231,3 +232,22 @@ char *ymalloc(u) unsigned u;
 	return(p);
 }
 #endif
+
+long ftol(awkfloat f)
+{
+	if (f != f)
+		return(0);
+	if (f >= 2147483647.0)
+		return(2147483647L);
+	if (f <= -2147483648.0)
+		return(-2147483647L-1);
+	return((long)f);
+}
+
+awkfloat ipart(awkfloat f)
+{
+	double i;
+
+	modf(f, &i);
+	return(i);
+}
