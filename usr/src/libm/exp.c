@@ -27,6 +27,8 @@ exp(double arg)
 
 	if(arg == 0.)
 		return(1.);
+	if(arg != arg)
+		return(arg);
 	if(arg < -maxf)
 		return(0.);
 	if(arg > maxf) {

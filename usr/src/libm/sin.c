@@ -42,6 +42,8 @@ sinus(double arg, int quad)
 	double temp1, temp2;
 
 	x = arg;
+	if(x - x != 0)
+		return(x - x);
 	if(x<0) {
 		x = -x;
 		quad = quad + 2;

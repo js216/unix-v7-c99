@@ -35,7 +35,7 @@ ttyname(int f)
 		if (db.d_ino != fsb.st_ino)
 			continue;
 		strcpy(rbuf, dev);
-		strcat(rbuf, db.d_name);
+		strncat(rbuf, db.d_name, DIRSIZ);
 		if (stat(rbuf, &tsb) < 0)
 			continue;
 		if (tsb.st_dev==fsb.st_dev && tsb.st_ino==fsb.st_ino) {

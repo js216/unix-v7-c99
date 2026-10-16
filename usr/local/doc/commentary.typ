@@ -9423,129 +9423,418 @@ and after.
 
 #source("/usr/src/libc/gen/getenv.c")
 
+The environment is an array of strings of the form `name=value`, ended
+by a null pointer, which `exec` (#f("sys1.c")) copies onto the new
+stack after the arguments; `crt0.s` (#f("crt0.s")) leaves its address in
+`environ`. `getenv` returns the value of the variable it is asked for,
+or `NULL`.
+
+`nvmatch` compares the two strings until they differ. Reaching an `=`
+in both while still equal means `s1` is itself a `name=value` string
+whose name matches; reaching the end of `s1` just as `s2` reaches its
+`=` means the bare name matches. In either case the value starts after
+the `=` in `s2`.
+
+The include of #f("stdio.h") (1), which declares `getenv`, is new, and
+`nvmatch` is static and declared with its parameters (8), since it is
+used before it is defined.
+
 #lines(1, 39)
 
 #source("/usr/src/libc/gen/ttyname.c")
+
+`ttyname` finds the name of the terminal open on descriptor `f`. A
+terminal is a character special file, and its name is found by reading
+`/dev` as a file of directory entries (#f("dir.h")) and looking for an
+entry with the same i-number. Since `/dev` may hold entries for other
+file systems' i-numbers only by accident, each candidate is checked with
+`stat`, which must give the same device and i-number. The name is
+returned in a static buffer, overwritten by the next call.
+
+The name in a directory entry has `DIRSIZ` characters and no null when
+it uses all of them, so the port appends it with `strncat` (38), which
+copies at most `DIRSIZ` characters and terminates the result; v7's
+`strcat` would have run on past the entry. #f("stdio.h") (11) replaces
+v7's declarations of `strcpy` and `strcat`.
 
 #lines(1, 48)
 
 #source("/usr/src/libc/gen/nlist.c")
 
-#lines(1, 61)
+`nlist` looks up names in the symbol table of an executable file, for
+`ps`, `pstat`, `iostat`, and `dmesg`, which read the kernel through
+#f("mem.c") at the addresses it finds in `/unix`. The caller gives an
+array of `struct nlist` (#f("a.out.h")) ended by an empty name; each
+entry found receives its value, and the others are left zero.
+
+v7 read an a.out header, whose symbol table followed the text and data.
+The port's files are ELF, so `nlist` is rewritten around ELF's layout.
+The first 52 bytes, the ELF header, are read into `buf` as words. The
+magic number is the word 0x464c457f, the bytes `\177ELF` in the ARM's
+order (23). Word 8 is the offset of the section headers, and the low
+half of word 12 their number. Each 40-byte section header is read into
+`sh` (30) until one of type 2, the symbol table, is found: its offset
+and size go to `sa` and `n`, and `sh[6]` names the section that holds
+its strings, whose offset is kept in `st` (36).
+
+#lines(1, 38)
+
+The symbols are read `SPACE` at a time. Each is 16 bytes: the offset of
+its name in the string section, then its value. ELF names lack the
+leading underscore which v7's compiler gave every external name, and
+which the callers' tables keep (`_proc`, `_swapdev`), so the first eight
+characters of the name are read after an underscore (49--51) and
+compared with `strncmp`, as v7 compared eight characters. Every match is
+given the type `N_EXT|N_DATA`, since the callers use only the value.
+
+The symbols are read with a separate `lseek` each time (44), because the
+reads of names in between move the file offset.
+
+#lines(39, 61)
 
 #source("/usr/src/libc/stdio/fseek.c")
+
+`fseek` moves the position of a stream. A stream being read keeps a
+buffer of characters ahead of the file's own position, so a seek within
+what the buffer holds is done by moving `_ptr` alone (23--28). `p` is
+then the distance from the current point: for a seek relative to the
+start (`ptrname` 0), the file's position less what remains in the
+buffer is subtracted, and for one relative to the current point the
+characters still in the buffer are taken off the offset. Any other seek
+discards the buffer and calls `lseek`; a stream being written is first
+flushed.
+
+`p` is now initialised to -1 (12). In v7 a stream opened neither for
+reading nor writing returned whatever `p` held; it now fails. v7's
+declaration of `lseek` is gone, since #f("stdio.h") declares it.
 
 #lines(1, 46)
 
 #source("/usr/src/libm/sqrt.c")
 
+`sqrt` takes the square root by Newton's method. `frexp` splits the
+argument into a fraction and a power of two; the exponent is made even
+by doubling the fraction, so that half of it is the exponent of the
+root, and `0.5*(1.0+x)` is a first guess for the root of the fraction.
+The guess is scaled by the halved exponent, 30 bits at a time while it
+is large so that the shifts of `1L` stay within a `long`, and five
+iterations of `temp = (temp + arg/temp)/2` then reach the precision of
+a `double`. A negative argument sets `errno` to `EDOM` and returns zero.
+
+v7 defined `errno` in every file that set it, and declared `frexp`
+itself. Here `errno` is defined once, in `syscall.s` (#f("syscall.s")),
+and declared by `errno.h`, and `frexp` by #f("math.h"), which is now
+included (10).
+
 #lines(1, 54)
 
 #source("/usr/src/libm/log.c")
+
+`log` reduces its argument with `frexp` to a fraction between
+$sqrt(2)/2$ and $sqrt(2)$ and a power of two, and evaluates a rational
+approximation in `z = (x-1)/(x+1)`, whose coefficients come from Hart
+and Cheney's tables; the power of two adds `exp` times $ln 2$. `log10`
+divides by $ln 10$. An argument that is not positive sets `errno` to
+`EDOM` and returns `-HUGE`.
+
+The changes are those of #f("sqrt.c"): `errno` and `frexp` are declared
+by the headers instead of in the file.
 
 #lines(1, 58)
 
 #source("/usr/include/errno.h")
 
+The error numbers which a failing system call leaves in `errno` are
+v7's and the kernel's (#f("user.h")). The one addition is the
+declaration of `errno` itself (41). v7 left each program to declare it,
+and the libraries defined it in every file which set it, relying on the
+loader to merge the copies; here it is defined once, in
+#f("syscall.s").
+
 #lines(1, 41)
 
 #source("/usr/include/signal.h")
+
+`NSIG` follows the kernel's 32 signals (#f("param.h")). `signal` is
+declared with its prototype: it takes a signal number and a function
+taking the signal number, and returns the previous such function. v7's
+`int (*signal())()` gave handlers no parameters and an `int` result.
+`SIG_DFL` and `SIG_IGN` are cast to the same type. The signals beyond 15
+have no names, as in v7.
 
 #lines(1, 21)
 
 #source("/usr/include/sgtty.h")
 
+The terminal modes, kept in `struct sgttyb` by `gtty` and `stty`, are
+v7's, with the ioctl requests of #f("tty.c") and #f("tty.h"). The
+prototypes of `gtty` and `stty` (117) are new.
+
 #lines(1, 117)
 
 #source("/usr/include/setjmp.h")
+
+A `jmp_buf` holds what `setjmp` (#f("setjmp.s")) saves: the registers
+`r4` to `r11`, the stack pointer, and the return address, ten words,
+and the floating point registers `d8` to `d15`, which the ARM's calling
+convention also asks a function to preserve, sixteen words more. v7's
+three words held the PDP-11's frame pointer, stack pointer, and return
+address. The prototypes are new.
 
 #lines(1, 2)
 
 #source("/usr/include/utmp.h")
 
+`/etc/utmp` holds one such record for each terminal on which a user is
+logged in, and `/usr/adm/wtmp` a record for each login and logout.
+`ut_line` and `ut_name` are not terminated when they are full, so
+programs copy and compare them with a length (#f("cmd/wall.c")). The
+time has 64 bits (#f("types.h")), which makes the record 24 bytes; it is
+therefore not v7's format.
+
 #lines(1, 5)
 
 #source("/usr/include/pwd.h")
+
+The fields of a line of `/etc/passwd` (#f("passwd")), as
+#f("getpwent.c") unpacks them. The prototypes of the routines which read
+the file (12, 13) are new.
 
 #lines(1, 13)
 
 #source("/usr/include/grp.h")
 
+The fields of a line of `/etc/group` (#f("group")); the members are an
+array of names ended by a null pointer. The prototypes (7, 8) are new.
+
 #lines(1, 8)
 
 #source("/usr/include/time.h")
+
+`struct tm`, which `localtime` and `gmtime` (#f("ctime.c")) fill in, is
+v7's, unchanged; the year is counted from 1900 and kept modulo 10000.
 
 #lines(1, 11)
 
 #source("/usr/include/math.h")
 
+The mathematical routines of `libm` are declared with prototypes, and
+`modf` and `frexp`, which are in the C library, are added (13). `fmod`
+and `gamma` are declared because v7's header declared them, although
+neither v7's `libm` nor this one supplies them.
+
+`HUGE` is the largest IEEE double, which the ARM's floating point
+represents; v7's value was the largest number of the PDP-11's format.
+`LOGHUGE` is its decimal exponent.
+
 #lines(1, 16)
 
 #source("/usr/src/libc/gen/strcmp.c")
+
+The string routines of v7 are each a loop of a line or two over
+pointers, in the style the PDP-11's autoincrement addressing favoured.
+#f("stdio.h") now declares all of them, and each file includes it for
+the prototype of the routine it defines.
+
+`strcmp` compares two strings and returns the difference of the first
+pair of characters which differ. The characters are now masked with
+`0377` (13), so that the order of two strings depends only on their
+bytes: a character above 0177 compares greater than any ASCII one
+whether or not the compiler's `char` is signed. v7's PDP-11 compiler
+had a signed `char`, so v7 ordered such characters first; nothing in the
+system depends on that order.
 
 #lines(1, 14)
 
 #source("/usr/src/libc/gen/strcpy.c")
 
+`strcpy` copies `s2`, with its null, to `s1` and returns `s1`. The
+doubled parentheses around the assignment used as a condition (13) are
+those of #f("malloc.c").
+
 #lines(1, 16)
 
 #source("/usr/src/libc/gen/strlen.c")
+
+`strlen` counts the characters before the null.
 
 #lines(1, 16)
 
 #source("/usr/src/libc/gen/strcat.c")
 
+`strcat` finds the end of `s1`, steps back over the null (15), and
+copies `s2` there.
+
 #lines(1, 19)
 
 #source("/usr/src/libc/stdio/fgets.c")
+
+`fgets` reads characters into `s` until a newline, which it keeps, or
+until `n-1` characters have been read, and terminates the string. It
+returns `NULL` only when end of file comes before any character.
+
+`c` is now initialised (6). When `n` is 1 the loop reads nothing, and
+v7 then tested an uninitialised `c` (15); the call now returns an empty
+string.
 
 #lines(1, 19)
 
 #source("/usr/src/libc/stdio/ftell.c")
 
+`ftell` returns the position of a stream: the file's own position,
+taken with an `lseek` of zero, adjusted by what the buffer holds. For a
+stream being read the characters not yet taken from the buffer are
+subtracted; for one being written those placed in the buffer but not
+yet written are added. The declaration of `lseek` is gone, as in
+#f("fseek.c").
+
 #lines(1, 29)
 
 #source("/usr/src/libc/stdio/ungetc.c")
+
+`ungetc` pushes one character back into a stream being read, so that
+the next `getc` returns it. It steps `_ptr` back over the character just
+read and counts it again; on a stream whose buffer is empty and at its
+start, `_ptr` is first moved up one place, so that the step back stays
+within the buffer.
+
+The character is now stored only if it differs from the one already
+there (15, 16). `sscanf` (#f("scanf.c")) reads from the caller's string
+itself, which may be a string literal, and `doscan` pushes back the
+character it has just read; v7 wrote it back all the same, which C99
+leaves undefined for a literal. v7's `*iop->_ptr++` (10) fetched a
+character it did not use; the port only moves the pointer, and the
+`if` gains braces, both for warnings.
 
 #lines(1, 18)
 
 #source("/usr/src/libc/stdio/gcvt.c")
 
+`gcvt` converts a number to the shortest of its `%e` and `%f` forms,
+for `%g` in #f("doprnt.c"). `ecvt` (#f("ecvt.c")) gives `ndigit` digits
+and the position of the decimal point; trailing zeros are dropped, and
+the E-style form is chosen when the point lies more than four places
+beyond the digits or more than three before them.
+
+The exponent may now have three digits (34--37). The PDP-11's largest
+number was about $10^38$, so v7 printed two; an IEEE double reaches
+$10^308$. The doubled parentheses (21, 22) are those of #f("malloc.c"),
+and `ecvt` is declared by #f("stdio.h").
+
 #lines(1, 64)
 
 #source("/usr/src/libc/gen/perror.c")
+
+`perror` writes its argument, a colon, and the message for the error in
+`errno` on the standard error, with `write` rather than through stdio,
+so that it works whatever state the program's buffers are in. The
+messages are the array of #f("errlst.c").
+
+v7 declared `errno`, `sys_nerr`, and `sys_errlist` without `extern`,
+which made each a tentative definition merged by the loader with the
+real one; C99 requires a single definition, so the declarations are
+`extern` (7--9). `perror` returns `void`.
 
 #lines(1, 26)
 
 #source("/usr/src/libc/gen/errlst.c")
 
+The message for each error number, in the order of `errno.h`
+(#f("errno.h")), and their count, `sys_nerr`, for #f("perror.c") and for
+programs which print the message themselves. The file is v7's,
+unchanged.
+
 #lines(1, 38)
 
 #source("/usr/src/libc/gen/mktemp.c")
 
-#lines(1, 26)
+`mktemp` turns a name ending in `X`s into the name of a file which does
+not exist: the `X`s are replaced by the process id, so that two
+processes choose different names, and if the name is taken anyway the
+first `X`'s place is given the letters `a` to `y` in turn.
+
+The `X`s are now found by looking back from the end only as far as the
+start of the name (14). v7 stepped back while it saw an `X`, and a name
+which was all `X`s took it before the start of the array.
+
+#lines(1, 25)
 
 #source("/usr/src/libc/gen/l3.c")
+
+An inode holds its thirteen block addresses in three bytes each
+(#f("ino.h")), and `l3tol` and `ltol3` convert them to and from `long`s
+for #f("iget.c") and the file system programs. A `long` on the PDP-11
+was two words, the high word first, and each word had its low byte
+first, so v7 skipped the most significant byte in the middle of each
+group. The ARM keeps a `long`'s bytes in order from the least
+significant, so the three low bytes are the first three and the fourth
+is skipped (23) or zeroed (46) at the end. The on-disk order of the
+three bytes is therefore the ARM's, which `mkfs` (#f("mkfs.c")), built
+for the host, shares.
 
 #lines(1, 49)
 
 #source("/usr/src/libm/exp.c")
 
-#lines(1, 43)
+`exp` computes $e^x$ as $2^(x log_2 e)$: the integer part of the
+exponent goes to `ldexp`, and $2^f$ for the fraction comes from a
+rational approximation, again from Hart and Cheney. Arguments beyond
+`maxf` give zero or `HUGE` with `ERANGE`.
+
+A NaN argument is now returned at once (30, 31). The PDP-11 had no NaN,
+and v7 went on to convert `floor(arg)` to `int`, which for a NaN C99
+leaves undefined. `errno` is declared by `errno.h`, as in #f("sqrt.c").
+
+#lines(1, 45)
 
 #source("/usr/src/libm/sin.c")
 
-#lines(1, 69)
+`sin` and `cos` share `sinus`, which reduces the argument to a quarter
+period: `x` is measured in quarter turns, its integer part selects the
+quadrant, and the fraction goes to a polynomial ratio. Below 32764
+quarter turns the integer part fits an `int`; above, `modf` takes it, so
+that a large argument does not overflow.
+
+An infinity or NaN now gives NaN at once (45, 46): both make `x - x`
+non-zero, and either would have reached the conversion of the quadrant
+to `int` with no value in range. The prototypes replace v7's local
+declarations of `sinus` and `modf`.
+
+#lines(1, 71)
 
 #source("/usr/src/libm/atan.c")
+
+`atan` and `atan2` reduce their arguments to the range from 0 to
+$sqrt(2) - 1$ and use a polynomial ratio there. `atan2(y, x)` picks the
+quadrant from the signs of its arguments, and handles a zero or
+negligible `x` with `(arg1+arg2)==arg1`, so that it never divides by
+zero.
+
+`double static` (17) is rewritten `static double`, the order C99
+requires of new code, and the inner routines are static and declared
+with prototypes (33).
 
 #lines(1, 106)
 
 #source("/usr/src/libm/pow.c")
 
-#lines(1, 34)
+`pow` raises `arg1` to the power `arg2` as `exp(arg2*log(arg1))`. A
+negative base is allowed only with an integral exponent, and the sign of
+the result follows its parity.
+
+v7 tested the exponent by converting it to a `long`, which C99 leaves
+undefined for an exponent outside the range of `long`. `modf` now tests
+it at any magnitude (20): an exponent is integral if its fractional part
+is zero, and odd if half of it is not (23).
+
+#lines(1, 32)
 
 #source("/usr/src/libm/floor.c")
+
+`floor` takes the integer part with `modf`, which truncates towards
+zero, and moves a negative number with a fraction down by one. `ceil` is
+`-floor(-d)`. The include of #f("math.h") replaces v7's declaration of
+`modf`.
 
 #lines(1, 28)
 
@@ -12196,7 +12485,7 @@ whose directory does not exist, so without his `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
-#lines(139, 361)
+#lines(139, 364)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -12205,7 +12494,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(362, 363)
+#lines(365, 366)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

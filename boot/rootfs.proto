@@ -222,6 +222,8 @@ d--755 0 0
 					fp.exp	---644 0 0 usr/local/test/cases/fp.exp
 					intr	---644 0 0 usr/local/test/cases/intr
 					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
+					k12	---644 0 0 usr/local/test/cases/k12
+					k12.exp	---644 0 0 usr/local/test/cases/k12.exp
 					kern	---644 0 0 usr/local/test/cases/kern
 					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
 					kern.sed	---644 0 0 usr/local/test/cases/kern.sed
@@ -318,6 +320,7 @@ d--755 0 0
 					fmode	---755 0 0 usr/local/test/obj/fmode
 					fpt	---755 0 0 usr/local/test/obj/fpt
 					fs.img	---644 0 0 usr/local/test/obj/fs.img
+					k12	---755 0 0 usr/local/test/obj/k12
 					kcmp	---755 0 0 usr/local/test/obj/kcmp
 					kmt	---755 0 0 usr/local/test/obj/kmt
 					long	---644 0 0 usr/local/test/utils/long
