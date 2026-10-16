@@ -7,6 +7,10 @@
  *	r lba n		send n bytes read from block lba
  *	x		reset the board
  * The watchdog resets the board 33 s after the last command.
+ * From the host's shell:
+ *	stty -F /dev/ttyACM0 raw -echo; exec 3<>/dev/ttyACM0
+ *	printf 'w 0 %d\r' `stat -c %s img` >&3; cat img >&3; head -1 <&3
+ *	printf 'r 0 %d\r' `stat -c %s img` >&3; head -c `stat -c %s img` <&3 | cmp - img
  */
 
 #define	R(a)	(*(volatile unsigned *)(a))
