@@ -212,17 +212,17 @@ getxfile(register struct inode *ip, int nargc)
 	 * try them out for possible
 	 * overflow of max sizes
 	 */
-	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
+	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
 	lsize = (long)u.u_exdata.ux_ph[1].p_addr + u.u_exdata.ux_ph[1].p_msize;
 	if ((unsigned)lsize < u.u_exdata.ux_ph[1].p_msize ||
-	    u.u_exdata.ux_ph[1].p_addr < ctob(ts)) {
+	    u.u_exdata.ux_ph[1].p_addr < ptob(ts)) {
 		u.u_error = ENOMEM;
 		goto bad;
 	}
-	ds = btoc(lsize) - ts;
-	ss = SSIZE + btoc(nargc);
+	ds = btop(lsize) - ts;
+	ss = SSIZE + btop(nargc);
 	if (overlay) {
-		if ((u.u_sep==0 && ctos(ts) != ctos(u.u_tsize)) || nargc) {
+		if ((u.u_sep==0 && ts != u.u_tsize) || nargc) {
 			u.u_error = ENOMEM;
 			goto bad;
 		}
@@ -454,11 +454,11 @@ fork(void)
 	 * Make sure there's enough swap space for the
 	 * core image, thus reducing chances of running out
 	 */
-	if ((a = malloc(swapmap, ctod(u.u_procp->p_size))) == 0) {
+	if ((a = malloc(swapmap, ptod(u.u_procp->p_size))) == 0) {
 		u.u_error = ENOMEM;
 		goto out;
 	}
-	mfree(swapmap, ctod(u.u_procp->p_size), a);
+	mfree(swapmap, ptod(u.u_procp->p_size), a);
 	a = 0;
 	p2 = NULL;
 	for(p1 = &proc[0]; p1 < &proc[NPROC]; p1++) {
@@ -515,9 +515,9 @@ sbreak(void)
 	 * set n to new total size
 	 */
 
-	n = btoc((int)((struct a *)u.u_ap)->nsiz);
+	n = btop((int)((struct a *)u.u_ap)->nsiz);
 	if(!u.u_sep)
-		n -= ctos(u.u_tsize) * stoc(1);
+		n -= u.u_tsize;
 	if(n < 0)
 		n = 0;
 	d = n - u.u_dsize;

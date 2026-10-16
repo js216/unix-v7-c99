@@ -102,12 +102,8 @@
 /*
  * Some macros for units conversion
  */
-/* Core clicks (4096 bytes) to segments and vice versa */
-#define	ctos(x)	(x)
-#define stoc(x) (x)
-
-/* Core clicks (4096 bytes) to disk blocks */
-#define	ctod(x)	((x)<<3)
+/* Pages (4096 bytes) to disk blocks */
+#define	ptod(x)	((x)<<3)
 
 /* inumber to disk address */
 #define	itod(x)	(daddr_t)((((unsigned)x+7)>>2))
@@ -115,11 +111,11 @@
 /* inumber to disk offset */
 #define	itoo(x)	(int)((x+7)&03)
 
-/* clicks to bytes */
-#define	ctob(x)	(x<<12)
+/* pages to bytes */
+#define	ptob(x)	(x<<12)
 
-/* bytes to clicks */
-#define	btoc(x)	((((unsigned)x+4095)>>12))
+/* bytes to pages */
+#define	btop(x)	((((unsigned)x+4095)>>12))
 
 /* major part of a device */
 #define	major(x)	(int)(((unsigned)x>>8))

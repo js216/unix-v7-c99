@@ -45,8 +45,8 @@ physmark(void)
 
 	getproc(getpid());
 	m = open("/dev/mem", 0);
-	lseek(m, (long)ctob((unsigned long)(pr.p_addr+USIZE)) +
-	    ((unsigned)&mark - ctob((unsigned long)uk.u_tsize)), 0);
+	lseek(m, (long)ptob((unsigned long)(pr.p_addr+USIZE)) +
+	    ((unsigned)&mark - ptob((unsigned long)uk.u_tsize)), 0);
 	v = 0;
 	read(m, (char *)&v, sizeof(v));
 	close(m);

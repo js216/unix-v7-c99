@@ -55,9 +55,9 @@ struct	user
 	struct file *u_ofile[NOFILE];	/* pointers to file structures of open files */
 	char	u_pofile[NOFILE];	/* per-process flags of open files */
 	int	u_arg[5];		/* arguments to current system call */
-	unsigned u_tsize;		/* text size (clicks) */
-	unsigned u_dsize;		/* data size (clicks) */
-	unsigned u_ssize;		/* stack size (clicks) */
+	unsigned u_tsize;		/* text size (pages) */
+	unsigned u_dsize;		/* data size (pages) */
+	unsigned u_ssize;		/* stack size (pages) */
 	label_t	u_qsav;			/* label variable for quits and interrupts */
 	label_t	u_ssav;			/* label variable for swapping */
 	int	u_signal[NSIG];		/* disposition of signals */

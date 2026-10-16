@@ -34,7 +34,7 @@ main(void)
 			break;
 	}
 	printf("found self %d\n", i < NPROC);
-	pa = ctob((unsigned long)pr.p_addr);
+	pa = ptob((unsigned long)pr.p_addr);
 	lseek(k, (long)UBASE, 0);
 	printf("kmem u %d\n", read(k, (char *)&uk, sizeof(uk)) == sizeof(uk));
 	lseek(m, pa, 0);

@@ -43,17 +43,17 @@ startup(void)
 	 * free all of core
 	 */
 
-	i = btoc(corebase) + USIZE;
-	l1tab = (unsigned long long *)CLKADDR(i);
-	l1pa = ctob((unsigned)i);
+	i = btop(corebase) + USIZE;
+	l1tab = (unsigned long long *)PGADDR(i);
+	l1pa = ptob((unsigned)i);
 	for(a = 0; a < 4*NPROC; a++)
 		l1tab[a] = 0;
-	i += btoc(32*NPROC);
+	i += btop(32*NPROC);
 	mfree(ptmap, NPTAB, i);
 	i += NPTAB;
-	maxmem = btoc(coretop) - i;
+	maxmem = btop(coretop) - i;
 	mfree(coremap, maxmem, i);
-	printf("mem = %D\n", ctob((long)maxmem));
+	printf("mem = %D\n", ptob((long)maxmem));
 	if(MAXMEM < maxmem)
 		maxmem = MAXMEM;
 	mfree(swapmap, nswap, 1);
@@ -199,15 +199,15 @@ machine_init(void)
 	for(p = __ddrbss_start; p < __ddrbss_end; p++)
 		*p = 0;
 	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
-	corebase = ctob(btoc(vtop(__ddrbss_end)));
+	corebase = ptob(btop(vtop(__ddrbss_end)));
 	for(a = 0; a < USIZE; a++)
-		kl3u[a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
+		kl3u[a] = (corebase + ptob(a)) | BLK_KERN | PTE_TAB;
 	kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;
 	bootl1[vtop(_start)>>30] = 0;
 	tlbflush();
-	for(p = (char *)UBASE; p < (char *)UBASE + ctob(USIZE); p++)
+	for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)
 		*p = 0;
-	return((caddr_t)UBASE + ctob(USIZE));
+	return((caddr_t)UBASE + ptob(USIZE));
 }
 
 void
@@ -215,8 +215,8 @@ copyseg(int from, int to)
 {
 	register int *s, *d, i;
 
-	s = (int *)CLKADDR(from);
-	d = (int *)CLKADDR(to);
+	s = (int *)PGADDR(from);
+	d = (int *)PGADDR(to);
 	for(i = 0; i < PGSIZE/4; i++)
 		d[i] = s[i];
 }
@@ -226,7 +226,7 @@ clearseg(int a)
 {
 	register int *d, i;
 
-	d = (int *)CLKADDR(a);
+	d = (int *)PGADDR(a);
 	for(i = 0; i < PGSIZE/4; i++)
 		d[i] = 0;
 }
@@ -259,11 +259,11 @@ memaddr(int dev, off_t off)
 	register unsigned a, b, e;
 	register int i;
 
-	if(minor(dev) == 1 && (unsigned)off - UBASE < ctob(USIZE))
+	if(minor(dev) == 1 && (unsigned)off - UBASE < ptob(USIZE))
 		return((char *)off);
 	for(i = 0; i < 2; i++) {
 		b = (unsigned)(i ? __ddrbss_start : _start);
-		e = i ? (unsigned)CLKADDR(btoc(coretop)) : (unsigned)__bss_end;
+		e = i ? (unsigned)PGADDR(btop(coretop)) : (unsigned)__bss_end;
 		a = off;
 		if(minor(dev) == 0)
 			a += b - vtop((caddr_t)b);

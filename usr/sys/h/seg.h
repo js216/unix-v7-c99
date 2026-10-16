@@ -5,7 +5,7 @@
 #define	RO	0300		/* access abilities */
 #define	RW	0100
 #define	UENTRY_SIGTRAMP	8
-#define	CLKADDR(c)	((char *)(((unsigned)(c)<<12)+coreoff))
+#define	PGADDR(c)	((char *)(((unsigned)(c)<<12)+coreoff))
 #define	BLK_KERN	0x701ULL
 #define	BLK_DEV	0x60000000000405ULL
 #define	PTE_TAB	3

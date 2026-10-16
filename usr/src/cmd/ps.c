@@ -220,7 +220,7 @@ prcom(int puid)
 	char **ap;
 
 	if (mproc.p_flag&SLOAD) {
-		addr = ctob((unsigned long)mproc.p_addr);
+		addr = ptob((unsigned long)mproc.p_addr);
 		file = swmem;
 	} else {
 		addr = (mproc.p_addr+swplo)<<9;
@@ -231,16 +231,16 @@ prcom(int puid)
 		return(0);
 
 	/* set up address maps for user pcs */
-	txtsiz = ctob(u.u_tsize);
-	datsiz = ctob(u.u_dsize);
-	stksiz = ctob(u.u_ssize);
+	txtsiz = ptob(u.u_tsize);
+	datsiz = ptob(u.u_dsize);
+	stksiz = ptob(u.u_ssize);
 	septxt = u.u_sep;
 	datmap.b1 = (septxt ? 0 : round(txtsiz,TXTRNDSIZ));
 	datmap.e1 = datmap.b1+datsiz;
-	datmap.f1 = ctob(USIZE)+addr;
+	datmap.f1 = ptob(USIZE)+addr;
 	datmap.b2 = stackbas(stksiz);
 	datmap.e2 = stacktop(stksiz);
-	datmap.f2 = ctob(USIZE)+(datmap.e1-datmap.b1)+addr;
+	datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1)+addr;
 
 	tp = gettty();
 	if (tptr && strncmp(tptr, tp, 2))
@@ -254,7 +254,7 @@ prcom(int puid)
 		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid, mproc.p_cpu&0377,
 			mproc.p_pri,
 			mproc.p_nice,
-			mproc.p_addr, ctod(mproc.p_size));
+			mproc.p_addr, ptod(mproc.p_size));
 		if (mproc.p_wchan)
 			printf("%12o", (unsigned)mproc.p_wchan);
 		else
@@ -283,7 +283,7 @@ prcom(int puid)
 		printf(" swapper");
 		return(1);
 	}
-	addr += ctob((unsigned long)mproc.p_size) - 512;
+	addr += ptob((unsigned long)mproc.p_size) - 512;
 
 	/* look for sh special */
 	lseek(file, addr+512-sizeof(char **), 0);

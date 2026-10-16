@@ -40,25 +40,25 @@ ptbuild(register struct proc *p)
 	}
 	p->p_ptab = a;
 	p->p_nptab = n;
-	t = (unsigned long long *)CLKADDR(a);
+	t = (unsigned long long *)PGADDR(a);
 	for(i = 0; i < 512*n; i++)
 		t[i] = 0;
 	l1 = &l1tab[4*(p-proc)];
-	a = ctob(a);
+	a = ptob(a);
 	for(i = 0; i < n2; i++, a += PGSIZE)
 		l1[i] = a | PTE_TAB;
 	for(i = 0; i < n3lo; i++, a += PGSIZE)
 		t[i] = a | PTE_TAB;
 	t += 512*n2;
-	b = ctob((unsigned)taddr);
+	b = ptob((unsigned)taddr);
 	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
 		*t++ = b | pguser | u.u_pxrw;
-	b = ctob((unsigned)daddr) + ctob(USIZE);
+	b = ptob((unsigned)daddr) + ptob(USIZE);
 	for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)
 		*t++ = b | pguser | RW;
 	if(n3hi == 0)
 		return;
-	t = (unsigned long long *)CLKADDR(p->p_ptab) + 512*(n2+n3lo);
+	t = (unsigned long long *)PGADDR(p->p_ptab) + 512*(n2+n3lo);
 	l1[2] = a | PTE_TAB;
 	for(i = 0; i < n3hi; i++)
 		t[512-n3hi+i] = (a += PGSIZE) | PTE_TAB;
@@ -117,7 +117,7 @@ estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 
 	if(sep)
 		goto err;
-	if(ctos(nt)+ctos(nd) > 2*PTPGB || ctos(ns) > PTPGB)
+	if(nt+nd > 2*PTPGB || ns > PTPGB)
 		goto err;
 	if((int)(nt+nd+ns+USIZE) > maxmem)
 		goto err;

@@ -313,14 +313,14 @@ swapin(register struct proc *p)
 			xp->x_caddr = x;
 			if ((xp->x_flag&XLOAD)==0) {
 				swap(xp->x_daddr,x,xp->x_size,B_READ);
-				arm_sync_icache(CLKADDR(x), ctob(xp->x_size));
+				arm_sync_icache(PGADDR(x), ptob(xp->x_size));
 			}
 		}
 		xp->x_ccount++;
 		xunlock(xp);
 	}
 	swap(p->p_addr, a, p->p_size, B_READ);
-	mfree(swapmap, ctod(p->p_size), p->p_addr);
+	mfree(swapmap, ptod(p->p_size), p->p_addr);
 	p->p_addr = a;
 	p->p_flag |= SLOAD;
 	p->p_time = 0;

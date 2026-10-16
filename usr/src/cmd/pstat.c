@@ -319,12 +319,12 @@ dousr(void)
 {
 	union {
 		struct	user rxu;
-		char	fxu[ctob(USIZE)];
+		char	fxu[ptob(USIZE)];
 	} xu;
 	register struct user *up;
 	register int i;
 
-	lseek(fm, ctob(ubase), 0);
+	lseek(fm, ptob(ubase), 0);
 	read(fm, (char *)&xu, sizeof(xu));
 	up = &xu.rxu;
 	printf("rsav %.1o %.1o\n", up->u_rsav[0], up->u_rsav[1]);

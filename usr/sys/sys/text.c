@@ -28,7 +28,7 @@ xswap(register struct proc *p, int ff, int os)
 
 	if(os == 0)
 		os = p->p_size;
-	a = malloc(swapmap, ctod(p->p_size));
+	a = malloc(swapmap, ptod(p->p_size));
 	if(a == NULL)
 		return(0);
 	p->p_flag |= SLOCK;
@@ -65,7 +65,7 @@ xfree(void)
 	ip = xp->x_iptr;
 	if(--xp->x_count==0 && (ip->i_mode&ISVTX)==0) {
 		xp->x_iptr = NULL;
-		mfree(swapmap, ctod(xp->x_size), xp->x_daddr);
+		mfree(swapmap, ptod(xp->x_size), xp->x_daddr);
 		mfree(coremap, xp->x_size, xp->x_caddr);
 		ip->i_flag &= ~ITEXT;
 		if (ip->i_flag&ILOCK)
@@ -123,8 +123,8 @@ xalloc(register struct inode *ip)
 		psignal(u.u_procp, SIGKIL);
 		return;
 	}
-	ts = btoc(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
-	if((xp->x_daddr = malloc(swapmap, (int)ctod(ts))) == NULL)
+	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
+	if((xp->x_daddr = malloc(swapmap, (int)ptod(ts))) == NULL)
 		goto noswap;
 	xp->x_flag = XLOAD|XLOCK;
 	xp->x_count = 1;
@@ -136,7 +136,7 @@ xalloc(register struct inode *ip)
 	u.u_procp->p_textp = xp;
 	xexpand(xp);
 	if (xp->x_ccount == 0) {
-		mfree(swapmap, ctod(ts), xp->x_daddr);
+		mfree(swapmap, ptod(ts), xp->x_daddr);
 		xp->x_iptr = NULL;
 		ip->i_flag &= ~ITEXT;
 		ip->i_count--;
@@ -160,7 +160,7 @@ xalloc(register struct inode *ip)
 	u.u_procp->p_flag &= ~SLOCK;
 	u.u_segflg = 0;
 	install_sigtramp();
-	arm_sync_icache(CLKADDR(xp->x_caddr), ctob(ts));
+	arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));
 	xp->x_flag = XWRIT;
 	return;
 
@@ -183,7 +183,7 @@ xexpand(register struct text *xp)
 	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
 		if ((xp->x_flag&XLOAD)==0) {
 			swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);
-			arm_sync_icache(CLKADDR(xp->x_caddr), ctob(xp->x_size));
+			arm_sync_icache(PGADDR(xp->x_caddr), ptob(xp->x_size));
 		}
 		xp->x_ccount++;
 		xunlock(xp);
@@ -291,7 +291,7 @@ xuntext(register struct text *xp)
 	ip = xp->x_iptr;
 	xp->x_flag &= ~XLOCK;
 	xp->x_iptr = NULL;
-	mfree(swapmap, ctod(xp->x_size), xp->x_daddr);
+	mfree(swapmap, ptod(xp->x_size), xp->x_daddr);
 	ip->i_flag &= ~ITEXT;
 	if (ip->i_flag&ILOCK)
 		ip->i_count--;

@@ -219,13 +219,13 @@ core(void)
 		itrunc(ip);
 		u.u_offset = 0;
 		u.u_base = (caddr_t)&u;
-		u.u_count = ctob(USIZE);
+		u.u_count = ptob(USIZE);
 		u.u_segflg = 1;
 		writei(ip);
 		s = u.u_procp->p_size - USIZE;
 		estabur((unsigned)0, s, (unsigned)0, 0, RO);
 		u.u_base = 0;
-		u.u_count = ctob(s);
+		u.u_count = ptob(s);
 		u.u_segflg = 0;
 		writei(ip);
 	}
@@ -245,9 +245,9 @@ grow(unsigned sp)
 	register struct proc *p;
 	register int a;
 
-	if(sp >= USERSIZE-ctob(u.u_ssize))
+	if(sp >= USERSIZE-ptob(u.u_ssize))
 		return(0);
-	si = (USERSIZE-sp)/ctob(1) - u.u_ssize + SINCR;
+	si = (USERSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
 	if(si <= 0)
 		return(0);
 	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))
@@ -349,7 +349,7 @@ procxmt(void)
 	/* read u */
 	case 3:
 		i = (int)ipc.ip_addr;
-		if (i<0 || i >= ctob(USIZE))
+		if (i<0 || i >= ptob(USIZE))
 			goto error;
 		ipc.ip_data = ((physadr)&u)->r[i>>2];
 		break;

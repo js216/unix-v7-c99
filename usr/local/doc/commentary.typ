@@ -508,7 +508,7 @@ panicked; nothing has been changed yet.
 rounded up to a word, and the `na+3` words of the pointer vector built
 below them, the argument count, a pointer to each string, and two
 zeros. v7 passed the strings alone. When the vector did not fit in the
-`SSIZE` clicks left over, the `suword`s below the stack failed unseen,
+`SSIZE` pages left over, the `suword`s below the stack failed unseen,
 and the program began with an argument count of zero; with 4-byte
 pointers and a 4 KB `SSIZE`, some 1,360 short arguments would have
 been enough.
@@ -601,16 +601,16 @@ that a running text cannot be opened for writing, is in `access`
 #lines(205, 209)
 
 The text occupies the bottom of the address space: `ts` (215) is the
-number of clicks from address zero to the end of the text segment,
+number of pages from address zero to the end of the text segment,
 which includes the bottom page, below the text's own first address.
-The data begins at the first click above the text, and `ds` (222) is
-the number of clicks from there to the end of the data segment in
+The data begins at the first page above the text, and `ds` (222) is
+the number of pages from there to the end of the data segment in
 memory (its address plus `p_msize`), which takes in the uninitialised
 data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
 overflow is changed to fit: a sum of unsigned numbers which wraps round
 is smaller than either addend. A data segment which begins below the
 end of the text is refused with the same error (218). The stack is
-given `SSIZE` clicks plus room for the strings and the pointer vector,
+given `SSIZE` pages plus room for the strings and the pointer vector,
 `nargc` bytes.
 
 The overlay branch (224--235) is dead, since `overlay` is never set; it
@@ -619,7 +619,7 @@ is kept as v7 wrote it, but for the parentheses at 225, as in #f("slp.c").
 #lines(210, 238)
 
 With the profiling turned off (245) the old image is abandoned. As in v7, the image is
-expanded to `USIZE+ds+ss` clicks, its per process area and the sizes
+expanded to `USIZE+ds+ss` pages, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
 (247, 254, 255). The uninitialised data and the stack therefore read as
 zero. The image is no larger than the program: `sbreak` and the growth
@@ -725,7 +725,7 @@ checked for room for an image of the maximum size, `MAXMEM`
 Running out is no longer fatal (#f("slp.c")), and the insurance did
 harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
-clicks, after which no process at all could fork. The check made
+pages, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
 to the swap device, is the size of the caller's. The comment (454) is
 changed to match. The last slot of `proc` is reserved for the super-user, so that he can
@@ -749,17 +749,18 @@ process which has not yet called `exec`.
 #lines(443, 497)
 
 `sbreak` sets the size of the data area, and is v7's. The new break
-is converted to clicks, and, since the data begins at the first
+is converted to pages, and, since the data begins at the first
 segment after the text, the text's segments are subtracted; a segment
-is one click here (`ctos`, #f("param.h")). `estabur` must accept the
+is one page here, so v7's conversions `ctos` and `stoc` are gone and
+the size is subtracted as it stands. `estabur` must accept the
 new size: it refuses a data area that would run into the stack
 (#f("ureg.c")).
 
 The image is then changed with `expand`. Since the stack lies above the
-data in core, it is copied down (shrinking) or up (growing), a click at
+data in core, it is copied down (shrinking) or up (growing), a page at
 a time, by the amount of the change: when shrinking before the image is
 cut, so that nothing is lost, and when growing after it is enlarged,
-from the top down. The clicks added to the data are cleared, so that
+from the top down. The pages added to the data are cleared, so that
 the program finds zeros there, as it would in new memory. The shell
 relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
@@ -1022,7 +1023,7 @@ bit `n-1` of `p_sig`.
 #lines(170, 187)
 
 `core` writes the file `core` in the current directory: first the whole
-per-process area, `USIZE` clicks, which contains the saved registers,
+per-process area, `USIZE` pages, which contains the saved registers,
 then the user's memory. Before it looks the name up, it gives up unless
 the effective user and group ids equal the real ones (205), so that a
 set-user-id or set-group-id program leaves neither an image nor a file.
@@ -1060,14 +1061,14 @@ On the PDP-11 the stack lay at the top of the 64 KB address space, so
 `-ctob(u.u_ssize)` was the lowest address of the stack as an unsigned
 16-bit number, and `-sp` the depth of `sp` below the top. In 32 bits
 the top of the address space is `USERSIZE` (#f("param.h")), and the two
-expressions become `USERSIZE-ctob(u.u_ssize)` and `USERSIZE-sp`
+expressions become `USERSIZE-ptob(u.u_ssize)` and `USERSIZE-sp`
 (247--249); the divisor 64, the PDP-11's click in bytes, becomes
-`ctob(1)`. The rest is v7's. The new stack size is the depth of `sp` in
-clicks, rounded down, plus `SINCR` clicks of room; `estabur` refuses it
+`ptob(1)`. The rest is v7's. The new stack size is the depth of `sp` in
+pages, rounded down, plus `SINCR` pages of room; `estabur` refuses it
 if the stack would meet the data. `expand` enlarges the image, and the
 stack, which lies at the end of the image, is copied up by the number
-of clicks added, from the top down so that it does not overwrite
-itself, and the clicks freed at its bottom are cleared.
+of pages added, from the top down so that it does not overwrite
+itself, and the pages freed at its bottom are cleared.
 
 If `expand` fails, for want of both core and swap space (#f("slp.c")),
 the mapping is set back to the old sizes (257) and `grow` fails as it
@@ -1098,7 +1099,7 @@ On the ARM the two are one, and `fuiword` is merely another name for
 
 Request 3 reads a word of the per-process area, at a byte offset. The
 offset is turned into an index of `int`s by `>>2`, where v7 had `>>1`,
-since an `int` is now four bytes, not two. The limit `ctob(USIZE)` has
+since an `int` is now four bytes, not two. The limit `ptob(USIZE)` has
 grown with `USIZE` (#f("param.h")).
 
 #lines(349, 355)
@@ -1249,7 +1250,7 @@ as any of them exists. The `text` table records each such segment; a
 process finds its entry through `p_textp` (#f("proc.h")).
 
 `x_daddr` (9) is the block number of the swap copy, counted from
-`swplo`. `x_caddr` (10) is the click number of the core copy. `x_count`
+`swplo`. `x_caddr` (10) is the page number of the core copy. `x_count`
 (13) is the number of processes which use the text at all, and
 `x_ccount` (14) the number of those which are in core: the core copy may
 be freed when the second reaches zero, the swap copy only when the first
@@ -1257,8 +1258,8 @@ does.
 
 `x_caddr`, `x_daddr`, and `x_size` have been widened from `short` to
 `int`, for the reasons already given for `p_addr` and `p_size` in
-#f("proc.h"): neither a click number, nor a block of the swap area
-(#f("qemuconf")), nor the size of the largest text, `MAXMEM` clicks,
+#f("proc.h"): neither a page number, nor a block of the swap area
+(#f("qemuconf")), nor the size of the largest text, `MAXMEM` pages,
 fits in a `short`.
 
 `x_count` and `x_ccount` were `char`s, which count to 255 on the ARM.
@@ -1842,8 +1843,8 @@ and "device writes") and reads on a write (flag 1); and the status byte
 (124--126), which the device writes. Each address is a physical one,
 found by `vtop` (#f("machdep.c")) from the kernel's: that of a buffer
 in the cache, or, for `swap` and `physio` (#f("bio.c")), that of a
-process image in core, given by `CLKADDR` (#f("seg.h")). Such a
-transfer covers consecutive clicks, which are consecutive in physical
+process image in core, given by `PGADDR` (#f("seg.h")). Such a
+transfer covers consecutive pages, which are consecutive in physical
 memory too, so one descriptor serves.
 
 The minor device number, which v7 used to choose one of four drives, is
@@ -2032,8 +2033,8 @@ process waiting in `iowait`, `swap`, or `physio` is woken.
 
 #lines(365, 398)
 
-`swap` transfers `count` clicks of a process image between core, at
-click `coreaddr`, and the swap device, at block `blkno` of the swap area.
+`swap` transfers `count` pages of a process image between core, at
+page `coreaddr`, and the swap device, at block `blkno` of the swap area.
 It is called by `xswap` (#f("text.c")) and by `swapin` (#f("slp.c")),
 and sleeps until the transfer is complete.
 
@@ -2053,8 +2054,8 @@ request has such a limit, so the loop is kept but always ends after one
 transfer.
 
 v7 set `b_addr` (424) to the low sixteen bits of the physical address,
-`coreaddr<<6`, and `b_xmem` to the high bits. The port uses `CLKADDR`
-(#f("seg.h")), which gives the kernel's address for the click, and the
+`coreaddr<<6`, and `b_xmem` to the high bits. The port uses `PGADDR`
+(#f("seg.h")), which gives the kernel's address for the page, and the
 driver turns it into the physical address the device needs (`vtop`,
 #f("machdep.c")): the same division of labour, the address here and the
 device's view of it in the driver.
@@ -2093,33 +2094,33 @@ transfer does not overlap the text segment (489--498) is v7's: the
 text is shared, and a device must not write into it. v7 rounded the text size up to a
 whole number of 8 KB segments, 128 clicks, since the data began at the
 next segment; here the data begins at the next page, so the size in
-clicks is used as it stands (489). `nb` is the click of the start of
+pages is used as it stands (489). `nb` is the page of the start of
 the transfer (492).
 
 v7 then checked that the transfer lay wholly in the data segment or
 wholly in the stack (499--507), the two parts of the user's address
 space which are mapped, and which lie in different places in core. The
-check is v7's, with the click size changed and the top of the address
-space, which v7 wrote as 1024 clicks, now `btoc(USERSIZE)`. v7 also
+check is v7's, with the page size changed and the top of the address
+space, which v7 wrote as 1024 clicks, now `btop(USERSIZE)`. v7 also
 masked the addresses with `01777` to keep them within the 64 KB address
 space; the test at 487 has already done that here. v7 tested the click
 of the byte after the transfer, so that a transfer which ended exactly
-at the end of the data was refused. With clicks of 4096 bytes in place
-of 64, such a buffer is 64 times as likely, and the test is now of the
-click of the transfer's last byte (505).
+at the end of the data was refused. With pages of 4096 bytes in place
+of clicks of 64, such a buffer is 64 times as likely, and the test is
+now of the page of the transfer's last byte (505).
 
 #lines(486, 514)
 
 v7 found the physical address of the user's buffer by reading the user
 segmentation registers (`UISA` or `UDSA`), simulating the translation
 which the hardware would have made. The port computes it from the
-layout of the image instead (519--523): the data begins `USIZE` clicks
+layout of the image instead (519--523): the data begins `USIZE` pages
 into the image (#f("proc.h")), at `p_addr`, and the stack follows it.
-An address in the data lies `nb-ts` clicks into it; one in the stack
-lies as many clicks into the stack as it lies above the stack's lowest
-address. `CLKADDR` converts the click number to an address, as in
+An address in the data lies `nb-ts` pages into it; one in the stack
+lies as many pages into the stack as it lies above the stack's lowest
+address. `PGADDR` converts the page number to an address, as in
 `swap`, and the low twelve bits of the user's address give the offset
-within the click (524). Each part is contiguous in core, so the whole
+within the page (524). Each part is contiguous in core, so the whole
 transfer is too.
 
 `SLOCK` (528) keeps the process in core while the device transfers
@@ -3415,7 +3416,7 @@ the kernel image and the whole of core at fixed addresses, so
 them, and the driver passes it the device for that purpose. The
 distinction between the minor devices survives: in `/dev/mem` the
 offset is a physical address, so that a process image is found at
-offset `p_addr` times 4096, the size of a click; in `/dev/kmem` it is a
+offset `p_addr` times 4096, the size of a page; in `/dev/kmem` it is a
 kernel address, so that a kernel variable is found at the address which
 `nlist` reports for it. Since the two differ on both machines (Section
 1), `ps` reads the kernel's tables from `/dev/kmem` and the images from
@@ -8668,7 +8669,7 @@ library.
 #source("/usr/src/libc/gen/malloc.c")
 
 The storage allocator of user programs. It should not be confused with
-the kernel's `malloc` (#f("malloc.c")), which hands out clicks of core
+the kernel's `malloc` (#f("malloc.c")), which hands out pages of core
 and blocks of swap space from a resource map and keeps no record within
 the space itself. This one manages a single arena of memory obtained
 from the system with `sbrk`, which moves the end of the process's data
@@ -10725,7 +10726,7 @@ negative.
 #lines(192, 206)
 
 `prcom` handles one process. If it is loaded (`SLOAD`), its image is at
-`p_addr` clicks in `/dev/mem`. In the port, as on the PDP-11, `p_addr`
+`p_addr` pages in `/dev/mem`. In the port, as on the PDP-11, `p_addr`
 is a physical page number (#f("proc.h")), so v7's `ctob` of the click
 number gives the physical address, the offset in `/dev/mem`. It is
 computed as an `unsigned long`, and `addr` is one, for the reason just
@@ -10734,7 +10735,7 @@ and `swplo` is added. The `user` structure is at the start of the image
 in both cases.
 
 The maps follow from the shape of the image, which is v7's on the ARM
-too (#f("machdep.c")): the `USIZE` clicks of the `user` area, then the
+too (#f("machdep.c")): the `USIZE` pages of the `user` area, then the
 data, then the stack, packed together; the stack segment, at the top of
 the address space, follows the data in the image. `f2` (243) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
@@ -10749,9 +10750,9 @@ The fields of the line. The mask `&0377` (250) is new. `p_stat` is a
 `-Wall`; the mask makes it an `int`, and on the PDP-11, where `char`
 was signed, it would also have kept the subscript positive. The
 formats were made for the PDP-11, and three fields of the long listing
-are widened for 32-bit values (142, 254, 259, 261): `ADDR`, the click
+are widened for 32-bit values (142, 254, 259, 261): `ADDR`, the page
 number in octal, from six digits to eight, since the 512 MB of the
-MP135 machine's memory reaches click 917504, 03400000; `SZ` from four
+MP135 machine's memory reaches page 917504, 03400000; `SZ` from four
 columns to five, since a large image is thousands of blocks, which
 v7's `%4d` would run into the address; and
 `WCHAN`, a kernel address in octal, from seven columns to twelve, room
@@ -10759,7 +10760,7 @@ for eleven digits and a space. `p_wchan` is a pointer, and `%o` takes an
 `unsigned`; passing the pointer as it stands, as v7 did, is undefined,
 so it is converted (259). `SZ` is the image in blocks of 512 bytes:
 v7 converted its 64-byte clicks with `(p_size+7)>>3`, and the port with
-`ctod` (#f("param.h")), which serves 4096-byte clicks. The times
+`ptod` (#f("param.h")), which serves 4096-byte pages. The times
 assume `HZ` of 60, which holds (#f("param.h")).
 
 #lines(245, 287)

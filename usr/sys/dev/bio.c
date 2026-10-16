@@ -419,16 +419,16 @@ swap(int blkno, int coreaddr, register int count, int rdflg)
 		bp->b_flags = B_BUSY | B_PHYS | rdflg;
 		bp->b_dev = swapdev;
 		tcount = count;
-		bp->b_bcount = ctob(tcount);
+		bp->b_bcount = ptob(tcount);
 		bp->b_blkno = swplo+blkno;
-		bp->b_un.b_addr = CLKADDR(coreaddr);
+		bp->b_un.b_addr = PGADDR(coreaddr);
 		(*bdevsw[major(swapdev)].d_strategy)(bp);
 		spl6();
 		while((bp->b_flags&B_DONE)==0)
 			sleep((caddr_t)bp, PSWP);
 		count -= tcount;
 		coreaddr += tcount;
-		blkno += ctod(tcount);
+		blkno += ptod(tcount);
 	}
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
@@ -492,7 +492,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	nb = base>>12;
 	/*
 	 * Check overlap with text. (ts and nb now
-	 * in 4096-byte clicks)
+	 * in 4096-byte pages)
 	 */
 	if (nb < ts)
 		goto bad;
@@ -503,7 +503,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * (remember wraparound was already checked).
 	 */
 	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
-	    && nb < (int)(btoc(USERSIZE)-u.u_ssize))
+	    && nb < (int)(btop(USERSIZE)-u.u_ssize))
 		goto bad;
 	spl6();
 	while (bp->b_flags&B_BUSY) {
@@ -520,8 +520,8 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 		ts = u.u_procp->p_addr + USIZE + nb - ts;
 	else
 		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
-		    (btoc(USERSIZE)-u.u_ssize);
-	bp->b_un.b_addr = CLKADDR(ts) + (base&07777);
+		    (btop(USERSIZE)-u.u_ssize);
+	bp->b_un.b_addr = PGADDR(ts) + (base&07777);
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;
 	bp->b_error = 0;
