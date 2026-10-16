@@ -6,12 +6,11 @@
 
 struct nlist nl[] = {
 	{ "_proc", 0, 0 },
-	{ "_nproc", 0, 0 },
 	{ "_coremap", 0, 0 },
 	{ "", 0, 0 },
 };
 struct proc pr;
-int nproc, pid[64], fd[2];
+int pid[64], fd[2];
 extern int errno;
 char *sbrk(int incr);
 
@@ -21,10 +20,8 @@ getproc(int id)
 	int k, i;
 
 	k = open("/dev/kmem", 0);
-	lseek(k, (long)nl[1].n_value, 0);
-	read(k, (char *)&nproc, sizeof(nproc));
 	lseek(k, (long)nl[0].n_value, 0);
-	for (i = 0; i < nproc; i++) {
+	for (i = 0; i < NPROC; i++) {
 		read(k, (char *)&pr, sizeof(pr));
 		if (pr.p_stat && pr.p_pid == id)
 			break;
@@ -39,7 +36,7 @@ corefree(void)
 	int k, n;
 
 	k = open("/dev/kmem", 0);
-	lseek(k, (long)nl[2].n_value, 0);
+	lseek(k, (long)nl[1].n_value, 0);
 	n = 0;
 	while (read(k, (char *)&m, sizeof(m)) == sizeof(m) && m.m_size)
 		n += m.m_size;

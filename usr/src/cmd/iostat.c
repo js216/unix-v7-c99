@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <a.out.h>
+#include <sys/param.h>
 int	bflg;
 int	dflg;
 int	tflg;
@@ -37,7 +38,7 @@ struct iostat {
 	long	nreada;
 	long	ncache;
 	long	nwrite;
-	long	bufcount[50];
+	long	bufcount[NBUF];
 } io_info, io_delta;
 double	etime;
 
@@ -294,11 +295,13 @@ register int i;
 	 io_info.nread-io_delta.nread, io_info.nreada-io_delta.nreada,
 	 io_info.ncache-io_delta.ncache, io_info.nwrite-io_delta.nwrite);
 
-	for(i=0; i<30; ) {
+	for(i=0; i<NBUF; ) {
 		printf("%D\t",(long)io_info.bufcount[i]-io_delta.bufcount[i]);
 		i++;
 		if (i % 10 == 0)
 			printf("\n");
 	}
+	if (i % 10)
+		printf("\n");
 	io_delta = io_info;
 }

@@ -9,6 +9,7 @@
 #define	BLK_KERN	0x701ULL
 #define	BLK_DEV	0x60000000000405ULL
 #define	PTE_TAB	3
+#define	PGUSER	0xf03
 #define	PGSHIFT	12
 #define	PGSIZE	4096
 #define	PTPGB	(512*512)

@@ -3,19 +3,10 @@ root rk 0
 swap rk 0
 swplo 131072
 nswap 327680
-nbuf 1000
-ninode 1000
-nfile 1000
-nmount 16
-ncall 100
-nproc 500
-ntext 100
-nclist 1000
 ram c01e0000 2ffe0000 20000
 tables c0200000 c0000000 20000000
 core e0000000
 gic f0821000 f0822000
-pguser f03
 map c0000000 2fe00000 30000000 BLK_KERN
 map c0200000 c0000000 e0000000 BLK_KERN
 map f0000000 40000000 40200000 BLK_DEV

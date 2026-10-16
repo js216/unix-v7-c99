@@ -39,14 +39,6 @@ struct setup {
 	{"_kl11", 0, 0},
 #define	SFIL	6
 	{"_file", 0, 0},
-#define	SNINO	7
-	{"_ninode", 0, 0},
-#define	SNTXT	8
-	{"_ntext", 0, 0},
-#define	SNPRC	9
-	{"_nproc", 0, 0},
-#define	SNFIL	10
-	{"_nfile", 0, 0},
 	{"", 0, 0},
 };
 
@@ -58,9 +50,8 @@ int	usrf;
 unsigned long	ubase;
 int	filf;
 int	allflg;
-int	ninode, ntext, nproc, nfile;
 
-int oatoi(char *s), kint(int s);
+int oatoi(char *s);
 void doinode(void), dotext(void), doproc(void), dotty(void), dousr(void), dofil(void);
 void putf(int v, int n), ttyprt(int n, struct tty *atp);
 int
@@ -117,10 +108,6 @@ main(int argc, char **argv)
 		printf("no namelist\n");
 		exit(1);
 	}
-	ninode = kint(SNINO);
-	ntext = kint(SNTXT);
-	nproc = kint(SNPRC);
-	nfile = kint(SNFIL);
 	if (inof)
 		doinode();
 	if (txtf)
@@ -215,7 +202,7 @@ dotext(void)
 		printf("%7.1o", xp->x_caddr);
 		printf("%5d", xp->x_size);
 		printf("%8.1o", (unsigned)xp->x_iptr);
-		printf("%4d", xp->x_count);
+		printf("%4d", xp->x_count&0377);
 		printf("%4d", xp->x_ccount);
 		printf("\n");
 	}
@@ -408,17 +395,4 @@ dofil(void)
 		printf("%8.1o", (unsigned)fp->f_inode);
 		printf(" %ld\n", fp->f_un.f_offset);
 	}
-}
-
-int
-kint(int s)
-{
-	int v;
-
-	lseek(fc, (long)setup[s].value, 0);
-	if (read(fc, (char *)&v, sizeof(v)) != sizeof(v) || v <= 0 || v > 65536) {
-		printf("bad %.8s\n", setup[s].name);
-		exit(1);
-	}
-	return(v);
 }

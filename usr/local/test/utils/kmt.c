@@ -7,12 +7,10 @@
 
 struct nlist nl[] = {
 	{ "_proc", 0, 0 },
-	{ "_nproc", 0, 0 },
 	{ "", 0, 0 },
 };
 struct proc pr;
 struct user uk, um;
-int nproc;
 
 int
 main(void)
@@ -25,8 +23,6 @@ main(void)
 	nlist("/unix", nl);
 	printf("proc above USERSIZE %d\n", nl[0].n_value >= USERSIZE);
 	pid = getpid();
-	lseek(k, (long)nl[1].n_value, 0);
-	read(k, (char *)&nproc, sizeof(nproc));
 	lseek(k, (long)nl[0].n_value, 0);
 	for (i = 0; i < NPROC; i++) {
 		read(k, (char *)&pr, sizeof(pr));

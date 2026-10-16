@@ -17,7 +17,6 @@ struct nlist nl[] = {
 	{ "_proc", 0, 0 },
 	{ "_swapdev", 0, 0 },
 	{ "_swplo", 0, 0 },
-	{ "_nproc", 0, 0 },
 	{ "", 0, 0 },
 };
 
@@ -41,7 +40,6 @@ int	mem;
 int	swmem;
 int	swap;
 daddr_t	swplo;
-int	nproc;
 
 int	ndev;
 struct devl {
@@ -130,8 +128,6 @@ bbreak:
 	 */
 	lseek(mem, (long)nl[2].n_value, 0);
 	read(mem, (char *)&swplo, sizeof(swplo));
-	lseek(mem, (long)nl[3].n_value, 0);
-	read(mem, (char *)&nproc, sizeof(nproc));
 	/*
 	 * Locate proc table
 	 */

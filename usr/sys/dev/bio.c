@@ -19,7 +19,7 @@ struct {
 	unsigned long	nreada;
 	unsigned long	ncache;
 	unsigned long	nwrite;
-	unsigned long	bufcount[50];
+	unsigned long	bufcount[NBUF];
 } io_info;
 #endif
 
@@ -266,7 +266,7 @@ getblk(dev_t dev, daddr_t blkno)
 			i++;
 			dp = dp->av_forw;
 		}
-		if (i<50)
+		if (i<NBUF)
 			io_info.bufcount[i]++;
 #endif
 		notavail(bp);

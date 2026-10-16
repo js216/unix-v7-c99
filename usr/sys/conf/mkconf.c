@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 
 void	puke(char **s);
 int	input(void), equal(char *a, char *b), badline(char *line);
@@ -505,20 +504,6 @@ struct	callo	callout[NCALL];\n\
 struct	cblock	cfree[NCLIST];\n"
 };
 
-char	*tune[] =
-{
-	"nbuf",
-	"ninode",
-	"nfile",
-	"nmount",
-	"ncall",
-	"nproc",
-	"ntext",
-	"nclist",
-	0
-};
-long	tunev[] = { 29, 200, 175, 8, 20, 150, 40, 100 };
-
 char	*strh[] =
 {
 	"	{0}",
@@ -560,7 +545,7 @@ int	nswap = 872;
 int	pack;
 int	nldisp = 1;
 int	ddr;
-unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, pguser, gicd, gicc;
+unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, gicd, gicc;
 #define	NMAP	8
 unsigned long	mapv[NMAP], mapb[NMAP], mape[NMAP];
 char	mapa[NMAP][100];
@@ -572,7 +557,7 @@ main(void)
 	register struct tab *p;
 	register char *q;
 	int i;
-	char up[10], *x;
+	char *x;
 
 	while(input());
 
@@ -670,19 +655,12 @@ main(void)
 		pipemaj, pipemin,
 		nldisp,
 		swplo, nswap);
-	for(i=0; tune[i]; i++) {
-		for(q=tune[i], x=up; (*x++ = toupper(*q++)); );
-		printf("#undef\t%s\n#define\t%s\t%ld\n", up, up, tunev[i]);
-	}
 	printf(strg1);
 	printf(strg2);
 	printf(strg3);
-	for(i=0; tune[i]; i++)
-		printf("int\t%s = %ld;\n", tune[i], tunev[i]);
 	if(rootmaj < 0)
 		fprintf(stderr, "No root device given\n");
 	printf("\nunsigned int\tcorebase, coreoff, coretop = 0x%lx;\n", coret);
-	printf("unsigned int\tpguser = 0x%lx;\n", pguser);
 	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n", gicd, gicc);
 	printf("\nstruct\tmemregion\tboard_map[] =\n{\n");
 	for (i=0; i<nmap; i++)
@@ -713,7 +691,7 @@ input(void)
 {
 	char line[100];
 	register struct tab *q;
-	int count, n, i;
+	int count, n;
 	long num;
 	char keyw[100], dev[100];
 
@@ -741,8 +719,6 @@ input(void)
 		return(sscanf(line, "%*s%lx", &coret) == 1 || badline(line));
 	if (equal(keyw, "gic"))
 		return(sscanf(line, "%*s%lx%lx", &gicd, &gicc) == 2 || badline(line));
-	if (equal(keyw, "pguser"))
-		return(sscanf(line, "%*s%lx", &pguser) == 1 || badline(line));
 	if (equal(keyw, "ddr")) {
 		ddr++;
 		return(1);
@@ -758,15 +734,6 @@ input(void)
 			q->count = 1;
 			fprintf(stderr, "%s: only one\n", keyw);
 		}
-		return(1);
-	}
-	for(i=0; tune[i]; i++)
-	if(equal(keyw, tune[i])) {
-		if (n<3)
-			goto badl;
-		if (sscanf(dev, "%ld", &num) <= 0)
-			goto badl;
-		tunev[i] = num;
 		return(1);
 	}
 	if (equal(keyw, "nswap")) {

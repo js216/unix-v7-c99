@@ -52,10 +52,10 @@ ptbuild(register struct proc *p)
 	t += 512*n2;
 	b = ptob((unsigned)taddr);
 	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
-		*t++ = b | pguser | u.u_pxrw;
+		*t++ = b | PGUSER | u.u_pxrw;
 	b = ptob((unsigned)daddr) + ptob(USIZE);
 	for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)
-		*t++ = b | pguser | RW;
+		*t++ = b | PGUSER | RW;
 	if(n3hi == 0)
 		return;
 	t = (unsigned long long *)PGADDR(p->p_ptab) + 512*(n2+n3lo);
@@ -64,7 +64,7 @@ ptbuild(register struct proc *p)
 		t[512-n3hi+i] = (a += PGSIZE) | PTE_TAB;
 	t += 512 + 512*n3hi - u.u_pssize;
 	for(i = 0; i < u.u_pssize; i++, b += PGSIZE)
-		*t++ = b | pguser | RW;
+		*t++ = b | PGUSER | RW;
 }
 
 /*
