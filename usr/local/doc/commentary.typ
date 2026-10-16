@@ -11059,7 +11059,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/tsort.c")
 
-#lines(1, 196)
+#lines(1, 198)
 
 #source("/usr/src/cmd/rev.c")
 

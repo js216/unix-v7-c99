@@ -61,6 +61,8 @@ main(int argc, char **argv)
 		if(i==j||present(i,j)) 
 			continue;
 		t = (struct predlist *)malloc(sizeof(struct predlist));
+		if(t==NULL)
+			error("too many items",empty);
 		t->nextpred = j->inedges;
 		t->pred = i;
 		j->inedges = t;
