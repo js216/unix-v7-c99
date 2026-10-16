@@ -76,12 +76,8 @@ resume:
 	movw ip, #BLK_KERN|PTE_TAB
 	orr r3, r3, ip
 	str r3, [r2, #0]
-	add r3, r3, #PGSIZE
-	str r3, [r2, #8]
 	dsb ish
 	ldr r3, =u
-	mcr p15, 0, r3, c8, c7, 3
-	add r3, r3, #PGSIZE
 	mcr p15, 0, r3, c8, c7, 3
 	dsb ish
 	isb
