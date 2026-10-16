@@ -189,7 +189,7 @@ bread(daddr_t bno, char *buf, int cnt)
 {
 	register int i;
 
-	lseek(fi, bno*BSIZE, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if (read(fi, buf, cnt) != cnt) {
 		printf("read error %D\n", bno);
 		for(i=0; i<cnt; i++)
