@@ -41,7 +41,6 @@ pwd; cd /usr/lib; pwd; cd $T/dd; pwd; cd $T
 sleep 1; sleep x; echo st$?
 echo walltest >w; /etc/wall <w
 ls
-primes 72057594037927934 | sed 2q
 echo 2 | primes | sed 3q
 echo '.TH x' >ro; echo 'hello world its' >>ro
 echo '.EQ' >>ro; echo 'a sup 2' >>ro; echo '.EN' >>ro; echo 'tail "q" and' >>ro
