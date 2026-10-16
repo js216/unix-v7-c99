@@ -2,13 +2,13 @@
 .globl _start, kl2, bootl1
 _start:
 	cpsid if
-	mrc p15, 0, r0, c1, c0, 0
-	bic r0, r0, #(1 << 12)
-	bic r0, r0, #(1 << 2)
-	bic r0, r0, #(1 << 11)
-	bic r0, r0, #(1 << 13)
-	bic r0, r0, #1
-	mcr p15, 0, r0, c1, c0, 0
+	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
+	bic r0, r0, #(1 << 12)	@ I: icache off
+	bic r0, r0, #(1 << 2)	@ C: dcache off
+	bic r0, r0, #(1 << 11)	@ Z: branch prediction off
+	bic r0, r0, #(1 << 13)	@ V: low vectors
+	bic r0, r0, #1		@ M: MMU off
+	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 	isb
 	mov r0, #0
 	mcr p15, 0, r0, c8, c7, 0
@@ -83,11 +83,11 @@ _start:
 	mcrr p15, 0, r6, r2, c2
 	mcrr p15, 1, r5, r2, c2
 	isb
-	mrc p15, 0, r0, c1, c0, 0
-	orr r0, r0, #1
-	orr r0, r0, #(1 << 2)
-	orr r0, r0, #(1 << 12)
-	mcr p15, 0, r0, c1, c0, 0
+	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
+	orr r0, r0, #1		@ M: MMU on
+	orr r0, r0, #(1 << 2)	@ C: dcache on
+	orr r0, r0, #(1 << 12)	@ I: icache on
+	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 	isb
 	ldr pc, =1f
 1:
