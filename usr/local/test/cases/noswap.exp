@@ -1,8 +1,6 @@
 core full 1, child swapped 1
 sbrk 1 errno 12
 fork -1 errno 12
-survived
-core full 1, child swapped 1
 child status 11
 survived
 core full 1, child swapped 1

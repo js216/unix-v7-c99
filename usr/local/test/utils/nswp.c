@@ -71,12 +71,14 @@ int
 main(int argc, char **argv)
 {
 	int n, i, c, st, size;
+	char *a, act;
 	unsigned j, sz;
 	char *p;
 
 	if (argc < 3)
 		return 1;
 	sz = atoi(argv[1]) << 20;
+	act = argv[2][strlen(argv[2])-1];
 	nlist("/unix", nl);
 	pipe(fd);
 	p = sbrk(sz);
@@ -88,7 +90,7 @@ main(int argc, char **argv)
 		if (mapfree(1) < size && mapfree(2) < 2*ptod(size))
 			break;
 		if ((pid[n] = fork()) == 0)
-			child(argv[2][0]);
+			child(act);
 	}
 	if ((c = fork()) == 0)
 		child(0);
@@ -96,22 +98,23 @@ main(int argc, char **argv)
 	getproc(c);
 	printf("core full %d, child swapped %d\n", mapfree(1) < size,
 	    c > 0 && (pr.p_flag & SLOAD) == 0);
-	switch (argv[2][0]) {
-	case 's':
-		p = sbrk(sz / 5);
-		printf("sbrk %d errno %d\n", p == (char *)-1, errno);
-		c = fork();
-		if (c == 0)
-			_exit(0);
-		printf("fork %d errno %d\n", c, errno);
-		break;
-	case 'g':
-	case 'x':
-		write(fd[1], "x", 1);
-		c = wait(&st);
-		printf("child status %d\n", st & 0177);
-		break;
-	}
+	for (a = argv[2]; *a; a++)
+		switch (*a) {
+		case 's':
+			p = sbrk(sz / 5);
+			printf("sbrk %d errno %d\n", p == (char *)-1, errno);
+			c = fork();
+			if (c == 0)
+				_exit(0);
+			printf("fork %d errno %d\n", c, errno);
+			break;
+		case 'g':
+		case 'x':
+			write(fd[1], "x", 1);
+			c = wait(&st);
+			printf("child status %d\n", st & 0177);
+			break;
+		}
 	for (i = 0; i < n; i++)
 		if (pid[i] > 0)
 			kill(pid[i], 9);
