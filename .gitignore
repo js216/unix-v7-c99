@@ -23,6 +23,7 @@ boot/rootfs-mp135.img
 boot/qemu.img
 boot/unix-mp135.bin
 boot/unix-mp135.stm32
+__pycache__/
 bin/
 usr/adm/
 usr/spool/
