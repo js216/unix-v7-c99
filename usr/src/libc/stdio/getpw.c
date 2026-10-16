@@ -18,21 +18,26 @@ getpw(int uid, char buf[])
 		while((c=getc(pwf)) != '\n') {
 			if(c == EOF)
 				return(1);
-			*bp++ = c;
+			if(bp < buf+BUFSIZ-1)
+				*bp++ = c;
 		}
 		*bp++ = '\0';
 		bp = buf;
 		n = 3;
 		while(--n)
 		while((c = *bp++) != ':')
-			if(c == '\n')
-				return(1);
+			if(c == '\0')
+				goto next;
 		while((c = *bp++) != ':') {
+			if(c == '\0')
+				goto next;
 			if(c<'0' || c>'9')
 				continue;
-			n = n*10+c-'0';
+			if(n < 100000000)
+				n = n*10+c-'0';
 		}
 		if(n == uid)
 			return(0);
+	next:	;
 	}
 }
