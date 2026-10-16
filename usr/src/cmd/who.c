@@ -37,7 +37,7 @@ main(int argc, char **argv)
 	}
 	while (fread((char *)&utmp, sizeof(utmp), 1, fi) == 1) {
 		if(argc==3) {
-			if (strcmp(utmp.ut_line, tp))
+			if (strncmp(utmp.ut_line, tp, sizeof utmp.ut_line))
 				continue;
 #ifdef interdata
 			printf("(Interdata) ");

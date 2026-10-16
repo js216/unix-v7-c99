@@ -54,7 +54,7 @@ sendmes(char *tty)
 	if(i)
 		return;
 	strcpy(t, "/dev/");
-	strcat(t, tty);
+	strncat(t, tty, sizeof utmp[0].ut_line);
 
 	if((f = fopen(t, "w")) == NULL) {
 		fprintf(stderr,"cannot open %s\n", t);
