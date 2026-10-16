@@ -111,6 +111,7 @@ ddrinit(void)
 	unsigned int *r;
 	int i;
 
+	ddrpower();
 	RCC(0x544) = 0;
 	while ((RCC(0x544) & 0x80000000) == 0)
 		;
