@@ -184,6 +184,8 @@ carrier(void)
 {
 	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
 
+	if (DIEPCTL(2) & EPENA)
+		return;
 	DIEPTSIZ(2) = 1U<<19 | 10;
 	DIEPCTL(2) |= EPENA|CNAK;
 	fifowrite(2, state, 10);
