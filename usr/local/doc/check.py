@@ -5,6 +5,7 @@ import re, os
 d = os.path.dirname(os.path.abspath(__file__))
 root = os.path.abspath(os.path.join(d, '../../..'))
 src = open(os.path.join(d, 'commentary.typ')).read()
+src = re.sub(r'(?m)^#include "([^"]+\.typ)"', lambda m: open(os.path.join(d, m.group(1))).read(), src)
 ok = True; cur = None; nxt = total = 0
 def done():
     global ok
