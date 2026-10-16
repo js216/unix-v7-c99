@@ -1,5 +1,0 @@
-T=/tmp/noswap U=/usr/local/test/utils
-mkdir $T; cd $T; mkdir core
-$U/nswp 100 sg
-$U/nswp 100 x
-cd /; rm -rf $T

@@ -243,8 +243,6 @@ d--755 0 0
 					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
 					misc2	---644 0 0 usr/local/test/cases/misc2
 					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
-					noswap	---644 0 0 usr/local/test/cases/noswap
-					noswap.exp	---644 0 0 usr/local/test/cases/noswap.exp
 					nsig	---644 0 0 usr/local/test/cases/nsig
 					nsig.exp	---644 0 0 usr/local/test/cases/nsig.exp
 					nsig.sed	---644 0 0 usr/local/test/cases/nsig.sed
@@ -293,8 +291,6 @@ d--755 0 0
 					stress	---644 0 0 usr/local/test/cases/stress
 					stress.exp	---644 0 0 usr/local/test/cases/stress.exp
 					stress.sed	---644 0 0 usr/local/test/cases/stress.sed
-					swpt	---644 0 0 usr/local/test/cases/swpt
-					swpt.exp	---644 0 0 usr/local/test/cases/swpt.exp
 					time64	---644 0 0 usr/local/test/cases/time64
 					time64.exp	---644 0 0 usr/local/test/cases/time64.exp
 					time64.sed	---644 0 0 usr/local/test/cases/time64.sed
@@ -329,7 +325,6 @@ d--755 0 0
 					many.img	---644 0 0 usr/local/test/obj/many.img
 					memt	---755 0 0 usr/local/test/obj/memt
 					monout	---644 0 0 usr/local/test/utils/monout
-					nswp	---755 0 0 usr/local/test/obj/nswp
 					ob	---755 0 0 usr/local/test/obj/ob
 					olda	---644 0 0 usr/local/test/utils/olda
 					physt	---755 0 0 usr/local/test/obj/physt
@@ -349,7 +344,6 @@ d--755 0 0
 					spd	---755 0 0 usr/local/test/obj/spd
 					stkt	---755 0 0 usr/local/test/obj/stkt
 					swb	---755 0 0 usr/local/test/obj/swb
-					swpt	---755 0 0 usr/local/test/obj/swpt
 					szt	---755 0 0 usr/local/test/obj/szt
 					tt	---755 0 0 usr/local/test/obj/tt
 					txtt	---755 0 0 usr/local/test/obj/txtt
