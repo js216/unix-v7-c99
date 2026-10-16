@@ -11084,7 +11084,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/diff3.c")
 
-#lines(1, 441)
+#lines(1, 444)
 
 #source("/usr/src/cmd/diffh.c")
 

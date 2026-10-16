@@ -142,8 +142,11 @@ number(char **lc)
 {
 	register int nn;
 	nn = 0;
-	while(digit(**lc))
-		nn = nn*10 + *(*lc)++ - '0';
+	while(digit(**lc)) {
+		if(nn < 100000000)
+			nn = nn*10 + **lc - '0';
+		(*lc)++;
+	}
 	return(nn);
 }
 
