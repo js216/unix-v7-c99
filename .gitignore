@@ -23,6 +23,9 @@ boot/rootfs-mp135.img
 boot/qemu.img
 boot/unix-mp135.bin
 boot/unix-mp135.stm32
+boot/sdwrite.bin
+boot/sdwrite.stm32
+usr/src/cmd/standalone/sdwrite
 __pycache__/
 bin/
 usr/adm/

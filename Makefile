@@ -25,6 +25,7 @@ include usr/sys/sys.mk
 include usr/src/libc/lib.mk
 include usr/src/libm/lib.mk
 include usr/src/cmd/cmd.mk
+include usr/src/cmd/standalone/stand.mk
 include usr/src/games/games.mk
 include usr/local/test/test.mk
 
