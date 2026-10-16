@@ -11640,6 +11640,15 @@ instead of the card.
 
 #source("/usr/src/cmd/cp.c")
 
+`cp` copies a file, or several into a directory, `BSIZE` bytes at a
+time. A copy into a directory takes the source's last component, and a
+copy of a file onto itself is refused by comparing device and i-number.
+The new file is created with the source's mode.
+
+The name built in a directory is now allocated to its length (52--56);
+v7 built it in `iobuf`, the 512-byte buffer of the copy, which a long
+directory overran.
+
 #lines(1, 95)
 
 #source("/usr/src/cmd/mv.c")
@@ -11647,6 +11656,14 @@ instead of the card.
 #lines(1, 299)
 
 #source("/usr/src/cmd/ln.c")
+
+`ln` makes a new link to a file: under the name given, or with the
+same last component inside a directory given as the second argument.
+Linking a directory needs `-f`, and even then only the super-user's
+`link` succeeds (#f("sys2.c")).
+
+The name built in a directory is now allocated to its length (47); v7
+built it in a 100-byte array, which a long name overran.
 
 #lines(1, 55)
 
@@ -11668,6 +11685,15 @@ instead of the card.
 
 #source("/usr/src/cmd/cat.c")
 
+`cat` copies its files, or its input, to its output; `-` names the
+input, and `-u` makes the output unbuffered. Before copying a file
+`cat` compares its device and i-number with those of the output, and
+refuses to copy a file onto itself, which would grow for ever.
+
+`dev` is now initialised to $-1$ like `ino` (17). v7 left it undefined
+when the output is a terminal or a disk, for which the comparison is
+not made, and then compared each input with it all the same.
+
 #lines(1, 63)
 
 #source("/usr/src/cmd/tee.c")
@@ -11687,6 +11713,11 @@ instead of the card.
 #lines(1, 120)
 
 #source("/usr/src/cmd/touch.c")
+
+`touch` sets a file's modification time to now, by reading its first
+byte and writing it back, since v7 has no system call for that alone
+except `utime`; an empty file is recreated instead. `-c` forbids
+creating files that do not exist.
 
 #lines(1, 70)
 
