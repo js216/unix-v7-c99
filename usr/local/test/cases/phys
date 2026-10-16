@@ -4,7 +4,7 @@ ls -l /dev/rrk0; sync
 dd if=/dev/rrk0 bs=512 skip=2000 count=8 >r1; dd if=/dev/root bs=512 skip=2000 count=8 >r2; cmp r1 r2 && echo same512
 dd if=/dev/rrk0 bs=4096 skip=300 count=6 >r1; dd if=/dev/root bs=4096 skip=300 count=6 >r2; cmp r1 r2 && echo same4096
 dd if=/dev/rrk0 bs=16384 skip=100 count=3 >r1; dd if=/dev/root bs=16384 skip=100 count=3 >r2; cmp r1 r2 && echo same16384
-set `$U/swb`; s=`expr $2 / 32 - 2`; t=`expr $s + 1`; expr $s \* 32 \>= $1
+set `$U/swb`; s=`expr $1 / 32 + 1024`; t=`expr $s + 1`; expr $s \* 32 \>= $1
 echo hello raw world | dd of=/dev/rrk0 bs=16384 seek=$s conv=sync
 dd if=/dev/rrk0 bs=65536 skip=`expr $s / 4` count=1 2>/dev/null | dd bs=512 skip=`expr $s % 4 \* 32` count=32 >o 2>e; cat e; od -c o | sed 2q
 tail +`expr $s \* 16384 + 1`c /dev/swap | dd bs=512 count=32 >o 2>e; cat e; od -c o | sed 2q
