@@ -273,6 +273,9 @@ d--755 0 0
 					r5j	---644 0 0 usr/local/test/cases/r5j
 					r5j.exp	---644 0 0 usr/local/test/cases/r5j.exp
 					r5j.sed	---644 0 0 usr/local/test/cases/r5j.sed
+					r5r	---644 0 0 usr/local/test/cases/r5r
+					r5r.exp	---644 0 0 usr/local/test/cases/r5r.exp
+					r5r.sed	---644 0 0 usr/local/test/cases/r5r.sed
 					sh	---644 0 0 usr/local/test/cases/sh
 					sh.exp	---644 0 0 usr/local/test/cases/sh.exp
 					sig	---644 0 0 usr/local/test/cases/sig
@@ -333,6 +336,7 @@ d--755 0 0
 					r12	---755 0 0 usr/local/test/obj/r12
 					r5h	---755 0 0 usr/local/test/obj/r5h
 					r5i	---755 0 0 usr/local/test/obj/r5i
+					r5r	---755 0 0 usr/local/test/obj/r5r
 					r5t	---755 0 0 usr/local/test/obj/r5t
 					regs	---755 0 0 usr/local/test/obj/regs
 					roff	---644 0 0 usr/local/test/utils/roff

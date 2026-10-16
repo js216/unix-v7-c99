@@ -1,0 +1,40 @@
+T=/tmp/r5r U=/usr/local/test/utils
+mkdir $T; cd $T
+echo '5 0:a 7 2047:a 0;a p 2047;a p' | dc
+echo x >f1; echo x >f2; echo y >f3; diff f2 f3 >d23; sed 's/^1c/4294967297c/' d23 >d13
+/usr/lib/diff3 d13 d23 f1 f2 f3; rm -f core
+cp $U/fs.img fs; dump 0sf 20000000 d fs </dev/null >o 2>&1; grep -c 'change tapes' o
+dd if=fs bs=520 count=1 2>/dev/null >f2; $U/ob 1 0 0 0 54 1 0 0 >>f2; dd if=fs bs=528 skip=1 2>/dev/null >>f2
+dd if=f2 bs=153600 count=1 2>/dev/null >f3; $U/ob 1 0 0 0 54 1 0 0 '504*0' >>f3; df f3; echo st$?
+dd if=fs bs=512 count=50 2>/dev/null >f4; df f4 >o4; echo st$?; sed 1q o4
+awk 'BEGIN { x = 1e10; y = x; y %= 3; print int(x), int(-x), x % 3, y, int(7.9), -7 % 3 }' </dev/null
+awk 'BEGIN { printf "%d %d %x\n", 1e20, -1e20, 1e20; print substr("hello", -1e20, 1e20) "|" }' </dev/null
+echo a | awk '{ print $1e20 }'
+echo aaab | sed 's/a*b/X/'; echo abab | sed 's/\(ab\)\1*/X/'; echo ab | sed 's/[ab]*$/X/'; echo x.y | sed 's/.*y/Z/'
+echo a | sed -e :l -e s/a/b/ -e '/a/b l' -e 'w o1' -e 'w o1'; cat o1
+for n in 3998 3999
+do
+	awk 'BEGIN { printf "s/q/"; for (i = 0; i < '$n' - 5; i++) printf "z"; print "/" }' </dev/null >scr
+	echo q | sed -f scr | wc -c; echo q | sed -e "`cat scr`" | wc -c
+done
+cp /etc/passwd pw; (echo x; echo y:z; awk 'BEGIN { for (i = 0; i < 600; i++) printf "a"; print ":p:77:1::/:" }' </dev/null; cat pw) >/etc/passwd
+$U/r5r pw 0; $U/r5r pw 77; $U/r5r pw 7; cp pw /etc/passwd
+(echo 1+400 m; echo 1-300 picometer; echo terameter) | units; echo
+echo '   qi:aa:bb' >idx; echo ' x:y' >qi; /usr/games/quiz -i idx aa bb </dev/null; rm idx qi
+echo x >f; $U/ut f 0 8589934597 >/dev/null; tar cf t f; dd if=t bs=4 skip=34 count=6 2>/dev/null | od -c; tar tvf t
+$U/ut f 0 -1 >/dev/null; tar cf t f; dd if=t bs=4 skip=34 count=6 2>/dev/null | od -c; tar tvf t
+mkdir root root/dev root/etc root/bin; cp /etc/wall root/wall; cp /bin/write root/write; cp /bin/sh root/bin/sh; cp /bin/echo root/bin/echo
+$U/ob 164 61 '6*0' 162 157 157 164 '4*0' '8*0' '24*0' 164 164 164 164 164 164 164 62 144 155 162 '5*0' '8*0' >root/etc/utmp
+>root/dev/t1; >root/dev/ttttttt2
+awk 'BEGIN { for (i = 0; i < 100; i++) printf "%030d\n", i }' </dev/null >m; $U/r5r ch $T/root /wall <m
+until test `cat root/dev/t1 root/dev/ttttttt2 | wc -c` -eq 6052; do sleep 1; done
+sed -n '1,3p;$p' root/dev/t1; cmp root/dev/t1 root/dev/ttttttt2 && echo same
+$U/ob 164 164 '6*0' 162 157 157 164 '4*0' '8*0' 144 155 162 164 164 171 61 62 144 155 162 '5*0' '8*0' >root/etc/utmp
+ln /dev/console root/dev/tt; >root/dev/dmrtty12; chmod 622 root/dev/dmrtty12
+echo hello >m; $U/r5r ch $T/root /write dmr <m 2<root/dev/tt; echo st$?
+echo '!echo hi' >m; $U/r5r ch $T/root /write dmr <m 2<root/dev/tt; echo st$?
+awk 'BEGIN { printf "!echo "; for (i = 0; i < 121; i++) printf "x"; print "" }' </dev/null >m
+$U/r5r ch $T/root /write dmr <m 2<root/dev/tt; echo st$?; cat root/dev/dmrtty12
+$U/r5r ch $T/root /write dmr aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa </dev/null 2<root/dev/tt; echo st$?
+$U/r5r ch $T/root /write nobody </dev/null 2<root/dev/tt; echo st$?
+cd /; rm -rf $T
