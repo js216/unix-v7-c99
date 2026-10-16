@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,363 @@
+@@ -0,0 +1,366 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -458,6 +458,8 @@ usr/local
 +					fp.exp	---644 0 0 usr/local/test/cases/fp.exp
 +					intr	---644 0 0 usr/local/test/cases/intr
 +					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
++					k12	---644 0 0 usr/local/test/cases/k12
++					k12.exp	---644 0 0 usr/local/test/cases/k12.exp
 +					kern	---644 0 0 usr/local/test/cases/kern
 +					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
 +					kern.sed	---644 0 0 usr/local/test/cases/kern.sed
@@ -554,6 +556,7 @@ usr/local
 +					fmode	---755 0 0 usr/local/test/obj/fmode
 +					fpt	---755 0 0 usr/local/test/obj/fpt
 +					fs.img	---644 0 0 usr/local/test/obj/fs.img
++					k12	---755 0 0 usr/local/test/obj/k12
 +					kcmp	---755 0 0 usr/local/test/obj/kcmp
 +					kmt	---755 0 0 usr/local/test/obj/kmt
 +					long	---644 0 0 usr/local/test/utils/long
@@ -17600,6 +17603,13 @@ usr/local
 @@ -7 +7 @@
 -	register i;
 +	register int i;
+@@ -14,2 +14,2 @@
+-	while (*--s == 'X') {
+-		*s = (pid%10) + '0';
++	while (s > as && s[-1] == 'X') {
++		*--s = (pid%10) + '0';
+@@ -18 +17,0 @@
+-	s++;
 
 % usr/src/libc/gen/modf.c usr/src/libc/gen/modf11.s
 @@ -1,4 +1,6 @@
@@ -18019,6 +18029,9 @@ usr/local
 @@ -23 +22 @@
 -	register df;
 +	register int df;
+@@ -39 +38 @@
+-		strcat(rbuf, db.d_name);
++		strncat(rbuf, db.d_name, DIRSIZ);
 
 % usr/src/libc/gen/ttyslot.c
 @@ -6,0 +7 @@
@@ -20901,6 +20914,9 @@ usr/local
 -exp(arg)
 -double arg;
 +exp(double arg)
+@@ -31,0 +30,2 @@
++	if(arg != arg)
++		return(arg);
 
 % usr/src/libm/fabs.c
 @@ -0,0 +1 @@
@@ -21016,6 +21032,17 @@ usr/local
 -pow(arg1,arg2)
 -double arg1, arg2;
 +pow(double arg1, double arg2)
+@@ -14,2 +12 @@
+-	double temp;
+-	long l;
++	double temp, h;
+@@ -23,2 +20 @@
+-		l = arg2;
+-		if(l != arg2)
++		if(modf(arg2, &h) != 0.)
+@@ -27 +23 @@
+-		if(l & 1)
++		if(modf(arg2/2, &h) != 0.)
 
 % usr/src/libm/sin.c
 @@ -18,0 +19,2 @@
@@ -21040,6 +21067,9 @@ usr/local
 +sinus(double arg, int quad)
 @@ -42 +37,0 @@
 -	double modf();
+@@ -49,0 +45,2 @@
++	if(x - x != 0)
++		return(x - x);
 
 % usr/src/libm/sinh.c
 @@ -15 +15 @@
