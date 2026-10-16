@@ -3,7 +3,7 @@ LIB1 = $S/sys/LIB1
 LIB2 = $S/dev/LIB2
 LIB1_OBJ := $(patsubst %.c,%.o,$(wildcard $S/sys/*.c))
 QEMU_DRV = $S/dev/pl011.o $S/dev/virtio_blk.o
-MP135_DRV = $S/dev/stm32usart.o $S/dev/stm32sd.o $S/dev/stm32ddr.o
+MP135_DRV = $S/dev/usart.o $S/dev/sd.o $S/dev/ddr.o
 LIB2_OBJ := $(filter-out $(QEMU_DRV) $(MP135_DRV),$(patsubst %.c,%.o,$(wildcard $S/dev/*.c)))
 BOARDS = qemu mp135
 KERNELS = $(BOARDS:%=$S/conf/%/unix)

@@ -99,7 +99,7 @@ the delay relative to the entry before it, so that the clock interrupt
 need only decrement the first non-zero entry (`clock`, #f("clock.c")). An
 entry with a null `c_func` ends the list. In this system its only user
 is the console driver, which calls `timeout` to have `ttrstrt` resume
-output after a delay (#f("pl011.c"), #f("stm32usart.c")).
+output after a delay (#f("pl011.c"), #f("usart.c")).
 
 The only change is the type of `c_func` (15). In v7 it was an `int`
 function of unspecified arguments; now it is declared as a `void`
@@ -1596,7 +1596,7 @@ driver's entry; one which is not gets an entry which fails. Only `rk` is
 configured here, and the routines named `rk` are those of the virtio
 disk driver (#f("virtio_blk.c")), which took v7's names so that
 `mkconf`'s table could be used unchanged. On the MP135 machine the same
-entry names the routines of the SD card driver, #f("stm32sd.c"), which
+entry names the routines of the SD card driver, #f("sd.c"), which
 took v7's names too; each machine's kernel links only its own driver.
 
 Note the braces around each row, without which `-Wall` warns that a
@@ -1617,7 +1617,7 @@ memory (8), the raw disk (9), and the controlling terminal `tty` (17)
 are configured. Of these only the disk is named in #f("qemuconf"):
 `mkconf` always includes the console, memory, and `tty`. The console's
 routines are named `kl`, after the PDP-11's KL11 interface, and are
-those of #f("pl011.c") (on the MP135 machine, of #f("stm32usart.c")).
+those of #f("pl011.c") (on the MP135 machine, of #f("usart.c")).
 
 The raw disk entry uses `rkread` and `rkwrite`, which call `physio`
 (#f("bio.c")) with the disk's strategy routine. v7's `nodev` in the
@@ -1710,7 +1710,7 @@ The three procedures at the end are the glue by which the
 machine-dependent code calls the configured drivers without naming
 them: `cninit` sets up the console early in `machine_init`, `bdinit`
 finds the disk at the end of `startup`, and `clock_ddr_init`, which on
-the MP135 machine starts the memory controller (#f("stm32ddr.c")), does
+the MP135 machine starts the memory controller (#f("ddr.c")), does
 nothing here, since the QEMU machine's memory needs no initialisation. `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
@@ -3583,7 +3583,7 @@ defined by the configuration, at the size `NCLIST` which it gives
 end of file, and an extra input delimiter. The user's view of the same
 six bytes is `struct tchars` in `sgtty.h`. The drivers named in the
 comment are v7's; in this system the only one is the console, whose
-drivers (#f("pl011.c"), #f("stm32usart.c")) still use `kl11` as the
+drivers (#f("pl011.c"), #f("usart.c")) still use `kl11` as the
 name of the `tty` array.
 
 #lines(20, 40)
@@ -3675,7 +3675,7 @@ single-line serial interfaces, and it has been kept as close to
 order, its procedure names (`klopen`, `klread`, `klstart`, and so on),
 and its `tty` array `kl11`, so that the character switch in
 #f("qemu/c.c") names the console's routines exactly as v7's did. The
-MP135 machine's console driver, #f("stm32usart.c"), follows `kl.c` in
+MP135 machine's console driver, #f("usart.c"), follows `kl.c` in
 the same way and defines the same names; each machine's kernel links
 only its own.
 
@@ -4225,9 +4225,9 @@ transports. The devices which QEMU puts between them are not mapped.
 
 The configuration of the MP135 machine, in the format of
 #f("qemuconf"). The devices, root, and swap are the same: one disk,
-configured as `rk` although it is an SD card driven by #f("stm32sd.c"),
+configured as `rk` although it is an SD card driven by #f("sd.c"),
 holding the root file system and, after it, the swap area. The console
-is the chip's UART4, driven by #f("stm32usart.c").
+is the chip's UART4, driven by #f("usart.c").
 
 #lines(1, 5)
 
@@ -4261,7 +4261,7 @@ processor's data cache is the SD card's DMA controller, which moves
 process images during swapping and raw I/O, and the buffers of the
 buffer cache. The disk driver therefore cleans and invalidates the
 cache over every transfer before it, and invalidates it after a read
-(`dcflush`, `dcinval`, #f("stm32sd.c")), so that the device reads what
+(`dcflush`, `dcinval`, #f("sd.c")), so that the device reads what
 the processor wrote and the processor does not afterwards find stale
 lines. The buffers of the buffer cache occupy whole cache lines of
 their own (#f("main.c")).
@@ -4272,9 +4272,9 @@ and the GPIO ports, the SD card controller, and the DDR controller with
 its PHY (21--24); the interrupt controller (25), which on this chip
 lies apart from them; and the TrustZone controller of the DDR (26).
 The gaps between their kernel addresses are those between the blocks;
-the drivers' register addresses follow from them (#f("stm32usart.c")).
+the drivers' register addresses follow from them (#f("usart.c")).
 
-The last line, `ddr`, asks for `ddrinit` (#f("stm32ddr.c")) to be called
+The last line, `ddr`, asks for `ddrinit` (#f("ddr.c")) to be called
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
 tables in it are touched.
 
@@ -4359,7 +4359,7 @@ declaration was `int rkstrategy();` and a definition of `rktab`, the
 head of the disk's queue, which the disk driver also defined; v7's
 loader merged the two as a common symbol. Now `rkstrategy` is declared
 in #f("systm.h"), and `rktab` is declared `extern`, so that the driver's
-definition (#f("virtio_blk.c"), #f("stm32sd.c")) is the only one. Both
+definition (#f("virtio_blk.c"), #f("sd.c")) is the only one. Both
 machines' disk drivers took v7's `rk` names, so this one entry serves
 for each.
 
@@ -4548,7 +4548,7 @@ name the same devices, root, and swap, and give the tables the same
 sizes, the first 109 lines are identical to those of #f("qemu/c.c"), to
 whose commentary the reader is referred.
 The routines behind the names are different: `kl` is now the UART
-driver #f("stm32usart.c"), and `rk` the SD card driver #f("stm32sd.c").
+driver #f("usart.c"), and `rk` the SD card driver #f("sd.c").
 
 #lines(1, 109)
 
@@ -4566,12 +4566,12 @@ it; and six blocks of peripherals, from 0xf0000000 (@ch-startup).
 #lines(110, 125)
 
 `intrtab` is the same as the QEMU machine's, though the numbers behind `klirq` and
-`rkirq` differ (85 and 82, #f("stm32usart.c"), #f("stm32sd.c")). The one
+`rkirq` differ (85 and 82, #f("usart.c"), #f("sd.c")). The one
 difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
-(#f("stm32ddr.c")), since the configuration ends with `ddr`.
+(#f("ddr.c")), since the configuration ends with `ddr`.
 
 #lines(126, 137)
-#source("/usr/sys/dev/stm32usart.c")
+#source("/usr/sys/dev/usart.c")
 
 The console driver of the MP135 machine. Like #f("pl011.c") on the QEMU
 machine,
@@ -4724,7 +4724,7 @@ bounded by time, and a newline is followed by a carriage return alone,
 as in #f("pl011.c").
 
 #lines(195, 236)
-#source("/usr/sys/dev/stm32sd.c")
+#source("/usr/sys/dev/sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.
 Like #f("virtio_blk.c") on the QEMU machine, it replaces v7's `rk.c` and
@@ -4867,7 +4867,7 @@ there. The rest is v7's.
 `rkread` and `rkwrite` are v7's, for the raw disk.
 
 #lines(144, 156)
-#source("/usr/sys/dev/stm32ddr.c")
+#source("/usr/sys/dev/ddr.c")
 
 This file is not a driver in v7's sense: it has no switch entry and no
 special file, and its one procedure, `ddrinit`, is called once, early
@@ -4891,7 +4891,7 @@ the kernel, its page tables, and the first processes would then all
 have to fit in SYSRAM, and they do not.
 
 This is also one of the two places where the kernel changes the chip's
-clocks; the other is the console's `klinit` (#f("stm32usart.c")).
+clocks; the other is the console's `klinit` (#f("usart.c")).
 Elsewhere they are taken as the ROM left them, but the DDR needs a
 clock of a particular frequency which the ROM does not provide.
 
@@ -5435,7 +5435,7 @@ user. Opening it (267) makes the child the leader of the terminal's
 process group, as in `single`. In v7 the open of a dial-up
 line slept until the modem reported a call, so that this is where an
 idle line's process waited; the console drivers (#f("pl011.c"),
-#f("stm32usart.c")) have no modem control, and the open returns at
+#f("usart.c")) have no modem control, and the open returns at
 once.
 
 `getty` is called with the name `-` and one argument, the table
@@ -5530,7 +5530,7 @@ the entry `14console` in `/etc/ttys`: enabled, with table `'4'`, the
 tab expansion on output. The speeds of any table are irrelevant here.
 `tty.c` records them, but the console drivers never use them: the QEMU
 machine's UART has no speed to set, and the MP135 machine's is set to
-115200 baud once, by `klinit` (#f("stm32usart.c")), just as the KL11
+115200 baud once, by `klinit` (#f("usart.c")), just as the KL11
 console of the PDP-11 had a speed set by jumpers.
 
 #lines(50, 103)
@@ -10818,7 +10818,7 @@ Everything the kernel prints with `printf` (#f("prf.c")) passes through
 the console driver's `putchar`, which keeps a copy of each character in
 the circular buffer `msgbuf`, 128 bytes (`MSGBUFS`) long, with
 `msgbufp` pointing at the next place to be written (#f("pl011.c"),
-#f("stm32usart.c")). The
+#f("usart.c")). The
 buffer is defined in #f("main.c") and the pointer in #f("machdep.c").
 `dmesg` copies the two out of the running kernel and prints the
 buffer, oldest character first, so that messages which went to the
@@ -12292,7 +12292,7 @@ search path, since they name their headers relative to themselves, as
 `LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
 machine only are kept out of `LIB2`: the UART and the disk of the QEMU
 machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
-machine (#f("stm32usart.c"), #f("stm32sd.c"), #f("stm32ddr.c")). The two sets
+machine (#f("usart.c"), #f("sd.c"), #f("ddr.c")). The two sets
 take the same v7 names, such as `klopen` and `rkstrategy`, and so could
 not share one archive; each kernel is instead linked with its own
 machine's drivers (30, 31). `SYS_OBJ` names every kernel object, so that
@@ -12538,7 +12538,7 @@ only this ELF file; the image which the boot ROM would load, with its
 header, is not made.
 
 Here the separation of `.ddrbss` from `.bss` matters. The DDR is dead
-until `ddrinit` (#f("stm32ddr.c")) has started it, so `_start`
+until `ddrinit` (#f("ddr.c")) has started it, so `_start`
 (#f("low.s")) may clear only `.bss`, in SYSRAM; `machine_init`
 (#f("machdep.c")) clears `.ddrbss` after the DDR is running. `NOLOAD`
 gives the section no contents in the file, so that nothing has to be
