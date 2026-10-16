@@ -1,5 +1,5 @@
 U=/usr/local/test/utils
 set `$U/swb`; e=`expr $2 - 1`
 echo end of disk | dd of=/dev/rrk0 bs=512 seek=$e conv=sync
-dd if=/dev/rrk0 bs=512 skip=$e count=1 | od -c
+dd if=/dev/rrk0 bs=65536 skip=`expr $e / 128` count=1 2>/dev/null | dd bs=512 skip=`expr $e % 128` count=1 | od -c
 dd if=/dev/rrk0 bs=512 skip=99999999999 count=1; echo st$?
