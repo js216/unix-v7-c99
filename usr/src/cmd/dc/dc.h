@@ -112,5 +112,5 @@ int	log10;
 int	count;
 char	*pp;
 void	onintr(int sig);
-char	*nalloc(char *p, unsigned nbytes);
+char	*nalloc(char *p, unsigned n, unsigned nbytes);
 char	*dummy;

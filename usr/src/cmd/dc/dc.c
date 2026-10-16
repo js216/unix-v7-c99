@@ -1733,10 +1733,12 @@ copy(struct blk *hptr, int size)
 	all++;
 	nbytes += size;
 	sz = length(hptr);
-	ptr = nalloc(hptr->beg, (unsigned)size);
+	if(sz > (unsigned)size)
+		sz = size;
+	ptr = nalloc(hptr->beg, sz, (unsigned)size);
 	if(ptr == 0){
 		garbage("copy");
-		if((ptr = nalloc(hptr->beg, (unsigned)size)) == NULL){
+		if((ptr = nalloc(hptr->beg, sz, (unsigned)size)) == NULL){
 			printf("copy size %d\n",size);
 			ospace("copy");
 		}
@@ -1935,13 +1937,13 @@ lookwd(struct blk *p)
 	return(*wp->rdw);
 }
 char *
-nalloc(register char *p, unsigned nbytes)
+nalloc(register char *p, unsigned n, unsigned nbytes)
 {
 	register char *q, *r;
 	q = r = malloc(nbytes);
 	if(q==0)
 		return(0);
-	while(nbytes--)
+	while(n--)
 		*q++ = *p++;
 	return(r);
 }

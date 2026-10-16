@@ -11118,7 +11118,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/dc/dc.c")
 
-#lines(1, 1947)
+#lines(1, 1949)
 
 #source("/usr/src/cmd/egrep.y")
 
