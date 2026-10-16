@@ -273,6 +273,20 @@ memaddr(int dev, off_t off)
 	return(NULL);
 }
 
+/*
+ * A device register at physical address off, for /dev/mem
+ */
+char *
+devaddr(off_t off)
+{
+	register struct memregion *m;
+
+	for(m = board_map; m->end != 0; m++)
+		if(m->attr == BLK_DEV && (unsigned)off - m->start < m->end - m->start)
+			return((char *)(m->va + (unsigned)off - m->start));
+	return(NULL);
+}
+
 int
 fumem(int dev, off_t off)
 {

@@ -153,6 +153,8 @@ int	access(struct inode *ip, int mode),
 	ttread(struct tty *tp), ufalloc(void),
 	xswap(struct proc *p, int ff, int os);
 caddr_t	machine_init(void), ttwrite(struct tty *tp);
+char	*devaddr(off_t off);
+void	iomove(caddr_t cp, int n, int flag);
 unsigned long long cntvct_get(void);
 unsigned	vtop(caddr_t va);
 void	printf(char *fmt, ...);

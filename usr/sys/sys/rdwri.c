@@ -5,7 +5,6 @@
 #include "../h/user.h"
 #include "../h/buf.h"
 #include "../h/conf.h"
-void	iomove(caddr_t cp, int n, int flag);
 
 /*
  * Read the file corresponding to

@@ -14,14 +14,27 @@
 #include "../h/dir.h"
 #include "../h/user.h"
 #include "../h/conf.h"
+#include "../h/buf.h"
 
 void
 mmread(int dev)
 {
 	register int c;
+	register char *a;
+	int w;
 
 	if(minor(dev) == 2)
 		return;
+	if(minor(dev) == 0 && devaddr(u.u_offset)) {
+		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
+		    (a = devaddr(u.u_offset)) != NULL) {
+			w = *(volatile int *)a;
+			iomove((caddr_t)&w, 4, B_READ);
+		}
+		if(u.u_count)
+			u.u_error = ENXIO;
+		return;
+	}
 	do {
 		if ((c = fumem(dev, u.u_offset)) < 0)
 			u.u_error = ENXIO;
@@ -32,9 +45,21 @@ void
 mmwrite(int dev)
 {
 	register int c;
+	register char *a;
+	int w;
 
 	if(minor(dev) == 2) {
 		u.u_count = 0;
+		return;
+	}
+	if(minor(dev) == 0 && devaddr(u.u_offset)) {
+		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
+		    (a = devaddr(u.u_offset)) != NULL) {
+			iomove((caddr_t)&w, 4, B_WRITE);
+			*(volatile int *)a = w;
+		}
+		if(u.u_count)
+			u.u_error = ENXIO;
 		return;
 	}
 	for(;;) {
