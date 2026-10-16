@@ -30,6 +30,7 @@
 #define	ARG	0x08
 #define	CMD	0x0c
 #define	RESP1	0x14
+#define	FIFO	0x80
 #define	DTIMER	0x24
 #define	DLEN	0x28
 #define	DCTRL	0x2c
@@ -43,6 +44,8 @@
 #define	BLK512	0220
 #define	CLEAR	0x1fe00fff
 #define	CMDREND	0100
+#define	DATAEND	0400
+#define	RXFIFOE	(1<<19)
 #define	CMDERR	05
 #define	BUSYD0	(1<<20)
 #define	BUSYD0END	(1<<21)
@@ -105,7 +108,7 @@ void
 rkinit(void)
 {
 	register int i, n;
-	unsigned c;
+	unsigned c, sw[16];
 
 	RCC(0x770) = 014;
 	for (i = 8; i <= 12; i++) {
@@ -150,6 +153,21 @@ rkinit(void)
 	rkcmd(6, 2, 1);
 	SD(CLKCR) = 2 | WIDE;
 	SD(DTIMER) = -1;
+	SD(DCTRL) = 0;
+	SD(DLEN) = 64;
+	SD(DCTRL) = 0140 | DTDIR;
+	rkcmd(6|0100, 0x80FFFFF1, 1);
+	for (n = 0; n < 16; ) {
+		i = SD(STA);
+		if ((i & RXFIFOE) == 0)
+			sw[n++] = SD(FIFO);
+		else if (i & (ERR|DATAEND))
+			break;
+	}
+	if (n == 16 && (sw[4]&017) == 1) {
+		rkdelay(10);
+		SD(CLKCR) = 1 | WIDE;
+	}
 }
 
 void
@@ -190,6 +208,10 @@ rkstart(void)
 	if (rkn > MAXIO)
 		rkn = MAXIO;
 	rkstop = 0;
+	if ((bp->b_flags & B_READ) == 0) {
+		rkcmd(55, rca, 1);
+		rkcmd(23, rkn>>BSHIFT, 1);
+	}
 	dcflush(bp->b_un.b_addr+rkoff, rkn);
 	SD(ICR) = CLEAR;
 	SD(DCTRL) = 0;
