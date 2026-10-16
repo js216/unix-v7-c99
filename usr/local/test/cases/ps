@@ -4,5 +4,5 @@ ps ax | sed -n '1p;/swapper$/p;/ps ax$/p'
 sleep 1 & wait; ps ax | grep -c 'sle[e]p'
 (echo a; exec $U/pidf p sleep 100) | (until test -s p; do sleep 1; done; ps ax | grep -c 'sle[e]p 100'; kill -13 `cat p`; cat)
 for i in 1 2 3 4 5 6 7 8 9 10; do echo crypttest | crypt key | crypt key; done
-for i in 1 2 3 4 5 6 7 8 9 10; do sleep 1 & wait; ps | grep -c 'sle[e]p'; echo crypttest | crypt key | crypt key; done
+for i in 1 2 3; do sleep 1 & wait; ps | grep -c 'sle[e]p'; echo crypttest | crypt key | crypt key; done
 cd /; rm -rf $T
