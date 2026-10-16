@@ -31,6 +31,7 @@ printf(char *fmt, ...)
 	register int c;
 	va_list adx;
 	char *s;
+	long l;
 
 	va_start(adx, fmt);
 loop:
@@ -42,6 +43,10 @@ loop:
 		putchar(c);
 	}
 	c = *fmt++;
+	if(c == '\0') {
+		va_end(adx);
+		return;
+	}
 	if(c == 'd' || c == 'u' || c == 'o' || c == 'x')
 		printn(va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
 	else if(c == 's') {
@@ -49,7 +54,15 @@ loop:
 		while((c = *s++))
 			putchar(c);
 	} else if (c == 'D') {
-		printn(va_arg(adx, long), 10);
+		l = va_arg(adx, long);
+		if(l < 0) {
+			putchar('-');
+			printn(-(unsigned long)l, 10);
+		} else
+			printn(l, 10);
+	} else {
+		putchar('%');
+		putchar(c);
 	}
 	goto loop;
 }
@@ -97,7 +110,7 @@ prdev(char *str, dev_t dev)
 }
 
 /*
- * deverr prints a diagnostic from
+ * deverror prints a diagnostic from
  * a device driver.
  * It prints the device, block number,
  * and an octal word (usually some error
