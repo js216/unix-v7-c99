@@ -5089,7 +5089,7 @@ routine which sets it (#f("libc/syscall.s")).
 v7's file ended by reserving two bytes at the start of `.data`. In a
 program with separate instruction and data spaces, data location 0
 would otherwise have held a variable, whose address would then compare
-equal to a null pointer. The port's programs are linked at `0xa0`, with
+equal to a null pointer. The port's programs are linked at `0x94`, with
 the signal trampoline at 8 (#f("seg.h")), so no object of the program can
 lie at address 0, and the padding is gone.
 
@@ -12104,7 +12104,7 @@ code and constants, is 41,711 bytes with `-Os` against 48,850 with
 `-O`, which matters on the MP135 machine, where the whole kernel must
 fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
-`-Wl,-z,max-page-size=4096,-Ttext=0xa0` are options for the linker,
+`-Wl,-z,max-page-size=4096,-Ttext=0x94` are options for the linker,
 which the compiler ignores when it only compiles; they apply to the
 link of every user program (20), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
@@ -12113,10 +12113,13 @@ executable, and the data, readable and writable. This is the ELF
 counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
 read-only and shares it among all the processes running the program. `max-page-size`
 places the data at the start of a new 4096-byte page, so that the two
-can be mapped with different permissions. `-Ttext=0xa0` links the text
-at address `0xa0`, which leaves room below it for the signal trampoline
-at 8 (#f("seg.h")), and for the ELF file header and up to three program
-headers (148 bytes). Most programs have three: the 64-bit division of
+can be mapped with different permissions. `-Ttext=0x94` links the text
+at address `0x94`, just past the ELF file header (52 bytes) and three
+program headers (32 bytes each), 148 bytes in all, which the linker
+places at the start of the text segment; the text is word-aligned, as
+0x94 is. The signal trampoline at 8 (#f("seg.h")) lies within the
+headers, written over them by `xalloc` (#f("text.c")) while the text is
+still writable. Most programs have three: the 64-bit division of
 `libgcc`, which `_doprnt` needs (#f("stdio/doprnt.c")), brings a section
 of unwinding information, `.ARM.exidx`, to which the linker gives a
 program header of its own beside the two loadable segments. The linker
