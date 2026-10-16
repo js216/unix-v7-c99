@@ -102,7 +102,7 @@ rkcmd(int com, unsigned arg, int resp)
 /*
  * Bring the card up as the boot ROM would have:
  * pins, a 400 kHz clock, identification, the size
- * from the CSD, selection, then 16 MHz.
+ * from the CSD, selection, then 4 bits at 32 MHz.
  */
 void
 rkinit(void)
