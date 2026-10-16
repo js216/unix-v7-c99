@@ -13,7 +13,7 @@ wc -l big
 p=.; for i in 0 1 2 3 4 5 6 7 8 9 a b c d e; do p=$p/./././././././././.; done; echo $p/longdir | wc -c
 mkdir $p/longdir; echo st$?; ls -d longdir; rmdir longdir
 cp /usr/lib/crontab crontab
-awk 'BEGIN { for (i = 1; i <= 4; i++) { s = ""; for (j = 0; j < 40; j++) s = s "xxxxxxxxxx"; printf "* * * * * echo %d %s >/tmp/r5a/cron%d\n", i, s, i } }' </dev/null >/usr/lib/crontab; wc /usr/lib/crontab
+awk 'BEGIN { for (i = 1; i <= 4; i++) { s = ""; for (j = 0; j < 40; j++) s = s "xxxxxxxxxx"; printf "* * * * * test -s /tmp/r5a/cron%d || echo %d %s >/tmp/r5a/cron%d\n", i, i, s, i } }' </dev/null >/usr/lib/crontab; wc /usr/lib/crontab
 c=`ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`; for p in $c; do kill -9 $p; done; /etc/cron; until test -s $T/cron1 -a -s $T/cron2 -a -s $T/cron3 -a -s $T/cron4; do sleep 1; done; cat $T/cron? | wc
 for p in `ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`; do kill -9 $p; done; cp crontab /usr/lib/crontab; test -n "$c" && /etc/cron
 mkdir $T/a-b; cp /bin/echo $T/a-b/zzz; PATH=$T/a-b:/bin nice zzz hello
