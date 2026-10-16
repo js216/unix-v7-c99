@@ -35,9 +35,9 @@ malloc(struct map *mp, int size)
 }
 
 /*
- * Free the previously allocated space aa
+ * Free the previously allocated space a
  * of size units into the specified map.
- * Sort aa into map and combine on
+ * Sort a into map and combine on
  * one or both ends if possible.
  */
 void
