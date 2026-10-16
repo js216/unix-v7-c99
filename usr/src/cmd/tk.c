@@ -218,6 +218,7 @@ execom(void)
 			freopen("/dev/null", "r", stdin);
 	}
 	execl("/bin/sh", "sh", "-t", (char *)0);
+	exit(1);
 }
 
 void
