@@ -245,9 +245,9 @@ grow(unsigned sp)
 	register struct proc *p;
 	register int a;
 
-	if(sp >= USERSIZE-ptob(u.u_ssize))
+	if(sp >= USRSIZE-ptob(u.u_ssize))
 		return(0);
-	si = (USERSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
+	si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
 	if(si <= 0)
 		return(0);
 	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))

@@ -84,7 +84,7 @@
 #define	NSHIFT	7		/* LOG2(NINDIR) */
 #define	USIZE	2		/* size of user block (*4096) */
 #define	UBASE	0xFFE00000U	/* abs. addr of user block */
-#define	USERSIZE	0xC0000000U	/* size of user address space */
+#define	USRSIZE	0xC0000000U	/* size of user address space */
 #define	NULL	0
 #define	CMASK	0		/* default mask for file creation */
 #define	NODEV	(dev_t)(-1)

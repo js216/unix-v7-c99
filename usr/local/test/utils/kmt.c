@@ -21,7 +21,7 @@ main(void)
 	k = open("/dev/kmem", 0);
 	m = open("/dev/mem", 0);
 	nlist("/unix", nl);
-	printf("proc above USERSIZE %d\n", nl[0].n_value >= USERSIZE);
+	printf("proc above USRSIZE %d\n", nl[0].n_value >= USRSIZE);
 	pid = getpid();
 	lseek(k, (long)nl[0].n_value, 0);
 	for (i = 0; i < NPROC; i++) {

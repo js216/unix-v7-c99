@@ -36,7 +36,7 @@ before e3a00001
 w e3a00002 e12fff1e
 after e3a00002
 exit 12
-proc above USERSIZE 1
+proc above USRSIZE 1
 found self 1
 kmem u 1
 mem u 1

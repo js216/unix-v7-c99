@@ -106,7 +106,7 @@ exece(void)
 	 * copy back arglist
 	 */
 
-	ucp = USERSIZE - nc - NBPW;
+	ucp = USRSIZE - nc - NBPW;
 	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
 	u.u_ar0[R6] = ap;
 	suword((caddr_t)ap, na-ne);

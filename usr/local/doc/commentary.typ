@@ -524,7 +524,7 @@ routine expects.
 
 v7 placed the strings at `-nc - NBPW` (109): on the PDP-11 user
 addresses were 16 bits, and a negative number named a location below the
-top of the 64 KB address space. The ARM user address space is `USERSIZE`, 3 GB,
+top of the 64 KB address space. The ARM user address space is `USRSIZE`, 3 GB,
 and the strings now end one word below its top. The stack pointer
 (`ap`) is rounded down to a multiple of 8, since the ARM procedure call
 standard requires that alignment at every call, and `crt0` calls `main`
@@ -1060,8 +1060,8 @@ then executed again.
 On the PDP-11 the stack lay at the top of the 64 KB address space, so
 `-ctob(u.u_ssize)` was the lowest address of the stack as an unsigned
 16-bit number, and `-sp` the depth of `sp` below the top. In 32 bits
-the top of the address space is `USERSIZE` (#f("param.h")), and the two
-expressions become `USERSIZE-ptob(u.u_ssize)` and `USERSIZE-sp`
+the top of the address space is `USRSIZE` (#f("param.h")), and the two
+expressions become `USRSIZE-ptob(u.u_ssize)` and `USRSIZE-sp`
 (247--249); the divisor 64, the PDP-11's click in bytes, becomes
 `ptob(1)`. The rest is v7's. The new stack size is the depth of `sp` in
 pages, rounded down, plus `SINCR` pages of room; `estabur` refuses it
@@ -2068,7 +2068,7 @@ transfer is described by `u_base`, `u_count`, and `u_offset`, as for
 #lines(464, 485)
 
 The checks (486) are v7's, with two added. The transfer must lie within
-the user's address space, below `USERSIZE`, and its offset on the
+the user's address space, below `USRSIZE`, and its offset on the
 device must not be negative (487). `readi` and `writei` let a negative
 offset through to character devices, for the sake of `/dev/kmem`
 (#f("rdwri.c")); for a disk it would become a negative block number,
@@ -2085,7 +2085,7 @@ v7 then checked that the transfer lay wholly in the data segment or
 wholly in the stack (499--507), the two parts of the user's address
 space which are mapped, and which lie in different places in core. The
 check is v7's, with the page size changed and the top of the address
-space, which v7 wrote as 1024 clicks, now `btop(USERSIZE)`. v7 also
+space, which v7 wrote as 1024 clicks, now `btop(USRSIZE)`. v7 also
 masked the addresses with `01777` to keep them within the 64 KB address
 space; the test at 487 has already done that here. v7 tested the click
 of the byte after the transfer, so that a transfer which ended exactly
@@ -6276,7 +6276,7 @@ executes them until the end of the input.
 
 `<sys/param.h>` (14) replaces v7's `<sys/types.h>`: it carries the
 same type definitions, which may not be given twice, and also
-`USERSIZE`, which `execargs.h` needs.
+`USRSIZE`, which `execargs.h` needs.
 
 The definitions at 23--30 are new. They are the variables which
 #f("sh/defs.h") declares; in v7 the header itself defined them, in
@@ -6340,7 +6340,7 @@ On re-entry for a command file (92), the shell stores `dolv` through
 looks for the arguments of a process, and the store makes the command
 file appear there under its own name. In v7 `execargs` was
 `(char **)-2`, the last word of the PDP-11's 64 KB address space; in
-the port it is `USERSIZE-4`, the last word below the end of the 3 GB
+the port it is `USRSIZE-4`, the last word below the end of the 3 GB
 user address space, which `exec` leaves zero. The cast of `dolv` to `char *` is new: v7 stored a
 `char **` where a `char *` belongs without one.
 
@@ -10579,10 +10579,10 @@ by anyone instead.
 v7 included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
 such header, and the macros are defined here (8--10), with the top of
-the stack at `USERSIZE`, the end of the 3 GB user address space
+the stack at `USRSIZE`, the end of the 3 GB user address space
 (#f("param.h")), where the PDP-11's was at `0x10000`, the end of its
 64 KB address space. The macros are expanded only where they are used,
-after `<sys/param.h>` (11) has defined `USERSIZE`.
+after `<sys/param.h>` (11) has defined `USRSIZE`.
 `TXTRNDSIZ`, the unit to which the text is rounded before the data
 begins, is a page, where the PDP-11's was an 8 KB segment. The
 argument `siz` of `stacktop` was unused in v7 too.
@@ -10718,7 +10718,7 @@ assume `HZ` of 60, which holds (#f("param.h")).
 #lines(241, 283)
 
 The arguments are sought in the last 512 bytes of the image, the top of
-the stack. First the last word below `USERSIZE` is examined: `exec` leaves
+the stack. First the last word below `USRSIZE` is examined: `exec` leaves
 it zero, but the shell, when it runs a command file, stores there a
 pointer to its own argument list (`execargs`, #f("sh/main.c")), so that
 `ps` shows the name of the command file rather than `sh`. The pointers

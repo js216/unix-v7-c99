@@ -484,7 +484,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * Check odd base, odd count, and address wraparound
 	 */
 	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
-	    base+u.u_count > USERSIZE || u.u_offset < 0)
+	    base+u.u_count > USRSIZE || u.u_offset < 0)
 		goto bad;
 	ts = u.u_tsize;
 	if (u.u_sep)
@@ -503,7 +503,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 	 * (remember wraparound was already checked).
 	 */
 	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
-	    && nb < (int)(btop(USERSIZE)-u.u_ssize))
+	    && nb < (int)(btop(USRSIZE)-u.u_ssize))
 		goto bad;
 	spl6();
 	while (bp->b_flags&B_BUSY) {
@@ -520,7 +520,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
 		ts = u.u_procp->p_addr + USIZE + nb - ts;
 	else
 		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
-		    (btop(USERSIZE)-u.u_ssize);
+		    (btop(USRSIZE)-u.u_ssize);
 	bp->b_un.b_addr = PGADDR(ts) + (base&07777);
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;
