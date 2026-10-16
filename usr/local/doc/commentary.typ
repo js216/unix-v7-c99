@@ -282,27 +282,12 @@ the scale, as v7 did by way of `nofault`.
 #lines(185, 191)
 #source("/usr/sys/sys/sysent.c")
 
-In v7 #f("sysent.c") held nothing but the table of system calls, and the
-procedure which used it, `trap`, lived with the other trap handling in
-`trap.c`. Here `trap.c` is gone and its surviving parts are
-here: the table, `regloc`, a much reduced `trap` which handles only
-system calls, `user_trap_handler`, which handles every other exception,
-and the two dummy calls `nosys` and `nullsys`.
+#f("sysent.c") holds the table of system calls, and nothing else.
+v7 declared every system call routine here as an `int` function;
+#f("systm.h") now declares them all with prototypes, as `void`
+functions of no arguments, `nosys` and `nullsys` among them.
 
-The includes added at 3--5 are among those of v7's `trap.c`; #f("dir.h")
-and #f("user.h") for `u`, and #f("reg.h") for the register indices, are
-all that `trap` now needs. `EBIT` (6), the carry bit of the saved
-status register, is v7's definition from `trap.c`, with the bit's
-position in the ARM's `CPSR`.
-
-v7 declared every system call routine here as an `int` function.
-#f("systm.h") now declares them all with prototypes, as
-`void` functions of no arguments. `nosys` and `nullsys` (7, 8) are v7's,
-moved from `trap.c`: `nosys` fails with `EINVAL`, and `nullsys` does
-nothing. They are used only in the table, so they are made `static` and
-defined before it, which spares them a declaration.
-
-#lines(1, 9)
+#lines(1, 3)
 
 The table is indexed by system call number. Each entry gives the number
 of arguments, the number of them passed in registers, and the routine.
@@ -316,11 +301,11 @@ the instruction stream. On the ARM all arguments come in registers, so
 the two columns are now equal and the counts have been corrected for
 the 32-bit word:
 
-- `seek` (38), call 19, took four words, since its offset was a two-word `long`;
-  now it takes three. `stime` (44) keeps v7's two: the `time_t` it
+- `seek` (32), call 19, took four words, since its offset was a two-word `long`;
+  now it takes three. `stime` (38) keeps v7's two: the `time_t` it
   receives is now 64 bits, two ARM words, as the PDP-11's `long` was
   two of its own.
-- `tell` (59), which is `nosys` in any case, is given no arguments.
+- `tell` (53), which is `nosys` in any case, is given no arguments.
 
 Two slots have changed their routine. Slot 56, the multiplexor
 `mpxchan`, was in v7 either the real multiplexed file system or the
@@ -332,31 +317,42 @@ signal handler's trampoline calls to restore the registers which
 returned from a handler with the `rtt` instruction, which reloads both
 `pc` and `ps` from the user stack.
 
-#lines(10, 83)
+#lines(4, 77)
+
+#source("/usr/sys/sys/trap.c")
+
+#f("trap.c") is what remains of v7's trap handling: `regloc`, a much
+reduced `trap` which handles only system calls, `user_trap_handler`,
+which handles every other exception, and the two dummy calls `nosys`
+and `nullsys`. #f("dir.h") and #f("user.h") are included for `u`, and
+#f("reg.h") for the register indices. `EBIT` (7), the carry bit of the
+saved status register, has the bit's position in the ARM's `CPSR`.
+
+#lines(1, 8)
 
 `regloc` maps the PDP-11 register numbers 0 to 7, and the status word,
 onto indices in the saved frame (#f("reg.h")). `ptrace` uses it. It
 comes from v7's `trap.c`.
 
-#lines(84, 84)
+#lines(9, 17)
 
 `trap` is called from the `svc` entry in #f("low.s") with a pointer to
 the frame of saved registers, with interrupts enabled. It is v7's
 system call case, taken out of the switch over trap types, with the
 differences which follow.
 
-#lines(85, 95)
+#lines(18, 28)
 
-The carry bit is cleared (96), as v7 cleared it on entry; it is set
+The carry bit is cleared (29), as v7 cleared it on entry; it is set
 again below if the call fails.
 
-The call number (97) is not fetched from the low six bits of the
+The call number (30) is not fetched from the low six bits of the
 `sys` instruction in user memory, but taken from the register `r7`,
 where the library stub has put it (`r[7]` is the ARM `r7`, not `R7`,
 which is the `pc`). This is the convention of ARM Linux. A number
 greater than 63 is reduced modulo 64.
 
-The `sy_narg` arguments are copied from `r0` upwards (98, 99). v7
+The `sy_narg` arguments are copied from `r0` upwards (31, 32). v7
 found its register arguments through `regloc`, and then advanced the
 saved `pc` past any inline arguments; there are none here, so the saved
 `pc` already addresses the instruction after the `svc`. No entry of the
@@ -368,33 +364,33 @@ inline, with that instruction's inline arguments. There being no inline
 arguments, it is reduced to `nullsys`; `trap` no longer has the special
 case for it.
 
-The second return value is preset to the user's `r1` (102), as in v7.
-The first is preset to zero (101), where v7 preset it to the user's
+The second return value is preset to the user's `r1` (35), as in v7.
+The first is preset to zero (34), where v7 preset it to the user's
 `r0`. v7's library stubs cleared `r0` themselves after a call which
 returns no value, such as `close` or `chdir`; here every stub returns
 `r0` as the kernel leaves it (#f("libc/syscall.s")), and the preset makes
 such a call return zero rather than its first argument.
 
-#lines(96, 103)
+#lines(29, 36)
 
 The call itself is made as in v7. The `save` of `u.u_qsav` provides the point to
 which `sleep` (#f("slp.c")) returns when a signal interrupts a system
 call, and in that event the call fails with `EINTR`.
 
-An error is reported as in v7 (110--116): the carry bit is set in the
+An error is reported as in v7 (43--49): the carry bit is set in the
 saved status register, and the error number is returned in `r0`. The
 library's `cerror` (#f("libc/syscall.s")) tests the carry, stores `r0` in
 `errno`, and returns -1. Since the error is not encoded in `r0`, a
 successful call may return any value, a `time` after January 2038
 among them.
 
-#lines(104, 116)
+#lines(37, 49)
 
-The common tail of v7's `trap` follows (117--121): any pending signal is acted
+The common tail of v7's `trap` follows (50--54): any pending signal is acted
 upon, the process's priority is recomputed, and if a more deserving
 process is waiting the processor is given up.
 
-If the process is being profiled (92, 122, 123), the system time spent
+If the process is being profiled (25, 55, 56), the system time spent
 in the call, the ticks which `clock` added to `u_stime` meanwhile, is
 charged to the user's `pc`, which is the instruction after the `svc`;
 `clock` (#f("clock.c")) charges only ticks in user mode, so without this
@@ -403,48 +399,48 @@ This is v7's code, but for the `pc`, which v7 received as a parameter
 and here is taken from the frame.
 
 Finally, as in v7, the floating point registers are loaded from the
-u-area if anything since the entry (93) stored them there (124, 125): a
+u-area if anything since the entry (26) stored them there (57, 58): a
 switch to another process, a signal, `fork`, or `exec`, which sets
 `u_fpsaved` itself after clearing the saved registers (#f("sys1.c")). If
 nothing did, the registers still hold the process's own values, and
 nothing need be done.
 
-#lines(117, 126)
+#lines(50, 59)
 
 `user_trap_handler` handles the rest of v7's `trap`: the exceptions
 other than `svc`, and the preemption check after an interrupt. It is
 called from #f("low.s") with a signal number, the saved frame, and, for
 a data abort, the address which could not be reached.
 
-If the exception was not taken in user mode (`0x10`, 130--134), the
+If the exception was not taken in user mode (`0x10`, 63--67), the
 kernel itself has faulted, and the system panics, after printing the
 faulting address and its cause from the coprocessor registers `DFAR`
 and `DFSR`. v7 printed the PDP-11 equivalents. A fault in one of the
 routines which reach user memory never arrives here: #f("low.s") sends
 it back to the routine through `nofault` (#f("mch.s")).
 
-#lines(127, 134)
+#lines(60, 67)
 
 An undefined instruction in Thumb code (the `T` bit, `0x20`, of the
 saved status) leaves the saved PC two bytes past the start of the
 instruction (#f("low.s")). The top five bits of the instruction's first
 halfword, read with `fubyte` from its upper byte, tell whether it is 32
 bits long (`0xe8` and above); if so, the PC is moved past the second
-halfword (137, 138), so that a handler which returns resumes at the next
+halfword (70, 71), so that a handler which returns resumes at the next
 instruction, not in the middle of this one. Such code comes only from
 the C compiler's support library (#f("machdep.c") has more on Thumb
 state).
 
 The signal is then posted to the current process and
 the same tail as in `trap` is run, the loading of the floating point
-registers included (147, 148). A signal number of zero is passed by
+registers included (80, 81). A signal number of zero is passed by
 the interrupt entry, when `runrun` is set; nothing is posted then
-(139), and the call serves only to reach the tail, as v7's type 12 trap
+(72), and the call serves only to reach the tail, as v7's type 12 trap
 did.
 
 The exception is the one which v7's `trap` also made for a segmentation
 fault: if the stack can grow to cover the fault, it is grown and no
-signal is sent (139--141), and the process resumes at the faulting
+signal is sent (72--74), and the process resumes at the faulting
 instruction, which this time succeeds. v7 grew the stack to cover the
 stack pointer, which on the PDP-11 had already been decremented when a
 push faulted. On the ARM a store multiple which pushes registers leaves
@@ -463,7 +459,11 @@ instruction also arrives as a prefetch abort, and gives `SIGSEG`, not
 `SIGTRC`. There are no `iot` and `emt` instructions, no floating point
 exceptions, and no parity registers.
 
-#lines(135, 149)
+#lines(68, 82)
+
+`nosys` fails with `EINVAL`, and `nullsys` does nothing.
+
+#lines(83, 99)
 #source("/usr/sys/sys/sys1.c")
 
 #f("sys1.c") holds the system calls which make, change, and end
