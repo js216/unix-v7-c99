@@ -122,7 +122,7 @@ irq(int *r)
 
 	n = GICC(0xc);
 	if((n&0x3ff) == TIMER)
-		clock((caddr_t)r[PC], (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
+		clock((caddr_t)r[PC], r[RPS]);
 	else
 		for(ip = intrtab; ip->i_irq; ip++)
 			if(*ip->i_irq == (int)(n&0x3ff))

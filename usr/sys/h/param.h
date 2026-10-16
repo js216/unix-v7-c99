@@ -136,7 +136,7 @@ typedef	long		off_t;
 /*
  * Machine-dependent bits and macros
  */
-#define	UMODE	0170000		/* usermode bits */
-#define	USERMODE(ps)	((ps & UMODE)==UMODE)
+#define	UMODE	037		/* mode bits of the CPSR */
+#define	USERMODE(ps)	((ps & UMODE)==020)
 
 extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;

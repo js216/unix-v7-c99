@@ -137,8 +137,8 @@ the stack: the device number, the stack pointer, `r1`, the new PS, `r0`,
 and the `pc` and `ps` of the interrupted program. Only the last two were
 used. The caller is now `irq` (#f("machdep.c")), an ordinary C
 procedure, and `clock` takes just those two: the interrupted `pc`, and
-for `ps` either `UMODE` or zero, according to whether the processor was
-in user mode.
+for `ps` the interrupted program's status register, whose mode field
+`USERMODE` tests (#f("param.h")).
 
 `clock` runs 60 times a second (`HZ`), with interrupts masked, and must
 therefore be brief. The list of functions in the comment is v7's; the
