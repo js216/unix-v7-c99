@@ -15,9 +15,10 @@
 #define	NRK	4
 
 #define	RESET	0
-#define	WCOM	24
-#define	RCOM	17
+#define	WCOM	25
+#define	RCOM	18
 #define	GO	0x1140
+#define	STOP	0x118c
 #define	DRESET	014
 #define	IENABLE	0x800013f
 #define	DRY	0200
@@ -41,6 +42,12 @@
 #define	DTDIR	02
 #define	BLK512	0220
 #define	CLEAR	0x1fe00fff
+#define	CMDREND	0100
+#define	CMDERR	05
+#define	BUSYD0	(1<<20)
+#define	BUSYD0END	(1<<21)
+#define	WIDE	(1<<14)
+#define	MAXIO	0x1000000
 
 /*
  * Monitoring device bit
@@ -52,6 +59,7 @@ int	rkirq = 82;
 struct	buf	rktab;
 struct	buf	rrkbuf;
 unsigned	rkoff;
+static unsigned	rkn, rkstop, rksta;
 daddr_t	nrkblk;
 static unsigned	rca, rkbyte;
 
@@ -138,7 +146,9 @@ rkinit(void)
 		nrkblk = (c+1) << (((SD(RESP1+8)>>15)&7) + 2 + ((SD(RESP1+4)>>16)&017) - 9);
 	}
 	rkcmd(7, rca, 1);
-	SD(CLKCR) = 2;
+	rkcmd(55, rca, 1);
+	rkcmd(6, 2, 1);
+	SD(CLKCR) = 2 | WIDE;
 	SD(DTIMER) = -1;
 }
 
@@ -163,6 +173,10 @@ rkstrategy(register struct buf *bp)
 	spl0();
 }
 
+/*
+ * One command moves the rest of the buffer, up to MAXIO
+ * bytes; CMD12 then stops the card.
+ */
 void
 rkstart(void)
 {
@@ -172,10 +186,14 @@ rkstart(void)
 	if ((bp = rktab.b_actf) == NULL)
 		return;
 	rktab.b_active++;
-	dcflush(bp->b_un.b_addr+rkoff, BSIZE);
+	rkn = bp->b_bcount - rkoff;
+	if (rkn > MAXIO)
+		rkn = MAXIO;
+	rkstop = 0;
+	dcflush(bp->b_un.b_addr+rkoff, rkn);
 	SD(ICR) = CLEAR;
 	SD(DCTRL) = 0;
-	SD(DLEN) = BSIZE;
+	SD(DLEN) = rkn;
 	SD(DCTRL) = bp->b_flags&B_READ ? BLK512|DTDIR : BLK512;
 	SD(IDMABASER) = vtop(bp->b_un.b_addr+rkoff);
 	SD(IDMACTRL) = 1;
@@ -188,8 +206,7 @@ rkstart(void)
 	SD(CMD) = com;
 	dk_busy |= 1<<DK_N;
 	dk_numb[DK_N] = (unsigned long)dk_numb[DK_N] + 1;
-	com = BSIZE>>6;
-	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + com;
+	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + (rkn>>6);
 }
 
 void
@@ -200,21 +217,39 @@ rkintr(void)
 
 	sta = SD(STA);
 	SD(ICR) = CLEAR;
-	SD(MASK) = 0;
-	SD(IDMACTRL) = 0;
-	if (rktab.b_active == NULL)
+	if (rktab.b_active == NULL) {
+		SD(MASK) = 0;
 		return;
+	}
+	if (rkstop == 0) {
+		SD(IDMACTRL) = 0;
+		rksta = sta;
+		rkstop = 1;
+		SD(MASK) = CMDREND|CMDERR|BUSYD0END;
+		SD(ARG) = 0;
+		SD(CMD) = STOP;
+		return;
+	}
+	if (rkstop == 1 && (sta&CMDERR) == 0 && SD(STA)&BUSYD0) {
+		rkstop = 2;
+		SD(MASK) = BUSYD0END;
+		return;
+	}
+	SD(MASK) = 0;
+	if (sta&CMDERR)
+		rksta |= sta;
+	sta = rksta;
 	dk_busy &= ~(1<<DK_N);
 	bp = rktab.b_actf;
 	rktab.b_active = NULL;
-	if (sta & ERR) {
+	if (sta & (ERR|CMDERR)) {
 		deverror(bp, sta, 0);
 		if (++rktab.b_errcnt <= 10) {
 			rkstart();
 			return;
 		}
 		bp->b_flags |= B_ERROR;
-	} else if ((rkoff += BSIZE) < bp->b_bcount) {
+	} else if ((rkoff += rkn) < bp->b_bcount) {
 		rkstart();
 		return;
 	}
