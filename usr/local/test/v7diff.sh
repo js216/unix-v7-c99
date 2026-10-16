@@ -14,7 +14,7 @@ usr/local
 % usr/src/cmd/cmd.mk /dev/null
 @@ -0,0 +1,50 @@
 +C = usr/src/cmd
-+CMD_ETC = accton cron dmesg getty init mknod mount umount update wall
++CMD_ETC = accton cron dmesg getty init mknod mount reset umount update wall wdog
 +CMD_USRLIB = atrun diff3 diffh makekey
 +CMD_DIRS = awk dc sed sh tar tp
 +
@@ -103,18 +103,18 @@ usr/local
 +	$(call T,AR)$(AR) rc $@ $^
 
 % usr/sys/sys.mk /dev/null
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,42 @@
 +S = usr/sys
 +LIB1 = $S/sys/LIB1
 +LIB2 = $S/dev/LIB2
 +LIB1_OBJ := $(patsubst %.c,%.o,$(wildcard $S/sys/*.c))
 +QEMU_DRV = $S/dev/pl011.o $S/dev/virtio_blk.o
-+MP135_DRV = $S/dev/usart.o $S/dev/sd.o $S/dev/ddr.o
++MP135_DRV = $S/dev/otg.o $S/dev/sd.o $S/dev/ddr.o $S/dev/pmic.o
 +LIB2_OBJ := $(filter-out $(QEMU_DRV) $(MP135_DRV),$(patsubst %.c,%.o,$(wildcard $S/dev/*.c)))
 +BOARDS = qemu mp135
 +KERNELS = $(BOARDS:%=$S/conf/%/unix)
 +SYS_OBJ = $(LIB1_OBJ) $(LIB2_OBJ) $(QEMU_DRV) $(MP135_DRV) $S/conf/low.o $S/conf/mch.o $(BOARDS:%=$S/conf/%/c.o)
-+GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf
++GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) $S/conf/mkconf $S/conf/mkstm32
 +
 +$(SYS_OBJ): $S/sys.mk
 +$(SYS_OBJ): CFLAGS += -mfloat-abi=soft
@@ -127,6 +127,9 @@ usr/local
 +$S/conf/mkconf: $S/conf/mkconf.c
 +	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
 +
++$S/conf/mkstm32: $S/conf/mkstm32.c
++	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
++
 +$S/conf/%/c.c $S/conf/%/unix.ld: $S/conf/%conf $S/conf/mkconf
 +	$Qmkdir -p $(@D)
 +	$(call T,MKCONF)cd $(@D) && ../mkconf <../$*conf
@@ -137,9 +140,15 @@ usr/local
 +$S/conf/mp135/unix: $(MP135_DRV)
 +$S/conf/%/unix: $S/conf/low.o $S/conf/mch.o $S/conf/%/c.o $(LIB1) $(LIB2) $S/conf/%/unix.ld
 +	$(call T,LD)$(CC) -nostdlib -T $(@D)/unix.ld -o $@ $(filter %.o,$^) $(LIB1) $(LIB2)
++
++all: boot/unix-mp135.stm32
++boot/unix-mp135.bin: $S/conf/mp135/unix
++	$(call T,OBJCOPY)$(CROSS_COMPILE)objcopy -O binary $< $@
++boot/unix-mp135.stm32: boot/unix-mp135.bin $S/conf/mkstm32
++	$(call T,MKSTM32)$S/conf/mkstm32 $< $@
 
 % Makefile /dev/null
-@@ -0,0 +1,91 @@
+@@ -0,0 +1,95 @@
 +CROSS_COMPILE ?= arm-none-eabi-
 +CC = $(CROSS_COMPILE)gcc
 +AS = $(CROSS_COMPILE)as
@@ -167,6 +176,7 @@ usr/local
 +include usr/src/libc/lib.mk
 +include usr/src/libm/lib.mk
 +include usr/src/cmd/cmd.mk
++include usr/src/cmd/standalone/stand.mk
 +include usr/src/games/games.mk
 +include usr/local/test/test.mk
 +
@@ -183,10 +193,15 @@ usr/local
 +boot/unix: usr/sys/conf/qemu/unix
 +	$(call T,CP)cp $< $@
 +
-+qemu: boot/unix boot/rootfs.img
++qemu: boot/unix boot/qemu.img
 +	qemu-system-arm -machine virt -cpu cortex-a7 -m 512M -nographic \
-+	    -kernel boot/unix -drive if=none,file=boot/rootfs.img,format=raw,id=hd0 \
++	    -kernel boot/unix -drive if=none,file=boot/qemu.img,format=raw,id=hd0 \
 +	    -device virtio-blk-device,drive=hd0
++
++boot/qemu.img: boot/rootfs.img $S/conf/qemuconf
++	$(call T,CP)cp --sparse=always $< $@
++	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
++	    $S/conf/qemuconf) $@
 +
 +ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
 +	etc/passwd etc/group etc/ttys etc/rc \
@@ -197,13 +212,11 @@ usr/local
 +
 +DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 +
-+boot/rootfs.img: boot/unix $S/conf/qemuconf
-+boot/rootfs-mp135.img: $S/conf/mp135/unix $S/conf/mp135conf
++boot/rootfs.img: boot/unix
++boot/rootfs-mp135.img: $S/conf/mp135/unix
 +boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto $(ROOT)
 +	$(call T,MKFS)sed 's| boot/unix$$| $(filter boot/unix $S/conf/%/unix,$^)|' boot/rootfs.proto | \
 +	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin
-+	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
-+	    $(filter $S/conf/%conf,$^)) $@
 +
 +etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 +	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
@@ -225,7 +238,7 @@ usr/local
 +clean:
 +	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) $(TEST_IMG)
 +	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
-+	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img
++	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img boot/qemu.img
 +
 +.PHONY: all clean qemu
 +.DELETE_ON_ERROR:
@@ -233,9 +246,9 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,365 @@
+@@ -0,0 +1,361 @@
 +/dev/null
-+131072 16384
++32768 1024
 +d--755 0 0
 +	bin	d--755 0 0
 +		1	---755 0 0 bin/1
@@ -366,6 +379,8 @@ usr/local
 +		rc	---755 0 0 etc/rc
 +		ttys	---644 0 0 etc/ttys
 +		update	---755 0 0 etc/update
++		wdog	---755 0 0 etc/wdog
++		reset	---755 0 0 etc/reset
 +		dmesg	--g755 0 2 etc/dmesg
 +		mknod	---755 0 0 etc/mknod
 +		mount	---755 0 0 etc/mount
@@ -477,8 +492,6 @@ usr/local
 +					misc1.sed	---644 0 0 usr/local/test/cases/misc1.sed
 +					misc2	---644 0 0 usr/local/test/cases/misc2
 +					misc2.exp	---644 0 0 usr/local/test/cases/misc2.exp
-+					noswap	---644 0 0 usr/local/test/cases/noswap
-+					noswap.exp	---644 0 0 usr/local/test/cases/noswap.exp
 +					nsig	---644 0 0 usr/local/test/cases/nsig
 +					nsig.exp	---644 0 0 usr/local/test/cases/nsig.exp
 +					nsig.sed	---644 0 0 usr/local/test/cases/nsig.sed
@@ -527,8 +540,6 @@ usr/local
 +					stress	---644 0 0 usr/local/test/cases/stress
 +					stress.exp	---644 0 0 usr/local/test/cases/stress.exp
 +					stress.sed	---644 0 0 usr/local/test/cases/stress.sed
-+					swpt	---644 0 0 usr/local/test/cases/swpt
-+					swpt.exp	---644 0 0 usr/local/test/cases/swpt.exp
 +					time64	---644 0 0 usr/local/test/cases/time64
 +					time64.exp	---644 0 0 usr/local/test/cases/time64.exp
 +					time64.sed	---644 0 0 usr/local/test/cases/time64.sed
@@ -563,7 +574,6 @@ usr/local
 +					many.img	---644 0 0 usr/local/test/obj/many.img
 +					memt	---755 0 0 usr/local/test/obj/memt
 +					monout	---644 0 0 usr/local/test/utils/monout
-+					nswp	---755 0 0 usr/local/test/obj/nswp
 +					ob	---755 0 0 usr/local/test/obj/ob
 +					olda	---644 0 0 usr/local/test/utils/olda
 +					physt	---755 0 0 usr/local/test/obj/physt
@@ -583,7 +593,6 @@ usr/local
 +					spd	---755 0 0 usr/local/test/obj/spd
 +					stkt	---755 0 0 usr/local/test/obj/stkt
 +					swb	---755 0 0 usr/local/test/obj/swb
-+					swpt	---755 0 0 usr/local/test/obj/swpt
 +					szt	---755 0 0 usr/local/test/obj/szt
 +					tt	---755 0 0 usr/local/test/obj/tt
 +					txtt	---755 0 0 usr/local/test/obj/txtt
@@ -656,7 +665,7 @@ usr/local
 % usr/include/execargs.h
 @@ -1 +1 @@
 -char **execargs = (char**)(-2);
-+char **execargs = (char**)(USERSIZE-4);
++char **execargs = (char**)(USRSIZE-4);
 
 % usr/include/grp.h
 @@ -6,0 +7,2 @@
@@ -852,9 +861,9 @@ usr/local
 @@ -83,2 +85,4 @@
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
-+#define	USIZE	2		/* size of user block (*4096) */
++#define	USIZE	1		/* size of user block (*4096) */
 +#define	UBASE	0xFFE00000U	/* abs. addr of user block */
-+#define	USERSIZE	0xC0000000U	/* size of user address space */
++#define	USRSIZE	0xC0000000U	/* size of user address space */
 +#ifndef NULL
 @@ -85,0 +90 @@
 +#endif
@@ -893,6 +902,11 @@ usr/local
 +typedef	unsigned short	ino_t;
 +typedef	long long	time_t;
 +typedef	int		label_t[10];	/* regs 4-11, sp, lr */
+@@ -140,2 +141,2 @@
+-#define	UMODE	0170000		/* usermode bits */
+-#define	USERMODE(ps)	((ps & UMODE)==UMODE)
++#define	UMODE	037		/* mode bits of the CPSR */
++#define	USERMODE(ps)	((ps & UMODE)==020)
 @@ -143,2 +144 @@
 -#define	INTPRI	0340		/* Priority bits */
 -#define	BASEPRI(ps)	((ps & INTPRI) != 0)
@@ -10135,8 +10149,8 @@ usr/local
 @@ -8 +8,3 @@
 -#include <core.h>
 +#define TXTRNDSIZ 4096L
-+#define stacktop(siz) (USERSIZE)
-+#define stackbas(siz) (USERSIZE-siz)
++#define stacktop(siz) (USRSIZE)
++#define stackbas(siz) (USRSIZE-siz)
 @@ -10,2 +12 @@
 -#include <sys/proc.h>
 -#include <sys/tty.h>
@@ -21205,18 +21219,18 @@ usr/local
 +.globl _start, kl2, bootl1
 +_start:
 +	cpsid if
-+	mrc p15, 0, r0, c1, c0, 0
-+	bic r0, r0, #(1 << 12)
-+	bic r0, r0, #(1 << 2)
-+	bic r0, r0, #(1 << 11)
-+	bic r0, r0, #(1 << 13)
-+	bic r0, r0, #1
-+	mcr p15, 0, r0, c1, c0, 0
++	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
++	bic r0, r0, #(1 << 12)	@ I: icache off
++	bic r0, r0, #(1 << 2)	@ C: dcache off
++	bic r0, r0, #(1 << 11)	@ Z: branch prediction off
++	bic r0, r0, #(1 << 13)	@ V: low vectors
++	bic r0, r0, #1		@ M: MMU off
++	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 +	isb
 +	mov r0, #0
-+	mcr p15, 0, r0, c8, c7, 0
-+	mcr p15, 0, r0, c7, c5, 0
-+	mcr p15, 0, r0, c7, c5, 6
++	mcr p15, 0, r0, c8, c7, 0	@ TLBIALL: TLB
++	mcr p15, 0, r0, c7, c5, 0	@ ICIALLU: icache
++	mcr p15, 0, r0, c7, c5, 6	@ BPIALL: branch predictor
 +	dsb
 +	isb
 +	adr r4, _start
@@ -21286,11 +21300,11 @@ usr/local
 +	mcrr p15, 0, r6, r2, c2
 +	mcrr p15, 1, r5, r2, c2
 +	isb
-+	mrc p15, 0, r0, c1, c0, 0
-+	orr r0, r0, #1
-+	orr r0, r0, #(1 << 2)
-+	orr r0, r0, #(1 << 12)
-+	mcr p15, 0, r0, c1, c0, 0
++	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
++	orr r0, r0, #1		@ M: MMU on
++	orr r0, r0, #(1 << 2)	@ C: dcache on
++	orr r0, r0, #(1 << 12)	@ I: icache on
++	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 +	isb
 +	ldr pc, =1f
 +1:
@@ -21409,7 +21423,7 @@ usr/local
 +	.space 32
 
 % usr/sys/conf/mch.s
-@@ -1,2 +1,173 @@
+@@ -1,2 +1,169 @@
 -/ machine language assist
 -/ for 11/45 or 11/70 CPUs
 +.set BLK_KERN, 0x701
@@ -21490,12 +21504,8 @@ usr/local
 +	movw ip, #BLK_KERN|PTE_TAB
 +	orr r3, r3, ip
 +	str r3, [r2, #0]
-+	add r3, r3, #PGSIZE
-+	str r3, [r2, #8]
 +	dsb ish
 +	ldr r3, =u
-+	mcr p15, 0, r3, c8, c7, 3
-+	add r3, r3, #PGSIZE
 +	mcr p15, 0, r3, c8, c7, 3
 +	dsb ish
 +	isb
@@ -21585,7 +21595,7 @@ usr/local
 +	strbt r1, [r0]
 +	mov r0, #0
 +	b uok
-@@ -4,541 +174,0 @@
+@@ -4,541 +170,0 @@
 -
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
@@ -22127,7 +22137,7 @@ usr/local
 -
 -_fuword:
 -	mov	2(sp),r1
-@@ -546,2 +176,6 @@
+@@ -546,2 +172,6 @@
 -	jsr	pc,gword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22136,7 +22146,7 @@ usr/local
 +	ldrt r1, [r0]
 +	mov r0, r1
 +	b uok
-@@ -549,28 +182,0 @@
+@@ -549,28 +178,0 @@
 -giword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22165,7 +22175,7 @@ usr/local
 -_suword:
 -	mov	2(sp),r1
 -	mov	4(sp),r0
-@@ -578,2 +184,82 @@
+@@ -578,2 +180,82 @@
 -	jsr	pc,pword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22250,7 +22260,7 @@ usr/local
 +dfsr:
 +	mrc p15, 0, r0, c5, c0, 0
 +	bx lr
-@@ -581,444 +266,0 @@
+@@ -581,444 +262,0 @@
 -piword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22695,7 +22705,7 @@ usr/local
 -	.=.+[6*340.]
 -
 -.globl countbase
-@@ -1026,25 +268,2 @@
+@@ -1026,25 +264,2 @@
 -countbase:
 -	_profcnts
 -_profsize:
@@ -22723,7 +22733,7 @@ usr/local
 -	rts	pc
 +waitloc:
 +	.word 1b
-@@ -1053,6 +272,8 @@
+@@ -1053,6 +268,8 @@
 -_xprobuf:.=.+512.
 -_proloc:.=.+2
 -_mode:	.=.+16.
@@ -22981,7 +22991,7 @@ usr/local
 @@ -550,0 +547,6 @@
 +int	ddr;
 +unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, gicd, gicc;
-+#define	NMAP	8
++#define	NMAP	9
 +unsigned long	mapv[NMAP], mapb[NMAP], mape[NMAP];
 +char	mapa[NMAP][100];
 +int	nmap;
@@ -23175,24 +23185,25 @@ usr/local
 +equal(char *a, char *b)
 
 % usr/sys/conf/mp135conf usr/sys/conf/rktmconf
-@@ -4,3 +4,15 @@
+@@ -4,3 +4,16 @@
 -swplo 4000
 -nswap 872
 -tm
-+swplo 131072
-+nswap 327680
++swplo 32768
++nswap 1048576
 +ram c01e0000 2ffe0000 20000
 +tables c0200000 c0000000 20000000
 +core e0000000
-+gic f0821000 f0822000
++gic f0621000 f0622000
 +map c0000000 2fe00000 30000000 BLK_KERN
 +map c0200000 c0000000 e0000000 BLK_KERN
-+map f0000000 40000000 40200000 BLK_DEV
-+map f0200000 50000000 50200000 BLK_DEV
-+map f0400000 58000000 58200000 BLK_DEV
-+map f0600000 5a000000 5a200000 BLK_DEV
-+map f0800000 a0000000 a0200000 BLK_DEV
-+map f0a00000 5c000000 5c200000 BLK_DEV
++map f0000000 50000000 50200000 BLK_DEV
++map f0200000 58000000 58200000 BLK_DEV
++map f0400000 5a000000 5a200000 BLK_DEV
++map f0600000 a0000000 a0200000 BLK_DEV
++map f0800000 5c000000 5c200000 BLK_DEV
++map f0a00000 49000000 49200000 BLK_DEV
++map f0c00000 4c000000 4c200000 BLK_DEV
 +ddr
 
 % usr/sys/conf/qemuconf usr/sys/conf/rktmconf
@@ -23200,8 +23211,8 @@ usr/local
 -swplo 4000
 -nswap 872
 -tm
-+swplo 131072
-+nswap 327680
++swplo 32768
++nswap 1048576
 +ram c0000000 40000000 4000000
 +core 60000000
 +gic f0000000 f0010000
@@ -23344,7 +23355,7 @@ usr/local
 @@ -496 +486,2 @@
 -	if (base&01 || u.u_count&01 || base>=base+u.u_count)
 +	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
-+	    base+u.u_count > USERSIZE || u.u_offset < 0)
++	    base+u.u_count > USRSIZE || u.u_offset < 0)
 @@ -498 +489 @@
 -	ts = (u.u_tsize+127) & ~0177;
 +	ts = u.u_tsize;
@@ -23358,7 +23369,7 @@ usr/local
 -	if ((((base+u.u_count)>>6)&01777) >= ts+u.u_dsize
 -	    && nb < 1024-u.u_ssize)
 +	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
-+	    && nb < (int)(btop(USERSIZE)-u.u_ssize))
++	    && nb < (int)(btop(USRSIZE)-u.u_ssize))
 @@ -528,3 +519,6 @@
 -	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
 -	bp->b_un.b_addr = (caddr_t)((ts<<6) + (base&077));
@@ -23367,7 +23378,7 @@ usr/local
 +		ts = u.u_procp->p_addr + USIZE + nb - ts;
 +	else
 +		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
-+		    (btop(USERSIZE)-u.u_ssize);
++		    (btop(USRSIZE)-u.u_ssize);
 +	bp->b_un.b_addr = PGADDR(ts) + (base&07777);
 @@ -557,2 +551,2 @@
 -geterror(bp)
@@ -23378,17 +23389,31 @@ usr/local
 % usr/sys/dev/mem.c
 @@ -12,0 +13 @@
 +#include "../h/systm.h"
-@@ -16 +16,0 @@
+@@ -16 +17 @@
 -#include "../h/seg.h"
-@@ -18 +18,2 @@
++#include "../h/buf.h"
+@@ -18 +19,2 @@
 -mmread(dev)
 +void
 +mmread(int dev)
-@@ -20,2 +21 @@
+@@ -20,2 +22,3 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-@@ -26,10 +26 @@
++	register char *a;
++	int w;
+@@ -24,0 +28,10 @@
++	if(minor(dev) == 0 && devaddr(u.u_offset)) {
++		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
++		    (a = devaddr(u.u_offset)) != NULL) {
++			w = *(volatile int *)a;
++			iomove((caddr_t)&w, 4, B_READ);
++		}
++		if(u.u_count)
++			u.u_error = ENXIO;
++		return;
++	}
+@@ -26,10 +39 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
 -		a = UISA->r[0];
@@ -23400,22 +23425,35 @@ usr/local
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if ((c = fuibyte((caddr_t)on)) < 0)
 +		if ((c = fumem(dev, u.u_offset)) < 0)
-@@ -37,3 +27,0 @@
+@@ -37,3 +40,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
-@@ -43 +31,2 @@
+@@ -43 +44,2 @@
 -mmwrite(dev)
 +void
 +mmwrite(int dev)
-@@ -45,2 +34 @@
+@@ -45,2 +47,3 @@
 -	register c, bn, on;
 -	int a, d;
 +	register int c;
-@@ -53,2 +40,0 @@
++	register char *a;
++	int w;
+@@ -51,0 +55,10 @@
++	if(minor(dev) == 0 && devaddr(u.u_offset)) {
++		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
++		    (a = devaddr(u.u_offset)) != NULL) {
++			iomove((caddr_t)&w, 4, B_WRITE);
++			*(volatile int *)a = w;
++		}
++		if(u.u_count)
++			u.u_error = ENXIO;
++		return;
++	}
+@@ -53,2 +65,0 @@
 -		bn = u.u_offset >> 6;
 -		on = u.u_offset & 077;
-@@ -57,8 +43 @@
+@@ -57,8 +68 @@
 -		a = UISA->r[0];
 -		d = UISD->r[0];
 -		spl7();
@@ -23425,7 +23463,7 @@ usr/local
 -			UISA->r[0] = (ka6-6)->r[(bn>>7)&07] + (bn & 0177);
 -		if (suibyte((caddr_t)on, c) < 0)
 +		if (sumem(dev, u.u_offset-1, c) < 0)
-@@ -66,3 +44,0 @@
+@@ -66,3 +69,0 @@
 -		UISA->r[0] = a;
 -		UISD->r[0] = d;
 -		spl0();
@@ -23638,14 +23676,14 @@ usr/local
 +	UARTIMSC = s;
 
 % usr/sys/dev/ddr.c /dev/null
-@@ -0,0 +1,189 @@
+@@ -0,0 +1,192 @@
 +#include "../h/param.h"
 +#include "../h/systm.h"
 +
 +#define	R(a)	(*(volatile unsigned int *)(a))
-+#define	RCC(o)	R(0xF0200000+(o))
-+#define	DDRC(o)	R(0xF0603000+(o))
-+#define	DPHY(o)	R(0xF0604000+(o))
++#define	RCC(o)	R(0xF0000000+(o))
++#define	DDRC(o)	R(0xF0403000+(o))
++#define	DPHY(o)	R(0xF0404000+(o))
 +#define	DDRITFCR	RCC(0x5C0)
 +
 +static unsigned int ddrc[] = {
@@ -23752,14 +23790,14 @@ usr/local
 +	unsigned int *r;
 +	int i;
 +
-+	RCC(0x420) = 0x100;
-+	while ((RCC(0x428) & 0x100) == 0)
++	ddrpower();
++	RCC(0x544) = 0;
++	while ((RCC(0x544) & 0x80000000) == 0)
 +		;
-+	RCC(0x4D0) &= ~1;
++	RCC(0x4D0) &= ~0x71;
 +	while (RCC(0x4D0) & 2)
 +		;
-+	RCC(0x480) = (RCC(0x480) & ~7) | 1;
-+	RCC(0x4D4) = 0x00020041;
++	RCC(0x4D4) = RCC(0x480)&3 ? 0x00020041 : 0x00070041;
 +	RCC(0x4D8) = 0x00000101;
 +	RCC(0x4DC) = 0x1400 << 3;
 +	RCC(0x4DC) |= 0x10000;
@@ -23767,18 +23805,21 @@ usr/local
 +	RCC(0x4D0) |= 1;
 +	while ((RCC(0x4D0) & 2) == 0)
 +		;
++	RCC(0x544) = 2;
++	while ((RCC(0x544) & 0x80000000) == 0)
++		;
 +
-+	if (R(0xF020100C) & 0x1000) {
-+		R(0xF020100C) |= 0x800;
-+		R(0xF020100C) &= ~0x1000;
++	if (R(0xF000100C) & 0x1000) {
++		R(0xF000100C) |= 0x800;
++		R(0xF000100C) &= ~0x1000;
 +	}
 +	RCC(0x780) = 2;
 +	RCC(0x740) = 0x800;
 +	(void)RCC(0x740);
-+	R(0xF0A06008) = 0;
-+	R(0xF0A06114) = 0xFFFFFFFF;
-+	R(0xF0A06110) = 0xC0000001;
-+	R(0xF0A06008) = 1;
++	R(0xF0806008) = 0;
++	R(0xF0806114) = 0xFFFFFFFF;
++	R(0xF0806110) = 0xC0000001;
++	R(0xF0806008) = 1;
 +
 +	DDRITFCR &= ~0x100;
 +	DDRITFCR |= 0xFC000;
@@ -23830,25 +23871,31 @@ usr/local
 +}
 
 % usr/sys/dev/sd.c usr/sys/dev/rk.c
-@@ -12 +12 @@
+@@ -12 +12,3 @@
 -#define	RKADDR	((struct device *)0177400)
-+#define	SD(off)	(*(volatile int *)(0xF0405000+(off)))
-@@ -14 +14 @@
++#define	SD(off)	(*(volatile int *)(0xF0205000+(off)))
++#define	RCC(off)	(*(volatile int *)(0xF0000000+(off)))
++#define	GPIO(p, off)	(*(volatile int *)(0xF0002000+(p)*0x1000+(off)))
+@@ -14 +15,0 @@
 -#define	NRKBLK	4872
-+#define	NRKBLK	458752
-@@ -17,3 +17,3 @@
+@@ -17,3 +18,4 @@
 -#define	WCOM	2
 -#define	RCOM	4
 -#define	GO	01
-+#define	WCOM	24
-+#define	RCOM	17
++#define	WCOM	25
++#define	RCOM	18
 +#define	GO	0x1140
-@@ -21 +21 @@
++#define	STOP	0x118c
+@@ -21 +23 @@
 -#define	IENABLE	0100
 +#define	IENABLE	0x800013f
-@@ -25,0 +26,14 @@
+@@ -25,0 +28,26 @@
++#define	POWER	0x00
++#define	CLKCR	0x04
 +#define	ARG	0x08
 +#define	CMD	0x0c
++#define	RESP1	0x14
++#define	FIFO	0x80
 +#define	DTIMER	0x24
 +#define	DLEN	0x28
 +#define	DCTRL	0x2c
@@ -23861,7 +23908,15 @@ usr/local
 +#define	DTDIR	02
 +#define	BLK512	0220
 +#define	CLEAR	0x1fe00fff
-@@ -32,10 +46,2 @@
++#define	CMDREND	0100
++#define	DATAEND	0400
++#define	RXFIFOE	(1<<19)
++#define	CMDERR	05
++#define	BUSYD0	(1<<20)
++#define	BUSYD0END	(1<<21)
++#define	WIDE	(1<<14)
++#define	MAXIO	0x1000000
+@@ -32,10 +60,2 @@
 -struct	device
 -{
 -	int	rkds;
@@ -23874,35 +23929,140 @@ usr/local
 -
 +void rkstart(void);
 +int	rkirq = 82;
-@@ -43,0 +50 @@
+@@ -43,0 +64,4 @@
 +unsigned	rkoff;
-@@ -45,2 +52,2 @@
++static unsigned	rkn, rkstop, rksta;
++daddr_t	nrkblk;
++static unsigned	rca, rkbyte;
+@@ -45,2 +69,2 @@
 -rkstrategy(bp)
 -register struct buf *bp;
-+void
-+rkinit(void)
-@@ -47,0 +55,2 @@
-+	SD(DTIMER) = -1;
-+}
-@@ -49,3 +58,5 @@
++static void
++rkdelay(unsigned us)
+@@ -47,0 +72 @@
++	unsigned long long t;
+@@ -49,3 +74,104 @@
 -	if(bp->b_flags&B_PHYS)
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
++	t = cntvct_get() + cntfrq_get()/1000000*us;
++	while (cntvct_get() < t)
++		;
++}
++
++/*
++ * Send a command and wait for it;
++ * the response is in RESP1-4.
++ */
++static void
++rkcmd(int com, unsigned arg, int resp)
++{
++	register int sta;
++	unsigned long long t;
++
++	SD(ICR) = CLEAR;
++	SD(ARG) = arg;
++	SD(CMD) = com | resp<<8 | 0x1000;
++	t = cntvct_get() + cntfrq_get()/10;
++	do {
++		sta = SD(STA);
++		if (cntvct_get() > t || sta&04)
++			panic("sd card");
++	} while ((sta & (resp ? 0101 : 0200)) == 0);
++	if (sta&01 && com != 41 && resp != 3)
++		panic("sd card crc");
++}
++
++/*
++ * Bring the card up as the boot ROM would have:
++ * pins, a 400 kHz clock, identification, the size
++ * from the CSD, selection, then 16 MHz.
++ */
++void
++rkinit(void)
++{
++	register int i, n;
++	unsigned c, sw[16];
++
++	RCC(0x770) = 014;
++	for (i = 8; i <= 12; i++) {
++		GPIO(2, 0x00) = (GPIO(2, 0x00) & ~(3<<2*i)) | 2<<2*i;
++		GPIO(2, 0x08) |= 1<<2*i;
++		GPIO(2, 0x24) = (GPIO(2, 0x24) & ~(0xF<<(i-8)*4)) | 12<<(i-8)*4;
++	}
++	GPIO(3, 0x00) = (GPIO(3, 0x00) & ~(3<<4)) | 2<<4;
++	GPIO(3, 0x08) |= 1<<4;
++	GPIO(3, 0x20) = (GPIO(3, 0x20) & ~(0xF<<8)) | 12<<8;
++	RCC(0x648) = (RCC(0x648) & ~7) | 3;
++	RCC(0x780) = 1<<16;
++	RCC(0x6F0) = 1<<16;
++	RCC(0x6F4) = 1<<16;
++	SD(CLKCR) = 80;
++	SD(POWER) = 3;
++	rkdelay(1000);
++	rkcmd(0, 0, 0);
++	rkcmd(8, 0x1AA, 1);
++	for (n = 0; ; n++) {
++		if (n == 1000)
++			panic("sd card");
++		rkcmd(55, 0, 1);
++		rkcmd(41, 0x40FF8000, 2);
++		if (SD(RESP1) < 0)
++			break;
++		rkdelay(1000);
++	}
++	rkbyte = (SD(RESP1) & 0x40000000) == 0;
++	rkcmd(2, 0, 3);
++	rkcmd(3, 0, 1);
++	rca = SD(RESP1) & 0xFFFF0000;
++	rkcmd(9, rca, 3);
++	if ((unsigned)SD(RESP1)>>30 == 1)
++		nrkblk = ((SD(RESP1+4)&077)<<16 | (unsigned)SD(RESP1+8)>>16) * 1024 + 1024;
++	else {
++		c = (SD(RESP1+4)&01777)<<2 | (unsigned)SD(RESP1+8)>>30;
++		nrkblk = (c+1) << (((SD(RESP1+8)>>15)&7) + 2 + ((SD(RESP1+4)>>16)&017) - 9);
++	}
++	rkcmd(7, rca, 1);
++	rkcmd(55, rca, 1);
++	rkcmd(6, 2, 1);
++	SD(CLKCR) = 2 | WIDE;
++	SD(DTIMER) = -1;
++	SD(DCTRL) = 0;
++	SD(DLEN) = 64;
++	SD(DCTRL) = 0140 | DTDIR;
++	rkcmd(6|0100, 0x80FFFFF1, 1);
++	for (n = 0; n < 16; ) {
++		i = SD(STA);
++		if ((i & RXFIFOE) == 0)
++			sw[n++] = SD(FIFO);
++		else if (i & (ERR|DATAEND))
++			break;
++	}
++	if (n == 16 && (sw[4]&017) == 1) {
++		rkdelay(10);
++		SD(CLKCR) = 1 | WIDE;
++	}
++}
++
 +void
 +rkstrategy(register struct buf *bp)
 +{
 +
-+	if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
-@@ -68 +79,2 @@
++	if (bp->b_blkno >= nrkblk || bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
+@@ -68 +194,6 @@
 -rkstart()
++/*
++ * One command moves the rest of the buffer, up to MAXIO
++ * bytes; CMD12 then stops the card.
++ */
 +void
 +rkstart(void)
-@@ -71,3 +83 @@
+@@ -71,3 +202 @@
 -	register com;
 -	daddr_t bn;
 -	int dn, cn, sn;
 +	register int com;
-@@ -78,8 +88,10 @@
+@@ -78,8 +207,18 @@
 -	bn = bp->b_blkno;
 -	dn = minor(bp->b_dev);
 -	cn = bn/12;
@@ -23911,127 +24071,587 @@ usr/local
 -	RKADDR->rkba = bp->b_un.b_addr;
 -	RKADDR->rkwc = -(bp->b_bcount>>1);
 -	com = ((bp->b_xmem&3) << 4) | IENABLE | GO;
-+	dcflush(bp->b_un.b_addr+rkoff, BSIZE);
++	rkn = bp->b_bcount - rkoff;
++	if (rkn > MAXIO)
++		rkn = MAXIO;
++	rkstop = 0;
++	if ((bp->b_flags & B_READ) == 0) {
++		rkcmd(55, rca, 1);
++		rkcmd(23, rkn>>BSHIFT, 1);
++	}
++	dcflush(bp->b_un.b_addr+rkoff, rkn);
 +	SD(ICR) = CLEAR;
 +	SD(DCTRL) = 0;
-+	SD(DLEN) = BSIZE;
++	SD(DLEN) = rkn;
 +	SD(DCTRL) = bp->b_flags&B_READ ? BLK512|DTDIR : BLK512;
 +	SD(IDMABASER) = vtop(bp->b_un.b_addr+rkoff);
 +	SD(IDMACTRL) = 1;
 +	SD(MASK) = IENABLE;
-+	SD(ARG) = bp->b_blkno+(rkoff>>BSHIFT);
++	SD(ARG) = (bp->b_blkno+(rkoff>>BSHIFT)) << (rkbyte ? BSHIFT : 0);
 +	com = GO;
-@@ -89 +101 @@
+@@ -89 +228 @@
 -	RKADDR->rkcs = com;
 +	SD(CMD) = com;
-@@ -91,3 +103,3 @@
+@@ -91,3 +230,2 @@
 -	dk_numb[DK_N] += 1;
 -	com = bp->b_bcount>>6;
 -	dk_wds[DK_N] += com;
 +	dk_numb[DK_N] = (unsigned long)dk_numb[DK_N] + 1;
-+	com = BSIZE>>6;
-+	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + com;
-@@ -96 +108,2 @@
++	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + (rkn>>6);
+@@ -96 +234,2 @@
 -rkintr()
 +void
 +rkintr(void)
-@@ -98,0 +112 @@
+@@ -98,0 +238 @@
 +	register int sta;
-@@ -99,0 +114,4 @@
+@@ -100 +240,18 @@
+-	if (rktab.b_active == NULL)
 +	sta = SD(STA);
 +	SD(ICR) = CLEAR;
++	if (rktab.b_active == NULL) {
++		SD(MASK) = 0;
++		return;
++	}
++	if (rkstop == 0) {
++		SD(IDMACTRL) = 0;
++		rksta = sta;
++		rkstop = 1;
++		SD(MASK) = CMDREND|CMDERR|BUSYD0END;
++		SD(ARG) = 0;
++		SD(CMD) = STOP;
++		return;
++	}
++	if (rkstop == 1 && (sta&CMDERR) == 0 && SD(STA)&BUSYD0) {
++		rkstop = 2;
++		SD(MASK) = BUSYD0END;
+@@ -101,0 +259,5 @@
++	}
 +	SD(MASK) = 0;
-+	SD(IDMACTRL) = 0;
-@@ -105,5 +123,2 @@
++	if (sta&CMDERR)
++		rksta |= sta;
++	sta = rksta;
+@@ -105,5 +267,2 @@
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
 -		RKADDR->rkcs = RESET|GO;
 -		while((RKADDR->rkcs&CTLRDY) == 0)
 -			;
-+	if (sta & ERR) {
++	if (sta & (ERR|CMDERR)) {
 +		deverror(bp, sta, 0);
-@@ -114,0 +130,3 @@
-+	} else if ((rkoff += BSIZE) < bp->b_bcount) {
+@@ -114,0 +274,3 @@
++	} else if ((rkoff += rkn) < bp->b_bcount) {
 +		rkstart();
 +		return;
-@@ -115,0 +134,3 @@
+@@ -115,0 +278,3 @@
 +	rkoff = 0;
 +	if (bp->b_flags & B_READ)
 +		dcinval(bp->b_un.b_addr, bp->b_bcount);
-@@ -123,2 +144,2 @@
+@@ -123,2 +288,2 @@
 -rkread(dev)
 -dev_t dev;
 +void
 +rkread(dev_t dev)
-@@ -130,2 +151,2 @@
+@@ -130,2 +295,2 @@
 -rkwrite(dev)
 -dev_t dev;
 +void
 +rkwrite(dev_t dev)
 
-% usr/sys/dev/usart.c usr/sys/dev/kl.c
-@@ -12 +12 @@
+% usr/sys/dev/otg.c usr/sys/dev/kl.c
+@@ -2 +2,3 @@
+- *   KL/DL-11 driver
++ * Console on the USB OTG port, as a CDC-ACM device, for a
++ * board reached only by USB. The PHY and clocks are as the
++ * boot ROM left them after loading the kernel over USB.
+@@ -11,26 +13,56 @@
+-/* base address */
 -#define	KLADDR	((struct device *)0177560)	/* console */
-+#define	KLADDR	0xF0010000
-@@ -14,0 +15,2 @@
-+#define	RCC	0xF0200000
-+#define	GPIOD	0xF0205000
-@@ -18,0 +21,20 @@
-+#define	CR1	(*(volatile int *)(KLADDR+0x00))
-+#define	BRR	(*(volatile int *)(KLADDR+0x0c))
-+#define	ISR	(*(volatile int *)(KLADDR+0x1c))
-+#define	ICR	(*(volatile int *)(KLADDR+0x20))
-+#define	RDR	(*(volatile int *)(KLADDR+0x24))
-+#define	TDR	(*(volatile int *)(KLADDR+0x28))
-+#define	UART4CKSELR	(*(volatile int *)(RCC+0x61c))
-+#define	APB1ENSETR	(*(volatile int *)(RCC+0x700))
-+#define	AHB4ENSETR	(*(volatile int *)(RCC+0x770))
-+#define	GPIOD_MODER	(*(volatile int *)(GPIOD+0x00))
-+#define	GPIOD_AFRL	(*(volatile int *)(GPIOD+0x20))
-+#define	GPIOD_AFRH	(*(volatile int *)(GPIOD+0x24))
-+#define	UE	01
-+#define	RE	04
-+#define	TE	010
-+#define	RXNEIE	040
-+#define	TXEIE	0200
-+#define	RXNE	040
-+#define	TXE	0200
-+#define	FIFOEN	04000000000
-@@ -28,3 +50,3 @@
+-#define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
+-#define	DLBASE	((struct device *)0175610)	/* dl-e */
+-#define	NKL11	1
+-#define	NDL11	0
+-#define DSRDY	02
+-#define	RDRENB	01
+-#define	DLDELAY	4	/* Extra delay for DL's (double buff) */
+-
+-#define	NL1	000400
+-#define	NL2	001000
+-#define	CR2	020000
+-#define	FF1	040000
+-#define	TAB1	002000
+-
+-struct	tty kl11[NKL11+NDL11];
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
+-
+-struct device {
+-	int	rcsr;
+-	int	rbuf;
+-	int	tcsr;
+-	int	tbuf;
++#define	OTGADDR	0xF0A00000
++#define	R(o)	(*(volatile unsigned *)(OTGADDR+(o)))
++#define	FIFO(n)	R(0x1000+(n)*0x1000)
++#define	GOTGCTL	R(0x000)
++#define	GAHBCFG	R(0x008)
++#define	GUSBCFG	R(0x00c)
++#define	GRSTCTL	R(0x010)
++#define	GINTSTS	R(0x014)
++#define	GINTMSK	R(0x018)
++#define	GRXSTSP	R(0x020)
++#define	GRXFSIZ	R(0x024)
++#define	DIEPTXF0	R(0x028)
++#define	GCCFG	R(0x038)
++#define	DIEPTXF(n)	R(0x100+(n)*4)
++#define	DCFG	R(0x800)
++#define	DCTL	R(0x804)
++#define	DSTS	R(0x808)
++#define	DIEPMSK	R(0x810)
++#define	DOEPMSK	R(0x814)
++#define	DAINTMSK	R(0x81c)
++#define	DIEPCTL(n)	R(0x900+(n)*0x20)
++#define	DIEPINT(n)	R(0x908+(n)*0x20)
++#define	DIEPTSIZ(n)	R(0x910+(n)*0x20)
++#define	DOEPCTL(n)	R(0xb00+(n)*0x20)
++#define	DOEPINT(n)	R(0xb08+(n)*0x20)
++#define	DOEPTSIZ(n)	R(0xb10+(n)*0x20)
++#define	PCGCCTL	R(0xe00)
++
++#define	EPENA	(1U<<31)
++#define	SNAK	(1U<<27)
++#define	CNAK	(1U<<26)
++#define	SD0PID	(1U<<28)
++#define	STALL	(1U<<21)
++#define	USBAEP	(1U<<15)
++#define	XFRC	01
++#define	STUP	010
++#define	RXFLVL	(1U<<4)
++#define	USBRST	(1U<<12)
++#define	ENUMDNE	(1U<<13)
++#define	SDIS	02
++#define	NOUT	511
++
++struct	tty kl11[1];
 +void	klstart(struct tty *tp);
-+static void	klrint(dev_t dev);
-+int	klirq = 85;
-@@ -39,2 +61,17 @@
++static void	klrint(void), klflush(void);
++static int	usbpoll(void);
++int	klirq = 128;
++extern struct cblock	*cfreelist;
++
++static unsigned char setup[8], ep0buf[64], rxbuf[512], out[NOUT];
++static unsigned rxlen, rxpos, outlen, bulkmps = 512, ep0len;
++static int config, inbusy, dtr;
++
++static const unsigned char devdesc[18] = {
++	18, 1, 0x00, 0x02, 2, 0, 0, 64, 0x09, 0x12, 0x01, 0x00,
++	0x00, 0x01, 1, 2, 0, 1
+@@ -39,2 +71,392 @@
 -klopen(dev, flag)
 -dev_t dev;
++static unsigned char cfgdesc[67] = {
++	9, 2, 67, 0, 2, 1, 0, 0xc0, 1,
++	9, 4, 0, 0, 1, 2, 2, 0, 0,
++	5, 0x24, 0, 0x10, 0x01,
++	5, 0x24, 1, 0, 1,
++	4, 0x24, 2, 2,
++	5, 0x24, 6, 0, 1,
++	7, 5, 0x82, 3, 16, 0, 8,
++	9, 4, 1, 0, 2, 10, 0, 0, 0,
++	7, 5, 0x01, 2, 0x00, 0x02, 0,
++	7, 5, 0x81, 2, 0x00, 0x02, 0
++};
++
++static const unsigned char lang[4] = { 4, 3, 0x09, 0x04 };
++static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0, 8 };
++
++static void
++fifowrite(int ep, const unsigned char *p, unsigned n)
++{
++	register unsigned i, w;
++
++	for (i = 0; i < n; i += 4) {
++		w = p[i];
++		if (i+1 < n)
++			w |= p[i+1] << 8;
++		if (i+2 < n)
++			w |= p[i+2] << 16;
++		if (i+3 < n)
++			w |= (unsigned)p[i+3] << 24;
++		FIFO(ep) = w;
++	}
++}
++
++static void
++fiforead(unsigned char *p, unsigned n, unsigned max)
++{
++	register unsigned i, w;
++
++	for (i = 0; i < n; i += 4) {
++		w = FIFO(0);
++		if (i < max)
++			p[i] = w;
++		if (i+1 < max)
++			p[i+1] = w >> 8;
++		if (i+2 < max)
++			p[i+2] = w >> 16;
++		if (i+3 < max)
++			p[i+3] = w >> 24;
++	}
++}
++
++static void
++ep0out(void)
++{
++	DOEPTSIZ(0) = 3U<<29 | 1U<<19 | 64;
++	DOEPCTL(0) |= EPENA|CNAK;
++}
++
++static const unsigned char *ep0p;
++static unsigned ep0n;
++static int ep0zlp;
++
++static void
++ep0next(void)
++{
++	register unsigned n;
++
++	n = ep0n < 64 ? ep0n : 64;
++	DIEPTSIZ(0) = 1U<<19 | n;
++	DIEPCTL(0) |= EPENA|CNAK;
++	fifowrite(0, ep0p, n);
++	ep0p += n;
++	ep0n -= n;
++	if (n < 64)
++		ep0zlp = 0;
++}
++
++static void
++ep0in(const unsigned char *p, unsigned n)
++{
++	unsigned want;
++
++	want = setup[6] | setup[7]<<8;
++	if (n > want)
++		n = want;
++	ep0p = p;
++	ep0n = n;
++	ep0zlp = n < want;
++	ep0next();
++	ep0out();
++}
++
++static void
++ep0stall(void)
++{
++	DIEPCTL(0) |= STALL;
++	DOEPCTL(0) |= STALL;
++	ep0out();
++}
++
++static void
++rxarm(void)
++{
++	DOEPTSIZ(1) = 1U<<19 | bulkmps;
++	DOEPCTL(1) |= EPENA|CNAK;
++}
++
++/*
++ * Tell the host the line has carrier, so that an open
++ * which waits for it can finish.
++ */
++static void
++carrier(void)
++{
++	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
++
++	if (DIEPCTL(2) & EPENA)
++		return;
++	DIEPTSIZ(2) = 1U<<19 | 10;
++	DIEPCTL(2) |= EPENA|CNAK;
++	fifowrite(2, state, 10);
++}
++
++static void
++dosetup(void)
++{
++	unsigned char buf[32];
++	register unsigned type, req, val, i;
++	static const char prod[] = "unix";
++
++	type = setup[0];
++	req = setup[1];
++	val = setup[2] | setup[3]<<8;
++	if ((type&0x60) == 0x20) {
++		if (req == 0x20 && (type&0x80) == 0) {
++			ep0len = 7;
++			ep0out();
++		} else if (req == 0x21 && type&0x80)
++			ep0in(linecoding, 7);
++		else if (req == 0x22 || req == 0x23) {
++			if (req == 0x22)
++				dtr = val&1;
++			ep0in(0, 0);
++			if (req == 0x22 && config)
++				carrier();
++		} else
++			ep0stall();
++		return;
++	}
++	switch (req) {
++	case 0:
++		buf[0] = type == 0x80;
++		buf[1] = 0;
++		ep0in(buf, 2);
++		return;
++	case 1:
++	case 3:
++	case 11:
++		ep0in(0, 0);
++		return;
++	case 5:
++		DCFG = (DCFG & ~(0177U<<4)) | (val&0177)<<4;
++		ep0in(0, 0);
++		return;
++	case 6:
++		switch (val>>8) {
++		case 1:
++			ep0in(devdesc, 18);
++			return;
++		case 2:
++			for (i = 0; i < sizeof cfgdesc; i += cfgdesc[i])
++				if (cfgdesc[i+1] == 5 && cfgdesc[i+3] == 2) {
++					cfgdesc[i+4] = bulkmps;
++					cfgdesc[i+5] = bulkmps >> 8;
++				}
++			ep0in(cfgdesc, sizeof cfgdesc);
++			return;
++		case 3:
++			if ((val&0xff) == 0) {
++				ep0in(lang, 4);
++				return;
++			}
++			if ((val&0xff) <= 2) {
++				for (i = 0; prod[i]; i++) {
++					buf[2+2*i] = prod[i];
++					buf[3+2*i] = 0;
++				}
++				buf[0] = 2+2*i;
++				buf[1] = 3;
++				ep0in(buf, buf[0]);
++				return;
++			}
++		}
++		ep0stall();
++		return;
++	case 8:
++		buf[0] = config;
++		ep0in(buf, 1);
++		return;
++	case 9:
++		config = val&0xff;
++		if (config) {
++			DIEPCTL(1) = USBAEP | 2U<<18 | 1U<<22 | SD0PID | bulkmps;
++			DOEPCTL(1) = USBAEP | 2U<<18 | SD0PID | bulkmps;
++			DIEPCTL(2) = USBAEP | 3U<<18 | 2U<<22 | SD0PID | 16;
++			inbusy = 0;
++			rxlen = rxpos = 0;
++			rxarm();
++		}
++		ep0in(0, 0);
++		return;
++	case 10:
++		buf[0] = 0;
++		ep0in(buf, 1);
++		return;
++	}
++	ep0stall();
++}
++
++static void
++busreset(void)
++{
++	register int i;
++
++	for (i = 0; i < 4; i++) {
++		if (i) {
++			DOEPCTL(i) = SNAK;
++			DIEPCTL(i) = 0;
++		}
++		DIEPINT(i) = 0xffff;
++		DOEPINT(i) = 0xffff;
++	}
++	DCFG &= ~(0177U<<4);
++	config = dtr = inbusy = 0;
++	GRSTCTL = 1U<<5 | 0x10U<<6;
++	while (GRSTCTL & 1U<<5)
++		;
++	ep0out();
++}
++
++static void
++txflush(void)
++{
++	if (!config || inbusy || outlen == 0)
++		return;
++	DIEPTSIZ(1) = (outlen+bulkmps-1)/bulkmps << 19 | outlen;
++	DIEPCTL(1) |= EPENA|CNAK;
++	fifowrite(1, out, outlen);
++	outlen = 0;
++	inbusy = 1;
++}
++
++static void
++klflush(void)
++{
++	unsigned long long timo;
++
++	timo = cntvct_get() + cntfrq_get()/HZ;
++	do
++		usbpoll();
++	while (inbusy && cntvct_get() < timo);
++	txflush();
++}
++
++/*
++ * Service the controller: called from the interrupt
++ * and, with interrupts off, by putchar.
++ */
++static int
++usbpoll(void)
++{
++	register unsigned s, st, ep, n, k;
++	int done;
++
++	done = 0;
++	s = GINTSTS;
++	if (s & USBRST) {
++		GINTSTS = USBRST;
++		busreset();
++	}
++	if (s & ENUMDNE) {
++		GINTSTS = ENUMDNE;
++		bulkmps = ((DSTS>>1)&3) == 0 ? 512 : 64;
++		DIEPCTL(0) &= ~3U;
++		DCTL |= 1U<<8;
++	}
++	while (GINTSTS & RXFLVL) {
++		st = GRXSTSP;
++		ep = st & 017;
++		n = (st>>4) & 03777;
++		k = (st>>17) & 017;
++		if (k == 6)
++			fiforead(setup, n, 8);
++		else if (k == 2 && ep == 0)
++			fiforead(ep0buf, n, sizeof ep0buf);
++		else if (k == 2 && ep == 1) {
++			fiforead(rxbuf, n, sizeof rxbuf);
++			rxlen = n;
++			rxpos = 0;
++		} else
++			fiforead(0, n, 0);
++	}
++	st = DOEPINT(0);
++	if (st & STUP) {
++		DOEPINT(0) = STUP|XFRC|060;
++		dosetup();
++	} else if (st & XFRC) {
++		DOEPINT(0) = XFRC|060;
++		if (ep0len) {
++			for (n = 0; n < 7; n++)
++				linecoding[n] = ep0buf[n];
++			ep0len = 0;
++			ep0in(0, 0);
++		} else
++			ep0out();
++	}
++	if (DIEPINT(0) & XFRC) {
++		DIEPINT(0) = XFRC;
++		if (ep0n || ep0zlp)
++			ep0next();
++	}
++	if (DIEPINT(1) & XFRC) {
++		DIEPINT(1) = XFRC;
++		inbusy = 0;
++		done = 1;
++	}
++	st = DOEPINT(1);
++	if (st & XFRC) {
++		DOEPINT(1) = st;
++		if (rxlen == 0)
++			rxarm();
++	}
++	return(done);
++}
++
 +void
 +klinit(void)
 +{
-+	AHB4ENSETR = 010;
-+	(void)AHB4ENSETR;
-+	GPIOD_MODER = (GPIOD_MODER & ~(3<<12|3<<16)) | 2<<12 | 2<<16;
-+	GPIOD_AFRL = (GPIOD_AFRL & ~(017<<24)) | 8<<24;
-+	GPIOD_AFRH = (GPIOD_AFRH & ~017) | 8;
-+	APB1ENSETR = 0x10000;
-+	(void)APB1ENSETR;
-+	UART4CKSELR = (UART4CKSELR & ~7) | 2;
-+	BRR = 556;
-+	CR1 = FIFOEN|UE|TE|RE;
++	register int i;
++	unsigned long long t;
++
++	DCTL |= SDIS;
++	t = cntvct_get() + cntfrq_get()/5;
++	while (cntvct_get() < t)
++		;
++	while ((GRSTCTL & 1U<<31) == 0)
++		;
++	GRSTCTL = 1;
++	while (GRSTCTL & 1)
++		;
++	GAHBCFG = 0;
++	GUSBCFG = (GUSBCFG & ~(1U<<29|1U<<30|017U<<10)) | 1U<<30 | 9U<<10;
++	t = cntvct_get() + cntfrq_get()/20;
++	while (cntvct_get() < t)
++		;
++	GCCFG &= ~(1U<<21);
++	GOTGCTL |= 1U<<6 | 1U<<7;
++	PCGCCTL = 0;
++	DCFG = 0;
++	GRXFSIZ = 0x100;
++	DIEPTXF0 = 0x40U<<16 | 0x100;
++	DIEPTXF(1) = 0x100U<<16 | 0x140;
++	DIEPTXF(2) = 0x20U<<16 | 0x240;
++	GRSTCTL = 1U<<5 | 0x10U<<6;
++	while (GRSTCTL & 1U<<5)
++		;
++	GRSTCTL = 1U<<4;
++	while (GRSTCTL & 1U<<4)
++		;
++	for (i = 0; i < 4; i++) {
++		DIEPCTL(i) = 0;
++		DOEPCTL(i) = 0;
++		DIEPINT(i) = 0xffff;
++		DOEPINT(i) = 0xffff;
++	}
++	DIEPMSK = XFRC;
++	DOEPMSK = XFRC|STUP;
++	DAINTMSK = 0x30003;
++	GINTMSK = RXFLVL | USBRST | ENUMDNE | 1U<<18 | 1U<<19;
++	GINTSTS = 0xffffffff;
++	DCTL &= ~SDIS;
++	t = cntvct_get() + 10*cntfrq_get();
++	while (!(config && dtr) && cntvct_get() < t)
++		usbpoll();
++	t = cntvct_get() + cntfrq_get()/5;
++	while (cntvct_get() < t)
++		usbpoll();
++	GAHBCFG = 1;
 +}
 +
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +78,0 @@
+@@ -42 +463,0 @@
 -	register struct device *addr;
-@@ -44 +80 @@
+@@ -44 +464,0 @@
 -	register d;
-+	register int d;
-@@ -45,0 +82 @@
+@@ -46,2 +466,2 @@
+-	d = minor(dev);
+-	if(d >= NKL11+NDL11) {
 +	(void)flag;
-@@ -52,12 +88,0 @@
++	if (minor(dev) != 0) {
+@@ -51,13 +471 @@
+-	tp = &kl11[d];
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -24044,151 +24664,190 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +92 @@
++	tp = &kl11[0];
+@@ -67 +475 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +95 @@
+@@ -70,2 +477,0 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
-+	CR1 |= RXNEIE;
-@@ -75,3 +99,2 @@
+@@ -75,3 +481,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +104 @@
+@@ -79,4 +484,2 @@
+-	register struct tty *tp;
+-
+-	tp = &kl11[minor(dev)];
+-	ttyclose(tp);
 +	(void)flag;
-@@ -85,2 +109,2 @@
++	ttyclose(&kl11[minor(dev)]);
+@@ -85,2 +488,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -87,0 +112,7 @@
+@@ -87,0 +491,6 @@
 +	register int s;
 +
 +	s = spl5();
-+	ttyunhold(&kl11[minor(dev)]);
-+	CR1 |= RXNEIE;
-+	klrint(dev);
++	ttyunhold(&kl11[0]);
++	klrint();
 +	splx(s);
-@@ -91,2 +122,2 @@
+@@ -91,2 +500,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +128,2 @@
+@@ -97,2 +506,2 @@
 -klxint(dev)
 -dev_t dev;
-+static void
-+klxint(dev_t dev)
-@@ -102,0 +134 @@
-+	CR1 &= ~TXEIE;
-@@ -105,4 +137 @@
++void
++klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
+@@ -100,9 +509,3 @@
+-	register struct tty *tp;
+-
+-	tp = &kl11[minor(dev)];
+-	ttstart(tp);
+-	if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
-+		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +140,2 @@
++	(void)flag;
++	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
++		u.u_error = ENOTTY;
+@@ -111,2 +514,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
-+klrint(dev_t dev)
-@@ -115 +143,0 @@
++klrint(void)
+@@ -114,2 +516,0 @@
+-	register int c;
 -	register struct device *addr;
-@@ -119,4 +147,9 @@
+@@ -118,5 +519,12 @@
+-	tp = &kl11[minor(dev)];
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
 -	ttyinput(c, tp);
-+	while(ISR&RXNE) {
-+		if(tp->t_holdq.c_cc >= TTHOLDQ) {
-+			CR1 &= ~RXNEIE;
-+			break;
-+		}
-+		c = RDR;
-+		ttyhold(c, tp);
++	tp = &kl11[0];
++	if (rxlen == 0)
++		return;
++	while (rxpos < rxlen) {
++		if (tp->t_holdq.c_cc >= TTHOLDQ || cfreelist == NULL ||
++		    cfreelist->c_next == NULL)
++			return;
++		ttyhold(rxbuf[rxpos++], tp);
 +	}
-+	ICR = 017;
-@@ -125,3 +158,2 @@
++	rxlen = rxpos = 0;
++	if (config)
++		rxarm();
+@@ -125,3 +533,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
-+klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +161,2 @@
++klstart(register struct tty *tp)
+@@ -129,2 +536,7 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
-+	(void)flag;
-+	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +166,2 @@
+-		u.u_error = ENOTTY;
++	register int c;
++
++	if (inbusy || !config)
++		return;
++	while (outlen < NOUT && (c = getc(&tp->t_outq)) >= 0)
++		out[outlen++] = c;
++	txflush();
+@@ -133,2 +545,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
-+klstart(register struct tty *tp)
-@@ -136,2 +169 @@
++klintr(void)
+@@ -136,2 +548 @@
 -	register c;
 -	register struct device *addr;
-+	register int c;
-@@ -139,2 +171 @@
++	register struct tty *tp;
+@@ -139,11 +550,8 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
-+	if((ISR&TXE) == 0)
-@@ -144 +175 @@
+-		return;
+-	if ((c=getc(&tp->t_outq)) >= 0) {
+-		if (tp->t_flags&RAW)
 -			addr->tbuf = c;
-+			TDR = c;
-@@ -146 +177 @@
+-		else if (c<=0177)
 -			addr->tbuf = c | (partab[c]&0200);
-+			TDR = c;
-@@ -150,0 +182 @@
-+		CR1 |= TXEIE;
-@@ -154 +186,9 @@
+-		else {
+-			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
+-			tp->t_state |= TIMEOUT;
++	tp = &kl11[0];
++	if (usbpoll()) {
++		if (outlen)
++			txflush();
++		else if (tp->t_state&ISOPEN) {
++			ttstart(tp);
++			if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
++				wakeup((caddr_t)&tp->t_outq);
+@@ -151,0 +560 @@
++	klrint();
+@@ -154 +562,0 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
-+void
-+klintr(void)
-+{
-+	if (ISR&RXNE)
-+		klrint(0);
-+	if (ISR&TXE && CR1&TXEIE)
-+		klxint(0);
-+}
-+
-@@ -166,2 +206,2 @@
+@@ -157,7 +565 @@
+- * Attempts to save and restore device
+- * status.
+- * If the switches are 0, all
+- * printing is inhibited.
+- *
+- * Whether or not printing is inhibited,
+- * the last MSGBUFS characters
++ * The last MSGBUFS characters
+@@ -166,2 +568,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +209,2 @@
+@@ -169 +571 @@
 -	register s, timo;
 +	register int s;
-+	unsigned long long timo;
-@@ -176,6 +217 @@
+@@ -176,25 +578,11 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
 -	if ((KLADDR->rbuf&0177) == 0)
 -		return;
 -	timo = 30000;
-+	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +222,2 @@
+-	/*
+-	 * Try waiting for the console tty to come ready,
+-	 * otherwise give up after a reasonable time.
+-	 */
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
-+	while((ISR&TXE) == 0)
-+		if(cntvct_get() >= timo)
-@@ -191,3 +227,3 @@
+-			break;
+-	if(c == 0)
+-		return;
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
-+	s = CR1;
-+	CR1 &= ~TXEIE;
-+	TDR = c;
-@@ -196,2 +231,0 @@
+-	if(c == '\n') {
+-		putchar('\r');
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +234,2 @@
+-	}
+-	putchar(0);
 -	KLADDR->tcsr = s;
-+	if(s&TXEIE || kl11[0].t_outq.c_cc)
-+		CR1 |= TXEIE;
++	if (c == 0 || !config)
++		return;
++	s = spl7();
++	if (outlen >= NOUT-1)
++		klflush();
++	if (c == '\n')
++		out[outlen++] = '\r';
++	out[outlen++] = c;
++	if (c == '\n')
++		klflush();
++	splx(s);
 
 % usr/sys/dev/sys.c
 @@ -4,0 +5 @@
@@ -24736,9 +25395,9 @@ usr/local
 @@ -83,2 +85,3 @@
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
-+#define	USIZE	2		/* size of user block (*4096) */
++#define	USIZE	1		/* size of user block (*4096) */
 +#define	UBASE	0xFFE00000U	/* abs. addr of user block */
-+#define	USERSIZE	0xC0000000U	/* size of user address space */
++#define	USRSIZE	0xC0000000U	/* size of user address space */
 @@ -94 +97 @@
 -#define	CBSIZE	14		/* number of chars in a clist block */
 +#define	CBSIZE	12		/* number of chars in a clist block */
@@ -24774,6 +25433,11 @@ usr/local
 +typedef	unsigned short	ino_t;
 +typedef	long long	time_t;
 +typedef	int		label_t[10];	/* regs 4-11, sp, lr */
+@@ -140,2 +139,2 @@
+-#define	UMODE	0170000		/* usermode bits */
+-#define	USERMODE(ps)	((ps & UMODE)==UMODE)
++#define	UMODE	037		/* mode bits of the CPSR */
++#define	USERMODE(ps)	((ps & UMODE)==020)
 @@ -143,2 +142 @@
 -#define	INTPRI	0340		/* Priority bits */
 -#define	BASEPRI(ps)	((ps & INTPRI) != 0)
@@ -24873,7 +25537,7 @@ usr/local
 @@ -27 +26 @@
 -int	nchrdev;
 +extern	int	nchrdev;
-@@ -29,16 +28,16 @@
+@@ -29,11 +28,10 @@
 -int	mpid;			/* generic for unique process id's */
 -char	runin;			/* scheduling flag */
 -char	runout;			/* scheduling flag */
@@ -24885,11 +25549,6 @@ usr/local
 -int	nswap;			/* size of swap space */
 -int	updlock;		/* lock for sync */
 -daddr_t	rablock;		/* block to be read ahead */
--extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
--char	msgbuf[MSGBUFS];	/* saved "printf" characters */
--dev_t	rootdev;		/* device of the root */
--dev_t	swapdev;		/* swapping device */
--dev_t	pipedev;		/* pipe device */
 +extern	int	mpid;			/* generic for unique process id's */
 +extern	char	runin;			/* scheduling flag */
 +extern	char	runout;			/* scheduling flag */
@@ -24900,18 +25559,22 @@ usr/local
 +extern	int	nswap;			/* size of swap space */
 +extern	int	updlock;		/* lock for sync */
 +extern	daddr_t	rablock;		/* block to be read ahead */
-+extern	char	regloc[];	/* locs. of saved user registers (sysent.c) */
+@@ -41,4 +39,5 @@
+-char	msgbuf[MSGBUFS];	/* saved "printf" characters */
+-dev_t	rootdev;		/* device of the root */
+-dev_t	swapdev;		/* swapping device */
+-dev_t	pipedev;		/* pipe device */
 +extern	char	msgbuf[MSGBUFS];	/* saved "printf" characters */
-+extern	char	*msgbufp;
++extern	char	*msgbufp;	/* next place in msgbuf */
 +extern	dev_t	rootdev;		/* device of the root */
 +extern	dev_t	swapdev;		/* swapping device */
 +extern	dev_t	pipedev;		/* pipe device */
 @@ -46,0 +46,4 @@
 +extern	unsigned long long clkcval;	/* when the clock is next due */
-+extern	unsigned clkreload, clkrem, clkfrac;
++extern	unsigned clkreload, clkrem, clkfrac;	/* ticks: counts, remainder, its sum */
 +extern	unsigned long long *l1tab;	/* user first-level tables */
 +extern	unsigned l1pa;		/* their physical address */
-@@ -48,16 +51,114 @@
+@@ -48,16 +51,243 @@
 -dev_t getmdev();
 -daddr_t	bmap();
 -struct inode *ialloc();
@@ -24943,106 +25606,235 @@ usr/local
 +struct filsys *getfs(dev_t dev);
 +struct file *getf(int f);
 +struct file *falloc(void);
-+int	uchar(void);
 +struct clist; struct map; struct text; struct tty; struct uprof;
-+void	acct(void), addupc(caddr_t pc, struct uprof *p, int t),
-+	alarm(void), arm_sync_icache(caddr_t a, unsigned n),
-+	bawrite(struct buf *bp), bcopy(caddr_t from, caddr_t to, int count),
-+	bdinit(void), bdwrite(struct buf *bp), bflush(dev_t dev),
-+	brelse(struct buf *bp), bwrite(struct buf *bp), chdir(void),
-+	chmod(void), chown(void), chroot(void), cinit(void), clearseg(int a),
-+	clkstart(void),
-+	clock(caddr_t pc, int ps),
-+	clock_ddr_init(void), close(void), closef(struct file *fp),
-+	clrbuf(struct buf *bp), cninit(void), cntv_ctl_set(int c),
-+	cntv_cval_set(unsigned long long c), copyseg(int from, int to),
-+	creat(void),
-+	dcflush(caddr_t a, unsigned n), dcinval(caddr_t a, unsigned n),
-+	ddrinit(void),
-+	deverror(struct buf *bp, int o1, int o2), dmbsy(void), dup(void),
-+	exec(void), exece(void), exit(int rv), fork(void),
-+	free(dev_t dev, daddr_t bno), fstat(void), ftime(void), getgid(void),
-+	getpid(void), getuid(void), gtime(void), gtty(void), idle(void),
-+	ifree(dev_t dev, ino_t ino), install_sigtramp(void),
-+	iodone(struct buf *bp), ioctl(void), iput(struct inode *ip),
-+	irq(int *r), itrunc(struct inode *ip),
-+	iupdat(struct inode *ip, time_t *ta, time_t *tm), kill(void),
-+	klclose(dev_t dev, int flag), klinit(void), klintr(void),
-+	klioctl(dev_t dev, int cmd, caddr_t addr, int flag),
-+	klopen(dev_t dev, int flag), klread(dev_t dev),
-+	klwrite(dev_t dev), link(void),
-+	mfree(struct map *mp, int size, int a), mknod(void), mmread(int dev),
-+	mmwrite(int dev),
-+	ndflush(struct clist *q, int cc), nice(void),
-+	nodev(dev_t dev, int flag),
-+	nolioctl(int cmd, struct tty *tp, caddr_t addr),
-+	noioctl(dev_t dev, int cmd, caddr_t addr, int flag), nordwr(dev_t dev),
-+	nostrat(struct buf *bp), nulldev(dev_t dev, int flag),
-+	nulltty(struct tty *tp), open(void), openi(struct inode *ip, int rw),
-+	panic(char *s), panictrap(void), pause(void),
-+	physio(void (*strat)(struct buf *bp), struct buf *bp, int dev, int rw),
-+	pipe(void), plock(struct inode *ip), prdev(char *str, dev_t dev),
-+	prele(struct inode *ip), profil(void), psig(void),
-+	psignal(struct proc *p, int sig), ptfree(struct proc *p), ptrace(void),
-+	putchar(int c),
-+	qswtch(void), read(void), readi(struct inode *ip), restfp(void *fps),
-+	readp(struct file *fp), resume(int a, label_t lab), rexit(void),
-+	rkinit(void), rkintr(void), rkread(dev_t dev),
-+	rkstrategy(struct buf *bp), rkwrite(dev_t dev), saccess(void),
-+	savfp(void *fps), sbreak(void), sched(void), seek(void),
-+	sendsig(caddr_t p, int signo),
-+	setgid(void), setrun(struct proc *p), setuid(void), sigreturn(void),
-+	signal(int pgrp, int sig), sleep(caddr_t chan, int pri), smount(void),
-+	spl0(void), spl1(void), splx(int s), ssig(void), startup(void),
-+	stat(void), stime(void), stty(void), sumount(void), sureg(void),
-+	swap(int blkno, int coreaddr, int count, int rdflg), swtch(void),
-+	sync(void), syopen(int dev, int flag), syread(int dev), sysacct(void),
-+	sysioctl(int dev, int cmd, caddr_t addr, int flag), syslock(void),
-+	sysphys(void), sywrite(int dev),
-+	timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim), times(void),
-+	tlbflush(void), trap(int *r), ttbset(unsigned a), ttrstrt(caddr_t arg),
-+	ttstart(struct tty *tp),
-+	ttychars(struct tty *tp), ttyclose(struct tty *tp),
-+	ttyhold(int c, struct tty *tp),
-+	ttyinput(int c, struct tty *tp), ttyopen(dev_t dev, struct tty *tp),
-+	ttyrend(struct tty *tp, char *pb, char *pe),
-+	ttyunhold(struct tty *tp), umask(void), unlink(void),
-+	update(void), user_trap_handler(int signo, int *r, unsigned a),
-+	utime(void),
-+	wait(void), wakeup(caddr_t chan), wdir(struct inode *ip), write(void),
-+	writei(struct inode *ip), writep(struct file *fp),
-+	xalloc(struct inode *ip), xfree(void), xlock(struct text *xp),
-+	xrele(struct inode *ip), xumount(int dev), xunlock(struct text *xp);
-+int	access(struct inode *ip, int mode),
-+	b_to_q(char *cp, int cc, struct clist *q), cntfrq_get(void),
-+	copyin(caddr_t f, caddr_t t, unsigned n),
-+	copyout(caddr_t f, caddr_t t, unsigned n), cpass(void), dfar(void),
-+	dfsr(void), expand(int newsize),
-+	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw),
-+	fsig(struct proc *p), fubyte(caddr_t a), fumem(int dev, off_t off),
-+	fuword(caddr_t a), getc(struct clist *p), getw(struct clist *p),
-+	grow(unsigned sp), issig(void), malloc(struct map *mp, int size),
-+	max(unsigned a, unsigned b), min(unsigned a, unsigned b),
-+	ndqb(struct clist *q, int flag), newproc(void), passc(int c),
-+	putc(int c, struct clist *p), putw(int c, struct clist *p),
-+	q_to_b(struct clist *q, char *cp, int cc), save(label_t lab),
-+	schar(void), setpri(struct proc *pp), spl5(void), spl6(void),
-+	spl7(void), subyte(caddr_t a, int c), sumem(int dev, off_t off, int c),
-+	suser(void), suword(caddr_t a, int v),
-+	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev),
-+	ttread(struct tty *tp), ufalloc(void),
-+	xswap(struct proc *p, int ff, int os);
-+caddr_t	machine_init(void), ttwrite(struct tty *tp);
++void	acct(void);
++void	addupc(caddr_t pc, struct uprof *p, int t);
++void	alarm(void);
++void	arm_sync_icache(caddr_t a, unsigned n);
++void	bawrite(struct buf *bp);
++void	bcopy(caddr_t from, caddr_t to, int count);
++void	bdinit(void);
++void	bdwrite(struct buf *bp);
++void	bflush(dev_t dev);
++void	brelse(struct buf *bp);
++void	bwrite(struct buf *bp);
++void	chdir(void);
++void	chmod(void);
++void	chown(void);
++void	chroot(void);
++void	cinit(void);
++void	clearseg(int a);
++void	clkstart(void);
++void	clock(caddr_t pc, int ps);
++void	clock_ddr_init(void);
++void	close(void);
++void	closef(struct file *fp);
++void	clrbuf(struct buf *bp);
++void	cninit(void);
++void	cntv_ctl_set(int c);
++void	cntv_cval_set(unsigned long long c);
++void	copyseg(int from, int to);
++void	creat(void);
++void	dcflush(caddr_t a, unsigned n);
++void	dcinval(caddr_t a, unsigned n);
++void	ddrinit(void);
++void	ddrpower(void);
++void	deverror(struct buf *bp, int o1, int o2);
++void	dmbsy(void);
++void	dup(void);
++void	exec(void);
++void	exece(void);
++void	exit(int rv);
++void	fork(void);
++void	free(dev_t dev, daddr_t bno);
++void	fstat(void);
++void	ftime(void);
++void	getgid(void);
++void	getpid(void);
++void	getuid(void);
++void	gtime(void);
++void	gtty(void);
++void	idle(void);
++void	ifree(dev_t dev, ino_t ino);
++void	install_sigtramp(void);
++void	ioctl(void);
++void	iodone(struct buf *bp);
++void	iomove(caddr_t cp, int n, int flag);
++void	iput(struct inode *ip);
++void	irq(int *r);
++void	itrunc(struct inode *ip);
++void	iupdat(struct inode *ip, time_t *ta, time_t *tm);
++void	kill(void);
++void	klclose(dev_t dev, int flag);
++void	klinit(void);
++void	klintr(void);
++void	klioctl(dev_t dev, int cmd, caddr_t addr, int flag);
++void	klopen(dev_t dev, int flag);
++void	klread(dev_t dev);
++void	klwrite(dev_t dev);
++void	link(void);
++void	mfree(struct map *mp, int size, int a);
++void	mknod(void);
++void	mmread(int dev);
++void	mmwrite(int dev);
++void	ndflush(struct clist *q, int cc);
++void	nice(void);
++void	nodev(dev_t dev, int flag);
++void	noioctl(dev_t dev, int cmd, caddr_t addr, int flag);
++void	nolioctl(int cmd, struct tty *tp, caddr_t addr);
++void	nordwr(dev_t dev);
++void	nostrat(struct buf *bp);
++void	nosys(void);
++void	nulldev(dev_t dev, int flag);
++void	nullsys(void);
++void	nulltty(struct tty *tp);
++void	open(void);
++void	openi(struct inode *ip, int rw);
++void	panic(char *s);
++void	panictrap(void);
++void	pause(void);
++void	physio(void (*strat)(struct buf *bp), struct buf *bp, int dev, int rw);
++void	pipe(void);
++void	plock(struct inode *ip);
++void	prdev(char *str, dev_t dev);
++void	prele(struct inode *ip);
++void	printf(char *fmt, ...);
++void	profil(void);
++void	psig(void);
++void	psignal(struct proc *p, int sig);
++void	ptfree(struct proc *p);
++void	ptrace(void);
++void	putchar(int c);
++void	qswtch(void);
++void	read(void);
++void	readi(struct inode *ip);
++void	readp(struct file *fp);
++void	restfp(void *fps);
++void	resume(int a, label_t lab);
++void	rexit(void);
++void	rkinit(void);
++void	rkintr(void);
++void	rkread(dev_t dev);
++void	rkstrategy(struct buf *bp);
++void	rkwrite(dev_t dev);
++void	saccess(void);
++void	savfp(void *fps);
++void	sbreak(void);
++void	sched(void);
++void	seek(void);
++void	sendsig(caddr_t p, int signo);
++void	setgid(void);
++void	setrun(struct proc *p);
++void	setuid(void);
++void	signal(int pgrp, int sig);
++void	sigreturn(void);
++void	sleep(caddr_t chan, int pri);
++void	smount(void);
++void	spl0(void);
++void	spl1(void);
++void	splx(int s);
++void	ssig(void);
++void	startup(void);
++void	stat(void);
++void	stime(void);
++void	stty(void);
++void	sumount(void);
++void	sureg(void);
++void	swap(int blkno, int coreaddr, int count, int rdflg);
++void	swtch(void);
++void	sync(void);
++void	syopen(int dev, int flag);
++void	syread(int dev);
++void	sysacct(void);
++void	sysioctl(int dev, int cmd, caddr_t addr, int flag);
++void	syslock(void);
++void	sysphys(void);
++void	sywrite(int dev);
++void	timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim);
++void	times(void);
++void	tlbflush(void);
++void	trap(int *r);
++void	ttbset(unsigned a);
++void	ttrstrt(caddr_t arg);
++void	ttstart(struct tty *tp);
++void	ttychars(struct tty *tp);
++void	ttyclose(struct tty *tp);
++void	ttyhold(int c, struct tty *tp);
++void	ttyinput(int c, struct tty *tp);
++void	ttyopen(dev_t dev, struct tty *tp);
++void	ttyrend(struct tty *tp, char *pb, char *pe);
++void	ttyunhold(struct tty *tp);
++void	umask(void);
++void	unlink(void);
++void	update(void);
++void	user_trap_handler(int signo, int *r, unsigned a);
++void	utime(void);
++void	wait(void);
++void	wakeup(caddr_t chan);
++void	wdir(struct inode *ip);
++void	write(void);
++void	writei(struct inode *ip);
++void	writep(struct file *fp);
++void	xalloc(struct inode *ip);
++void	xfree(void);
++void	xlock(struct text *xp);
++void	xrele(struct inode *ip);
++void	xumount(int dev);
++void	xunlock(struct text *xp);
++int	access(struct inode *ip, int mode);
++int	b_to_q(char *cp, int cc, struct clist *q);
++int	cntfrq_get(void);
++int	copyin(caddr_t f, caddr_t t, unsigned n);
++int	copyout(caddr_t f, caddr_t t, unsigned n);
++int	cpass(void);
++int	dfar(void);
++int	dfsr(void);
++int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
++int	expand(int newsize);
++int	fsig(struct proc *p);
++int	fubyte(caddr_t a);
++int	fumem(int dev, off_t off);
++int	fuword(caddr_t a);
++int	getc(struct clist *p);
++int	getw(struct clist *p);
++int	grow(unsigned sp);
++int	issig(void);
++int	malloc(struct map *mp, int size);
++int	max(unsigned a, unsigned b);
++int	min(unsigned a, unsigned b);
++int	ndqb(struct clist *q, int flag);
++int	newproc(void);
++int	passc(int c);
++int	putc(int c, struct clist *p);
++int	putw(int c, struct clist *p);
++int	q_to_b(struct clist *q, char *cp, int cc);
++int	save(label_t lab);
++int	schar(void);
++int	setpri(struct proc *pp);
++int	spl5(void);
++int	spl6(void);
++int	spl7(void);
++int	subyte(caddr_t a, int c);
++int	sumem(int dev, off_t off, int c);
++int	suser(void);
++int	suword(caddr_t a, int v);
++int	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev);
++int	ttread(struct tty *tp);
++int	uchar(void);
++int	ufalloc(void);
++int	xswap(struct proc *p, int ff, int os);
++caddr_t	machine_init(void);
++caddr_t	ttwrite(struct tty *tp);
++char	*devaddr(off_t off);
 +unsigned long long cntvct_get(void);
 +unsigned	vtop(caddr_t va);
-+void	printf(char *fmt, ...);
 +#define	fuibyte	fubyte
 +#define	fuiword	fuword
 +#define	suibyte	subyte
 +#define	suiword	suword
 +#define	copyiin	copyin
 +#define	copyiout	copyout
-@@ -67,6 +168,6 @@
+@@ -67,6 +297,6 @@
 -int	dk_busy;
 -long	dk_time[32];
 -long	dk_numb[3];
@@ -25055,7 +25847,7 @@ usr/local
 +extern	long	dk_wds[3];
 +extern	long	tk_nin;
 +extern	long	tk_nout;
-@@ -80 +181 @@
+@@ -80 +310 @@
 -	int	(*sy_call)();		/* handler */
 +	void	(*sy_call)(void);	/* handler */
 
@@ -25576,7 +26368,7 @@ usr/local
 +
 +	n = GICC(0xc);
 +	if((n&0x3ff) == TIMER)
-+		clock((caddr_t)r[PC], (r[RPS]&0x1f) == 0x10 ? UMODE : 0);
++		clock((caddr_t)r[PC], r[RPS]);
 +	else
 +		for(ip = intrtab; ip->i_irq; ip++)
 +			if(*ip->i_irq == (int)(n&0x3ff))
@@ -25609,7 +26401,7 @@ usr/local
 @@ -152,0 +153,2 @@
 +	u.u_ar0[R0] = signo;
 +	u.u_ar0[RPS] &= ~0x0600fe20;
-@@ -155,9 +157,23 @@
+@@ -155,9 +157,55 @@
 -/*
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
@@ -25642,9 +26434,7 @@ usr/local
 +{
 +	register struct memregion *m;
 +	register unsigned a;
-@@ -165,2 +181,10 @@
--mapalloc(bp)
--register struct buf *bp;
++
 +	a = (unsigned)va;
 +	for(m = board_map; m->end != 0; m++)
 +		if(m->attr != BLK_DEV && a - m->va < m->end - m->start)
@@ -25655,12 +26445,10 @@ usr/local
 +
 +caddr_t
 +machine_init(void)
-@@ -168 +192,2 @@
--	register i, a;
++{
 +	register unsigned a;
 +	register char *p;
-@@ -170 +195,51 @@
--	if(cputype != 70)
++
 +	kmap(1);
 +	cninit();
 +	clock_ddr_init();
@@ -25678,10 +26466,13 @@ usr/local
 +		*p = 0;
 +	return((caddr_t)UBASE + ptob(USIZE));
 +}
-+
+@@ -165,2 +213,2 @@
+-mapalloc(bp)
+-register struct buf *bp;
 +void
 +copyseg(int from, int to)
-+{
+@@ -168 +216,17 @@
+-	register i, a;
 +	register int *s, *d, i;
 +
 +	s = (int *)PGADDR(from);
@@ -25699,7 +26490,8 @@ usr/local
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = 0;
 +}
-+
+@@ -170 +234,12 @@
+-	if(cputype != 70)
 +void
 +sigreturn(void)
 +{
@@ -25717,7 +26509,7 @@ usr/local
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +248,60 @@
+@@ -177,19 +248,74 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -25762,6 +26554,20 @@ usr/local
 +		if(a - b < e - b)
 +			return((char *)a);
 +	}
++	return(NULL);
++}
++
++/*
++ * A device register at physical address off, for /dev/mem
++ */
++char *
++devaddr(off_t off)
++{
++	register struct memregion *m;
++
++	for(m = board_map; m->end != 0; m++)
++		if(m->attr == BLK_DEV && (unsigned)off - m->start < m->end - m->start)
++			return((char *)(m->va + (unsigned)off - m->start));
 +	return(NULL);
 +}
 +
@@ -25814,7 +26620,7 @@ usr/local
 +char	runrun;
 +char	curpri;
 +int	maxmem;
-+int	updlock;
++int	updlock = 1;
 +daddr_t	rablock;
 +char	msgbuf[MSGBUFS];
 +int	dk_busy;
@@ -25834,25 +26640,27 @@ usr/local
 @@ -38 +63 @@
 -	proc[0].p_addr = ka6->r[0];
 +	proc[0].p_addr = btop(corebase);
-@@ -68,2 +93,2 @@
+@@ -53,0 +79 @@
++	updlock = 0;
+@@ -68,2 +94,2 @@
 -		expand(USIZE + (int)btoc(szicode));
 -		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 +		expand(USIZE + (int)btop(szicode));
 +		estabur((unsigned)0, btop(szicode), (unsigned)0, 0, RO);
-@@ -70,0 +96 @@
+@@ -70,0 +97 @@
 +		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE), szicode);
-@@ -90 +116,2 @@
+@@ -90 +117,2 @@
 -iinit()
 +void
 +iinit(void)
-@@ -119 +146 @@
+@@ -119 +147 @@
 -char	buffers[NBUF][BSIZE+BSLOP];
 +extern int	buffers[][(BSIZE+BSLOP+63)/64*16];
-@@ -125 +152,2 @@
+@@ -125 +153,2 @@
 -binit()
 +void
 +binit(void)
-@@ -137 +165 @@
+@@ -137 +166 @@
 -		bp->b_un.b_addr = buffers[i];
 +		bp->b_un.b_addr = (caddr_t)buffers[i] + (-(unsigned)buffers&63);
 
@@ -26094,58 +26902,56 @@ usr/local
 +	register int s;
 
 % usr/sys/sys/rdwri.c
-@@ -7,0 +8 @@
-+void	iomove(caddr_t cp, int n, int flag);
-@@ -19,2 +20,2 @@
+@@ -19,2 +19,2 @@
 -readi(ip)
 -register struct inode *ip;
 +void
 +readi(register struct inode *ip)
-@@ -26,2 +27,2 @@
+@@ -26,2 +26,2 @@
 -	register on, n;
 -	register type;
 +	register int on, n;
 +	register int type;
-@@ -31 +32 @@
+@@ -31 +31 @@
 -	if(u.u_offset < 0) {
 +	if(u.u_offset < 0 && (ip->i_mode&IFMT) != IFCHR) {
-@@ -39 +40,2 @@
+@@ -39 +39,2 @@
 -		return((*cdevsw[major(dev)].d_read)(dev));
 +		(*cdevsw[major(dev)].d_read)(dev);
 +		return;
-@@ -83,2 +85,2 @@
+@@ -83,2 +84,2 @@
 -writei(ip)
 -register struct inode *ip;
 +void
 +writei(register struct inode *ip)
-@@ -89,2 +91,2 @@
+@@ -89,2 +90,2 @@
 -	register n, on;
 -	register type;
 +	register int n, on;
 +	register int type;
-@@ -92 +94 @@
+@@ -92 +93 @@
 -	if(u.u_offset < 0) {
 +	if(u.u_offset < 0 && (ip->i_mode&IFMT) != IFCHR) {
-@@ -136,2 +138,2 @@
+@@ -136,2 +137,2 @@
 -max(a, b)
 -unsigned a, b;
 +int
 +max(unsigned a, unsigned b)
-@@ -149,2 +151,2 @@
+@@ -149,2 +150,2 @@
 -min(a, b)
 -unsigned a, b;
 +int
 +min(unsigned a, unsigned b)
-@@ -173,3 +175,2 @@
+@@ -173,3 +174,2 @@
 -iomove(cp, n, flag)
 -register caddr_t cp;
 -register n;
 +void
 +iomove(register caddr_t cp, register int n, int flag)
-@@ -177 +178 @@
+@@ -177 +177 @@
 -	register t;
 +	register int t;
-@@ -200 +201 @@
+@@ -200 +200 @@
 -		u.u_offset += n;
 +		u.u_offset = (unsigned long)u.u_offset + n;
 
@@ -26221,10 +27027,10 @@ usr/local
 +	register int a;
 @@ -244 +248 @@
 -	if(sp >= -ctob(u.u_ssize))
-+	if(sp >= USERSIZE-ptob(u.u_ssize))
++	if(sp >= USRSIZE-ptob(u.u_ssize))
 @@ -246 +250 @@
 -	si = (-sp)/64 - u.u_ssize + SINCR;
-+	si = (USERSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
++	si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
 @@ -252 +256,4 @@
 -	expand(p->p_size+si);
 +	if(expand(p->p_size+si) == 0) {
@@ -26527,7 +27333,7 @@ usr/local
 @@ -103,2 +109,2 @@
 -	ucp = -nc - NBPW;
 -	ap = ucp - na*NBPW - 3*NBPW;
-+	ucp = USERSIZE - nc - NBPW;
++	ucp = USRSIZE - nc - NBPW;
 +	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
 @@ -144,2 +150,2 @@
 -getxfile(ip, nargc)
@@ -26919,14 +27725,7 @@ usr/local
 +		iput(ip);
 
 % usr/sys/sys/sysent.c
-@@ -2,0 +3,6 @@
-+#include "../h/dir.h"
-+#include "../h/user.h"
-+#include "../h/reg.h"
-+#define	EBIT	0x20000000	/* user error bit in PS: C-bit */
-+static void nullsys(void) { }
-+static void nosys(void) { u.u_error = EINVAL; }
-@@ -10,54 +15,0 @@
+@@ -10,54 +9,0 @@
 -int	alarm();
 -int	mpxchan();
 -int	chdir();
@@ -26981,7 +27780,7 @@ usr/local
 -int	utime();
 -int	wait();
 -int	write();
-@@ -67,64 +19,64 @@
+@@ -67,64 +13,64 @@
 -	0, 0, nullsys,			/*  0 = indir */
 -	1, 1, rexit,			/*  1 = exit */
 -	0, 0, fork,			/*  2 = fork */
@@ -27110,73 +27909,6 @@ usr/local
 +	{1, 1, chroot},			/* 61 = chroot */
 +	{0, 0, nosys},			/* 62 = x */
 +	{0, 0, sigreturn}		/* 63 = sigreturn */
-@@ -131,0 +84,66 @@
-+char	regloc[9] = { R0, R1, R2, R3, R4, R5, R6, R7, RPS };
-+void
-+trap(int *r)
-+{
-+	register int i;
-+	register struct sysent *callp;
-+	time_t syst;
-+
-+	syst = u.u_stime;
-+	u.u_fpsaved = 0;
-+	u.u_ar0 = r;
-+	u.u_error = 0;
-+	r[RPS] &= ~EBIT;
-+	callp = &sysent[r[7] & 077];
-+	for(i = 0; i < callp->sy_narg; i++)
-+		u.u_arg[i] = r[i];
-+	u.u_dirp = (caddr_t)u.u_arg[0];
-+	u.u_r.r_val1 = 0;
-+	u.u_r.r_val2 = r[R1];
-+	u.u_ap = u.u_arg;
-+	if (save(u.u_qsav)) {
-+		if (u.u_error == 0)
-+			u.u_error = EINTR;
-+	} else {
-+		(*callp->sy_call)();
-+	}
-+	if (u.u_error) {
-+		r[RPS] |= EBIT;
-+		r[R0] = u.u_error;
-+	} else {
-+		r[R0] = u.u_r.r_val1;
-+		r[R1] = u.u_r.r_val2;
-+	}
-+	if (issig())
-+		psig();
-+	curpri = setpri(u.u_procp);
-+	if (runrun)
-+		qswtch();
-+	if(u.u_prof.pr_scale)
-+		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
-+	if (u.u_fpsaved)
-+		restfp(&u.u_fps);
-+}
-+void
-+user_trap_handler(int signo, int *r, unsigned a)
-+{
-+	if((r[RPS] & 0x1f) != 0x10) {
-+		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
-+		    signo, r[15], r[RPS], dfar(), dfsr());
-+		panic("kernel trap");
-+	}
-+	u.u_fpsaved = 0;
-+	u.u_ar0 = r;
-+	if(signo == SIGINS && r[RPS]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
-+		r[PC] += 2;
-+	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
-+	    grow(a) == 0))
-+		psignal(u.u_procp, signo);
-+	if (issig())
-+		psig();
-+	curpri = setpri(u.u_procp);
-+	if (runrun)
-+		qswtch();
-+	if (u.u_fpsaved)
-+		restfp(&u.u_fps);
-+}
 
 % usr/sys/sys/text.c
 @@ -10,0 +11,2 @@
@@ -27522,6 +28254,1323 @@ usr/local
 +	u.u_pssize = ns;
 +	u.u_pxrw = xrw;
 +	ptfree(u.u_procp);
+
+% usr/src/cmd/reset.c /dev/null
+@@ -0,0 +1,22 @@
++/*
++ * Reset the STM32MP1 board, through RCC_MP_GRSTCSETR.
++ */
++
++#include <stdio.h>
++
++int
++main(void)
++{
++	int mem, v;
++
++	sync();
++	if((mem = open("/dev/mem", 1)) < 0) {
++		perror("/dev/mem");
++		exit(1);
++	}
++	v = 1;
++	lseek(mem, 0x50000114L, 0);
++	write(mem, (char *)&v, 4);
++	perror("reset");
++	exit(1);
++}
+
+% usr/src/cmd/standalone/sdwrite.c /dev/null
+@@ -0,0 +1,776 @@
++/*
++ * Standalone SD card writer for the STM32MP135,
++ * loaded through the boot ROM's USB DFU mode.
++ * It presents a CDC-ACM serial port and obeys:
++ *	i		card size in blocks
++ *	w lba n		take n bytes, write them from block lba
++ *	r lba n		send n bytes read from block lba
++ *	x		reset the board
++ * The watchdog resets the board 33 s after the last command.
++ * From the host's shell:
++ *	stty -F /dev/ttyACM0 raw -echo; exec 3<>/dev/ttyACM0
++ *	printf 'w 0 %d\r' `stat -c %s img` >&3; cat img >&3; head -1 <&3
++ *	printf 'r 0 %d\r' `stat -c %s img` >&3; head -c `stat -c %s img` <&3 | cmp - img
++ */
++
++#define	R(a)	(*(volatile unsigned *)(a))
++
++#define	RCC	0x50000000
++#define	GPIOC	0x50004000
++#define	GPIOD	0x50005000
++#define	SD	0x58005000
++#define	OTG	0x49000000
++#define	IWDG	0x5a002000
++
++#define	POWER	(SD+0x00)
++#define	CLKCR	(SD+0x04)
++#define	ARG	(SD+0x08)
++#define	CMD	(SD+0x0c)
++#define	RESP1	(SD+0x14)
++#define	DTIMER	(SD+0x24)
++#define	DLEN	(SD+0x28)
++#define	DCTRL	(SD+0x2c)
++#define	STA	(SD+0x34)
++#define	ICR	(SD+0x38)
++#define	SDFIFO	(SD+0x80)
++
++#define	CCRCFAIL	01
++#define	CTIMEOUT	04
++#define	DERR	072
++#define	CMDREND	0100
++#define	CMDSENT	0200
++#define	DATAEND	0400
++#define	TXFIFOHE	(1<<14)
++#define	RXFIFOHF	(1<<15)
++#define	RXFIFOE	(1<<19)
++#define	BUSYD0	(1<<20)
++#define	CLEAR	0x1fe00fff
++#define	CPSMEN	(1<<12)
++#define	TRANS	0100
++#define	STOP	0200
++#define	HWFC	(1<<17)
++#define	WIDE	(1<<14)
++
++#define	GRSTCTL	(OTG+0x010)
++#define	GINTSTS	(OTG+0x014)
++#define	GRXSTSR	(OTG+0x01c)
++#define	GRXSTSP	(OTG+0x020)
++#define	DCFG	(OTG+0x800)
++#define	DCTL	(OTG+0x804)
++#define	DSTS	(OTG+0x808)
++#define	DIEPCTL(n)	(OTG+0x900+(n)*0x20)
++#define	DIEPINT(n)	(OTG+0x908+(n)*0x20)
++#define	DIEPTSIZ(n)	(OTG+0x910+(n)*0x20)
++#define	DTXFSTS(n)	(OTG+0x918+(n)*0x20)
++#define	DOEPCTL(n)	(OTG+0xb00+(n)*0x20)
++#define	DOEPINT(n)	(OTG+0xb08+(n)*0x20)
++#define	DOEPTSIZ(n)	(OTG+0xb10+(n)*0x20)
++#define	FIFO(n)	(OTG+0x1000+(n)*0x1000)
++
++#define	EPENA	(1U<<31)
++#define	SNAK	(1U<<27)
++#define	CNAK	(1U<<26)
++#define	SD0PID	(1U<<28)
++#define	STALL	(1U<<21)
++#define	USBAEP	(1U<<15)
++#define	XFRC	01
++#define	STUP	010
++#define	RXFLVL	(1U<<4)
++#define	USBRST	(1U<<12)
++#define	ENUMDNE	(1U<<13)
++#define	SDIS	02
++
++#define	NRING	(64*1024)
++
++void	main(void);
++void	reset(void);
++
++static unsigned	ring[NRING/4], rxbuf[128];
++static unsigned char	setup[8], ep0buf[64], line[80];
++static unsigned	rca, nblk, mps = 512, ep0len, rxn;
++static int	config, rxready;
++
++static const unsigned char devdesc[18] = {
++	18, 1, 0x00, 0x02, 2, 0, 0, 64, 0x09, 0x12, 0x02, 0x00,
++	0x00, 0x01, 0, 0, 0, 1
++};
++
++static unsigned char cfgdesc[67] = {
++	9, 2, 67, 0, 2, 1, 0, 0xc0, 1,
++	9, 4, 0, 0, 1, 2, 2, 0, 0,
++	5, 0x24, 0, 0x10, 0x01,
++	5, 0x24, 1, 0, 1,
++	4, 0x24, 2, 2,
++	5, 0x24, 6, 0, 1,
++	7, 5, 0x82, 3, 16, 0, 8,
++	9, 4, 1, 0, 2, 10, 0, 0, 0,
++	7, 5, 0x01, 2, 0x00, 0x02, 0,
++	7, 5, 0x81, 2, 0x00, 0x02, 0
++};
++
++static unsigned char coding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0, 8 };
++
++__asm__(
++	".section .start, \"ax\"\n"
++	".globl _start\n"
++"_start:\n"
++	"cpsid if\n"
++	"ldr sp, =0x30000000\n"
++	"mrc p15, 0, r0, c1, c0, 0\n"
++	"orr r0, r0, #(1 << 12)\n"
++	"mov r1, #0\n"
++	"mcr p15, 0, r1, c7, c5, 0\n"
++	"mcr p15, 0, r0, c1, c0, 0\n"
++	"isb\n"
++	"ldr r0, =__bss_start__\n"
++	"ldr r1, =__bss_end__\n"
++	"mov r2, #0\n"
++"1:	cmp r0, r1\n"
++	"strlo r2, [r0], #4\n"
++	"blo 1b\n"
++	"bl main\n"
++	".text\n"
++);
++
++static unsigned
++now(void)
++{
++	unsigned lo, hi;
++
++	__asm__ volatile("mrrc p15, 0, %0, %1, c14" : "=r"(lo), "=r"(hi));
++	return(lo);
++}
++
++static void
++delay(unsigned us)
++{
++	unsigned t;
++
++	t = now();
++	while (now() - t < us*64)
++		;
++}
++
++static void
++kick(void)
++{
++	R(IWDG) = 0xaaaa;
++}
++
++void
++reset(void)
++{
++	R(RCC+0x114) = 1;
++	for (;;)
++		;
++}
++
++/*
++ * USB: one CDC-ACM device, polled.
++ */
++static void
++fifowrite(int ep, const unsigned char *p, unsigned n)
++{
++	register unsigned i, w;
++
++	for (i = 0; i < n; i += 4) {
++		w = p[i];
++		if (i+1 < n)
++			w |= p[i+1] << 8;
++		if (i+2 < n)
++			w |= p[i+2] << 16;
++		if (i+3 < n)
++			w |= (unsigned)p[i+3] << 24;
++		R(FIFO(ep)) = w;
++	}
++}
++
++static void
++fiforead(unsigned char *p, unsigned n)
++{
++	register unsigned i, w;
++
++	for (i = 0; i < n; i += 4) {
++		w = R(FIFO(0));
++		if (p == 0)
++			continue;
++		p[i] = w;
++		if (i+1 < n)
++			p[i+1] = w >> 8;
++		if (i+2 < n)
++			p[i+2] = w >> 16;
++		if (i+3 < n)
++			p[i+3] = w >> 24;
++	}
++}
++
++static void
++ep0out(void)
++{
++	R(DOEPTSIZ(0)) = 3U<<29 | 1U<<19 | 64;
++	R(DOEPCTL(0)) |= EPENA|CNAK;
++}
++
++static void
++ep0in(const unsigned char *p, unsigned n)
++{
++	unsigned want;
++
++	want = setup[6] | setup[7]<<8;
++	if (n > want)
++		n = want;
++	R(DIEPTSIZ(0)) = (n == 0 ? 1U : (n+63)/64)<<19 | n;
++	R(DIEPCTL(0)) |= EPENA|CNAK;
++	fifowrite(0, p, n);
++	ep0out();
++}
++
++static void
++rxarm(void)
++{
++	R(DOEPTSIZ(1)) = 1U<<19 | mps;
++	R(DOEPCTL(1)) |= EPENA|CNAK;
++	rxready = 0;
++}
++
++/*
++ * Tell the host the line has carrier, so that an open
++ * which waits for it can finish.
++ */
++static void
++carrier(void)
++{
++	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
++
++	if (R(DIEPCTL(2)) & EPENA)
++		return;
++	R(DIEPTSIZ(2)) = 1U<<19 | 10;
++	R(DIEPCTL(2)) |= EPENA|CNAK;
++	fifowrite(2, state, 10);
++}
++
++static void
++dosetup(void)
++{
++	unsigned char buf[4];
++	register unsigned type, req, val, i;
++
++	type = setup[0];
++	req = setup[1];
++	val = setup[2] | setup[3]<<8;
++	if ((type&0x60) == 0x20) {
++		if (req == 0x20) {
++			ep0len = 7;
++			ep0out();
++		} else if (req == 0x21)
++			ep0in(coding, 7);
++		else
++			ep0in(0, 0);
++		if (req == 0x22 && config)
++			carrier();
++		return;
++	}
++	switch (req) {
++	case 5:
++		R(DCFG) = (R(DCFG) & ~(0177U<<4)) | (val&0177)<<4;
++		ep0in(0, 0);
++		return;
++	case 6:
++		if (val>>8 == 1) {
++			ep0in(devdesc, 18);
++			return;
++		}
++		if (val>>8 == 2) {
++			for (i = 0; i < sizeof cfgdesc; i += cfgdesc[i])
++				if (cfgdesc[i+1] == 5 && cfgdesc[i+3] == 2) {
++					cfgdesc[i+4] = mps;
++					cfgdesc[i+5] = mps>>8;
++				}
++			ep0in(cfgdesc, sizeof cfgdesc);
++			return;
++		}
++		break;
++	case 9:
++		config = val&0xff;
++		R(DIEPCTL(1)) = USBAEP | 2U<<18 | 1U<<22 | SD0PID | mps;
++		R(DOEPCTL(1)) = USBAEP | 2U<<18 | SD0PID | mps;
++		R(DIEPCTL(2)) = USBAEP | 3U<<18 | 2U<<22 | SD0PID | 16;
++		rxarm();
++		ep0in(0, 0);
++		return;
++	case 0:
++	case 8:
++	case 10:
++		buf[0] = req == 8 ? config : type == 0x80;
++		buf[1] = 0;
++		ep0in(buf, req == 0 ? 2 : 1);
++		return;
++	case 1:
++	case 3:
++	case 11:
++		ep0in(0, 0);
++		return;
++	}
++	R(DIEPCTL(0)) |= STALL;
++	R(DOEPCTL(0)) |= STALL;
++	ep0out();
++}
++
++/*
++ * Service the controller.  An OUT packet on the data
++ * endpoint goes into rxbuf at once, so that SETUP packets
++ * behind it in the FIFO are not held up; rxready says one
++ * is waiting, rxn its size.  The endpoint takes no more
++ * until it has been used.
++ */
++static void
++usbpoll(void)
++{
++	register unsigned s, st, n, k;
++	int i;
++
++	s = R(GINTSTS);
++	if (s & USBRST) {
++		R(GINTSTS) = USBRST;
++		for (i = 1; i < 4; i++) {
++			R(DOEPCTL(i)) = SNAK;
++			R(DIEPCTL(i)) = 0;
++		}
++		R(DCFG) &= ~(0177U<<4);
++		config = 0;
++		ep0out();
++	}
++	if (s & ENUMDNE) {
++		R(GINTSTS) = ENUMDNE;
++		mps = ((R(DSTS)>>1)&3) == 0 ? 512 : 64;
++		R(DIEPCTL(0)) &= ~3U;
++		R(DCTL) |= 1U<<8;
++	}
++	while (R(GINTSTS) & RXFLVL) {
++		st = R(GRXSTSP);
++		n = (st>>4) & 03777;
++		k = (st>>17) & 017;
++		if (k == 2 && (st&017) == 1) {
++			for (i = 0; i < (int)n; i += 4)
++				rxbuf[i/4] = R(FIFO(0));
++			rxready = 1;
++			rxn = n;
++		} else if (k == 6)
++			fiforead(setup, n);
++		else if (k == 2)
++			fiforead(ep0buf, n);
++		else
++			fiforead(0, n);
++	}
++	st = R(DOEPINT(0));
++	if (st & STUP) {
++		R(DOEPINT(0)) = STUP|XFRC|060;
++		dosetup();
++	} else if (st & XFRC) {
++		R(DOEPINT(0)) = XFRC|060;
++		if (ep0len) {
++			for (n = 0; n < 7; n++)
++				coding[n] = ep0buf[n];
++			ep0len = 0;
++			ep0in(0, 0);
++		} else
++			ep0out();
++	}
++	R(DIEPINT(0)) = R(DIEPINT(0));
++	st = R(DOEPINT(1));
++	if (st & XFRC)
++		R(DOEPINT(1)) = st;
++}
++
++/*
++ * Take the waiting OUT packet, rxn bytes, into p;
++ * then accept the next.
++ */
++static void
++usbtake(unsigned *p)
++{
++	register unsigned i;
++
++	for (i = 0; i < rxn; i += 4)
++		*p++ = rxbuf[i/4];
++	rxarm();
++}
++
++/*
++ * Send n bytes, a packet at a time as the
++ * transmit FIFO has room for it.
++ */
++static int
++usbsend(const unsigned char *p, unsigned n)
++{
++	register unsigned i, k;
++	unsigned t;
++
++	R(DIEPTSIZ(1)) = (n == 0 ? 1 : (n+mps-1)/mps)<<19 | n;
++	R(DIEPCTL(1)) |= EPENA|CNAK;
++	t = now();
++	for (i = 0; i < n; i += k) {
++		k = n-i < mps ? n-i : mps;
++		while ((R(DTXFSTS(1)) & 0xffff) < (k+3)/4)
++			if (now() - t > 64000000)
++				return(-1);
++		fifowrite(1, p+i, k);
++	}
++	while ((R(DIEPINT(1)) & XFRC) == 0)
++		if (now() - t > 64000000)
++			return(-1);
++		else
++			usbpoll();
++	R(DIEPINT(1)) = XFRC;
++	return(0);
++}
++
++static void
++usbinit(void)
++{
++	int i;
++
++	R(DCTL) |= SDIS;
++	delay(200000);
++	while ((R(GRSTCTL) & 1U<<31) == 0)
++		;
++	R(GRSTCTL) = 1;
++	while (R(GRSTCTL) & 1)
++		;
++	R(OTG+0x008) = 0;
++	R(OTG+0x00c) = (R(OTG+0x00c) & ~(1U<<29|1U<<30|017U<<10)) | 1U<<30 | 9U<<10;
++	delay(50000);
++	R(OTG+0x038) &= ~(1U<<21);
++	R(OTG+0x000) |= 1U<<6 | 1U<<7;
++	R(OTG+0xe00) = 0;
++	R(DCFG) = 0;
++	R(OTG+0x024) = 0x300;
++	R(OTG+0x028) = 0x40U<<16 | 0x300;
++	R(OTG+0x104) = 0x80U<<16 | 0x340;
++	R(OTG+0x108) = 0x20U<<16 | 0x3c0;
++	R(GRSTCTL) = 1U<<5 | 0x10U<<6;
++	while (R(GRSTCTL) & 1U<<5)
++		;
++	R(GRSTCTL) = 1U<<4;
++	while (R(GRSTCTL) & 1U<<4)
++		;
++	for (i = 0; i < 4; i++) {
++		R(DIEPCTL(i)) = 0;
++		R(DOEPCTL(i)) = 0;
++		R(DIEPINT(i)) = 0xffff;
++		R(DOEPINT(i)) = 0xffff;
++	}
++	R(OTG+0x018) = 0;
++	R(GINTSTS) = 0xffffffff;
++	R(DCTL) &= ~SDIS;
++}
++
++static void
++say(const char *s)
++{
++	register int n;
++
++	for (n = 0; s[n]; n++)
++		;
++	(void)usbsend((const unsigned char *)s, n);
++}
++
++static void
++putn(unsigned v)
++{
++	char buf[12];
++	register int i;
++
++	i = sizeof buf - 1;
++	buf[i] = 0;
++	do
++		buf[--i] = '0' + v%10;
++	while (v /= 10);
++	say(buf+i);
++}
++
++/*
++ * The SD card.
++ */
++static int
++sdcmd(unsigned com, unsigned arg, int resp)
++{
++	register unsigned sta, t;
++
++	R(ICR) = CLEAR;
++	R(ARG) = arg;
++	R(CMD) = com | resp<<8 | CPSMEN;
++	t = now();
++	do {
++		sta = R(STA);
++		if (sta & CTIMEOUT || now() - t > 6400000)
++			return(-1);
++	} while ((sta & (resp ? CMDREND|CCRCFAIL : CMDSENT)) == 0);
++	if (sta & CCRCFAIL && resp == 1 && (com&077) != 41)
++		return(-1);
++	return(0);
++}
++
++static int
++sdinit(void)
++{
++	register int i;
++	unsigned buf[16], c;
++
++	R(RCC+0x770) = 014;
++	for (i = 8; i <= 12; i++) {
++		R(GPIOC+0x00) = (R(GPIOC+0x00) & ~(3U<<2*i)) | 2U<<2*i;
++		R(GPIOC+0x08) |= 1U<<2*i;
++		R(GPIOC+0x24) = (R(GPIOC+0x24) & ~(0xfU<<(i-8)*4)) | 12U<<(i-8)*4;
++	}
++	R(GPIOD+0x00) = (R(GPIOD+0x00) & ~(3U<<4)) | 2U<<4;
++	R(GPIOD+0x08) |= 1U<<4;
++	R(GPIOD+0x20) = (R(GPIOD+0x20) & ~(0xfU<<8)) | 12U<<8;
++	R(RCC+0x648) = (R(RCC+0x648) & ~7U) | 3;
++	R(RCC+0x780) = 1U<<16;
++	R(RCC+0x6f0) = 1U<<16;
++	R(RCC+0x6f4) = 1U<<16;
++	R(CLKCR) = 80 | HWFC;
++	R(POWER) = 3;
++	delay(1000);
++	if (sdcmd(0, 0, 0) || sdcmd(8, 0x1aa, 1))
++		return(-1);
++	for (i = 0; ; i++) {
++		if (i == 1000 || sdcmd(55, 0, 1) || sdcmd(41, 0x40ff8000, 2))
++			return(-1);
++		if (R(RESP1) & 1U<<31)
++			break;
++		delay(1000);
++	}
++	if ((R(RESP1) & 1U<<30) == 0)
++		return(-1);
++	if (sdcmd(2, 0, 3) || sdcmd(3, 0, 1))
++		return(-1);
++	rca = R(RESP1) & 0xffff0000;
++	if (sdcmd(9, rca, 3))
++		return(-1);
++	nblk = (((R(RESP1+4)&077)<<16 | R(RESP1+8)>>16) + 1) * 1024;
++	if (sdcmd(7, rca, 1) || sdcmd(55, rca, 1) || sdcmd(6, 2, 1))
++		return(-1);
++	R(CLKCR) = 2 | WIDE | HWFC;
++	R(DTIMER) = 0xffffffff;
++	R(DCTRL) = 0;
++	R(DLEN) = 64;
++	R(DCTRL) = 6<<4 | 2;
++	if (sdcmd(6|TRANS, 0x80fffff1, 1))
++		return(-1);
++	for (i = 0; i < 16; ) {
++		c = R(STA);
++		if ((c & RXFIFOE) == 0)
++			buf[i++] = R(SDFIFO);
++		else if (c & (DATAEND|DERR))
++			break;
++	}
++	if (i == 16 && (buf[4] & 0xf) == 1) {
++		delay(1000);
++		R(CLKCR) = 1 | WIDE | HWFC;
++	}
++	return(0);
++}
++
++static void
++sdstop(int wr)
++{
++	sdcmd(12|STOP, 0, 1);
++	while (R(STA) & BUSYD0)
++		;
++	if (wr)
++		while (sdcmd(13, rca, 1) == 0 && (R(RESP1)>>9 & 017) != 4)
++			;
++}
++
++/*
++ * Write n bytes from USB to the card at block bn.
++ * The ring holds what has come in and not gone out;
++ * both sides stall the other when it is empty or full.
++ */
++static int
++sdwrite(unsigned bn, unsigned n)
++{
++	register unsigned in, out, sta;
++	unsigned left, t;
++
++	if (sdcmd(55, rca, 1) || sdcmd(23, n/512, 1))
++		return(-1);
++	R(DCTRL) = 0;
++	R(DLEN) = n;
++	R(DCTRL) = 9<<4;
++	if (sdcmd(25|TRANS, bn, 1))
++		return(-1);
++	in = out = 0;
++	left = n;
++	t = now();
++	for (;;) {
++		usbpoll();
++		if (rxready && left && in - out <= NRING - 512) {
++			usbtake(&ring[(in%NRING)/4]);
++			in += rxn;
++			left = left > rxn ? left - rxn : 0;
++			t = now();
++			kick();
++		}
++		sta = R(STA);
++		if (sta & DERR)
++			break;
++		while (in - out >= 32 && (sta = R(STA)) & TXFIFOHE) {
++			register unsigned *p = &ring[(out%NRING)/4];
++			__asm__ volatile("ldm %0, {r4-r11}\n\tstm %1, {r4-r11}"
++			    : : "r"(p), "r"(SDFIFO)
++			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
++			out += 32;
++		}
++		if (sta & DATAEND)
++			break;
++		if (now() - t > 640000000)
++			break;
++	}
++	sta = R(STA);
++	sdstop(1);
++	return(sta & DATAEND && (sta & DERR) == 0 ? 0 : -1);
++}
++
++/*
++ * Send n bytes read from block bn to USB.
++ */
++static int
++sdread(unsigned bn, unsigned n)
++{
++	register unsigned in, out, sta, k;
++	unsigned t;
++
++	R(DCTRL) = 0;
++	R(DLEN) = n;
++	R(DCTRL) = 9<<4 | 2;
++	if (sdcmd(18|TRANS, bn, 1))
++		return(-1);
++	in = out = 0;
++	t = now();
++	while (out < n) {
++		sta = R(STA);
++		if (sta & DERR || now() - t > 640000000)
++			break;
++		while (in - out <= NRING - 32 && (sta = R(STA)) & RXFIFOHF) {
++			register unsigned *p = &ring[(in%NRING)/4];
++			__asm__ volatile("ldm %1, {r4-r11}\n\tstm %0, {r4-r11}"
++			    : : "r"(p), "r"(SDFIFO)
++			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
++			in += 32;
++		}
++		if (sta & DATAEND && in < n)
++			while (in < n && (R(STA) & RXFIFOE) == 0) {
++				ring[(in%NRING)/4] = R(SDFIFO);
++				in += 4;
++			}
++		k = in - out;
++		if (k >= 16384 || (k && in >= n)) {
++			if (k > 16384)
++				k = 16384;
++			if (k > NRING - out%NRING)
++				k = NRING - out%NRING;
++			if (usbsend((unsigned char *)ring + out%NRING, k))
++				break;
++			out += k;
++			t = now();
++			kick();
++		}
++	}
++	if (out == n && n%mps == 0)
++		(void)usbsend(0, 0);
++	sdstop(0);
++	return(out == n ? 0 : -1);
++}
++
++static unsigned
++num(unsigned char **pp)
++{
++	register unsigned char *p;
++	register unsigned n;
++
++	p = *pp;
++	while (*p == ' ')
++		p++;
++	for (n = 0; *p >= '0' && *p <= '9'; p++)
++		n = n*10 + *p - '0';
++	*pp = p;
++	return(n);
++}
++
++static int
++getln(void)
++{
++	unsigned buf[128];
++	register unsigned i, n;
++
++	n = 0;
++	for (;;) {
++		usbpoll();
++		if (!rxready)
++			continue;
++		usbtake(buf);
++		for (i = 0; i < rxn; i++) {
++			if (((unsigned char *)buf)[i] == '\r' || ((unsigned char *)buf)[i] == '\n') {
++				line[n] = 0;
++				return(n);
++			}
++			if (n < sizeof line - 1)
++				line[n++] = ((unsigned char *)buf)[i];
++		}
++	}
++}
++
++void
++main(void)
++{
++	unsigned char *p;
++	unsigned bn, n;
++	int e;
++
++	R(RCC+0x728) = 1U<<15;
++	R(IWDG) = 0xcccc;
++	R(IWDG) = 0x5555;
++	R(IWDG+4) = 6;
++	R(IWDG+8) = 0xfff;
++	kick();
++	e = sdinit();
++	usbinit();
++	for (;;) {
++		if (getln() == 0)
++			continue;
++		kick();
++		p = line+1;
++		switch (line[0]) {
++		case 'i':
++			if (e) {
++				say("no card\n");
++				break;
++			}
++			say("blocks ");
++			putn(nblk);
++			say("\n");
++			break;
++		case 'w':
++		case 'r':
++			bn = num(&p);
++			n = num(&p);
++			if (e || n == 0 || n%512 || bn + n/512 > nblk) {
++				say("?\n");
++				break;
++			}
++			if (line[0] == 'w')
++				say(sdwrite(bn, n) ? "error\n" : "ok\n");
++			else if (sdread(bn, n))
++				say("error\n");
++			break;
++		case 'x':
++			reset();
++			break;
++		default:
++			say("?\n");
++		}
++	}
++}
+
+% usr/src/cmd/standalone/stand.mk /dev/null
+@@ -0,0 +1,15 @@
++STAND = usr/src/cmd/standalone
++SAFLAGS = $W -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=soft \
++	-mno-unaligned-access -Os -fno-tree-loop-distribute-patterns \
++	-Wl,-N,--section-start=.start=0x2ffe0000,-Ttext=0x2ffe0100
++
++all: boot/sdwrite.stm32
++
++$(STAND)/sdwrite: $(STAND)/sdwrite.c $(STAND)/stand.mk
++	$(call T,LD)$(CC) $(SAFLAGS) -o $@ $<
++
++boot/sdwrite.bin: $(STAND)/sdwrite
++	$(call T,OBJCOPY)$(CROSS_COMPILE)objcopy -O binary $< $@
++
++boot/sdwrite.stm32: boot/sdwrite.bin $S/conf/mkstm32
++	$(call T,MKSTM32)$S/conf/mkstm32 $< $@
+
+% usr/src/cmd/wdog.c /dev/null
+@@ -0,0 +1,53 @@
++/*
++ * Start the STM32MP1's watchdog, IWDG2, and feed it every 10 seconds.
++ * Should this stop, the board resets after 33 seconds.
++ */
++
++#include <signal.h>
++#include <stdio.h>
++
++#define	APB4ENSETR	0x50000728L
++#define	IWDG	0x5a002000L
++
++int	mem;
++
++void	put(long a, int v);
++
++void
++put(long a, int v)
++{
++	lseek(mem, a, 0);
++	write(mem, (char *)&v, 4);
++}
++
++void feed(int sig);
++int
++main(void)
++{
++	if((mem = open("/dev/mem", 1)) < 0) {
++		perror("/dev/mem");
++		exit(1);
++	}
++	if(fork())
++		exit(0);
++	close(0);
++	close(1);
++	close(2);
++	put(APB4ENSETR, 1<<15);
++	put(IWDG, 0xcccc);
++	put(IWDG, 0x5555);
++	put(IWDG+4, 6);
++	put(IWDG+8, 0xfff);
++	feed(0);
++	for(;;)
++		pause();
++}
++
++void
++feed(int sig)
++{
++	(void)sig;
++	put(IWDG, 0xaaaa);
++	signal(SIGALRM, feed);
++	alarm(10);
++}
+
+% usr/sys/conf/mkstm32.c /dev/null
+@@ -0,0 +1,65 @@
++/*
++ * Put the STM32MP1 boot ROM's header, version 2, on a kernel:
++ * mkstm32 unix.bin unix.stm32. It loads and enters at SYSRAM.
++ */
++#include <stdio.h>
++#include <string.h>
++
++#define	SYSRAM	0x2ffe0000UL
++#define	MAXIMG	(128*1024L - 512)
++
++unsigned char	hdr[512], img[MAXIMG+1];
++
++static void
++put4(unsigned char *p, unsigned long v)
++{
++	p[0] = v;
++	p[1] = v >> 8;
++	p[2] = v >> 16;
++	p[3] = v >> 24;
++}
++
++int
++main(int argc, char **argv)
++{
++	FILE *f;
++	long n, i;
++	unsigned long sum;
++
++	if (argc != 3) {
++		fprintf(stderr, "usage: mkstm32 image header+image\n");
++		return 1;
++	}
++	if ((f = fopen(argv[1], "rb")) == NULL) {
++		perror(argv[1]);
++		return 1;
++	}
++	n = fread(img, 1, sizeof img, f);
++	fclose(f);
++	if (n > MAXIMG) {
++		fprintf(stderr, "mkstm32: %s too big for SYSRAM\n", argv[1]);
++		return 1;
++	}
++	sum = 0;
++	for (i = 0; i < n; i++)
++		sum += img[i];
++	memcpy(hdr, "STM2", 4);
++	put4(hdr+68, sum);
++	hdr[74] = 2;
++	put4(hdr+76, n);
++	put4(hdr+80, SYSRAM);
++	put4(hdr+88, SYSRAM);
++	put4(hdr+100, 1UL << 31);
++	put4(hdr+104, 512 - 128);
++	memcpy(hdr+128, "ST\377\377", 4);
++	put4(hdr+132, 512 - 128);
++	if ((f = fopen(argv[2], "wb")) == NULL) {
++		perror(argv[2]);
++		return 1;
++	}
++	if (fwrite(hdr, 1, 512, f) != 512 || fwrite(img, 1, n, f) != (size_t)n || fclose(f)) {
++		perror(argv[2]);
++		return 1;
++	}
++	return 0;
++}
+
+% usr/sys/dev/pmic.c /dev/null
+@@ -0,0 +1,93 @@
++/*
++ * STPMIC1 power management chip, on I2C4
++ */
++#include "../h/param.h"
++#include "../h/systm.h"
++
++#define	R(a)	(*(volatile unsigned int *)(a))
++#define	RCC(o)	R(0xF0000000+(o))
++#define	GPIO(p, o)	R(0xF0002000+(p)*0x1000+(o))
++#define	I2C(o)	R(0xF0C05000+(o))
++
++static int
++i2cwait(unsigned int bit)
++{
++	unsigned long long t;
++
++	t = cntvct_get() + cntfrq_get()/10;
++	while ((I2C(0x18) & bit) == 0)
++		if (I2C(0x18) & 0x10 || cntvct_get() > t) {
++			I2C(0x1C) = 0x30;
++			return(-1);
++		}
++	return(0);
++}
++
++static int
++pmic(unsigned int reg, int val)
++{
++	I2C(0x04) = 0x33<<1 | (val < 0 ? 1 : 2)<<16 | 1<<13 | (val < 0 ? 0 : 1<<25);
++	if (i2cwait(2))
++		return(-1);
++	I2C(0x28) = reg;
++	if (val < 0) {
++		if (i2cwait(0x40))
++			return(-1);
++		I2C(0x04) = 0x33<<1 | 1<<10 | 1<<16 | 1<<13 | 1<<25;
++		if (i2cwait(4))
++			return(-1);
++		val = I2C(0x24);
++	} else {
++		if (i2cwait(2))
++			return(-1);
++		I2C(0x28) = val;
++	}
++	if (i2cwait(0x20))
++		return(-1);
++	I2C(0x1C) = 0x20;
++	return(val);
++}
++
++static void
++pinmode(int port, int pin, int mode)
++{
++	GPIO(port, 0x00) = (GPIO(port, 0x00) & ~(3<<2*pin)) | mode<<2*pin;
++	GPIO(port, 0x04) |= 1<<pin;
++	GPIO(port, 0x20+pin/8*4) = (GPIO(port, 0x20+pin/8*4) & ~(0xF<<pin%8*4)) | 6<<pin%8*4;
++}
++
++/*
++ * Power the DDR: BUCK2 at 1.35 V and VREF_DDR of the STPMIC1,
++ * on I2C4. SCL is PE15; SDA is PB9 on the DK board, PB7 on
++ * the Odyssey, whichever answers.
++ */
++void
++ddrpower(void)
++{
++	static int sda[] = { 9, 7 };
++	unsigned long long t;
++	int i;
++
++	RCC(0x770) = 0x12;
++	(void)RCC(0x770);
++	pinmode(4, 15, 2);
++	RCC(0x604) = (RCC(0x604) & ~0x38) | 0x10;
++	RCC(0x748) = 0x20;
++	(void)RCC(0x748);
++	I2C(0x10) = 0x10805E89;
++	for (i = 0; ; i++) {
++		if (i == 2)
++			panic("pmic");
++		pinmode(1, sda[i], 2);
++		I2C(0x00) = 1;
++		if (pmic(0x06, -1) >= 0)
++			break;
++		I2C(0x00) = 0;
++		pinmode(1, sda[i], 3);
++	}
++	if (pmic(0x21, 30<<2 | 1) < 0 || pmic(0x24, 1) < 0)
++		panic("pmic");
++	t = cntvct_get() + cntfrq_get()/100;
++	while (cntvct_get() < t)
++		;
++}
+
+% usr/sys/sys/trap.c
+@@ -5 +4,0 @@
+-#include "../h/proc.h"
+@@ -7 +5,0 @@
+-#include "../h/seg.h"
+@@ -9,5 +7 @@
+-#define	EBIT	1		/* user error bit in PS: C-bit */
+-#define	SETD	0170011		/* SETD instruction */
+-#define	SYS	0104400		/* sys (trap) instruction */
+-#define	USER	020		/* user-mode flag added to dev */
+-#define	MEMORY	((physadr)0177740) /* 11/70 "memory" subsystem */
++#define	EBIT	0x20000000	/* user error bit in PS: C-bit */
+@@ -24,13 +18,2 @@
+-/*
+- * Called from l40.s or l45.s when a processor trap occurs.
+- * The arguments are the words saved on the system stack
+- * by the hardware and software during the trap processing.
+- * Their order is dictated by the hardware and the details
+- * of C's calling sequence. They are peculiar in that
+- * this call is not 'by value' and changed user registers
+- * get copied back on return.
+- * dev is the kind of trap that occurred.
+- */
+-trap(dev, sp, r1, nps, r0, pc, ps)
+-int *pc;
+-dev_t dev;
++void
++trap(int *r)
+@@ -38,2 +21 @@
+-	register i;
+-	register *a;
++	register int i;
+@@ -41 +22,0 @@
+-	int (*fetch)();
+@@ -46,133 +27,15 @@
+-	if ((ps&UMODE) == UMODE)
+-		dev |= USER;
+-	u.u_ar0 = &r0;
+-	switch(minor(dev)) {
+-
+-	/*
+-	 * Trap not expected.
+-	 * Usually a kernel mode bus error.
+-	 * The numbers printed are used to
+-	 * find the hardware PS/PC as follows.
+-	 * (all numbers in octal 18 bits)
+-	 *	address_of_saved_ps =
+-	 *		(ka6*0100) + aps - 0140000;
+-	 *	address_of_saved_pc =
+-	 *		address_of_saved_ps - 2;
+-	 */
+-	default:
+-		printf("ka6 = %o\n", ka6->r[0]);
+-		printf("aps = %o\n", &ps);
+-		printf("pc = %o ps = %o\n", pc, ps);
+-		printf("trap type %o\n", dev);
+-		panic("trap");
+-
+-	case 0+USER: /* bus error */
+-		i = SIGBUS;
+-		break;
+-
+-	/*
+-	 * If illegal instructions are not
+-	 * being caught and the offending instruction
+-	 * is a SETD, the trap is ignored.
+-	 * This is because C produces a SETD at
+-	 * the beginning of every program which
+-	 * will trap on CPUs without 11/45 FPU.
+-	 */
+-	case 1+USER: /* illegal instruction */
+-		if(fuiword((caddr_t)(pc-1)) == SETD && u.u_signal[SIGINS] == 0)
+-			goto out;
+-		i = SIGINS;
+-		break;
+-
+-	case 2+USER: /* bpt or trace */
+-		i = SIGTRC;
+-		ps &= ~TBIT;
+-		break;
+-
+-	case 3+USER: /* iot */
+-		i = SIGIOT;
+-		break;
+-
+-	case 5+USER: /* emt */
+-		i = SIGEMT;
+-		break;
+-
+-	case 6+USER: /* sys call */
+-		u.u_error = 0;
+-		ps &= ~EBIT;
+-		a = pc;
+-		callp = &sysent[fuiword((caddr_t)(a-1))&077];
+-		if (callp == sysent) { /* indirect */
+-			a = (int *)fuiword((caddr_t)(a));
+-			pc++;
+-			i = fuword((caddr_t)a);
+-			a++;
+-			if ((i & ~077) != SYS)
+-				i = 077;	/* illegal */
+-			callp = &sysent[i&077];
+-			fetch = fuword;
+-		} else {
+-			pc += callp->sy_narg - callp->sy_nrarg;
+-			fetch = fuiword;
+-		}
+-		for (i=0; i<callp->sy_nrarg; i++)
+-			u.u_arg[i] = u.u_ar0[regloc[i]];
+-		for(; i<callp->sy_narg; i++)
+-			u.u_arg[i] = (*fetch)((caddr_t)a++);
+-		u.u_dirp = (caddr_t)u.u_arg[0];
+-		u.u_r.r_val1 = u.u_ar0[R0];
+-		u.u_r.r_val2 = u.u_ar0[R1];
+-		u.u_ap = u.u_arg;
+-		if (save(u.u_qsav)) {
+-			if (u.u_error==0)
+-				u.u_error = EINTR;
+-		} else {
+-			(*callp->sy_call)();
+-		}
+-		if(u.u_error) {
+-			ps |= EBIT;
+-			u.u_ar0[R0] = u.u_error;
+-		} else {
+-			u.u_ar0[R0] = u.u_r.r_val1;
+-			u.u_ar0[R1] = u.u_r.r_val2;
+-		}
+-		goto out;
+-
+-	/*
+-	 * Since the floating exception is an
+-	 * imprecise trap, a user generated
+-	 * trap may actually come from kernel
+-	 * mode. In this case, a signal is sent
+-	 * to the current process to be picked
+-	 * up later.
+-	 */
+-	case 8: /* floating exception */
+-		stst(&u.u_fper);	/* save error code */
+-		psignal(u.u_procp, SIGFPT);
+-		return;
+-
+-	case 8+USER:
+-		i = SIGFPT;
+-		stst(&u.u_fper);
+-		break;
+-
+-	/*
+-	 * If the user SP is below the stack segment,
+-	 * grow the stack automatically.
+-	 * This relies on the ability of the hardware
+-	 * to restart a half executed instruction.
+-	 * On the 11/40 this is not the case and
+-	 * the routine backup/l40.s may fail.
+-	 * The classic example is on the instruction
+-	 *	cmp	-(sp),-(sp)
+-	 */
+-	case 9+USER: /* segmentation exception */
+-	{
+-	int	osp;
+-
+-		osp = sp;
+-		if(backup(u.u_ar0) == 0)
+-			if(grow((unsigned)osp))
+-				goto out;
+-		i = SIGSEG;
+-		break;
++	u.u_ar0 = r;
++	u.u_error = 0;
++	r[RPS] &= ~EBIT;
++	callp = &sysent[r[7] & 077];
++	for(i = 0; i < callp->sy_narg; i++)
++		u.u_arg[i] = r[i];
++	u.u_dirp = (caddr_t)u.u_arg[0];
++	u.u_r.r_val1 = 0;
++	u.u_r.r_val2 = r[R1];
++	u.u_ap = u.u_arg;
++	if (save(u.u_qsav)) {
++		if (u.u_error == 0)
++			u.u_error = EINTR;
++	} else {
++		(*callp->sy_call)();
+@@ -180,42 +43,6 @@
+-
+-	/*
+-	 * The code here is a half-hearted
+-	 * attempt to do something with all
+-	 * of the 11/70 parity registers.
+-	 * In fact, there is little that
+-	 * can be done.
+-	 */
+-	case 10:
+-	case 10+USER:
+-		printf("parity\n");
+-		if(cputype == 70) {
+-			for(i=0; i<4; i++)
+-				printf("%o ", MEMORY->r[i]);
+-			printf("\n");
+-			MEMORY->r[2] = -1;
+-			if(dev & USER) {
+-				i = SIGBUS;
+-				break;
+-			}
+-		}
+-		panic("parity");
+-
+-	/*
+-	 * Allow process switch
+-	 */
+-	case USER+12:
+-		goto out;
+-
+-	/*
+-	 * Locations 0-2 specify this style trap, since
+-	 * DEC hardware often generates spurious
+-	 * traps through location 0.  This is a
+-	 * symptom of hardware problems and may
+-	 * represent a real interrupt that got
+-	 * sent to the wrong place.  Watch out
+-	 * for hangs on disk completion if this message appears.
+-	 */
+-	case 15:
+-	case 15+USER:
+-		printf("Random interrupt ignored\n");
+-		return;
++	if (u.u_error) {
++		r[RPS] |= EBIT;
++		r[R0] = u.u_error;
++	} else {
++		r[R0] = u.u_r.r_val1;
++		r[R1] = u.u_r.r_val2;
+@@ -223,4 +50 @@
+-	psignal(u.u_procp, i);
+-
+-out:
+-	if(issig()) {
++	if (issig())
+@@ -228 +51,0 @@
+-	}
+@@ -233 +56,24 @@
+-		addupc((caddr_t)pc, &u.u_prof, (int)(u.u_stime-syst));
++		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
++	if (u.u_fpsaved)
++		restfp(&u.u_fps);
++}
++void
++user_trap_handler(int signo, int *r, unsigned a)
++{
++	if((r[RPS] & 0x1f) != 0x10) {
++		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
++		    signo, r[15], r[RPS], dfar(), dfsr());
++		panic("kernel trap");
++	}
++	u.u_fpsaved = 0;
++	u.u_ar0 = r;
++	if(signo == SIGINS && r[RPS]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
++		r[PC] += 2;
++	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
++	    grow(a) == 0))
++		psignal(u.u_procp, signo);
++	if (issig())
++		psig();
++	curpri = setpri(u.u_procp);
++	if (runrun)
++		qswtch();
+@@ -241 +87,2 @@
+-nosys()
++void
++nosys(void)
+@@ -249 +96,2 @@
+-nullsys()
++void
++nullsys(void)
 EOF
 # How the check works.  One awk pass reads the entries above.  For each
 # entry it loads the v7 file, applies the hunks (each - line must match the
