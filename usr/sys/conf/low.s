@@ -1,3 +1,4 @@
+.set BLK_KERN, 0x701
 .globl _start, kl2, bootl1
 _start:
 	cpsid if
@@ -34,7 +35,7 @@ _start:
 	ldr r1, =__bss_end
 	sub r1, r1, #1
 	lsr r1, r1, #21
-	movw r3, #0x701
+	movw r3, #BLK_KERN
 1:
 	add ip, r4, r0, lsl #21
 	orr ip, ip, r3

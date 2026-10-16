@@ -1,3 +1,7 @@
+.set BLK_KERN, 0x701
+.set PTE_TAB, 3
+.set PGSHIFT, 12
+.set PGSIZE, 4096
 .globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
 .globl dcinval
@@ -68,16 +72,16 @@ save:
 resume:
 	cpsid i
 	ldr r2, =kl3u
-	lsl r3, r0, #12
-	movw ip, #0x703
+	lsl r3, r0, #PGSHIFT
+	movw ip, #BLK_KERN|PTE_TAB
 	orr r3, r3, ip
 	str r3, [r2, #0]
-	add r3, r3, #0x1000
+	add r3, r3, #PGSIZE
 	str r3, [r2, #8]
 	dsb ish
 	ldr r3, =u
 	mcr p15, 0, r3, c8, c7, 3
-	add r3, r3, #0x1000
+	add r3, r3, #PGSIZE
 	mcr p15, 0, r3, c8, c7, 3
 	dsb ish
 	isb
