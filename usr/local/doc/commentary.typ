@@ -210,7 +210,9 @@ busy bits of up to three disks (`dk_busy`, which the block drivers set
 and clear), plus 8 for a user process of lowered priority, 16 for system
 time, and another 8 if the processor was idle. The test for idleness is
 that the interrupted `pc` is `waitloc`, the address just after the `wfi`
-in `idle` (#f("mch.s")).
+in `idle` (#f("mch.s")). The count is incremented as an `unsigned long`
+and converted back: at 60 ticks a second a `long` overflows after about
+13 months, which C99 leaves undefined, while the unsigned sum wraps.
 
 `p_cpu` (100), the recent use of the processor, is incremented but not
 allowed to wrap round to zero.
@@ -1858,7 +1860,9 @@ sees.
 
 The remaining lines are v7's: they record the transfer for `iostat`.
 `dk_wds` is counted in units of 32 PDP-11 words, 64 bytes, since
-`iostat` multiplies it by 32.
+`iostat` multiplies it by 32. Both counts are summed as `unsigned long`,
+as `dk_time` is in #f("clock.c"), so that they wrap instead of
+overflowing.
 
 #lines(127, 136)
 
@@ -1908,7 +1912,8 @@ before its definition and only within this file.
 `DISKMON` compiles in the counters of `io_info`, which `iostat` reads
 from `/dev/kmem`: reads, read-aheads, cache hits, and writes, and in
 `bufcount` how deep in the available list each buffer found in the
-cache was. v7 gave `bufcount` `NBUF` entries, one for each possible
+cache was. The counters are unsigned, so that they wrap after a long
+uptime instead of overflowing. v7 gave `bufcount` `NBUF` entries, one for each possible
 depth; `NBUF` is now a variable (#f("param.h")), which cannot size a
 member of a structure, so the array has the 50 entries that `iostat`
 reads, and deeper finds are not counted (269).
@@ -4038,7 +4043,8 @@ handing the block to a multiplexed channel, if there was one; the
 #lines(402, 424)
 
 `ttyinput` is called by the driver's receive interrupt with each
-character. `tk_nin` counts them for the statistics of `iostat`. The
+character. `tk_nin` counts them for the statistics of `iostat`, summed as
+an `unsigned long` so that it wraps instead of overflowing. The
 mask with `0377` (439) keeps the character proper: a UART may return
 error flags above it.
 
@@ -4095,7 +4101,8 @@ it.
 #lines(529, 550)
 
 `ttyoutput` puts one character on the output queue, transformed as the
-modes require. In `RAW` mode it goes unchanged. Otherwise a tab may be
+modes require, and counts it in `tk_nout`, unsigned as `tk_nin` is. In
+`RAW` mode it goes unchanged. Otherwise a tab may be
 expanded into spaces by recursive calls; for an upper case terminal,
 the characters which it cannot print are replaced by a backslash and a
 substitute, and lower case letters by capitals; and with `CRMOD` a
@@ -4825,7 +4832,7 @@ buffer's physical address, which `vtop` (#f("machdep.c")) finds from the
 kernel's, and enabled, the interrupts are unmasked, and the
 argument is set. Writing the command register (101) starts the
 transfer. The counts for `iostat` are v7's, but count one block per
-command.
+command, and are summed as `unsigned long`, as in #f("virtio_blk.c").
 
 #lines(79, 107)
 

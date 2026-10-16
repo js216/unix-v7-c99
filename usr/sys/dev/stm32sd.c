@@ -100,9 +100,9 @@ rkstart(void)
 		com |= WCOM;
 	SD(CMD) = com;
 	dk_busy |= 1<<DK_N;
-	dk_numb[DK_N] += 1;
+	dk_numb[DK_N] = (unsigned long)dk_numb[DK_N] + 1;
 	com = BSIZE>>6;
-	dk_wds[DK_N] += com;
+	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + com;
 }
 
 void

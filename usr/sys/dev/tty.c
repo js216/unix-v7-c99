@@ -435,7 +435,7 @@ ttyinput(register int c, register struct tty *tp)
 {
 	register int t_flags;
 
-	tk_nin += 1;
+	tk_nin = (unsigned long)tk_nin + 1;
 	c &= 0377;
 	t_flags = tp->t_flags;
 	if (t_flags&TANDEM)
@@ -561,7 +561,7 @@ ttyoutput(register int c, register struct tty *tp)
 	register char *colp;
 	register int ctype;
 
-	tk_nout += 1;
+	tk_nout = (unsigned long)tk_nout + 1;
 	/*
 	 * Ignore EOT in normal mode to avoid hanging up
 	 * certain terminals.

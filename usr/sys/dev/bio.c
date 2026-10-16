@@ -15,11 +15,11 @@ void	iowait(struct buf *bp), notavail(struct buf *bp),
 #ifdef	DISKMON
 struct {
 	int	nbuf;
-	long	nread;
-	long	nreada;
-	long	ncache;
-	long	nwrite;
-	long	bufcount[50];
+	unsigned long	nread;
+	unsigned long	nreada;
+	unsigned long	ncache;
+	unsigned long	nwrite;
+	unsigned long	bufcount[50];
 } io_info;
 #endif
 

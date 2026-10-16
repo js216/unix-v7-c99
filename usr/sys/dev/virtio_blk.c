@@ -129,9 +129,9 @@ rkstart(void)
 	dmbsy();
 	RKADDR(0x50) = 0;
 	dk_busy |= 1<<DK_N;
-	dk_numb[DK_N] += 1;
+	dk_numb[DK_N] = (unsigned long)dk_numb[DK_N] + 1;
 	com = bp->b_bcount>>6;
-	dk_wds[DK_N] += com;
+	dk_wds[DK_N] = (unsigned long)dk_wds[DK_N] + com;
 }
 
 void

@@ -95,7 +95,7 @@ out:
 			a += 8;
 		u.u_stime++;
 	}
-	dk_time[a] += 1;
+	dk_time[a] = (unsigned long)dk_time[a] + 1;
 	pp = u.u_procp;
 	if(++pp->p_cpu == 0)
 		pp->p_cpu--;
