@@ -175,6 +175,20 @@ rxarm(void)
 	DOEPCTL(1) |= EPENA|CNAK;
 }
 
+/*
+ * Tell the host the line has carrier, so that an open
+ * which waits for it can finish.
+ */
+static void
+carrier(void)
+{
+	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
+
+	DIEPTSIZ(2) = 1U<<19 | 10;
+	DIEPCTL(2) |= EPENA|CNAK;
+	fifowrite(2, state, 10);
+}
+
 static void
 dosetup(void)
 {
@@ -195,6 +209,8 @@ dosetup(void)
 			if (req == 0x22)
 				dtr = val&1;
 			ep0in(0, 0);
+			if (req == 0x22 && config)
+				carrier();
 		} else
 			ep0stall();
 		return;
