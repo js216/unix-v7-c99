@@ -7,6 +7,7 @@ char	*dfile	= "/usr/lib/units";
 char	*unames[NDIM];
 double	getflt(void);
 void	fperr(int sig), init(void);
+int	fpbad(double x);
 int	pu(int u, int i, int f), get(void);
 struct	table	*hash(char *name);
 struct unit
@@ -81,7 +82,7 @@ loop:
 	printf("you have: ");
 	if(convr(&u1))
 		goto loop;
-	if(fperrc)
+	if(fperrc || fpbad(u1.factor))
 		goto fp;
 loop1:
 	printf("you want: ");
@@ -91,14 +92,14 @@ loop1:
 		if(u1.dim[i] != u2.dim[i])
 			goto conform;
 	f = u1.factor/u2.factor;
-	if(fperrc)
+	if(fperrc || fpbad(f))
 		goto fp;
 	printf("\t* %e\n", f);
 	printf("\t/ %e\n", 1./f);
 	goto loop;
 
 conform:
-	if(fperrc)
+	if(fperrc || fpbad(u1.factor) || fpbad(u2.factor))
 		goto fp;
 	printf("conformability\n");
 	units(&u1);
@@ -466,6 +467,12 @@ l0:
 	if(tp >= &table[NTAB])
 		tp = table;
 	goto l0;
+}
+
+int
+fpbad(double x)
+{
+	return(x == 0. || x - x != 0.);
 }
 
 void

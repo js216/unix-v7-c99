@@ -10895,7 +10895,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/units.c")
 
-#lines(1, 478)
+#lines(1, 485)
 
 #source("/usr/src/cmd/yes.c")
 
