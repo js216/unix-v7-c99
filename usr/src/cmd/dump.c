@@ -108,6 +108,8 @@ main(int argc, char *argv[])
 			argv++;
 			argc--;
 			tsize = atol(*argv);
+			if(tsize > 0x7fffffffL/(12L*10L))
+				tsize = 0x7fffffffL/(12L*10L);
 			tsize *= 12L*10L;
 		}
 		break;

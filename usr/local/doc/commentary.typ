@@ -11294,7 +11294,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/dump.c")
 
-#lines(1, 655)
+#lines(1, 657)
 
 #source("/usr/src/cmd/restor.c")
 
