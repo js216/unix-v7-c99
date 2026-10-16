@@ -109,7 +109,7 @@ usr/local
 +LIB2 = $S/dev/LIB2
 +LIB1_OBJ := $(patsubst %.c,%.o,$(wildcard $S/sys/*.c))
 +QEMU_DRV = $S/dev/pl011.o $S/dev/virtio_blk.o
-+MP135_DRV = $S/dev/stm32usart.o $S/dev/stm32sd.o $S/dev/stm32ddr.o
++MP135_DRV = $S/dev/usart.o $S/dev/sd.o $S/dev/ddr.o
 +LIB2_OBJ := $(filter-out $(QEMU_DRV) $(MP135_DRV),$(patsubst %.c,%.o,$(wildcard $S/dev/*.c)))
 +BOARDS = qemu mp135
 +KERNELS = $(BOARDS:%=$S/conf/%/unix)
@@ -150,7 +150,7 @@ usr/local
 +W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
 +	-Wold-style-definition -Wmissing-prototypes
 +CFLAGS = $W \
-+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=hard -Os -Wl,-z,max-page-size=4096,-Ttext=0xa0 \
++	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=hard -Os -Wl,-z,max-page-size=4096,-Ttext=0x94 \
 +	-MMD -MP
 +ASFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
 +HOSTCFLAGS = $W
@@ -233,7 +233,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,366 @@
+@@ -0,0 +1,368 @@
 +/dev/null
 +131072 16384
 +d--755 0 0
@@ -460,6 +460,8 @@ usr/local
 +					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
 +					k12	---644 0 0 usr/local/test/cases/k12
 +					k12.exp	---644 0 0 usr/local/test/cases/k12.exp
++					k13	---644 0 0 usr/local/test/cases/k13
++					k13.exp	---644 0 0 usr/local/test/cases/k13.exp
 +					kern	---644 0 0 usr/local/test/cases/kern
 +					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
 +					kern.sed	---644 0 0 usr/local/test/cases/kern.sed
@@ -870,7 +872,7 @@ usr/local
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
 +#define	USIZE	2		/* size of user block (*4096) */
-+#define	UBASE	0xFFF00000U	/* abs. addr of user block */
++#define	UBASE	0xFFE00000U	/* abs. addr of user block */
 +#define	USERSIZE	0xC0000000U	/* size of user address space */
 +#ifndef NULL
 @@ -85,0 +90 @@
@@ -15818,10 +15820,11 @@ usr/local
 @@ -13 +16 @@
 -	char	dim[NDIM];
 +	signed char	dim[NDIM];
-@@ -19 +22 @@
+@@ -18,2 +21 @@
+-	double	factor;
 -	char	dim[NDIM];
-+	signed char	dim[NDIM];
-@@ -29,17 +32,17 @@
++	struct	unit u;
+@@ -29,17 +31,17 @@
 -	1e-18,	"atto",
 -	1e-15,	"femto",
 -	1e-12,	"pico",
@@ -15856,117 +15859,149 @@ usr/local
 +	{1e9,	"giga"},
 +	{1e12,	"tera"},
 +	{0.0,	0}
-@@ -52,2 +55,4 @@
+@@ -52,2 +54,4 @@
 -main(argc, argv)
 -char *argv[];
 +void	units(struct unit *up);
 +int	convr(struct unit *up), lookup(char *name, struct unit *up, int den, int c);
 +int
 +main(int argc, char *argv[])
-@@ -55 +60 @@
+@@ -55 +59 @@
 -	register i;
 +	register int i;
-@@ -80 +85 @@
+@@ -80 +84 @@
 -	if(fperrc)
 +	if(fperrc || fpbad(u1.factor))
-@@ -90 +95 @@
+@@ -90 +94 @@
 -	if(fperrc)
 +	if(fperrc || fpbad(f))
-@@ -97 +102 @@
+@@ -97 +101 @@
 -	if(fperrc)
 +	if(fperrc || fpbad(u1.factor) || fpbad(u2.factor))
-@@ -109,2 +114,2 @@
+@@ -109,2 +113,2 @@
 -units(up)
 -struct unit *up;
 +void
 +units(struct unit *up)
-@@ -113 +118 @@
+@@ -113 +117 @@
 -	register f, i;
 +	register int f, i;
-@@ -129 +134,2 @@
+@@ -129 +133,2 @@
 -pu(u, i, f)
 +int
 +pu(int u, int i, int f)
-@@ -140 +146 @@
+@@ -140 +145 @@
 -			return(2);
 +		return(2);
-@@ -147,2 +153,2 @@
+@@ -147,2 +152,2 @@
 -convr(up)
 -struct unit *up;
 +int
 +convr(struct unit *up)
-@@ -151 +157 @@
+@@ -151 +156 @@
 -	register c;
 +	register int c;
-@@ -182,0 +189 @@
+@@ -182,0 +188 @@
 +	case 0:
-@@ -190 +197 @@
+@@ -190 +196 @@
 -		if(c == '\n')
 +		if(c == '\n' || c == 0)
-@@ -194 +201,2 @@
+@@ -194 +200,2 @@
 -	*cp++ = c;
 +	if(cp < &name[19])
 +		*cp++ = c;
-@@ -198,3 +206,2 @@
+@@ -198,3 +205,2 @@
 -lookup(name, up, den, c)
 -char *name;
 -struct unit *up;
 +int
 +lookup(char *name, struct unit *up, int den, int c)
-@@ -204 +211 @@
+@@ -204 +210 @@
 -	register i;
 +	register int i;
-@@ -230 +237 @@
+@@ -216 +222 @@
+-			p->factor /= q->factor*e;
++			p->factor /= q->u.factor*e;
+@@ -218 +224 @@
+-				p->dim[i] -= q->dim[i];
++				p->dim[i] -= q->u.dim[i];
+@@ -220 +226 @@
+-			p->factor *= q->factor*e;
++			p->factor *= q->u.factor*e;
+@@ -222 +228 @@
+-				p->dim[i] += q->dim[i];
++				p->dim[i] += q->u.dim[i];
+@@ -230 +236 @@
 -	for(i=0; cp1 = prefix[i].pname; i++) {
 +	for(i=0; (cp1 = prefix[i].pname); i++) {
-@@ -252,2 +259,2 @@
+@@ -252,2 +258,2 @@
 -equal(s1, s2)
 -char *s1, *s2;
 +static int
 +equal(char *s1, char *s2)
-@@ -265 +272,2 @@
+@@ -265 +271,2 @@
 -init()
 +void
 +init(void)
-@@ -291 +299 @@
+@@ -281,2 +288,2 @@
+-		lp->factor = 1.0;
+-		lp->dim[i] = 1;
++		lp->u.factor = 1.0;
++		lp->u.dim[i] = 1;
+@@ -286 +293 @@
+-	lp->factor = 1.0;
++	lp->u.factor = 1.0;
+@@ -291 +298 @@
 -		printf("%l units; %l bytes\n\n", i, cp-names);
 +		printf("%d units; %d bytes\n\n", i, cp-names);
-@@ -297 +305 @@
+@@ -297 +304 @@
 -			units(tp);
-+			units((struct unit *)tp);
-@@ -311,0 +320,4 @@
++			units(&tp->u);
+@@ -311,0 +319,4 @@
 +		if(cp >= &names[NTAB*10-1] || i >= NTAB-2) {
 +			printf("too many units\n");
 +			exit(1);
 +		}
-@@ -333 +345 @@
+@@ -322 +333 @@
+-			tp->factor = lp->factor;
++			tp->u.factor = lp->u.factor;
+@@ -324 +335 @@
+-				tp->dim[c] = lp->dim[c];
++				tp->u.dim[c] = lp->u.dim[c];
+@@ -333 +344 @@
 -	convr(lp);
-+	convr((struct unit *)lp);
-@@ -359 +371 @@
++	convr(&lp->u);
+@@ -337 +348 @@
+-	if(lp->factor != 1.0)
++	if(lp->u.factor != 1.0)
+@@ -340 +351 @@
+-		t = lp->dim[c];
++		t = lp->u.dim[c];
+@@ -359 +370 @@
 -getflt()
 +getflt(void)
-@@ -361 +373 @@
+@@ -361 +372 @@
 -	register c, i, dp;
 +	register int c, i, dp;
-@@ -393 +405,2 @@
+@@ -393 +404,2 @@
 -			i = i*10 + c-'0';
 +			if(i < 10000)
 +				i = i*10 + c-'0';
-@@ -415 +428,2 @@
+@@ -415 +427,2 @@
 -get()
 +int
 +get(void)
-@@ -417 +431 @@
+@@ -417 +430 @@
 -	register c;
 +	register int c;
-@@ -419 +433 @@
+@@ -419 +432 @@
 -	if(c=peekc) {
 +	if((c=peekc)) {
-@@ -435,2 +449 @@
+@@ -435,2 +448 @@
 -hash(name)
 -char *name;
 +hash(char *name)
-@@ -459 +472,8 @@
+@@ -459 +471,8 @@
 -fperr()
 +int
 +fpbad(double x)
@@ -15976,7 +16011,7 @@ usr/local
 +
 +void
 +fperr(int sig)
-@@ -460,0 +481 @@
+@@ -460,0 +480 @@
 +	(void)sig;
 
 % usr/src/cmd/update.c
@@ -16225,49 +16260,55 @@ usr/local
 @@ -32 +34 @@
 -			while(types[dif] = argv[1][dif])
 +			for(k = 0; dif < 9 && (types[dif] = argv[1][k]); k++)
-@@ -121,2 +123,2 @@
+@@ -45,0 +48,5 @@
++	for(k = 0; k < dif; k++)
++		if(types[k] == '/' && range < 2) {
++			printf("Range is too small.\n");
++			exit(0);
++		}
+@@ -121,2 +128,2 @@
 -getline(s)
 -char *s;
 +void
 +getline(char *s)
-@@ -130 +132 @@
+@@ -130 +137 @@
 -		if(*rs == 0)
 +		if(feof(stdin))
-@@ -134 +136 @@
+@@ -134 +141 @@
 -				if(*rs == '\0')	exit(0);
 +				if(feof(stdin))	exit(0);
-@@ -138 +140 @@
+@@ -138 +145 @@
 -	while(*--rs == ' ')
 +	while(rs > s && *--rs == ' ')
-@@ -142,2 +144,2 @@
+@@ -142,2 +149,2 @@
 -getnum(s)
 -char *s;
 +int
 +getnum(char *s)
-@@ -150 +152,2 @@
+@@ -150 +157,2 @@
 -		a = a*10 + c - '0';
 +		if(a < 100000)
 +			a = a*10 + c - '0';
-@@ -156 +159,2 @@
+@@ -156 +164,2 @@
 -random(range)
 +int
 +random(int range)
-@@ -161 +165,2 @@
+@@ -161 +170,2 @@
 -skrand(range){
 +int
 +skrand(int range){
-@@ -168 +173,2 @@
+@@ -168 +178,2 @@
 -score()
 +void
 +score(void)
-@@ -176 +182 @@
+@@ -176 +187 @@
 -	printf("Total time %ld seconds; %.1f seconds per problem\n\n\n",
 +	printf("Total time %lld seconds; %.1f seconds per problem\n\n\n",
-@@ -185 +191,2 @@
+@@ -185 +196,2 @@
 -delete()
 +void
 +delete(int sig)
-@@ -186,0 +194 @@
+@@ -186,0 +199 @@
 +	(void)sig;
 
 % usr/src/games/backgammon.c
@@ -21117,7 +21158,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,205 @@
+@@ -1,72 +1,206 @@
 -/ low core
 -
 -.data
@@ -21190,6 +21231,7 @@ usr/local
 -
 -.globl	_htintr
 -htio:	jsr	r0,call; jmp _htintr
++.set BLK_KERN, 0x701
 +.globl _start, kl2, bootl1
 +_start:
 +	cpsid if
@@ -21226,7 +21268,7 @@ usr/local
 +	ldr r1, =__bss_end
 +	sub r1, r1, #1
 +	lsr r1, r1, #21
-+	movw r3, #0x701
++	movw r3, #BLK_KERN
 +1:
 +	add ip, r4, r0, lsl #21
 +	orr ip, ip, r3
@@ -21397,9 +21439,13 @@ usr/local
 +	.space 32
 
 % usr/sys/conf/mch.s
-@@ -1,2 +1,169 @@
+@@ -1,2 +1,173 @@
 -/ machine language assist
 -/ for 11/45 or 11/70 CPUs
++.set BLK_KERN, 0x701
++.set PTE_TAB, 3
++.set PGSHIFT, 12
++.set PGSIZE, 4096
 +.globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
 +.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
 +.globl dcinval
@@ -21469,17 +21515,17 @@ usr/local
 +
 +resume:
 +	cpsid i
-+	ldr r2, =kl3u+256*8
-+	lsl r3, r0, #12
-+	movw ip, #0x703
++	ldr r2, =kl3u
++	lsl r3, r0, #PGSHIFT
++	movw ip, #BLK_KERN|PTE_TAB
 +	orr r3, r3, ip
 +	str r3, [r2, #0]
-+	add r3, r3, #0x1000
++	add r3, r3, #PGSIZE
 +	str r3, [r2, #8]
 +	dsb ish
 +	ldr r3, =u
 +	mcr p15, 0, r3, c8, c7, 3
-+	add r3, r3, #0x1000
++	add r3, r3, #PGSIZE
 +	mcr p15, 0, r3, c8, c7, 3
 +	dsb ish
 +	isb
@@ -21569,7 +21615,7 @@ usr/local
 +	strbt r1, [r0]
 +	mov r0, #0
 +	b uok
-@@ -4,541 +170,0 @@
+@@ -4,541 +174,0 @@
 -
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
@@ -22111,7 +22157,7 @@ usr/local
 -
 -_fuword:
 -	mov	2(sp),r1
-@@ -546,2 +172,6 @@
+@@ -546,2 +176,6 @@
 -	jsr	pc,gword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22120,7 +22166,7 @@ usr/local
 +	ldrt r1, [r0]
 +	mov r0, r1
 +	b uok
-@@ -549,28 +178,0 @@
+@@ -549,28 +182,0 @@
 -giword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22149,7 +22195,7 @@ usr/local
 -_suword:
 -	mov	2(sp),r1
 -	mov	4(sp),r0
-@@ -578,2 +180,82 @@
+@@ -578,2 +184,82 @@
 -	jsr	pc,pword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22234,7 +22280,7 @@ usr/local
 +dfsr:
 +	mrc p15, 0, r0, c5, c0, 0
 +	bx lr
-@@ -581,444 +262,0 @@
+@@ -581,444 +266,0 @@
 -piword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22679,7 +22725,7 @@ usr/local
 -	.=.+[6*340.]
 -
 -.globl countbase
-@@ -1026,25 +264,2 @@
+@@ -1026,25 +268,2 @@
 -countbase:
 -	_profcnts
 -_profsize:
@@ -22707,7 +22753,7 @@ usr/local
 -	rts	pc
 +waitloc:
 +	.word 1b
-@@ -1053,6 +268,8 @@
+@@ -1053,6 +272,8 @@
 -_xprobuf:.=.+512.
 -_proloc:.=.+2
 -_mode:	.=.+16.
@@ -23048,7 +23094,7 @@ usr/local
 +	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramv, ramn);
 +	if (tabn)
 +		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabv, tabn);
-+	printf("}\nu = 0xFFF00000;\nENTRY(start)\n");
++	printf("}\nu = 0xFFE00000;\nENTRY(start)\n");
 +	printf("start = _start - 0x%lx;\nSECTIONS\n{\n", ramv-ramb);
 +	printf("\t.text : AT(ADDR(.text) - 0x%lx) { *(.text*) } > RAM\n", ramv-ramb);
 +	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) { *(.rodata*) } > RAM\n", ramv-ramb);
@@ -23675,7 +23721,7 @@ usr/local
 -	KLADDR->tcsr = s;
 +	UARTIMSC = s;
 
-% usr/sys/dev/stm32ddr.c /dev/null
+% usr/sys/dev/ddr.c /dev/null
 @@ -0,0 +1,189 @@
 +#include "../h/param.h"
 +#include "../h/systm.h"
@@ -23867,7 +23913,7 @@ usr/local
 +	DDRITFCR |= 0x100;
 +}
 
-% usr/sys/dev/stm32sd.c usr/sys/dev/rk.c
+% usr/sys/dev/sd.c usr/sys/dev/rk.c
 @@ -12 +12 @@
 -#define	RKADDR	((struct device *)0177400)
 +#define	SD(off)	(*(volatile int *)(0xF0405000+(off)))
@@ -24007,7 +24053,7 @@ usr/local
 +void
 +rkwrite(dev_t dev)
 
-% usr/sys/dev/stm32usart.c usr/sys/dev/kl.c
+% usr/sys/dev/usart.c usr/sys/dev/kl.c
 @@ -12 +12 @@
 -#define	KLADDR	((struct device *)0177560)	/* console */
 +#define	KLADDR	0xF0010000
@@ -24791,7 +24837,7 @@ usr/local
 -#define	USIZE	16		/* size of user block (*64) */
 -#define	UBASE	0140000		/* abs. addr of user block */
 +#define	USIZE	2		/* size of user block (*4096) */
-+#define	UBASE	0xFFF00000U	/* abs. addr of user block */
++#define	UBASE	0xFFE00000U	/* abs. addr of user block */
 +#define	USERSIZE	0xC0000000U	/* size of user address space */
 @@ -94 +97 @@
 -#define	CBSIZE	14		/* number of chars in a clist block */
@@ -25161,7 +25207,7 @@ usr/local
 + * The user block is USIZE*4096 bytes
 @@ -9 +9 @@
 - * loc 140000; contains the system
-+ * loc 0xFFF00000; contains the system
++ * loc 0xFFE00000; contains the system
 @@ -24 +24 @@
 -		double	u_fpregs[6];	/* FP registers */
 +		double	u_fpregs[32];	/* FP registers */
@@ -25719,7 +25765,7 @@ usr/local
 +	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
 +	corebase = ctob(btoc(vtop(__ddrbss_end)));
 +	for(a = 0; a < USIZE; a++)
-+		kl3u[256+a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
++		kl3u[a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
 +	kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;
 +	bootl1[vtop(_start)>>30] = 0;
 +	tlbflush();
