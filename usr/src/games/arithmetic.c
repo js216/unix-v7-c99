@@ -45,6 +45,11 @@ main(int argc, char *argv[])
 		printf("Range is too large.\n");
 		exit(0);
 	}
+	for(k = 0; k < dif; k++)
+		if(types[k] == '/' && range < 2) {
+			printf("Range is too small.\n");
+			exit(0);
+		}
 
 	if(dif == 0) {
 		types[0] = '+';

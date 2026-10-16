@@ -224,6 +224,8 @@ d--755 0 0
 					intr.exp	---644 0 0 usr/local/test/cases/intr.exp
 					k12	---644 0 0 usr/local/test/cases/k12
 					k12.exp	---644 0 0 usr/local/test/cases/k12.exp
+					k13	---644 0 0 usr/local/test/cases/k13
+					k13.exp	---644 0 0 usr/local/test/cases/k13.exp
 					kern	---644 0 0 usr/local/test/cases/kern
 					kern.exp	---644 0 0 usr/local/test/cases/kern.exp
 					kern.sed	---644 0 0 usr/local/test/cases/kern.sed

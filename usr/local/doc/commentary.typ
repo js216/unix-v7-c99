@@ -11156,65 +11156,478 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/games/wump.c")
 
-#lines(1, 384)
+`wump` is the game of Hunt the Wumpus, which came to Unix from the
+People's Computer Company's newsletter. The cave is twenty rooms, each
+joined to three others; three rooms hold pits and three hold bats, and
+the wumpus sleeps in one. The instructions, which say the rest, are
+printed with `printf` in turn, each line given the number of rooms or of
+tunnels as an argument, which only lines 3 and 4 use (108).
+
+The prototypes (20, 21) are new.
+
+#lines(1, 97)
+
+The cave is built in two passes. The first strings all twenty rooms
+into a single chain through their first two tunnels, so that every room
+can be reached; the second fills the remaining tunnels with `tunnel`,
+which picks a random room with a free tunnel and joins the two. A cave
+in which a room leads to itself, or twice to the same room, is thrown
+away and built again (138--142). Each room's tunnels are sorted for
+printing, with `qsort` (#f("qsort.c")), whose element size is now
+`sizeof(p->tunn[0])`, four bytes, where v7 wrote 2.
+
+The hazards and the player are then placed at random, the player in an
+empty room. The `=|` and `=&` of v7's source, the assignment operators
+of early C which v7's compiler still accepted, are written `|=` and
+`&=`.
+
+#lines(98, 184)
+
+Each turn reports the room, kills the player in a pit or with the
+wumpus, and moves him at random if a bat is there. The warnings look at
+the rooms one tunnel away, and for the wumpus two. A move must be along
+a tunnel. An arrow follows the list of rooms given, as far as five, but
+where the next room is not joined to the arrow's room it goes down a
+random tunnel instead (246--251). A shot, or entering the wumpus's
+room, wakes the wumpus, which moves along one of its tunnels or, one
+time in four, stays.
+
+#lines(185, 289)
+
+`rline` reads a line and returns its first non-blank character, leaving
+the character that ended the word in `tchar`, so that `m 5` on one line
+needs no second prompt. At end of input the game now exits; v7 tested
+for a null character, which `getchar` never returns, and so looped at
+end of file. `rin` reads a room number and returns 0 for anything else;
+its digits now stop accumulating above 1000, so that a long number
+cannot overflow.
+
+`rnum` returns a random number below `n`. The generator is seeded from
+the time on the first call; v7 kept the time in two words and mixed
+them, and the port keeps it in a `long long`.
+
+#lines(290, 384)
 
 #source("/usr/src/games/fortune.c")
+
+`fortune` prints one line chosen at random from
+`/usr/games/lib/fortunes`, reading the file only once: the `n`th line
+replaces the line kept so far with probability $1/n$, so that when the
+file ends every line has had the same chance of being the one kept.
+`rand` returns numbers below 32768, which is why the test compares with
+`32768./p`. The generator is seeded from the process id and the time.
+
+The time is now a `long long` (11), as `time` returns it
+(#f("types.h")); its two halves are still mixed into the seed by adding
+the high bits to the low. A missing file is still reported with v7's
+joke message.
 
 #lines(1, 32)
 
 #source("/usr/src/cmd/echo.c")
 
+`echo` writes its arguments separated by blanks and ended by a newline,
+which a first argument `-n` suppresses. The shell has no built-in
+`echo`, so every `echo` in a script runs this program. The file is v7's
+with a prototype for `main`.
+
 #lines(1, 22)
 
 #source("/usr/src/cmd/cal.c")
 
-#lines(1, 208)
+`cal` prints the calendar of a month, or of a whole year, of the
+Gregorian calendar as it was adopted in Britain and its colonies, so
+that September 1752 lacks eleven days. Each month is drawn into a
+character array, seven columns of three characters for each of six
+weeks, and the year's form draws three months side by side into rows of
+72 characters (61--63).
+
+The prototypes (11, 12) are new, since `main` uses the procedures before
+their definitions.
+
+#lines(1, 72)
+
+`number` converts an argument, returning 0 for anything that is not a
+number. It now also returns 0 once the number exceeds four digits (83),
+so that a long argument does not overflow; `main` refuses any year
+above 9999. `pstr` turns the nulls of a row into blanks, cuts the
+trailing blanks, and prints it.
+
+#lines(73, 107)
+
+`cal` fills in one month. The day of the week of 1 January comes from
+`jan1`, and the length of the year from the difference between two such
+days: one day means 365, two days 366, and anything else is 1752, whose
+September loses eleven days after the 2nd (154--157). `jan1` counts one
+day for each year and one for each leap year, takes away the Gregorian
+centuries after 1800, and adds three for the days lost in 1752.
+
+#lines(108, 208)
 
 #source("/usr/src/cmd/date.c")
 
-#lines(1, 164)
+`date` prints the date and time, or with an argument `yymmddhhmm[.ss]`
+sets them; `-u` works in Greenwich time. Setting the clock appends two
+records to `/usr/adm/wtmp`, with the names `|` and `{` and the times
+before and after the change, so that `ac` can correct the connect times
+which span it.
+
+`timbuf` is a `time_t` (11), now 64 bits (#f("types.h")), and v7's
+declarations of the time routines give way to #f("stdio.h") and
+#f("time.h"). The time zone of `ftime` (#f("timeb.h")) is in minutes
+west of Greenwich, as in v7.
+
+#lines(1, 89)
+
+`gtime` reverses the argument and takes its digits two at a time from
+the end, seconds first, with `gp`; a field which is not given keeps the
+current day, month, or year. It then counts the days from 1970,
+including the leap days which `dysize` (#f("ctime.c")) reports.
+
+Two-digit years below 70 now mean the years from 2000 (133, 134), so
+that the clock can be set to dates up to 2069; v7's `date`, whose time
+ended in 2038, read every year as 19`yy`. A field that is not a pair of
+digits makes `gp` return -1, which the range tests reject, and a
+negative year (123) is now one of them; before, `date x101010000` set
+the clock to 1999.
+
+#lines(90, 164)
 
 #source("/usr/src/cmd/factor.c")
+
+`factor` prints the prime factors of its argument, or of each number on
+its input, one per line. v7's `factor` was PDP-11 assembler which did
+its arithmetic in the FP11's floating point, whose 56-bit fraction
+bounded the numbers it accepted. The port's is written in C, with
+`long long` arithmetic and the same bound, `BIG`, $2^56$; a larger
+number is refused with v7's "Ouch."
+
+The trial divisors are 2, 3, 5, 7, 11, 13, and then the numbers which
+share no factor with 210, $2 dot 3 dot 5 dot 7$. `tab` holds the 48
+gaps between such numbers around one period of 210, and `i` starts at
+3, so that from 17 on the divisor steps through the cycle (64). Each
+divisor is tried while its square does not exceed what is left; what
+remains at the end is itself prime.
+
+The digits are accumulated only while `n` is below `BIG` (51), so that a
+long argument cannot overflow, and `put` prints a `long long` without
+`printf`, with the five spaces of v7's output.
 
 #lines(1, 72)
 
 #source("/usr/src/cmd/primes.c")
 
+`primes` prints the primes from its argument upwards, for ever. Like
+#f("factor.c") it was PDP-11 assembler in v7, using the FP11, and is
+rewritten in C with `long long` arithmetic and the same bound, $2^56$.
+
+Primes below 100 come from the table `pt`. Beyond that `primes` sieves
+8000 numbers at a time, starting at the odd number `nn`: `table` has one
+bit for each number of the window, and `mark` sets the bits of the
+multiples of `p` within it, starting from the first multiple at or
+above `nn` (79--81). Every divisor up to the square root of the window's
+end is used, 3, 5, 7, and then the numbers prime to 210, in the cycle of
+gaps `factab` of #f("factor.c"). The odd numbers whose bits stay clear
+are prime and are printed (129--135), and the window moves on.
+
+Output goes through a 512-byte buffer, written with `write`, and the
+input is read with `read` a character at a time, as the assembler did;
+numbers are converted to decimal by the recursive `ftoa`.
+
 #lines(1, 137)
 
 #source("/usr/src/cmd/units.c")
 
-#lines(1, 485)
+`units` converts quantities between units: asked "you have" and "you
+want", it prints the factors which take one to the other. A unit is a
+`factor` and ten exponents, one for each of the fundamental dimensions
+(length, mass, time, and so on) which `/usr/lib/units` defines; two
+units are conformable when their exponents agree.
+
+The exponents are now `signed char` (16). Every inverse unit has
+negative ones, and the ARM's `char` is unsigned, so v7's plain `char`
+would have made a second of $-1$ into 255. A table entry now contains a
+`struct unit` (21) where v7 repeated its two members and passed the
+entry, cast, wherever a unit was wanted: C99 does not allow an object to
+be used as a different structure type even when the first members agree,
+so `units(&tp->u)` and `convr(&lp->u)` pass the member itself. The
+prefixes' initialisers gain the braces of each entry, for
+`-Wmissing-braces`.
+
+#lines(1, 53)
+
+`main` reads the table with `init` and then converts in a loop. Before
+printing, the two factors are checked with `fpbad`: the PDP-11's
+floating point trapped on overflow and underflow, which `fperr` counted
+in `fperrc`, but the ARM's hard floating point raises no signal, so a
+result that is zero or not finite now reports "underflow or overflow"
+instead of printing an infinity.
+
+#lines(54, 111)
+
+`units` prints a unit as its factor and the names of its dimensions,
+those with negative exponents after a `/`. `convr` reads a quantity, a
+number and then names separated by blanks, `-`, or `/`, a digit after a
+name being its power, and `lookup` multiplies or divides it by each.
+A name not in the table is tried again without each prefix that it
+starts with, and then without a final `s`. A name longer than 19
+characters is now cut short instead of overrunning `name` (201), and the
+end of the input (`c == 0`) ends the quantity, so that a table without a
+final newline cannot make `convr` loop.
+
+#lines(112, 256)
+
+`init` reads `/usr/lib/units`: each line defines a name as a quantity of
+other units, and the first ten lines make `m`, `kg`, `sec`, and the
+rest the fundamental dimensions, by defining them as `*a*` to `*j*`,
+the names `init` gives the ten dimensions before it reads the file
+(281--291). Lines starting with `/` are comments. The names are kept in `names`, and the table is a hash table
+of 601 entries probed in sequence. Running out of either now stops
+`units` with "too many units" (320); v7 wrote past the arrays.
+
+#lines(257, 367)
+
+`getflt` reads a number, with an optional fraction and exponent; `a|b`
+means `a` divided by `b`. The exponent's digits now stop accumulating
+at five (405). `get` returns the next character, or 0 at the end of the
+table; at the end of the standard input `units` exits.
+
+#lines(368, 484)
 
 #source("/usr/src/cmd/yes.c")
+
+`yes` repeats its argument, or `y`, for ever, for commands which ask
+for confirmation; the suite also uses it as a process which runs until
+it is killed. #f("stdio.h") is now included for `printf`.
 
 #lines(1, 7)
 
 #source("/usr/src/cmd/sleep.c")
 
+`sleep` suspends itself for the number of seconds in its argument,
+with the library's `sleep` (#f("sleep.c")).
+
+The count is now `unsigned` (5), so that a long string of digits wraps
+instead of overflowing, as `sleep` takes an `unsigned` anyway. A missing
+argument or a character that is not a digit now exits with status 1;
+v7 printed the message and exited with 0, as if it had slept.
+
 #lines(1, 22)
 
 #source("/usr/src/cmd/basename.c")
+
+`basename` prints the last component of a path name, and with a second
+argument removes that suffix from it, as in ``cc `basename f .c`.o``.
+`p2` is left just after the last `/`, and the suffix is compared from
+its end backwards and cut off if it matches.
+
+v7 called `puts` with a second argument, `stdout`, which its `puts`
+ignored; the call is now `puts(p2)` (27).
 
 #lines(1, 29)
 
 #source("/usr/src/cmd/osh.c")
 
-#lines(1, 866)
+`osh` is the shell of the Sixth Edition, which v7 kept beside the
+Bourne shell of Part Two for old scripts. It is a few hundred lines
+against the Bourne shell's thousands: no variables but the positional
+parameters `$0` to `$9` and `$$`, no control flow but `goto` (a separate
+command), and wild cards left to a separate program, `/etc/glob`, which
+v7 did not include. Its source is old C: v7 still compiled `=+` and
+`=|` for `+=` and `|=`, and the parse tree kept pointers in `int`s. The
+port writes the assignment operators in the modern order, and makes
+every conversion between pointer and `int` an explicit cast, which is
+exact on the ARM, whose `int` and pointers have 32 bits.
+
+The flags describe a command in the tree: `FAND` for one run in the
+background, `FPIN` and `FPOU` for the ends of a pipe, `FPAR` for a
+command in parentheses, `FINT` for one which must ignore interrupts,
+and `FPRS` for one whose process id is printed. A tree node is a few
+`int`s: its type, the input and output file names (`DLEF`, `DRIT`), the
+flags, and for a command its words from `DCOM`. `NSIG` is redefined to
+the sixteen signals `mesg` names, since #f("signal.h") now gives 32.
+
+#lines(1, 88)
+
+`main` closes stray descriptors, makes `$$` from the process id (now
+taking each digit before dividing, 99, 100, where v7 divided first and
+so gave a tenth of the id), and
+takes `-c` for a command from the argument, `-t` for a single line, or a
+file to read; a login shell (`-` in `argv[0]`) ignores QUIT, and
+INTR unless it was already ignored. The `int` conversion of the
+previous handler (131) tests whether it was `SIG_IGN`, as v7 did with
+the number 1.
+
+`main1` reads one line into words and executes its tree. A syntax
+error found deep in the parse returns through `jmpbuf`.
+
+#lines(89, 175)
+
+`word` collects one word. Characters inside quotes, and those escaped
+with `\`, carry the bit `QUOTE`, 0200, so that they are not taken as
+special; `trim` takes it away before the command runs. A quoted string
+which runs past the end of the line buffer is now refused like any
+other overflow (195--200); v7 wrote past `line`.
+
+`getc` returns the next character, expanding `$n` and `$$` from a
+saved pointer `dolp`; `readc` reads the input itself, from the `-c`
+argument or one character at a time. The redefinitions of `getc` and
+`putc`, the shell's own, are why #f("stdio.h")'s macros are undefined
+(7, 8).
+
+#lines(176, 335)
+
+The parser works on the array of words, by recursive descent: `syn1`
+splits at `;`, `&`, and newline, `syn2` at `|` or `^`, and `syn3` takes
+a simple command or a parenthesised list with its redirections. Each
+returns a tree node allocated from `trebuf` by `tree`, which escapes
+through `jmpbuf` when the buffer is full.
+
+#lines(336, 537)
+
+`execute` runs a tree. A few commands are built in: `chdir`, `shift`,
+`login`, `newgrp`, `wait`, and `:`. Others fork, redirect, and execute:
+a word with `[`, `?`, or `*` hands the command to `/etc/glob`, which v7
+did not ship either, so such a command fails here as there. The command
+is tried as given, in `/bin`, and in `/usr/bin`, the name being built
+in a buffer allocated to its length (706); v7 built it in the line
+buffer. A file which is not an executable is run by `/bin/osh` itself,
+as a script (757); v7 named `/usr/bin/osh`, which did not exist.
+
+#lines(538, 745)
+
+`pwait` waits for a child and reports one which a signal killed,
+`(s>>8)|e` being the exit status the script returns. `prn` prints a
+process id in decimal.
+
+#lines(746, 866)
 
 #source("/usr/src/games/arithmetic.c")
 
-#lines(1, 201)
+`arithmetic` drills sums. Its arguments choose the operations, any of
+`+-x/`, and a range of numbers, 10 unless given; every twenty problems,
+and on an interrupt, it prints the score and the time taken. A problem
+answered wrongly is added to the pool, so that it is more likely to
+come again (122, 123), and `skrand` favours numbers near the middle of
+the range.
+
+The operations are now copied with a limit of nine (34), and from
+`argv[1][k]` rather than `argv[1][dif]`: v7 indexed the argument by the
+count of operations so far, so a second argument such as `x` after `+-`
+read past its end. A range below 2 with division is refused (48--52),
+since every divisor would be zero and the search for one at 99 would not
+end. `getline` stops at end of input, which v7 tested by looking for a
+null character that never comes, and no longer steps before its buffer
+on a blank line (145). `getnum` stops accumulating above 100000. The
+times are `long long`, as `time` returns them.
+
+#lines(1, 206)
 
 #source("/usr/src/games/hangman.c")
+
+`hangman` picks a random word from the dictionary and lets the player
+guess its letters, seven wrong guesses being allowed. The word is found
+by seeking to a random byte of the file, skipping the partial word
+there, and taking the next word of at least seven lower-case letters,
+hyphens removed; the score is the average number of errors per word, a
+lost word counting two more.
+
+v7 seeded the generator with `tvec[1]+tvec[2]`, the second word of the
+time and a word beyond the end of the array; the time is now a single
+`long long` (37--40). The dictionary's words are read with a width of
+127 (58, 130), so that a long line cannot overrun the buffers, and words
+longer than 25 letters are skipped (141), since `word` holds 25. The
+guess is read with `fgets` in place of `gets` (78), and a dictionary
+with no usable word now stops the game with "no words" (131) instead of
+searching it for ever.
 
 #lines(1, 160)
 
 #source("/usr/src/games/quiz.c")
 
-#lines(1, 497)
+`quiz` asks questions from a file of facts and checks the answers. The
+index, `/usr/games/quiz.k/index`, names a file for each subject and the
+kinds of fact it holds, such as `state:capital`; asked for two of them,
+`quiz` reads the file and asks one kind of fact and expects the other.
+A fact is a pattern: `[...]` encloses something optional, `{...}`
+groups, and `|` separates alternatives, so that an answer may be given
+in more than one way.
+
+`score` is now `signed char` (12), since in the `-t` mode a question
+answered wrongly scores $-1$ and comes again, and the ARM's plain
+`char` cannot hold it. `line` has room for `NC` characters and two more
+(23). The prototypes (26--31) are new.
+
+`readline` reads a line of the file, dropping repeated blanks and
+joining a line ended by `\`; `nc` counts the characters read, which
+`readindex` uses as the offset of each line. It no longer steps its
+pointer before the start of `line` to drop a leading blank: the loop is
+now a `while` which advances only past characters it keeps. The test
+for end of file masks the character (58), since the ARM's `char` makes
+0377 a positive number.
+
+#lines(1, 66)
+
+`cmp` matches an answer against a pattern. `disj` tries the
+alternatives in turn, `string` a sequence of characters and bracketed
+parts, and `eat` a single character, compared without regard to case by
+`fold`. Each returns 1 for a match, 0 for none, and 2 for a malformed
+pattern; with `s` zero they only skip over the pattern. The `|` in
+`t|(x&s)` (97) gains parentheses, which change nothing, for a warning.
+
+#lines(67, 190)
+
+`publish` prints the first of a pattern's alternatives. `segment` splits
+a line at its colons into `w`, each part now limited to `SL` characters
+(237), and `talloc` gives each part two more bytes, for the escape which
+a part may end with (310). `perm` finds, for each kind of fact asked
+for, the field of an index line which matches it, and `find` the index
+line for which all match.
+
+#lines(191, 311)
+
+`main` reads the index, finds the subject, and then asks questions from
+it in a random order until interrupted. More than `NF` arguments are now
+refused (352), since `select` has `NF` entries. A subject file with no
+facts in it now stops `quiz` with "I don't know about that" (361); v7
+went on to compute a question number modulo zero. A fact longer than
+`NC` characters is cut there (368). The time is a `long long`, and the
+increment for the generator takes its low bits as v7 did, now with the
+parentheses which make the order of `&` and `|` explicit (325).
+
+#lines(312, 401)
+
+`query` reads an answer with `read`, a character at a time, dropping
+repeated blanks; characters beyond the size of `response` are now
+dropped (411), and end of input ends the game. `next` picks the next
+question with a linear congruential generator, skipping those already
+answered.
+
+#lines(402, 497)
 
 #source("/usr/src/games/fish.c")
+
+`fish` plays Go Fish against the player. A hand is an array of
+thirteen counts, one for each rank, and four of a rank make a book,
+which scores. The program's own guesses come from `myguess`, which in
+the professional mode, asked for at the start, remembers what the
+player has asked for, since he must hold it, and otherwise picks the
+rank asked about longest ago; without it the guess is random.
+
+The source is v7's, in its own layout, with prototypes (22--26) and
+declarations in the modern style. The changes which are not mechanical
+are three. The player's input now ends the game at end of file: `guess`
+exits on `EOF` and the loops which skip the rest of a line stop there
+too, where v7 read for ever. The ranks kept in the `char` array `try`
+are masked with `0377` before they index `hehas` and `haveguessed`
+(497--512), so that the program behaves the same whatever the
+signedness of `char`; with ranks from 1 to 13 the masks change no
+value. And `mark` (85) takes the hand first, as every call passes it.
+v7 defined it as `mark(cd, hand)`, the reverse of its calls; on the
+PDP-11, where a pointer and an `int` were passed alike, `hand[cd]` still
+reached the right count, since `a[i]` is `*(a+i)` whichever of the two
+is the address, but the test against `NOMORE` looked at the address
+instead of the card.
 
 #lines(1, 526)
 
@@ -12485,7 +12898,7 @@ whose directory does not exist, so without his `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
-#lines(139, 364)
+#lines(139, 366)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -12494,7 +12907,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(365, 366)
+#lines(367, 368)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to

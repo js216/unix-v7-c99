@@ -18,8 +18,7 @@ struct unit
 
 struct table
 {
-	double	factor;
-	signed char	dim[NDIM];
+	struct	unit u;
 	char	*name;
 } table[NTAB];
 char	names[NTAB*10];
@@ -220,13 +219,13 @@ loop:
 	if(q->name) {
 		l1:
 		if(den) {
-			p->factor /= q->factor*e;
+			p->factor /= q->u.factor*e;
 			for(i=0; i<NDIM; i++)
-				p->dim[i] -= q->dim[i];
+				p->dim[i] -= q->u.dim[i];
 		} else {
-			p->factor *= q->factor*e;
+			p->factor *= q->u.factor*e;
 			for(i=0; i<NDIM; i++)
-				p->dim[i] += q->dim[i];
+				p->dim[i] += q->u.dim[i];
 		}
 		if(c >= '2' && c <= '9') {
 			c--;
@@ -286,12 +285,12 @@ init(void)
 		*cp++ = 0;
 		lp = hash(np);
 		lp->name = np;
-		lp->factor = 1.0;
-		lp->dim[i] = 1;
+		lp->u.factor = 1.0;
+		lp->u.dim[i] = 1;
 	}
 	lp = hash("");
 	lp->name = cp-1;
-	lp->factor = 1.0;
+	lp->u.factor = 1.0;
 
 l0:
 	c = get();
@@ -302,7 +301,7 @@ l0:
 			if(tp->name == 0)
 				continue;
 			printf("%s", tp->name);
-			units((struct unit *)tp);
+			units(&tp->u);
 		}
 		fclose(inp);
 		inp = stdin;
@@ -331,9 +330,9 @@ l0:
 			if(tp->name)
 				goto redef;
 			tp->name = np;
-			tp->factor = lp->factor;
+			tp->u.factor = lp->u.factor;
 			for(c=0; c<NDIM; c++)
-				tp->dim[c] = lp->dim[c];
+				tp->u.dim[c] = lp->u.dim[c];
 			i++;
 			goto l0;
 		}
@@ -342,14 +341,14 @@ l0:
 	lp = hash(np);
 	if(lp->name)
 		goto redef;
-	convr((struct unit *)lp);
+	convr(&lp->u);
 	lp->name = np;
 	f = 0;
 	i++;
-	if(lp->factor != 1.0)
+	if(lp->u.factor != 1.0)
 		goto l0;
 	for(c=0; c<NDIM; c++) {
-		t = lp->dim[c];
+		t = lp->u.dim[c];
 		if(t>1 || (f>0 && t!=0))
 			goto l0;
 		if(f==0 && t==1) {
