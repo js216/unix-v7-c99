@@ -6,7 +6,7 @@
  * while the process is swapped.
  * The user block is USIZE*4096 bytes
  * long; resides at virtual kernel
- * loc 0xFFF00000; contains the system
+ * loc 0xFFE00000; contains the system
  * stack per user; is cross referenced
  * with the proc structure for the
  * same process.

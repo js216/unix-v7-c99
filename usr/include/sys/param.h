@@ -83,7 +83,7 @@
 #define	NMASK	0177		/* NINDIR-1 */
 #define	NSHIFT	7		/* LOG2(NINDIR) */
 #define	USIZE	2		/* size of user block (*4096) */
-#define	UBASE	0xFFF00000U	/* abs. addr of user block */
+#define	UBASE	0xFFE00000U	/* abs. addr of user block */
 #define	USERSIZE	0xC0000000U	/* size of user address space */
 #ifndef NULL
 #define	NULL	0

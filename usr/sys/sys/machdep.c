@@ -201,7 +201,7 @@ machine_init(void)
 	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
 	corebase = ctob(btoc(vtop(__ddrbss_end)));
 	for(a = 0; a < USIZE; a++)
-		kl3u[256+a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
+		kl3u[a] = (corebase + ctob(a)) | BLK_KERN | PTE_TAB;
 	kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;
 	bootl1[vtop(_start)>>30] = 0;
 	tlbflush();

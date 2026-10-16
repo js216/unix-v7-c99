@@ -584,7 +584,7 @@ main(void)
 	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramv, ramn);
 	if (tabn)
 		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabv, tabn);
-	printf("}\nu = 0xFFF00000;\nENTRY(start)\n");
+	printf("}\nu = 0xFFE00000;\nENTRY(start)\n");
 	printf("start = _start - 0x%lx;\nSECTIONS\n{\n", ramv-ramb);
 	printf("\t.text : AT(ADDR(.text) - 0x%lx) { *(.text*) } > RAM\n", ramv-ramb);
 	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) { *(.rodata*) } > RAM\n", ramv-ramb);

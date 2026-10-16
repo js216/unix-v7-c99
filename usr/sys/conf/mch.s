@@ -67,7 +67,7 @@ save:
 
 resume:
 	cpsid i
-	ldr r2, =kl3u+256*8
+	ldr r2, =kl3u
 	lsl r3, r0, #12
 	movw ip, #0x703
 	orr r3, r3, ip

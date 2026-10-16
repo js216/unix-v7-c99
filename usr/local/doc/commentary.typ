@@ -4445,7 +4445,7 @@ The entry point is named: `start`, the physical address of `_start`.
 QEMU, which loads the ELF file itself, jumps to the entry point with
 the MMU off, so the kernel address would not do. On the MP135 machine
 the kernel's first byte, at the start of SYSRAM, is `_start` too. Between the regions and the sections the
-symbol `u` is set to `0xFFF00000`, the value of `UBASE` (#f("param.h")),
+symbol `u` is set to `0xFFE00000`, the value of `UBASE` (#f("param.h")),
 as v7's `mch.s` set `_u`; `mkconf` is a program of the build machine
 and does not include the kernel's headers, so the address is written
 out here, and the two must agree.
