@@ -39,7 +39,7 @@ main(void)
 		uk.u_procp == um.u_procp);
 	lseek(m, (long)UBASE, 0);
 	printf("mem at UBASE %d\n", read(m, (char *)&um, 4));
-	lseek(k, pa, 0);
-	printf("kmem at physical %d\n", read(k, (char *)&uk, 4));
+	lseek(k, (long)ptob(1), 0);
+	printf("kmem below the kernel %d\n", read(k, (char *)&uk, 4));
 	return 0;
 }
