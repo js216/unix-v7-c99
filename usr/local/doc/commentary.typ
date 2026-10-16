@@ -2960,8 +2960,8 @@ device is still in the table, a file on it is in use and the call
 fails.
 
 The structure `a` describes the argument but is never used, since
-`getmdev` finds the name through `u.u_dirp`. v7 declared it `register
-struct a { ... };`, which declares a tag but no variable, so that the
+`getmdev` finds the name through `u.u_dirp`. v7 declared it
+`register struct a { ... };`, which declares a tag but no variable, so that the
 `register` applies to nothing, and the compiler warns of it. The
 `register` has gone; the unused declaration is kept as v7's.
 
@@ -3719,8 +3719,8 @@ The declarations of `ttrstrt` and `partab` have gone: the first is in
 `klrint` is declared (41) because `klread` now calls it, before its
 definition. `klirq` (42) is the console's interrupt number at the interrupt
 controller, which `intrtab` (#f("qemu/c.c")) reaches through a pointer;
-33 is shared peripheral interrupt 1, to which QEMU wires the UART. `struct
-device` is v7's description of the KL11's registers and is now unused.
+33 is shared peripheral interrupt 1, to which QEMU wires the UART.
+`struct device` is v7's description of the KL11's registers and is now unused.
 
 #lines(39, 50)
 
@@ -5944,8 +5944,8 @@ say so. `REAL` survives, though nothing uses it.
 #lines(1, 23)
 
 Each structure gets a typedef for itself or for a pointer to it.
-v7 also typedef'd `SYSTAB` here (deleted), as an array of `struct
-sysnod`, before that structure was defined; C99 does not allow an array
+v7 also typedef'd `SYSTAB` here (deleted), as an array of
+`struct sysnod`, before that structure was defined; C99 does not allow an array
 of an incomplete type, and the line has moved below the definition
 (110).
 
@@ -6015,8 +6015,8 @@ becomes `if( c ){ s ;}`, `WHILE c DO s OD` becomes `while( c ){ s ;}`,
 and `REP s PER c DONE` is a `do`-`while` loop. `LOOP ... POOL` is a loop
 without a test, left by `break` or `return`. The brackets of each
 construct are supplied by its keywords, so a body of several statements
-needs no braces, and an `ELIF` chain needs no nesting. `SWITCH x IN
-... ENDSW` frames a `switch`; the cases inside are written in plain C.
+needs no braces, and an `ELIF` chain needs no nesting.
+`SWITCH x IN ... ENDSW` frames a `switch`; the cases inside are written in plain C.
 
 Note that `FI` and `OD` supply a semicolon. A statement before them may
 omit its own, and the shell's sources often do (`IF x THEN y=0 FI`).
@@ -8867,8 +8867,8 @@ Since 2007 the American rule has been different, so the time printed
 here is an hour wrong for some weeks of each year, in March and April
 and around the start of November.
 
-The subtraction (91) and the addition (105) are done in `unsigned long
-long`, and the result converted back: a time within hours of the
+The subtraction (91) and the addition (105) are done in
+`unsigned long long`, and the result converted back: a time within hours of the
 largest or smallest `time_t` would otherwise overflow a signed
 `long long`, which C leaves undefined. The unsigned arithmetic wraps
 instead, and only such an absurd time is affected.
@@ -10264,8 +10264,8 @@ compiled as an ordinary class with its bits inverted.
 
 The buffers are larger than `ed`'s: `ESIZE` 256 against 128, and nine
 bracketed subexpressions (`NBRA`) against five. `bittab` gives the bit
-for each of the eight positions within a byte; it is now `unsigned
-char` (48), since the last of them, 128, is not a value a signed `char`
+for each of the eight positions within a byte; it is now
+`unsigned char` (48), since the last of them, 128, is not a value a signed `char`
 can hold.
 
 `main` collects the flags. With `-y`, each lower-case letter outside
@@ -12243,8 +12243,8 @@ compile ends.
 
 The copies are not exact. `mkfs` writes super-blocks, inodes, and free
 lists as structures, which the kernel must read as the ARM lays them
-out: least significant byte first, `int` and `long` four bytes, `long
-long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
+out: least significant byte first, `int` and `long` four bytes,
+`long long` eight bytes on an eight-byte boundary. A 64-bit host agrees in
 everything but `long`, which there is eight bytes, so `sed` turns each
 `typedef long` into `typedef int`, the same four bytes on every host;
 `daddr_t` and `off_t` are the types it changes. The host's own headers
@@ -12334,8 +12334,8 @@ v7's `#include "../h/param.h"`; the search path `-I$S/conf` (28) lets
 
 #lines(20, 29)
 
-The link. In place of v7's `ld -X -i l.o mch.o c.o ../sys/LIB1
-../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
+The link. In place of v7's
+`ld -X -i l.o mch.o c.o ../sys/LIB1 ../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
 the machine's drivers, then the two archives, with no start-up file or
 library of the toolchain's (`-nostdlib`) and with the machine's linker
 script (#f("qemu/unix.ld")). `-i`, which gave the PDP-11 kernel separate
@@ -12616,8 +12616,8 @@ they belonged to the union, as in `filsys.s_fsize`; early C compilers
 allowed it, since member names were global, but C99 does not. The two
 `#define`s (49, 55) turn every such use into a reference through the
 member, `filsys.fs.s_fsize`, while the unions keep their v7 names: a
-macro is not expanded again within its own expansion. v7's `struct exec
-head`, the header of the bootstrap program, is gone with the bootstrap.
+macro is not expanded again within its own expansion. v7's
+`struct exec head`, the header of the bootstrap program, is gone with the bootstrap.
 
 #lines(35, 69)
 

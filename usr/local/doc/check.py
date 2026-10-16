@@ -21,4 +21,7 @@ for m in re.finditer(r'#source\("([^"]+)"\)|#lines\((\d+),\s*(\d+)\)|listing\(',
         if b < a or b > total: print(f'{cur}: bad range {a},{b} (file has {total})'); ok = False
         nxt = b + 1
 done()
+for m in re.finditer(r'(?<!`)`(?!`)([^`]*?)`(?!`)', src):
+    if '\n' in m.group(1):
+        print(f'line {src.count(chr(10), 0, m.start()) + 1}: inline code spans a line break'); ok = False
 print('OK' if ok else 'FAILED')
