@@ -11282,7 +11282,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/cmd/df.c")
 
-#lines(1, 95)
+#lines(1, 98)
 
 #source("/usr/src/cmd/du.c")
 

@@ -46,7 +46,10 @@ dfree(char *file)
 	bread(1L, (char *)&sblock, sizeof(sblock));
 	i = 0;
 	while(alloc())
-		i++;
+		if(++i > sblock.s_fsize) {
+			printf("free list loops, b=%D\n", blkno);
+			break;
+		}
 	printf("%s %D\n", file, i);
 	close(fi);
 }
@@ -86,10 +89,10 @@ bread(daddr_t bno, char *buf, int cnt)
 	int n;
 	extern int errno;
 
-	lseek(fi, bno<<BSHIFT, 0);
+	lseek(fi, (long)((unsigned long)bno*BSIZE), 0);
 	if((n=read(fi, buf, cnt)) != cnt) {
 		printf("read error %D\n", bno);
 		printf("count = %d; errno = %d\n", n, errno);
-		exit(0);
+		exit(1);
 	}
 }
