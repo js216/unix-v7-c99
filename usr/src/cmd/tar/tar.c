@@ -669,6 +669,7 @@ void
 tomodes(register struct stat *sp)
 {
 	register char *cp;
+	long long t;
 
 	for (cp = dblock.dummy; cp < &dblock.dummy[TBLOCK]; cp++)
 		*cp = '\0';
@@ -676,7 +677,12 @@ tomodes(register struct stat *sp)
 	sprintf(dblock.dbuf.uid, "%6o ", sp->st_uid);
 	sprintf(dblock.dbuf.gid, "%6o ", sp->st_gid);
 	sprintf(dblock.dbuf.size, "%11lo ", sp->st_size);
-	sprintf(dblock.dbuf.mtime, "%11llo ", sp->st_mtime);
+	t = sp->st_mtime;
+	if (t < 0)
+		t = 0;
+	if (t > 077777777777LL)
+		t = 077777777777LL;
+	sprintf(dblock.dbuf.mtime, "%11llo ", (unsigned long long)t);
 }
 
 int
