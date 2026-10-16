@@ -10923,7 +10923,7 @@ an inode lost until `icheck` or `clri` attended to it.
 
 #source("/usr/src/games/quiz.c")
 
-#lines(1, 493)
+#lines(1, 497)
 
 #source("/usr/src/games/fish.c")
 

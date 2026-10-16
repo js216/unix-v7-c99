@@ -36,13 +36,16 @@ readline(void)
 	char *t;
 	register int c;
 loop:
-	for (t=line; c=getc(input), *t=c, c!=EOF; t++) {
+	t = line;
+	while (c=getc(input), *t=c, c!=EOF) {
 		nc++;
 		if(*t==' '&&(t==line||t[-1]==' '))
-			t--;
+			continue;
 		if(*t=='\n') {
-			if(t>line&&t[-1]=='\\')		/*inexact test*/
+			if(t>line&&t[-1]=='\\') {	/*inexact test*/
+				t++;
 				continue;
+			}
 			while(t>line&&t[-1]==' ')
 				*--t = '\n';
 			*++t = 0;
@@ -57,6 +60,7 @@ loop:
 			} while(*line!='\n');
 			goto loop;
 		}
+		t++;
 	}
 	return(0);
 }
