@@ -13,7 +13,7 @@ mv m2 mon.out; prof x.out; echo st$?; rm mon.out x.out x2 p1 p2
 echo zzz >ig; ptx -i ig -w </dev/null; echo st$?
 awk 'BEGIN { printf "a "; for (i = 0; i < 150; i++) printf "\""; print "" }' </dev/null | ptx -i ig | wc -c
 awk 'BEGIN { for (i = 0; i < 250; i++) printf "b"; print " c" }' </dev/null | ptx -i ig | wc -c
-echo 'a b c' | ptx -w 3 -i ig; echo st$?; echo 'a b c' | ptx -g 71 -i ig; echo st$?
+echo 'a b c' >abc; ptx -w 3 -i ig abc; echo st$?; ptx -g 71 -i ig abc; echo st$?
 awk 'BEGIN { for (i = 0; i < 2048; i++) print "w" i }' </dev/null >ig; echo hello world | ptx -i ig; echo st$?; rm ig
 cp $U/fs.img fs; quot fs fs; echo '8 words' | tr -d '\012' | quot -n fs | od -c
 cp /etc/passwd pw; echo 'x::300:1::/:' >>/etc/passwd; quot -c fs | sed 4q; cp pw /etc/passwd
@@ -30,15 +30,15 @@ echo 0 0 1 1 2 4 | spline -x 5 5 | wc -l
 p=$T; for i in 1 2 3 4 5 6; do p=$p/$B; mkdir $p; done; split -1 /etc/group $p/x; ls $p | wc -l; split -0 /etc/group; echo st$?
 (stty erase; echo st$? 1>&2; stty; $U/spd 200; stty; stty ek 0) 2>&1 >/dev/tty
 tabs </dev/null | od -c; tail +4294967295c /etc/passwd | wc -c; tail +5000000b /etc/passwd | wc -c
-awk 'BEGIN { for (i = 0; i < 25; i++) printf "{"; print "p"; for (i = 0; i < 25; i++) print "}" }' </dev/null >sc; echo x | sed -n -f sc; echo st$?
-awk 'BEGIN { printf "s/x/"; for (i = 0; i < 12000; i++) printf "a"; print "/" }' </dev/null >sc; echo x | sed -f sc; echo st$?
+awk 'BEGIN { for (i = 0; i < 25; i++) printf "{"; print "p"; for (i = 0; i < 25; i++) print "}" }' </dev/null >sc; echo x >ex; sed -n -f sc <ex; echo st$?
+awk 'BEGIN { printf "s/x/"; for (i = 0; i < 12000; i++) printf "a"; print "/" }' </dev/null >sc; sed -f sc <ex; echo st$?
 echo 10 | sed -n -e '$p
 s/1\0/x/p'
 echo x | sed -n -e "w $p/w" -e "s/^/y/w $p/w"; cat $p/w
-sed 's/abc' </dev/null; echo st$?; echo x | sed s; echo st$?; sed 'y/abc' </dev/null; echo st$?
+sed 's/abc' </dev/null; echo st$?; sed s <ex; echo st$?; sed 'y/abc' </dev/null; echo st$?
 awk 'BEGIN { for (i = 0; i < 21; i++) { print "a\\"; print "t" i } }' </dev/null >sc; echo x | sed -f sc | wc -l
 awk 'BEGIN { for (i = 0; i < 300; i++) printf "%019d\n", i }' </dev/null >sl; sed -n -e :a -e '$!N' -e '$!ba' -e p sl | wc -c
-sed -n 'H;${x;p;}' sl | wc -c; echo abc | sed 's/\(x*\)\1*/y/'; echo x | sed -e; echo st$?; sed -f </dev/null; echo st$?; rm sc sl
+sed -n 'H;${x;p;}' sl | wc -c; echo abc | sed 's/\(x*\)\1*/y/'; sed -e <ex; echo st$?; sed -f </dev/null; echo st$?; rm sc sl
 awk 'BEGIN { for (i = 0; i < 1587; i++) print i % 3 }' </dev/null | sort -u
 awk 'BEGIN { for (i = 0; i < 30000; i++) printf "s"; print "" }' </dev/null | sort | wc -c; sort -T $p /etc/group | wc -l
 dump 0f dmp fs >/dev/null 2>&1; restor xf /etc/passwd x </dev/null; echo st$?; ls rst* 2>&1; restor r; echo st$?; restor xf; echo st$?
