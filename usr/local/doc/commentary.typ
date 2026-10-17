@@ -12636,19 +12636,8 @@ The MP135 machine's boot ROM does not load an ELF file. It loads an
 image with a header of its own, 512 bytes long, from the SD card or
 over USB, into SYSRAM, and jumps into it. `objcopy` therefore turns the
 kernel into the bare bytes of its loaded sections, `unix-mp135.bin`,
-and `mkstm32`, a host program kept in `conf`, puts the header in
-front, making `unix-mp135.stm32`, which `all` includes.
-
-The header is that of the chip's documentation, version 2: the magic
-`STM2`; 64 bytes of signature, left zero, since the chip is not set to
-demand one; the checksum, the sum of the image's bytes, which the ROM
-recomputes; the version (byte 74, 2); the image's length; the entry
-point and the load address, both the start of SYSRAM, `0x2ffe0000`,
-where `_start` lies (#f("mp135/unix.ld")); and flag bit 31 with a
-length of 384, which say that an extension header follows and fills
-the rest of the 512 bytes: a padding header (`ST` followed by two bytes
-of `0xff`), of the same length. Every other byte is zero. An image
-longer than SYSRAM less the header is refused.
+and `mkstm32`, a host program kept in `conf` (#f("mkstm32.c")), puts
+the header in front, making `unix-mp135.stm32`, which `all` includes.
 
 #lines(38, 42)
 #source("/usr/src/libc/lib.mk")
@@ -12859,6 +12848,31 @@ megabyte, six times SYSRAM, so `EXCLUDE_FILE` (16) keeps them out of
 and `coreoff` are set only after that.
 
 #lines(1, 24)
+#source("/usr/sys/conf/mkstm32.c")
+
+#f("mkstm32.c") puts the boot ROM's header on the MP135 machine's
+kernel (#f("sys.mk")). Like `mkconf`, it runs on the build machine,
+never on the target.
+
+The header is that of the chip's documentation, version 2 (46--55):
+the magic `STM2`; 64 bytes of signature, left zero, since the chip is
+not set to demand one; the checksum (47), the sum of the image's bytes
+(43--45), which the ROM recomputes; the version (48); the image's
+length (49); the entry point and the load address (50, 51), both the
+start of SYSRAM, `0x2ffe0000` (8), where `_start` lies
+(#f("mp135/unix.ld")); and flag bit 31 with a length of 384 (52, 53),
+which say that an extension header follows and fills the rest of the
+512 bytes: a padding header (54, 55), `ST` followed by two bytes of
+`0xff`, of the same length. Every other byte is zero, since `hdr` is
+external and so starts out cleared.
+
+The fields are little-endian, and `put4` (13--20) stores them a byte at
+a time, so that the header does not depend on the byte order of the
+build machine. An image longer than SYSRAM less the header (9) is
+refused (39--42): `img` has room for one byte more than that, so that
+`fread` shows a longer file by filling it.
+
+#lines(1, 65)
 #source("/usr/src/cmd/mkfs.c")
 
 `mkfs` makes an empty file system, or, given a prototype file, one
