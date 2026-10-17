@@ -21332,9 +21332,9 @@ usr/local
 +	b svc_entry
 +	b pabort_entry
 +	b dabort_entry
-+	b badtrap
++	b badtrap	@ reserved
 +	b irq_entry
-+	b badtrap
++	b badtrap	@ FIQ
 +
 +svc_entry:
 +	srsdb sp!, #0x13
