@@ -12983,69 +12983,505 @@ whatever child `wait` returned first.
 
 #source("/usr/src/cmd/test.c")
 
+`test` evaluates an expression made of its arguments and exits with 0
+if it is true, 1 if false, and 255 for a malformed one; it is how the
+shell's `if` and `while` test files and strings. Called as `[`, it
+requires a closing `]`. The expression is parsed by recursive descent
+as it is evaluated: `exp` for `-o`, `e1` for `-a`, `e2` for `!`, and
+`e3` for parentheses and the primaries, which test files (`-r`, `-w`,
+`-f`, `-d`, `-s`), terminals (`-t`), strings (`-z`, `-n`, `=`, `!=`),
+and integers (`-eq` and the like, with `-l` giving a string's length).
+`EQ` (9) treats a missing argument as unequal to anything. Apart from
+its prototypes the program is v7's.
+
 #lines(1, 197)
 
 #source("/usr/src/cmd/expr.y")
 
-#lines(1, 693)
+`expr` evaluates an expression given as its arguments, one token to
+an argument, and prints the result; it is how the shell does
+arithmetic. Its grammar is written for `yacc`, which makes from it the
+parser `yyparse`. The operators, in rising precedence, are `|` and `&`,
+the comparisons, `+` and `-`, `*`, `/`, and `%`, and `:`, which matches a
+regular expression; `substr`, `length`, `index`, and `match` are
+prefix functions. Every value is a string, and the exit status is 1
+when the result is zero or empty. The actions are now written without
+the `=` before the brace (32--57), an old form of `yacc`'s which
+`bison`, the parser generator the build uses, does not accept.
+
+#lines(1, 60)
+
+`yylex` returns each argument as a token: an operator from the table,
+or a string. `index` is renamed by the preprocessor (19), since the
+library has an `index` of its own, and the table, `operators`, no
+longer has the name of the C++ keyword `operator`.
+
+`rel` compares as numbers when both operands are integers, else as
+strings. Several of v7's errors are corrected here: `<=` returned
+`i>=0`, the result of `>=` (117); a negative right operand was not
+taken as a number (108); and the comparison subtracted the two numbers,
+which can overflow, where it now compares them (109). `arith` likewise
+now accepts negative operands (127), reports division by zero (131--132),
+and computes in `long long`, reporting a result which does not fit in a
+`long` (124, 141--142); v7 let the machine trap or wrap. `substr` now
+treats a position or length of zero or less as nothing (183, 187), and
+returns a copy of the substring (189--191), where v7 wrote a null into
+the argument itself.
+
+#lines(61, 229)
+
+The regular expressions are those of `ed`, compiled by `compile` and
+matched by `advance`, with `\{m,n\}` for repetition. `ematch` keeps
+the text matched by `\(...\)` in `Mstring`, now allocated to its length
+(253), where v7 copied it into 128 bytes. `RETURN` and `ERROR` (234--235)
+now return values, as `compile` requires. `compile` now checks its room
+one byte early (333), since a code may take two; refuses an unclosed
+`\(` (338--339), an unended class (379--380, 386--387), and a `\{`
+after anything but a single character (428--429); and stops reading a
+count once it is too large (440). Characters entered in a class are
+masked to seven bits (282), and subexpression numbers masked to a byte
+before they index (560--628), where the `char` might be negative. A
+repeated back-reference to an empty subexpression now matches at once
+(628--629) instead of looping for ever, and `getrnge` compares the
+marker for "no upper bound" as unsigned (675).
+
+#lines(230, 693)
 
 #source("/usr/src/cmd/bc.y")
 
-#lines(1, 616)
+`bc` is a calculator with a language like C's: variables, arrays, and
+functions named by single letters, `if`, `while`, and `for`, and
+numbers of any size and scale. It does no arithmetic itself. It is a
+compiler from that language to the language of `dc` (#f("dc/dc.c")):
+`main` starts `dc` with a pipe to its input, and the parser translates
+each statement into `dc`'s postfix commands as soon as it is complete.
+Each grammar action builds its translation with `bundle`, which gathers
+pointers to strings, or to earlier bundles, into `b_space`; `output`
+then prints the tree. A function's body becomes a string stored in a
+`dc` register, `if` and `while` bodies become strings executed
+conditionally, named by the characters `crs` hands out, and `break`
+and `return` leave them with `dc`'s `Q`.
+
+The grammar is now free of conflicts. In v7 a statement could be any
+expression, `e`, including an assignment, which the statement rules
+also covered, so the parser generator met two ways to read `a=1`, and
+v7's `yacc` settled them by the order of the rules. Expressions without assignment are now `ex`
+(168), assignments are added to make `e` (260--281), and a statement is
+`ex`, whose value is printed, or one of the assignment statements,
+whose value is not (61--74). `break` outside a loop is now an error
+(75--77), where v7 indexed `bstack` with $-1$. The actions are written
+without the `=` before the brace, as for `expr`.
+
+#lines(1, 166)
+
+Values on the parser's stack are now `char *` (3). A digit is a pointer
+to its character in a string of the sixteen digits (407), where v7 put
+the character itself in an `int` and stored that; `constant` now copies
+the character it points to (299, 301). The remainder operator is `"%"`
+(179): the strings are now printed with `printf("%s", ...)` (508),
+where v7 used each string as its own format, so that a `%` had to be
+doubled and any `%` in a quoted string misprinted. `CRS` now stops at
+the 14 nested levels which `bstack` and `numb` can hold (308), and
+`crs+=3` replaces `crs=+3` (306), the old spelling of `+=` which would
+now mean an assignment of 3.
+
+#lines(167, 340)
+
+`yylex` reads characters through `getch`, looking ahead one character
+for the two-character operators and recognising a keyword by its first
+two letters. It now stops before the code buffer `cary` overflows
+(362--364). `getch` reads the files named and then the standard input;
+a file which cannot be opened is now skipped (477), where v7 fell off
+the end of the function and returned whatever was in the register.
+
+`bundle` now takes its arguments through `<stdarg.h>` (484--499); v7
+took the address of its first argument and walked up the stack, which
+worked only with the PDP-11's way of passing arguments. A macro of the
+same name (22) also stores the result in `yyval`, as v7's function
+did. `routput` tells a bundle from a string by whether it points into
+`b_space`.
+
+#lines(341, 616)
 
 #source("/usr/src/cmd/dc/dc.h")
+
+`dc` is a desk calculator for numbers of unlimited size and scale,
+with a stack, registers, and strings that can be executed as programs;
+`bc` (#f("bc.y")) is a compiler into its language. Every number and
+string lives in a `blk` (46--51), a growable byte buffer with a read
+and a write pointer, managed by `salloc`, `copy`, and `release` and the
+`s` macros (14--37). A number is a sequence of base-100 digits, least
+significant first, each in a byte; a negative number is kept as its
+complement, so that its last digit is $-1$. On the stack a number
+carries one more byte after its digits, its scale, the number of
+decimal digits after the point. Registers are a symbol table of `sym`s
+(89--94), one list for each byte that names a register, so that `S`
+and `L` can stack values in a register; a register also holds an
+array, as a block of pointers to blocks.
+
+Reading a digit back must give a negative value for the complement's
+last byte, so the macros `sgetc`, `slookc`, and `sbackc` extend the
+sign of the byte by hand (22--28). v7 used those versions only for the
+Interdata, and on the PDP-11 relied on `char` being signed; they are
+now used everywhere but the PDP-11 (22, 29), since the port's compiler
+makes `char` unsigned. `savk`, which holds a scale, is now an `int`
+(60).
 
 #lines(1, 116)
 
 #source("/usr/src/cmd/dc/dc.c")
 
-#lines(1, 1949)
+`commnds` is the interpreter: it reads a character at a time, through
+`readc`, and acts on it. Digits, with an optional point and underscore
+for a negative sign, push a number; `+ - * / % ^ v` do arithmetic on
+the top of the stack; `p`, `f`, and `P` print; `s`, `l`, `S`, and `L`
+store and load registers, `:` and `;` array elements; `k`, `i`, and `o`
+set the scale and the input and output bases; `[...]` pushes a string,
+`x` executes one, and `<`, `>`, and `=` execute a register's string
+conditionally; `!` runs a shell command and `q` quits.
+
+Several of the commands are corrected here. The output base, read from
+a number by `o`, now stops growing before it overflows a `long` (246).
+`S`, `s`, `:`, and `L` took an entry from the free list of symbols and
+only then checked whether the list was empty, through the null pointer
+it had just followed; the check now comes first (396, 429, 479). A new
+array register now starts as one null pointer (404--405), and clearing
+an array skips the null entries in it (423--424), where v7 released
+them. The test of an index against an array's length is now made in
+signed arithmetic (488, 523); v7 subtracted `PTRSZ`, an unsigned size,
+so that the comparison was unsigned and a short array looked long
+enough. An element never stored now loads as the number zero (533--534),
+where v7 pushed a block holding a null pointer. And `x` and `?` now
+check the depth of nested strings before they go deeper (541--547,
+555--558); v7 compared after incrementing, and in one path not at all,
+so that deep recursion wrote past `readstk`. `x` reuses the slot of a
+string it has finished, so that a string which ends by executing
+another, as a loop does, does not grow the stack.
+
+#lines(1, 585)
+
+`div` divides by long division in base 100, estimating each quotient
+digit from the leading digits and correcting it. Division by zero now
+prints its message and gives zero (596--600); v7 returned the integer 1
+in place of a pointer to a number. `dscale` and `removr` handle the
+scales, `sqrt` takes a square root by Newton's method, and `exp`
+raises to a power by repeated squaring.
+
+#lines(586, 868)
+
+`init` sets up the stack, the free list of symbols, and the constants.
+The free list now ends at the last entry (918), where v7 linked that to
+the entry past the array. `readin` reads a number from the input,
+`add0` appends zeros, `mult` multiplies, and `chsign` complements. In
+`readc`, v7 tested `readptr != &readptr[0]`, which is always true; the
+test is now against `readstk` (1128), so that at the bottom of the
+stack of strings `readc` reads from the input as intended, and the
+function now returns a value at its end (1139).
+
+#lines(869, 1173)
+
+`print` prints a number in the output base: `tenot` for base ten,
+`hexot` and `bigot` for others, breaking lines at `ll` characters.
+
+#lines(1174, 1422)
+
+`add` adds two numbers digit by digit with carry; `eqk` brings two
+numbers to the same scale. `command` runs a shell command for `!`; the
+line is now kept within its buffer (1574--1579), where v7 copied it
+without a limit. `cond` executes a register for the comparisons, and
+`load` loads one. `log2` finds the position of a number's top bit; it
+now shifts up to bit 30 and stops (1675--1678), where v7 shifted until
+the number went negative, an overflow C does not define.
+
+#lines(1423, 1682)
+
+The rest manages storage. `salloc` allocates a block and its header;
+`more` doubles a block when it fills; `garbage` reclaims; and `copy`
+makes a copy of a given size. `nalloc` now takes both the number of
+bytes to copy and the size to allocate (1940--1949), and `copy` copies
+only the length of the original (1735--1738): v7 copied the full new
+size, reading past the end of a smaller block. `getwd`, `putwd`, and
+`lookwd` handle arrays, whose words are pointers.
+
+#lines(1683, 1949)
 
 #source("/usr/src/cmd/egrep.y")
+
+`egrep` searches for lines matching a full regular expression, with
+alternation `|`, grouping, and the operators `*`, `+`, and `?`. The
+expression is parsed by a `yacc` grammar into a tree, and from the
+tree `cgotofn` builds a deterministic automaton directly, by the method
+of following positions: each state is a set of positions in the
+expression, `cfoll` computes for each position the positions which can
+follow it, and the automaton's transitions are made lazily, a state at
+a time, as the input needs them, `NSTATES` at most. `execute` then
+runs each line through the automaton once, never backing up, so the
+time is linear in the input. The options are those of `grep`.
+
+The automaton's table now has 256 columns (21): `execute` indexes it
+with each input byte made positive (538), and v7's 128 columns let a
+byte above 127 read the next state's row. For the same reason `chars`,
+which holds the characters of the classes and their counts, is now an
+array of `int`s (34), and `nextch` returns bytes unsigned (175). The
+grammar's last conflict, which `bison` would report, is resolved by
+declaring a precedence for `error` (14). The checks for a full state table and position array
+were one short, and now leave room for the entry about to be written
+(325, 392). An escaped character now jumps to `defchar` (164) instead
+of falling into it, and the old initialisations without `=` (27, 36)
+are written in C99's form.
 
 #lines(1, 616)
 
 #source("/usr/src/cmd/awk/awk.g.y")
 
+`awk` is a language for scanning text: a program is a list of patterns,
+each with an action, and every input line is split into fields and
+matched against every pattern, the action running for each that
+matches. It is built of several parts. The lexical analyser,
+#f("awk/awk.lx.l"), and this grammar, for `lex` and `yacc`, turn the
+program into a tree of `node`s, built by the functions of
+#f("awk/parse.c"). #f("awk/run.c") interprets the tree, through the
+table `proctab` of functions for each operator, which the program
+#f("awk/proc.c") generates at build time. #f("awk/tran.c") keeps the
+variables in symbol tables, #f("awk/lib.c") reads records and splits
+them into fields, and #f("awk/b.c") compiles regular expressions into
+automata. The declarations shared by all are in #f("awk/awk.def").
+
+The values on `yacc`'s stack are `int`s, and pointers to nodes pass
+through them. In v7 the functions which build nodes were declared to
+return `int`, so that nothing was converted. They now return `node *`
+and take `node *` arguments, and macros of the same names (35--49)
+convert the grammar's `int`s to pointers and back, which on the port,
+where the two have the same size, preserves them.
+
+The grammar is now free of conflicts. v7's left `yacc` to resolve them
+by its defaults, and `bison` reports each; the precedences added to
+the declarations (30) and the `%prec ASGNOP` on several rules
+(120--255) settle each the way those defaults did, so that programs
+parse as before.
+
 #lines(1, 285)
 
 #source("/usr/src/cmd/awk/awk.lx.l")
+
+The lexical analyser recognises `awk`'s tokens. It has start states for
+ordinary text (`A`), strings (`str`), character classes (`chc`), and
+regular expressions (`reg`), which `startreg` enters when the grammar
+sees a `/` that begins one. A name becomes a variable in the symbol
+table at once, and a number or string a constant, so that the token's
+value is a pointer to its `cell`; as in the grammar, it passes through
+`yylval`, an `int` (75--140).
+
+The analyser is now written for `flex`, which takes the place of v7's
+`lex`. `flex` does its own buffering and calls `YY_INPUT` (12--17) for
+more, which is made to call `input` a character at a time, so that
+`input` no longer handles pushed-back characters (157--172); its start
+state is read with `YY_START` (37), where v7 computed it from `lex`'s
+internal tables, as its comment admits. The program text given as an
+argument is read as unsigned bytes (164), and so is a one-character
+token (117). The escapes in strings and classes now go through `CADD`
+(142--148), which checks the length of `cbuf`, where v7 stored them
+without a check.
 
 #lines(1, 178)
 
 #source("/usr/src/cmd/awk/main.c")
 
+`main` reads the options: `-f` names a file of program, `-F` the field
+separator, and otherwise the first argument is the program; the rest
+are the files to read. It then parses the program and, if there were
+no errors, runs it. `logit` appended each use of `awk` to a file of its
+author's, if the file exists; it now takes the time in a `long long`
+(83), the port's `time_t`, where v7 used an array of two `int`s. The
+option `-i` and `msgfiles` let `awk` be driven as a server, reading the
+names of the files for each run from a descriptor.
+
 #lines(1, 147)
 
 #source("/usr/src/cmd/awk/b.c")
+
+`b.c` compiles a regular expression, already parsed by the grammar
+into a tree, into a deterministic automaton, by the method of
+following positions that `egrep` uses. `makedfa` puts `.*` in front, so
+that the expression may match anywhere, and a `FINAL` node at the end;
+`penter` numbers the leaves, `cfoll` computes the follow set of each,
+and `cgotofn` builds the states, each the set of positions that may be
+active, with their transitions packed as pairs of a character and a
+state. `match` runs a string through the automaton.
+
+`penter` now stops at `MAXLIN` leaves (65--66), and `cclenter`, which
+expands the ranges of a class, at `MAXLIN` characters (122--135); v7
+wrote past both arrays. The ranges are now compared as unsigned bytes
+(120--121). The tables of symbols in `cgotofn` now have a slot for each
+of the 256 bytes, and the table of transitions room for a pair for each
+(303, 311--313); bytes are masked before they index them (331--431).
+v7 sized them for 128 characters and indexed them with `char`s that
+could be negative. The check for a full table of states was one short
+(454). And the states are freed except the first (490--491), whose set
+is the follow set of the first leaf, which `freetr` frees later; v7
+freed it twice.
 
 #lines(1, 538)
 
 #source("/usr/src/cmd/awk/lib.c")
 
+`getrec` reads the next record from the input files, taking an
+argument of the form `var=value` as an assignment instead of a file.
+The record separator `RS` is a newline by default; an empty `RS` makes
+records of paragraphs, separated by blank lines. `fldbld` splits the
+record into the fields `$1` to `$NF`, kept in `fldtab`, on blanks or on
+the single character `FS`; it is called only when a field is used.
+`recbld` rebuilds `$0` from the fields after one is assigned.
+
+`getrec` now checks the length of the record before each character it
+stores (65--66); v7 checked once the record was complete, after any
+overrun. `recbld` now stops at the end of `fldtab` and of `record`
+(173--183), and `fieldadr` refuses a negative field number (190),
+where v7 indexed before the array.
+
+`error` takes a variable list of arguments (203--209), passed on to
+the library's `_doprnt`; v7 declared seven arguments, used or not, and
+relied on the PDP-11's passing them all on the stack. `isnumber`
+decides whether a string looks like a number.
+
 #lines(1, 285)
 
 #source("/usr/src/cmd/awk/run.c")
 
-#lines(1, 876)
+`run.c` interprets the tree. `execute` walks a list of statements,
+calling for each node the function which `proctab` gives for its
+operator; every such function takes the node's operands and returns
+an `obj`, a cell with a type that says whether it is a value, a truth
+value, or a jump for `next`, `exit`, `break`, or `continue`. Values
+computed along the way live in temporary cells, which `tempfree`
+releases. `program` runs the `BEGIN` actions, then the patterns for
+each record, then the `END` actions. It no longer frees the last
+temporary a second time after its loop (86--87); v7 freed it again, or,
+with no input, freed a value it had never set.
+
+#lines(1, 96)
+
+`array` finds an element, creating it, in the array's own symbol
+table. `matchop` matches a string against a regular expression's
+automaton; it now matches before it frees the temporary which holds the
+string (137), where v7 matched a string it had already freed. `substr`
+and `sindex` free their temporaries only once their strings are done
+with (281--286, 309--310). `substr` now returns a copy of any length
+(282--285), where v7 built the result in 100 bytes. `indirect`, which
+gives the field `$n`, and `substr` convert their numbers through `ftol`
+(244, 263, 271), which saturates instead of overflowing.
+
+#lines(97, 311)
+
+`format` carries out a `printf` format with the program's values. It
+now grows its buffer as it writes (314--325, 338, 381, 394), where v7
+wrote into a fixed `RECSIZE` bytes. It refuses a format item too long
+for `fmt` before copying past it (348--351), refuses a `*` width and a
+width over 100000 (355--358), whose effect on the length could not be
+bounded, and passes `%c` an integer (370), as C requires.
+
+#lines(312, 423)
+
+`arith`, `incrdecr`, and `assign` do the arithmetic. The remainder is
+now `i - j*ipart(i/j)` (459, 522), where v7 converted the quotient to
+`long`, which overflows for large ones. `cat` concatenates, `pastat`
+runs a pattern and its action, and `dopa2` handles the range patterns
+`p1, p2`, keeping in `pairstack` which ranges are open. `aprintf` now
+prints a string as an argument of `%s` (599), where v7 used it as the
+format itself.
+
+#lines(424, 606)
+
+`split` splits a string into an array. It now works on a copy of the
+string and builds each piece in a copy of it (618--619, 656--657), where
+v7 built the pieces in 100 bytes and could be splitting the very value
+it was replacing; the element's name has room for any `int` (612).
+`ifstat`, `whilestat`, `forstat`, and `instat` are the control
+statements; `instat`, the `for (i in a)` loop, now returns a value
+(752), as `nullproc` does (835), where v7 fell off the end of the
+function. `fncn` gives the built-in functions; `int` now uses `ipart`
+(795). `print` checks the length of the line before it adds each field
+and separator (818--819), where v7 checked once the line was built,
+after any overrun. `redirprint` writes to a file or a pipe, keeping
+them open in `files`; it now skips slots that hold no file (857).
+
+#lines(607, 876)
 
 #source("/usr/src/cmd/awk/tran.c")
+
+`tran.c` keeps the variables. A symbol table is an array of `MAXSYM`
+hash chains of `cell`s; `symtab` holds the program's variables, and
+each array is a table of its own. `syminit` enters the built-in
+variables `FS`, `RS`, `NR`, and the rest. A cell holds a string, a
+number, or both, as its `tval` says: `getfval` and `getsval` convert on
+demand and remember the result, and `setfval` and `setsval` invalidate
+the other form.
+
+`freesymtab` now reads each cell's successor before freeing the cell
+(64--65), where v7 read it from the freed cell. `setsval` now copies the
+new string before freeing the old (145--149), so that a cell can be set
+from its own value. `hash` adds the bytes unsigned (106).
+
+`getsval` prints a number with `%.20g` when it is an integer, else in
+the format `OFMT`. The test of "integer" converted the number to
+`long`, which C leaves undefined when the number is out of range; it now
+goes through `ftol` (187, 236--245), which converts saturating, and
+`ipart` (247--253) takes the integer part of a number for the function
+`int` without any conversion.
 
 #lines(1, 253)
 
 #source("/usr/src/cmd/awk/awk.def")
 
+`awk.def` declares what the parts share: the built-in variables, which
+are pointers into their cells; the `cell` (26--32), holding a name, a
+string, a number, and the type bits of 41--45; the `obj` that every
+operator returns (60--64); and the `node` of the tree (67--74), whose
+operands follow it in an array allocated to the right length. The macros
+of 112--124 classify nodes and results.
+
+All the functions of the parts are now declared here with their
+prototypes (47--51, 125--146), where v7 declared the few that did not
+return `int`; and `PA2NUM`, the number of range patterns, moves here
+from #f("awk/run.c") (109), since #f("awk/parse.c") now checks it.
+`yfree` takes any pointer (2).
+
 #lines(1, 150)
 
 #source("/usr/src/cmd/awk/token.c")
+
+`token.c` gives the names of the tokens, for debugging output and for
+the table which #f("awk/proc.c") generates. The numbers must be those
+of the header the parser generator writes: `bison` numbers the tokens
+from 258, where v7's `yacc` started at 257, so every entry moves up by
+one (10--84), and `ptoken` and `tokname` index from `FIRSTTOKEN` (90,
+99), not from a number written in.
 
 #lines(1, 100)
 
 #source("/usr/src/cmd/awk/parse.c")
 
+`parse.c` builds the nodes of the tree, for the actions of the grammar.
+`node0` to `node4` allocate a node with that many operands; the `stat`
+functions make statements and the `op` functions expressions. A value,
+a variable's cell, is stored as a node whose type is `NVALUE` and whose
+first operand is the cell. `pa2stat` makes a range pattern and gives it
+a slot in `pairstack`; it now refuses more than `PA2NUM` (119--120),
+where v7 counted on without a check.
+
 #lines(1, 137)
 
 #source("/usr/src/cmd/awk/proc.c")
+
+`proc.c` is not part of `awk`. It is compiled and run on the build
+machine, and writes `proctab.c`: the table `proctab`, which gives for
+each token the function that `execute` calls, and `printname`, the
+operator's text for debugging. Tokens with no function get `nullproc`.
+The table now has the prototype of its functions (69), which
+#f("awk/awk.def") declares, so the generator no longer writes
+declarations of them; it writes its initialisers with `=` (69, 74),
+and an empty string where a token has no printed name (78), where v7
+printed a null pointer.
 
 #lines(1, 80)
 
