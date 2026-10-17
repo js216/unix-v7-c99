@@ -12391,93 +12391,591 @@ relied on the structure's layout.
 
 #source("/usr/src/cmd/sort.c")
 
-#lines(1, 913)
+`sort` sorts lines, or merges files already sorted (`-m`), or checks
+that a file is sorted (`-c`). It reads as many lines as fit in its
+memory, sorts their pointers with its own quicksort, and writes each
+such run to a temporary file; it then merges the runs, `N`, seven, at a
+time, until one remains, which goes to the output. Keys are described
+by `+m.n -m.n` pairs, each with options of its own, and kept in
+`fields`; `fields[0]` holds the options which apply to the whole line.
+The translation tables `fold`, `nofold`, `nonprint`, and `dict` map a
+character to the value it sorts by, or say whether to ignore it.
+
+The tables were indexed by `char`, which on the PDP-11 was signed, so
+each key keeps a pointer to the middle of its table (156--157), and
+the comparison indexes with a value from $-128$ to 127. The tables are
+now `unsigned char`, which their values above 127 need, and the
+comparisons convert each byte to `signed char` before indexing (660,
+662, 671), so that the same entries are found whatever the port's
+compiler makes of `char`. `qsort` is renamed by the preprocessor (6),
+since the library's `qsort`, with another interface, is declared by the
+headers.
+
+#lines(1, 174)
+
+`main` gathers the options and keys, then lets each key with no options
+of its own inherit those of the whole line. It takes all the memory it
+can get, up to `MEM` beyond the present break, for the pointers and the
+text of the lines. It now starts from the break as it stands (244--245),
+where v7 started from `end`, the end of the program's data, which lies
+below anything the library has already allocated. The name of the
+temporary file is now allocated to the length of the directory, which
+`-T` may give (257); v7's array held 30 characters.
+
+`sort` reads the lines of all the inputs into a run, and writes each
+run sorted. A line longer than the space left now loses its end (314),
+where v7 wrote past the space; `tend` marks its last byte (254).
+
+#lines(175, 351)
+
+`merge` merges files: each has a line buffer in `merg`, the buffers are
+kept ordered by their current lines, and the least is written and
+replaced by its file's next line. For `-u`, a line equal to the one
+written before is dropped, by comparing it with a copy kept in a spare
+buffer; with only one file left, v7 compared with the buffer below the
+first, which does not exist, and the copy is now used then too
+(405--406).
+
+`setfil` names an input or a temporary file; the temporaries end in two
+letters which count them. `safeoutfil` notices, for `-m -o`, that the
+output is also an input, in which case even the last merge goes to a
+temporary file first. It now starts its search at the first input when
+there are fewer than `N` (541); v7 started `N` before the last, which
+with fewer inputs indexed before the array.
+
+#lines(352, 583)
+
+`cmp` compares two lines key by key; `cmpa` compares whole lines when
+there are no keys, or to break a tie. A numeric key is compared as a
+decimal number with optional sign and fraction, digit by digit, so that
+there is no limit on its size. `cmpa` now compares bytes as unsigned
+(691), as the tables of `cmp` order them.
+
+`skip` finds the start or end of a key, `m` fields and then `n`
+characters along. `field` reads the options and positions of a key. The
+position after a point is now stored explicitly in `n` (804); v7 wrote
+it at an offset from `m` computed from the layout of the structure.
+`number` now saturates (818) instead of overflowing, and `copyproto`
+copies the prototype key by structure assignment (744), where v7
+copied it as an array of `int`s.
+
+#lines(584, 913)
 
 #source("/usr/src/cmd/uniq.c")
+
+`uniq` copies its input, dropping each line equal to the one before.
+`-u` prints only lines which are not repeated, `-d` only one copy of
+those which are, and `-c` precedes each line by the number of times it
+occurs. `-n` ignores the first `n` fields of each line in the
+comparison, and `+n` the first `n` characters after them. The two
+buffers hold the current line and the next.
+
+`gline` now stops storing at the end of its 1000-byte buffer (70, 75),
+dropping the rest of a longer line, where v7 wrote past it.
 
 #lines(1, 144)
 
 #source("/usr/src/cmd/comm.c")
 
+`comm` reads two sorted files and prints three columns: the lines only
+in the first, those only in the second, and those in both. The flags
+`-1`, `-2`, and `-3` suppress columns. The columns are made by leading
+tabs, `ldr`, and suppressing a column shortens the leaders of the
+columns to its right by writing nulls into them. They are now arrays
+(19); v7 wrote into string constants, which C does not allow.
+
+`compare` decides which line comes first. It no longer starts its
+pointers one byte before the lines (149--150), an address which need
+not exist, and it compares the bytes as unsigned (153), the order in
+which `sort` puts them.
+
 #lines(1, 166)
 
 #source("/usr/src/cmd/join.c")
+
+`join` joins two files sorted on a common field: for each pair of
+lines whose join fields are equal it prints the field and the rest of
+both lines, or the fields listed with `-o`. `-a` also prints the
+unpaired lines of a file, `-e` gives the text for an empty field, and
+`-t` the separator. When several lines of the second file share a key,
+`main` remembers where the run began, `bot2`, and seeks back there for
+each line of the first file with the same key, so that every pairing is
+printed.
+
+`input` splits a line into at most `NFLD` fields. It now reports a line
+with more (167--168), where v7 wrote past `ppi`; it no longer steps
+past the null that ends a line without a newline (172--174), which v7's
+own comment admitted it did; and it fills the unused pointers with
+empty strings (176--177), where v7 set only the next one to null, so
+that a short line left `output` printing a field from the line before
+or a null pointer. The field numbers given with `-o` and `-j` are now
+checked against `NFLD` (89--90, 95--96), and `-o` and `-j` no longer
+read past the last argument (59, 73--74). `top2` starts at zero (32).
 
 #lines(1, 225)
 
 #source("/usr/src/cmd/tr.c")
 
+`tr` copies its input, replacing each character of the first string by
+the corresponding one of the second, which is extended with its last
+character. `-d` deletes the characters of the first string instead,
+`-s` squeezes runs of a character of the second string to one, and
+`-c` takes the complement of the first string. `a-b` is a range, and
+`\nnn` an octal code. `main` builds `code`, the translation of every
+character, then filters the input through it; null bytes are dropped.
+
+`nextc` takes the next character of a string, with escapes. At the end
+of a string it now backs up to the null (130), where v7 also wrote a
+null there, into the argument or, for a missing string, into the
+constant `""`. `next` expands ranges; a `-` at the end of a string is
+now taken literally once (102--104), where v7 backed up onto it and
+returned it again for ever.
+
 #lines(1, 132)
 
 #source("/usr/src/cmd/tail.c")
+
+`tail` copies the end of a file, from a given distance before the end
+(`-n`) or after the start (`+n`), counted in lines, blocks, or
+characters; `r` prints the lines in reverse order. From the start it
+skips by reading, or for a disk file by seeking. From the end it seeks
+to `LBIN-1` bytes before the end when it can, and otherwise reads the
+whole input round a circular buffer of `LBIN` bytes, whose last
+4096 bytes are all it can show; then it walks back from the end of
+what it has kept, counting newlines.
+
+The count is now kept from overflowing (41, 58): it saturates at the
+largest `long`, where v7 multiplied on regardless, which C leaves
+undefined. `p` is initialised (26), since a count of zero lines writes
+from it without having read anything.
 
 #lines(1, 188)
 
 #source("/usr/src/cmd/wc.c")
 
+`wc` counts the lines, words, and characters of its files, or of its
+input, and their totals. A word is a maximal run of printing
+characters other than space; a control character other than newline,
+space, or tab neither starts nor ends one. An option such as `-lw`
+chooses the counts printed, and their order. Apart from its prototypes
+the program is v7's.
+
 #lines(1, 86)
 
 #source("/usr/src/cmd/pr.c")
 
-#lines(1, 432)
+`pr` prints files in pages of `length` lines, 66 by default, each
+headed by the file's time, its name, and the page number, and
+optionally in several columns (`-n`), or several files side by side
+(`-m`). While it prints to a terminal it makes the terminal writable
+only by its owner (`fixtty`), so that messages from `write` do not
+break up the pages, and restores the mode when done or interrupted.
+
+#lines(1, 137)
+
+`print` prints one file. For columns, the text of a whole page must be
+read before its first line can be printed, so `nexbuf` reads the file
+into `buffer`, used circularly, ending what it has with the mark
+`0375`, or `0376` at the end of the file; `tpgetc` takes a column's next
+character, and `colp` points at the start of each column. The number of
+columns is now at least one (164--165): with `-0`, or `-m` and no file
+that could be opened, v7 divided the width by zero. The header is now
+cut to 80 characters (207), since the line is built in a buffer of 150
+bytes, which v7 overran with a long name given with `-h`.
+
+`put` turns runs of spaces back into tabs where that is shorter, and
+`putcp` discards everything before the first page asked for with
+`+n`.
+
+#lines(138, 432)
 
 #source("/usr/src/cmd/sed/sed.h")
+
+`sed` edits a stream: it applies a script of `ed`-like commands to
+each line of its input in turn. The script is compiled first, by
+#f("sed/sed0.c"), into an array of `reptr`s, one per command, each with
+its addresses and regular expression, compiled into `respace`, a
+pointer `lb1` for branches and blocks, the right-hand side of a
+substitution, a file to write to, and the command's code (72--98) and
+flags. #f("sed/sed1.c") then runs it. `linebuf` is the pattern space and
+`holdsp` the hold space.
+
+In v7 `reptr` was a union of two structures alike in all but the type
+of `lb1`, a `char *` in one and a pointer to the union in the other;
+the program used whichever suited. It is now the one structure
+(104--116), with `lb1` a pointer to it. The names of the files for `w`
+now have room for a whole line (68), as `text` copies them, where v7
+gave them 40 bytes. `RESIZE` is twice v7's (27); the reason is given
+with `main`. As with `tp`, the variables are now defined once, in
+#f("sed/sed0.c"), and only declared here.
 
 #lines(1, 152)
 
 #source("/usr/src/cmd/sed/sed0.c")
 
-#lines(1, 1000)
+`main` reads the options: `-n` suppresses the automatic printing of
+each line, `-e` gives a line of script, and `-f` a file of script; with
+neither, the first argument is the script. It then resolves the
+labels and runs the script over each file named, or the input.
+
+`reend` marks the end of the space for compiled expressions and text.
+`fcomp` compares the next free byte with it before it compiles an
+address or a right-hand side, not while it does so, and one regular
+expression may take `ESIZE` bytes and one text a whole line; v7 put
+`reend` at the end of `respace`, so that the last thing compiled could
+run past it. It is now that much short of the end (50), and `RESIZE`
+was doubled to keep the room which v7 had. `-f` with no file now stops
+`sed` (72), where v7 opened a null name.
+
+#lines(1, 127)
+
+`fcomp` compiles the script, a line at a time, read by `rline`. For
+each command it compiles up to two addresses, then the command itself:
+`{` and `}` nest through `cmpend`, now refusing more than `DEPTH` levels
+(224--227), where v7 wrote past the array; `:` defines a label and `b`
+and `t` refer to one, which `dechain` resolves once all are known;
+`a`, `i`, `c`, and `r` take a text; `s` a regular expression, a
+right-hand side, and flags; `w` a file, opened at once; and `y` two
+strings, compiled by `ycomp` into a table of 128 characters.
+
+#lines(128, 578)
+
+`compsub` compiles a right-hand side, with `\n` for the subexpressions
+and `&` for the whole match. `compile` compiles a regular expression
+into the codes of #f("sed/sed.h"), as `ed` does. It now refuses an
+expression with no delimiter at all (615--616), which v7 compiled by
+taking the null at the end of the line as the delimiter. A null within
+an expression now ends it as an error (690--693), where v7 skipped it
+and went on reading past the end of the line. Character classes are
+bit maps of 128 bits, and the characters entered in them, and the ends
+of ranges, are now masked to seven bits (736, 747), so that a byte with
+the top bit set cannot index outside the map.
+
+#lines(579, 765)
+
+`rline` reads a line of script, from the argument of `-e` or from the
+file, joining lines that end with a backslash. It now stores each
+character before it advances (780--842), where v7 started its pointer
+one byte before the buffer, an address C does not promise; and it now
+stops with "Line too long" at the end of `linebuf` (766--771), where v7
+wrote on past it. `address` reads a line number, now saturating (867--870),
+a `$`, or a regular expression. `cmp` likewise no longer starts before
+its strings (891--895). `text` copies the text of `a`, `i`, `c`, and
+`r`, removing escapes; `search` finds a label; and `dechain` links each
+branch to its label and each `{` to its `}`. `ycomp` now refuses a `y`
+with no delimiter (967--968) and stops at the end of the line (974),
+where v7 read on past it.
+
+#lines(766, 1000)
 
 #source("/usr/src/cmd/sed/sed1.c")
 
-#lines(1, 736)
+`execute` runs the script over one file. For each line read by `gline`
+into the pattern space it walks the commands, deciding for each whether
+its addresses select the line; a command with two addresses is "in
+range", `inar`, from a line matching the first to one matching the
+second. A line number in an address is an index into `tlno`, now
+masked to a byte (84, 107), since it is stored in a `char`. Unless `-n`
+was given or the line deleted, the pattern space is printed at the end,
+followed by any text queued by `a` and `r`.
+
+#lines(1, 160)
+
+`match` and `advance` match a compiled expression, as in `ed`. Several
+loops which walked back through the line now stop at its start (281,
+318, 329, 337), where v7 stepped the pointer one byte before it, an
+address C does not define. A repeated back-reference to an empty
+subexpression now matches at once (273--274), where v7 looped for ever
+advancing by nothing. And an empty match at the point where the last
+match ended is now refused (239--240), as the loops of `star` already
+refused it, so that `s/x*/y/g` cannot match there twice. The numbers of
+subexpressions are masked to a byte before they index (253--272).
+
+#lines(161, 343)
+
+`substitute` replaces a match, or every match with `g`, by building
+the new line in `genbuf` with `dosub` and `place`. A line which grows
+past `LBSIZE` now stops `sed` with "Output line too long" (381--391,
+407--410); v7 printed that and carried on writing past the buffer.
+
+`command` performs a command. `a` and `r` queue their text in `abuf`;
+when more than `ABUFSIZE` are queued, the last is now overwritten
+(430, 609) instead of the array overrun. `G` and `H` append one space
+to the other after a newline; they now check the room before writing
+the newline as well as the characters (476--481, 494--499). `N` does
+the same (571--572). `l` prints a line with its control characters
+made visible, now taking bytes as unsigned (517). `y` now leaves bytes
+with the top bit set as they are (658), where v7 used them to index
+its table of 128 characters with a negative number.
+
+#lines(344, 663)
+
+`gline` reads a line from the input, a block at a time; at the end of
+the last file it sets `dolflag`, so that `$` matches the line just
+read. A failed read is now treated as an empty block (685), where v7
+set the end of its buffer from the $-1$ which `read` returned. `arout`
+writes the queued text after the line, and no longer starts its
+pointer before `abuf` (719).
+
+#lines(664, 736)
 
 #source("/usr/src/cmd/tsort.c")
+
+`tsort` reads pairs of names, each meaning that the first comes before
+the second, and prints the names in an order consistent with all the
+pairs. Each name is a `nodelist` with the list of its immediate
+predecessors; the program repeatedly prints a live node with no live
+predecessor and kills it. When none is left but live nodes remain,
+there is a cycle, and `findloop` walks back along predecessors until a
+node repeats, prints the cycle, and lets the walk continue from it.
+`index` is renamed by the preprocessor (9), since the library has an
+`index` of its own.
+
+The names are now read into buffers of 512 bytes with their length
+limited (47, 54), where v7 read with `%s` into 50 bytes and overran
+them with a long name; and a failed `malloc` for an edge is now
+reported (64--65).
 
 #lines(1, 198)
 
 #source("/usr/src/cmd/rev.c")
 
+`rev` copies its files, or its input, reversing the characters of each
+line. A line longer than `N`, 256 characters, is reversed in pieces of
+that length. The program is v7's, with a prototype.
+
 #lines(1, 44)
 
 #source("/usr/src/cmd/split.c")
+
+`split` cuts a file into pieces of `count` lines, 1000 by default,
+named by the output name, `x` by default, followed by `aa`, `ab`, and
+so on. The name is now allocated to fit the output name given (56),
+where v7 built it in an array of 100 bytes. A count of zero is now
+refused (35--38): v7 then wrote a first piece of one line, since the
+loop over lines runs its body at least once, and then a second, empty
+name for each further line.
 
 #lines(1, 85)
 
 #source("/usr/src/cmd/sum.c")
 
+`sum` prints a 16-bit checksum of each file and its size in blocks of
+`BUFSIZ`, 512 bytes. Before each byte is added the sum is rotated
+right by one bit, so that the order of the bytes matters. The program
+is v7's, with a prototype.
+
 #lines(1, 48)
 
 #source("/usr/src/cmd/look.c")
+
+`look` prints the lines of a sorted file which begin with a given
+string, by default from the dictionary `/usr/dict/words`, folding case
+and ignoring punctuation. It binary-searches the file by seeking:
+`mid` is moved to the start of the next line, and the range narrowed
+until it can be scanned. `canon` reduces a string to the form compared,
+dropping all but letters and digits with `-d` and folding upper case
+with `-f`; `-t` ends the key at a given character.
+
+The key is now reduced in place in the argument (57), which `canon`
+can only shorten, where v7 copied it into an array of 50 bytes;
+`getword` stops storing at the end of `entry` (138). `compare` now
+compares bytes as unsigned (124), the order of `sort`. And `puts` is
+called with its one argument (96, 109); v7 passed `stdout` as well,
+which the function ignored.
 
 #lines(1, 165)
 
 #source("/usr/src/cmd/col.c")
 
+`col` filters out reverse line feeds, so that the output of `nroff`
+with multi-column text or tables can go to a device which cannot move
+the paper backwards. It keeps the last `PL` half-lines in core, in
+`page`, assembling the current one in `lbuff`, and writes each
+half-line out once nothing can come back to it. The escapes `ESC 7`,
+`ESC 8`, and `ESC 9` move a full or half line up, or a half line
+down; `-f` keeps forward half-lines in the output. A character placed
+where another stands is overstruck with a backspace unless `-b` is
+given, and characters between `SO` and `SI` are marked with `GREEK`,
+the top bit, so that the shifts can be put back on output. `-x` stops
+`emit` turning runs of spaces into tabs.
+
+`outc` now drops a character which would make the line longer than
+`lbuff` (166--167); v7 assembled the line without looking at its
+length. `nroff` is not part of this system, but `col` serves any text
+that uses the same escapes.
+
 #lines(1, 319)
 
 #source("/usr/src/cmd/ptx.c")
 
-#lines(1, 562)
+`ptx` makes a permuted index: each line of the input appears once for
+each significant word in it, rotated so that the word comes first, and
+the result is sorted and laid out for `troff` as `.xx` lines with four
+fields, the text before and after the word, either side of a gutter.
+Words in the ignore file, by default `/usr/lib/eign`, are skipped, or
+with `-o` only the words in the given file are used; `-b` names the
+characters which break words.
+
+`main` reads the word list into a buffer and a hash table, `hasht`,
+whose search wraps round and stops only at an empty slot; `storeh` now
+refuses the last slot (547--548), so that one is always empty, where v7
+filled the table and the search could go round for ever. An empty word,
+between two adjacent breaks, is no longer stored (209). The break table
+now has 256 entries (46), since `getc` returns bytes up to 255 and v7's
+128 were overrun by a break file with such a byte; the bytes of the
+text are masked before they index it (322, 328). The options which take
+an argument no longer read past the last one (107--153), and a width
+which leaves no room for the gap is refused (166--167).
+
+`cmpline` writes, for each word kept, the rotated line to a temporary
+file, with `TILDE` marking where the line originally began, and
+`/bin/sort` sorts it. The file's name is now an array (65), into which
+`mktemp` writes; v7 passed it a string constant. An exec of `sort`
+that fails is now reported (246).
+
+#lines(1, 306)
+
+`getsort` reads the sorted lines and lays out each in the four fields,
+trimming at word boundaries with `rtrim` and `ltrim` and marking
+truncation with `/`. `line` now has room for twice `LMAX` (45), since
+each `"` is doubled for `troff`, and both copies are checked against
+its end (458--463), as `getline` now leaves room for the newline (280).
+`onintr` removes the temporary file; it now exits with 0 when called at
+the normal end (511), where v7 always exited with 1.
+
+#lines(307, 562)
 
 #source("/usr/src/cmd/deroff.c")
+
+`deroff` strips the requests, macros, escapes, equations, and tables
+of `troff`, `eqn`, and `tbl` from text, leaving the words, so that
+they can be checked for spelling or counted; `-w` prints one word per
+line. All input goes through the macro `C` (16), which also skips
+equations between the delimiters which `eqn`'s `delim` sets. `work`
+reads a line at a time: a line beginning with `.` or `'` is a request,
+handled by `comline`, which follows `.so` and `.nx` into other files,
+skips macro definitions and the bodies of `.EQ` and `.TS`, and keeps
+the arguments of a few macros; other lines go to `regline`, which drops
+the backslash constructions through `backsl`.
+
+The class table `chars` now has 256 entries (33), and bytes are masked
+before they index it (273, 294--301), where v7's 128 entries were
+indexed by `char`s that could be negative. `regline` now stops filling
+`line` at its end (227--228), dropping the rest of a long line; v7 wrote
+past it. The name of a file to include now has 256 bytes (46), and the
+nesting of included files stops with a message at the 15 that `files`
+holds (346--347); v7 had 50 bytes for the name and no check of the
+depth. And `\s` at the very start of a line no longer backs `lp` up
+before `line` (456--457).
 
 #lines(1, 510)
 
 #source("/usr/src/cmd/diff3.c")
 
+`diff3` compares three versions of a file. It does not compare them
+itself: it reads two reports from `diff`, of the first file against
+the third and of the second against the third, and the three files,
+and prints the places where they differ, marked by which of them
+disagrees, or with `-e` an `ed` script that folds the differences
+between the second and third files into the first. In v7 a shell
+script in `/bin` ran the two `diff`s into temporary files and then
+this program, which lives in `/usr/lib`; the script is not part of
+this system, so the program is run directly.
+
+`readin` reads the line numbers of each change in a report into an
+array of `diff`s, and adds one more entry after the last, giving the
+positions at the end. The arrays now have room for that entry (28--30):
+v7 refused more than `NC` changes but then wrote the extra entry past
+the end of a full array, and wrote one before the start of an empty
+one, which is now skipped (132--135). A report which cannot be opened
+is now reported (100--103), and an unreadable one makes `diff3` exit
+with 1 rather than 0 (107). `number` now stops growing before it
+overflows (145--149).
+
+`getline` reads a line, keeping as much of it as `line` holds. It now
+reads a long line to its end and returns its whole length (172--184),
+since the caller counts bytes to position itself in the files; v7
+returned a long line in pieces of 255 characters, which threw the
+counts of lines out.
+
+`merge` walks the two lists of changes together, matching the parts of
+each that concern the same lines of the third file, and calls `change`
+and `edit` to report them; `duplicate` notices when the first two files
+were changed alike.
+
 #lines(1, 444)
 
 #source("/usr/src/cmd/diffh.c")
+
+`diffh` is the "half-hearted" `diff`, which `diff -h` runs
+(#f("cmd/diff.c")) for files too large for the real algorithm. It keeps
+only a window of `RANGE` lines of each file in core, and after a
+difference looks for the next place where `C`, three, lines agree in
+both: `easysynch` tries cheaply, `hardsynch` searches the whole window.
+It cannot find the shortest set of changes, and gives up on changes
+longer than the window, but it needs little memory.
+
+The test for an option now checks that there is an argument (80). The
+character given to `isspace` is masked to a byte (204--206), since a
+negative `char` is not a valid argument. When a file is given as a
+directory, `dopen` builds the name of the file in it in a buffer which
+now has 512 bytes and is checked first (219--237); v7 built it in 100
+bytes without looking.
 
 #lines(1, 268)
 
 #source("/usr/src/cmd/fgrep.c")
 
-#lines(1, 348)
+`fgrep` searches for any of a set of fixed strings, given as an
+argument, one to a line, or in a file with `-f`. It builds from them
+the automaton of Aho and Corasick: `cgotofn` makes a tree of the words,
+in which a state is a list of `words` entries linked through `link`,
+one for each character that can follow, and `cfail` adds to every
+state a failure link, the state for the longest proper suffix of what
+has been matched that is also a prefix of some word. `execute` then
+runs the input through the automaton once, never backing up, and
+prints each line in which some word ends; the options are those of
+`grep`. Its messages now name it rather than `egrep` (82, 91), from
+which it was adapted.
+
+The words are now read as unsigned bytes (231, 266), so that a word
+with bytes above 127 can match. In `execute`, an empty entry, whose
+character is a null, no longer matches a null in the input (148, 161).
+
+#lines(1, 235)
+
+`cfail` computes the failure links breadth first, with a circular
+queue. v7's version was wrong in two ways. To find where a state fails
+to, it tried only the alternatives of one state, and when none matched
+it stopped, leaving the link at the start instead of following the
+failure links further; and after finding one it left the loop with
+`continue`, so that the other alternatives of the state being processed
+got no links at all. Both made `fgrep` miss matches of words which
+overlap others. The search now follows the failure links until a match
+or the start (333--343), and sets the link on every entry of the new
+state (336--338), all of which share it. The queue now has a slot for
+every state (13), where v7's 400 overflowed for large word lists, and
+its wrapping is simpler (329--331).
+
+#lines(236, 348)
 
 #source("/usr/src/cmd/crypt.c")
+
+`crypt` enciphers its input with a key, by a machine on the lines of
+the Enigma with one rotor, `t1`, its inverse `t2`, and a reflector,
+`t3`; since the reflector pairs each position with another, the same
+key deciphers what it enciphered. The rotor steps once per byte, and a
+second rotor position, `n2`, once per 256 bytes. `setup` turns the key
+into 13 characters by running `makekey`, the password-hashing program,
+through a pipe, and from them seeds a generator which shuffles `t1` and
+pairs the positions of `t3`.
+
+The seed is now unsigned (20), so that its arithmetic wraps instead of
+overflowing; it is converted to `long` before the remainder (51), which
+then gives v7's values, so that a file enciphered under v7 deciphers
+here. `setup` now waits for `makekey` itself (38--39), where v7 took
+whatever child `wait` returned first.
 
 #lines(1, 91)
 
