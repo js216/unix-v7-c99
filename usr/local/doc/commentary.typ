@@ -13107,7 +13107,7 @@ did. `routput` tells a bundle from a string by whether it points into
 
 `dc` is a desk calculator for numbers of unlimited size and scale,
 with a stack, registers, and strings that can be executed as programs;
-`bc` (#f("bc.y")) is a compiler into its language. Every number and
+`bc` (#f("cmd/bc.y")) is a compiler into its language. Every number and
 string lives in a `blk` (46--51), a growable byte buffer with a read
 and a write pointer, managed by `salloc`, `copy`, and `release` and the
 `s` macros (14--37). A number is a sequence of base-100 digits, least
@@ -13491,69 +13491,230 @@ printed a null pointer.
 
 #source("/usr/src/cmd/su.c")
 
+`su` makes the user another user, by default the super-user, after
+asking for that user's password, unless there is none or the caller is
+already the super-user. It is set-user-id root, so that it can call
+`setgid` and `setuid` (#f("sys4.c")) for the new ids, and then runs
+the user's shell. In the environment it changes the shell's prompt
+`PS1` to `# `, as a reminder. The program is v7's, with a prototype.
+
 #lines(1, 47)
 
 #source("/usr/src/cmd/passwd.c")
+
+`passwd` changes a password. The user must give the old one, unless
+it is the super-user; the new one must mix kinds of characters or be
+long, though after two refusals any is accepted. The new password is
+encrypted with `crypt` and a salt of two characters taken from the
+time and the process id. `passwd` is set-user-id root, so that it can
+write `/etc/passwd`: it copies the file to `/etc/ptmp`, whose existence
+also serves as a lock, with the user's entry changed, and copies it
+back.
+
+The time is now taken into a `long long` (23), the port's `time_t`. And
+`passwd` now removes the temporary file and exits with 0 after copying
+it back (158--159); v7 fell into the code after, which removed it and
+exited with 1, so that a successful change reported failure.
 
 #lines(1, 166)
 
 #source("/usr/src/cmd/chmod.c")
 
+`chmod` changes the modes of files, given either as an octal number or
+symbolically: who (`u`, `g`, `o`, or `a`), an operation (`+`, `-`, or
+`=`), and permissions, either letters or the copy of another class's
+bits (`u`, `g`, `o`), with several clauses separated by commas. Without
+a who, the clause applies to all classes except the bits masked by the
+user's `umask`. `newmode` parses the mode afresh for each file, since a
+symbolic mode is relative to the file's own. The octal number is now
+gathered in an `unsigned` (93), so that a long string of digits wraps
+instead of overflowing.
+
 #lines(1, 182)
 
 #source("/usr/src/cmd/who.c")
+
+`who` lists the users logged in, from `/etc/utmp`, which `init` and
+`login` keep: one entry per terminal, with the user's name, the
+terminal, and the time of login. With two arguments, as in `who am i`,
+it prints the entry of the terminal on its standard input. The name
+and terminal fields of a `utmp` are eight bytes with no null when full,
+so the terminal is now compared with `strncmp` (40) and the name from
+the password file copied with `strncpy` (27), where v7 used `strcmp`
+and `strcpy`, which ran past the fields.
 
 #lines(1, 62)
 
 #source("/usr/src/cmd/write.c")
 
+`write` copies lines typed by the user to another user's terminal,
+found in `/etc/utmp`, after a heading that names the writer; a line
+beginning with `!` is run as a shell command instead, and end of file
+writes `EOF` and stops. The target's terminal must be writable by
+others, which `mesg` controls. Opening it is given five seconds
+(`timout`), since the open of a terminal can wait for a carrier. The
+`utmp` fields of eight bytes are now compared and copied with their
+lengths bounded (50, 53, 76), and the user's name printed as an argument
+of `%s` (91), where v7 used it as a format. The buffer of a line now has
+room for the null which `ex` needs after 128 characters (119).
+
 #lines(1, 184)
 
 #source("/usr/src/cmd/mesg.c")
+
+`mesg` allows or forbids messages from `write` by setting the mode of
+the user's terminal to 0622 or 0600; with no argument it reports the
+current state. Its exit status is 0 when messages are allowed. It now
+reports a standard error that is not a terminal (24), where v7 called
+`stat` with the null pointer `ttyname` returned.
 
 #lines(1, 56)
 
 #source("/usr/src/cmd/at.c")
 
+`at` arranges for commands to be run later. It reads the time, such as
+`3pm` or `0815`, and a day, as a month and day of the month or a day of
+the week, optionally `week` for a week later, and writes the commands,
+from its input or a file, into a file in `/usr/spool/at` whose name
+encodes the year, the day of the year, and the time, for `atrun`
+(#f("cmd/atrun.c")) to find. Before the commands it writes a `cd` to the
+current directory and the current environment, so that they run as
+they would have run now. Times are kept in "grains" of hours times 100
+plus minutes.
+
+The year in the file's name is now taken modulo 100 (85): `tm_year`
+counts from 1900, and from 2000 on it has three digits, which would
+break the fixed format of the name that `atrun` reads. `makeutime` now
+stops reading digits once the time is past a day (128), so that a long
+string cannot overflow it. `filename`, which adds a number to the name
+to make it unique, now gives up after the hundred numbers there are
+(294--301); v7 searched for ever once all were taken. The time is taken
+into a `long long` (210), and the variable `utime` is renamed by the
+preprocessor (11), since the library has a function of that name.
+
 #lines(1, 310)
 
 #source("/usr/src/cmd/atrun.c")
+
+`atrun` runs the jobs which `at` has queued. `cron` starts it every
+few minutes; it reads `/usr/spool/at`, and for each file whose time has
+come it forks a child which moves the file to `past`, takes on the ids
+of the file's owner, and runs the file with the shell, removing it
+afterwards. `atrun` is set-user-id root, so that it can take on any
+user's ids.
+
+The year is now taken modulo 100 (64), as `at` writes it. The job's
+group now comes from its owner's entry in the password file (96--98),
+where v7 used the group of the spool file. The spool directory is
+writable by everyone, so its files' groups can be chosen by whoever
+makes them; a user in a privileged group, such as `sys`, which may read
+the memory and disk special files (#f("rootfs.proto")), could give a
+job that group and have it run with it later, as anyone could who
+could write such a file there.
 
 #lines(1, 112)
 
 #source("/usr/src/cmd/newgrp.c")
 
+`newgrp` changes the user's group to one named in `/etc/group` of which
+the user is a member, or any to `other`; a group with a password asks
+for it if the user has none. It is set-user-id root, so that it can call
+`setgid`; `done` gives the privilege up and replaces itself with a new
+shell, which runs in the new group. The program is v7's, with
+prototypes.
+
 #lines(1, 55)
 
 #source("/usr/src/cmd/chown.c")
+
+`chown` changes the owner of files, given by name or number, keeping
+their group. The `chown` system call is for the super-user only
+(#f("sys4.c")), so in practice only the super-user can use the command.
+The program is v7's, with prototypes.
 
 #lines(1, 56)
 
 #source("/usr/src/cmd/chgrp.c")
 
+`chgrp` changes the group of files, keeping their owner, through the
+same system call as `chown`, and so likewise only for the super-user.
+The program is v7's, with prototypes.
+
 #lines(1, 54)
 
 #source("/usr/src/cmd/wall.c")
+
+`wall` writes a message to every logged-in user's terminal, as found
+in `/etc/utmp`, forking a child for each terminal so that one which
+blocks does not hold up the rest. It is meant for the super-user, whose
+writes are not stopped by a terminal's mode. The message is now read
+only up to the size of `mesg` (30), and the terminal's name appended
+with its length bounded (57), where v7 overran both.
 
 #lines(1, 67)
 
 #source("/usr/src/cmd/kill.c")
 
+`kill` sends a signal, by default `SIGTERM`, to each process named by
+its id. The kernel allows it only to the processes of the same user,
+or any for the super-user (#f("sys4.c")). A process id is now printed
+as signed (34), as `int`s are; the program is otherwise v7's.
+
 #lines(1, 41)
 
 #source("/usr/src/cmd/nice.c")
+
+`nice` runs a command with its priority lowered, by 10 or by the
+amount given; only the super-user may give a negative amount, which
+raises the priority. The program is v7's, with a prototype.
 
 #lines(1, 25)
 
 #source("/usr/src/cmd/stty.c")
 
+`stty` sets the modes of the terminal on its standard output, or with
+no arguments prints them. The tables `speeds` and `modes` give, for
+each word it accepts, the baud rate, or the bits of `sg_flags` to set
+and to clear; `erase` and `kill` take the next argument as the
+character, with `^` for a control character. The flags and their
+meanings are those of the terminal driver (#f("tty.c")). The tables'
+entries are now braced (13--129), as C99 asks of an array of
+structures.
+
+`erase` and `kill` with no character after them are now refused
+(154, 161), where v7 read the null pointer that ends `argv`. The
+characters are compared as unsigned (216, 220), so that one above 127
+is not shown as a control character, and a speed outside the table is
+shown as 0 (258), where v7 indexed past it.
+
 #lines(1, 259)
 
 #source("/usr/src/cmd/tty.c")
 
+`tty` prints the name of the terminal on its standard input, found by
+`ttyname`, or with `-s` only sets the exit status to say whether there
+is one. The program is v7's, with a prototype.
+
 #lines(1, 18)
 
 #source("/usr/src/cmd/pwd.c")
+
+`pwd` prints the current directory. The system keeps no name for it,
+so `pwd` climbs: it finds the current directory's entry in `..` by its
+i-number, changes to `..`, and repeats until it reaches the root,
+prepending each name to `name`. Where `..` is on another device, the
+mounted directory's i-number says nothing about the entry in the
+directory it is mounted on, so `pwd` must `stat` each entry there and
+compare devices as well.
+
+`name` now has 4096 bytes (11), where v7 had 512. A directory entry's
+name has no null when it is 14 characters long, so it is now copied to
+`dname`, which has room for one, before `stat` or `cat` uses it (12,
+52, 75); v7 used the entry itself and ran on into whatever followed.
+The test of each `read` now compares with the size of an entry
+converted to `int` (41, 48): v7 compared the `int` result with the
+`unsigned` size, so that a failure, $-1$, became a large unsigned
+number and passed the test.
 
 #lines(1, 86)
 
