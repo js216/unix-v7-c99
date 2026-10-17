@@ -11879,7 +11879,47 @@ instead of the card.
 
 #source("/usr/src/cmd/ls.c")
 
-#lines(1, 422)
+`ls` lists files and the contents of directories. Each name to be
+listed gets an `lbuf` (14--27), allocated by `gstat` and kept, by
+pointer, in `flist`; the list is sorted with `qsort` and printed by
+`pentry`. A name given as an argument keeps its pointer in `namep`, a
+name read from a directory its 14 characters in `lname`, and the flag
+`ISARG` says which half of the union is in use. The time of the entry is
+a `time_t` (26, 31), so that the comparison with six months ago in
+`pentry` and the sort by time hold for times past 2038.
+
+`main` reads the options and lists the arguments, or the current
+directory. v7 made its default list with `argv = &dotp - 1`, the address
+of a pointer before a single variable, which C does not promise to
+exist; `dotp` is now an array whose second element is `"."` (40, 135).
+The arguments are sorted, the files among them printed, and each
+directory read and its entries sorted and printed after them; `compar`
+puts directories given as arguments last unless `-d` is set.
+
+#lines(1, 162)
+
+`pentry` prints one entry. The i-number, kept as a `short`, is printed
+through `ino_t` (175), so that one above 32767 is not shown negative.
+`getname` looks up a user or group id in the password or group file,
+remembering the last one found. It now stores at most 15 characters of
+the name (226), since `tbuf` holds 16; v7 copied the whole field. The
+modes come from the tables `m1` to `m9`: each gives the number of bits
+to test, then pairs of a bit and the character it prints, and the
+character for none of them.
+
+#lines(163, 274)
+
+`makename` joins a directory name and an entry name. Its buffer now has
+room for the longest name `exec` can pass as an argument, `NCARGS`, with
+a slash, an entry name, and a null (279); v7's held 100 characters,
+which a long argument overran. `readdir` reads a directory a `direct`
+at a time, skipping empty slots and, without `-a`, `.` and `..`; it now
+ends the copied name with a null (321), since a 14-character name has
+none in the directory. `gstat` makes the `lbuf`, calling `stat` only
+when the options need what it returns; after `NFILES` entries it reuses
+the last slot and says once that there are too many.
+
+#lines(275, 422)
 
 #source("/usr/src/cmd/cp.c")
 
@@ -11896,7 +11936,36 @@ directory overran.
 
 #source("/usr/src/cmd/mv.c")
 
-#lines(1, 299)
+`mv` renames a file, moves files into a directory, or renames a
+directory. There is no system call to rename: `mv` links the new name
+and unlinks the old, and when the two names are on different devices,
+so that `link` fails, it runs `cp` and removes the original. Only the
+super-user may link or unlink a directory (#f("sys2.c"),
+#f("sys4.c")), so `mv` is
+set-user-id root; `main` gives up that privilege at once unless the
+source is a directory (41).
+
+`move` handles a file. The name built inside a target directory is now
+an array sized to the two names (59); v7 used `MAXN`, 100 bytes, and
+overran it with long names. A target which is not writable is replaced
+only if the user, at a terminal, answers `y`.
+
+#lines(1, 121)
+
+`mvdir` renames a directory, after checks for which the privilege is
+needed: the user must be able to write both parents and the directory
+itself, and the move must stay on one device. It now refuses either
+name if it does not fit in `MAXN` (130--133), and checks the length of
+the built name exactly (139), where v7 assumed that the last component
+was at most `DIRSIZ` long, which a name given by the user need not be.
+A directory which changes parent must also have its `..` relinked
+(202--218); v7 built that name with `strcat` onto `dst`, which held
+whatever the stack held, and the copy is now `strcpy` (202). `check`
+walks up from the new parent through `..` to the root, refusing to
+move a directory under itself, and `chkdot` refuses names containing
+`..`, which would defeat that walk.
+
+#lines(122, 299)
 
 #source("/usr/src/cmd/ln.c")
 
@@ -11912,17 +11981,132 @@ built it in a 100-byte array, which a long name overran.
 
 #source("/usr/src/cmd/rm.c")
 
+`rm` removes files. A file the user cannot write is removed only after
+a `y`, unless `-f` is given or the input is not a terminal; `-i` asks
+about every file. With `-r`, a directory is emptied by `rm` calling
+itself on each entry, and then removed by running `rmdir`, since only
+the super-user may unlink a directory and `rmdir` is set-user-id root.
+
+The name of an entry is now built in an array sized to the directory's
+name (57); v7's held 100 characters. And `rm` now closes the directory
+while it removes each entry, then reopens it and seeks back to where
+it was (88--93): v7 kept it open, so that each level of the tree held a
+descriptor, and a tree deeper than `NOFILE`, 20, stopped the removal.
+
+`rmdir` returns 1 for a failure (154), where v7 returned the status
+from `wait`; that status is the exit code times 256, and since `main`
+adds the results into its own exit code, which keeps only the low
+eight bits, a single failure in v7 left `rm` exiting with 0.
+
 #lines(1, 172)
 
 #source("/usr/src/cmd/rmdir.c")
+
+`rmdir` removes empty directories. A directory is three links: its
+name in the parent, its own `.`, and its `..` to the parent. `rmdir`
+checks that the directory is not the current one and holds nothing but
+those two entries, then unlinks `..`, `.`, and the name, in that order.
+Only the super-user may unlink a directory, so `rmdir` is set-user-id
+root, and checks itself that the user may write the parent: `access`
+judges by the real user id.
+
+The name is now copied into an array sized to it, with room for the
+`/..` appended later (31); v7's held 500 characters. `np` now points
+past the last slash (38--39), so that `a/.` and `a/..` are refused by
+the test at 75; v7 left it on the slash, and the test saw `/.`, which it
+did not match. And a missing `.` or `..` is now recognised by `errno`
+being `ENOENT` (81, 86): v7 took any failure of `access` for absence,
+so that a `..` it could not reach skipped the check of permission and
+was unlinked.
 
 #lines(1, 104)
 
 #source("/usr/src/cmd/find.c")
 
-#lines(1, 762)
+`find` walks the trees named by its first arguments and evaluates, for
+each file, the expression made of the rest. The expression is compiled
+first into a tree of `anode`s (14--17): each holds the function which
+evaluates it and two operands. In v7 every predicate read the same node
+through a structure of its own, `{ int f, t, s; }` for `-mtime` and the
+like; here there is the one structure, and a predicate's number and
+sign are stored in the pointer fields `L` and `R`, converted to
+pointers and back (179, 316). `Node` holds 100 nodes, and `mk` now
+says so when an expression needs more (260--263); v7 wrote past the
+array.
+
+`find` returns to the directory it started from, `Home`, before each
+path, and runs commands from there. `Home` and `Pathname` now hold 4096
+characters (12, 41), where v7 had 128 and 200, and `main` refuses a
+path which does not fit (90--93). It also now copes with `pwd` failing
+to run (63--68), where v7 cut the last character off whatever it had.
+`ctime` is renamed by the preprocessor (3), since the predicate would
+otherwise clash with the library's `ctime`, which the headers declare.
+
+#lines(1, 113)
+
+The expression is parsed by recursive descent: `exp` for `-o`, `e1`
+for concatenation, which means "and", `e2` for `!`, and `e3` for
+parentheses and the predicates. `nxtarg` hands out the arguments, and
+returns an empty string, three times at most, once they run out. `-perm`
+now stops reading digits once the mode has more than twelve bits
+(212), so that a long argument does not overflow `i`.
+
+#lines(114, 283)
+
+The functions after the parse evaluate the nodes against `Statb`, the
+status of the current file. A time predicate compares the file's age in
+days with its argument: the age is computed by `AGE` (9) in unsigned
+arithmetic, so that a time far in the past or future cannot overflow
+the subtraction, which C leaves undefined for signed numbers. `scomp`
+compares with a sign: `+n` means more than `n`, `-n` less than `n`.
+The negation is now made in `long long` (480), so that it cannot
+overflow either.
+
+`-cpio` writes the files found to an archive in `cpio`'s format. The
+modification time in its header is now four 16-bit halves, most
+significant first (413, 435--436), where v7 had two: the port's
+`time_t` is 64 bits. The archives are therefore not v7's; the system
+has no `cpio` command to read them. A name longer than the header's 256 bytes
+is now refused (423--426) instead of overrunning `h_name`.
+
+#lines(284, 482)
+
+`doex` runs the command of `-exec` or `-ok`, with `{}` replaced by the
+path; it now refuses more than 49 arguments (495--498), the size of
+`nargv`. `getunum` finds a name in the password or group file; the
+name and number it reads now stop at the 20 bytes of `str`
+(529--538). `descend` evaluates the expression on a file and, for a
+directory, on each entry in it, a block of 32 entries at a time,
+changing into the directory to keep the names short. It keeps a
+directory open while it descends only if the descriptor is a low one
+(599), so that a deep tree does not run out of them. It now refuses to
+descend when a further name would not fit in `Pathname` (578--581).
+
+`gmatch` and `amatch` match a name against a pattern in the manner of
+the shell. The characters are now taken as unsigned (664--680), so that
+the comparisons of ranges hold whatever the signedness of `char`.
+`chgreel` asks, on `/dev/tty`, for another output device when a write
+fails; it now gives up if `/dev/tty` cannot be opened or read (745).
+
+#lines(483, 762)
 
 #source("/usr/src/cmd/od.c")
+
+`od` dumps a file in octal, decimal, hexadecimal, bytes, or
+characters, eight 16-bit words to a line, each line headed by its
+offset. A line equal to the one before is printed once, and the run of
+equal lines after it as a single `*`. Each format is a bit in `conv`,
+and `line` prints one row for each bit set, in the order of the bits.
+`offset` reads the starting point, `+` followed by a number which is
+octal, hexadecimal with `x`, or decimal with a point, and in blocks with
+`b`.
+
+The offset is now an `unsigned long` (12, 193, 220), so that it prints
+correctly at 2 GB and beyond, where v7's `long` turned negative. And
+`line` now stops after the seven bits which name formats (105); v7 shifted
+`c` until it became zero, which with a 16-bit `int` happened after
+sixteen shifts, but with a 32-bit `int` reaches the sign bit, where a
+further shift is undefined.
 
 #lines(1, 253)
 
@@ -11941,17 +12125,150 @@ not made, and then compared each input with it all the same.
 
 #source("/usr/src/cmd/tee.c")
 
+`tee` copies its input to its output and to each file named, `-a`
+appending instead of truncating. When the output or a file is a
+terminal or a pipe, `t` is set, and `tee` passes on what it has as soon
+as a read returns, instead of waiting to fill 512 bytes, and writes it
+in pieces of 16 bytes; otherwise output to a terminal would lag behind
+the input.
+
+A file is now checked by `fstat` on the descriptor just opened (51);
+v7 called `stat` on the name, so that a file which existed but could not
+be opened passed the check and kept $-1$ as its descriptor. The
+function which writes messages is renamed by the preprocessor (19),
+since `<stdio.h>` declares a `puts` of its own.
+
 #lines(1, 97)
 
 #source("/usr/src/cmd/tar/tar.c")
 
-#lines(1, 961)
+`tar` writes files to an archive, and lists or extracts them again.
+The archive was meant for magnetic tape, by default `/dev/mt1`, but
+`f` names any file, `-` the standard input or output. Each file is a
+header block of 512 bytes, `hblock` (13--26), followed by its
+contents rounded up to whole blocks; two empty blocks end the archive.
+The header holds the file's name, mode, owners, size, and time as
+ASCII octal numbers, so that an archive is the same whatever the byte
+order of the machine which made it. A block is read or written in
+records of `nblock` blocks, 20 at most.
+
+`main` reads the key: `c` creates, `r` appends, `u` appends only files
+newer than their copies in the archive, `x` extracts, and `t` lists;
+`v` reports each file, `w` asks about each, `m` leaves the extracted
+files with the present time, and `l` reports links it could not find.
+
+#lines(1, 197)
+
+`dorep` adds files. Without `c` it first reads to the end of the
+archive; for `u` it writes each name and time to a temporary file,
+sorted, which `checkupdate` searches later. The command's buffer is now
+initialised (214) before the `strcat`s which `sprintf` then overwrites;
+v7 appended to whatever the stack held. `dorep` changes into the
+directory of each argument and passes the last component to
+`putfile`; when the directory cannot be entered it now passes the
+whole name instead (238), where v7 carried on in the wrong directory.
+The current directory, read through `pwd` into `wdir`, now has 512
+bytes (203) where v7 had 60.
+
+`getdir` reads a header and converts its fields. The time is now read
+as a `long long` (282), the port's `time_t`. A header whose size is
+negative or does not fit a `long` is treated as damaged (284), and the
+two names are now ended with a null (288), since a name of 100
+characters fills its field and has none; v7 read on into the next
+field. The time written to the temporary file stops at the field's 12
+characters (290) for the same reason.
+
+#lines(198, 307)
+
+`putfile` writes one file, or, for a directory, calls itself on each
+entry, closing the directory meanwhile and reopening it at the entry
+after, as `rm` does. A directory whose name will not fit in a header is
+now refused, and one which cannot be entered is reported (337--346);
+v7 called `chdir` without looking at the result, and then wrote the
+entries of the wrong directory under the right names. A file with more
+than one link is written in full only the first time; afterwards a
+header with `linkflag` set names the first copy.
+
+#lines(308, 448)
+
+`doxtract` extracts the files named, or all, making the directories
+on their paths with `mkdir` (`checkdir`), and gives each file its
+owners and, unless `m`, its time from the archive. `dotable` lists the
+archive, in the manner of `ls -l` with `v`.
+
+#lines(449, 566)
+
+`tomodes` fills a header from a file's status. The time field holds 11
+octal digits, 33 bits, so a 64-bit time is now kept within that range
+(680--685): a time before 1970 is written as 0 and one past the year
+2242 as the largest the field holds. `checksum` adds the bytes of the
+header, with the field for the checksum itself taken as spaces. The
+bytes are now added as `signed char` (698): v7's PDP-11 compiler made
+`char` signed, and the sum must be the same as v7's for archives to
+pass between the systems, whatever the port's compiler makes of
+`char`.
+
+#lines(567, 700)
+
+`response` now stops at end of input (725), where v7 read for ever.
+`getwdir` reads the current directory through a pipe from `pwd`; it now
+reads up to the 512 bytes of the buffer and fails cleanly when no
+newline comes (786--791), where v7 read 50 bytes into a 60-byte buffer
+and then searched for a newline which might not be there.
+
+`lookup` and `bsrch` binary-search the sorted temporary file for a
+name, reading a window of `N` bytes around the middle of the range and
+taking the first whole line in it. A line is a name of up to 100
+characters, a space, and 12 digits of time, so `N` is now 256 (797),
+which holds the end of one line and the whole of the next; v7's 200
+could not. `readtape` now treats end of file as an error (882), where
+v7 went on with whatever was in its buffer.
+
+#lines(701, 961)
 
 #source("/usr/src/cmd/file.c")
+
+`file` guesses what kind of file each argument is, or each name listed
+in the file given with `-f`. Special files and directories are told by
+their mode; anything else by its first 512 bytes. A known magic number
+in the first word marks an executable or an archive; otherwise `type`
+looks for the marks of C, Fortran, assembler, and `roff` text by
+keyword (`lookup`), past comments (`ccom`, `ascom`), and finally
+decides between data, commands, English, and other text. `english`
+judges by the frequencies of letters and the spacing of punctuation.
+
+The buffer is now an array of `int`s (11--12), so that its first word
+may be read as an `int`, which v7 did by casting a `char` array that
+need not be aligned for one. It has room for a null after the data
+read (99), which stops the scans that look for a character before
+the end. The port's executables are ELF files, whose first four bytes
+are `0x7f` and `ELF`; read as a little-endian `int` they are
+`0x464c457f` (102), and are reported as executable. The PDP-11's magic
+numbers are kept.
+
+Bytes with the top bit set are now tested for as such (152), and
+masked before they index a table or reach `isalpha` (193, 210, 306);
+v7 relied on `char` being signed, so that `buf[i] <= 0` caught them.
+The test for `roff` input now also accepts a request at the very start
+of the file (193), where v7 looked at the byte before the buffer.
+A name read with `-f` loses its last character only when that is a
+newline (40), `file -f` exits with 0, and a failed read is reported as
+such (95--96).
 
 #lines(1, 332)
 
 #source("/usr/src/cmd/cmp.c")
+
+`cmp` compares two files byte by byte. It reports the first difference
+by byte and line, or with `-l` every differing byte with both values in
+octal, or with `-s` nothing but its exit status: 0 for equal files, 1
+for different ones, and 2 for trouble. Optional offsets, decimal or,
+with a leading zero, octal, skip the start of either file.
+
+`otoi` now accumulates in an `unsigned long` (110), so that an offset
+too large for a `long` wraps instead of overflowing, which C leaves
+undefined for signed numbers; and the character given to `isdigit` is
+masked to a byte (117), since a negative `char` is not a valid argument.
 
 #lines(1, 120)
 
@@ -11966,25 +12283,107 @@ creating files that do not exist.
 
 #source("/usr/src/cmd/tp/tp.h")
 
+`tp` saves files on DECtape or magnetic tape and restores them, the
+predecessor of `tar`. Unlike `tar`'s, its tape begins with a directory:
+block 0 holds a bootstrap, then come `ndentb` blocks of entries, each a
+`tent` (25--37) of 64 bytes giving a file's name, mode, owners, size,
+time, and the tape block where its contents start. In core the
+directory is the array `dir` of `dent`s, with the names packed into
+memory obtained from `sbrk`, and a bit map, `map`, of the blocks in
+use guides the placing of new files. DECtape could be read and written
+at any block, so files are added, replaced, and deleted in place; a
+magnetic tape is always written whole.
+
+The time in `tent` is now a `long long` (33), the port's `time_t`, and
+`unused` shrinks from eight `short`s to six (35), so that an entry
+keeps its 64 bytes and a block still holds eight. A tape is therefore
+not v7's, but `tp` reads its own. `name` has room for twice `NAMELEN`
+(53): a directory's name, already checked to fit, has an entry's name
+appended to it before that is checked in turn.
+
 #lines(1, 84)
 
 #source("/usr/src/cmd/tp/tp_defs.h")
+
+`tp_defs.h` gives the names of the tape devices, the default flags,
+and the bootstrap programs which `wrdir` copies to block 0. The digit
+of a unit is patched into the device names by `main`.
 
 #lines(1, 5)
 
 #source("/usr/src/cmd/tp/tp0.c")
 
+`tp0.c` defines the variables which #f("tp/tp.h") declares. In v7 the
+header defined them, and every file which included it defined them
+again, which the PDP-11's loader merged but C99 does not allow.
+
 #lines(1, 9)
 
 #source("/usr/src/cmd/tp/tp1.c")
+
+`main` reads the key: a unit number, `f` for a named file, `m` for
+magnetic tape instead of DECtape, and one command, which `setcom`
+installs in `command`: `r` replaces or adds (the default), `u` does so
+only for files newer than their copies, `d` deletes, `x` extracts, and
+`t` lists. `c` starts with an empty directory, and `v`, `w`, and `i`
+ask for reports, questions, and the ignoring of errors. `optap` opens
+the tape and sets its size and number of directory entries.
+
+The commands are short: each reads the directory or starts a fresh
+one, applies a function to the entries named (`gettape`) or adds the
+files named (`getfiles`), and writes the directory back. `encode`
+stores a name in the packed area, growing it with `sbrk`. It now
+measures the name without reading past the 32 bytes of a tape entry
+(180--181), which need not end with a null, and refuses a name of 32
+characters (182), which would leave none when written back; v7 called
+`strlen` and allowed 32.
 
 #lines(1, 198)
 
 #source("/usr/src/cmd/tp/tp2.c")
 
-#lines(1, 363)
+`lastd` is the last entry in use. When the directory is empty it now
+points at the first entry (18), and `clrent` walks it back over cleared
+entries (30--32); v7 made it a null pointer, from which the loops
+`while (++d <= lastd)` and `lastd + 1` computed addresses C does not
+define, and its `clrent` tested the entry after the one cleared.
+
+`rddir` reads the directory. The sum of the 32 `short`s of a valid
+entry is zero; if any is not, the tape may come from a machine of the
+other byte order, and `rddir` tries again with the bytes of each entry
+swapped (`fls`). `tptr` now starts at the first entry of the block
+already read (42), since a count of entries taken from the tape need
+not be a multiple of eight. `wrdir` writes the bootstrap and the
+directory, recording the number of entries in the bootstrap block's
+last word and making each entry's checksum.
+
+#lines(1, 163)
+
+`tread` and `twrite` move a block, and `wseek` positions the tape,
+reading a byte first when the move is long, which on DECtape made the
+drive run there at speed. `verify` asks about a file under `w`; it now
+stops at end of input (232, 238), where v7 read for ever. `getfiles`
+and `expand` walk the files named, and `callout` enters each ordinary
+file in the directory. The name given is now copied with its length
+limited (250), each entry's name ended with a null (280--281), and a
+path too long for a tape entry refused before it is used (302--305);
+v7 copied all three with `strcpy` into buffers of 32 bytes.
+
+#lines(164, 363)
 
 #source("/usr/src/cmd/tp/tp3.c")
+
+`gettape` applies `delete`, `extract`, or `taboc` to each entry named,
+or to all. `update` finds for each new file the first run of free
+blocks long enough in the bit map, writes the directory, and
+`update1` then copies the files to the tape in the order of their
+addresses, so that the tape moves one way. `usage` counts the entries
+and blocks in use.
+
+`taboc` lists an entry. The time is now taken apart through the `tm`
+structure which `localtime` returns (202, 223--224); v7 declared
+`localtime` as returning an array of `int`s and indexed it, which
+relied on the structure's layout.
 
 #lines(1, 256)
 
