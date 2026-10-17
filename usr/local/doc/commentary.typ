@@ -13853,57 +13853,314 @@ program is v7's, with prototypes.
 
 #source("/usr/src/cmd/icheck.c")
 
+`icheck` checks the consistency of the blocks of a file system. It
+reads every inode, and for each block an inode claims, directly or
+through the indirect blocks, marks it in the bit map `bmap`, reporting
+a block outside the file system as bad and one already marked as a
+duplicate; it then walks the free list, checking its blocks the same
+way. A block neither claimed nor free is missing. With `-b` it reports
+every use of the blocks listed; with `-s` it ignores the old free list
+and builds a new one from the blocks not claimed, which is the usual
+repair for a damaged free list.
+
+The free list is now followed for at most as many blocks as the file
+system has (177), so that a list which loops back on itself ends; v7
+followed it for ever. The total of used blocks now adds the
+triple-indirect count (196), where v7 added the double-indirect count
+twice and left the triple out. `-b` no longer reads past the last
+argument (73), and `blist` has room for the $-1$ that ends it after a
+full list (18). The offset of a block is now computed unsigned
+(395, 411), so that it does not overflow for blocks beyond 2 GB, and
+a failed read clears the bytes asked for (402), where v7 cleared one
+block, too few for a read of the inodes and too many for the
+superblock. A free-list block is read through a union that names the
+structure, `fb` (336--339), since C99 has no unnamed members.
+
 #lines(1, 473)
 
 #source("/usr/src/cmd/dcheck.c")
+
+`dcheck` checks the directories of a file system against the inodes'
+link counts. The first pass reads every directory and counts, in
+`ecount`, the entries that name each inode; the second compares each
+count with the inode's `di_nlink` and reports those that differ. An
+entry naming an inode out of range is reported as bad, and with `-i`
+every entry naming one of the listed inodes is reported. The counts are
+kept in bytes, held at 255 once they reach it.
+
+`bmap` now refuses the first block index beyond the single indirect
+block (209), where v7's test let one through, reading an entry past the
+end of `ibuf`. The other changes are those of `icheck`: `-i` stops at the
+last argument and `ilist` has room for its terminator (20, 45), a
+block's offset is computed unsigned (192), and a failed read clears the
+bytes asked for (195).
 
 #lines(1, 215)
 
 #source("/usr/src/cmd/ncheck.c")
 
+`ncheck` prints the path names of inodes, by reading the file system
+directly: the first pass enters every directory in the hash table
+`htab`; the second records for each directory the name and parent of
+every subdirectory in it; the third prints, for each entry naming one
+of the inodes asked for, or any with `-a` and `-i`, its path, which
+`pname` builds by following the parents up to the root. With `-s` it
+lists only special files and set-id files, which is a check of
+security: they are collected into `ilist` in the first pass.
+
+`-s` now stops collecting one short of the end of `ilist` (144), which
+needs a zero after the last inode, and `-i` stops at the last argument
+(60); v7 could fill the list with no terminator. The changes to `bmap`
+and `bread` are those of `dcheck` (301--317).
+
 #lines(1, 323)
 
 #source("/usr/src/cmd/df.c")
+
+`df` prints the number of free blocks of each file system named, by
+default the root, `/dev/root`, where v7 listed its own machine's disks.
+It counts by walking the free list from the superblock as the kernel's
+`alloc` would (#f("alloc.c")), without changing anything. It now stops
+when the count exceeds the file system's size (49--52), so that a free
+list which loops ends, and exits with 1 after a read error (96). The
+offset of a block is computed unsigned (92), as in `icheck`.
 
 #lines(1, 98)
 
 #source("/usr/src/cmd/du.c")
 
+`du` prints the number of blocks used by each directory under the
+names given, and with `-a` by each file; with `-s` only the totals. It
+walks the tree as `find` does, changing into each directory. A file
+with several links is counted once: `ml` remembers up to `ML` such
+files by device and i-number.
+
+The search of `ml` now stops at the entries in use (84), where v7 also
+looked at the next, unset one. The path now has 4096 bytes (9), and both
+a name given and one built in the walk are checked against it (39--42,
+109--112), where v7 had 256 bytes and no checks. An empty name no
+longer makes `du` look at the byte before it (103).
+
 #lines(1, 172)
 
 #source("/usr/src/cmd/mount.c")
+
+`mount` mounts a file system on a directory, read-only if a third
+argument is given, through the `mount` system call (#f("sys3.c")), and
+records it in `/etc/mtab` by the last component of the special file's
+name; with no arguments it lists the table. The table is only a record
+kept for people: the kernel keeps its own, and `/etc/mtab` can disagree
+with it after a crash. The program is v7's, with a prototype.
 
 #lines(1, 65)
 
 #source("/usr/src/cmd/dump.c")
 
-#lines(1, 657)
+`dump` copies a file system to tape, in full or incrementally: a dump
+of level _n_ holds the files changed since the last dump of a lower
+level, whose date it finds in `/etc/ddate` (`getitime`) and, with `u`,
+records its own (`putitime`). It works in passes over the inodes, read
+straight from the disk. Pass I marks in `nodmap` the files changed
+since that date and in `dirmap` all directories; pass II, repeated
+until nothing changes, keeps only the directories which lead to a
+marked file; pass III writes the directories and pass IV the files. On
+the tape each file is a header record, a `spcl` with the inode and a
+map of which of its blocks follow, then the blocks; the format is that
+of `<dumprestor.h>`, and `restor` and `dumpdir` read it.
+
+The options' arguments are now checked: a density of zero is refused
+(99--102), which v7 divided by later, and a tape size is held within
+what a `long` can hold once multiplied (111--112). The defaults still
+name v7's disk and tape.
+
+#lines(1, 184)
+
+`pass` applies a function to every inode selected by a map; `icat` and
+`indir` walk a file's blocks, through the indirect blocks, calling one
+function per block and another per array of addresses. `bitmap` writes
+a map to tape, and `spclrec` writes a header record, with a checksum
+that makes the record's words sum to `CHECKSUM`; the sum is now
+unsigned (367), so that it wraps instead of overflowing. The
+headers hold times as the port's 64-bit `time_t`, so its tapes are not
+v7's.
+
+#lines(185, 533)
+
+`getitime` and `putitime` read and update `/etc/ddate`, which holds an
+`idates` for each file system and level. The names are now compared
+and copied at most `DIRSIZ` characters, and the copy ended with a null
+(562, 605, 616--621), where v7 went on until it met a null. `putitime`
+now rewrites the entry for the same file system and level in place
+(613); v7 counted that entry too, and so wrote the new one after it,
+over the next entry or at the end of the file.
+
+#lines(534, 657)
 
 #source("/usr/src/cmd/restor.c")
 
-#lines(1, 1154)
+`restor` reads tapes written by `dump`. With `t` it prints the dates
+of a dump; with `x` it extracts the files named, finding them by path
+in the directories on the tape; with `r` it restores a whole dump onto
+a file system, which must have been made fresh with `mkfs` for a full
+dump, the incremental dumps then following in order; `R` starts at a
+later volume. Restoring writes the inodes and blocks directly on the
+disk, so that a file gets the same i-number it had, and directories
+need not be rebuilt.
+
+`main` now refuses `f` without a tape name and `r` without a file
+system (115--116, 130--131), where v7 read past the arguments. The
+temporary file for `x` is removed at once once opened (145), so that
+it does not survive an interruption; v7 removed it at the end.
+
+#lines(1, 153)
+
+`doit` carries out the command. The answers read from the terminal are
+now read with `fgets`, limited to the buffer (212, 305), and the end of
+input stops `restor` where v7 waited for ever for a newline (321--323);
+so it does when `readtape` asks for the next volume (527--529).
+
+#lines(154, 406)
+
+For `x`, `pass1` reads the directories from the tape into a temporary
+file, recording where each begins in `inotab`, now refusing more than
+`MAXINO` of them (441--444), where v7 wrote past the table. `getfile`
+reads a file's blocks from the tape, calling one function for each
+block present and another for each hole; the count of blocks taken from
+a header is now kept within the header's map (478). `psearch` follows
+a path through the directories by `search`; it now starts each
+component at the component itself (686), where v7 started one byte in,
+so that an empty component, from a path ending in a slash, began past
+the end of the name.
+
+#lines(407, 718)
+
+For `r`, the file system is written through a small cache of blocks.
+`clri` clears an inode by assigning an empty one (791--793), where v7
+cleared it as an array of `int`s; `itrunc` and `tloop` free a file's
+blocks, and `bfree` and `alloc` keep the free list as the kernel does
+(#f("alloc.c")). `alloc` now checks that the count of free blocks is in
+range before it indexes with it (891--892), and `bfree` that it is not
+negative (867). The offsets of blocks are computed unsigned (737,
+769). A free-list block is read through a union which names its
+structure, `frees`, since C99 has no unnamed members.
+
+#lines(719, 975)
+
+`gethead`, `ishead`, `checktype`, `checksum`, `checkvol`, and `readhdr`
+read and check the header records; `xtrfile`, `skip`, `rstrfile`,
+`rstrskip`, and `putdir` are the functions which `getfile` calls.
+`readbits` reads a map from the tape; a count of blocks larger than the
+map is now reduced to its size (1135--1136), where v7 read past it.
+
+#lines(976, 1154)
 
 #source("/usr/src/cmd/clri.c")
+
+`clri` clears inodes, given by number, by writing zeros over them on
+the special file. It is the last resort for an inode which the file
+system's checks find damaged; the blocks it held must then be recovered
+with `icheck -s`. Every number is checked, and its block read, before
+any is cleared. The size of an inode comes from the structure (8), so
+that the port's inodes of 128 bytes are cleared whole. The indices are
+now `unsigned` (24), as the inode number is. The program is otherwise
+v7's.
 
 #lines(1, 81)
 
 #source("/usr/src/cmd/umount.c")
 
+`umount` unmounts a file system and removes it from `/etc/mtab`. When
+the table is left empty, the search for its last entry now stops at the
+start (47), where v7 went on before the array. The entry is cleared
+through a pointer to the whole structure (44), where v7 indexed `file`
+past its end into `spec`, which C does not allow.
+
 #lines(1, 55)
 
 #source("/usr/src/cmd/mknod.c")
+
+`mknod` makes a special file with the given major and minor device
+numbers, which only the super-user may do (#f("sys2.c")). A device number
+holds each in a byte, so `number` now refuses values over 255 (41, 45),
+which v7 let spill into the other byte. A failure now makes `mknod` exit
+with 1 (25, 31), where v7 exited with 0 after reporting it, and with
+whatever was left in a register after the usage message.
 
 #lines(1, 46)
 
 #source("/usr/src/cmd/dd.c")
 
-#lines(1, 553)
+`dd` copies a file with the block sizes and conversions asked for:
+input and output block sizes, records to skip on input and to seek
+past on output, a count of records, and conversions between ASCII and
+the EBCDIC of IBM's machines, of case, and of byte order, with `noerror`
+and `sync` for reading damaged tapes. The tables `etoa`, `atoe`, and
+`atoibm` (38--142) give the character codes, now `unsigned char`, since
+they hold values above 127. It reads records into `ibuf` and moves the
+bytes one at a time through the conversion function into `obuf`; with
+`bs` and no conversion it writes each record as read.
+
+`BIG`, the largest argument, is now that of a 32-bit `int` (4), where
+v7's was that of a 16-bit one. Errors in the arguments and in opening
+the files now make `dd` exit with 1 (236--273), where v7 exited with 0;
+`term` passes on a status (537--543), 1 after an error of reading or
+writing and the signal's number after an interrupt. `skip` now stops at
+the end of the input (283--284), where v7 went on reading nothing for
+the rest of the count. Note that `skip` reads its way past the records,
+so that skipping far into a large input takes as long as copying it.
+
+#lines(1, 362)
+
+`number` reads a size, with `k`, `b`, and `w` for units of 1024, 512,
+and 2 bytes, and `x` for a product. It now works in `long long` and
+stops at the limit (386--393), so that an overflow is reported instead
+of wrapping. A "word" is now two bytes (400), the 16-bit word of the
+tapes `dd` was made for; v7 multiplied by `sizeof(int)`, which on the
+PDP-11 was the same but on the port would be four.
+
+#lines(363, 553)
 
 #source("/usr/src/cmd/dumpdir.c")
+
+`dumpdir` lists the files on a dump tape with their i-numbers, by
+reading the directories from the tape, as `restor x` does, into a
+temporary file, and then walking them from the root, printing every
+file the dump holds. Much of it is `restor`'s code.
+
+The temporary file is now opened twice, once for writing and once for
+reading, and removed at once (69--74), so that it does not outlive the
+program. `printem` walks a directory and calls itself for each
+subdirectory; it now remembers its place in the one reading stream and
+seeks back to it after the call (161--173), where v7 opened the file
+afresh for every level and so ran out of streams in a deep tree. A path
+too long for `prebuf` is now reported instead of overrunning it
+(164--167). As in `restor`, the table of directories, the count of
+blocks in a header, and the size of a map are now checked (130--133,
+205, 482--483), and the end of input stops the wait for a new volume
+(250--252).
 
 #lines(1, 492)
 
 #source("/usr/src/cmd/quot.c")
+
+`quot` reports how many blocks each user owns on a file system, read
+straight from the inodes, largest first; `-f` adds the number of files,
+`-c` instead counts files by size, and `-n` reads a list of i-numbers,
+such as `ncheck` prints, and prints each file's owner before the
+line. The default file system names v7's disk. `du` is indexed by user
+id while counting and sorted for the report.
+
+`check` now puts `du` back into the order of user ids and clears the
+counts before each file system (100--110): v7 counted the second file
+system into a table already sorted by the first, so that its blocks
+went to the wrong users and on top of the first's totals. An inode with
+a negative size is now ignored (137), the number of blocks is computed
+without first adding to the size (142, 152), which could overflow, and
+a user id is checked as unsigned (57, 150). With `-n`, the copying of
+the rest of a line now stops at the end of the input (173--178), where
+v7 printed the value of `EOF` as a character. `qcmp` compares users
+with no name as having an empty one (202), where v7 passed a null
+pointer to `strcmp`.
 
 #lines(1, 248)
 
