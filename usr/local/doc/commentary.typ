@@ -66,7 +66,7 @@ When a process enters the kernel, by a system call, an interrupt, or an
 exception, its registers are saved on the kernel stack, and `u.u_ar0` is
 set to point at the saved `r0`. #f("reg.h") gives the position of every
 other saved register as an index from that point, so that the kernel
-may write `u.u_ar0[R6]` for the user's stack pointer without knowing how
+may write `u.u_ar0[SP]` for the user's stack pointer without knowing how
 the frame was built.
 
 In v7 the frame was assembled partly by the PDP-11 hardware (`pc` and
@@ -76,21 +76,18 @@ registers did not lie in order: `r1` was two words below `r0`, `r2` to
 -2, -9, -8, -7, -6, -3, 1, and 2. On the ARM the frame is built by
 #f("low.s") in a single order: `r0` to `r12` at indices 0 to 12, the
 user's `sp` at 13, its `lr` at 14, the return address at 15, and the
-saved status register (`spsr`) at 16. The PDP-11 names are kept for the
-registers that have counterparts: `r6` was the stack pointer, so `R6` is
-13; `r7` was the program counter, so `R7` and `PC` are both 15; and
-`RPS`, which named the processor status word, now names the saved `cpsr`.
+saved status register (`spsr`) at 16. The registers are named by the
+ARM's names (12--14): `SP` for the stack pointer, `PC` for the program
+counter, and `PSR` for the saved status, where v7 had the PDP-11's
+`R6`, `R7`, and `RPS`. v7's `TBIT`, the PDP-11's trace bit, is gone:
+the ARM has no such bit in its status register, and nothing sets it
+(#f("sig.c")).
 
-Note that `R7` is the PDP-11 `r7`, that is the PC, not the ARM `r7`. The
-ARM registers `r6` to `r12` and `lr` have no names here; code which
+The ARM registers `r6` to `r12` and `lr` have no names here; code which
 needs one writes the index, as `trap` (#f("trap.c")) does with `r[7]`,
 the register which holds the system call number.
 
-`TBIT` (17), the PDP-11 trace bit, is kept from v7, though nothing uses
-it: the ARM has no equivalent bit in its status register, and `procxmt`
-(#f("sig.c")), which set it in v7, does not.
-
-#lines(1, 17)
+#lines(1, 14)
 #source("/usr/sys/h/callo.h")
 
 The callout table holds requests of the form "call `c_func(c_arg)` after
@@ -345,8 +342,8 @@ again below if the call fails.
 
 The call number (30) is not fetched from the low six bits of the
 `sys` instruction in user memory, but taken from the register `r7`,
-where the library stub has put it (`r[7]` is the ARM `r7`, not `R7`,
-which is the `pc`). This is the convention of ARM Linux. A number
+where the library stub has put it (`r[7]` is the ARM `r7`; the PDP-11's
+`R7`, its `pc`, is `PC` here). This is the convention of ARM Linux. A number
 greater than 63 is reduced modulo 64.
 
 The `sy_narg` arguments are copied from `r0` upwards (31, 32). v7
@@ -733,7 +730,7 @@ the user program must also be told which it is. v7 did it with a trick
 which the port keeps. In the child `fork` returns the parent's pid
 (484); in the parent it advances the saved `pc` by one word (496), so
 that the parent skips the instruction after the `svc`, a branch which
-only the child therefore takes. `R7` is the PDP-11's name for the `pc`
+only the child therefore takes. `PC` is v7's `R7`, the `pc`
 (#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
 instruction, as it was two, the size of a PDP-11 one. The library stub
 (`fork.s`) is built on it as v7's was: the parent returns the child's
