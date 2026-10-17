@@ -13722,25 +13722,130 @@ number and passed the test.
 
 #source("/usr/src/cmd/ac.c")
 
+`ac` adds up connect time from `/usr/adm/wtmp`, the log of logins and
+logouts which `init` and `login` append to: in total, per user with
+`-p`, or per day with `-d`, optionally for named users only. A record
+names a terminal and a user, or no user for a logout; the time between
+a login on a terminal and the next record for the terminal is charged
+to the user. Records whose terminal is `|` and `}` mark the old and new
+times of a change of the date, by which the open sessions are shifted.
+`tbuf` holds the state of each terminal, numbered from the last two
+digits of its name, and `ubuf` the total for each user. At the end a
+pseudo-record logs everyone out at the present time.
+
+The times are now `time_t` (23, 28--30, 179, 233, 250), the port's 64
+bits. When `ubuf` is full, `update` now charges further users to its
+last entry (197), where v7's search ran past the end of the array.
+
 #lines(1, 256)
 
 #source("/usr/src/cmd/sa.c")
+
+`sa` summarises the process accounting file `/usr/adm/acct`, to which
+the kernel appends a record for every process that exits while
+accounting is on (#f("acct.c")): its command name, user, and times.
+`sa` totals the records by command in the hash table `tab`, and by
+user in `user`; it lumps commands run once, or with odd characters in
+their names, into `***other`, and with `-s` saves the totals in
+`/usr/adm/savacct` and `/usr/adm/usracct`, which later runs start
+from (`init`), so that the large file can be truncated. The options
+choose the sorting and what is printed. `expand` unpacks the kernel's
+compressed times: a 13-bit mantissa times 8 to the power of a 3-bit
+exponent.
+
+`enter` hashes the command name, all `NC` bytes of it. The names it is
+given for the merged entries are now arrays of that size (46, 168,
+464); v7 passed string constants of nine bytes, from which the hash
+read one byte more. The hash is now computed unsigned (439--440) where
+v7 negated a sum that might have overflowed, and a full table now stops
+`sa` with a message (442--446) instead of a search for ever. Merging
+into `***other` now skips that entry itself (169--170), which v7 could
+add to itself and then empty.
+
+`printmoney` now finds a user's name with `getpwuid` (228); v7 used
+`getpw`, which copies the whole line of the password file, up to
+`BUFSIZ` bytes, into the caller's buffer, here of 128. The comparison
+functions for `qsort` take `char *` arguments, as its declaration
+requires (336--371). Times are `time_t` (279).
 
 #lines(1, 493)
 
 #source("/usr/src/cmd/pstat.c")
 
+`pstat` prints the kernel's tables: the in-core inodes (`-i`), texts
+(`-x`), processes (`-p`), terminals (`-t`), open files (`-f`), and a
+process's `user` structure given its address (`-u`). It looks up the
+tables' addresses in the symbol table of `/unix` with `nlist`, and
+reads them from the memory special files. It is set-group-id `sys`,
+the group that may read those (#f("rootfs.proto")).
+
+The tables are now read from `/dev/kmem` (17), by kernel address. On
+the PDP-11 the kernel's data lay at the same addresses in physical
+memory, so v7 read `/dev/mem`; here the kernel runs at its own virtual
+addresses. A `user` structure, found by its physical page, is still
+read from `/dev/mem` (18, 314--315), now converting the page number
+with `ptob` where v7 shifted it by the PDP-11's 64-byte click. When the
+memory is taken from a file named as an argument, `pstat` now first
+gives up the group `sys` (96--99), so that it cannot be used to read
+any file the group may read.
+
+The kernel's structures are taken from the kernel's own headers
+(9--15), since several, such as `user.h`, differ from what the library's
+copies give to ordinary programs. `nlist` marks a symbol it did not
+find with a type of 0 (107, 265), as the port's `nlist` for ELF files
+does, where v7's used $-1$. The number of terminal lines read from the
+kernel is kept within the array (269--270). In `dousr`, the PDP-11's
+segmentation registers give way to the sizes of the process's
+segments (327--329), and the times, now `long long`, are printed as
+such (346--347).
+
 #lines(1, 398)
 
 #source("/usr/src/cmd/iostat.c")
+
+`iostat` reports the kernel's instrumentation, repeatedly at an
+interval if asked. At each clock tick the kernel adds one to the entry
+of `dk_time` indexed by the set of disks busy and the state of the
+processor, so that the 32 entries give the ticks spent in each
+combination; the disk drivers count their transfers and words in
+`dk_numb` and `dk_wds`, and the terminal handler its characters in
+`tk_nin` and `tk_nout` (#f("clock.c"), #f("tty.c")). `iostat` reads these from
+`/dev/kmem` at the addresses `nlist` finds in `/unix`, takes the
+differences from the previous reading, and prints per-second rates,
+times per seek and per transfer, and the share of time in user mode,
+`nice`, the system, and idle. With `-b` it prints the buffer cache's
+counts from `io_info`.
+
+v7 found only the address of `dk_busy` and read all the counters as one
+block from there, relying on the PDP-11 kernel's placing them together
+in that order, and then took the differences of 40 `long`s starting at
+`etime`, running on through the structure into the counters after it.
+Each counter is now looked up by its own name (16--23) and read from its
+own address (97--108), and the differences are taken counter by
+counter (109--129); the loader of the port's kernel promises no order.
+The sums are now kept in `double` (186, 214), the times of each reading
+in `long long` (138), and the table of buffers has `NBUF` entries
+(41, 298), where v7 wrote 50 and printed 30.
 
 #lines(1, 307)
 
 #source("/usr/src/cmd/accton.c")
 
+`accton` turns process accounting on, into the file named, or off with
+no argument, through the `acct` system call, which only the super-user
+may make (#f("acct.c")). The program is v7's, with a prototype.
+
 #lines(1, 16)
 
 #source("/usr/src/cmd/time.c")
+
+`time` runs a command and prints the real time it took and the user
+and system time of its processes, which `times` reports for the
+children waited for. Times are in ticks of a sixtieth of a second; the
+real time, measured with `time` in seconds, is multiplied up to match.
+`printt` prints a number of ticks as hours, minutes, seconds, and
+tenths, without leading zeros, dividing by the bases in `quant`. The
+program is v7's, with prototypes.
 
 #lines(1, 78)
 
