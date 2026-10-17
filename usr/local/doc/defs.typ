@@ -19,7 +19,7 @@
 #let text-of(path) = read(path).trim("\n", at: end).split("\n")
 #let lines(a, b) = context {
   show raw.line: l => box(width: 3em, align(right, text(fill: gray, str(l.number + a - 1)))) + h(1em) + box(width: 1fr, l.body)
-  raw(text-of(file.get()).slice(a - 1, b).join("\n"), block: true, lang: "c")
+  raw(text-of(file.get()).slice(a - 1, b).join("\n"), block: true)
 }
 #let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
 #let f(name) = link(label(name), raw(name))
