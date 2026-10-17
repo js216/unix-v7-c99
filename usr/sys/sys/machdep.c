@@ -122,7 +122,7 @@ irq(int *r)
 
 	n = GICC(0xc);
 	if((n&0x3ff) == TIMER)
-		clock((caddr_t)r[PC], r[RPS]);
+		clock((caddr_t)r[PC], r[PSR]);
 	else
 		for(ip = intrtab; ip->i_irq; ip++)
 			if(*ip->i_irq == (int)(n&0x3ff))
@@ -138,8 +138,8 @@ sendsig(caddr_t p, int signo)
 {
 	register unsigned n, m;
 
-	m = (RPS+1)*sizeof(int);
-	n = (u.u_ar0[R6] - m - sizeof(u.u_fps)) & ~7;
+	m = (PSR+1)*sizeof(int);
+	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
 	grow(n);
 	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
 	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
@@ -147,11 +147,11 @@ sendsig(caddr_t p, int signo)
 		psignal(u.u_procp, SIGSEG);
 		return;
 	}
-	u.u_ar0[R6] = n;
+	u.u_ar0[SP] = n;
 	u.u_ar0[14] = UENTRY_SIGTRAMP;
-	u.u_ar0[R7] = (int)p;
+	u.u_ar0[PC] = (int)p;
 	u.u_ar0[R0] = signo;
-	u.u_ar0[RPS] &= ~0x0600fe20;
+	u.u_ar0[PSR] &= ~0x0600fe20;
 }
 
 extern struct memregion board_map[];
@@ -234,11 +234,11 @@ clearseg(int a)
 void
 sigreturn(void)
 {
-	int f[RPS+1];
+	int f[PSR+1];
 	register int i;
 	register caddr_t a;
 
-	a = (caddr_t)u.u_ar0[R6];
+	a = (caddr_t)u.u_ar0[SP];
 	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
 	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
 		u.u_signal[SIGSEG] = 0;
@@ -246,9 +246,9 @@ sigreturn(void)
 		return;
 	}
 	u.u_fpsaved = 1;
-	for(i = 0; i < RPS; i++)
+	for(i = 0; i < PSR; i++)
 		u.u_ar0[i] = f[i];
-	u.u_ar0[RPS] = (f[RPS] & 0xfe0ffe20) | 0x10;
+	u.u_ar0[PSR] = (f[PSR] & 0xfe0ffe20) | 0x10;
 	u.u_r.r_val1 = f[R0];
 	u.u_r.r_val2 = f[R1];
 }

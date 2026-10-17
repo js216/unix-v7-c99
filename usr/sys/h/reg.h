@@ -9,9 +9,6 @@
 #define	R3	(3)
 #define	R4	(4)
 #define	R5	(5)
-#define	R6	(13)
-#define	R7	(15)
+#define	SP	(13)
 #define	PC	(15)
-#define	RPS	(16)
-
-#define	TBIT	020		/* PS trace bit */
+#define	PSR	(16)

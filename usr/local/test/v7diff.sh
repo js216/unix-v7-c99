@@ -25459,7 +25459,7 @@ usr/local
 +	int	xp_sig;		/* signals pending to this process */
 
 % usr/sys/h/reg.h
-@@ -7,9 +7,9 @@
+@@ -7,11 +7,8 @@
 -#define	R1	(-2)
 -#define	R2	(-9)
 -#define	R3	(-8)
@@ -25469,15 +25469,16 @@ usr/local
 -#define	R7	(1)
 -#define	PC	(1)
 -#define	RPS	(2)
+-
+-#define	TBIT	020		/* PS trace bit */
 +#define	R1	(1)
 +#define	R2	(2)
 +#define	R3	(3)
 +#define	R4	(4)
 +#define	R5	(5)
-+#define	R6	(13)
-+#define	R7	(15)
++#define	SP	(13)
 +#define	PC	(15)
-+#define	RPS	(16)
++#define	PSR	(16)
 
 % usr/sys/h/seg.h
 @@ -2 +2 @@
@@ -26368,7 +26369,7 @@ usr/local
 +
 +	n = GICC(0xc);
 +	if((n&0x3ff) == TIMER)
-+		clock((caddr_t)r[PC], r[RPS]);
++		clock((caddr_t)r[PC], r[PSR]);
 +	else
 +		for(ip = intrtab; ip->i_irq; ip++)
 +			if(*ip->i_irq == (int)(n&0x3ff))
@@ -26384,23 +26385,25 @@ usr/local
 +	register unsigned n, m;
 @@ -146 +141,2 @@
 -	n = u.u_ar0[R6] - 4;
-+	m = (RPS+1)*sizeof(int);
-+	n = (u.u_ar0[R6] - m - sizeof(u.u_fps)) & ~7;
-@@ -148,2 +144,6 @@
++	m = (PSR+1)*sizeof(int);
++	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
+@@ -148,5 +144,11 @@
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
+-	u.u_ar0[R6] = n;
+-	u.u_ar0[RPS] &= ~TBIT;
+-	u.u_ar0[R7] = (int)p;
 +	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
 +	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
 +		return;
 +	}
-@@ -151 +151 @@
--	u.u_ar0[RPS] &= ~TBIT;
++	u.u_ar0[SP] = n;
 +	u.u_ar0[14] = UENTRY_SIGTRAMP;
-@@ -152,0 +153,2 @@
++	u.u_ar0[PC] = (int)p;
 +	u.u_ar0[R0] = signo;
-+	u.u_ar0[RPS] &= ~0x0600fe20;
++	u.u_ar0[PSR] &= ~0x0600fe20;
 @@ -155,9 +157,55 @@
 -/*
 - * 11/70 routine to allocate the
@@ -26495,11 +26498,11 @@ usr/local
 +void
 +sigreturn(void)
 +{
-+	int f[RPS+1];
++	int f[PSR+1];
 +	register int i;
 +	register caddr_t a;
 +
-+	a = (caddr_t)u.u_ar0[R6];
++	a = (caddr_t)u.u_ar0[SP];
 +	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
 +	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
@@ -26530,9 +26533,9 @@ usr/local
 -		wakeup((caddr_t)&maplock);
 -	maplock = 0;
 +	u.u_fpsaved = 1;
-+	for(i = 0; i < RPS; i++)
++	for(i = 0; i < PSR; i++)
 +		u.u_ar0[i] = f[i];
-+	u.u_ar0[RPS] = (f[RPS] & 0xfe0ffe20) | 0x10;
++	u.u_ar0[PSR] = (f[PSR] & 0xfe0ffe20) | 0x10;
 +	u.u_r.r_val1 = f[R0];
 +	u.u_r.r_val2 = f[R1];
 +}
@@ -27067,9 +27070,11 @@ usr/local
 @@ -383 +393 @@
 -			if (p == &u.u_ar0[regloc[i]])
 +			if (p == &u.u_ar0[regloc[i]&0377])
-@@ -386,2 +396 @@
+@@ -385,3 +395,2 @@
+-		if (p == &u.u_ar0[RPS]) {
 -			ipc.ip_data |= 0170000;	/* assure user space */
 -			ipc.ip_data &= ~0340;	/* priority 0 */
++		if (p == &u.u_ar0[PSR]) {
 +			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;	/* assure user space */
 @@ -397,3 +405,0 @@
 -	/*  one version causes a trace-trap */
@@ -27330,11 +27335,13 @@ usr/local
 @@ -96 +102 @@
 -	if (getxfile(ip, nc) || u.u_error)
 +	if (getxfile(ip, nc+(na+3)*NBPW) || u.u_error)
-@@ -103,2 +109,2 @@
+@@ -103,3 +109,3 @@
 -	ucp = -nc - NBPW;
 -	ap = ucp - na*NBPW - 3*NBPW;
+-	u.u_ar0[R6] = ap;
 +	ucp = USRSIZE - nc - NBPW;
 +	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
++	u.u_ar0[SP] = ap;
 @@ -144,2 +150,2 @@
 -getxfile(ip, nargc)
 -register struct inode *ip;
@@ -27432,7 +27439,7 @@ usr/local
 -	for(cp = &regloc[0]; cp < &regloc[6];)
 -		u.u_ar0[*cp++] = 0;
 +	for(i = 0; i < PC; i++)
-+		if(i != R6)
++		if(i != SP)
 +			u.u_ar0[i] = 0;
 +	u.u_r.r_val2 = 0;
 @@ -288 +307 @@
@@ -27475,6 +27482,9 @@ usr/local
 @@ -435 +461 @@
 -	mfree(swapmap, ctod(MAXMEM), a);
 +	mfree(swapmap, ptod(u.u_procp->p_size), a);
+@@ -470 +496 @@
+-	u.u_ar0[R7] += NBPW;
++	u.u_ar0[PC] += NBPW;
 @@ -477 +503,2 @@
 -sbreak()
 +void
@@ -29309,6 +29319,9 @@ usr/local
 -#define	USER	020		/* user-mode flag added to dev */
 -#define	MEMORY	((physadr)0177740) /* 11/70 "memory" subsystem */
 +#define	EBIT	0x20000000	/* user error bit in PS: C-bit */
+@@ -21 +15 @@
+-	R0, R1, R2, R3, R4, R5, R6, R7, RPS
++	R0, R1, R2, R3, R4, R5, SP, PC, PSR
 @@ -24,13 +18,2 @@
 -/*
 - * Called from l40.s or l45.s when a processor trap occurs.
@@ -29467,7 +29480,7 @@ usr/local
 -		break;
 +	u.u_ar0 = r;
 +	u.u_error = 0;
-+	r[RPS] &= ~EBIT;
++	r[PSR] &= ~EBIT;
 +	callp = &sysent[r[7] & 077];
 +	for(i = 0; i < callp->sy_narg; i++)
 +		u.u_arg[i] = r[i];
@@ -29524,7 +29537,7 @@ usr/local
 -		printf("Random interrupt ignored\n");
 -		return;
 +	if (u.u_error) {
-+		r[RPS] |= EBIT;
++		r[PSR] |= EBIT;
 +		r[R0] = u.u_error;
 +	} else {
 +		r[R0] = u.u_r.r_val1;
@@ -29546,16 +29559,16 @@ usr/local
 +void
 +user_trap_handler(int signo, int *r, unsigned a)
 +{
-+	if((r[RPS] & 0x1f) != 0x10) {
++	if((r[PSR] & 0x1f) != 0x10) {
 +		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
-+		    signo, r[15], r[RPS], dfar(), dfsr());
++		    signo, r[PC], r[PSR], dfar(), dfsr());
 +		panic("kernel trap");
 +	}
 +	u.u_fpsaved = 0;
 +	u.u_ar0 = r;
-+	if(signo == SIGINS && r[RPS]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
++	if(signo == SIGINS && r[PSR]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
 +		r[PC] += 2;
-+	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
++	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[SP] ||
 +	    grow(a) == 0))
 +		psignal(u.u_procp, signo);
 +	if (issig())

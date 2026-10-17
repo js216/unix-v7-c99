@@ -12,7 +12,7 @@
  */
 char	regloc[9] =
 {
-	R0, R1, R2, R3, R4, R5, R6, R7, RPS
+	R0, R1, R2, R3, R4, R5, SP, PC, PSR
 };
 
 void
@@ -26,7 +26,7 @@ trap(int *r)
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
 	u.u_error = 0;
-	r[RPS] &= ~EBIT;
+	r[PSR] &= ~EBIT;
 	callp = &sysent[r[7] & 077];
 	for(i = 0; i < callp->sy_narg; i++)
 		u.u_arg[i] = r[i];
@@ -41,7 +41,7 @@ trap(int *r)
 		(*callp->sy_call)();
 	}
 	if (u.u_error) {
-		r[RPS] |= EBIT;
+		r[PSR] |= EBIT;
 		r[R0] = u.u_error;
 	} else {
 		r[R0] = u.u_r.r_val1;
@@ -60,16 +60,16 @@ trap(int *r)
 void
 user_trap_handler(int signo, int *r, unsigned a)
 {
-	if((r[RPS] & 0x1f) != 0x10) {
+	if((r[PSR] & 0x1f) != 0x10) {
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
-		    signo, r[15], r[RPS], dfar(), dfsr());
+		    signo, r[PC], r[PSR], dfar(), dfsr());
 		panic("kernel trap");
 	}
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
-	if(signo == SIGINS && r[RPS]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
+	if(signo == SIGINS && r[PSR]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
 		r[PC] += 2;
-	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[R6] ||
+	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[SP] ||
 	    grow(a) == 0))
 		psignal(u.u_procp, signo);
 	if (issig())

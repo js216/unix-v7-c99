@@ -108,7 +108,7 @@ exece(void)
 
 	ucp = USRSIZE - nc - NBPW;
 	ap = (ucp - na*NBPW - 3*NBPW) & ~7;
-	u.u_ar0[R6] = ap;
+	u.u_ar0[SP] = ap;
 	suword((caddr_t)ap, na-ne);
 	nc = 0;
 	for (;;) {
@@ -300,7 +300,7 @@ setregs(void)
 		if((*rp & 1) == 0)
 			*rp = 0;
 	for(i = 0; i < PC; i++)
-		if(i != R6)
+		if(i != SP)
 			u.u_ar0[i] = 0;
 	u.u_r.r_val2 = 0;
 	u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
@@ -493,7 +493,7 @@ fork(void)
 	u.u_r.r_val1 = p2->p_pid;
 
 out:
-	u.u_ar0[R7] += NBPW;
+	u.u_ar0[PC] += NBPW;
 }
 
 /*

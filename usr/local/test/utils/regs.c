@@ -48,7 +48,7 @@ main(int argc, char **argv)
 	ar0 = ptrace(3, pid, (int *)off, 0);
 	off = ar0 - UBASE;
 	for (i = 0; i < PC; i++) {
-		if (i == R6)
+		if (i == SP)
 			continue;
 		r = ptrace(3, pid, (int *)(off + i*4), 0);
 		if (r != 0)
