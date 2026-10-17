@@ -83,7 +83,7 @@ registers that have counterparts: `r6` was the stack pointer, so `R6` is
 
 Note that `R7` is the PDP-11 `r7`, that is the PC, not the ARM `r7`. The
 ARM registers `r6` to `r12` and `lr` have no names here; code which
-needs one writes the index, as `trap` (#f("sysent.c")) does with `r[7]`,
+needs one writes the index, as `trap` (#f("trap.c")) does with `r[7]`,
 the register which holds the system call number.
 
 `TBIT` (17), the PDP-11 trace bit, is kept from v7, though nothing uses
@@ -121,7 +121,7 @@ configuration (#f("param.h")), and the table is defined with it in
 later, and, new in this port, `addupc`, the profiling routine.
 
 `addupc`, which `clock` calls before its definition at the end of the
-file, is declared in #f("systm.h"), since `trap` (#f("sysent.c")) calls
+file, is declared in #f("systm.h"), since `trap` (#f("trap.c")) calls
 it too. In v7 it was an assembly routine in `mch.s`.
 
 `SCHMAG` (10) is a fraction written as a bare macro: since `x*SCHMAG`
@@ -661,7 +661,7 @@ general register but the stack pointer `r6` and the `pc` `r7`. The port
 clears every general register of the ARM in the same way, `r0` to `r12`
 and `lr`, all but the stack pointer, which is already set for the new
 program, and the `pc`, which is set next; the new program inherits
-nothing from the old. When the call returns, `trap` (#f("sysent.c"))
+nothing from the old. When the call returns, `trap` (#f("trap.c"))
 puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
 zero, but the second is the caller's `r1`, the old program's argument
 pointer, so it is cleared too (305). The `pc` is set to the entry point
@@ -674,7 +674,7 @@ program here begins.
 The floating point save area is cleared (307, 308): all 32 registers
 become zero, and `FPSCR` zero selects rounding to nearest, with no
 exception flags. `u_fpsaved` is set (309), so that the return to user
-mode loads the cleared state (#f("sysent.c")). In v7 it was set only if
+mode loads the cleared state (#f("trap.c")). In v7 it was set only if
 `exec` had happened to sleep, so that `swtch` stored the registers;
 otherwise the cleared area was never loaded, and the new program began
 with the old one's floating point registers. Files marked close-on-exec are
@@ -924,7 +924,7 @@ header, so the two agree.
 which is built on them. A signal is sent by setting a bit in the
 receiving process's `p_sig` (`psignal`); nothing else happens to the
 receiver until it next passes through `trap` or `user_trap_handler`
-(#f("sysent.c")), or wakes from an interruptible `sleep`
+(#f("trap.c")), or wakes from an interruptible `sleep`
 (#f("slp.c")). There it asks `issig` whether a signal is pending and, if
 so, calls `psig` to take the action. A process thus always acts on a
 signal itself, and only on its way back to user mode.
@@ -1050,7 +1050,7 @@ and the line is deleted.
 
 `grow` extends the stack downward, so that it includes the address
 `sp`. A reference below the stack is a fault, and `user_trap_handler`
-(#f("sysent.c")) and `sendsig` (#f("machdep.c")) call `grow` to enlarge
+(#f("trap.c")) and `sendsig` (#f("machdep.c")) call `grow` to enlarge
 the stack, moving it in core with `copyseg`; the faulting instruction is
 then executed again.
 
@@ -2251,7 +2251,7 @@ than in #f("systm.h").
 #lines(1, 26)
 
 `rdwr` serves both `read` and `write`. The arguments are reached, as in
-every v7 system call, through `u.u_ap`, which `trap` (#f("sysent.c"))
+every v7 system call, through `u.u_ap`, which `trap` (#f("trap.c"))
 points at `u.u_arg`, into which it has copied the caller's arguments
 from r0 upward; the local structure `a` gives them names.
 
@@ -2910,7 +2910,7 @@ descriptor onto itself does nothing (122).
 
 `smount` mounts the block device named by the first argument on the
 file named by the second. `getmdev` checks the first; `u.u_dirp`, which
-`trap` (#f("sysent.c")) set to the first argument, is then pointed at
+`trap` (#f("trap.c")) set to the first argument, is then pointed at
 the second for `namei`. The file mounted on must be in use by no one
 else, so that no process has it open or as its current directory, and
 must not be special. Nothing requires it to be a directory, though
@@ -3261,7 +3261,7 @@ block for every access.
 `pipe` allocates the inode and two `file`s. Each `falloc` leaves its
 descriptor in `u.u_r.r_val1`, so the first is saved in `r`; at the end
 the read descriptor is returned in r0 and the write descriptor in r1,
-by way of `r_val2`, which `trap` (#f("sysent.c")) copies to the caller's
+by way of `r_val2`, which `trap` (#f("trap.c")) copies to the caller's
 r1. The C library's `pipe` stores the two in the caller's array.
 
 The inode is returned by `ialloc` locked, but no `prele` follows: the
@@ -5348,6 +5348,21 @@ the signal trampoline at 8 (`sendsig`, #f("machdep.c")), so no object of the pro
 lie at address 0, and the padding is gone.
 
 #lines(13, 13)
+#source("/usr/src/libc/gen/cuexit.c")
+
+`exit` flushes the program's output streams, through `_cleanup`
+(#f("stdio/flsbuf.c")), and ends the process with `_exit`, the system
+call. v7's was a few lines of assembler which did the same; here C does.
+
+#lines(1, 8)
+#source("/usr/src/libc/gen/abort.c")
+
+`abort` ends the program with a core image by sending itself `SIGIOT`.
+v7 executed the PDP-11's `iot` instruction, whose trap the kernel turned
+into that signal; the ARM has no such instruction, and `kill` reaches
+the same end.
+
+#lines(1, 8)
 #source("/usr/src/libc/syscall.s")
 
 This short routine is where every system call made by a C program
@@ -5369,7 +5384,7 @@ contained. The name `cerror` is v7's; its job has grown.
 On the PDP-11 a system call was the instruction `sys n`, a trap whose
 low bits held the call number. Arguments came partly in `r0` and partly
 in the words following the instruction, which the kernel fetched from
-user space and stepped over (#f("sysent.c")). The kernel reported failure
+user space and stepped over (#f("trap.c")). The kernel reported failure
 by setting the carry bit in the saved processor status, with the error
 number in `r0`. Each stub therefore tested the carry with `bec`
 (branch if carry clear) after the trap and, on an error, jumped to
@@ -5378,7 +5393,7 @@ number in `r0`. Each stub therefore tested the carry with `bec`
 
 The ARM has `svc`, which takes an exception to the kernel's `svc_entry`
 (#f("low.s")); there the user registers and status are saved, and `trap`
-(#f("sysent.c")) is called with a pointer to them. The 24-bit immediate
+(#f("trap.c")) is called with a pointer to them. The 24-bit immediate
 field of `svc` is ignored. The call number is taken from `r7`, the
 convention of ARM Linux, and the arguments from `r0` upwards. These are
 exactly the registers in which the ARM procedure call standard passes a
@@ -5523,6 +5538,124 @@ code, and `sendsig` and `sigreturn` (#f("machdep.c")) take care of a
 signal which interrupts one of them.
 
 #lines(1, 4)
+#source("/usr/src/libc/sys/fork.s")
+
+`fork` is the one stub which makes its call itself, since the kernel
+returns from it to two places (#f("sys1.c")): the child resumes at the
+instruction after the `svc`, the branch to 1 (6), and the parent one
+instruction further on (7), where the carry bit tells it whether the
+call failed. Each gets the other's process id in `r0`. The parent
+returns it; the child stores it in `par_uid`, as v7's did, and returns
+0. The register `r7` is saved and restored as in `cerror`
+(#f("libc/syscall.s")), on both paths.
+
+#lines(1, 19)
+#source("/usr/src/libc/sys/pipe.s")
+
+`pipe` gets two descriptors back, in `r0` and `r1`, and must store them
+into the array whose address the caller passed in `r0`. The stub saves
+that address and its return address on the stack and calls `cerror`
+with `bl`, so that `cerror` returns here (3--5). If the carry is set,
+`cerror` has already stored the error and loaded $-1$, and the stub
+returns that (7); otherwise it stores the two descriptors and returns
+0 (8--10). `wait` and `time` are made the same way.
+
+#lines(1, 10)
+#source("/usr/src/libc/sys/wait.s")
+
+`wait` returns the id of a child that has exited, and, if the caller
+gave a pointer, stores the child's status, which the kernel returns in
+`r1`, through it (8--9).
+
+#lines(1, 10)
+#source("/usr/src/libc/sys/execl.s")
+
+`execl(file, arg0, arg1, ..., 0)` passes its arguments to `exece` as an
+array, with the environment. The array is already almost in memory: by
+the procedure call standard `arg0` to `arg2` arrive in `r1` to `r3`, and
+any further arguments on the stack, in order, just above the stack
+pointer. Pushing `r1` to `r3` (3) puts the first three directly below
+the rest, so that the stack pointer is then the address of the whole
+list, which becomes the second argument (4); `environ` is the third
+(5--6). The call returns only if it fails, when the stub pops the three
+words and returns $-1$. v7's built the same list from its stack frame.
+
+#lines(1, 12)
+#source("/usr/src/libc/sys/execv.s")
+
+`execv(file, argv)` already has its file and argument list in `r0` and
+`r1`; the stub adds `environ` as the third argument (3--4) and makes the
+call `exece`, 59, through `cerror`.
+
+#lines(1, 6)
+#source("/usr/src/libc/sys/dup.s")
+
+`dup` duplicates a descriptor. `dup2(f, nf)` makes `nf` a copy of `f`;
+it is the same call, `dup`, with the bit `0100` set in the first
+argument to say that the second is given (4), which the kernel tests
+(#f("sys3.c")). v7's stub set the bit the same way.
+
+#lines(1, 7)
+#source("/usr/src/libc/sys/lseek.s")
+
+`lseek` is a plain stub: its three arguments, a descriptor, a `long`
+offset, and the origin, arrive in `r0` to `r2`, where the kernel takes
+them. On the PDP-11 the `long` took two words, and v7's stub had to
+place three words after its `sys` instruction.
+
+#lines(1, 4)
+#source("/usr/src/libc/sys/ptrace.s")
+
+`ptrace(req, pid, addr, data)` lets a parent read and write a stopped
+child's memory and registers. The kernel takes the data word in `r0`
+and the request last, as v7's PDP-11 call did, so the stub exchanges
+`r0` and `r3` through `ip` (3--5) before the call. v7's stub also
+cleared `errno` first, so that a caller reading a word could tell a
+word of $-1$ from a failure by testing `errno`; the port's does not, so
+such a caller must clear `errno` itself.
+
+#lines(1, 7)
+#source("/usr/src/libc/sys/sbrk.s")
+
+`brk` sets the end of the program's data, the break, to an address,
+and `sbrk` moves it by an amount and returns the old end, the start of
+the new space. The library keeps the break in `nd`, starting at `end`,
+the end of the program's uninitialised data, which the linker defines.
+`sbrk` now first rounds the old break up to a multiple of eight bytes
+(5--6), so that the space it returns is aligned for any type, as the
+ARM's `double`s and the `ldrd` and `strd` instructions require; the
+PDP-11 needed no more than an even address. `brk` records the new break
+only if the call succeeded (18--19).
+
+#lines(1, 23)
+#source("/usr/src/libc/sys/time.s")
+
+`time` returns the time as the port's 64-bit `time_t`, which the kernel
+returns in `r0` and `r1` together (#f("sys4.c")); the procedure call
+standard returns a `long long` in that pair, so the stub need not move
+it. If the caller passed a pointer, both words are stored through it
+(7--8). `ftime` is a plain stub.
+
+#lines(1, 12)
+#source("/usr/src/libc/sys/stime.s")
+
+`stime(tp)` sets the time, for the super-user only (#f("sys4.c")). The
+caller passes a pointer to a 64-bit `time_t`; the stub loads both words
+into `r0` and `r1` (4), where the kernel takes the argument.
+
+#lines(1, 6)
+#source("/usr/src/libc/sys/getuid.s")
+
+The kernel's `getuid` returns the real user id in `r0` and the
+effective one in `r1` (#f("sys4.c")). `getuid` returns the first;
+`geteuid` makes the same call and returns the second (5--9).
+
+#lines(1, 9)
+#source("/usr/src/libc/sys/getgid.s")
+
+`getgid` and `getegid` are made in the same way for the group ids.
+
+#lines(1, 9)
 #source("/usr/src/cmd/init.c")
 
 `init` is process 1. `main` (#f("main.c")) makes it with `newproc`,
@@ -6026,6 +6159,59 @@ read as an entry of its own; a password file has no such lines.
 
 == Reading Commands <ch-reading>
 
+#source("/usr/src/libc/stdio/getpwuid.c")
+
+`getpwuid` finds a user's entry in the password file by id, reading
+it through `getpwent` from the start and closing it again, so that each
+call is independent; `getpwnam`, which finds it by name, is the same
+loop with `strcmp`. The entry returned is
+`getpwent`'s static one, overwritten by the next call. Apart from
+prototypes both are v7's.
+
+#lines(1, 12)
+#source("/usr/src/libc/stdio/getgrent.c")
+
+`getgrent` reads `/etc/group` an entry at a time, as `getpwent` reads
+the password file: the line is cut at its colons by `grskip`, which
+replaces each separator with a null, and the members, separated by
+commas, become a null-terminated array of pointers into the line.
+`setgrent` rewinds the file and `endgrent` closes it. Apart from
+prototypes it is v7's.
+
+#lines(1, 63)
+#source("/usr/src/libc/stdio/getgrgid.c")
+
+`getgrgid` and `getgrnam` find a group by id or by name, as
+`getpwuid` finds a user.
+
+#lines(1, 12)
+#source("/usr/src/libc/stdio/getgrnam.c")
+
+`getgrnam` searches by name, again with `strcmp`.
+
+#lines(1, 13)
+#source("/usr/src/libc/stdio/getpw.c")
+
+`getpw`, the older interface, copies into the caller's buffer the
+whole line of the password file for a user id, and returns 0 if it
+found one. It now stores at most `BUFSIZ` bytes of a line (21--22), and
+moves on to the next line when one has too few fields (29--33): the
+line has had its newline replaced by a null (24), but v7 then tested
+for a newline, and on a short line read on past the null into the rest
+of the buffer. The id now stops growing before it overflows (36--37).
+
+#lines(1, 43)
+#source("/usr/src/libc/gen/getlogin.c")
+
+`getlogin` returns the name under which the user logged in on the
+terminal of the process, from the entry of `/etc/utmp` that `ttyslot`
+gives for it, or 0 if there is none. The name field has eight bytes and
+no null when full; v7 ended it by writing a blank into its ninth byte,
+which is the first of the next field, then searched for that blank. It
+now copies the name into an array of its own with room for the ninth
+byte (6, 22--26).
+
+#lines(1, 28)
 #source("/usr/src/cmd/sh/defs.h")
 
 The shell is an ordinary user program, `/bin/sh`, but it is the one
@@ -8497,6 +8683,107 @@ mask to `char` makes it 0 before the `&=`, which states the same effect
 without the conversion, and keeps v7's `&=`.
 
 #lines(86, 107)
+#source("/usr/src/libc/stdio/data.c")
+
+`data.c` defines the table of streams, `_iob`, with its first three
+entries set up: the standard input with the static buffer `_sibuf`,
+the standard output, given `_sobuf` when it is first written if it is
+not a terminal (#f("stdio/flsbuf.c")), and the standard error,
+unbuffered. `_lastbuf` marks the end of the table. The file is v7's.
+
+#lines(1, 13)
+#source("/usr/src/libc/stdio/findiop.c")
+
+`_findiop` finds a free entry in `_iob` for `fopen` and `fdopen`, one
+which is neither reading nor writing, or returns null when all
+`_NFILE` are in use. It is v7's, with a prototype.
+
+#lines(1, 14)
+#source("/usr/src/libc/stdio/rdwr.c")
+
+`fread` and `fwrite` move `count` items of `size` bytes, a byte at a
+time through `getc` and `putc`, and return the number of whole items
+moved. They are v7's, with prototypes.
+
+#lines(1, 40)
+#source("/usr/src/libc/stdio/getchar.c")
+
+`getchar` is a macro in `<stdio.h>`; this file defines it also as a
+function, for a program that takes its address or undefines the macro.
+`putchar`, `fgetc`, and `fputc` do the same for their macros. The
+function `putchar` now returns nothing, as it was always used.
+
+#lines(1, 13)
+#source("/usr/src/libc/stdio/putchar.c")
+
+`putchar` writes a character on the standard output through `putc`.
+
+#lines(1, 13)
+#source("/usr/src/libc/stdio/fgetc.c")
+
+`fgetc` is `getc` as a function.
+
+#lines(1, 7)
+#source("/usr/src/libc/stdio/fputc.c")
+
+`fputc` is `putc` as a function.
+
+#lines(1, 7)
+#source("/usr/src/libc/stdio/gets.c")
+
+`gets` reads a line from the standard input into the caller's array,
+replacing the newline with a null. Nothing tells it how big the array
+is, so a long line overruns it; `fgets` (#f("stdio/fgets.c")), which
+takes the size, is the safe form. The function is v7's.
+
+#lines(1, 16)
+#source("/usr/src/libc/stdio/puts.c")
+
+`puts` writes a string and a newline on the standard output.
+
+#lines(1, 11)
+#source("/usr/src/libc/stdio/fputs.c")
+
+`fputs` writes a string, without a newline, on a stream, and returns
+what the last `putc` returned. The result is now initialised (6), so
+that an empty string returns 0, where v7 returned whatever the register
+held.
+
+#lines(1, 12)
+#source("/usr/src/libc/stdio/getw.c")
+
+`getw` and `putw` read and write an `int` as binary, least significant
+byte first. An `int` is now four bytes (11--13), where the PDP-11's
+was two; `getw` returns $-1$ at end of file, which a stored $-1$ cannot
+be told from without `feof`.
+
+#lines(1, 14)
+#source("/usr/src/libc/stdio/putw.c")
+
+`putw` writes the four bytes of an `int` (6--9).
+
+#lines(1, 10)
+#source("/usr/src/libc/stdio/strout.c")
+
+`_strout` writes a field for `_doprnt` (#f("stdio/doprnt.c")): `count`
+characters of `string`, padded with `fillch` to the left when `adjust`
+is negative and to the right when positive; with zeros, a leading minus
+sign is written before the padding. It is v7's, with a prototype.
+
+#lines(1, 21)
+#source("/usr/src/libc/stdio/clrerr.c")
+
+`clearerr` clears a stream's error and end-of-file flags.
+
+#lines(1, 7)
+#source("/usr/src/libc/stdio/rew.c")
+
+`rewind` returns a stream to the start of its file, flushing any
+output and discarding any input buffered, and clearing the flags; a
+stream open for both reading and writing may then do either. It is
+v7's, with a prototype.
+
+#lines(1, 13)
 #source("/usr/src/libc/stdio/fopen.c")
 
 `fopen` opens the named file as a stream. It is split in two: `_findiop`
@@ -8560,6 +8847,14 @@ them. v7's local declaration of `_findiop` is gone, #f("stdio.h") now
 declaring it.
 
 #lines(1, 43)
+#source("/usr/src/libc/stdio/freopen.c")
+
+`freopen` closes a stream and opens a file on the same entry of
+`_iob`, through `_endopen` (#f("stdio/endopen.c")); it is how a program
+attaches its standard input or output to a named file. It is v7's,
+with a prototype.
+
+#lines(1, 8)
 #source("/usr/src/libc/stdio/setbuf.c")
 
 `setbuf` gives a stream a buffer of the caller's, which must hold
@@ -9058,6 +9353,14 @@ caller's argument against it.
 The debugging routine `allock` follows.
 
 #lines(138, 189)
+#source("/usr/src/libc/gen/calloc.c")
+
+`calloc` allocates space for `num` items of `size` bytes with `malloc`
+and clears it, an `int` at a time; `cfree` frees it. The size arguments
+of `cfree` are now named and unused (28--29), where v7 left them out of
+the parameter list. Otherwise it is v7's.
+
+#lines(1, 31)
 #source("/usr/src/libc/gen/ctime.c")
 
 The system keeps time as a single `time_t`, the number of seconds since
@@ -9190,6 +9493,15 @@ the first condition, which agrees with the full rule from 1901 to 2099.
 The doubled parentheses in the copy loop (195) are those of #f("malloc.c").
 
 #lines(187, 236)
+#source("/usr/src/libc/gen/timezone.c")
+
+`timezone` names a time zone given its offset west of Greenwich in
+minutes and whether summer time is in effect, for `ctime`'s callers
+such as `date`: the zones of North America by their letters, otherwise
+in the form `GMT+h:mm`. The entries of the table are now braced
+(16--22), as C99 asks.
+
+#lines(1, 45)
 #source("/usr/src/libc/gen/atof.c")
 
 `atof` converts a decimal number in characters, with an optional sign,
@@ -9239,6 +9551,19 @@ had no infinities, and this case could not arise. The local declaration
 of `ldexp` has gone, `math.h` now declaring it with a prototype.
 
 #lines(73, 97)
+#source("/usr/src/libc/gen/atoi.c")
+
+`atoi` and `atol` convert a decimal string, with optional blanks and
+sign, to an `int` or a `long`. The value is now accumulated unsigned
+(5), so that too many digits wrap instead of overflowing, which C leaves
+undefined for signed numbers.
+
+#lines(1, 26)
+#source("/usr/src/libc/gen/atol.c")
+
+`atol` is `atoi` for a `long`, likewise accumulated unsigned (5).
+
+#lines(1, 26)
 #source("/usr/src/libc/gen/ecvt.c")
 
 `ecvt` and `fcvt` convert a `double` to a string of decimal digits,
@@ -9309,6 +9634,38 @@ right, and in `fcvt`'s case adds a digit at the end. The rounding digit
 itself is then cut off by the null character.
 
 #lines(86, 104)
+#source("/usr/src/libc/gen/frexp.c")
+
+`frexp` splits a number into a fraction between one half and one and a
+power of two. v7's was four instructions of the PDP-11's floating-point
+unit; the ARM's has nothing like them, so the port takes the IEEE double
+apart. Its high word, on this little-endian machine the second, holds
+the sign, an 11-bit exponent biased by 1023, and the top 20 bits of the
+fraction. `frexp` reads the exponent (15) and replaces it by 1022, the
+exponent of a number in $[1/2, 1)$ (16). A denormal number, with an
+exponent field of zero, is first scaled by $2^54$ to make it normal
+(11--14).
+
+#lines(1, 18)
+#source("/usr/src/libc/gen/ldexp.c")
+
+`ldexp` multiplies a number by a power of two. The port builds the
+power as a double directly, with the exponent field set and the
+fraction zero (10--13), and multiplies; a power beyond the range of a
+double is applied in steps of at most $2^1000$ (11--12). A result which
+overflows is replaced by the largest double of the right sign, and
+`errno` set to `ERANGE` (16--19), as v7's did.
+
+#lines(1, 21)
+#source("/usr/src/libc/gen/modf.c")
+
+`modf` splits a number into its integer and fractional parts, both
+with the number's sign. The port clears the bits of the fraction which
+lie below the binary point, given by the exponent (9--17): all of them
+for a number below one, none for a number of 52 or more bits; the
+fractional part is the difference (19).
+
+#lines(1, 20)
 #source("/usr/src/libc/gen/qsort.c")
 
 `qsort` sorts an array of `n` elements of `es` bytes each, in place,
@@ -9526,6 +9883,17 @@ pointers to functions returning `int`. The `execl` (11) ends with
 `(char *)0`, as in #f("cmd/getty.c").
 
 #lines(1, 23)
+#source("/usr/src/libc/gen/sleep.c")
+
+`sleep` suspends the process for a number of seconds with `alarm` and
+`pause`, keeping any alarm the caller had set: if that alarm is due
+first, `sleep` ends then, and otherwise it sets the caller's alarm again
+for what remains. The handler leaves through `longjmp` back into
+`sleep`. The variables which change between `setjmp` and `longjmp` are
+now `volatile` (9--12), since C promises their values after the jump
+only then; on the PDP-11 v7's compiler kept them in memory anyway.
+
+#lines(1, 42)
 #source("/usr/src/libc/gen/execvp.c")
 
 `execvp` and `execlp` are `execv` and `execl` with the search which the
@@ -9705,6 +10073,30 @@ v7's declarations of `strcpy` and `strcat`.
 
 #lines(1, 48)
 
+#source("/usr/src/libc/gen/isatty.c")
+
+`isatty` says whether a descriptor is a terminal, by asking for its
+modes with `gtty`, which fails for anything else. It is v7's, with a
+prototype.
+
+#lines(1, 16)
+#source("/usr/src/libc/gen/stty.c")
+
+`stty` and `gtty` set and get a terminal's modes. They were system
+calls of the sixth edition; v7 made them library routines over `ioctl`,
+which this file keeps. The parameter is now the `struct sgttyb` of
+`<sgtty.h>` (9, 15), where v7 named a structure that did not exist.
+
+#lines(1, 18)
+#source("/usr/src/libc/gen/ttyslot.c")
+
+`ttyslot` gives the slot in `/etc/utmp` of the terminal of the process,
+the number of its line in `/etc/ttys`, from the name `ttyname` finds for
+the standard input, output, or error. `getttys` reads a line of
+`/etc/ttys` and returns the name after its two leading characters,
+which are flags for `init`. It is v7's, with prototypes.
+
+#lines(1, 58)
 #source("/usr/src/libc/gen/nlist.c")
 
 `nlist` looks up names in the symbol table of an executable file, for
@@ -9756,6 +10148,12 @@ declaration of `lseek` is gone, since #f("stdio.h") declares it.
 
 #lines(1, 46)
 
+#source("/usr/src/libc/gen/tell.c")
+
+`tell` returns the current offset of a descriptor, by an `lseek` that
+moves nowhere. It is v7's, with a prototype.
+
+#lines(1, 10)
 #source("/usr/src/libm/sqrt.c")
 
 `sqrt` takes the square root by Newton's method. `frexp` splits the
@@ -9913,6 +10311,78 @@ copies `s2` there.
 
 #lines(1, 19)
 
+#source("/usr/src/libc/gen/strncmp.c")
+
+`strncmp`, `strncpy`, and `strncat` are the forms of `strcmp`,
+`strcpy`, and `strcat` limited to `n` characters. `strncmp` now
+compares the differing bytes as unsigned (13), as `strcmp` does, so
+that the order does not depend on the signedness of `char`.
+
+#lines(1, 14)
+#source("/usr/src/libc/gen/strncpy.c")
+
+`strncpy` copies at most `n` characters and pads the rest of the `n`
+with nulls; when the source is `n` long or longer the result has no
+null at all, which is the form of the fixed fields of directory
+entries and of `utmp`. It is v7's, with a prototype.
+
+#lines(1, 21)
+#source("/usr/src/libc/gen/strncat.c")
+
+`strncat` appends at most `n` characters and always a null. It is v7's,
+with a prototype.
+
+#lines(1, 23)
+#source("/usr/src/libc/gen/index.c")
+
+`index` returns a pointer to the first occurrence of a character in a
+string, or null; the null that ends the string counts, so that
+`index(s, 0)` finds the end. `rindex` returns the last occurrence. Both
+are v7's, with prototypes.
+
+#lines(1, 17)
+#source("/usr/src/libc/gen/rindex.c")
+
+`rindex` scans the whole string, remembering the last match (14--18).
+
+#lines(1, 20)
+#source("/usr/src/libc/memcpy.c")
+
+`memcpy` and `memset` copy and fill memory a byte at a time. They have
+no v7 original: the compiler may call them for itself, to copy a
+structure or clear a large local array, even in code that asks for no
+library (#f("libc/lib.mk")), so the library must have them. They are
+written as plain loops.
+
+#lines(1, 23)
+#source("/usr/src/libc/gen/swab.c")
+
+`swab` swaps the bytes of each pair, for moving 16-bit data between
+machines of the two byte orders, as `tp` and `dd` do. v7 swapped through
+`int` pointers, an `int` being 16 bits; it now works on bytes (12--17),
+since the port's `int` is 32 bits, and the pairs must stay 16 bits.
+
+#lines(1, 18)
+#source("/usr/src/libc/gen/ctype_.c")
+
+`_ctype_` classifies characters for the macros of `<ctype.h>`: each
+entry holds bits for upper and lower case, digit, space, punctuation,
+control, and hexadecimal digit. The first entry is for `EOF`, and the
+macros index from the second. The table now has room for 256
+characters (3), since the macros now mask their argument to a byte; the
+entries beyond 127 are zero, so that no character with the top bit set
+belongs to any class. v7's table stopped at 127, and a negative `char`
+indexed before it.
+
+#lines(1, 21)
+#source("/usr/src/libc/gen/rand.c")
+
+`rand` is a linear congruential generator, returning 15 bits of the
+state; `srand` sets the state. The state is now an `unsigned long`
+(2), so that the multiplication wraps, which C promises only for
+unsigned numbers; the sequence is v7's.
+
+#lines(1, 14)
 #source("/usr/src/libc/stdio/fgets.c")
 
 `fgets` reads characters into `s` until a newline, which it keeps, or
@@ -10088,6 +10558,82 @@ zero, and moves a negative number with a fraction down by one. `ceil` is
 
 == Classic Programs <ch-classic>
 
+#source("/usr/src/libm/fabs.c")
+
+`fabs` returns the absolute value of a double. It is v7's, with a
+prototype.
+
+#lines(1, 9)
+#source("/usr/src/libm/asin.c")
+
+`asin` and `acos` are computed from `atan` (#f("libm/atan.c")) and
+`sqrt`: $"asin" x = "atan"(x / sqrt(1 - x^2))$, with the complementary
+form near 1 where that quotient loses accuracy (29--32). An argument
+outside $[-1, 1]$ sets `errno` to `EDOM`. Apart from prototypes and
+`<math.h>` for the declarations the file is v7's.
+
+#lines(1, 46)
+#source("/usr/src/libm/tan.c")
+
+`tan` reduces its argument to an octant by multiplying by $4/pi$ and
+taking the fraction with `modf`, then evaluates a rational
+approximation from Hart and Cheney's collection, the source of most of
+the library's coefficients; in two octants it returns the reciprocal,
+and `HUGE` with `ERANGE` where the tangent is infinite. v7's file
+defined `errno` again; it now uses the library's one definition
+(#f("libc/syscall.s")), whose reason the commentary there gives.
+
+#lines(1, 70)
+#source("/usr/src/libm/sinh.c")
+
+`sinh` uses a rational approximation for small arguments, where the
+difference of exponentials would lose accuracy, and `exp` beyond; for
+arguments above 21 the smaller exponential no longer matters and the
+larger is halved alone. `cosh` uses `exp` throughout. Apart from
+prototypes the file is v7's.
+
+#lines(1, 65)
+#source("/usr/src/libm/tanh.c")
+
+`tanh` is `sinh` over `cosh`, except above 21, where it is $plus.minus 1$
+to the precision of a double and the quotients would overflow. It is
+v7's, with a prototype.
+
+#lines(1, 26)
+#source("/usr/src/libm/hypot.c")
+
+`hypot` computes $sqrt(a^2 + b^2)$ without overflowing for large
+arguments, by dividing by the larger first. `cabs`, the absolute value
+of a complex number, calls it. Apart from prototypes the file is v7's.
+
+#lines(1, 39)
+#source("/usr/src/libm/j0.c")
+
+`j0` and `y0` are the Bessel functions of order zero of the first and
+second kinds. Below 8 each is a rational approximation in $x^2$, `y0`
+adding a multiple of $J_0(x) log x$; above, `asympt` computes the two
+amplitude functions of the asymptotic form, and the result is their
+combination with a sine and a cosine. The coefficients are from Hart
+and Cheney. v7 defined `errno` here too, as in `tan`, and `j1` and `jn` did the
+same.
+
+#lines(1, 185)
+#source("/usr/src/libm/j1.c")
+
+`j1` and `y1` are the Bessel functions of order one, built in the same
+way as `j0` and `y0`.
+
+#lines(1, 191)
+#source("/usr/src/libm/jn.c")
+
+`jn` and `yn` give the Bessel functions of any integer order. `yn` and,
+for an order below the argument, `jn` recur forwards from the functions
+of orders 0 and 1. Forward recurrence is unstable for `jn` when the
+order exceeds the argument, so it then evaluates a continued fraction
+for the ratio of consecutive orders and recurs backwards, scaling the
+result by `j0` (61--75). Apart from prototypes the file is v7's.
+
+#lines(1, 104)
 #source("/usr/src/cmd/ed.c")
 
 `ed` is the editor of v7, and the program in this book in which its
@@ -12389,6 +12935,19 @@ relied on the structure's layout.
 
 == Text Tools <ch-text>
 
+#source("/usr/src/cmd/arcv.c")
+
+`arcv` converts archives of the sixth edition, whose magic number was
+`0177555`, to v7's format, `ARMAG` in `<ar.h>`, in place through a
+temporary file: each old member header, a name, a date, the owner, the
+mode, and a 16-bit size, becomes a new `ar_hdr`. The old archive was a
+PDP-11 file, so its fields are read in that machine's layout: the magic
+as two bytes (61), the size as an `unsigned short` (18), and the date
+as a `long` whose two halves the PDP-11 stored the more significant
+first, which are now exchanged (80). The temporary file's name is now
+an array (21), into which `mktemp` writes.
+
+#lines(1, 99)
 #source("/usr/src/cmd/sort.c")
 
 `sort` sorts lines, or merges files already sorted (`-m`), or checks
@@ -12758,6 +13317,18 @@ name for each further line.
 
 #lines(1, 85)
 
+#source("/usr/src/cmd/random.c")
+
+`random` copies each line of its input with probability $1/n$, $n$
+being the argument, 2 by default, and exits with a random number below
+$n$, which a shell script can test; `-e` only sets the exit status, and
+`-r` leaves the output unbuffered. The lines are now copied a character
+at a time (26--30), where v7 read each with `gets` into a fixed buffer;
+and the exit status is now computed only when $n$ fits in an `int`
+(32), since converting a larger number is undefined. The seed is taken
+from the 64-bit time (9, 19--20).
+
+#lines(1, 33)
 #source("/usr/src/cmd/sum.c")
 
 `sum` prints a 16-bit checksum of each file and its size in blocks of
@@ -12871,6 +13442,129 @@ before `line` (456--457).
 
 #lines(1, 510)
 
+#source("/usr/src/cmd/checkeq.c")
+
+`checkeq` checks text for `eqn`: unbalanced `.EQ` and `.EN` lines,
+delimiters set with `delim` and left unclosed, and equations spread
+over several lines, which are reported with their line numbers. It is
+v7's, with prototypes.
+
+#lines(1, 101)
+#source("/usr/src/cmd/cb.c")
+
+`cb`, the C beautifier, reads C on its input and writes it indented by
+its nesting, one statement to a line, with `else` and `case` placed
+conventionally; comments and strings are copied as they are. It works
+on characters, not on a parse of the language, keeping the depths of
+braces, parentheses, and `if`s in small arrays and the text of the
+current statement in `string`.
+
+The arrays of levels now have 20 entries, and `string` 1000 bytes
+(6--36), where v7 had 10 and 200, and each is now checked: nesting
+deeper, or a statement longer, now stops `cb` with a message
+(`toodeep`, 81, 253, 276), where v7 wrote past the arrays; and a closing
+brace without an opening one no longer makes the level negative (104).
+End of input now writes what is pending and stops (279--282), where the
+loops which skip to a semicolon or parenthesis went on reading `EOF`
+for ever. `puts` and `gets`, the program's own, are renamed by the
+preprocessor (2--3), since `<stdio.h>` declares the library's.
+
+#lines(1, 389)
+#source("/usr/src/cmd/sp.c")
+
+`sp` saves paper by printing short lines several to a line, each
+starting at a tab stop, as long as they fit in the width given, 80 by
+default. `getit` reads a line, measuring it with its tabs expanded both
+where it began and where it would go. It now stops at the end of its
+256-byte buffer (16), treating a longer line as ending there, where v7
+read on past it. The absolute value of a negative width is now taken
+unsigned (56), so that the most negative `int` does not overflow.
+
+#lines(1, 82)
+#source("/usr/src/cmd/vpr.c")
+
+`vpr` printed files on a Versatec electrostatic printer through
+`/dev/vp0`, with an optional banner of large letters, and charged the
+pages to `/usr/adm/vpacct`. The port has no such printer or driver, so
+`vpr` stops at once with "Can't open printer"; it is kept as part of
+v7. Overstruck characters, which the printer could not print, are
+gathered into a second line printed over the first. The banner's
+letters come from `chrtab`, sixteen bytes of dots per character. v7
+declared it as an array of 16-byte rows whose size was given only by
+the later definition, which C does not allow; it is now a flat array of
+`unsigned char`, indexed by character and row (24, 222, 238). The time
+of the banner is a `long long` (211).
+
+#lines(1, 335)
+#source("/usr/src/cmd/tk.c")
+
+`tk` shows text, such as the output of `nroff`, on a Tektronix 4014
+storage-tube terminal, in one column or several across the screen.
+Each character is placed by the terminal's graphics mode, `sendpt`
+sending only the parts of the address that changed, and the
+reverse and half-line motions of `nroff` are honoured. When the screen
+is full `tk` waits for a newline from `/dev/tty`; `!` there runs a
+shell command. Apart from prototypes and a signal handler's argument it
+is v7's; the shell it runs on `!` now ends the child if it cannot be
+executed (226), where v7's child went on running `tk`.
+
+#lines(1, 255)
+#source("/usr/src/cmd/tc.c")
+
+`tc` simulates the C/A/T phototypesetter on the Tektronix 4014: it
+reads `troff`'s output for the typesetter, a stream of escapes, size
+and font changes, and character codes, and draws each character at
+its place, in the size and font asked for as nearly as the terminal
+can. Pages are shown one at a time, waiting at the end of each as `tk`
+does. The program's own `atoi`, which reads a number from its input, is
+renamed by the preprocessor (8), and `oput` loses the trailing `else`
+which made it a statement that swallowed the next `else` (9).
+
+The reply typed at the end of a page now stops at the end of its
+buffer (285), a character with no entry in the tables is now skipped
+(208), and a number read from the input stops growing before it
+overflows (364); v7 overran the buffer, followed a null pointer, and
+overflowed.
+
+#lines(1, 646)
+#source("/usr/src/cmd/graph.c")
+
+`graph` draws a graph of pairs of numbers read from its input, with
+axes, grid, labels, and a title, scaled to fit or as the options say,
+on linear or logarithmic axes. It writes the device-independent plot
+format of v7, which filters such as `tek` turned into drawing on a
+terminal: a letter for each operation, `m` to move, `n` to continue a
+line, `t` for a label, followed by 16-bit coordinates, low byte first.
+In v7 the routines that wrote it, `space`, `move`, `line`, and the
+rest, came from the plotting library, `-lplot`; that library is not
+part of this system, so the few `graph` needs are now defined at its
+end (699--762).
+
+Since the format's coordinates are 16-bit, every coordinate now goes
+through `fix` (77--80), which clamps it to that range, where v7's
+conversion of a large `float` to `int` was undefined. `conv` now
+computes in `double` and tests the range so that a NaN falls outside
+(604--608). The title and labels are now read with their lengths
+limited (132, 633--644), the table of tick marks stops at its 50 entries
+(565, 572), and the first value structure is cleared by `calloc` (87).
+
+#lines(1, 762)
+#source("/usr/src/cmd/spline.c")
+
+`spline` reads pairs of numbers and writes, for `graph`, a smooth curve
+through them: a cubic spline, whose second derivatives come from a
+tridiagonal system of equations, with a choice of end conditions, or a
+periodic one with `-p`. `rhs` gives the right-hand side of the system
+for point `i`; for the periodic spline the last point wraps round to
+the first, through `i_`. v7 used `i_` for the differences of `y` but
+`i` for those of `x` in the same quotient (146), so that at the last
+point it divided the wrong difference and read past the data; both now
+use `i_`. The number of points interpolated between two given ones is
+now computed in `double` and kept within range (203--204), and the
+buffer for a number has room for the null after its 30 characters
+(226).
+
+#lines(1, 330)
 #source("/usr/src/cmd/diff3.c")
 
 `diff3` compares three versions of a file. It does not compare them
@@ -13518,6 +14212,17 @@ exited with 1, so that a successful change reported failure.
 
 #lines(1, 166)
 
+#source("/usr/src/cmd/makekey.c")
+
+`makekey` reads ten bytes, an eight-character key and a two-character
+salt, and writes the thirteen characters of `crypt` (#f("gen/crypt.c"))
+applied to them. It lets programs such as `crypt` (#f("cmd/crypt.c"))
+use the password-hashing function without loading it, and the cost of
+the hash, a large part of a second on the PDP-11, made searching for
+keys slow. The buffers are now cleared first (13--14), so that a short
+input gives a defined key.
+
+#lines(1, 20)
 #source("/usr/src/cmd/chmod.c")
 
 `chmod` changes the modes of files, given either as an octal number or
@@ -13689,6 +14394,20 @@ shown as 0 (258), where v7 indexed past it.
 
 #lines(1, 259)
 
+#source("/usr/src/cmd/tabs.c")
+
+`tabs` sets the hardware tab stops of a terminal every eight columns,
+and with them the left margin unless `-n` is given, by sending the
+escape sequences of the terminal named: the DASI 300 and 450, the
+Teletype 37, the GE TermiNet, and the Hewlett-Packard 2645, terminals
+of v7's time. Padding characters give a slow terminal time to clear its
+old stops. With no name it guesses the terminal from the modes and
+speed the driver has for it (86--97). For two of them it first turns
+off the driver's delays. The terminal modes it reads are now cleared
+first (62, 165, 188), so that when the input is not a terminal and
+`gtty` fails, the guess and `stty` do not use whatever the stack held.
+
+#lines(1, 209)
 #source("/usr/src/cmd/tty.c")
 
 `tty` prints the name of the terminal on its standard input, found by
@@ -13851,6 +14570,24 @@ program is v7's, with prototypes.
 
 == Maintaining File Systems <ch-fsmaint>
 
+#source("/usr/src/cmd/prof.c")
+
+`prof` printed an execution profile: from the symbol table of an
+object file and the counts in `mon.out`, which the library's `monitor`
+wrote for a program compiled with `-p`, a histogram of where the
+program counter was found at each clock tick, it estimated the time
+spent in each function and the number of calls. It reads the PDP-11's
+`a.out` format, and the port's programs are ELF files, so it now refuses
+them as being in a bad format; the library has no `monitor` either. The
+program is kept as part of v7, and made safe on any input: the header
+of `mon.out` and the symbol table are now checked as they are read
+(107--108, 121--125, 136--137), and the addresses, which v7 converted
+by subtracting null pointers, are divided by the size of a counting unit
+(126--127). The variable `ftime` is renamed `ftim` (42), since the
+library's `ftime` is declared in the headers; the plotting code, which
+used a library this system lacks, is left out by `#ifdef plot`.
+
+#lines(1, 323)
 #source("/usr/src/cmd/icheck.c")
 
 `icheck` checks the consistency of the blocks of a file system. It
@@ -14077,6 +14814,15 @@ past its end into `spec`, which C does not allow.
 
 #lines(1, 55)
 
+#source("/usr/src/cmd/sync.c")
+
+`sync` makes the `sync` system call, which starts the writing of every
+modified buffer, inode, and superblock to the disks (#f("sys4.c"),
+#f("alloc.c")). It
+is typed before the machine is stopped; `update`, run from `rc`, does
+the same every 30 seconds. The program is v7's, with a prototype.
+
+#lines(1, 7)
 #source("/usr/src/cmd/mknod.c")
 
 `mknod` makes a special file with the given major and minor device
@@ -15164,3 +15910,28 @@ shows those files' group as a number. The memory and disk special
 files, and the programs which read them, have group `sys`.
 
 #lines(1, 4)
+#source("/usr/src/cmd/wdog.c")
+
+`wdog` keeps the MP135 machine alive. It starts the chip's independent
+watchdog, IWDG2, and feeds it every 10 seconds from a signal handler;
+should the system stop, the watchdog resets the chip some 33 seconds
+later. The registers are written through `/dev/mem` (#f("mem.c")), a
+word at a time, as device registers require. `put` writes one: first
+the watchdog's clock is turned on (36), then the watchdog is started
+(`0xcccc`), its registers unlocked (`0x5555`), the prescaler set to
+divide its 32 kHz clock by 256 and the reload count to 4095 (39--40),
+which together give the 33 seconds; `0xaaaa` reloads the count. The
+program detaches itself with `fork` and closes its descriptors, and is
+run by hand, as `/etc/wdog`, by the super-user, who alone may write
+`/dev/mem`. Nothing stops the watchdog once started but a reset, so
+killing `wdog` makes the chip reset itself 33 seconds later.
+
+#lines(1, 53)
+#source("/usr/src/cmd/reset.c")
+
+`reset` writes the disks' buffers out with `sync` and resets the chip
+at once, by setting the system reset bit of the reset controller,
+`RCC_MP_GRSTCSETR`, through `/dev/mem`. It returns only if the write
+fails.
+
+#lines(1, 22)
