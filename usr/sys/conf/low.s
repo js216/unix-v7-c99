@@ -198,7 +198,7 @@ dabort_entry:
 
 .bss
 .balign 8
-	.space 8192
+	.space 4096
 stack_top:
 .balign 4096
 kl2:
