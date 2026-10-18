@@ -180,18 +180,21 @@ calling of callouts, and the once-per-second work below, until a later
 tick, so as not to run them inside some other, half-finished, interrupt
 routine; the second test followed `++lbolt` below. Both tests have
 gone. The clock interrupt can only be taken when the IRQ is unmasked,
-which is the state that `spl0` and `spl1` give, the ARM equivalent of
+which is the state that `intr_enable` gives, the ARM equivalent of
 priority zero, so a clock tick never interrupts a routine which has
-raised its priority with `spl5` and above, nor a device interrupt
-routine, and the tests were always false.
+masked it with `intr_disable`, nor a device interrupt routine, and the
+tests were always false. The names are FreeBSD's (#f("mch.s")): with
+one mask bit, v7's `spl0` and `spl1` are both `intr_enable`, its
+`spl5`, `spl6`, and `spl7` are all `intr_disable`, and `splx` is
+`intr_restore`.
 
 #lines(59, 63)
 
 Every expired callout is called, in order, with its argument,
 and the remainder of the list is then moved down to the front of the
-table. `spl5` was meant to lower the PDP-11 priority from 6 to 5,
-admitting other clock-level work; on the ARM the IRQ is already masked
-and `spl5` changes nothing. The doubled parentheses at 72 are those of
+table. v7's `spl5` here was meant to lower the PDP-11 priority from 6
+to 5, admitting other clock-level work; on the ARM the IRQ is already
+masked and `intr_disable` changes nothing. The doubled parentheses at 72 are those of
 #f("malloc.c").
 
 #lines(64, 79)
@@ -231,7 +234,7 @@ processor at its next return to user mode. This is what makes the
 priorities just recomputed take effect against a process which computes
 without pause and so never sleeps.
 
-`spl1` (105) unmasks the IRQ. On the PDP-11 it let other interrupts in
+`intr_enable` (105), v7's `spl1`, unmasks the IRQ. On the PDP-11 it let other interrupts in
 while the loop over `proc` was done. Here it does not: the interrupt
 controller delivers no further interrupt until `irq` writes the end of
 interrupt, after `clock` returns; only then can one nest
@@ -1808,8 +1811,8 @@ fails such a request, so that a raw read of 510 bytes, which `physio`
 lets through as an even count, would otherwise be tried eleven times.
 
 v7's call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is gone
-with the map. The priority is raised with `spl5` and lowered with `spl0`, as in v7: the
-routine is called at process level. During startup `spl0` leaves
+with the map. The IRQ is masked with `intr_disable` and unmasked with `intr_enable`: the
+routine is called at process level. During startup `intr_enable` leaves
 interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
 
 The queue is that of v7, threaded through `av_forw` and headed in
@@ -1976,7 +1979,7 @@ The device's list is searched for the block. If the buffer
 is busy, the caller sleeps, and searches again when woken, since the
 buffer may meanwhile have been given to another block. Otherwise the
 buffer is taken from the available list (`notavail`). The interval
-between the test of `B_BUSY` (256) and the sleep is protected by `spl6`,
+between the test of `B_BUSY` (256) and the sleep is protected by `intr_disable`,
 since an interrupt could otherwise release the buffer and issue its
 wakeup before the sleep began, and the sleeper would never be woken.
 
@@ -3465,9 +3468,9 @@ count; nothing reads it.
 #lines(1, 10)
 
 `getc` removes and returns the first character of a queue, or −1 if it
-is empty. All the procedures in the file run at `spl6`, since the queues
-are shared with the interrupt routines; on the ARM this simply masks
-the IRQ.
+is empty. All the procedures in the file run with the IRQ masked
+(`intr_disable`, v7's `spl6`), since the queues are shared with the
+interrupt routines.
 
 The mask with `0377` (26) mattered on the PDP-11, whose characters were
 signed: without it the character 0377, which #f("tty.c") uses as a line
@@ -3487,7 +3490,7 @@ they are equally safe here, where both are 32.
 blocks as it goes, and returns the number moved. It was used by v7's
 multiplexed files (`mx2.c`), which are not part of this system; nothing
 here calls it. v7's version returned from an empty queue with
-interrupts still masked by `spl6`; the port restores the caller's level
+interrupts still masked; the port restores the caller's level
 first (63).
 
 #lines(45, 89)
@@ -3756,7 +3759,7 @@ with the host. A paste of any length thus arrives whole, where v7 threw
 away everything typed once `TTYHOG` was passed. `klread` is where the
 hold ends: before the reader takes a line, it moves what it can from
 `t_holdq` to the raw queue (`ttyunhold`, 90), unmasks the interrupts,
-and calls `klrint` itself (91, 92), at `spl5`, to empty the FIFO as
+and calls `klrint` itself (91, 92), with the IRQ masked, to empty the FIFO as
 far as the queues allow, and then reads as v7 did. A reader can never
 wait on a held line, since input is held only while there is a line to
 read.
@@ -3896,9 +3899,9 @@ Its procedures fall into two halves. The "top half" runs on behalf of a
 process, in `read`, `write`, `open`, `close`, and `ioctl`, and may sleep.
 The "bottom half", `ttyinput` and `ttstart` with what they call, is
 reached from the driver's interrupt routine and may not. The queues of
-the `tty` (#f("tty.h")) lie between the two, and the top half raises the
-priority with `spl5` whenever it examines them. On the ARM this masks
-the IRQ, as do `spl6` and `spl7` (#f("mch.s")).
+the `tty` (#f("tty.h")) lie between the two, and the top half masks the
+IRQ with `intr_disable` (#f("mch.s")) whenever it examines them, where
+v7 raised the priority with `spl5`.
 
 v7 included `mx.h` here for the multiplexed files (`mx1.c` and
 `mx2.c`). They are not part of this system, so the include, and the
@@ -3982,7 +3985,7 @@ the six bytes of `struct tc`, through the shorthand `tun`.
 
 #lines(208, 286)
 
-`wflushtty` waits, at `spl5`, until the driver has sent every character
+`wflushtty` waits, with the IRQ masked, until the driver has sent every character
 of the output queue, then flushes the queues. The sleep on `t_outq` is
 ended by the driver's transmit interrupt (`klxint`, #f("pl011.c")),
 which wakes a sleeper when `ASLEEP` is set and the queue has drained to
@@ -4010,7 +4013,7 @@ otherwise demand.
 
 The parentheses in the condition (347, 348) are new, as in #f("slp.c"). v7's early `return` (351) left the processor at `spl5`,
 and so kept every interrupt, the clock's among them, masked until the
-process next returned to user mode. `spl0` (350) now unmasks them
+process next returned to user mode. `intr_enable` (350) now unmasks them
 first, as the normal path does after the loop.
 
 #lines(330, 355)
