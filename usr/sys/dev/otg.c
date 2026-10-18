@@ -490,10 +490,10 @@ klread(dev_t dev)
 {
 	register int s;
 
-	s = spl5();
+	s = intr_disable();
 	ttyunhold(&kl11[0]);
 	klrint();
-	splx(s);
+	intr_restore(s);
 	ttread(&kl11[minor(dev)]);
 }
 
@@ -578,7 +578,7 @@ putchar(register int c)
 	}
 	if (c == 0 || !config)
 		return;
-	s = spl7();
+	s = intr_disable();
 	if (outlen >= NOUT-1)
 		klflush();
 	if (c == '\n')
@@ -586,5 +586,5 @@ putchar(register int c)
 	out[outlen++] = c;
 	if (c == '\n')
 		klflush();
-	splx(s);
+	intr_restore(s);
 }

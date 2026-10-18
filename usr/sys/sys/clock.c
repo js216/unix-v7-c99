@@ -61,7 +61,7 @@ clock(caddr_t pc, int ps)
 	 * callout
 	 */
 
-	spl5();
+	intr_disable();
 	if(callout[0].c_time <= 0) {
 		p1 = &callout[0];
 		while(p1->c_func != 0 && p1->c_time <= 0) {
@@ -102,7 +102,7 @@ out:
 	if(++lbolt >= HZ) {
 		lbolt -= HZ;
 		++time;
-		spl1();
+		intr_enable();
 		runrun++;
 		wakeup((caddr_t)&lbolt);
 		for(pp = &proc[0]; pp < &proc[NPROC]; pp++)
@@ -151,7 +151,7 @@ timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim)
 
 	t = tim;
 	p1 = &callout[0];
-	s = spl7();
+	s = intr_disable();
 	while(p1->c_func != 0 && p1->c_time <= t) {
 		t -= p1->c_time;
 		p1++;
@@ -171,7 +171,7 @@ timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim)
 	p1->c_time = t;
 	p1->c_func = fun;
 	p1->c_arg = arg;
-	splx(s);
+	intr_restore(s);
 }
 void
 addupc(caddr_t pc, register struct uprof *p, int t)

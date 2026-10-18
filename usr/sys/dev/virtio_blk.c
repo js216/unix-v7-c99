@@ -91,7 +91,7 @@ rkstrategy(register struct buf *bp)
 		return;
 	}
 	bp->av_forw = (struct buf *)NULL;
-	spl5();
+	intr_disable();
 	if(rktab.b_actf == NULL)
 		rktab.b_actf = bp;
 	else
@@ -99,7 +99,7 @@ rkstrategy(register struct buf *bp)
 	rktab.b_actl = bp;
 	if(rktab.b_active == NULL)
 		rkstart();
-	spl0();
+	intr_enable();
 }
 
 void

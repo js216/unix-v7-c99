@@ -2,19 +2,21 @@
 .set PTE_TAB, 3
 .set PGSHIFT, 12
 .set PGSIZE, 4096
-.globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
-.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-.globl dcinval
-.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, restfp, dfar, dfsr
+.globl dmbsy, intr_enable, intr_disable, intr_restore
+.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set
+.globl save, resume
+.globl dcinval, dcflush, arm_sync_icache, tlbflush, ttbset
 .globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
+.globl idle, waitloc
+.globl savfp, restfp
+.globl dfar, dfsr
 .globl kl3u
 
 dmbsy:
 	dmb sy
 	bx lr
 
-spl0:
-spl1:
+intr_enable:
 	mrs r0, cpsr
 	ldr r1, =irq_ready
 	ldr r1, [r1]
@@ -23,14 +25,12 @@ spl1:
 	cpsie i
 	bx lr
 
-spl5:
-spl6:
-spl7:
+intr_disable:
 	mrs r0, cpsr
 	cpsid i
 	bx lr
 
-splx:
+intr_restore:
 	tst r0, #0x80
 	bne 1f
 	ldr r1, =irq_ready
@@ -84,7 +84,7 @@ resume:
 	ldmia r1, {r4-r11}
 	ldr sp, [r1, #32]
 	ldr r2, [r1, #36]
-	bl spl0
+	bl intr_enable
 	mov r0, #1
 	bx r2
 

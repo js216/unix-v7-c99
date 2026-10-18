@@ -292,14 +292,14 @@ void
 wflushtty(register struct tty *tp)
 {
 
-	spl5();
+	intr_disable();
 	while (tp->t_outq.c_cc && tp->t_state&CARR_ON) {
 		(*tp->t_oproc)(tp);
 		tp->t_state |= ASLEEP;
 		sleep((caddr_t)&tp->t_outq, TTOPRI);
 	}
 	flushtty(tp);
-	spl0();
+	intr_enable();
 }
 
 /*
@@ -314,7 +314,7 @@ flushtty(register struct tty *tp)
 		;
 	wakeup((caddr_t)&tp->t_rawq);
 	wakeup((caddr_t)&tp->t_outq);
-	s = spl6();
+	s = intr_disable();
 	tp->t_state &= ~TTSTOP;
 	(*cdevsw[major(tp->t_dev)].d_stop)(tp);
 	while (getc(&tp->t_outq) >= 0)
@@ -324,7 +324,7 @@ flushtty(register struct tty *tp)
 	while (getc(&tp->t_holdq) >= 0)
 		;
 	tp->t_delct = 0;
-	splx(s);
+	intr_restore(s);
 }
 
 
@@ -343,16 +343,16 @@ canon(register struct tty *tp)
 	register int c;
 	int mc;
 
-	spl5();
+	intr_disable();
 	while (((tp->t_flags&(RAW|CBREAK))==0 && tp->t_delct==0)
 	    || ((tp->t_flags&(RAW|CBREAK))!=0 && tp->t_rawq.c_cc==0)) {
 		if ((tp->t_state&CARR_ON)==0 || tp->t_chan!=NULL) {
-			spl0();
+			intr_enable();
 			return(0);
 		}
 		sleep((caddr_t)&tp->t_rawq, TTIPRI);
 	}
-	spl0();
+	intr_enable();
 loop:
 	bp = &canonb[2];
 	while ((c=getc(&tp->t_rawq)) >= 0) {
@@ -707,10 +707,10 @@ ttstart(register struct tty *tp)
 {
 	register int s;
 
-	s = spl5();
+	s = intr_disable();
 	if((tp->t_state&(TIMEOUT|TTSTOP|BUSY)) == 0)
 		(*tp->t_oproc)(tp);
-	splx(s);
+	intr_restore(s);
 }
 
 /*
@@ -741,7 +741,7 @@ ttwrite(register struct tty *tp)
 	if ((tp->t_state&CARR_ON)==0)
 		return(NULL);
 	while (u.u_count) {
-		spl5();
+		intr_disable();
 		while (tp->t_outq.c_cc > TTHIWAT) {
 			ttstart(tp);
 			tp->t_state |= ASLEEP;
@@ -749,7 +749,7 @@ ttwrite(register struct tty *tp)
 				return((caddr_t)&tp->t_outq);
 			sleep((caddr_t)&tp->t_outq, TTOPRI);
 		}
-		spl0();
+		intr_enable();
 		if ((c = cpass()) < 0)
 			break;
 		ttyoutput(c, tp);

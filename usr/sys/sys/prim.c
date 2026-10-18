@@ -17,7 +17,7 @@ getc(register struct clist *p)
 	register struct cblock *bp;
 	register int c, s;
 
-	s = spl6();
+	s = intr_disable();
 	if (p->c_cc <= 0) {
 		c = -1;
 		p->c_cc = 0;
@@ -39,7 +39,7 @@ getc(register struct clist *p)
 			cfreelist = bp;
 		}
 	}
-	splx(s);
+	intr_restore(s);
 	return(c);
 }
 
@@ -56,11 +56,11 @@ q_to_b(register struct clist *q, register char *cp, int cc)
 
 	if (cc <= 0)
 		return(0);
-	s = spl6();
+	s = intr_disable();
 	if (q->c_cc <= 0) {
 		q->c_cc = 0;
 		q->c_cf = q->c_cl = NULL;
-		splx(s);
+		intr_restore(s);
 		return(0);
 	}
 	acp = cp;
@@ -84,7 +84,7 @@ q_to_b(register struct clist *q, register char *cp, int cc)
 			cfreelist = bp;
 		}
 	}
-	splx(s);
+	intr_restore(s);
 	return(cp-acp);
 }
 
@@ -100,7 +100,7 @@ ndqb(register struct clist *q, int flag)
 register int cc;
 int s;
 
-	s = spl6();
+	s = intr_disable();
 	if (q->c_cc <= 0) {
 		cc = -q->c_cc;
 		goto out;
@@ -125,7 +125,7 @@ int s;
 		}
 	}
 out:
-	splx(s);
+	intr_restore(s);
 	return(cc);
 }
 
@@ -140,7 +140,7 @@ ndflush(register struct clist *q, register int cc)
 {
 register int s;
 
-	s = spl6();
+	s = intr_disable();
 	if (q->c_cc < 0) {
 		if (q->c_cf != NULL) {
 			q->c_cc += cc;
@@ -180,7 +180,7 @@ register int s;
 		q->c_cf = q->c_cl = NULL;
 	}
 out:
-	splx(s);
+	intr_restore(s);
 }
 int
 putc(int c, register struct clist *p)
@@ -189,10 +189,10 @@ putc(int c, register struct clist *p)
 	register char *cp;
 	register int s;
 
-	s = spl6();
+	s = intr_disable();
 	if ((cp = p->c_cl) == NULL || p->c_cc < 0 ) {
 		if ((bp = cfreelist) == NULL) {
-			splx(s);
+			intr_restore(s);
 			return(-1);
 		}
 		cfreelist = bp->c_next;
@@ -201,7 +201,7 @@ putc(int c, register struct clist *p)
 	} else if (((int)cp & CROUND) == 0) {
 		bp = (struct cblock *)cp - 1;
 		if ((bp->c_next = cfreelist) == NULL) {
-			splx(s);
+			intr_restore(s);
 			return(-1);
 		}
 		bp = bp->c_next;
@@ -212,7 +212,7 @@ putc(int c, register struct clist *p)
 	*cp++ = c;
 	p->c_cc++;
 	p->c_cl = cp;
-	splx(s);
+	intr_restore(s);
 	return(0);
 }
 
@@ -234,7 +234,7 @@ b_to_q(register char *cp, register int cc, struct clist *q)
 	acc = cc;
 
 
-	s = spl6();
+	s = intr_disable();
 	if ((cq = q->c_cl) == NULL || q->c_cc < 0) {
 		if ((bp = cfreelist) == NULL) 
 			goto out;
@@ -259,7 +259,7 @@ b_to_q(register char *cp, register int cc, struct clist *q)
 out:
 	q->c_cl = cq;
 	q->c_cc += acc-cc;
-	splx(s);
+	intr_restore(s);
 	return(cc);
 }
 
@@ -307,13 +307,13 @@ putw(int c, register struct clist *p)
 {
 	register int s;
 
-	s = spl6();
+	s = intr_disable();
 	if (cfreelist==NULL) {
-		splx(s);
+		intr_restore(s);
 		return(-1);
 	}
 	putc(c, p);
 	putc(c>>8, p);
-	splx(s);
+	intr_restore(s);
 	return(0);
 }

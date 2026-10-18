@@ -110,7 +110,7 @@ clkstart(void)
 	cntv_cval_set(clkcval = cntvct_get() + clkreload);
 	cntv_ctl_set(1);
 	irq_ready = 1;
-	spl0();
+	intr_enable();
 }
 
 void

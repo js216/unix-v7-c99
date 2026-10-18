@@ -33,7 +33,7 @@ sleep(caddr_t chan, int pri)
 	register int s, h;
 
 	rp = u.u_procp;
-	s = spl6();
+	s = intr_disable();
 	if (chan==0)
 		panic("zero wchan");
 	rp->p_stat = SSLEEP;
@@ -49,10 +49,10 @@ sleep(caddr_t chan, int pri)
 			rp->p_wchan = 0;
 			rp->p_stat = SRUN;
 			slpque[h] = rp->p_link;
-			spl0();
+			intr_enable();
 			goto psig;
 		}
-		spl0();
+		intr_enable();
 		if(runin != 0) {
 			runin = 0;
 			wakeup((caddr_t)&runin);
@@ -61,10 +61,10 @@ sleep(caddr_t chan, int pri)
 		if(issig())
 			goto psig;
 	} else {
-		spl0();
+		intr_enable();
 		swtch();
 	}
-	splx(s);
+	intr_restore(s);
 	return;
 
 	/*
@@ -88,7 +88,7 @@ wakeup(register caddr_t chan)
 	register int i;
 	int s;
 
-	s = spl6();
+	s = intr_disable();
 	i = HASH(chan);
 	p = slpque[i];
 	q = NULL;
@@ -108,7 +108,7 @@ wakeup(register caddr_t chan)
 		q = p;
 		p = p->p_link;
 	}
-	splx(s);
+	intr_restore(s);
 }
 
 /*
@@ -123,7 +123,7 @@ setrq(struct proc *p)
 	register struct proc *q;
 	register int s;
 
-	s = spl6();
+	s = intr_disable();
 	for(q=runq; q!=NULL; q=q->p_link)
 		if(q == p) {
 			printf("proc on q\n");
@@ -132,7 +132,7 @@ setrq(struct proc *p)
 	p->p_link = runq;
 	runq = p;
 out:
-	splx(s);
+	intr_restore(s);
 }
 
 /*
@@ -214,7 +214,7 @@ sched(void)
 	 */
 
 loop:
-	spl6();
+	intr_disable();
 	outage = -20000;
 	for (rp = &proc[0]; rp < &proc[NPROC]; rp++)
 	if (rp->p_stat==SRUN && (rp->p_flag&SLOAD)==0 &&
@@ -230,7 +230,7 @@ loop:
 		sleep((caddr_t)&runout, PSWP);
 		goto loop;
 	}
-	spl0();
+	intr_enable();
 
 	/*
 	 * See if there is core for that process;
@@ -247,7 +247,7 @@ loop:
 	 * at bad priority; if none, select the oldest.
 	 */
 
-	spl6();
+	intr_disable();
 	p = NULL;
 	maxsize = -1;
 	inage = -1;
@@ -269,7 +269,7 @@ loop:
 			}
 		}
 	}
-	spl0();
+	intr_enable();
 	/*
 	 * Swap found user out if sleeping at bad pri,
 	 * or if he has spent at least 2 seconds in core and
@@ -282,7 +282,7 @@ loop:
 			goto loop;
 		p->p_flag |= SLOAD;
 	}
-	spl6();
+	intr_disable();
 	runin++;
 	sleep((caddr_t)&runin, PSWP);
 	goto loop;
@@ -385,7 +385,7 @@ swtch(void)
 	if (save(u.u_qsav)==0 && save(u.u_rsav))
 		return;
 loop:
-	spl6();
+	intr_disable();
 	runrun = 0;
 	pp = NULL;
 	q = NULL;

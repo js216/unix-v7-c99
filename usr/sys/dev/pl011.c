@@ -86,11 +86,11 @@ klread(dev_t dev)
 {
 	register int s;
 
-	s = spl5();
+	s = intr_disable();
 	ttyunhold(&kl11[minor(dev)]);
 	UARTIMSC |= RXI|RTI;
 	klrint(dev);
-	splx(s);
+	intr_restore(s);
 	ttread(&kl11[minor(dev)]);
 }
 

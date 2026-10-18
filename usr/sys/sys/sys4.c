@@ -35,10 +35,10 @@ ftime(void)
 	register unsigned ms;
 
 	uap = (struct a *)u.u_ap;
-	spl7();
+	intr_disable();
 	t.time = time;
 	ms = lbolt;
-	spl0();
+	intr_enable();
 	if (ms > HZ) {
 		ms -= HZ;
 		t.time++;

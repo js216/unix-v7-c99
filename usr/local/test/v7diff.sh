@@ -21431,19 +21431,21 @@ usr/local
 +.set PTE_TAB, 3
 +.set PGSHIFT, 12
 +.set PGSIZE, 4096
-+.globl dmbsy, spl0, spl1, spl5, spl6, spl7, splx
-+.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set, save, resume, dcflush
-+.globl dcinval
-+.globl arm_sync_icache, tlbflush, ttbset, idle, waitloc, savfp, restfp, dfar, dfsr
++.globl dmbsy, intr_enable, intr_disable, intr_restore
++.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set
++.globl save, resume
++.globl dcinval, dcflush, arm_sync_icache, tlbflush, ttbset
 +.globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
++.globl idle, waitloc
++.globl savfp, restfp
++.globl dfar, dfsr
 +.globl kl3u
 +
 +dmbsy:
 +	dmb sy
 +	bx lr
 +
-+spl0:
-+spl1:
++intr_enable:
 +	mrs r0, cpsr
 +	ldr r1, =irq_ready
 +	ldr r1, [r1]
@@ -21452,14 +21454,12 @@ usr/local
 +	cpsie i
 +	bx lr
 +
-+spl5:
-+spl6:
-+spl7:
++intr_disable:
 +	mrs r0, cpsr
 +	cpsid i
 +	bx lr
 +
-+splx:
++intr_restore:
 +	tst r0, #0x80
 +	bne 1f
 +	ldr r1, =irq_ready
@@ -21513,7 +21513,7 @@ usr/local
 +	ldmia r1, {r4-r11}
 +	ldr sp, [r1, #32]
 +	ldr r2, [r1, #36]
-+	bl spl0
++	bl intr_enable
 +	mov r0, #1
 +	bx r2
 +
@@ -23274,6 +23274,12 @@ usr/local
 @@ -186 +185 @@
 -	register s;
 +	register int s;
+@@ -196 +195 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -211 +210 @@
+-	splx(s);
++	intr_restore(s);
 @@ -218,3 +217,2 @@
 -incore(dev, blkno)
 -dev_t dev;
@@ -23288,14 +23294,41 @@ usr/local
 @@ -245 +241 @@
 -	register i;
 +	register int i;
+@@ -252 +248 @@
+-	spl0();
++	intr_enable();
+@@ -259 +255 @@
+-		spl6();
++		intr_disable();
+@@ -265 +261 @@
+-		spl0();
++		intr_enable();
+@@ -279 +275 @@
+-	spl6();
++	intr_disable();
+@@ -285 +281 @@
+-	spl0();
++	intr_enable();
 @@ -309 +305 @@
 -geteblk()
 +geteblk(void)
+@@ -315 +311 @@
+-	spl6();
++	intr_disable();
+@@ -320 +316 @@
+-	spl0();
++	intr_enable();
 @@ -343,2 +339,2 @@
 -iowait(bp)
 -register struct buf *bp;
 +void
 +iowait(register struct buf *bp)
+@@ -347 +343 @@
+-	spl6();
++	intr_disable();
+@@ -350 +346 @@
+-	spl0();
++	intr_enable();
 @@ -358,2 +354,2 @@
 -notavail(bp)
 -register struct buf *bp;
@@ -23304,6 +23337,12 @@ usr/local
 @@ -361 +357 @@
 -	register s;
 +	register int s;
+@@ -363 +359 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -367 +363 @@
+-	splx(s);
++	intr_restore(s);
 @@ -374,2 +370,2 @@
 -iodone(bp)
 -register struct buf *bp;
@@ -23330,6 +23369,9 @@ usr/local
 @@ -413 +407 @@
 -	register tcount;
 +	register int tcount;
+@@ -419 +413 @@
+-	spl6();
++	intr_disable();
 @@ -428,3 +422 @@
 -		if (tcount >= 01700)	/* prevent byte-count wrap */
 -			tcount = 01700;
@@ -23339,14 +23381,26 @@ usr/local
 -		bp->b_un.b_addr = (caddr_t)(coreaddr<<6);
 -		bp->b_xmem = (coreaddr>>10) & 077;
 +		bp->b_un.b_addr = PGADDR(coreaddr);
+@@ -435 +426 @@
+-		spl6();
++		intr_disable();
 @@ -440 +431 @@
 -		blkno += ctod(tcount);
 +		blkno += ptod(tcount);
+@@ -444 +435 @@
+-	spl0();
++	intr_enable();
 @@ -456,2 +447,2 @@
 -bflush(dev)
 -dev_t dev;
 +void
 +bflush(dev_t dev)
+@@ -462 +453 @@
+-	spl6();
++	intr_disable();
+@@ -471 +462 @@
+-	spl0();
++	intr_enable();
 @@ -484,3 +475,2 @@
 -physio(strat, bp, dev, rw)
 -register struct buf *bp;
@@ -23371,6 +23425,9 @@ usr/local
 -	    && nb < 1024-u.u_ssize)
 +	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
 +	    && nb < (int)(btop(USRSIZE)-u.u_ssize))
+@@ -517 +508 @@
+-	spl6();
++	intr_disable();
 @@ -528,3 +519,6 @@
 -	ts = (u.u_sep? UDSA: UISA)->r[nb>>7] + (nb&0177);
 -	bp->b_un.b_addr = (caddr_t)((ts<<6) + (base&077));
@@ -23381,6 +23438,12 @@ usr/local
 +		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
 +		    (btop(USRSIZE)-u.u_ssize);
 +	bp->b_un.b_addr = PGADDR(ts) + (base&07777);
+@@ -536 +530 @@
+-	spl6();
++	intr_disable();
+@@ -542 +536 @@
+-	spl0();
++	intr_enable();
 @@ -557,2 +551,2 @@
 -geterror(bp)
 -register struct buf *bp;
@@ -23546,11 +23609,11 @@ usr/local
 @@ -87,0 +87,7 @@
 +	register int s;
 +
-+	s = spl5();
++	s = intr_disable();
 +	ttyunhold(&kl11[minor(dev)]);
 +	UARTIMSC |= RXI|RTI;
 +	klrint(dev);
-+	splx(s);
++	intr_restore(s);
 @@ -91,2 +97,2 @@
 -klwrite(dev)
 -dev_t dev;
@@ -24051,6 +24114,12 @@ usr/local
 +{
 +
 +	if (bp->b_blkno >= nrkblk || bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
+@@ -57 +183 @@
+-	spl5();
++	intr_disable();
+@@ -65 +191 @@
+-	spl0();
++	intr_enable();
 @@ -68 +194,6 @@
 -rkstart()
 +/*
@@ -24695,10 +24764,10 @@ usr/local
 @@ -87,0 +491,6 @@
 +	register int s;
 +
-+	s = spl5();
++	s = intr_disable();
 +	ttyunhold(&kl11[0]);
 +	klrint();
-+	splx(s);
++	intr_restore(s);
 @@ -91,2 +500,2 @@
 -klwrite(dev)
 -dev_t dev;
@@ -24843,7 +24912,7 @@ usr/local
 -	KLADDR->tcsr = s;
 +	if (c == 0 || !config)
 +		return;
-+	s = spl7();
++	s = intr_disable();
 +	if (outlen >= NOUT-1)
 +		klflush();
 +	if (c == '\n')
@@ -24851,7 +24920,7 @@ usr/local
 +	out[outlen++] = c;
 +	if (c == '\n')
 +		klflush();
-+	splx(s);
++	intr_restore(s);
 
 % usr/sys/dev/sys.c
 @@ -4,0 +5 @@
@@ -24949,6 +25018,12 @@ usr/local
 -register struct tty *tp;
 +void
 +wflushtty(register struct tty *tp)
+@@ -292 +295 @@
+-	spl5();
++	intr_disable();
+@@ -299 +302 @@
+-	spl0();
++	intr_enable();
 @@ -305,2 +308,2 @@
 -flushtty(tp)
 -register struct tty *tp;
@@ -24957,21 +25032,32 @@ usr/local
 @@ -308 +311 @@
 -	register s;
 +	register int s;
+@@ -314 +317 @@
+-	s = spl6();
++	s = intr_disable();
 @@ -320,0 +324,2 @@
 +	while (getc(&tp->t_holdq) >= 0)
 +		;
+@@ -322 +327 @@
+-	splx(s);
++	intr_restore(s);
 @@ -333,2 +338,2 @@
 -canon(tp)
 -register struct tty *tp;
 +static int
 +canon(register struct tty *tp)
-@@ -342,2 +347,2 @@
+@@ -341,3 +346,3 @@
+-	spl5();
 -	while ((tp->t_flags&(RAW|CBREAK))==0 && tp->t_delct==0
 -	    || (tp->t_flags&(RAW|CBREAK))!=0 && tp->t_rawq.c_cc==0) {
++	intr_disable();
 +	while (((tp->t_flags&(RAW|CBREAK))==0 && tp->t_delct==0)
 +	    || ((tp->t_flags&(RAW|CBREAK))!=0 && tp->t_rawq.c_cc==0)) {
 @@ -344,0 +350 @@
-+			spl0();
++			intr_enable();
+@@ -349 +355 @@
+-	spl0();
++	intr_enable();
 @@ -401,3 +407,2 @@
 -ttyrend(tp, pb, pe)
 -register struct tty *tp;
@@ -25080,6 +25166,12 @@ usr/local
 @@ -675 +708 @@
 -	register s;
 +	register int s;
+@@ -677 +710 @@
+-	s = spl5();
++	s = intr_disable();
+@@ -680 +713 @@
+-	splx(s);
++	intr_restore(s);
 @@ -687,2 +720,2 @@
 -ttread(tp)
 -register struct tty *tp;
@@ -25092,6 +25184,12 @@ usr/local
 @@ -707 +739 @@
 -	register c;
 +	register int c;
+@@ -712 +744 @@
+-		spl5();
++		intr_disable();
+@@ -720 +752 @@
+-		spl0();
++		intr_enable();
 
 % usr/sys/dev/virtio_blk.c usr/sys/dev/rk.c
 @@ -12 +12 @@
@@ -25168,6 +25266,12 @@ usr/local
 -		mapalloc(bp);
 -	if (bp->b_blkno >= NRKBLK) {
 +	if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK) {
+@@ -57 +94 @@
+-	spl5();
++	intr_disable();
+@@ -65 +102 @@
+-	spl0();
++	intr_enable();
 @@ -68 +105,2 @@
 -rkstart()
 +void
@@ -25580,7 +25684,7 @@ usr/local
 +extern	unsigned clkreload, clkrem, clkfrac;	/* ticks: counts, remainder, its sum */
 +extern	unsigned long long *l1tab;	/* user first-level tables */
 +extern	unsigned l1pa;		/* their physical address */
-@@ -48,16 +51,243 @@
+@@ -48,16 +51,240 @@
 -dev_t getmdev();
 -daddr_t	bmap();
 -struct inode *ialloc();
@@ -25663,6 +25767,8 @@ usr/local
 +void	idle(void);
 +void	ifree(dev_t dev, ino_t ino);
 +void	install_sigtramp(void);
++void	intr_enable(void);
++void	intr_restore(int s);
 +void	ioctl(void);
 +void	iodone(struct buf *bp);
 +void	iomove(caddr_t cp, int n, int flag);
@@ -25736,9 +25842,6 @@ usr/local
 +void	sigreturn(void);
 +void	sleep(caddr_t chan, int pri);
 +void	smount(void);
-+void	spl0(void);
-+void	spl1(void);
-+void	splx(int s);
 +void	ssig(void);
 +void	startup(void);
 +void	stat(void);
@@ -25804,6 +25907,7 @@ usr/local
 +int	getc(struct clist *p);
 +int	getw(struct clist *p);
 +int	grow(unsigned sp);
++int	intr_disable(void);
 +int	issig(void);
 +int	malloc(struct map *mp, int size);
 +int	max(unsigned a, unsigned b);
@@ -25817,9 +25921,6 @@ usr/local
 +int	save(label_t lab);
 +int	schar(void);
 +int	setpri(struct proc *pp);
-+int	spl5(void);
-+int	spl6(void);
-+int	spl7(void);
 +int	subyte(caddr_t a, int c);
 +int	sumem(int dev, off_t off, int c);
 +int	suser(void);
@@ -25840,7 +25941,7 @@ usr/local
 +#define	suiword	suword
 +#define	copyiin	copyin
 +#define	copyiout	copyout
-@@ -67,6 +297,6 @@
+@@ -67,6 +294,6 @@
 -int	dk_busy;
 -long	dk_time[32];
 -long	dk_numb[3];
@@ -25853,7 +25954,7 @@ usr/local
 +extern	long	dk_wds[3];
 +extern	long	tk_nin;
 +extern	long	tk_nout;
-@@ -80 +310 @@
+@@ -80 +307 @@
 -	int	(*sy_call)();		/* handler */
 +	void	(*sy_call)(void);	/* handler */
 
@@ -26046,6 +26147,9 @@ usr/local
 -		goto out;
 -
 -	/*
+@@ -71 +64 @@
+-	spl5();
++	intr_disable();
 @@ -79 +72 @@
 -		while(p2->c_func = p1->c_func) {
 +		while((p2->c_func = p1->c_func)) {
@@ -26055,13 +26159,21 @@ usr/local
 @@ -110,2 +102,0 @@
 -		if (BASEPRI(ps))
 -			return;
+@@ -114 +105 @@
+-		spl1();
++		intr_enable();
 @@ -154,3 +145,2 @@
 -timeout(fun, arg, tim)
 -int (*fun)();
 -caddr_t arg;
 +void
 +timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim)
-@@ -184,0 +175,16 @@
+@@ -164 +154 @@
+-	s = spl7();
++	s = intr_disable();
+@@ -184 +174,17 @@
+-	splx(s);
++	intr_restore(s);
 +}
 +void
 +addupc(caddr_t pc, register struct uprof *p, int t)
@@ -26362,7 +26474,7 @@ usr/local
 +	cntv_cval_set(clkcval = cntvct_get() + clkreload);
 +	cntv_ctl_set(1);
 +	irq_ready = 1;
-+	spl0();
++	intr_enable();
 +}
 +
 +void
@@ -26844,14 +26956,26 @@ usr/local
 -register struct clist *p;
 +int
 +getc(register struct clist *p)
+@@ -25 +20 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -47 +42 @@
+-	splx(s);
++	intr_restore(s);
 @@ -55,3 +50,2 @@
 -q_to_b(q, cp, cc)
 -register struct clist *q;
 -register char *cp;
 +int
 +q_to_b(register struct clist *q, register char *cp, int cc)
+@@ -65 +59 @@
+-	s = spl6();
++	s = intr_disable();
 @@ -68,0 +63 @@
-+		splx(s);
++		intr_restore(s);
+@@ -92 +87 @@
+-	splx(s);
++	intr_restore(s);
 @@ -102,2 +97,2 @@
 -ndqb(q, flag)
 -register struct clist *q;
@@ -26860,6 +26984,12 @@ usr/local
 @@ -105 +100 @@
 -register cc;
 +register int cc;
+@@ -108 +103 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -133 +128 @@
+-	splx(s);
++	intr_restore(s);
 @@ -143,3 +138,2 @@
 -ndflush(q, cc)
 -register struct clist *q;
@@ -26869,6 +26999,12 @@ usr/local
 @@ -147 +141 @@
 -register s;
 +register int s;
+@@ -149 +143 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -189 +183 @@
+-	splx(s);
++	intr_restore(s);
 @@ -191,2 +185,2 @@
 -putc(c, p)
 -register struct clist *p;
@@ -26877,6 +27013,18 @@ usr/local
 @@ -196 +190 @@
 -	register s;
 +	register int s;
+@@ -198 +192 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -201 +195 @@
+-			splx(s);
++			intr_restore(s);
+@@ -210 +204 @@
+-			splx(s);
++			intr_restore(s);
+@@ -221 +215 @@
+-	splx(s);
++	intr_restore(s);
 @@ -231,4 +225,2 @@
 -b_to_q(cp, cc, q)
 -register char *cp;
@@ -26887,6 +27035,12 @@ usr/local
 @@ -238 +230 @@
 -	register s, acc;
 +	register int s, acc;
+@@ -245 +237 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -270 +262 @@
+-	splx(s);
++	intr_restore(s);
 @@ -278 +270,2 @@
 -cinit()
 +void
@@ -26904,6 +27058,15 @@ usr/local
 @@ -315 +308 @@
 -	register s;
 +	register int s;
+@@ -317 +310 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -319 +312 @@
+-		splx(s);
++		intr_restore(s);
+@@ -324 +317 @@
+-	splx(s);
++	intr_restore(s);
 
 % usr/sys/sys/rdwri.c
 @@ -19,2 +19,2 @@
@@ -27096,6 +27259,21 @@ usr/local
 @@ -31 +33 @@
 -	register s, h;
 +	register int s, h;
+@@ -34 +36 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -50 +52 @@
+-			spl0();
++			intr_enable();
+@@ -53 +55 @@
+-		spl0();
++		intr_enable();
+@@ -62 +64 @@
+-		spl0();
++		intr_enable();
+@@ -65 +67 @@
+-	splx(s);
++	intr_restore(s);
 @@ -82,2 +84,2 @@
 -wakeup(chan)
 -register caddr_t chan;
@@ -27104,6 +27282,12 @@ usr/local
 @@ -86 +88 @@
 -	register i;
 +	register int i;
+@@ -89 +91 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -109 +111 @@
+-	splx(s);
++	intr_restore(s);
 @@ -118,2 +120,2 @@
 -setrq(p)
 -struct proc *p;
@@ -27112,6 +27296,12 @@ usr/local
 @@ -122 +124 @@
 -	register s;
 +	register int s;
+@@ -124 +126 @@
+-	s = spl6();
++	s = intr_disable();
+@@ -133 +135 @@
+-	splx(s);
++	intr_restore(s);
 @@ -140,2 +142,2 @@
 -setrun(p)
 -register struct proc *p;
@@ -27135,15 +27325,30 @@ usr/local
 @@ -205 +208 @@
 -	register outage, inage;
 +	register int outage, inage;
+@@ -214 +217 @@
+-	spl6();
++	intr_disable();
+@@ -230 +233 @@
+-	spl0();
++	intr_enable();
+@@ -247 +250 @@
+-	spl6();
++	intr_disable();
 @@ -257 +260 @@
 -		if (rp->p_stat==SSLEEP&&rp->p_pri>=PZERO || rp->p_stat==SSTOP) {
 +		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) || rp->p_stat==SSTOP) {
+@@ -269 +272 @@
+-	spl0();
++	intr_enable();
 @@ -278,2 +281,3 @@
 -		xswap(p, 1, 0);
 -		goto loop;
 +		if (xswap(p, 1, 0))
 +			goto loop;
 +		p->p_flag |= SLOAD;
+@@ -281 +285 @@
+-	spl6();
++	intr_disable();
 @@ -292,2 +296,2 @@
 -swapin(p)
 -register struct proc *p;
@@ -27172,6 +27377,9 @@ usr/local
 @@ -349 +357 @@
 -	register n;
 +	register int n;
+@@ -380 +388 @@
+-	spl6();
++	intr_disable();
 @@ -412 +419,0 @@
 -	spl0();
 @@ -426 +433,2 @@
@@ -27619,6 +27827,12 @@ usr/local
 -ftime()
 +void
 +ftime(void)
+@@ -35 +38 @@
+-	spl7();
++	intr_disable();
+@@ -38 +41 @@
+-	spl0();
++	intr_enable();
 @@ -53 +56,2 @@
 -stime()
 +void
