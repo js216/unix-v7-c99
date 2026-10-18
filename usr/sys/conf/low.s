@@ -152,6 +152,7 @@ irq_entry:
 	b 1f
 
 badtrap:
+	cpsid if, #0x13
 	bl panictrap
 	b badtrap
 

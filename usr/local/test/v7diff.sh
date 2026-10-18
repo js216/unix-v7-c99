@@ -21142,7 +21142,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,206 @@
+@@ -1,72 +1,207 @@
 -/ low core
 -
 -.data
@@ -21369,6 +21369,7 @@ usr/local
 +	b 1f
 +
 +badtrap:
++	cpsid if, #0x13
 +	bl panictrap
 +	b badtrap
 +
