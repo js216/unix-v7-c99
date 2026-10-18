@@ -133,7 +133,8 @@ its parameters were the words which the hardware and `call` had left on
 the stack: the device number, the stack pointer, `r1`, the new PS, `r0`,
 and the `pc` and `ps` of the interrupted program. Only the last two were
 used. The caller is now `irq` (#f("machdep.c")), an ordinary C
-procedure, and `clock` takes just those two: the interrupted `pc`, and
+procedure, which passes every handler in `intrtab` (#f("conf.h")) just
+those two: the interrupted `pc`, and
 for `ps` the interrupted program's status register, whose mode field
 `USERMODE` tests (#f("param.h")).
 
@@ -1551,8 +1552,12 @@ them so, whether or not those headers have been included.
 as the PDP-11's interrupt vectors in `l.s` did. `i_irq` points to the
 driver's variable holding its interrupt number, rather than holding the
 number itself, because a driver may learn its number only when it finds
-its device: the virtio disk (#f("virtio_blk.c")) does. `clkstart` and
-`irq` (#f("machdep.c")) enable and dispatch interrupts from the table.
+its device: the virtio disk (#f("virtio_blk.c")) does. `i_fn` is called
+with the interrupted `pc` and `ps`, as every PDP-11 handler was called
+with the interrupt's frame. Only `clock` (#f("clock.c")) uses them, to
+charge the tick to user or system time and to profile; the device
+handlers discard them. `clkstart` and `irq` (#f("machdep.c")) enable and
+dispatch interrupts from the table, the clock's among them.
 
 #lines(50, 55)
 #source("/usr/sys/conf/qemu/c.c")
@@ -1681,10 +1686,9 @@ table (#f("virtio_blk.c")).
 #lines(86, 97)
 
 `intrtab` (99) pairs each configured interrupting device with its
-handler (`struct intr`, #f("conf.h")): the console and the disk. The
-number is reached through a pointer, since the disk driver learns its
-own only when it finds the device. The clock is not in the table; it is
-handled by `irq` itself.
+handler (`struct intr`, #f("conf.h")): the clock, the console, and the
+disk. The numbers are reached through pointers, since the disk driver
+learns its own only when it finds the device.
 
 The three procedures at the end are the glue by which the
 machine-dependent code calls the configured drivers without naming
@@ -1695,7 +1699,7 @@ nothing here, since the QEMU machine's memory needs no initialisation. `putchar`
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
 
-#lines(98, 108)
+#lines(98, 109)
 #source("/usr/sys/dev/virtio_blk.c")
 
 This is the disk driver of the QEMU machine. It replaces v7's
@@ -1848,12 +1852,12 @@ overflowing.
 
 `rkintr` is called by `irq` (#f("machdep.c")) when the disk interrupts.
 The interrupt is acknowledged by writing back the bits read from
-the interrupt status register (142). It is ignored if no
+the interrupt status register (143). It is ignored if no
 request is outstanding, as in v7, or if the device has not yet returned
-it in the used ring. The barrier (145) keeps the processor from reading
+it in the used ring. The barrier (146) keeps the processor from reading
 `vstatus` or the data before it has seen the device's index.
 
-#lines(137, 145)
+#lines(137, 146)
 
 An error is reported by a nonzero status byte. v7 reported the
 RK11's error and drive status registers by `deverror` (#f("prf.c")),
@@ -1862,13 +1866,13 @@ and has nothing to reset. The retry, up to ten times, and the remainder
 of the procedure are v7's: the request is taken off the queue, completed
 by `iodone` (#f("bio.c")), and the next is started.
 
-#lines(146, 163)
+#lines(147, 164)
 
 The raw disk, `cdevsw` entry 9, transfers directly between the disk and
 the user's memory by way of `physio` (#f("bio.c")), using the private
 header `rrkbuf`.
 
-#lines(164, 176)
+#lines(165, 177)
 #source("/usr/sys/dev/bio.c")
 
 #f("bio.c") holds the buffer cache and the other routines which stand
@@ -3837,11 +3841,11 @@ guest error, and a real PL011 would send nothing.
 (#f("machdep.c")) when the interrupt controller reports interrupt 33.
 The one interrupt serves both directions, so the masked status is
 examined to decide which of v7's two handlers to call, the receive
-timeout counting as a receive interrupt (167). The transmit interrupt
+timeout counting as a receive interrupt (168). The transmit interrupt
 is raised when the transmit FIFO has drained to its trigger level, and
-is cleared explicitly (170), before `klxint` refills the FIFO.
+is cleared explicitly (171), before `klxint` refills the FIFO.
 
-#lines(156, 173)
+#lines(156, 174)
 
 `putchar` is the console output of `printf` (#f("prf.c")). It polls
 the transmitter, bypassing the `tty` structure and its queues, and is
@@ -3875,7 +3879,7 @@ could not be made without reading `UARTDR`, which would remove a
 character from the receive queue and so steal it from the input. The comment
 about the console switches was already stale in v7.
 
-#lines(174, 215)
+#lines(175, 216)
 #source("/usr/sys/dev/tty.c")
 
 #f("tty.c") holds the code common to all terminals: what a driver such
@@ -4536,7 +4540,7 @@ it; and seven blocks of peripherals, from 0xf0000000 (@ch-startup).
 difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
 (#f("ddr.c")), since the configuration ends with `ddr`.
 
-#lines(102, 113)
+#lines(102, 114)
 #source("/usr/sys/dev/otg.c")
 
 The console driver of the MP135 machine. The machine's console is its
@@ -4824,7 +4828,7 @@ left in `out`, or else lets `ttstart` refill it, and wakes a writer
 waiting for the queue to drain, as `kl.c`'s transmitter interrupt did.
 In either case it passes on any input.
 
-#lines(545, 562)
+#lines(545, 563)
 
 `putchar` keeps v7's copy of the last `MSGBUFS` characters in `msgbuf`.
 It then adds the character to `out`, with a carriage return before a
@@ -4835,7 +4839,7 @@ which has stopped reading delays each line of kernel output by a tick
 and no more. Until the host has configured the device there is no one
 to send to, and the character is kept only in `msgbuf`.
 
-#lines(563, 589)
+#lines(564, 590)
 #source("/usr/sys/dev/sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.
@@ -5020,8 +5024,8 @@ On an error, of the transfer or of command 12, the status is reported
 by `deverror` (#f("prf.c")) and the same part retried, up to v7's ten
 times. v7 also reset the RK11 and waited for it to be ready; there is
 no reset here. On success the next part of the request is started if
-there is one (274), and the request is otherwise complete. After a
-read, the cache is invalidated once more over the whole buffer (280),
+there is one (275), and the request is otherwise complete. After a
+read, the cache is invalidated once more over the whole buffer (281),
 so that any line which the processor may have fetched while the
 transfer was under way is discarded. Nothing is written back: a line
 written back now would overwrite the new data. The lines were clean at
@@ -5031,11 +5035,11 @@ lines with the rest of the process's memory, but the process sleeps
 until the transfer is done, and nothing else writes there. The rest is
 v7's.
 
-#lines(234, 287)
+#lines(234, 288)
 
 `rkread` and `rkwrite` are v7's, for the raw disk.
 
-#lines(288, 300)
+#lines(289, 301)
 #source("/usr/sys/dev/ddr.c")
 
 This file is not a driver in v7's sense: it has no switch entry and no
