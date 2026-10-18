@@ -666,9 +666,9 @@ main(void)
 	for (i=0; i<nmap; i++)
 		printf("\t{0x%lx, 0x%lx, 0x%lx, %s},\n", mapv[i], mapb[i], mape[i], mapa[i]);
 	printf("\t{0, 0, 0, 0}\n};\n");
-	printf("\nextern int\tklirq, rkirq;\n");
+	printf("\nextern int\tclkirq, klirq, rkirq;\n");
 	printf("struct\tintr\tintrtab[] =\n{\n");
-	printf("\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
+	printf("\t{&clkirq, clock},\n\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
 	printf("\t{0, 0}\n};\n");
 	printf("\nvoid\tcninit(void) { klinit(); }\n");
 	printf("void\tbdinit(void) { rkinit(); }\n");

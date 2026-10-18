@@ -51,5 +51,5 @@ extern struct linesw
 struct intr
 {
 	int	*i_irq;
-	void	(*i_fn)(void);
+	void	(*i_fn)(caddr_t pc, int ps);
 };

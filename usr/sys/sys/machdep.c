@@ -80,11 +80,11 @@ sysphys(void)
  */
 #define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
 #define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
-#define	TIMER	27
 extern struct intr intrtab[];
 unsigned long long clkcval;
 unsigned	clkreload, clkrem, clkfrac;
 int	irq_ready;
+int	clkirq = 27;
 
 static void
 gicen(int n)
@@ -101,7 +101,6 @@ clkstart(void)
 	if((clkreload = cntfrq_get()/HZ) == 0)
 		panic("no clock");
 	clkrem = cntfrq_get()%HZ;
-	gicen(TIMER);
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)
 			gicen(*ip->i_irq);
@@ -121,12 +120,9 @@ irq(int *r)
 	register unsigned n;
 
 	n = GICC(0xc);
-	if((n&0x3ff) == TIMER)
-		clock((caddr_t)r[PC], r[PSR]);
-	else
-		for(ip = intrtab; ip->i_irq; ip++)
-			if(*ip->i_irq == (int)(n&0x3ff))
-				(*ip->i_fn)();
+	for(ip = intrtab; ip->i_irq; ip++)
+		if(*ip->i_irq == (int)(n&0x3ff))
+			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
 	GICC(0x10) = n;
 }
 

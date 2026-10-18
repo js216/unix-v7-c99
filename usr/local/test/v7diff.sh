@@ -23123,9 +23123,9 @@ usr/local
 +	for (i=0; i<nmap; i++)
 +		printf("\t{0x%lx, 0x%lx, 0x%lx, %s},\n", mapv[i], mapb[i], mape[i], mapa[i]);
 +	printf("\t{0, 0, 0, 0}\n};\n");
-+	printf("\nextern int\tklirq, rkirq;\n");
++	printf("\nextern int\tclkirq, klirq, rkirq;\n");
 +	printf("struct\tintr\tintrtab[] =\n{\n");
-+	printf("\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
++	printf("\t{&clkirq, clock},\n\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
 +	printf("\t{0, 0}\n};\n");
 +	printf("\nvoid\tcninit(void) { klinit(); }\n");
 +	printf("void\tbdinit(void) { rkinit(); }\n");
@@ -23620,7 +23620,7 @@ usr/local
 +			UARTDR = c;
 @@ -149,0 +152 @@
 +			return;
-@@ -154 +157,18 @@
+@@ -154 +157,19 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klinit(void)
@@ -23630,8 +23630,9 @@ usr/local
 +}
 +
 +void
-+klintr(void)
++klintr(caddr_t pc, int ps)
 +{
++	(void)pc; (void)ps;
 +	if (UARTMIS&(RXI|RTI))
 +		klrint(0);
 +	if (UARTMIS&TXI) {
@@ -23640,16 +23641,16 @@ usr/local
 +	}
 +}
 +
-@@ -166,2 +186,2 @@
+@@ -166,2 +187,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +189,2 @@
+@@ -169 +190,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +197 @@
+@@ -176,6 +198 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -23657,22 +23658,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +202,2 @@
+@@ -186,2 +203,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while(UARTFR&TXFF)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +207,3 @@
+@@ -191,3 +208,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = UARTIMSC;
 +	UARTIMSC = 0;
 +	UARTDR = c;
-@@ -196,2 +211,0 @@
+@@ -196,2 +212,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +214 @@
+@@ -200 +215 @@
 -	KLADDR->tcsr = s;
 +	UARTIMSC = s;
 
@@ -24102,11 +24103,12 @@ usr/local
 @@ -96 +234,2 @@
 -rkintr()
 +void
-+rkintr(void)
++rkintr(caddr_t pc, int ps)
 @@ -98,0 +238 @@
 +	register int sta;
-@@ -100 +240,18 @@
+@@ -100 +240,19 @@
 -	if (rktab.b_active == NULL)
++	(void)pc; (void)ps;
 +	sta = SD(STA);
 +	SD(ICR) = CLEAR;
 +	if (rktab.b_active == NULL) {
@@ -24125,13 +24127,13 @@ usr/local
 +	if (rkstop == 1 && (sta&CMDERR) == 0 && SD(STA)&BUSYD0) {
 +		rkstop = 2;
 +		SD(MASK) = BUSYD0END;
-@@ -101,0 +259,5 @@
+@@ -101,0 +260,5 @@
 +	}
 +	SD(MASK) = 0;
 +	if (sta&CMDERR)
 +		rksta |= sta;
 +	sta = rksta;
-@@ -105,5 +267,2 @@
+@@ -105,5 +268,2 @@
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
 -		RKADDR->rkcs = RESET|GO;
@@ -24139,20 +24141,20 @@ usr/local
 -			;
 +	if (sta & (ERR|CMDERR)) {
 +		deverror(bp, sta, 0);
-@@ -114,0 +274,3 @@
+@@ -114,0 +275,3 @@
 +	} else if ((rkoff += rkn) < bp->b_bcount) {
 +		rkstart();
 +		return;
-@@ -115,0 +278,3 @@
+@@ -115,0 +279,3 @@
 +	rkoff = 0;
 +	if (bp->b_flags & B_READ)
 +		dcinval(bp->b_un.b_addr, bp->b_bcount);
-@@ -123,2 +288,2 @@
+@@ -123,2 +289,2 @@
 -rkread(dev)
 -dev_t dev;
 +void
 +rkread(dev_t dev)
-@@ -130,2 +295,2 @@
+@@ -130,2 +296,2 @@
 -rkwrite(dev)
 -dev_t dev;
 +void
@@ -24766,12 +24768,12 @@ usr/local
 -klstart(tp)
 -register struct tty *tp;
 +void
-+klintr(void)
++klintr(caddr_t pc, int ps)
 @@ -136,2 +548 @@
 -	register c;
 -	register struct device *addr;
 +	register struct tty *tp;
-@@ -139,11 +550,8 @@
+@@ -139,11 +550,9 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 -		return;
@@ -24783,6 +24785,7 @@ usr/local
 -		else {
 -			timeout(ttrstrt, (caddr_t)tp, (c&0177) + DLDELAY);
 -			tp->t_state |= TIMEOUT;
++	(void)pc; (void)ps;
 +	tp = &kl11[0];
 +	if (usbpoll()) {
 +		if (outlen)
@@ -24791,11 +24794,11 @@ usr/local
 +			ttstart(tp);
 +			if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
 +				wakeup((caddr_t)&tp->t_outq);
-@@ -151,0 +560 @@
+@@ -151,0 +561 @@
 +	klrint();
-@@ -154 +562,0 @@
+@@ -154 +563,0 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
-@@ -157,7 +565 @@
+@@ -157,7 +566 @@
 - * Attempts to save and restore device
 - * status.
 - * If the switches are 0, all
@@ -24804,15 +24807,15 @@ usr/local
 - * Whether or not printing is inhibited,
 - * the last MSGBUFS characters
 + * The last MSGBUFS characters
-@@ -166,2 +568,2 @@
+@@ -166,2 +569,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +571 @@
+@@ -169 +572 @@
 -	register s, timo;
 +	register int s;
-@@ -176,25 +578,11 @@
+@@ -176,25 +579,11 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -25213,14 +25216,15 @@ usr/local
 @@ -96 +137,2 @@
 -rkintr()
 +void
-+rkintr(void)
-@@ -100 +142,2 @@
++rkintr(caddr_t pc, int ps)
+@@ -100 +142,3 @@
 -	if (rktab.b_active == NULL)
++	(void)pc; (void)ps;
 +	RKADDR(0x64) = RKADDR(0x60);
 +	if (rktab.b_active == NULL || vq->uidx != vq->aidx)
-@@ -101,0 +145 @@
+@@ -101,0 +146 @@
 +	dmbsy();
-@@ -105,5 +149,2 @@
+@@ -105,5 +150,2 @@
 -	if (RKADDR->rkcs < 0) {		/* error bit */
 -		deverror(bp, RKADDR->rker, RKADDR->rkds);
 -		RKADDR->rkcs = RESET|GO;
@@ -25228,12 +25232,12 @@ usr/local
 -			;
 +	if (vstatus) {
 +		deverror(bp, vstatus, 0);
-@@ -123,2 +164,2 @@
+@@ -123,2 +165,2 @@
 -rkread(dev)
 -dev_t dev;
 +void
 +rkread(dev_t dev)
-@@ -130,2 +171,2 @@
+@@ -130,2 +172,2 @@
 -rkwrite(dev)
 -dev_t dev;
 +void
@@ -25307,7 +25311,7 @@ usr/local
 +struct intr
 +{
 +	int	*i_irq;
-+	void	(*i_fn)(void);
++	void	(*i_fn)(caddr_t pc, int ps);
 +};
 
 % usr/sys/h/dir.h
@@ -25669,7 +25673,7 @@ usr/local
 +void	kill(void);
 +void	klclose(dev_t dev, int flag);
 +void	klinit(void);
-+void	klintr(void);
++void	klintr(caddr_t pc, int ps);
 +void	klioctl(dev_t dev, int cmd, caddr_t addr, int flag);
 +void	klopen(dev_t dev, int flag);
 +void	klread(dev_t dev);
@@ -25715,7 +25719,7 @@ usr/local
 +void	resume(int a, label_t lab);
 +void	rexit(void);
 +void	rkinit(void);
-+void	rkintr(void);
++void	rkintr(caddr_t pc, int ps);
 +void	rkread(dev_t dev);
 +void	rkstrategy(struct buf *bp);
 +void	rkwrite(dev_t dev);
@@ -26314,7 +26318,7 @@ usr/local
 -	return;
 -
 -bad:
-@@ -125,11 +81,50 @@
+@@ -125,11 +81,46 @@
 -#define	CLOCK1	((physadr)0177546)
 -#define	CLOCK2	((physadr)0172540)
 -clkstart()
@@ -26328,11 +26332,11 @@ usr/local
 -	lks->r[0] = 0115;
 +#define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
 +#define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
-+#define	TIMER	27
 +extern struct intr intrtab[];
 +unsigned long long clkcval;
 +unsigned	clkreload, clkrem, clkfrac;
 +int	irq_ready;
++int	clkirq = 27;
 +
 +static void
 +gicen(int n)
@@ -26349,7 +26353,6 @@ usr/local
 +	if((clkreload = cntfrq_get()/HZ) == 0)
 +		panic("no clock");
 +	clkrem = cntfrq_get()%HZ;
-+	gicen(TIMER);
 +	for(ip = intrtab; ip->i_irq; ip++)
 +		if(*ip->i_irq)
 +			gicen(*ip->i_irq);
@@ -26369,26 +26372,23 @@ usr/local
 +	register unsigned n;
 +
 +	n = GICC(0xc);
-+	if((n&0x3ff) == TIMER)
-+		clock((caddr_t)r[PC], r[PSR]);
-+	else
-+		for(ip = intrtab; ip->i_irq; ip++)
-+			if(*ip->i_irq == (int)(n&0x3ff))
-+				(*ip->i_fn)();
++	for(ip = intrtab; ip->i_irq; ip++)
++		if(*ip->i_irq == (int)(n&0x3ff))
++			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
 +	GICC(0x10) = n;
-@@ -141,2 +136,2 @@
+@@ -141,2 +132,2 @@
 -sendsig(p, signo)
 -caddr_t p;
 +void
 +sendsig(caddr_t p, int signo)
-@@ -144 +139 @@
+@@ -144 +135 @@
 -	register unsigned n;
 +	register unsigned n, m;
-@@ -146 +141,2 @@
+@@ -146 +137,2 @@
 -	n = u.u_ar0[R6] - 4;
 +	m = (PSR+1)*sizeof(int);
 +	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
-@@ -148,5 +144,11 @@
+@@ -148,5 +140,11 @@
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
 -	u.u_ar0[R6] = n;
@@ -26405,7 +26405,7 @@ usr/local
 +	u.u_ar0[PC] = (int)p;
 +	u.u_ar0[R0] = signo;
 +	u.u_ar0[PSR] &= ~0x0600fe20;
-@@ -155,9 +157,55 @@
+@@ -155,9 +153,55 @@
 -/*
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
@@ -26470,12 +26470,12 @@ usr/local
 +		*p = 0;
 +	return((caddr_t)UBASE + ptob(USIZE));
 +}
-@@ -165,2 +213,2 @@
+@@ -165,2 +209,2 @@
 -mapalloc(bp)
 -register struct buf *bp;
 +void
 +copyseg(int from, int to)
-@@ -168 +216,17 @@
+@@ -168 +212,17 @@
 -	register i, a;
 +	register int *s, *d, i;
 +
@@ -26494,7 +26494,7 @@ usr/local
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = 0;
 +}
-@@ -170 +234,12 @@
+@@ -170 +230,12 @@
 -	if(cputype != 70)
 +void
 +sigreturn(void)
@@ -26508,12 +26508,12 @@ usr/local
 +	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-@@ -172,4 +246,0 @@
+@@ -172,4 +242,0 @@
 -	spl6();
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +248,74 @@
+@@ -177,19 +244,74 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;

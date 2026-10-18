@@ -135,10 +135,11 @@ rkstart(void)
 }
 
 void
-rkintr(void)
+rkintr(caddr_t pc, int ps)
 {
 	register struct buf *bp;
 
+	(void)pc; (void)ps;
 	RKADDR(0x64) = RKADDR(0x60);
 	if (rktab.b_active == NULL || vq->uidx != vq->aidx)
 		return;

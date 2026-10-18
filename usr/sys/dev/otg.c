@@ -543,10 +543,11 @@ klstart(register struct tty *tp)
 }
 
 void
-klintr(void)
+klintr(caddr_t pc, int ps)
 {
 	register struct tty *tp;
 
+	(void)pc; (void)ps;
 	tp = &kl11[0];
 	if (usbpoll()) {
 		if (outlen)

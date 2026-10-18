@@ -162,8 +162,9 @@ klinit(void)
 }
 
 void
-klintr(void)
+klintr(caddr_t pc, int ps)
 {
+	(void)pc; (void)ps;
 	if (UARTMIS&(RXI|RTI))
 		klrint(0);
 	if (UARTMIS&TXI) {

@@ -232,11 +232,12 @@ rkstart(void)
 }
 
 void
-rkintr(void)
+rkintr(caddr_t pc, int ps)
 {
 	register struct buf *bp;
 	register int sta;
 
+	(void)pc; (void)ps;
 	sta = SD(STA);
 	SD(ICR) = CLEAR;
 	if (rktab.b_active == NULL) {
