@@ -8,8 +8,12 @@ $(TEST_OBJ): CPPFLAGS = -Iusr/include -Iusr/sys
 $(TEST_OBJ): $(TS)/test.mk
 $(TEST_OBJ): $(TS)/obj/%.o: $(TS)/utils/%.c | $(TS)/obj
 	$(COMPILE.c) -o $@ $<
-$(TEST_BIN): %: $(CRT) %.o $(LIBM) $(LIBC)
+PROF_BIN = $(TS)/obj/proft
+$(PROF_BIN).o: CFLAGS += -pg
+$(filter-out $(PROF_BIN),$(TEST_BIN)): %: $(CRT) %.o $(LIBM) $(LIBC)
 	$(LINK)
+$(PROF_BIN): %: $(MCRT) %.o $(LIBM) $(LIBC)
+	$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^) -lgcc
 $(TS)/obj/fs.img: $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \
     $(TS)/utils/words $(TS)/utils/long $(TS)/utils/sortin $(TS)/utils/u2 | $(TS)/obj
 	$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null

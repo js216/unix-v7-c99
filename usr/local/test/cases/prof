@@ -1,0 +1,6 @@
+T=/tmp/prof U=/usr/local/test/utils
+mkdir $T; cd $T
+$U/proft
+prof $U/proft | awk '$1 == "tick" || $1 == "work" || $1 == "main" { print $1, $4 } $1 == "work" && $2 > 20 { print "work busy" }' | sort
+prof -a $U/proft | awk '$1 == "tick" { print "-a tick", $4 }'
+cd /; rm -rf $T

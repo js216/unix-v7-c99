@@ -33,7 +33,7 @@ all: $(KERNELS)
 
 .SECONDARY: $(GEN)
 
-OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
+OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(MCRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
 $(OBJ) $(GEN): Makefile
 
 %.c: %.y

@@ -6,10 +6,9 @@ mkdir d; cd d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22
 pwd | wc -c; cd $T; rm -r d; echo st$?; ls d
 pstat -i /unix >/dev/null; echo st$?
 cp $U/monout mon.out; cp $U/xout x.out; prof x.out >p1
-dd if=x.out bs=16 count=1 2>/dev/null >x2; $U/ob 140 0 1 0 >>x2; dd if=x.out bs=20 skip=1 2>/dev/null >>x2
-prof x2 >p2; cmp p1 p2 && echo same
+dd if=x.out bs=52 count=1 2>/dev/null >x2; prof x2; echo st$?
 dd if=mon.out bs=8 count=1 2>/dev/null >m2; $U/ob 350 3 0 0 >>m2; dd if=/unix bs=512 count=20 2>/dev/null >>m2
-mv m2 mon.out; prof x.out; echo st$?; rm mon.out x.out x2 p1 p2
+mv m2 mon.out; prof x.out; echo st$?; rm mon.out x.out x2 p1
 echo zzz >ig; ptx -i ig -w </dev/null; echo st$?
 awk 'BEGIN { printf "a "; for (i = 0; i < 150; i++) printf "\""; print "" }' </dev/null | ptx -i ig | wc -c
 awk 'BEGIN { for (i = 0; i < 250; i++) printf "b"; print " c" }' </dev/null | ptx -i ig | wc -c

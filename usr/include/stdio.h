@@ -93,6 +93,8 @@ void	rewind(FILE *iop), setbuf(FILE *iop, char *buf), clearerr(FILE *iop);
 void	perror(char *s), srand(unsigned x), free(char *p);
 void	qsort(char *a, unsigned n, int es, int (*fc)(char *p1, char *p2));
 void	swab(char *from, char *to, int n);
+void	profil(short *buf, int bufsiz, int offset, int scale);
+void	monitor(char *lowpc, char *highpc, short *buf, int bufsiz, int cntsiz);
 void	cfree(char *p, unsigned num, unsigned size);
 void	setkey(char *key), encrypt(char *block, int edflag);
 void	ltol3(char *cp, long *lp, int n), l3tol(long *lp, char *cp, int n);

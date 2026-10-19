@@ -5,13 +5,12 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <a.out.h>
 
 typedef	short UNIT;		/* unit of profiling */
 
 struct stat stbuf;
 struct	nl {
-	char	name[8];
+	char	name[16];
 	unsigned value;
 	float	time;
 	long	ncall;
@@ -51,7 +50,6 @@ struct nl *npe;
 int	aflg;
 int	vflg;
 int	lflg;
-long	symoff;
 
 int	min(unsigned a, unsigned b), max(unsigned a, unsigned b);
 int	timcmp(char *a, char *b), valcmp(char *a, char *b);
@@ -67,7 +65,9 @@ main(int argc, char **argv)
 	double tx, ty;
 #endif
 	struct cnt *cp;
-	struct exec xbuf;
+	unsigned eh[13], sh[10], sym[4];
+	long sa, st;
+	unsigned n;
 	struct hdr h;
 
 	lowpc = -1;
@@ -104,15 +104,24 @@ main(int argc, char **argv)
 		fprintf(stderr, "%s: not found\n", namfil);
 		done();
 	}
-	if (fread((char *)&xbuf, sizeof(xbuf), 1, nfile) != 1 ||
-	    (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3)) {
+	if (fread((char *)eh, sizeof eh, 1, nfile) != 1 || eh[0] != 0x464c457f) {
 		fprintf(stderr, "%s: bad format\n", namfil);
 		done();
 	}
-	symoff = (long)xbuf.a_text + xbuf.a_data;
-	if ((xbuf.a_flag&01) == 0)
-		symoff *= 2;
-	fseek(nfile, symoff+sizeof(xbuf), 0);
+	n = sa = st = 0;
+	for (i = eh[12]&0xffff; --i >= 0 && n == 0; ) {
+		fseek(nfile, eh[8] + i*40, 0);
+		if (fread((char *)sh, sizeof sh, 1, nfile) != 1)
+			break;
+		if (sh[1] == 2) {
+			sa = sh[4];
+			n = sh[5];
+			fseek(nfile, eh[8] + sh[6]*40, 0);
+			if (fread((char *)sh, sizeof sh, 1, nfile) != 1)
+				n = 0;
+			st = sh[4];
+		}
+	}
 	if((pfile = fopen("mon.out","r")) == NULL) {
 		fprintf(stderr, "No mon.out\n");
 		done();
@@ -131,17 +140,22 @@ main(int argc, char **argv)
 	pfpos = ftell(pfile);
 #endif
 	npe = nl;
-	for (nname = 0; xbuf.a_syms > 0; xbuf.a_syms -= sizeof(struct nlist)) {
-		struct nlist nbuf;
-		if (npe >= &nl[1199] || fread((char *)&nbuf, sizeof(nbuf), 1, nfile) != 1)
+	for (nname = 0; n >= sizeof sym; n -= sizeof sym, sa += sizeof sym) {
+		fseek(nfile, sa, 0);
+		if (npe >= &nl[1199] || fread((char *)sym, sizeof sym, 1, nfile) != 1)
 			break;
-		if (nbuf.n_type!=N_TEXT && nbuf.n_type!=N_TEXT+N_EXT)
+		if ((sym[3]&017) > 2 || (sym[3]>>16) == 0 || (sym[3]>>16) >= (eh[12]&0xffff))
 			continue;
-		if (aflg==0 && nbuf.n_type!=N_TEXT+N_EXT)
+		if (aflg==0 && (sym[3]&0360) != 020)
 			continue;
-		npe->value = nbuf.n_value/sizeof(UNIT);
-		for (i=0; i<8; i++)
-			npe->name[i] = nbuf.n_name[i];
+		fseek(nfile, eh[8] + (sym[3]>>16)*40, 0);
+		if (fread((char *)sh, sizeof sh, 1, nfile) != 1 || (sh[2]&4) == 0)
+			continue;
+		fseek(nfile, st + sym[0], 0);
+		npe->name[fread(npe->name, 1, sizeof npe->name - 1, nfile)] = 0;
+		if (npe->name[0] == '$')
+			continue;
+		npe->value = sym[1]/sizeof(UNIT);
 		npe++;
 		nname++;
 	}
@@ -151,13 +165,15 @@ main(int argc, char **argv)
 	}
 	npe->value = -1;
 	npe++;
-	for (cp = cbuf; cp < &cbuf[h.ncount]; cp++)
-		for (np = nl; np < npe; np++)
-			if ((unsigned)(cp->cvalue/sizeof(UNIT) - np->value) <=10) {
-				np->ncall = cp->cncall;
-				break;
-			}
 	qsort((char *)nl, nname, sizeof(struct nl), valcmp);
+	for (cp = cbuf; cp < &cbuf[h.ncount]; cp++) {
+		if (cp->cvalue == 0)
+			continue;
+		for (np = nl; np[1].value <= cp->cvalue/sizeof(UNIT); np++)
+			;
+		if (np->value <= cp->cvalue/sizeof(UNIT))
+			np->ncall = cp->cncall;
+	}
 	scale = highpc - lowpc;
 	scale /= bufs/sizeof(UNIT);
 	for(i=0;;i++) {
@@ -256,13 +272,13 @@ main(int argc, char **argv)
 print:
 #endif
 	actime = 0;
-	printf("    name %%time  cumsecs  #call  ms/call\n");
+	printf("           name %%time  cumsecs  #call  ms/call\n");
 	if (!lflg)
 		qsort((char *)nl, nname, sizeof(struct nl), timcmp);
 	for (np = nl; np<npe-1; np++) {
 		ftim = np->time/totime;
 		actime += np->time;
-		printf("%8.8s%6.1f%9.2f", np->name, 100*ftim, actime/60);
+		printf("%15.15s%6.1f%9.2f", np->name, 100*ftim, actime/60);
 		if(np->ncall!=0) {
 			printf("%6ld", np->ncall);
 			printf(" %7.2f\n", np->time/(np->ncall*.06));

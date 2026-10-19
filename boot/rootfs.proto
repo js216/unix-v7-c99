@@ -252,6 +252,8 @@ d--755 0 0
 					phys	---644 0 0 usr/local/test/cases/phys
 					phys.exp	---644 0 0 usr/local/test/cases/phys.exp
 					phys.sed	---644 0 0 usr/local/test/cases/phys.sed
+					prof	---644 0 0 usr/local/test/cases/prof
+					prof.exp	---644 0 0 usr/local/test/cases/prof.exp
 					prog	---644 0 0 usr/local/test/cases/prog
 					prog.exp	---644 0 0 usr/local/test/cases/prog.exp
 					ps	---644 0 0 usr/local/test/cases/ps
@@ -334,6 +336,7 @@ d--755 0 0
 					pidf	---755 0 0 usr/local/test/obj/pidf
 					prs	---755 0 0 usr/local/test/obj/prs
 					prt	---755 0 0 usr/local/test/obj/prt
+					proft	---755 0 0 usr/local/test/obj/proft
 					ptt	---755 0 0 usr/local/test/obj/ptt
 					ptw	---755 0 0 usr/local/test/obj/ptw
 					r12	---755 0 0 usr/local/test/obj/r12

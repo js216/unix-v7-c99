@@ -39,7 +39,7 @@ apple	banana	cherry	date
 found /usr/local/test/utils/words
      17
 /
-     53
+     54
 1
    PID TTY TIME CMD
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
@@ -119,7 +119,7 @@ who: cannot open utmp
    RF                RK                RP                  PERCENT
    tpm  msps  mspt   tpm  msps  mspt   tpm  msps  mspt  user  nice systm  idle
       3
-/bin/ls: bad format
+No mon.out
 arcv: /usr/local/test/utils/words not archive format
 437 units; 3191 bytes
 

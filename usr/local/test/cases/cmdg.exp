@@ -192,28 +192,28 @@ dmr::7:3::/usr/dmr:
 
 a.out: not found
 st0
-    name %time  cumsecs  #call  ms/call
-   _main  33.3     0.67     5  133.33
-    _foo  33.3     1.33     3  222.22
-    _zed  22.5     1.78    12   37.50
-    _end  10.8     2.00
-    name %time  cumsecs  #call  ms/call
-   _main  33.3     0.67     5  133.33
-    _foo  33.3     1.33     3  222.22
-    _zed  22.5     1.78    12   37.50
-    _end  10.8     2.00
-    name %time  cumsecs  #call  ms/call
-   _main  33.3     0.67     5  133.33
-    _zed  22.5     1.12    12   37.50
-    _foo  18.3     1.48     3  122.22
-     loc  15.0     1.78
-    _end  10.8     2.00
-    name %time  cumsecs  #call  ms/call
-   _main  33.3     0.67     5  133.33
-    _foo  18.3     1.03     3  122.22
-     loc  15.0     1.33
-    _zed  22.5     1.78    12   37.50
-    _end  10.8     2.00
+           name %time  cumsecs  #call  ms/call
+           main  33.3     0.67     5  133.33
+            foo  33.3     1.33     3  222.22
+            zed  22.5     1.78    12   37.50
+            end  10.8     2.00
+           name %time  cumsecs  #call  ms/call
+           main  33.3     0.67     5  133.33
+            foo  33.3     1.33     3  222.22
+            zed  22.5     1.78    12   37.50
+            end  10.8     2.00
+           name %time  cumsecs  #call  ms/call
+           main  33.3     0.67     5  133.33
+            zed  22.5     1.12    12   37.50
+            foo  18.3     1.48     3  122.22
+            loc  15.0     1.78
+            end  10.8     2.00
+           name %time  cumsecs  #call  ms/call
+           main  33.3     0.67     5  133.33
+            foo  18.3     1.03     3  122.22
+            loc  15.0     1.33
+            zed  22.5     1.78    12   37.50
+            end  10.8     2.00
 
      2
      2

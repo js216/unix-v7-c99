@@ -76,15 +76,16 @@ usr/local
 +	$(LINK)
 
 % usr/src/libc/lib.mk /dev/null
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +L = usr/src/libc
 +LIBC = $L/libc.a
 +CRT = $L/csu/crt0.o
++MCRT = $L/csu/mcrt0.o
 +LIBC_OBJ := $(addsuffix .o,$(basename $(wildcard $L/*.[cs] $L/gen/*.[cs] \
 +	$L/stdio/*.[cs] $L/sys/*.[cs])))
 +
-+$(LIBC_OBJ) $(CRT): CPPFLAGS = -Iusr/include
-+$(LIBC_OBJ) $(CRT): $L/lib.mk
++$(LIBC_OBJ) $(CRT) $(MCRT): CPPFLAGS = -Iusr/include
++$(LIBC_OBJ) $(CRT) $(MCRT): $L/lib.mk
 +
 +$(LIBC): $(LIBC_OBJ)
 +	$Qrm -f $@
@@ -184,7 +185,7 @@ usr/local
 +
 +.SECONDARY: $(GEN)
 +
-+OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
++OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(MCRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
 +$(OBJ) $(GEN): Makefile
 +
 +%.c: %.y
@@ -203,7 +204,7 @@ usr/local
 +	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 +	    $S/conf/qemuconf) $@
 +
-+ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
++ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \
 +	etc/passwd etc/group etc/ttys etc/rc \
 +	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
 +	usr/lib/lib.b
@@ -246,7 +247,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,361 @@
+@@ -0,0 +1,367 @@
 +/dev/null
 +32768 1024
 +d--755 0 0
@@ -278,6 +279,7 @@ usr/local
 +		dd	---755 0 0 bin/dd
 +		df	--g755 0 2 bin/df
 +		diff	---755 0 0 bin/diff
++		diff3	---755 0 0 bin/diff3
 +		deroff	---755 0 0 bin/deroff
 +		du	---755 0 0 bin/du
 +		dump	---755 0 0 bin/dump
@@ -466,6 +468,8 @@ usr/local
 +					ddend.exp	---644 0 0 usr/local/test/cases/ddend.exp
 +					devperm	---644 0 0 usr/local/test/cases/devperm
 +					devperm.exp	---644 0 0 usr/local/test/cases/devperm.exp
++					diff3	---644 0 0 usr/local/test/cases/diff3
++					diff3.exp	---644 0 0 usr/local/test/cases/diff3.exp
 +					exec	---644 0 0 usr/local/test/cases/exec
 +					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 +					exec.sed	---644 0 0 usr/local/test/cases/exec.sed
@@ -498,6 +502,8 @@ usr/local
 +					phys	---644 0 0 usr/local/test/cases/phys
 +					phys.exp	---644 0 0 usr/local/test/cases/phys.exp
 +					phys.sed	---644 0 0 usr/local/test/cases/phys.sed
++					prof	---644 0 0 usr/local/test/cases/prof
++					prof.exp	---644 0 0 usr/local/test/cases/prof.exp
 +					prog	---644 0 0 usr/local/test/cases/prog
 +					prog.exp	---644 0 0 usr/local/test/cases/prog.exp
 +					ps	---644 0 0 usr/local/test/cases/ps
@@ -580,6 +586,7 @@ usr/local
 +					pidf	---755 0 0 usr/local/test/obj/pidf
 +					prs	---755 0 0 usr/local/test/obj/prs
 +					prt	---755 0 0 usr/local/test/obj/prt
++					proft	---755 0 0 usr/local/test/obj/proft
 +					ptt	---755 0 0 usr/local/test/obj/ptt
 +					ptw	---755 0 0 usr/local/test/obj/ptw
 +					r12	---755 0 0 usr/local/test/obj/r12
@@ -728,7 +735,7 @@ usr/local
 +#define	SIG_IGN	(void (*)(int))1
 
 % usr/include/stdio.h
-@@ -37,5 +37,64 @@
+@@ -37,5 +37,66 @@
 -FILE	*fopen();
 -FILE	*freopen();
 -FILE	*fdopen();
@@ -793,6 +800,8 @@ usr/local
 +void	perror(char *s), srand(unsigned x), free(char *p);
 +void	qsort(char *a, unsigned n, int es, int (*fc)(char *p1, char *p2));
 +void	swab(char *from, char *to, int n);
++void	profil(short *buf, int bufsiz, int offset, int scale);
++void	monitor(char *lowpc, char *highpc, short *buf, int bufsiz, int cntsiz);
 +void	cfree(char *p, unsigned num, unsigned size);
 +void	setkey(char *key), encrypt(char *block, int edflag);
 +void	ltol3(char *cp, long *lp, int n), l3tol(long *lp, char *cp, int n);
@@ -10028,10 +10037,17 @@ usr/local
 +}
 
 % usr/src/cmd/prof.c
-@@ -42 +42 @@
+@@ -8 +7,0 @@
+-#include <a.out.h>
+@@ -14 +13 @@
+-	char	name[8];
++	char	name[16];
+@@ -42 +41 @@
 -double	ftime;
 +double	ftim;
-@@ -56,2 +56,5 @@
+@@ -54 +52,0 @@
+-long	symoff;
+@@ -56,2 +54,5 @@
 -main(argc, argv)
 -char **argv;
 +int	min(unsigned a, unsigned b), max(unsigned a, unsigned b);
@@ -10039,24 +10055,46 @@ usr/local
 +void	done(void);
 +int
 +main(int argc, char **argv)
-@@ -60 +62,0 @@
+@@ -60 +60,0 @@
 -	int timcmp(), valcmp();
-@@ -61,0 +64 @@
+@@ -61,0 +62 @@
 +#ifdef plot
-@@ -64 +66,0 @@
+@@ -64 +64,0 @@
 -	struct cnt *cp;
-@@ -65,0 +68,2 @@
+@@ -66 +66,5 @@
+-	struct exec xbuf;
 +#endif
 +	struct cnt *cp;
++	unsigned eh[13], sh[10], sym[4];
++	long sa, st;
++	unsigned n;
 @@ -83 +87 @@
 -				if(lowpc == -1)
 +				if(lowpc == (unsigned)-1)
-@@ -103,2 +107,2 @@
+@@ -103,2 +107 @@
 -	fread((char *)&xbuf, 1, sizeof(xbuf), nfile);
 -	if (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3) {
-+	if (fread((char *)&xbuf, sizeof(xbuf), 1, nfile) != 1 ||
-+	    (xbuf.a_magic!=A_MAGIC1 && xbuf.a_magic!=A_MAGIC2 && xbuf.a_magic!=A_MAGIC3)) {
-@@ -117,3 +121,7 @@
++	if (fread((char *)eh, sizeof eh, 1, nfile) != 1 || eh[0] != 0x464c457f) {
+@@ -108,4 +111,14 @@
+-	symoff = (long)xbuf.a_text + xbuf.a_data;
+-	if ((xbuf.a_flag&01) == 0)
+-		symoff *= 2;
+-	fseek(nfile, symoff+sizeof(xbuf), 0);
++	n = sa = st = 0;
++	for (i = eh[12]&0xffff; --i >= 0 && n == 0; ) {
++		fseek(nfile, eh[8] + i*40, 0);
++		if (fread((char *)sh, sizeof sh, 1, nfile) != 1)
++			break;
++		if (sh[1] == 2) {
++			sa = sh[4];
++			n = sh[5];
++			fseek(nfile, eh[8] + sh[6]*40, 0);
++			if (fread((char *)sh, sizeof sh, 1, nfile) != 1)
++				n = 0;
++			st = sh[4];
++		}
++	}
+@@ -117,3 +130,7 @@
 -	fread((char *)&h, sizeof(struct hdr), 1, pfile);
 -	lowpc = h.lowpc - (UNIT *)0;
 -	highpc = h.highpc - (UNIT *)0;
@@ -10067,23 +10105,58 @@ usr/local
 +	}
 +	lowpc = (unsigned)h.lowpc/sizeof(UNIT);
 +	highpc = (unsigned)h.highpc/sizeof(UNIT);
-@@ -121,0 +130 @@
+@@ -121,0 +139 @@
 +#ifdef plot
-@@ -122,0 +132 @@
+@@ -122,0 +141 @@
 +#endif
-@@ -126 +136,2 @@
+@@ -124,4 +143,7 @@
+-	for (nname = 0; xbuf.a_syms > 0; xbuf.a_syms -= sizeof(struct nlist)) {
+-		struct nlist nbuf;
 -		fread((char *)&nbuf, sizeof(nbuf), 1, nfile);
-+		if (npe >= &nl[1199] || fread((char *)&nbuf, sizeof(nbuf), 1, nfile) != 1)
+-		if (nbuf.n_type!=N_TEXT && nbuf.n_type!=N_TEXT+N_EXT)
++	for (nname = 0; n >= sizeof sym; n -= sizeof sym, sa += sizeof sym) {
++		fseek(nfile, sa, 0);
++		if (npe >= &nl[1199] || fread((char *)sym, sizeof sym, 1, nfile) != 1)
 +			break;
-@@ -149 +160 @@
++		if ((sym[3]&017) > 2 || (sym[3]>>16) == 0 || (sym[3]>>16) >= (eh[12]&0xffff))
++			continue;
++		if (aflg==0 && (sym[3]&0360) != 020)
+@@ -129 +151,2 @@
+-		if (aflg==0 && nbuf.n_type!=N_TEXT+N_EXT)
++		fseek(nfile, eh[8] + (sym[3]>>16)*40, 0);
++		if (fread((char *)sh, sizeof sh, 1, nfile) != 1 || (sh[2]&4) == 0)
+@@ -131,3 +154,5 @@
+-		npe->value = nbuf.n_value/sizeof(UNIT);
+-		for (i=0; i<8; i++)
+-			npe->name[i] = nbuf.n_name[i];
++		fseek(nfile, st + sym[0], 0);
++		npe->name[fread(npe->name, 1, sizeof npe->name - 1, nfile)] = 0;
++		if (npe->name[0] == '$')
++			continue;
++		npe->value = sym[1]/sizeof(UNIT);
+@@ -143,7 +168,9 @@
+-	for (cp = cbuf; cp < &cbuf[h.ncount]; cp++)
+-		for (np = nl; np < npe; np++)
+-			if ((unsigned)(cp->cvalue/sizeof(UNIT) - np->value) <=10) {
+-				np->ncall = cp->cncall;
+-				break;
+-			}
 -	qsort(nl, nname, sizeof(struct nl), valcmp);
 +	qsort((char *)nl, nname, sizeof(struct nl), valcmp);
-@@ -153,2 +164,2 @@
++	for (cp = cbuf; cp < &cbuf[h.ncount]; cp++) {
++		if (cp->cvalue == 0)
++			continue;
++		for (np = nl; np[1].value <= cp->cvalue/sizeof(UNIT); np++)
++			;
++		if (np->value <= cp->cvalue/sizeof(UNIT))
++			np->ncall = cp->cncall;
++	}
+@@ -153,2 +180,2 @@
 -		register j;
 -		unsigned UNIT ccnt;
 +		register int j;
 +		unsigned short ccnt;
-@@ -162,4 +173,4 @@
+@@ -162,4 +189,4 @@
 -		ftime = ccnt;
 -		totime += ftime;
 -		if(ftime > maxtime)
@@ -10092,55 +10165,58 @@ usr/local
 +		totime += ftim;
 +		if(ftim > maxtime)
 +			maxtime = ftim;
-@@ -172 +183 @@
+@@ -172 +199 @@
 -			nl[j].time += overlap*ftime/scale;
 +			nl[j].time += overlap*ftim/scale;
-@@ -201 +212 @@
+@@ -201 +228 @@
 -		ftime = ccnt;
 +		ftim = ccnt;
-@@ -204 +215 @@
+@@ -204 +231 @@
 -		lastsx -= 2000.*ftime/totime;
 +		lastsx -= 2000.*ftim/totime;
-@@ -210 +221 @@
+@@ -210 +237 @@
 -				lastx = -ftime*2000./maxtime;
 +				lastx = -ftim*2000./maxtime;
-@@ -223 +234 @@
+@@ -223 +250 @@
 -		ftime = np->time/totime;
 +		ftim = np->time/totime;
-@@ -250 +261 @@
+@@ -248 +275 @@
+-	printf("    name %%time  cumsecs  #call  ms/call\n");
++	printf("           name %%time  cumsecs  #call  ms/call\n");
+@@ -250 +277 @@
 -		qsort(nl, nname, sizeof(struct nl), timcmp);
 +		qsort((char *)nl, nname, sizeof(struct nl), timcmp);
-@@ -252 +263 @@
+@@ -252 +279 @@
 -		ftime = np->time/totime;
 +		ftim = np->time/totime;
-@@ -254 +265 @@
+@@ -254 +281 @@
 -		printf("%8.8s%6.1f%9.2f", np->name, 100*ftime, actime/60);
-+		printf("%8.8s%6.1f%9.2f", np->name, 100*ftim, actime/60);
-@@ -264,2 +275,2 @@
++		printf("%15.15s%6.1f%9.2f", np->name, 100*ftim, actime/60);
+@@ -264,2 +291,2 @@
 -min(a, b)
 -unsigned a, b;
 +int
 +min(unsigned a, unsigned b)
-@@ -272,2 +283,2 @@
+@@ -272,2 +299,2 @@
 -max(a, b)
 -unsigned a, b;
 +int
 +max(unsigned a, unsigned b)
-@@ -280,2 +291,2 @@
+@@ -280,2 +307,2 @@
 -valcmp(p1, p2)
 -struct nl *p1, *p2;
 +int
 +valcmp(char *a, char *b)
-@@ -282,0 +294 @@
+@@ -282,0 +310 @@
 +	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
-@@ -286,2 +298,2 @@
+@@ -286,2 +314,2 @@
 -timcmp(p1, p2)
 -struct nl *p1, *p2;
 +int
 +timcmp(char *a, char *b)
-@@ -288,0 +301 @@
+@@ -288,0 +317 @@
 +	struct nl *p1 = (struct nl *)a, *p2 = (struct nl *)b;
-@@ -299 +312,2 @@
+@@ -299 +328,2 @@
 -done()
 +void
 +done(void)
@@ -18079,6 +18155,12 @@ usr/local
 @@ -41 +41 @@
 -getttys(f)
 +getttys(int f)
+@@ -50 +50 @@
+-		if (*lp =='\n') {
++		if (*lp =='\n' || lp == &line[31]) {
+@@ -54,2 +53,0 @@
+-		if (lp >= &line[32])
+-			return(line+2);
 
 % usr/src/libc/memcpy.c /dev/null
 @@ -0,0 +1,23 @@
@@ -20296,7 +20378,7 @@ usr/local
 +	b	cerror
 
 % usr/src/libc/sys/ptrace.s
-@@ -1,28 +1,7 @@
+@@ -1,28 +1,12 @@
 -/ ptrace -- C library
 -
 -/	result = ptrace(req, pid, addr, data);
@@ -20327,6 +20409,11 @@ usr/local
 -	sys	.ptrace; 0: .=.+6
 +.globl	ptrace
 +ptrace:
++	push	{r0}
++	mov	r0, #0
++	ldr	ip, =errno
++	str	r0, [ip]
++	pop	{r0}
 +	mov	ip, r0
 +	mov	r0, r3
 +	mov	r3, ip
