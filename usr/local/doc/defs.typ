@@ -3,9 +3,9 @@
   let k = p
   let n = str(k)
   let here-p(h) = h.location().page() == p
-  if p == 1 {
+  if p == 1 or query(heading.where(level: 1)).any(here-p) or query(heading.where(level: 2)).any(here-p) {
     none
-  } else if query(heading.where(level: 2).before(here())).len() == 0 or query(heading.where(level: 1)).any(here-p) or query(heading.where(level: 2)).any(here-p) {
+  } else if query(heading.where(level: 2).before(here())).len() == 0 {
     if calc.even(k) { n } else { align(right, n) }
   } else if calc.even(k) {
     let sec = query(heading.where(level: 2).before(here())).last()
@@ -15,6 +15,13 @@
     let prev = query(heading.where(level: 3).before(here()))
     let sub = if on.len() > 0 { on.first() } else if prev.len() > 0 { prev.last() } else { none }
     if sub == none { align(right, n) } else { emph(sub.body) + h(1fr) + n }
+  }
+}
+#let opening-foot = context {
+  let p = here().page()
+  let here-p(h) = h.location().page() == p
+  if query(heading.where(level: 2)).any(here-p) and not query(heading.where(level: 1)).any(here-p) {
+    align(center, str(p))
   }
 }
 #let file = state("file", "")
