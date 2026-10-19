@@ -273,14 +273,14 @@ but the product of two 32-bit values may need 64 bits, so it is formed
 as an `unsigned long long` (182). An odd byte offset is rounded up to
 the next counter, as the PDP-11 code did.
 
-#lines(176, 184)
+#lines(176, 185)
 
 The counter is read and written with `copyin` and
 `copyout`, two bytes at a time, since the user's buffer may be
 anywhere. If it cannot be reached, profiling is turned off by clearing
 the scale, as v7 did by way of `nofault`.
 
-#lines(185, 191)
+#lines(186, 192)
 #source("/usr/sys/sys/sysent.c")
 
 #f("sysent.c") holds the table of system calls, and nothing else.
@@ -397,13 +397,13 @@ This is v7's code, but for the `pc`, which v7 received as a parameter
 and here is taken from the frame.
 
 Finally, as in v7, the floating point registers are loaded from the
-u-area if anything since the entry (26) stored them there (57, 58): a
+u-area if anything since the entry (26) stored them there (58, 59): a
 switch to another process, a signal, `fork`, or `exec`, which sets
 `u_fpsaved` itself after clearing the saved registers (#f("sys1.c")). If
 nothing did, the registers still hold the process's own values, and
 nothing need be done.
 
-#lines(50, 59)
+#lines(50, 60)
 
 `user_trap_handler` handles the rest of v7's `trap`: the exceptions
 other than `svc`, and the preemption check after an interrupt. It is
@@ -417,28 +417,28 @@ and `DFSR`. v7 printed the PDP-11 equivalents. A fault in one of the
 routines which reach user memory never arrives here: #f("low.s") sends
 it back to the routine through `nofault` (#f("mch.s")).
 
-#lines(60, 67)
+#lines(61, 69)
 
 An undefined instruction in Thumb code (the `T` bit, `0x20`, of the
 saved status) leaves the saved PC two bytes past the start of the
 instruction (#f("low.s")). The top five bits of the instruction's first
 halfword, read with `fubyte` from its upper byte, tell whether it is 32
 bits long (`0xe8` and above); if so, the PC is moved past the second
-halfword (70, 71), so that a handler which returns resumes at the next
+halfword (72, 74), so that a handler which returns resumes at the next
 instruction, not in the middle of this one. Such code comes only from
 the C compiler's support library (#f("machdep.c") has more on Thumb
 state).
 
 The signal is then posted to the current process and
 the same tail as in `trap` is run, the loading of the floating point
-registers included (80, 81). A signal number of zero is passed by
+registers included (83, 84). A signal number of zero is passed by
 the interrupt entry, when `runrun` is set; nothing is posted then
-(72), and the call serves only to reach the tail, as v7's type 12 trap
+(75), and the call serves only to reach the tail, as v7's type 12 trap
 did.
 
 The exception is the one which v7's `trap` also made for a segmentation
 fault: if the stack can grow to cover the fault, it is grown and no
-signal is sent (72--74), and the process resumes at the faulting
+signal is sent (75--77), and the process resumes at the faulting
 instruction, which this time succeeds. v7 grew the stack to cover the
 stack pointer, which on the PDP-11 had already been decremented when a
 push faulted. On the ARM a store multiple which pushes registers leaves
@@ -457,11 +457,11 @@ instruction also arrives as a prefetch abort, and gives `SIGSEG`, not
 `SIGTRC`. There are no `iot` and `emt` instructions, no floating point
 exceptions, and no parity registers.
 
-#lines(68, 82)
+#lines(70, 85)
 
 `nosys` fails with `EINVAL`, and `nullsys` does nothing.
 
-#lines(83, 99)
+#lines(86, 102)
 #source("/usr/sys/sys/sys1.c")
 
 #f("sys1.c") holds the system calls which make, change, and end
@@ -574,20 +574,20 @@ its code would lie in memory which every process writes privately.
 
 A malformed header is refused here too, before anything of the old
 image is given up. A program header which cannot be read whole ends the
-search (192, 193); what `ux_ph[n]` held would be left over from the
+search (194, 195); what `ux_ph[n]` held would be left over from the
 program that ran before. A text segment with nothing in the file
-(198) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
+(200) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
 reckoned from its address, could still be nonzero, so that the page
 tables (#f("ureg.c")) would map the start of the process's own image,
 its per process area, as the text. A data segment with more bytes in
-the file than in memory (199) would be read past the end of the space
+the file than in memory (201) would be read past the end of the space
 reserved for it. A text segment which begins at offset 0 holds the ELF
 header and the program header table, which `xalloc` skips; if the text
-were shorter than the two (200, 201), the count left to read would wrap
+were shorter than the two (202, 203), the count left to read would wrap
 around to an enormous number, and the text would be read beyond its
 pages after the old image had gone.
 
-#lines(184, 204)
+#lines(184, 206)
 
 v7's test follows unchanged: a program with a text may not be executed
 while some process has the file open, unless that is because it is
@@ -596,67 +596,67 @@ change the text under the processes which share it. The counterpart,
 that a running text cannot be opened for writing, is in `access`
 (#f("fio.c")).
 
-#lines(205, 209)
+#lines(207, 211)
 
-The text occupies the bottom of the address space: `ts` (215) is the
+The text occupies the bottom of the address space: `ts` (217) is the
 number of pages from address zero to the end of the text segment,
 which includes the bottom page, below the text's own first address.
-The data begins at the first page above the text, and `ds` (222) is
+The data begins at the first page above the text, and `ds` (225) is
 the number of pages from there to the end of the data segment in
 memory (its address plus `p_msize`), which takes in the uninitialised
 data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
 overflow is changed to fit: a sum of unsigned numbers which wraps round
 is smaller than either addend. A data segment which begins below the
-end of the text is refused with the same error (218). The stack is
+end of the text is refused with the same error (221). The stack is
 given `SSIZE` pages plus room for the strings and the pointer vector,
 `nargc` bytes.
 
-The overlay branch (224--235) is dead, since `overlay` is never set; it
+The overlay branch (227--238) is dead, since `overlay` is never set; it
 is kept as v7 wrote it, but for the parentheses at 225, as in #f("slp.c").
 
-#lines(210, 238)
+#lines(212, 241)
 
-With the profiling turned off (245) the old image is abandoned. As in v7, the image is
+With the profiling turned off (248) the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` pages, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
-(247, 254, 255). The uninitialised data and the stack therefore read as
+(250, 257, 258). The uninitialised data and the stack therefore read as
 zero. The image is no larger than the program: `sbreak` and the growth
 of the stack (`grow`, #f("sig.c")) enlarge it when the program asks for
 more, and `fork` copies only what there is (#f("slp.c")).
 
 `expand` fails when there is room neither in core nor in the swap area
 (#f("slp.c")). The old image is already gone, so the process is killed
-with a message (248--253), as `xalloc` (#f("text.c")) kills it when it
+with a message (251--256), as `xalloc` (#f("text.c")) kills it when it
 cannot place the text; `u_error` stops `exec` from copying the
 arguments into an image which was never made.
 
-#lines(239, 256)
+#lines(242, 259)
 
 `xalloc` (#f("text.c")) has attached the text, shared with any other
 process running the same file, or read it in. The data segment is now
 read from the file into user space at its own address, from its file
 offset, for `ux_dsize` bytes, the size of the segment in the file
-(262--266). v7 mapped the data at address zero for the purpose, and
+(265--269). v7 mapped the data at address zero for the purpose, and
 read from just after the text in the file; here the final mapping of
 text and data serves.
 
-#lines(257, 266)
+#lines(260, 269)
 
 The set-user-id and set-group-id bits take effect unless
 the process is being traced, in which case it is stopped with `SIGTRC`
 instead, so that the tracing parent can examine the new image.
 
-#lines(267, 280)
+#lines(270, 283)
 
 The sizes are recorded and the user mapping set by
 `estabur`. The instructions of the new program were made visible to
 instruction fetch by `xalloc` (#f("text.c")), which read them in.
 
-#lines(281, 288)
+#lines(284, 291)
 
 `setregs` first resets to the default the signals that were caught
-(299--301), since the handlers no longer exist; signals that were ignored
-(value 1) stay ignored. Then the registers are cleared (302--304). v7
+(302--304), since the handlers no longer exist; signals that were ignored
+(value 1) stay ignored. Then the registers are cleared (305--307). v7
 cleared those which `regloc` names as `r0` to `r5`: on the PDP-11 every
 general register but the stack pointer `r6` and the `pc` `r7`. The port
 clears every general register of the ARM in the same way, `r0` to `r12`
@@ -665,16 +665,16 @@ program, and the `pc`, which is set next; the new program inherits
 nothing from the old. When the call returns, `trap` (#f("trap.c"))
 puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
 zero, but the second is the caller's `r1`, the old program's argument
-pointer, so it is cleared too (305). The `pc` is set to the entry point
-with bit 0 cleared (306); on the PDP-11 this ensured an even address. On the
+pointer, so it is cleared too (308). The `pc` is set to the entry point
+with bit 0 cleared (309); on the PDP-11 this ensured an even address. On the
 ARM bit 0 of an entry point would select Thumb state, in which no
 program here begins.
 
-#lines(289, 306)
+#lines(292, 309)
 
-The floating point save area is cleared (307, 308): all 32 registers
+The floating point save area is cleared (310, 311): all 32 registers
 become zero, and `FPSCR` zero selects rounding to nearest, with no
-exception flags. `u_fpsaved` is set (309), so that the return to user
+exception flags. `u_fpsaved` is set (312), so that the return to user
 mode loads the cleared state (#f("trap.c")). In v7 it was set only if
 `exec` had happened to sleep, so that `swtch` stored the registers;
 otherwise the cleared area was never loaded, and the new program began
@@ -682,7 +682,7 @@ with the old one's floating point registers. Files marked close-on-exec are
 closed, and the last component of the name of the file (left in
 `u.u_dbuf` by `namei`) is kept for accounting.
 
-#lines(307, 322)
+#lines(310, 325)
 
 `rexit` is the system call; `exit` is also called by the kernel, from
 `psig` and `stop` (#f("sig.c")), with a signal number. The user's code
@@ -692,7 +692,7 @@ goes in the high byte of the status and the signal in the low, as
 `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit; files, current and root
 directories, text, page tables (#f("ureg.c")), and finally core are
-released. Note that after `mfree` (372) the process goes on running on the stack within the
+released. Note that after `mfree` (375) the process goes on running on the stack within the
 per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
@@ -704,19 +704,19 @@ which is woken in case it is waiting; stopped children are set running
 so that they can die. Finally the parent is woken, and `swtch` is
 called, never to return.
 
-#lines(323, 391)
+#lines(326, 394)
 
 `wait` looks for a child which is a zombie. If it finds one, it
 collects the status and times, frees the `proc` entry, and returns the
 child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
-`exit` (386) and `stop` wake, and looks again. If there are none,
-`ECHILD`. Clearing `p_nptab` (423) is new; #f("proc.h") explains why.
+`exit` (389) and `stop` wake, and looks again. If there are none,
+`ECHILD`. Clearing `p_nptab` (426) is new; #f("proc.h") explains why.
 
-#lines(392, 442)
+#lines(395, 445)
 
-`fork` checks that the swap area could hold the caller's image (457),
+`fork` checks that the swap area could hold the caller's image (460),
 finds a free `proc` entry, and counts the caller's processes. v7
 checked for room for an image of the maximum size, `MAXMEM`
 (#f("param.h")), as insurance against running out of swap space later.
@@ -725,14 +725,14 @@ harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
 pages, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
-to the swap device, is the size of the caller's. The comment (454) is
+to the swap device, is the size of the caller's. The comment (457) is
 changed to match. The last slot of `proc` is reserved for the super-user, so that root can
 still log in and kill something when the table is full.
 
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
 the user program must also be told which it is. v7 did it with a trick
 which the port keeps. In the child `fork` returns the parent's pid
-(484); in the parent it advances the saved `pc` by one word (496), so
+(487); in the parent it advances the saved `pc` by one word (499), so
 that the parent skips the instruction after the `svc`, a branch which
 only the child therefore takes. `PC` is v7's `R7`, the `pc`
 (#f("reg.h")), and `NBPW` is now four bytes, the size of an ARM
@@ -744,7 +744,7 @@ branch, stores the parent's pid in `par_uid` and returns 0.
 In the child, the times are cleared and `AFORK` marks for accounting a
 process which has not yet called `exec`.
 
-#lines(443, 497)
+#lines(446, 500)
 
 `sbreak` sets the size of the data area, and is v7's. The new break
 is converted to pages, and, since the data begins at the first
@@ -764,11 +764,11 @@ relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
 
-If `expand` fails for want of swap space (541), the data size and the
+If `expand` fails for want of swap space (544), the data size and the
 mapping are set back and `sbreak` fails with `ENOMEM`, as when the
 image would exceed `maxmem`; v7 panicked.
 
-#lines(498, 555)
+#lines(501, 558)
 #source("/usr/sys/sys/sys4.c")
 
 #f("sys4.c") is a collection of small system calls: those concerned
@@ -1126,7 +1126,7 @@ per-process area, but only in three places: the floating point save
 area, now 32 registers long (390), a saved register named by `regloc`, or
 the saved status register.
 
-The `&0377` (393) is new. In v7 the values of `regloc` were negative,
+The `&0377` (394) is new. In v7 the values of `regloc` were negative,
 and the PDP-11's signed `char` gave the right index. On the ARM they are
 all positive and `char` is unsigned; the mask converts the `char` to an
 `int` before it is used as an index, of which the compiler would
@@ -1134,7 +1134,7 @@ otherwise warn, and changes nothing. Note that, as on the PDP-11, only
 the registers `r0` to `r5`, the stack pointer, and the `pc` can be
 written: `regloc` names no other.
 
-#lines(378, 394)
+#lines(378, 395)
 
 A new status word must not be allowed to give the child a
 privileged mode. v7 forced the PDP-11 current and previous mode bits to
@@ -1147,7 +1147,7 @@ the `GE` flags (16 to 19), and the Thumb state as `sigreturn` keeps it
 10 to 15, 25, and 26. A debugger may therefore stop a child anywhere in
 Thumb code, inside an `if-then` block too, and resume it there.
 
-#lines(395, 403)
+#lines(396, 405)
 
 Request 7 resumes the child, optionally at a new `pc`, with the
 pending signals replaced by the one given (or none). v7's request 9,
@@ -1163,7 +1163,7 @@ Request 8 makes the child exit. The `return` added after `exit` is
 never reached; it keeps the compiler, which does not know that `exit`
 does not return, from warning that control falls into the next case.
 
-#lines(404, 424)
+#lines(406, 426)
 #source("/usr/sys/h/acct.h")
 
 The record which the kernel appends to the accounting file when a
@@ -1248,9 +1248,9 @@ as any of them exists. The `text` table records each such segment; a
 process finds its entry through `p_textp` (#f("proc.h")).
 
 `x_daddr` (9) is the block number of the swap copy, counted from
-`swplo`. `x_caddr` (10) is the page number of the core copy. `x_count`
-(13) is the number of processes which use the text at all, and
-`x_ccount` (14) the number of those which are in core: the core copy may
+`swplo`. `x_caddr` (11) is the page number of the core copy. `x_count`
+(14) is the number of processes which use the text at all, and
+`x_ccount` (15) the number of those which are in core: the core copy may
 be freed when the second reaches zero, the swap copy only when the first
 does.
 
@@ -1264,13 +1264,13 @@ fits in a `short`.
 program holds a reference to its text, so a count can reach `NPROC`,
 150 (#f("param.h")); an unsigned `char`, as the ARM's is, counts to 255.
 
-`XLOAD` (22) says that the core copy is being read from the file and has
-no counterpart on the swap device yet; `XWRIT` (21) that the swap copy
+`XLOAD` (23) says that the core copy is being read from the file and has
+no counterpart on the swap device yet; `XWRIT` (22) that the swap copy
 must be written when the core copy is next given up. `XLOCK` and `XWANT`
-(23, 24) are the usual pair: a lock, and a request to be woken when it is
+(24, 25) are the usual pair: a lock, and a request to be woken when it is
 released.
 
-#lines(1, 24)
+#lines(1, 25)
 #source("/usr/sys/sys/text.c")
 
 #f("text.c") manages the `text` table of #f("text.h"), and holds besides
@@ -1425,28 +1425,28 @@ to be read from the file instead; a copy read from swap is made visible
 to instruction fetch (186) as `xalloc` does.
 
 If not, the process makes room for itself by swapping itself out
-(196), and leaves the matter to `sched`, which brings in data area and
+(197), and leaves the matter to `sched`, which brings in data area and
 text together (`swapin`, #f("slp.c")). The pattern is that of `expand`:
-`save(u.u_ssav)` (192) is the point to which the process returns, by way
+`save(u.u_ssav)` (193) is the point to which the process returns, by way
 of `SSWAP` and `swtch`, once it is back in core; it then reloads its
-user mapping with `sureg` and returns. `qswtch` (200) does not return.
+user mapping with `sureg` and returns. `qswtch` (201) does not return.
 If there is no swap space either, `xswap` fails, and `xexpand` returns
-at once (197) with the text still locked and `x_ccount` still zero, by
+at once (198) with the text still locked and `x_ccount` still zero, by
 which `xalloc` knows.
 
-#lines(173, 202)
+#lines(173, 203)
 
 The lock on a text entry. `xlock` sleeps at `PSWP`, a priority at which
 no signal can interrupt it.
 
-#lines(203, 225)
+#lines(204, 226)
 
 `xccdec` is called when a process using a text leaves core, by being
 swapped out or by giving up the text. When the last such process has
 gone, the core copy is freed, but first written to the swap device if
 it has never been written there (`XWRIT`).
 
-#lines(226, 246)
+#lines(227, 247)
 
 `xumount` is called by `umount` (#f("sys3.c")): a file system cannot be
 unmounted while a sticky text from it holds its inode. `xrele` is called
@@ -1454,15 +1454,15 @@ when write access to a file is checked (`access`, #f("fio.c")), when the
 file is unlinked, and when `chmod` clears its sticky bit (#f("sys4.c")):
 a text which no process is using should not hold the inode, nor survive
 a change to the file. Both pass the work to `xuntext`, which empties the
-entry only if no process uses it (287).
+entry only if no process uses it (288).
 
-The test in `xrele` (270) has gained parentheses. v7 wrote
+The test in `xrele` (271) has gained parentheses. v7 wrote
 `ip->i_flag&ITEXT==0`, which C parses as `ip->i_flag & (ITEXT==0)`,
 which is always zero, so that v7 never took the early return and always
 searched the table. The search finds nothing for an inode without
 `ITEXT`, so the bug cost only time; the port writes what was meant.
 
-#lines(247, 300)
+#lines(248, 301)
 #source("/usr/sys/h/buf.h")
 
 Apart from two deletions and a shortened comment, described below,
@@ -1609,7 +1609,7 @@ common symbol. Here `c.c` only takes its address, and declares it
 `extern`; the one definition is in the driver (#f("virtio_blk.c")), as
 in `rk.c`.
 
-#lines(18, 32)
+#lines(18, 33)
 
 The character device switch, in the same manner. The console (major 0),
 memory (8), the raw disk (9), and the controlling terminal `tty` (17)
@@ -1623,7 +1623,7 @@ The raw disk entry uses `rkread` and `rkwrite`, which call `physio`
 `ioctl` slot becomes `noioctl`, and v7's `nulldev` in `d_stop` becomes
 `nulltty`, again because the slots now have types.
 
-#lines(33, 57)
+#lines(34, 62)
 
 The one line discipline, that of #f("tty.c"). In v7 the row was
 `ttyopen, nulldev, ttread, ttwrite, nodev, ttyinput, ttstart`, which put
@@ -1633,7 +1633,7 @@ discipline, so the mistake was harmless; the port puts `ttstart` where
 its name says. `nulltty` replaces `nulldev` in `l_close`, and
 `nolioctl` replaces `nodev` in `l_ioctl`.
 
-#lines(58, 62)
+#lines(63, 68)
 
 Root, swap, and pipe devices are all minor device 0 of major device 0,
 the one disk. The file system occupies its first 32768 blocks
@@ -1644,7 +1644,7 @@ of the pack; putting the swap area after the file system keeps it clear
 of the superblock, the block which describes a file system as a whole,
 in block 1.
 
-#lines(63, 69)
+#lines(69, 75)
 
 The main tables of the system are defined here rather than in the files
 which use them, at the sizes of #f("param.h"). v7 also defined here
@@ -1654,29 +1654,29 @@ carries neither the multiplexor (`mx1.c`, `mx2.c`) nor its stub
 
 v7 defined the remaining tables elsewhere: the buffers, the three maps,
 and the mount table in `main.c`, the callouts in `callo.h`, and the
-character blocks in `prim.c`. The port defines them here too (78--84),
+character blocks in `prim.c`. The port defines them here too (84--90),
 so that every large table is in `c.o`, which the MP135 machine's linker
 script places in DDR, beyond the small SYSRAM in which its kernel runs
 (#f("mp135/unix.ld")). The sizes are the same on both machines;
 `CMAPSIZ` and the other sizes of the maps are computed from them.
 
-#lines(70, 85)
+#lines(76, 91)
 
 The rest of the file is new: the facts about the machine, taken from
 lines of #f("qemuconf") which v7's format did not have.
 
-`corebase` and `coretop` (86) bound, by physical address, the memory
+`corebase` and `coretop` (92) bound, by physical address, the memory
 which `startup` (#f("machdep.c")) gives to `coremap` for process images:
 from the first page after the kernel, which `machine_init` stores into
 `corebase`, to the end of the QEMU machine's 512 MB. `coreoff`, which
 `machine_init` also sets, is the distance from the physical address of
-core to its kernel address (#f("seg.h")). `gicdbase` and `giccbase` (87)
+core to its kernel address (#f("seg.h")). `gicdbase` and `giccbase` (93)
 locate, by kernel address, the distributor and the processor interface
 of the ARM generic interrupt controller. The attributes of a user page,
 `PGUSER`, are the same on both machines and are a constant
 (#f("seg.h")).
 
-`board_map` (89) lists the regions which the kernel maps in 2 MB blocks
+`board_map` (95) lists the regions which the kernel maps in 2 MB blocks
 (`machine_init`, #f("machdep.c")), each with its kernel address, its
 physical bounds, and its attributes: all 512 MB of memory, at
 0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
@@ -1686,9 +1686,9 @@ Since a kernel address is not a physical one, a device performing DMA
 must be given the latter, which `vtop` (#f("machdep.c")) finds in this
 table (#f("virtio_blk.c")).
 
-#lines(86, 97)
+#lines(92, 103)
 
-`intrtab` (99) pairs each configured interrupting device with its
+`intrtab` (105) pairs each configured interrupting device with its
 handler (`struct intr`, #f("conf.h")): the clock, the console, and the
 disk. The numbers are reached through pointers, since the disk driver
 learns its own only when it finds the device.
@@ -1702,7 +1702,7 @@ nothing here, since the QEMU machine's memory needs no initialisation. `putchar`
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
 
-#lines(98, 109)
+#lines(104, 115)
 #source("/usr/sys/dev/virtio_blk.c")
 
 This is the disk driver of the QEMU machine. It replaces v7's
@@ -2067,24 +2067,24 @@ driver, and does as much in one transfer as the user asks for. The
 transfer is described by `u_base`, `u_count`, and `u_offset`, as for
 `read` and `write`.
 
-#lines(464, 485)
+#lines(464, 486)
 
-The checks (486) are v7's, with two added. The transfer must lie within
+The checks (487) are v7's, with two added. The transfer must lie within
 the user's address space, below `USRSIZE`, and its offset on the
-device must not be negative (487). `readi` and `writei` let a negative
+device must not be negative (488). `readi` and `writei` let a negative
 offset through to character devices, for the sake of `/dev/kmem`
 (#f("rdwri.c")); for a disk it would become a negative block number,
 which the drivers' checks of `b_blkno`, signed comparisons, do not
 catch. The check that a
-transfer does not overlap the text segment (489--498) is v7's: the
+transfer does not overlap the text segment (490--499) is v7's: the
 text is shared, and a device must not write into it. v7 rounded the text size up to a
 whole number of 8 KB segments, 128 clicks, since the data began at the
 next segment; here the data begins at the next page, so the size in
-pages is used as it stands (489). `nb` is the page of the start of
-the transfer (492).
+pages is used as it stands (490). `nb` is the page of the start of
+the transfer (493).
 
 v7 then checked that the transfer lay wholly in the data segment or
-wholly in the stack (499--507), the two parts of the user's address
+wholly in the stack (500--508), the two parts of the user's address
 space which are mapped, and which lie in different places in core. The
 check is v7's, with the page size changed and the top of the address
 space, which v7 wrote as 1024 clicks, now `btop(USRSIZE)`. v7 also
@@ -2093,33 +2093,33 @@ space; the test at 487 has already done that here. v7 tested the click
 of the byte after the transfer, so that a transfer which ended exactly
 at the end of the data was refused. With pages of 4096 bytes in place
 of clicks of 64, such a buffer is 64 times as likely, and the test is
-now of the page of the transfer's last byte (505).
+now of the page of the transfer's last byte (506).
 
-#lines(486, 514)
+#lines(487, 515)
 
 v7 found the physical address of the user's buffer by reading the user
 segmentation registers (`UISA` or `UDSA`), simulating the translation
 which the hardware would have made. The port computes it from the
-layout of the image instead (519--523): the data begins `USIZE` pages
+layout of the image instead (520--524): the data begins `USIZE` pages
 into the image (#f("proc.h")), at `p_addr`, and the stack follows it.
 An address in the data lies `nb-ts` pages into it; one in the stack
 lies as many pages into the stack as it lies above the stack's lowest
 address. `PGADDR` converts the page number to an address, as in
 `swap`, and the low twelve bits of the user's address give the offset
-within the page (524). Each part is contiguous in core, so the whole
+within the page (525). Each part is contiguous in core, so the whole
 transfer is too.
 
-`SLOCK` (528) keeps the process in core while the device transfers
+`SLOCK` (529) keeps the process in core while the device transfers
 into its memory: the address given to the device would be wrong if the
 image were swapped out and brought back elsewhere.
 
-#lines(515, 543)
+#lines(516, 544)
 
 `geterror` passes the error of a failed transfer to the user. The
 comment's last sentence was true of v7's drivers and remains so here:
 neither disk driver sets `b_error`.
 
-#lines(544, 558)
+#lines(545, 559)
 
 == File System <ch-fs>
 
@@ -2330,17 +2330,17 @@ overflow a signed `long`, which C leaves undefined, while the unsigned
 sum wraps, and converted back it gives the negative offset that
 `readi` (#f("rdwri.c")) refuses.
 
-#lines(163, 210)
+#lines(163, 211)
 
 `link` makes a second name for an existing file. Only the super-user
-may link a directory (228), since a directory with two parents would
+may link a directory (229), since a directory with two parents would
 make the meaning of its ".." entry ambiguous, and a loop of directories
 could never be freed. The comment explains why the inode is unlocked
 before the second `namei`: the new name may lie on a path which passes
 through the file itself, if it is a directory, and `namei` would then
 wait forever for the lock which this process holds.
 
-#lines(211, 238)
+#lines(212, 239)
 
 `trap` set `u.u_dirp` to the first argument; it is pointed at the
 second for a call of `namei` with flag 1. If the name exists the call
@@ -2349,29 +2349,29 @@ which must be on the same device as the file, since a directory entry
 holds only an inode number. `wdir` (#f("iget.c")) writes the entry and
 releases `u.u_pdir`.
 
-#lines(239, 261)
+#lines(240, 262)
 
 `mknod` is the super-user's general means of making an inode: the mode
 is taken as given, so it is the only way to make a special file or a
 directory. The `mkdir` command, which runs as the super-user, calls
 `mknod` and then `link` twice, for "." and "..". For a special file the
 third argument, the device number, goes into the first block address
-(289). Nothing checks that a non-special inode receives a zero there.
+(290). Nothing checks that a non-special inode receives a zero there.
 
 Note the way an error from `suser` is handled: the test at 284 also
 catches it, so that the `goto out` path is taken only when `ip` has been
 set.
 
-#lines(262, 293)
+#lines(263, 294)
 
 `saccess`, the `access` system call, asks whether the real rather than
 the effective user could use the file in the given ways. It does so by
 installing the real ids for the duration of the `namei` and the calls
 of `access` (#f("fio.c")), which leave any refusal in `u.u_error`. The
-caller's mode uses the bits 4, 2, and 1, which the shifts (315--319)
+caller's mode uses the bits 4, 2, and 1, which the shifts (316--320)
 compare with the owner's bits of `IREAD`, `IWRITE`, and `IEXEC`.
 
-#lines(294, 325)
+#lines(295, 326)
 #source("/usr/sys/sys/fio.c")
 
 #f("fio.c") holds the small routines which manage open files and
@@ -3417,7 +3417,7 @@ turns into kernel ones. On the PDP-11 these were simply the top 8 KB of
 the physical address space, read like memory. A device register must be
 read and written whole, in one access of its own width, and a read may
 itself change the device, so the bytewise loop will not do. An offset in
-a device's block is therefore served a word at a time (28--37): each
+a device's block is therefore served a word at a time (28--38): each
 32-bit word is read once through a `volatile` pointer and passed to the
 user by `iomove` (#f("rdwri.c")). The request must be word-aligned and
 a whole number of words, and must stay within mapped device space; what
@@ -3425,17 +3425,17 @@ cannot be served so is refused with `ENXIO`. This is how the programs
 which reset the board and serve its watchdog from user space reach the
 watchdog's registers.
 
-#lines(19, 43)
+#lines(19, 44)
 
 `mmwrite` is the converse. `cpass` (#f("subr.c")) fetches the next byte
 from the user and has already advanced `u.u_offset` when it returns,
-hence the `-1` (68). The writes are checked as the reads are: `sumem`
+hence the `-1` (70). The writes are checked as the reads are: `sumem`
 shares `memaddr` with `fumem`, so that a byte is stored at the address
 from which a read at the same offset would fetch it, and an offset which
 names no memory is refused rather than stored through. Device registers
-are written a word at a time (55--64), as they are read.
+are written a word at a time (56--66), as they are read.
 
-#lines(44, 71)
+#lines(45, 73)
 #source("/usr/sys/sys/prim.c")
 
 #f("prim.c") manages the character lists, or clists, in which the
@@ -3608,26 +3608,26 @@ the console's input while the raw queue cannot take it (`TTHOLD`
 below), and since it belongs to the terminal, `flushtty` (#f("tty.c"))
 empties it with the other queues.
 
-Two changes were forced by C99. The procedure pointers (47, 48) now
+Two changes were forced by C99. The procedure pointers (47, 47) now
 have prototypes, and return nothing, matching the routines stored in
-them. The union (64--67) in v7 contained `struct tc;`, a structure with
+them. The union (66--69) in v7 contained `struct tc;`, a structure with
 no member name. The v7 compiler kept all member names in one table and
 let any of them be applied to any structure, so `tp->t_un.t_intrc`
 reached the first byte of the union without further ado. C99 does not
 allow this: a structure without a name declares no member at all, and
 C99 has no anonymous members. The structure is therefore given the
-member name `tc`, and the shorthand `tun` (70), through which every use
+member name `tc`, and the shorthand `tun` (72), through which every use
 in #f("tty.c") is written, now includes it, so that `tun.t_intrc` is
 unchanged in the source.
 
-#lines(41, 71)
+#lines(41, 73)
 
 `struct ttiocb` is the argument of `TIOCGETP` and `TIOCSETP`, and
 corresponds to `struct sgttyb` in `sgtty.h`. `ioc_flags` is an `int`, so
 the structure has grown from six bytes to eight; since the kernel and
 the user programs agree on the size of `int`, nothing else follows.
 
-#lines(72, 82)
+#lines(74, 84)
 
 The sleep priorities `TTIPRI` and `TTOPRI` are above `PZERO`
 (#f("param.h")), so a process waiting for a terminal can be interrupted
@@ -3635,15 +3635,15 @@ by a signal. The default erase and kill characters are still `#` and
 `@`. `TTHIWAT` and `TTLOWAT` bound the output queue: a writer sleeps when
 it holds more than 100 characters and is woken when it has fallen to 50.
 When the raw queue exceeds `TTYHOG` characters, all the queues are
-thrown away (`ttyinput`, #f("tty.c")). `TTHOLD` (99, 100) is new: it is
+thrown away (`ttyinput`, #f("tty.c")). `TTHOLD` (101, 102) is new: it is
 true when the raw queue has reached `TTYHOG` and holds something the
 reader can take, a complete line or, in `RAW` and `CBREAK` modes, any
 character. The console's drivers then hold further input on
 `t_holdq` (`ttyhold`, #f("tty.c"); #f("pl011.c")), so that a long paste
-waits instead of being lost. `TTHOLDQ` (101), also new, bounds that
+waits instead of being lost. `TTHOLDQ` (103), also new, bounds that
 queue at two thirds of the characters which the `NCLIST` blocks
 (#f("param.h")) can hold, the rest being left for the other queues.
-`CBRK` (93), the default extra delimiter, is a byte of all ones, which
+`CBRK` (95), the default extra delimiter, is a byte of all ones, which
 matches no character: input is tested against the delimiters only in
 cooked mode, after its top bit has been stripped. The value is now cast
 to `char`, the type of `t_brkc`, since a compiler whose `char` is signed
@@ -3660,7 +3660,7 @@ definitions here. Of the state bits, `XCLUDE` and `HUPCLS` may be set by
 the console's driver ignores them; `DKCMD` to `DKLINGR` belong to the
 datakit and are never set.
 
-#lines(83, 139)
+#lines(85, 141)
 
 The `ioctl` commands encode a letter for the class of device and a
 number. The `t` commands are carried out by `ttioccomm` (#f("tty.c")),
@@ -3669,7 +3669,7 @@ which are the datakit's, `ttioccomm` passes `DIOCGETP` and `DIOCSETP` to
 the line discipline, which here rejects them; the `x` commands are the
 multiplexor's.
 
-#lines(140, 171)
+#lines(142, 173)
 #source("/usr/sys/dev/pl011.c")
 
 #f("pl011.c") is the console driver of the QEMU machine. It
@@ -4350,7 +4350,7 @@ The rest of v7's table is unchanged but for braces, except for `tty`,
 the controlling terminal, whose `d_stop` slot becomes `nulltty`. v7's
 terminating `0` is now `{0}`.
 
-#lines(218, 420)
+#lines(218, 424)
 
 `stre` heads `c.c` with its includes. v7 followed them with
 declarations of `nulldev` and `nodev`; those are in #f("systm.h"), and
@@ -4359,7 +4359,7 @@ their place is taken by the include of #f("seg.h"), which defines
 `c.c`, and by those of #f("map.h"), #f("mount.h"), and #f("callo.h"),
 for the tables which `strg3` (below) defines.
 
-#lines(421, 442)
+#lines(425, 446)
 
 The remaining text of `c.c`. v7 wrote a bare `0` after the last entry
 of each switch; the port writes `{0}`, again for the braces. In `strg`,
@@ -4384,9 +4384,9 @@ callouts, and the character blocks (#f("qemu/c.c")). The buffers have
 one row more than `NBUF`, of a whole number of 64-byte cache lines,
 for `binit` to align them (#f("main.c")).
 
-#lines(443, 533)
+#lines(447, 540)
 
-v7's variables, followed by new ones (547--552) which hold the
+v7's variables, followed by new ones (554--559) which hold the
 description of the machine: whether DDR must be started (`ddr`); the kernel address,
 physical origin, and length of the kernel's memory (`ramv`, `ramb`,
 `ramn`) and of the region for its tables (`tabv`, `tabb`, `tabn`); the
@@ -4395,9 +4395,9 @@ controller; and up to `NMAP` regions to be mapped, each with its kernel
 address and its attributes kept as text. `NMAP` is 9, the number of
 `map` lines in #f("mp135conf"), the configuration with the most. The length of `mapa`'s strings is that of
 an input line, so that no token can overflow it. v7 declared `pack`
-twice (535, 545), which C permits for a variable without an initialiser.
+twice (542, 552), which C permits for a variable without an initialiser.
 
-#lines(534, 553)
+#lines(541, 560)
 
 The configuration is read in one go, and then the outputs are written,
 each by redirecting the standard output with `freopen`, as v7 did.
@@ -4429,10 +4429,10 @@ as v7's `mch.s` set `_u`; `mkconf` is a program of the build machine
 and does not include the kernel's headers, so the address is written
 out here, and the two must agree.
 
-#lines(554, 586)
+#lines(561, 601)
 
 The second pass writes `c.c` as v7 did. The assignments within the
-tests of the `for` loops (596, 603, 628, 635) have the doubled
+tests of the `for` loops (611, 618, 645, 652) have the doubled
 parentheses of #f("malloc.c"). Each
 configured row is now enclosed in braces. A device which is not
 configured gets a row of routines which fail: v7 wrote `nodev` in every
@@ -4441,13 +4441,13 @@ strategy slot gets `nostrat`, and a character device's read and write
 slots `nordwr`, its `ioctl` slot `noioctl`, and its `d_stop` slot
 `nulltty` (#f("conf.h")).
 
-#lines(587, 645)
+#lines(602, 665)
 
 The line disciplines, root, swap, and pipe devices, and the tables
 follow as in v7, except that the definition of `ldmpx` has gone; after
 them `strg3` adds the rest of the tables.
 
-#lines(646, 662)
+#lines(666, 682)
 
 The tail of `c.c` is new. It defines the machine's top of core and the
 addresses of the interrupt controller, which #f("machdep.c")
@@ -4470,12 +4470,12 @@ according to whether a TU16 tape was configured, so that the core dump
 routine in `mch.s` knew where to write. There is no dump routine in
 this system, and the pass is gone.
 
-#lines(663, 676)
+#lines(683, 701)
 
 `puke` writes a list of lines. v7 passed a second argument, which each
 line could use as a `printf` argument; no line used it, and it is gone.
 
-#lines(677, 687)
+#lines(702, 712)
 
 `input` reads one line of the configuration. The arrays `keyw` and `dev`
 were 32 characters long in v7, while a line may be 99; since `%s` copies
@@ -4491,13 +4491,13 @@ failed conversion. C99's `sscanf`, which is the host's here, stops at
 the first failure and returns 0, so the port scans the line a second
 time without the count.
 
-The keywords which describe the machine are recognised first (708--725).
+The keywords which describe the machine are recognised first (733--755).
 Their numbers are read in hexadecimal. A malformed line is reported by
 `badline`, a new procedure holding v7's message, which returns 1, so that
 reading continues as in v7. A ninth `map` line falls through to "cannot
 find".
 
-#lines(688, 725)
+#lines(713, 755)
 
 The remainder of `input` is v7's. A device name adds to that device's
 count, subject to the checks that a fixed device is not configured and
@@ -4509,12 +4509,12 @@ configured. The other keywords set the swap area, the root, swap,
 and pipe devices, and the options `pack` and `mpx`; `mpx` is now
 accepted and ignored.
 
-#lines(726, 808)
+#lines(756, 838)
 
 `badline` is the end of v7's `input`, made a procedure so that the new
 keywords can use it in an expression. `equal` is v7's.
 
-#lines(809, 821)
+#lines(839, 851)
 #source("/usr/sys/conf/mp135/c.c")
 
 The configuration of the MP135 machine, written by `mkconf`
@@ -4525,26 +4525,26 @@ whose commentary the reader is referred.
 The routines behind the names are different: `kl` is now the USB
 console driver #f("otg.c"), and `rk` the SD card driver #f("sd.c").
 
-#lines(1, 85)
+#lines(1, 91)
 
 The tables defined above lie in DDR, which #f("mp135/unix.ld")
 arranges. Process images occupy DDR from the first page after them to
-its end, physical address `0xe0000000` (86). The interrupt controller
+its end, physical address `0xe0000000` (92). The interrupt controller
 is the Cortex-A7's own, at physical `0xa0021000` and `0xa0022000`, which
-the kernel reaches at `0xf0621000` and `0xf0622000` (87).
+the kernel reaches at `0xf0621000` and `0xf0622000` (93).
 
 `board_map` maps nine regions: the 2 MB block which contains SYSRAM,
 cached, for the kernel, at 0xc0000000; DDR, cached likewise, just above
 it; and seven blocks of peripherals, from 0xf0000000 (@ch-intro).
 
-#lines(86, 101)
+#lines(92, 107)
 
 `intrtab` is the same as the QEMU machine's, though the numbers behind `klirq` and
 `rkirq` differ (128 and 82, #f("otg.c"), #f("sd.c")). The one
 difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
 (#f("ddr.c")), since the configuration ends with `ddr`.
 
-#lines(102, 114)
+#lines(108, 120)
 #source("/usr/sys/dev/otg.c")
 
 The console driver of the MP135 machine. The machine's console is its
@@ -4650,14 +4650,14 @@ significant byte first), one stop bit, no parity, 8 data bits. Nothing
 on a USB link depends on it, but a terminal program sets it and reads
 it back, and the device must remember it.
 
-#lines(66, 86)
+#lines(66, 87)
 
 `fifowrite` writes `n` bytes into the transmit FIFO of endpoint `ep`,
 four to a word, least significant first, with the last word padded.
 `fiforead` takes `n` bytes from the receive FIFO, keeping at most `max`
 of them; with `max` zero it discards a packet which has nowhere to go.
 
-#lines(87, 121)
+#lines(88, 122)
 
 `ep0out` makes endpoint 0 ready to receive: 64 bytes in one packet,
 and room for 3 back-to-back control requests (bits 29--30), as the
@@ -4676,7 +4676,7 @@ next request. `ep0stall` refuses a request in both directions.
 
 `rxarm` makes endpoint 1 ready to receive one bulk packet.
 
-#lines(122, 177)
+#lines(123, 178)
 
 `carrier` sends the line state on endpoint 2: a 10-byte "serial state"
 notification (`0xa1`, `0x20`) for interface 0, whose 2-byte value 3
@@ -4685,7 +4685,7 @@ port and waits for carrier, as a terminal program may, can then go on.
 A notification the host has not yet collected is not overwritten: while
 the endpoint is still enabled, `carrier` sends nothing.
 
-#lines(178, 193)
+#lines(179, 195)
 
 `dosetup` answers a control request. Its first byte gives the type, of
 which `0x60` selects the class requests (`0x20`) and `0x80` marks a
@@ -4697,7 +4697,7 @@ line state, whose bit 0 is DTR, after which the line state is sent if
 the device is configured; and `0x23`, send break, which is accepted and
 ignored. Anything else is refused.
 
-#lines(194, 219)
+#lines(196, 221)
 
 The standard requests are those every device must answer. Get status
 (0) reports the device as self-powered, and everything else as plain.
@@ -4712,17 +4712,17 @@ set from `bulkmps` in each bulk endpoint descriptor (type 5, attribute
 "unix", made as the specification asks, a length, the type 3, and the
 characters in 16 bits each. Get configuration (8) returns `config`.
 
-#lines(220, 269)
+#lines(222, 272)
 
 Set configuration (9) records the configuration, and if it is not zero
-activates the endpoints (273--275): endpoint 1 in and out as bulk
+activates the endpoints (276--280): endpoint 1 in and out as bulk
 endpoints (type 2, bits 18--19) of `bulkmps` bytes, the in endpoint
 using transmit FIFO 1 (bits 22--25); endpoint 2 in as an interrupt
 endpoint (type 3) of 16 bytes on FIFO 2. Output and input are reset,
 and endpoint 1 is made ready to receive. Get interface (10) returns
 alternate setting 0. Anything else is refused.
 
-#lines(270, 288)
+#lines(273, 293)
 
 `busreset` follows a reset of the bus by the host: every endpoint but 0
 is stopped, every endpoint's interrupts cleared, the address cleared,
@@ -4737,7 +4737,7 @@ transfer is under way, as one transfer of as many packets as it needs.
 for at most one clock tick, and then starts the next. It serves
 `putchar`, which may run with interrupts off.
 
-#lines(289, 334)
+#lines(294, 339)
 
 `usbpoll` does the controller's work, from the interrupt or from
 `putchar`, and returns whether a transfer to the host has finished. On
@@ -4753,7 +4753,7 @@ copied to `setup`, and 2 for data, which goes to `ep0buf` on endpoint 0
 and to `rxbuf` on endpoint 1. Any other entry, and its data, is
 discarded.
 
-#lines(335, 372)
+#lines(340, 377)
 
 A control request on endpoint 0 is answered by `dosetup`, after its
 interrupt flags are cleared, `060` being two flags that come with it.
@@ -4766,7 +4766,7 @@ packet on endpoint 1 out readies the endpoint for the next one, unless
 `rxbuf` still holds characters, in which case `klrint` does so once it
 has taken them.
 
-#lines(373, 405)
+#lines(378, 410)
 
 `klinit` is called by `cninit` (#f("mp135/c.c")) at the start of
 `machine_init` (#f("machdep.c")). It first disconnects the device
@@ -4802,7 +4802,7 @@ thus have somewhere to go. If no terminal is there within the 10
 seconds, the system boots without one, and `putchar` drops its output
 until the host configures the device.
 
-#lines(406, 460)
+#lines(411, 466)
 
 `klopen` opens the one console. The line has carrier at once
 (`CARR_ON`), and the modes are those of #f("pl011.c"). `klclose`,
@@ -4811,7 +4811,7 @@ until the host configures the device.
 `rxbuf`, since a hold of the input may have left them there, and then
 reads.
 
-#lines(461, 513)
+#lines(467, 519)
 
 `klrint` passes the characters of the last received packet to
 `ttyhold`. It stops while `t_holdq` is full, or the free list of
@@ -4824,7 +4824,7 @@ receiver falls behind.
 `klstart` collects the output queue into `out` and sends it, unless a
 transfer is under way, when the completion will call it again.
 
-#lines(514, 544)
+#lines(520, 550)
 
 `klintr` is the entry in `intrtab`, called by `irq` (#f("machdep.c")).
 When a transfer to the host finishes, it sends whatever `putchar` has
@@ -4832,7 +4832,7 @@ left in `out`, or else lets `ttstart` refill it, and wakes a writer
 waiting for the queue to drain, as `kl.c`'s transmitter interrupt did.
 In either case it passes on any input.
 
-#lines(545, 563)
+#lines(551, 570)
 
 `putchar` keeps v7's copy of the last `MSGBUFS` characters in `msgbuf`.
 It then adds the character to `out`, with a carriage return before a
@@ -4843,7 +4843,7 @@ which has stopped reading delays each line of kernel output by a tick
 and no more. Until the host has configured the device there is no one
 to send to, and the character is kept only in `msgbuf`.
 
-#lines(564, 590)
+#lines(571, 597)
 #source("/usr/sys/dev/sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.
@@ -4973,7 +4973,7 @@ now reports function 1 (the low four bits of the status's 17th byte,
 first in word 4), the card has switched; eight clocks later the divider
 becomes 1, and the card runs at 32 MHz.
 
-#lines(102, 172)
+#lines(102, 175)
 
 `rkstrategy` is v7's, with more in its test of the request. A block
 number beyond the card is rejected, as v7 rejected one beyond the end
@@ -4985,7 +4985,7 @@ from aligned addresses, so these two tests can fail only for raw I/O,
 which `physio` (#f("bio.c")) lets through with an even address and
 count. v7's call of `mapalloc` is gone, as in #f("virtio_blk.c").
 
-#lines(173, 193)
+#lines(176, 197)
 
 `rkstart` gives the rest of the request at the head of the queue, from
 `rkoff`, up to `MAXIO` bytes, to one command. v7 converted the block
@@ -4996,7 +4996,7 @@ for a card which counts in bytes. A write is preceded by application
 command 23, which tells the card how many blocks follow, so that it can
 erase them before they arrive.
 
-The cache is cleaned and invalidated over the buffer (215) by
+The cache is cleaned and invalidated over the buffer (219) by
 `dcflush` (#f("mch.s")), which writes any modified lines to memory and
 discards them. The IDMA reads and writes memory directly, without
 seeing the processor's data cache: before a write the data must be in
@@ -5010,11 +5010,11 @@ the old flags are cleared, the data path is stopped and given the
 length and the block size and direction, the IDMA is given the
 buffer's physical address, which `vtop` (#f("machdep.c")) finds from
 the kernel's, and enabled, the interrupts are unmasked, and the
-argument is set. Writing the command register (228) starts the
+argument is set. Writing the command register (233) starts the
 transfer. The counts for `iostat` are v7's, summed as `unsigned long`,
 as in #f("virtio_blk.c").
 
-#lines(194, 233)
+#lines(198, 238)
 
 `rkintr` is called by `irq` (#f("machdep.c")) at the end of the data or
 on an error, and, since a command of many blocks must be stopped, works
@@ -5028,22 +5028,22 @@ On an error, of the transfer or of command 12, the status is reported
 by `deverror` (#f("prf.c")) and the same part retried, up to v7's ten
 times. v7 also reset the RK11 and waited for it to be ready; there is
 no reset here. On success the next part of the request is started if
-there is one (275), and the request is otherwise complete. After a
-read, the cache is invalidated once more over the whole buffer (281),
+there is one (280), and the request is otherwise complete. After a
+read, the cache is invalidated once more over the whole buffer (286),
 so that any line which the processor may have fetched while the
 transfer was under way is discarded. Nothing is written back: a line
 written back now would overwrite the new data. The lines were clean at
-the start (215), and the buffers of the buffer cache share no line with
+the start (219), and the buffers of the buffer cache share no line with
 a neighbour (#f("main.c")); a raw transfer may share its first and last
 lines with the rest of the process's memory, but the process sleeps
 until the transfer is done, and nothing else writes there. The rest is
 v7's.
 
-#lines(234, 288)
+#lines(239, 293)
 
 `rkread` and `rkwrite` are v7's, for the raw disk.
 
-#lines(289, 301)
+#lines(294, 306)
 #source("/usr/sys/dev/ddr.c")
 
 This file is not a driver in v7's sense: it has no switch entry and no
@@ -5249,7 +5249,7 @@ autoend, and takes it from the receive register (`0x24`) when the
 receive flag (4) is set. Either way it waits for the stop (`0x20`),
 clears it, and returns the value.
 
-#lines(12, 49)
+#lines(12, 50)
 
 `pinmode` gives a pin of a port its mode (2 alternate function, 3
 analog, which disconnects it) in the mode register, makes it open-drain
@@ -5257,7 +5257,7 @@ in the output type register (`0x04`), as I2C requires, and selects
 alternate function 6, I2C4, in the low or high alternate function
 register (`0x20`, `0x24`), four bits per pin.
 
-#lines(50, 58)
+#lines(51, 62)
 
 `ddrpower` enables the clocks of GPIO ports B and E (`0x12`, bits 1 and
 4) and reads the register back, so that the clocks are running before
@@ -5281,7 +5281,7 @@ The PMIC is then told to set `BUCK2` to 1.35 V and turn it on (register
 `VREF_DDR` (register `0x24`, bit 0). A hundredth of a second is allowed
 for the voltages to settle before `ddrinit` starts the memory.
 
-#lines(59, 93)
+#lines(63, 97)
 #source("/usr/src/libc/csu/crt0.s")
 
 Every C program begins here. `crt0.o` is linked first, ahead of the
@@ -5388,24 +5388,24 @@ address restored from the stack.
 `monitor` is v7's, for 32-bit words. Called with a range of text
 addresses, a buffer, its size in halfwords, and a number of call
 counters, it lays out the buffer as `mon.out` will hold it: the header
-`hdr`, the counters `cnt`, and the histogram (33--40), the layout which
+`hdr`, the counters `cnt`, and the histogram (33--41), the layout which
 `prof` reads (#f("cmd/prof.c")). It then asks the kernel through
 `profil` to count the program counter into the histogram at each clock
 tick. The scale is a fraction of 0x10000 by which the offset of the
 program counter from the start of the range is multiplied to index the
 histogram (`addupc`, #f("clock.c")): 0x10000 gives a counter to every
 two bytes, and a smaller histogram a proportionally coarser one
-(44--48). Called with a null address, `monitor` stops the counting and
+(45--49). Called with a null address, `monitor` stops the counting and
 writes the whole buffer to `mon.out` (25--31).
 
 `mcount`, new in this file, counts a call of the function from which
 `__gnu_mcount_nc` (#f("csu/mcrt0.s")) passes an address. Lacking v7's
 per-function word, it searches the counters filled so far for the
 address, and takes a new one if it is not there and one is free
-(55--70). A program with a few hundred functions is profiled at the cost
+(56--71). A program with a few hundred functions is profiled at the cost
 of that search on every call.
 
-#lines(1, 70)
+#lines(1, 71)
 #source("/usr/src/libc/gen/cuexit.c")
 
 `exit` flushes the program's output streams, through `_cleanup`
@@ -5745,7 +5745,7 @@ although `init` uses no standard I/O, because the port's `stdio.h`
 (#f("stdio.h")) carries the prototypes of the library's system call
 stubs, `fork`, `execl`, `alarm`, and the rest, and C99 does not allow a
 function to be called without a declaration. For the same reason the
-functions of the file are declared before use (38--40); v7 relied on
+functions of the file are declared before use (38--42); v7 relied on
 their being implicitly `int`. Elsewhere `register i` has become
 `register int i`, since C99 has no implicit `int`.
 
@@ -5754,7 +5754,7 @@ so that loops may be written `for(ALL)` and `for(EVER)`. `itab` holds one entry 
 active terminal: the line name, the `getty` table character, and the
 process id of the process serving it, 0 if none.
 
-#lines(1, 41)
+#lines(1, 43)
 
 `main` is the outer loop: kill everything, run a single-user shell, run
 `/etc/rc`, read `/etc/ttys` and start the `getty`s, then wait for
@@ -5763,19 +5763,19 @@ children at all. Since a dead `getty` is at once replaced, that happens
 only when no terminal is served: none is enabled in `/etc/ttys`, or
 `fork` failed for each. `multiple` then returns, and the cycle starts again from the shutdown.
 
-The `setjmp` (46) marks the point to which `reset` (311) returns when a
+The `setjmp` (48) marks the point to which `reset` (313) returns when a
 hangup arrives. `reset` was declared locally in v7 (deleted), as a
 function returning `int`; it is now declared at 39 as a `void` function
 of the signal number, the form which `signal` requires (#f("sys/signal.s")).
 
-`merge` is called with an argument (52) because it doubles as the
+`merge` is called with an argument (54) because it doubles as the
 handler for `SIGINT`, and a handler receives the signal number; v7
 called it with none.
 
-#lines(42, 55)
+#lines(44, 57)
 
 `shutdown` clears the table, killing any process it names, and then
-kills every other process. `kill(-1, SIGKILL)` (69) from the super-user
+kills every other process. `kill(-1, SIGKILL)` (71) from the super-user
 sends the signal to every process but 0 and 1 (`kill`, #f("sys4.c")).
 `init` then waits for all its children. Should some child fail to die
 (a process sleeping in the kernel at a priority below `PZERO` does not
@@ -5783,7 +5783,7 @@ see signals), the alarm set at 67 fires after a minute, `reset` jumps
 back to the `setjmp`, and the shutdown begins again. Finally the file
 descriptors are closed, so that the next stage starts clean.
 
-#lines(56, 76)
+#lines(58, 78)
 
 `single` forks a shell on the console and waits for it to finish. The
 child opens `/dev/console` for reading and writing; it gets descriptor 0,
@@ -5794,57 +5794,57 @@ characters typed there reach the shell and its children. `init` itself
 never opens a terminal; its process group is 0, and no character typed
 on any terminal can signal it.
 
-The shell is called with the name `-` (94). A name beginning with `-`
+The shell is called with the name `-` (96). A name beginning with `-`
 tells the shell (#f("sh/main.c")) that it is a login shell, so it reads
 `.profile` in its current directory, here the root. The super-user is
 not asked for a password, since whoever holds the console holds the
 machine. When this shell ends, normally by an end-of-file typed on the
-console, the system goes multi-user. The commented-out `alarm` (85--87)
+console, the system goes multi-user. The commented-out `alarm` (87--89)
 is v7's.
 
-#lines(77, 99)
+#lines(79, 101)
 
 `runcom` runs `/etc/rc` with the shell and waits for it. The child's
 standard input, output, and error are the root directory, opened for
-reading (108), so that the commands of `/etc/rc` have no terminal and
+reading (110), so that the commands of `/etc/rc` have no terminal and
 must name `/dev/console` explicitly if they wish to be heard, as
 #f("rc") does.
 
-#lines(100, 116)
+#lines(102, 118)
 
 `multiple` is where `init` spends nearly all its time. It waits for any
 child to die; if the child served a terminal, the logout is recorded
 by `rmut` and a new `getty` is forked by `dfork`. An entry with `pid` -1
-is one for which `fork` failed in `dfork` (275); it is retried whenever
+is one for which `fork` failed in `dfork` (277); it is retried whenever
 any child dies.
 
-#lines(117, 134)
+#lines(119, 136)
 
 `term` ends the service of one table entry.
 
-#lines(135, 146)
+#lines(137, 148)
 
 `rline` reads one line of `/etc/ttys` into the structure `line`. A line
 is a flag character, `1` if the terminal is to be served and `0` if not,
 the character naming the `getty` table, and the terminal's name of up
 to seven characters, the rest being discarded. A line whose terminal
-cannot be both read and written (174), or which is malformed, is treated
+cannot be both read and written (176), or which is malformed, is treated
 as disabled. `rline` returns 0 only at the end of the file.
 
-#lines(147, 181)
+#lines(149, 183)
 
 `maktty` builds the terminal's path name in `tty`. `get` reads one
 character, mapping the newline to 0 and end of file to -1.
 
-`b` (200) is a `char`, which C leaves signed or unsigned as the
+`b` (202) is a `char`, which C leaves signed or unsigned as the
 compiler chooses. Where it is signed, as on the PDP-11, a byte with its
 top bit set would be returned negative and end the file early; the mask
-(206) returns every byte as a positive number, whatever the compiler.
+(208) returns every byte as a positive number, whatever the compiler.
 
-#lines(182, 207)
+#lines(184, 209)
 
 `merge` brings `itab` into line with `/etc/ttys`. It first empties
-`/etc/utmp` (216), the list of users logged in, and re-arms itself as
+`/etc/utmp` (218), the list of users logged in, and re-arms itself as
 the handler for `SIGINT`: the kernel resets a caught signal to its
 default when it is delivered (`psig`, #f("sig.c")), and a second
 interrupt would otherwise kill `init`, and with it the system.
@@ -5852,7 +5852,7 @@ interrupt would otherwise kill `init`, and with it the system.
 The table is then rearranged in place. `q` marks the end of the entries
 already matched. For each enabled line of the file, the table is
 searched from the start for an entry with the same name, an empty entry
-matching anything (226). The entry found, if it lies at or beyond `q`,
+matching anything (228). The entry found, if it lies at or beyond `q`,
 is exchanged with the one at `q`, the process id moving with its line
 and `q`'s old line moving to the slot vacated, and `q` advances. An
 entry found below `q` is a duplicate line in the file and is ignored.
@@ -5861,14 +5861,14 @@ terminals no longer enabled, and `term` kills their processes. Any
 entry which has a line but no process, a newly enabled terminal, is
 given a `getty`.
 
-#lines(208, 253)
+#lines(210, 255)
 
 `dfork` forks the process which will serve a terminal. In the child,
 the signals which `init` catches are reset to the default (they would
 be reset by `exec` in any case, but `chown` and `open` come first). The
 terminal is given back to the super-user, with mode 0622, writable by
 all so that `write` can reach it; `login` will give it to the
-user. Opening it (267) makes the child the leader of the terminal's
+user. Opening it (269) makes the child the leader of the terminal's
 process group, as in `single`. In v7 the open of a dial-up
 line slept until the modem reported a call, so that this is where an
 idle line's process waited; the console drivers (#f("pl011.c"),
@@ -5877,9 +5877,9 @@ once.
 
 `getty` is called with the name `-` and one argument, the table
 character from `/etc/ttys`, which is borrowed from the `tty` buffer
-(270, 271).
+(272, 273).
 
-#lines(254, 276)
+#lines(256, 278)
 
 `rmut` records that the user of a line has gone. In `/etc/utmp` the
 entry for the line, if any, has its name cleared and its time set to
@@ -5893,7 +5893,7 @@ The `utmp` structure is two arrays of 8 characters and a time of 8
 bytes, 24 bytes in all, where v7's time was a `long` and the structure
 20 bytes; the files are therefore not in v7's format.
 
-#lines(277, 309)
+#lines(279, 311)
 
 `reset` abandons whatever `init` was doing and returns to `main`.
 Note what happens on the ARM. `sendsig` (#f("machdep.c")) has placed the
@@ -5905,7 +5905,7 @@ saved frame is simply left behind in the part of the stack being
 discarded. The kernel keeps nothing on behalf of the handler, so
 nothing needs to be undone.
 
-#lines(310, 316)
+#lines(312, 318)
 #source("/usr/src/cmd/getty.c")
 
 `getty` is the program which `init` (#f("cmd/init.c")) runs on every
@@ -6327,7 +6327,7 @@ functions (81--104), chiefly those which returned something other than
 `int`; every other function,
 and every system call, was declared implicitly by its first call. C99
 has no implicit declarations. The port gives each of v7's declarations
-a prototype and adds the rest (105--139): every function the shell
+a prototype and adds the rest (105--155): every function the shell
 shares between its files, and the system calls it makes. The system
 calls are declared here, because the shell cannot include the port's
 `stdio.h`, which carries their prototypes (#f("stdio.h")): that file
@@ -6349,7 +6349,7 @@ took a `BLKPTR`: its callers pass a `STRING`, a `DOLPTR`, or a
 `BLKPTR`, and only a `void *` parameter accepts them all without a
 cast.
 
-#lines(78, 139)
+#lines(78, 155)
 
 `round(a,b)` rounds the address `a` up to a multiple of `b`, a power of
 two. It converts the pointer to `int` and returns an `int`, which works
@@ -6366,50 +6366,50 @@ is not compiled with `-fcommon`, which would restore the merging, so
 the header now declares them `extern`. Those which v7 defined nowhere
 else are now defined in #f("sh/main.c").
 
-#lines(140, 167)
+#lines(156, 183)
 
 The `MSG` strings are defined in #f("sh/msg.c"); the `NAMNOD`s, the
 nodes for the shell's built-in variables, in #f("sh/name.c").
-`standin` (226) is the current input file, of which `input` and `eof`
+`standin` (242) is the current input file, of which `input` and `eof`
 name two fields.
 
 The flags record the options set with `set` or on the command line,
-together with some internal state: `ttyflg` (239) marks an interactive
+together with some internal state: `ttyflg` (255) marks an interactive
 shell, `forked` a shell process which is a child of the shell proper,
 `waiting` a shell idle at its prompt, and `prompt` that a prompt is to
 be printed.
 
-#lines(168, 248)
+#lines(184, 264)
 
 `subshell` and `errshell` are the targets of the shell's two non-local
 jumps, both set in #f("sh/main.c"). `brkincr` is the amount by which the
 data segment is extended (#f("sh/stak.c")).
 
-`signal.h` (257) is new. It supplies the prototype of `signal`, and
+`signal.h` (273) is new. It supplies the prototype of `signal`, and
 `SIG_IGN`, with which #f("sh/fault.c") now tests whether a signal was
 ignored, where v7 compared the result of `signal` with 1. `fault` is
 declared with the signal number it receives, so that it has the type
 which `signal` expects of a handler.
 
-`MAXTRAP` (261), one more than the highest signal which `trap` accepts
+`MAXTRAP` (277), one more than the highest signal which `trap` accepts
 and the size of the tables of #f("sh/fault.c"), was v7's literal 17, its
 sixteen signals and the exit trap 0. It is now `NSIG`, from
 `signal.h`, so that the shell traps every signal the kernel can send,
 1 to 31.
 
-#lines(249, 275)
+#lines(265, 291)
 
-`execbrk` (285) was a `BOOL` in v7, that is a `char`. It is set to
+`execbrk` (301) was a `BOOL` in v7, that is a `char`. It is set to
 `-loopcnt` by `continue`, and the loops of #f("sh/xec.c") test
 `execbrk<0`. A PDP-11 `char` was signed and held the negative value; an
 ARM `char` is unsigned, so the test would never succeed. It is now an
 `INT`.
 
-`notfound` is declared twice (296, 313), as in v7. `end` (316) is the
+`notfound` is declared twice (312, 329), as in v7. `end` (332) is the
 address which the loader assigns to the end of the program's
 uninitialised data; the shell's heap begins there.
 
-#lines(276, 318)
+#lines(292, 334)
 #source("/usr/src/cmd/sh/mode.h")
 
 #f("sh/mode.h") names the shell's types and lays out its data
@@ -6571,10 +6571,10 @@ negative; the port treats every warning as an error. The mask makes the
 subscript an `int`. It does not change a character's value, and the
 quote test has already excluded the values above 0177, so the subscript
 stays within the 128 entries of the table. The declarations of the tables have become `extern`
-(69, 80); in v7 they were tentative definitions in every file. They are
+(69, 83); in v7 they were tentative definitions in every file. They are
 also `unsigned char` now, as in #f("sh/ctype.c").
 
-#lines(69, 90)
+#lines(69, 95)
 #source("/usr/src/cmd/sh/ctype.c")
 
 The two tables of character classes, laid out one row for each eight
@@ -6687,7 +6687,7 @@ starts the next item at the following word boundary. The cast of
 `round`'s result to `STKPTR` (54) is new: `round` yields an `int`, and
 C99 does not convert an integer to a pointer without one.
 
-#lines(43, 56)
+#lines(43, 57)
 
 `tdystak` returns the stack to the position `x`. Blocks on the chain
 `stakbsy` are parts of the stack that `addblok` turned into heap blocks
@@ -6696,9 +6696,9 @@ below the present base, if the stack has moved since it was saved;
 `max` then keeps the new base. `rmtemp` (#f("sh/error.c")) removes the
 temporary files made since `x`, which it recognises because their I/O
 nodes were also allocated on the stack, above `x`. The cast of `x` to
-`IOPTR` (66) is new, to match the prototype.
+`IOPTR` (67) is new, to match the prototype.
 
-#lines(57, 67)
+#lines(58, 68)
 
 `stakchk`, called from the command loop, gives back data space when
 more than two increments of it lie above the stack's base; `sbreak`
@@ -6706,7 +6706,7 @@ more than two increments of it lie above the stack's base; `sbreak`
 
 `cpystak` copies a string to a new item.
 
-#lines(68, 80)
+#lines(69, 81)
 #source("/usr/src/cmd/sh/blok.c")
 
 The heap. The arena is a circular list of blocks, each beginning with
@@ -6816,14 +6816,14 @@ same type definitions, which may not be given twice, and also
 
 The definitions at 23--30 are new. They are the variables which
 #f("sh/defs.h") declares; in v7 the header itself defined them, in
-every file, and the loader merged the copies. `execargs.h` (31) defines
+every file, and the loader merged the copies. `execargs.h` (32) defines
 the pointer `execargs`, explained below.
 
 `exfile` is declared `LOCAL`, where v7 declared it `PROC`, that is
 `extern`, and then defined it `LOCAL`. C99 forbids a `static`
 definition after a declaration with external linkage.
 
-#lines(1, 37)
+#lines(1, 38)
 
 The storage is set up first: `stdsigs` (#f("sh/fault.c")) arranges,
 among other things, to catch `SIGSEGV`, by which the shell grows its
@@ -6843,7 +6843,7 @@ of arguments left. If there is no file name among them, or the flag
 `dolv` and `dolc` are left describing the positional parameters, with
 `dolv[0]` the name of the shell or of the command file, `$0`.
 
-#lines(38, 61)
+#lines(39, 62)
 
 `subshell` is the point to which the shell returns when it is asked to
 run a command file without execute format. `execs` (#f("sh/service.c"))
@@ -6853,7 +6853,7 @@ which was to have executed it. The shell then starts afresh, from the
 setting of `$#`, `$0`, `$$`, and the temporary file names, but skips
 the profile.
 
-`$0`, `cmdadr`, is a copy of `dolv[0]` (67), which also names the
+`$0`, `cmdadr`, is a copy of `dolv[0]` (68), which also names the
 shell in its error messages. v7 kept the pointer itself. For a command
 file, `dolv` lies in a block which `setargs` (#f("sh/args.c")) made, and
 which the next `set` with arguments frees, strings and all; `cmdadr`
@@ -6869,9 +6869,9 @@ below. A command string given with `-c` is set up as the input by
 the named file. `comdiv` is then made non-null, so that a later
 `set -c` is not taken as a command string (`options`, #f("sh/args.c")).
 v7 wrote `comdiv--`, a decrement of the null pointer, which C99 leaves
-undefined; the port points it at `minus`, the string `-`, instead (90).
+undefined; the port points it at `minus`, the string `-`, instead (91).
 
-On re-entry for a command file (92), the shell stores `dolv` through
+On re-entry for a command file (93), the shell stores `dolv` through
 `execargs`, at the top of its user stack. That word is where `ps`
 looks for the arguments of a process, and the store makes the command
 file appear there under its own name. In v7 `execargs` was
@@ -6880,7 +6880,7 @@ the port it is `USRSIZE-4`, the last word below the end of the 3 GB
 user address space, which `exec` leaves zero. The cast of `dolv` to `char *` is new: v7 stored a
 `char **` where a `char *` belongs without one.
 
-#lines(62, 97)
+#lines(63, 98)
 
 `exfile` moves the input and output descriptors to `INIO` and `OTIO`,
 out of the way of the descriptors a user may redirect, and sets them to
@@ -6900,13 +6900,13 @@ the profile comes back here, and `exfile` returns, abandoning the
 profile but not the shell.
 
 `mailtime` is `volatile`, where v7 had `register`. It is changed after
-the `setjmp` (127) and used after a `longjmp` to it, and C99 leaves the
+the `setjmp` (131) and used after a `longjmp` to it, and C99 leaves the
 value of such a variable indeterminate unless it is `volatile`. It is
 also a `long long` rather than v7's `L_INT`, a `long`, so that it holds
 a 64-bit `st_mtime` whole: cut to 32 bits, a time after 2038 would never
 again compare equal, and the shell would announce mail at every prompt.
 
-#lines(98, 130)
+#lines(99, 134)
 
 The command loop. `tdystak(0)` discards everything left on the stack by
 the last command, and `stakchk` gives back any surplus memory
@@ -6923,7 +6923,7 @@ arguments, leaving the two pipe arguments undefined; the prototype
 demands all four, and the port passes zeros. The option `-t`
 (`oneflg`) ends the shell after one command.
 
-#lines(131, 158)
+#lines(135, 162)
 
 `chkpr` prints the secondary prompt, `PS2`, when a command continues on
 a further line. `settmp` makes the prefix of the names of temporary
@@ -6934,7 +6934,7 @@ the id; `tmpnam` marks its end, where `tmpfil`
 followed the id directly, so that the fifth temporary file of process
 123 and the thirty-fifth of process 12 were both `/tmp/sh1234`, and
 one shell could truncate the here document which another was writing or
-reading. The port puts a `-` after the id (172). `tmpout` grows from 20
+reading. The port puts a `-` after the id (176). `tmpout` grows from 20
 bytes to 24 (20) to hold `/tmp/sh`, an id of up to five digits, the
 `-`, a serial number of up to ten, now that an `INT` has 32 bits, and
 the null.
@@ -6945,7 +6945,7 @@ descriptor as an extra argument when the flag `DUPFLG` (#f("sh/dup.h"))
 was or-ed into the first. The library's `dup2` does exactly that, and,
 unlike `dup`, has a prototype with two arguments.
 
-#lines(159, 181)
+#lines(163, 185)
 #source("/usr/src/cmd/sh/io.c")
 
 The shell's input is a stack of `fileblk`s (#f("sh/mode.h")), of which
@@ -7040,9 +7040,9 @@ words.
 
 v7 used `argp`, a `char *`, as a pointer to the `argnod` as well, which
 its compiler permitted. C99 does not, and each use of `argp` as an
-`argnod` now casts it to `ARGPTR` (45--52).
+`argnod` now casts it to `ARGPTR` (45--56).
 
-#lines(18, 55)
+#lines(18, 59)
 
 A character which ends a word is a symbol in itself. If it is one of
 `&;<>|` (`dipchar`) and is doubled, it becomes the doubled symbol;
@@ -7051,7 +7051,7 @@ which `readc` returns at the end of the input, becomes `EOFSYM`. At the
 end of a line, any here documents named on it are read (`copy`,
 #f("sh/io.c")), since their text begins on the next line.
 
-#lines(56, 70)
+#lines(60, 74)
 
 `nextc` deals with the backslash. Before a newline it joins the lines,
 printing the secondary prompt. Inside double quotes, where `quote` is
@@ -7060,7 +7060,7 @@ pushed back, unless that character is the quote itself or one of the
 characters `escchar` allows; anywhere else the next character is taken
 quoted.
 
-#lines(71, 85)
+#lines(75, 89)
 
 `readc` returns the next character of the input. A character pushed
 back in `peekc` comes first; the assignment to the `char` `c` drops
@@ -7074,7 +7074,7 @@ When the buffer is empty, `readb` refills it; at the end of a file the
 descriptor is closed and `EOF`, the null character, is returned
 from then on.
 
-#lines(86, 117)
+#lines(90, 121)
 
 `readb` reads again when a read is interrupted by a signal which has
 a trap set (`trapnote`). A signal without a trap (`SIGSET`) is instead
@@ -7082,7 +7082,7 @@ treated as an error by `sigchk` (#f("sh/error.c")), which ends the
 shell or, if it is interactive, abandons the command. The return type
 `INT` is a mechanical addition.
 
-#lines(118, 127)
+#lines(122, 131)
 #source("/usr/src/cmd/sh/cmd.c")
 
 The parser. It is written by recursive descent, one procedure to each
@@ -7104,7 +7104,7 @@ before it calls `word`; `word` clears it again.
 The procedures of the file are declared `LOCAL` at the top (13--23),
 where v7 declared them `PROC`, that is `extern`, and defined them
 `LOCAL`, a contradiction C99 does not allow. `skipnl` was declared
-`VOID`, but returns `wdval`, and `item` uses the result (226); with
+`VOID`, but returns `wdval`, and `item` uses the result (228); with
 `VOID` now `void` it is declared, and defined, `INT`.
 
 #lines(1, 30)
@@ -7162,18 +7162,18 @@ The compound commands. Each allocates its node and fills it by calling
 `cmd` with the symbol which must end each part. `elif` is handled by
 treating it as the start of a nested `if`, with `wdval` set to `IFSYM`
 and `item` called again; the nested `if` consumes the `fi`, and the
-outer returns at once (215).
+outer returns at once (217).
 
-#lines(196, 217)
+#lines(196, 219)
 
 `for` takes a name, an optional `in` with its list of words, which is
-parsed as a simple command and stored as a `COMPTR` (228), then a
+parsed as a simple command and stored as a `COMPTR` (230), then a
 `do ... done` or a `{ ... }`. The cast of the result of `item` is new.
 `while` and `until` share a node, distinguished by type. A brace group
 is no node at all, but just its command list; a parenthesised command
 is a `TPAR` node inside a fork node, so that it is run in a subshell.
 
-#lines(218, 261)
+#lines(220, 264)
 
 The simple command. Words are taken until a symbol appears; each is
 either an assignment, chained on `argset`, or an argument, appended to
@@ -7181,20 +7181,20 @@ the list through `argtail`. Assignments are recognised only before the
 first argument, unless the option `-k` (`keyflg`) is set. Redirections
 may be interleaved with the words. `argset` is declared as a pointer to
 `ARGPTR`, though it holds an `ARGPTR`; v7 assigned between the two types
-freely, and the port casts (281, 290).
+freely, and the port casts (284, 295).
 
 If no command begins here (`default`), but redirections were found, a
 command without words is made, and the case falls through (267, with
 the new comment). After a compound command, redirections may follow
-(295); they wrap the command in a fork node, through whose `treio` they
-are applied. The parentheses around the assignment (296) are new.
+(301); they wrap the command in a fork node, through whose `treio` they
+are applied. The parentheses around the assignment (302) are new.
 
-#lines(262, 300)
+#lines(265, 306)
 
 `skipnl` reads symbols until one is not a newline, prompting with
 `PS2` for each.
 
-#lines(301, 307)
+#lines(307, 313)
 
 `inout` parses one redirection, and recursively those that follow. The
 descriptor, if one was given before the operator, is in `wdnum`; the
@@ -7205,7 +7205,7 @@ character directly, and `<>` gives read and write. The `>` case falls
 through into the `<` case to make that test (329, with the new
 comment).
 
-#lines(308, 351)
+#lines(314, 358)
 
 `chkword` requires an ordinary word. `chksym` requires the symbol
 `sym`, or one of several reserved words or-ed together: when both
@@ -7213,13 +7213,13 @@ comment).
 equals `wdval` only if all of `wdval`'s bits are in `sym`
 (#f("sh/sym.h")).
 
-#lines(352, 366)
+#lines(359, 373)
 
 `synbad` reports a syntax error, naming the offending symbol through
 `prsym`, with the line number when the shell is not interactive, and
 leaves through `exitsh` (#f("sh/error.c")).
 
-#lines(367, 401)
+#lines(374, 408)
 #source("/usr/src/cmd/sh/msg.c")
 
 The shell's strings, gathered in one file so that each is stored once.
@@ -7295,9 +7295,9 @@ definition relied on the loader to merge it with the real one
 
 `execflg` is set when the command is the last thing the current process
 has to do. A simple command may then be executed by `exec` without a
-`fork` first (242), since there is nothing to come back to.
+`fork` first (243), since there is nothing to come back to.
 
-`sav` and `tdystak` (415) bracket the whole routine: whatever the
+`sav` and `tdystak` (422) bracket the whole routine: whatever the
 command allocated on the stack, its expanded arguments in particular,
 is discarded when it ends. A nonzero `execbrk` (31) means that `break`
 or `continue` is unwinding the loops, and every command until the
@@ -7321,8 +7321,8 @@ Note that the parser wraps a simple command in a fork node only for
 `&` or a pipeline. Otherwise the decision to fork is made here, after
 expansion, for only now can the shell tell whether the name is one of
 its own commands (`syslook`). The assignments which precede a built-in
-command, or stand alone, are made in the shell itself (54); those
-before a program are made in the child for that program only (299).
+command, or stand alone, are made in the shell itself (55); those
+before a program are made in the child for that program only (302).
 The option `-x` (`execpr`) prints the expanded command.
 
 The port names the node through `c`, a `COMPTR`, where v7 used the
@@ -7331,15 +7331,15 @@ command node as `t->treio`; it is now `c->comio`, the same word, since
 both structures put it after the type (#f("sh/mode.h")). The doubled
 parentheses at 53 are those of #f("malloc.c").
 
-#lines(39, 65)
+#lines(39, 66)
 
 The built-in commands. `.` reads commands from a file in the current
-shell by way of `execexp` (421). `times` prints the user and system
+shell by way of `execexp` (428). `times` prints the user and system
 times of the shell's children, which the kernel accumulates in
 `u_cutime` and `u_cstime` (`times`, #f("sys4.c")); `prt` converts ticks
 to hours, minutes, and seconds assuming 60 to the second, which is still `HZ`
 (#f("param.h")). The kernel copies out four `time_t`s, so the array
-`t` (81) is of `long long`; as v7's `L_INT`, a `long`, it would hold
+`t` (82) is of `long long`; as v7's `L_INT`, a `long`, it would hold
 only half of what is copied into it, and the rest would overwrite the
 stack.
 
@@ -7353,9 +7353,9 @@ negative number, and is no longer a `char` (#f("sh/defs.h")).
 v7 let the `exit` case fall through into the next, harmless since
 `exitsh` never returns. GCC warns of a fall through between cases
 without a comment to say it is meant; the port ends the case with
-`break` (88), which states the intent better.
+`break` (89), which states the intent better.
 
-#lines(66, 101)
+#lines(67, 102)
 
 `trap` with a command and signal numbers stores the command in
 `trapcom` and catches the signals; an empty command ignores them
@@ -7363,21 +7363,21 @@ instead. If the first argument is a number, there is no command, and
 the listed traps are removed. Without arguments the traps are listed.
 The mechanism is in #f("sh/fault.c").
 
-#lines(102, 131)
+#lines(103, 132)
 
-`exec` applies its redirections to the shell itself (135). With no
+`exec` applies its redirections to the shell itself (136). With no
 command, that is all. Otherwise it falls into `login` (and `newgrp`,
 which has the same code): the shell marks itself `forked`, so that an
 error now ends it rather than returning to the prompt, restores the
 signals it inherited (`oldsigs`), and executes the command in its own
 process. If the `exec` fails, `done` ends the shell. The comment
-`/* fallthrough */` (137) is new and silences GCC; the `break` after
-`done` (142) is new for the reason given for `exit`.
+`/* fallthrough */` (138) is new and silences GCC; the `break` after
+`done` (143) is new for the reason given for `exit`.
 
 `wait` calls `await(-1)`, which collects children until there are none
 left (#f("sh/service.c")).
 
-#lines(132, 166)
+#lines(133, 167)
 
 The `test` command was meant to be built in, but v7 left it commented
 out; `test` is a separate program.
@@ -7385,7 +7385,7 @@ out; `test` is a separate program.
 `set` with arguments processes options and replaces the positional
 parameters; without, and without assignments, it lists the variables.
 `readonly` and `export` share code, with `exitval` borrowed to hold the
-attribute until it is reset (198). The comment at 189 is new.
+attribute until it is reset (199). The comment at 189 is new.
 
 `eval` runs its arguments as commands with `execexp`. The second
 parameter of `execexp` is declared `UFD`, an `int`, but serves two
@@ -7395,14 +7395,14 @@ without a cast; C99 requires one each way, here and at 426, and the
 conversion is exact because an `int` and a pointer are both 32 bits on
 the ARM, as both were 16 on the PDP-11.
 
-#lines(167, 206)
+#lines(168, 207)
 
 `umask` was added to the shell after Bourne, by someone who wrote
 plain C with spaces for indentation instead of the macros of
 #f("sh/mac.h"); the port keeps it as it is. In v7 the declaration at
 209 lacked its semicolon, a syntax error, and the port adds it.
 
-#lines(207, 224)
+#lines(208, 225)
 
 `builtin` (#f("sh/builtin.c")) is a hook for local built-in commands,
 and returns zero. v7 passed it `argn` and `com`, which its definition
@@ -7416,7 +7416,7 @@ of assignments, and is finished. The remaining cases, a program to run
 or redirections with no command, fall through (239, new comment) to be
 forked.
 
-#lines(225, 240)
+#lines(226, 241)
 
 The fork. No process is made if `execflg` says this is the last
 command of the present process, unless the node is to run in the
@@ -7436,13 +7436,13 @@ records (`post`) the writer of a pipe, to be waited for together with
 the reader at the end of the pipeline, or, for `&`, stores the pid in
 `$!` and does not wait at all.
 
-#lines(241, 264)
+#lines(242, 265)
 
 The child. It is marked `forked`, forgets its parent's temporary files
 and children, and makes temporary names of its own (`settmp`,
 #f("sh/main.c")). `oldsigs` (#f("sh/fault.c")) restores the signals to
 their state on entry, except those which a `trap` set to be ignored. A
-command run with `&` ignores interrupt and quit (276), and, unless its
+command run with `&` ignores interrupt and quit (277), and, unless its
 standard input was otherwise set, reads `/dev/null`, so that it cannot
 compete with the terminal. Ignored signals stay ignored across `exec`
 (`setregs`, #f("sys1.c")); this is all the protection v7 gives the
@@ -7462,20 +7462,20 @@ by a recursive `execute` with `execflg` set, so that its last command
 is executed without a further fork. A simple command is executed by
 `execa`. Either way `done` ends the child if control comes back.
 
-The `break` (304) is new. In v7 the `TFORK` case ended without one,
+The `break` (308) is new. In v7 the `TFORK` case ended without one,
 since both branches leave by `break` or `done`, and control passed into
 `TPAR` in appearance only.
 
-#lines(265, 305)
+#lines(266, 309)
 
 A parenthesised command runs in a child made by the enclosing fork
 node. Its diagnostic output, `output`, is a private copy of descriptor
 2 made by `exfile` (#f("sh/main.c")); it is replaced by a fresh copy of
 the present descriptor 2, so that a redirection of the standard error
 around the parentheses applies to the subshell's own messages too. The
-`break` (310) is new, as at 304.
+`break` (314) is new, as at 304.
 
-#lines(306, 311)
+#lines(310, 315)
 
 A pipeline. A pipe is made, and the left side is run with it as `pf2`,
 its output; the right side is then run with it as `pf1`, its input,
@@ -7484,15 +7484,15 @@ the right, passes its last output through. The left side is a fork node
 with `FPOU`, so `execute` returns as soon as it has been forked, and
 the right side, which has `FPCL`, closes the pipe in the shell and
 waits for both. The pipe is made only now, when it is needed, so that
-the shell holds at most one at a time. `l` (314) is the port's typed
+the shell holds at most one at a time. `l` (318) is the port's typed
 pointer, as `c` above.
 
-#lines(312, 322)
+#lines(316, 326)
 
 The lists: `;`, `&&`, and `||`. Only the right side of each inherits
 `execflg`, since the left must return to the shell.
 
-#lines(323, 339)
+#lines(327, 345)
 
 `for`. Without `in`, the loop runs over the positional parameters, and
 `useargs` (#f("sh/args.c")) increments their use count, so that a `set`
@@ -7505,14 +7505,14 @@ for a command. `scan` leaves the first word of its result untrimmed
 leaving, `breakcnt` is decremented and becomes the new `execbrk`, which
 stops the next loop out if more remain to be broken.
 
-#lines(340, 366)
+#lines(346, 372)
 
 `while` and `until` differ in one comparison: the body is run while the
 status of the condition, compared with zero, agrees with the type. The
 exit status is that of the last pass of the body, or zero if there was
 none.
 
-#lines(367, 389)
+#lines(373, 396)
 
 `case`. The word is expanded and its quoting removed. Each pattern of
 each arm is expanded in turn and matched with `gmatch`
@@ -7520,13 +7520,13 @@ each arm is expanded in turn and matched with `gmatch`
 quote bit and match only themselves; failing that, the pattern is
 trimmed and compared as a plain string. The first arm with a match is
 run and the search ends. The typed pointers `s` and `re` are the port's,
-and the `TREPTR` casts (394, 406) are needed because v7 used `t` to walk
+and the `TREPTR` casts (401, 413) are needed because v7 used `t` to walk
 the list of `regnod`s, which have no type field at all.
 
 After any command, `exitset` (#f("sh/error.c")) copies the status into
 `$?`.
 
-#lines(390, 417)
+#lines(397, 424)
 
 `execexp` executes a string, for `eval` and for traps, or the contents
 of an open file, for `.`. A new input block is pushed on the input
@@ -7534,7 +7534,7 @@ stack (#f("sh/io.c")), the whole input is parsed by one call of `cmd`,
 with newlines taken as `;`, and only then executed. A file read with
 `.` is therefore parsed completely before any of it runs.
 
-#lines(418, 432)
+#lines(425, 439)
 #source("/usr/src/cmd/sh/service.c")
 
 The routines with which `execute` (#f("sh/xec.c")) does its detailed
@@ -7670,12 +7670,12 @@ The flag bit is cleared and set by casting the pointer to an `int`
 (`Rcheat`, #f("sh/mode.h")). C99 needs a cast back to a pointer (274,
 289), and another on the result of `getstak` (277).
 
-#lines(272, 293)
+#lines(272, 294)
 
 `gsort` is a Shell sort, by `cf` (#f("sh/string.c")), with gaps each
 one less than a power of two, decreasing to 1.
 
-#lines(294, 316)
+#lines(295, 317)
 
 `getarg` expands each word of a command and returns the number of
 arguments it produced.
@@ -7689,11 +7689,11 @@ chain (`makearg`). Either way the head of the chain is then marked as
 the end of a group, for `scan`.
 
 `argp` is a `STRING`, and v7 took `->argval` from it directly; the port
-casts it to `ARGPTR` (352, 355). v7 set the mark with `Lcheat`, storing
+casts it to `ARGPTR` (353, 356). v7 set the mark with `Lcheat`, storing
 into the pointer through an `int` lvalue, which C99's rules of aliasing
-do not allow; it is now an assignment (357).
+do not allow; it is now an assignment (358).
 
-#lines(317, 359)
+#lines(318, 360)
 #source("/usr/src/cmd/sh/fault.c")
 
 The shell's handling of signals. Two tables are indexed by signal
@@ -8040,7 +8040,7 @@ scope before its definition, and making them `static` was the simpler
 remedy. `(void)n` tells the compiler that `countnam` ignores its
 argument.
 
-#lines(275, 303)
+#lines(275, 304)
 #source("/usr/src/cmd/sh/macro.c")
 
 Substitution. `macro` takes a word as `word` left it (#f("sh/word.c"))
@@ -8091,14 +8091,14 @@ characters fail every test of #f("sh/ctype.h").
 
 A `$` begins a substitution only if the next character could begin a
 parameter (`dolchar`); otherwise it is pushed back and the `$` is
-returned (135). After an optional brace, there are three kinds of
+returned (136). After an optional brace, there are three kinds of
 parameter.
 
 A name is collected on the stack and looked up. Since `lookup` may
 allocate, which can move the stack (#f("sh/stak.h")), its start is kept
 as an offset, `argp`, and turned back into an address by `absstak`.
 v7 assigned the integer `relstak()` to the `STRING` `argp` directly;
-the port casts it (70, 103). The character which ended the name is
+the port casts it (70, 104). The character which ended the name is
 pushed back into `peekc`, with `MARK` so that even a null is seen as
 present (#f("sh/word.c")). The second semicolon on line 75 is v7's.
 
@@ -8123,7 +8123,7 @@ leaves by `error`, but `error` is an ordinary function, not declared
 to return never, and GCC would warn that `v` might be used unset. The
 parentheses at 68 are new.
 
-#lines(58, 95)
+#lines(58, 96)
 
 Within braces, the name may be followed by `-`, `=`, `?`, or `+` and a
 word (`defchar` also accepts the closing brace). The word is wanted if
@@ -8137,7 +8137,7 @@ being built, and so becomes part of the result without further ado;
 Without braces, the character after the parameter belongs to the text
 and is pushed back.
 
-#lines(96, 111)
+#lines(97, 112)
 
 If the parameter is set, its value is pushed, unless `+` has supplied a
 word instead. For `$*` and `$@` the loop continues through every
@@ -8157,19 +8157,19 @@ error only under `set -u` (`setflg`).
 Every substitution ends by going back to `retry`: the value has been
 pushed directly, and `getch` returns the next character after it.
 
-#lines(112, 136)
+#lines(113, 137)
 
 A backquote starts a command substitution. A double quote toggles
 `quote` and is itself dropped, unless it is the character the caller
 is looking for: `subst` makes use of this exception, below.
 
-#lines(137, 145)
+#lines(138, 146)
 
 `macro` saves and restores `quote` and `quoted`, sets the word up as
 input, and copies it whole with `copyto(0)`. A word which consisted of
 double quotes and nothing more, such as `""`, would leave an empty
 result, and `split` drops empty fields (#f("sh/service.c")). A single
-`QUOTE` character is therefore pushed (161): it is not a separator, and
+`QUOTE` character is therefore pushed (162): it is not a separator, and
 `trim` later reduces it to the empty string, so that the word survives
 as an empty argument. The cast to `char` is new: `QUOTE` is 0200, which
 a compiler whose `char` is signed must change to store, and the cast
@@ -8179,9 +8179,9 @@ The input block is a `FILEHDR` rather than a `FILEBLK`, the same
 structure without the buffer, which is all a string needs, since
 `estabf` points the input directly at the string (#f("sh/mode.h")).
 `push` takes a `FILE`, a pointer to a `fileblk`; v7 passed the address
-of the `filehdr` as it was, and C99 requires the cast (156).
+of the `filehdr` as it was, and C99 requires the cast (157).
 
-#lines(146, 164)
+#lines(147, 165)
 
 `comsubst` runs the command between backquotes and substitutes its
 output. The part of the result built so far is first made a permanent
@@ -8190,7 +8190,7 @@ is read up to the closing backquote into a new item; `trim` removes the
 quote bits which `word` set on its escaped characters; and the text is
 pushed as a new input string.
 
-#lines(165, 181)
+#lines(166, 182)
 
 The whole string is parsed by `cmd` (#f("sh/cmd.c")) and wrapped in a
 fork node whose output is a pipe (`FPOU`). As the comment says, the pipe
@@ -8218,7 +8218,7 @@ the end of the output (#f("sh/word.c")).
 
 The parentheses at 195 are new.
 
-#lines(182, 203)
+#lines(183, 204)
 
 `subst` copies a here document from the descriptor `in` to `ot`,
 substituting parameters and commands (`initio`, #f("sh/service.c")).
@@ -8230,7 +8230,7 @@ from the result, which is written in pieces of `CPYSIZ` bytes from the
 stack. With `-x` the substituted text is shown on the diagnostic output
 as well. The parentheses at 216 are new.
 
-#lines(204, 231)
+#lines(205, 232)
 #source("/usr/src/cmd/sh/expand.c")
 
 File name generation. `split` (#f("sh/service.c")) offers each field of
@@ -8308,7 +8308,7 @@ The paths of the intermediate level are abandoned on the stack, to be
 freed with the rest of the command. The count returned is that of the
 final names.
 
-#lines(72, 102)
+#lines(72, 103)
 
 The original word is repaired, every character whose seven bits are
 zero becoming `/` again. `split` may yet use the word itself, when
@@ -8316,7 +8316,7 @@ nothing matched. The names are not sorted here; `scan` sorts each
 group of names as it builds the argument list (#f("sh/service.c")).
 The parentheses at 107 are new.
 
-#lines(103, 111)
+#lines(104, 112)
 
 `gmatch` matches the string `s` against the pattern `p`, recursively,
 one character of each at a time. It knows nothing of `/` or of a
@@ -8333,33 +8333,33 @@ pattern is compared with its quote bit stripped. In v7 the upper bound
 of a range was not: in `[a-'c']`, the quoted `c` is `0343`, and on the
 ARM, where `char` is unsigned, every character from `a` upward would
 fall within the range, while on the PDP-11, where it was negative, none
-did. The port masks it with `STRIP` (133), like the others. v7 has no negated class.
+did. The port masks it with `STRIP` (134), like the others. v7 has no negated class.
 
-#lines(112, 138)
+#lines(113, 140)
 
 An ordinary character must equal the character of the string; quoted,
 it still matches only itself, after `STRIP`. If it does, the case falls
 into that of `?`, which matches any one character. The comment
-`/* fallthrough */` (142) is new, and tells GCC that the fall is
+`/* fallthrough */` (144) is new, and tells GCC that the fall is
 intended. A `*` at the end of the pattern matches whatever remains;
 elsewhere every suffix of the string, including the empty one, is tried
 against the rest of the pattern. The end of the pattern matches only
 the end of the string.
 
-#lines(139, 157)
+#lines(141, 159)
 
 `addg` builds a new argument on the stack, leaving room for the link
 before it (`argnod`, #f("sh/mode.h")): the directory part up to the
 `0200` marker, with a `/` in its place; the matched name; and, if there
 is a rescan, a `/` and the rest of the pattern. `makearg` puts it on
-`gchain`. The cast of `endstak`'s result to `ARGPTR` (180) is new.
+`gchain`. The cast of `endstak`'s result to `ARGPTR` (182) is new.
 
-#lines(158, 181)
+#lines(160, 183)
 
 v7 declared the parameter of `makearg` as a `STRING` and applied
 `->argnxt` to it, which its compiler allowed; it is now an `ARGPTR`.
 
-#lines(182, 188)
+#lines(184, 190)
 #source("/usr/src/cmd/sh/args.c")
 
 The options and the positional parameters. `options` interprets the
@@ -8415,7 +8415,7 @@ next block on the chain `argfor`. When the count reaches zero the
 strings and the block are freed. The parentheses at 87 are new, and
 the cast at 90 is explained below.
 
-#lines(79, 96)
+#lines(79, 97)
 
 The vector of parameters is a `dolnod` (#f("sh/mode.h")): a link
 `dolnxt`, a use count `doluse`, and then the strings themselves,
@@ -8433,10 +8433,10 @@ v7 treated `np`, a `STRING *`, as a `DOLPTR` where it suited it,
 writing `np->doluse` and `np->dolarg` and assigning the result to
 `dolh`; its compiler allowed `->` on any pointer, and any pointer to be
 assigned to any other. C99 allows neither, and the port casts between
-the two types at each such place (76, 104, 105), as it does where a
-`char *` becomes a `STRING *` (90, 100). The layout is unchanged.
+the two types at each such place (76, 106, 107), as it does where a
+`char *` becomes a `STRING *` (90, 101). The layout is unchanged.
 
-#lines(97, 112)
+#lines(98, 114)
 
 `clearup` is called after an error (`exitsh`, #f("sh/error.c")) and
 before a command file is run (`execs`): it releases the parameter
@@ -8461,7 +8461,7 @@ loop's `freeargs` then leaves `argfor` at the block's successor, and
 the outer loop's reference is merely not released by a `clearup`
 during that loop, which can cost a block, never free one in use.
 
-#lines(113, 132)
+#lines(115, 134)
 #source("/usr/src/cmd/sh/print.c")
 
 The shell's output routines, and its conversions between numbers and
@@ -8516,12 +8516,12 @@ exceed that, that is, if `r` is at most the largest less the digit,
 divided by ten. If not, `r` is set to -1, which ends the loop and
 reports the bad number as before; nothing ever overflows.
 
-`return(0)` (98) is new. `failed` never returns, but nothing tells the
+`return(0)` (99) is new. `failed` never returns, but nothing tells the
 compiler so (the port does not use GNU's `noreturn` attribute), and
 without it control appears to reach the end of a function which returns
 a value, of which GCC warns.
 
-#lines(84, 99)
+#lines(84, 100)
 #source("/usr/src/cmd/sh/string.c")
 
 Four string routines, used throughout the shell in place of those of
@@ -8631,29 +8631,29 @@ and `signal` in `signal.h`.
 75, 79, 80) take or return a `long long`, where v7's took a `long`:
 `long long` is the port's `time_t` (#f("param.h")), which the header
 cannot name, since it is defined in `<sys/types.h>`, which many
-programs do not include. `time` has a line of its own (75) for its
+programs do not include. `time` has a line of its own (87) for its
 result type.
 
 The argument and result types are v7's own, not those of later
-standards. `sprintf` (72) returns its first argument, a `char *`;
-`malloc` (86) returns `char *` and takes an `unsigned`; `index` and
-`rindex` (85) take the character as a `char`; `sleep` and `putw` (77)
-return nothing, as their v7 definitions did. `ioctl` (56) takes a
+standards. `sprintf` (83) returns its first argument, a `char *`;
+`malloc` (101) returns `char *` and takes an `unsigned`; `index` and
+`rindex` (100) take the character as a `char`; `sleep` and `putw` (89)
+return nothing, as their v7 definitions did. `ioctl` (60) takes a
 `void *` because its callers pass a pointer to whichever structure the
-request needs. `exit`, `_exit`, and `abort` (73) are declared as plain
+request needs. `exit`, `_exit`, and `abort` (84) are declared as plain
 `void` functions, since the `noreturn` attribute is not C99. The
 variadic functions, `printf` and `scanf` and their relatives and `execl`
-and `execlp` (68--72), are declared with `...`; their definitions use
+and `execlp` (78--83), are declared with `...`; their definitions use
 `stdarg.h` (#f("stdio/printf.c")).
 
-`profil` and `monitor` (96, 97), which v7 left undeclared, start and
+`profil` and `monitor` (113, 114), which v7 left undeclared, start and
 stop the kernel's sampling of the program counter and keep the counts
 of a profiled program (#f("gen/mon.c")).
 
-`environ` (102) is defined in #f("csu/crt0.s"); the declaration lets the
+`environ` (121) is defined in #f("csu/crt0.s"); the declaration lets the
 `exec` routines and `getenv` find it.
 
-#lines(36, 102)
+#lines(36, 121)
 #source("/usr/include/sys/types.h")
 
 #f("sys/types.h") names the types in which the system's interfaces are
@@ -8685,7 +8685,7 @@ in the field `S_IFMT`, and its permissions. The kernel's copy
 (#f("stat.h")) is the same but for the last line (29), which declares
 the two calls for programs.
 
-#lines(1, 29)
+#lines(1, 30)
 #source("/usr/include/sys/times.h")
 
 `times` fills a `struct tms` with the user and system time of the
@@ -8750,7 +8750,7 @@ The terminal modes, kept in `struct sgttyb` by `gtty` and `stty`, are
 v7's, with the ioctl requests of #f("tty.c") and #f("tty.h"). The
 prototypes of `gtty` and `stty` (117) are new.
 
-#lines(1, 117)
+#lines(1, 118)
 
 #source("/usr/include/ctype.h")
 
@@ -8766,7 +8766,7 @@ only for a character known to be of the right case.
 #source("/usr/include/math.h")
 
 The mathematical routines of `libm` are declared with prototypes, and
-`modf` and `frexp`, which are in the C library, are added (13). `fmod`
+`modf` and `frexp`, which are in the C library, are added (14). `fmod`
 and `gamma` are declared because v7's header declared them, although
 neither v7's `libm` nor this one supplies them.
 
@@ -8774,22 +8774,22 @@ neither v7's `libm` nor this one supplies them.
 represents; v7's value was the largest number of the PDP-11's format.
 `LOGHUGE` is its decimal exponent.
 
-#lines(1, 16)
+#lines(1, 18)
 
 #source("/usr/include/pwd.h")
 
 The fields of a line of `/etc/passwd` (#f("passwd")), as
 #f("stdio/getpwent.c") unpacks them. The prototypes of the routines which read
-the file (12, 13) are new.
+the file (12, 14) are new.
 
-#lines(1, 13)
+#lines(1, 14)
 
 #source("/usr/include/grp.h")
 
 The fields of a line of `/etc/group` (#f("group")); the members are an
-array of names ended by a null pointer. The prototypes (7, 8) are new.
+array of names ended by a null pointer. The prototypes (7, 9) are new.
 
-#lines(1, 8)
+#lines(1, 9)
 
 #source("/usr/include/utmp.h")
 
@@ -8943,7 +8943,7 @@ value (`-Woverflow`); with `-Werror` the warning is fatal. Casting the
 mask to `char` makes it 0 before the `&=`, which states the same effect
 without the conversion, and keeps v7's `&=`.
 
-#lines(86, 107)
+#lines(86, 108)
 #source("/usr/src/libc/stdio/data.c")
 
 `data.c` defines the table of streams, `_iob`, with its first three
@@ -8966,7 +8966,7 @@ which is neither reading nor writing, or returns null when all
 time through `getc` and `putc`, and return the number of whole items
 moved. They are v7's, with prototypes.
 
-#lines(1, 40)
+#lines(1, 42)
 #source("/usr/src/libc/stdio/getchar.c")
 
 `getchar` is a macro in `<stdio.h>`; this file defines it also as a
@@ -9176,7 +9176,7 @@ takes the value from the argument list as v7's did.
 The literal text up to the next `%` is passed to `_strout` in one
 piece. `buf` must hold the longest conversion: a `%f` of the largest
 `double`, about 1.8e308, needs 309 digits before the point, and the
-precision is limited to 70 (106), so 400 bytes suffice. v7's buffer was
+precision is limited to 70 (110), so 400 bytes suffice. v7's buffer was
 128 bytes, enough when the largest PDP-11 number was about 1.7e38.
 
 #lines(19, 35)
@@ -9208,21 +9208,21 @@ converts it to `unsigned long long`; if it was negative a `-` is stored and the 
 taken by unsigned negation, which is correct even for the most negative
 value.
 
-#lines(66, 77)
+#lines(66, 79)
 
 The unsigned conversions, and the common code for all integers. The
 digits are generated backwards, from the least significant, into the
 far end of `buf`, then copied forward to follow any sign. v7 printed
 `%X` in lower case like `%x`, and so does this. A precision on an
 integer has v7's meaning, not the later one: if it is nonzero, and so
-is the number, a `0` is placed before the digits (91). The PDP-11 had
+is the number, a `0` is placed before the digits (95). The PDP-11 had
 no instruction to divide a 32-bit number, so `doprnt.s` divided the two
 words separately by a method it credits to Keith Davis; here `%` and
 `/` on an `unsigned long long` serve, by way of the compiler's routine
 for 64-bit division, since the Cortex-A7 divides only 32 bits in one
 instruction.
 
-#lines(78, 100)
+#lines(80, 104)
 
 The floating conversions take a `double`, the type to which a `float`
 argument is always promoted. The precision, the number of digits after
@@ -9233,17 +9233,17 @@ of `buf`. `%g` is wholly the business of `gcvt`.
 as a digit, the point, the rest, and the exponent. If the first digit
 is `0` the value was zero, and the exponent is adjusted to print as
 `+00`. The exponent of an IEEE `double` reaches 308, and is printed in
-three digits from 100 up (130); `fltpr.s` had to provide only two,
+three digits from 100 up (136); `fltpr.s` had to provide only two,
 since the PDP-11's exponent did not exceed 38.
 
 `%f` asks `fcvt` for the given number of digits after the point. A value
 below 1 begins with `0`. The digits before the point come from the
 buffer, but `fcvt` returns no more than 79 digits in all, and runs out
 when the digits before the point and the precision together need more;
-the tests of `*s` (140, 144) then supply zeros in their place. A `double` carries only about seventeen
+the tests of `*s` (146, 150) then supply zeros in their place. A `double` carries only about seventeen
 significant decimal digits, so nothing of value is lost.
 
-#lines(101, 147)
+#lines(105, 154)
 
 `%c` stores the character unless it is the null character, as in v7. `%s`
 takes the string, or `"(null)"` for a null pointer, which v7 also
@@ -9251,7 +9251,7 @@ printed, and uses at most the precision's worth of it. Neither is ever
 padded with zeros. Note that for `%s` the result is not copied into
 `buf`; `s` and `p` bracket the string itself.
 
-#lines(148, 159)
+#lines(155, 166)
 
 Any other character is printed as itself, which is how `%%` prints a
 percent sign. Then the padding is computed: `c` is the number of fill
@@ -9259,7 +9259,7 @@ characters, given to `_strout` as negative for padding on the left and
 positive for padding on the right. `_strout` takes care that a minus
 sign precedes the zeros of a zero-filled number.
 
-#lines(160, 168)
+#lines(167, 175)
 #source("/usr/src/libc/stdio/printf.c")
 
 `printf` formats its arguments on the standard output by way of
@@ -9323,7 +9323,7 @@ Unlike `_doprnt` the file was C in v7, so the port's changes are
 modest. Three of them repair faults in v7's code, one replaces the way
 the arguments were found, and one adds `ll`.
 
-`_sctab` (20) classifies characters: `SPC` marks the white space which
+`_sctab` (21) classifies characters: `SPC` marks the white space which
 separates fields, and `STP` is set afresh for each `%[` conversion to
 mark the characters which stop it. v7's table had 128 entries, but it
 was indexed by the result of `getc`, which may be anything from 0 to
@@ -9333,12 +9333,12 @@ and a `%[` set with such characters wrote beyond it. The table now has
 256 entries, one for each value of a byte. Only the first 64 are
 written out; the rest are zero.
 
-The prototypes (15--18) are new. `_doscan`, `_innum`, and `_instr` are
+The prototypes (15--19) are new. `_doscan`, `_innum`, and `_instr` are
 external, so `-Wmissing-prototypes` requires each to be declared before
 its definition, and `_innum` calls `_instr`, defined after it. #f("stdio.h")
 does not declare these internal routines.
 
-#lines(1, 29)
+#lines(1, 30)
 
 The main loop. A `%` introduces a conversion, `%%` matches a percent
 sign, white space in the format skips any amount of white space in the
@@ -9349,7 +9349,7 @@ After the `%` comes an optional `*`, which suppresses the assignment,
 then an optional field width, which defaults to 30000, in effect
 unlimited; then `l` for long or `h` for short; then the conversion
 letter. A capital letter means long, as in `printf`, so `%D` and `%E`
-are `%ld` and `%le`. `ll`, with its size `LLONG` (11, 63--66), is new:
+are `%ld` and `%le`. `ll`, with its size `LLONG` (11, 64--67), is new:
 `%llo` reads the 64-bit `time_t` back from a header of `tar`. `%[`
 reads the character class at once with `_getccl`.
 
@@ -9357,12 +9357,12 @@ In v7, `argp` was a pointer into the PDP-11 argument list, and `ptr` was
 set at once to the address of the next argument (`ptr = argp++`), or to
 0 if the assignment was suppressed; `_innum` then stored through it as
 through a pointer to a pointer of the appropriate type, `**(float **)ptr`
-and the like. Now `ptr` is set to `fmt` (49), which is used only as a
+and the like. Now `ptr` is set to `fmt` (50), which is used only as a
 value known not to be null, to record that an argument is to be taken.
 
-#lines(30, 77)
+#lines(31, 78)
 
-The argument itself is taken here (78--92), once the conversion letter
+The argument itself is taken here (79--95), once the conversion letter
 and the size are known, with `va_arg` and the type which the caller
 really passed: `char *` for strings and characters, `float *` or
 `double *` for the floating conversions, and `short *`, `int *`,
@@ -9376,17 +9376,17 @@ but the compiler is entitled to assume otherwise.
 it stored something, and an argument was supplied for it, the count of
 matches goes up. If the input ended, the scan ends.
 
-#lines(78, 118)
+#lines(79, 121)
 
 `_innum` converts a number. The field width is first cut to 62
-characters (131), since the characters of the field are copied into
+characters (135), since the characters of the field are copied into
 `numbuf`, of 64 bytes, for `atof`; with v7's default width of 30000 a
 long enough number overflowed the stack. 62 leaves room for the null
 character and for the one extra byte stored with an exponent's `e`
-(185), which takes two bytes of `numbuf` for one character of the
+(190), which takes two bytes of `numbuf` for one character of the
 count. Leading white space is skipped, and a sign noted.
 
-#lines(119, 155)
+#lines(122, 159)
 
 Digits are accumulated in `lcval`, now an `unsigned long long`, as
 they are read, by shifts for octal and hexadecimal, and for decimal by
@@ -9394,25 +9394,25 @@ they are read, by shifts for octal and hexadecimal, and for decimal by
 multiplication, a saving on the PDP-11. The field may hold 62 digits,
 far more than 64 bits take; v7's `long` overflowed, which C99 leaves
 undefined for a signed type. Unsigned, the value wraps round, and the
-negation of a negative number (193) is defined too. A floating number
+negation of a negative number (198) is defined too. A floating number
 is accumulated in the same way, uselessly,
 but its characters are also kept in `numbuf`. A point is accepted only
 in a floating conversion, and an exponent only after a digit has been
 seen. The parentheses at 158 are new, as in #f("slp.c").
 
-#lines(156, 191)
+#lines(160, 196)
 
 The character which ended the number is put back with `ungetc`, unless
 it was `EOF`, which `*eofptr` reports. Nothing is stored if no
 characters were taken or the assignment was suppressed. Otherwise the
 value is stored according to the scale and size, now through a pointer
-of the right type (204--227) rather than v7's double indirection. The
+of the right type (209--232) rather than v7's double indirection. The
 conversion of a large unsigned value to a signed type is
 implementation-defined, not undefined: GCC keeps the low bits. A
 `float` is produced by converting the `double` from `atof`; v7's
 declaration of `atof` has gone to #f("stdio.h").
 
-#lines(192, 230)
+#lines(197, 235)
 
 `_instr` reads a string (`%s`), a character class (`%[`), or
 characters (`%c`, by default one). A string first skips white space;
@@ -9421,19 +9421,19 @@ and `%c` stops only when the count is exhausted. Only a `%c` is stored
 without a null character. Note that `ptr` may be null for a suppressed
 assignment, in which case the characters are read and discarded.
 
-The first `getc` is masked with `0377` (247) for the enlarged table.
+The first `getc` is masked with `0377` (253) for the enlarged table.
 `EOF`, -1, then indexes entry 0377, which is harmless: the loop stops at
-`EOF` in any case, and the second loop (255) tests for `EOF` before it
+`EOF` in any case, and the second loop (261) tests for `EOF` before it
 indexes the table.
 
-#lines(231, 274)
+#lines(236, 280)
 
 `_getccl` builds the stop set for `%[`. A class beginning with `^`
 names the characters which stop the scan; otherwise it names those which
 do not. The loop sets or clears `STP` in all 256 entries, then flips it
 for each character up to the `]`.
 
-The loop at (291) has been rewritten. v7 masked the byte with `0177`
+The loop at (297) has been rewritten. v7 masked the byte with `0177`
 only for the comparison with `]` and indexed the table with the
 unmasked, possibly negative, value; the byte is now taken with `0377`
 once, and used as it is. v7 also stored each byte with `c++` and then
@@ -9443,7 +9443,7 @@ the end of the format. The test is now made before the byte is entered,
 and `_getccl` returns a pointer to the null character, at which
 `_doscan` stops.
 
-#lines(275, 300)
+#lines(281, 306)
 #source("/usr/src/libc/stdio/scanf.c")
 
 The three entries to `_doscan` (#f("stdio/doscan.c")): `scanf` reads the
@@ -9513,7 +9513,7 @@ returning nothing (37), the type with which `signal.h` declares
 `signal` (#f("sys/signal.s")); v7 declared them, in one declaration
 with the `int`s `f` and `r`, as pointers to functions returning `int`.
 
-#lines(32, 53)
+#lines(32, 54)
 #source("/usr/src/libc/stdio/system.c")
 
 `system` runs a command line through the shell and waits for it,
@@ -9984,22 +9984,22 @@ follow the point. They serve `_doprnt` for `%e` and `%f`
 (#f("stdio/doprnt.c")) and `gcvt` for `%g`. The result is in a static
 buffer which the next call overwrites.
 
-The includes and the static declaration of `cvt` (8--10) are new:
+The includes and the static declaration of `cvt` (8--11) are new:
 #f("stdio.h") holds the prototypes of `ecvt` and `fcvt`, and `math.h`
 that of `modf`, which v7 declared locally; `cvt` is used before it is
 defined.
 
-#lines(1, 24)
+#lines(1, 25)
 
 `cvt` does the work for both, `eflag` telling them apart. The number of
 digits is kept within the buffer of `NDIG` bytes, and the sign is
 recorded and removed. `r2` will count the position of the decimal point.
 
-#lines(25, 43)
+#lines(26, 44)
 
-The test at (44) is new. It replaces an infinity, or a NaN, which the
+The test at (45) is new. It replaces an infinity, or a NaN, which the
 IEEE arithmetic of the ARM can produce and the PDP-11's could not, by
-the largest finite `double`. Without it, the loop at (56) would never
+the largest finite `double`. Without it, the loop at (57) would never
 end for an infinity, since dividing an infinity by ten leaves it
 infinite.
 
@@ -10012,19 +10012,19 @@ the end of `buf` and then moved to its start. A number below 1 instead
 yields its leading zeros as a negative `r2`: it is multiplied by ten,
 and `r2` decremented, as long as the product stays below 1.
 
-The loop at (53--55) is new. The largest PDP-11 number, about 1.7e38,
+The loop at (54--56) is new. The largest PDP-11 number, about 1.7e38,
 had 39 digits before the point, and these always fitted in the 80 bytes
 of `buf`. An IEEE `double` may have 309, and the digits, built
 backwards from the end, would run off the front of the buffer for any
 number of 1e80 or more. Numbers of 1e40 or more are therefore divided by
 1e10 until they are smaller, `r2` counting ten places for each
 division, and the fraction which the division leaves is discarded
-(55). At most 40 digits are thus produced; the rest are lost, but a
+(56). At most 40 digits are thus produced; the rest are lost, but a
 `double` has only about seventeen significant decimal digits, and the
 digits which follow are supplied as zeros by the fraction loop below
 (the fraction of so large a number being zero) or by `_doprnt`.
 
-#lines(44, 68)
+#lines(45, 69)
 
 `p1` marks the position one past the last digit wanted: `ndigits` from
 the start for `ecvt`, `ndigits` past the point for `fcvt`. If that lies
@@ -10034,7 +10034,7 @@ produced, by repeated multiplication by ten, until there is one beyond
 the last wanted, the buffer being full at worst; in the latter case the
 result is returned unrounded, `NDIG`-1 digits long.
 
-#lines(69, 85)
+#lines(70, 86)
 
 The extra digit rounds the result: 5 is added to it and the carry is
 propagated leftwards. A carry out of the first digit, as when 9.99 is
@@ -10042,7 +10042,7 @@ rounded to two digits, makes that digit `1`, moves the point one place
 right, and in `fcvt`'s case adds a digit at the end. The rounding digit
 itself is then cut off by the null character.
 
-#lines(86, 104)
+#lines(87, 105)
 #source("/usr/src/libc/gen/frexp.c")
 
 `frexp` splits a number into a fraction between one half and one and a
@@ -10063,9 +10063,9 @@ power as a double directly, with the exponent field set and the
 fraction zero (10--13), and multiplies; a power beyond the range of a
 double is applied in steps of at most $2^1000$ (11--12). A result which
 overflows is replaced by the largest double of the right sign, and
-`errno` set to `ERANGE` (16--19), as v7's did.
+`errno` set to `ERANGE` (16--21), as v7's did.
 
-#lines(1, 21)
+#lines(1, 23)
 #source("/usr/src/libc/gen/modf.c")
 
 `modf` splits a number into its integer and fractional parts, both
@@ -10833,7 +10833,7 @@ commands, is straightforward, and is described only briefly.
 
 The changes from v7 are C99 declarations, and the few others noted
 fragment by fragment. Throughout the file, assignments used as
-conditions, such as `while ((*p2++ = *p1++))` (150), have gained the
+conditions, such as `while ((*p2++ = *p1++))` (157), have gained the
 doubled parentheses of #f("malloc.c").
 
 `stdio.h` (8) is new. `ed` uses no standard I/O at all, but in the port
@@ -10866,18 +10866,18 @@ being executed, and `linebuf` the line being worked on.
 the signal number, which is what `signal` returns in the port
 (#f("sys/signal.s")). The local declarations of `lseek`, `mktemp`,
 `malloc`, and `realloc` have gone, since #f("stdio.h") declares them.
-The prototypes (91--110) cover every procedure, since in this file
+The prototypes (91--117) cover every procedure, since in this file
 nearly every one is used before its definition. The name of the
 temporary file, `tfname` (69), is now an array holding the template
 which `mktemp` fills in; v7 passed `mktemp` the string constant itself,
 which the PDP-11 compiler put in writable data, but which is now part
 of the read-only text, where `mktemp`'s stores fault.
 
-#lines(29, 110)
+#lines(29, 117)
 
-`main` sets up the signals. The test of `SIGTERM` (120) installs
+`main` sets up the signals. The test of `SIGTERM` (127) installs
 `quit` only if the signal was not already ignored; `SIG_DFL` is 0. The
-tests at (157) and (159) are the same in another form: `SIG_IGN` is 1,
+tests at (164) and (166) are the same in another form: `SIG_IGN` is 1,
 so the low bit of the old action is set only if the signal was being
 ignored, as it is for a command run in the background. These casts
 from a function pointer to `int` lose nothing on the ARM, whose
@@ -10886,14 +10886,14 @@ pointers and `int`s are both 32 bits.
 A file named as an argument is read by placing `r` in `globp`, as
 though it had been typed as the first command. The array of line
 pointers is allocated, the temporary file named, and `setjmp` marks
-the place to which `error` will return after each mistake; `mktemp` (155)
+the place to which `error` will return after each mistake; `mktemp` (162)
 fills in the array `tfname`. `quit` now
 takes the signal number, being also a handler, and the direct call
 passes 0. v7 declared the three handlers inside `main`, as functions
 returning `int`; the prototypes above replace that declaration, and
-`oldintr` (115) has the type of a handler.
+`oldintr` (122) has the type of a handler.
 
-#lines(111, 165)
+#lines(118, 172)
 
 `commands` is the main loop. It first collects up to two addresses,
 separated by `,` or `;`. A `;` also sets `dot` to the first address,
@@ -10902,31 +10902,31 @@ given, both `addr1` and `addr2` are set to it. v7's local declaration
 of `getfile` and `gettty` at the head of `commands` has gone, as the
 prototypes cover them.
 
-#lines(166, 194)
+#lines(173, 201)
 
 The commands themselves. Most call `setdot`, `setall`, `setnoaddr`, or
 `nonzero` to supply default addresses or reject wrong ones, then
 `newline` to check that nothing follows, and then do their work.
 
-Five comments `/* fallthrough */` are new (213, 276, 293, 298, 341).
+Five comments `/* fallthrough */` are new (220, 283, 300, 305, 348).
 Each marks a case which, as in v7, runs on into the next; `-Wextra`
-warns of such a fall-through unless it is marked. The one at (298)
+warns of such a fall-through unless it is marked. The one at (305)
 follows a call of `quit`, which in fact never returns: it exits, or
 reports an error and jumps back to `main`. The compiler is not told
 this, and the comment satisfies it.
 
-Some cases show the representation at work. A mark (260) records the
+Some cases show the representation at work. A mark (267) records the
 line pointer itself, not the line number, with its low bit cleared, so
 that a mark follows its line however lines are added or deleted before
-it; the search for a mark (466) compares pointers. `u` (329) undoes the
+it; the search for a mark (473) compares pointers. `u` (336) undoes the
 last substitution by putting back the line pointer which it replaced,
 `subolda`; the old text is still in the temporary file, since nothing
 there is ever overwritten. v7 masked the line number which `=` reports
-with `077777` (371), a relic of the PDP-11's 16-bit `int` which
+with `077777` (378), a relic of the PDP-11's 16-bit `int` which
 limited the report to 32767; the mask is gone, and `=` reports any
 number of lines.
 
-#lines(195, 387)
+#lines(202, 394)
 
 `address` parses one address: a number, `.`, `$`, a mark, or a pattern
 between `/` or `?`, followed by any number of `+` and `-` offsets. A
@@ -10934,14 +10934,14 @@ pattern is compiled and the lines searched forwards or backwards from
 `dot`, wrapping round at the ends, until a match is found or the search
 returns to `dot`.
 
-#lines(388, 484)
+#lines(395, 491)
 
 The address checks, and `newline`, which accepts a trailing `p` or `l`
 to print the result. `filename` reads a file name after the command
 letter, or supplies the remembered one, `savedfile`; the first name
 given, or any given to `e` or `f`, is remembered.
 
-#lines(485, 574)
+#lines(492, 581)
 
 `onintr` answers an interrupt with "?" by way of `error`, so that an
 interrupted command is abandoned and the editor waits for the next.
@@ -10949,11 +10949,11 @@ interrupted command is abandoned and the editor waits for the next.
 
 `error` prints "?" and its argument, discards the rest of the input
 line, and jumps back to `main`. The `lseek` of the standard input to
-its end (623) matters when `ed` reads its commands from a file: one
+its end (630) matters when `ed` reads its commands from a file: one
 mistake abandons the rest of the script, rather than running the
 following commands on a buffer in an unknown state.
 
-#lines(575, 638)
+#lines(582, 645)
 
 `getchr` reads one character, from `peekc` if a character has been
 pushed back, from `globp` during a global command, and otherwise from
@@ -10966,13 +10966,13 @@ holding only ".". `getfile` reads a line of a file, through `genbuf`.
 Characters with the top bit set are refused, except that a buffer
 containing them is first passed to `crblock` for decryption under `-x`.
 
-#lines(639, 722)
+#lines(646, 729)
 
 `putfile` writes lines `addr1` to `addr2` to the file `io`, gathering
 them in `genbuf` and encrypting each block first under `-x`. `count`
 totals the characters, which `exfile` prints.
 
-#lines(723, 762)
+#lines(730, 769)
 
 `append` adds lines after `a`, taking them one at a time from the
 procedure `f` (`gettty`, `getfile`, `getsub`, or `getcopy`) until it
@@ -10981,25 +10981,25 @@ and its pointer is inserted after `dot` by moving the pointers above it
 up by one.
 
 When the array is full it is enlarged by 512 elements. The `free`
-before `realloc` (775) relies on v7's `realloc` accepting a block freed
+before `realloc` (782) relies on v7's `realloc` accepting a block freed
 since the last `malloc` (#f("gen/malloc.c")), as `cron` and `diff` do
 (#f("cmd/cron.c")). Since the array may move, `dot` and `dol` are
 adjusted; any other pointer into it held by a caller is the caller's
 problem, which `substitute` and `move` solve by comparing `zero` before
-and after. The cast `(int)nlall` (772) is new: `nlall` is `unsigned`,
+and after. The cast `(int)nlall` (779) is new: `nlall` is `unsigned`,
 and the comparison with a signed difference of pointers draws a
 warning from `-Wextra`.
 
-#lines(763, 795)
+#lines(770, 802)
 
 `callunix` runs `sh -t`, which reads one line of input, the rest of the
-`!` command, executes it, and exits; its `execl` (807) ends with
+`!` command, executes it, and exits; its `execl` (814) ends with
 `(char *)0`, as in #f("cmd/getty.c"). `savint` now has the type of a
 signal handler, and `pid` is declared separately, since it is not a
 function pointer. `quit` refuses to leave a modified buffer once,
 unless `vflag` is clear; a second `q` succeeds.
 
-#lines(796, 828)
+#lines(803, 835)
 
 `rdelete` removes the pointers of the deleted lines by moving the rest
 down. The text stays in the temporary file. `gdelete`, used for the
@@ -11009,12 +11009,12 @@ per line. It is now `static`, since nothing calls it before its
 definition, and `-Wmissing-prototypes` asks no prototype of a static
 procedure.
 
-#lines(829, 878)
+#lines(836, 885)
 
 Here is the representation of a line pointer. The temporary file is
 written only at its end, and each line is stored there as a
 null-terminated string. `tline` counts the file in units of two bytes,
-and a line occupies a whole number of four-byte units (922), so that a
+and a line occupies a whole number of four-byte units (929), so that a
 pointer is always even. Its low bit is free, and `global` uses it to
 mark lines. Of the remaining bits, bits 1 to 7 give the offset within
 a block of 512 bytes, in four-byte units, and the bits above them the
@@ -11030,12 +11030,12 @@ v7 kept a pointer in the sixteen bits of a PDP-11 `int`: the block
 number had eight, and the temporary file at most 255 blocks, about
 130 KB, at which `getblock` reported `TMP`. On the ARM `int` has 32 bits,
 and the masks which held the arithmetic to sixteen are gone: `tline`
-advances by an even number (922), and the block number is the whole of
-the pointer above bit 7 (933). A file of tens of thousands of lines now
+advances by an even number (929), and the block number is the whole of
+the pointer above bit 7 (940). A file of tens of thousands of lines now
 fits; the temporary file may grow until the disk is full, when a write
 fails and `blkio` reports `TMP` instead.
 
-#lines(879, 925)
+#lines(886, 932)
 
 `getblock` returns the address in a buffer of the byte at `atl`, and in
 `nleft` the number of bytes from there to the end of the block. Two
@@ -11052,29 +11052,29 @@ v7 declared `read` and `write` here as external functions returning
 which is the type of `iofcn` in `blkio`'s prototype, so that either may
 be passed to it.
 
-#lines(926, 979)
+#lines(933, 986)
 
 `init` empties the buffer: a fresh temporary file, created with mode
 0600 and opened for reading and writing, `tline` at 2, no marks, and
 empty buffers.
 
-#lines(980, 1002)
+#lines(987, 1009)
 
 `global` reads the command list of `g` or `v` into `globuf`, then marks,
 in the low bit of each line pointer, the lines which match (or for `v`
 do not). It then repeatedly finds the first marked line, clears its
 mark, makes it `dot`, and runs `commands` with `globp` pointing at the
 command list. When the list is exhausted, `getchr` returns `EOF`, and
-`commands` returns (380). The search starts again from `zero` each
+`commands` returns (387). The search starts again from `zero` each
 time, because the commands may have added, deleted, or moved lines;
 the marks travel with the pointers.
 
-#lines(1003, 1055)
+#lines(1010, 1062)
 
 `join` concatenates lines `addr1` to `addr2` in `genbuf`, writes the
 result as a new line, and deletes the rest.
 
-#lines(1056, 1078)
+#lines(1063, 1085)
 
 `substitute` applies `s` to each line in range which matches. `dosub`
 builds the new line in `genbuf` from the part before the match, the
@@ -11088,11 +11088,11 @@ and `append` with `getsub` adds the remainder as further lines.
 `compsub` reads the replacement. An escaped character is stored with
 its top bit set, which is how `dosub` tells `\&` and `\1` from `&` and
 `1`; `ed` refuses characters with the top bit set in its text, so the
-bit is free for the purpose. The `&0377` at (1179), v7's, kept such a
+bit is free for the purpose. The `&0377` at (1186), v7's, kept such a
 character positive where `char` was signed. The local declaration of
 `getsub` has been removed, as the prototype now precedes it.
 
-#lines(1079, 1213)
+#lines(1086, 1220)
 
 `move` implements `m` and, with `cflag`, `t`, which first appends a
 copy of the lines at the end of the buffer and then moves the copy. A
@@ -11102,7 +11102,7 @@ each part and then the whole leaves the two parts exchanged. No text
 is copied, and no extra memory is needed. The local declaration of
 `getcopy` has been removed.
 
-#lines(1214, 1279)
+#lines(1221, 1286)
 
 `compile` translates a regular expression, read through `getchr` up to
 the delimiter `aeof`, into `expbuf`. An empty expression reuses the
@@ -11121,7 +11121,7 @@ A class is stored as its count, followed by the characters
 themselves. A range `a-z` is expanded into every character between its
 ends. `grep` stores a class as a bit map instead (#f("cmd/grep.c")).
 
-#lines(1280, 1409)
+#lines(1287, 1416)
 
 `execute` tries the compiled expression on line `addr`, or, when `gf`
 is set, on the rest of the current line after the previous match, for
@@ -11132,10 +11132,10 @@ the substitution forever. As in `grep`, if the expression begins with
 a literal character, `advance` is tried only where that character
 occurs.
 
-The masks `&0377` (1416, 1417) are new: `c` is a `char`, and a
+The masks `&0377` (1423, 1424) are new: `c` is a `char`, and a
 subscript of that type draws a warning from `-Wall`.
 
-#lines(1410, 1460)
+#lines(1417, 1467)
 
 `advance` is the matcher. It walks the compiled expression and the line
 together, each code testing and consuming characters, and returns 1 at
@@ -11148,22 +11148,22 @@ therefore the leftmost, and the longest which allows the rest to
 match. This backtracking is the whole of the algorithm, and it is what
 `grep` copied.
 
-A closure of a back reference (1519) gives back whole copies of the
-group. If no number of copies will do, the match fails (1530), as in
+A closure of a back reference (1526) gives back whole copies of the
+group. If no number of copies will do, the match fails (1537), as in
 `grep`'s copy of the case. v7 had `continue` here, which went on
 matching the rest of the expression from `lp`, by then before the point
 where the closure began, so that `/\(ab\)\1*a/` matched the line `ab`.
 
-The masks `&0377` (1503, 1507) are new, for the same reason as in
+The masks `&0377` (1510, 1514) are new, for the same reason as in
 `execute`.
 
-#lines(1461, 1567)
+#lines(1468, 1574)
 
 `backref` compares the text of a group with the line. `cclass` searches
 a class's list for a character; the null at the end of the line matches
 no class, negated or not.
 
-#lines(1568, 1593)
+#lines(1575, 1600)
 
 The output routines. `putchr` collects characters in `line` and writes
 it when a newline arrives or 64 characters have gathered. Under `l` it
@@ -11175,7 +11175,7 @@ folds long lines.
 it now returns `int` with the value 0, to agree with the declaration of
 `puts` in #f("stdio.h"). v7's returned nothing.
 
-#lines(1594, 1662)
+#lines(1601, 1669)
 
 The encryption of `-x` and `x`. The key is read with echo turned off
 (`getkey`), and passed with two characters of salt to
@@ -11190,20 +11190,20 @@ of a counter, so that
 encryption and decryption are the same operation. This is the cipher
 of the `crypt` command. For the temporary file, `makekey` at the end
 mixes the time and the process id into the key, so that each session's
-file is encrypted differently. The `execl` calls (1749, 1750) end with
+file is encrypted differently. The `execl` calls (1756, 1757) end with
 `(char *)0`, as in #f("cmd/getty.c").
 
-The signal handler pointer in `getkey` (1695) has the new type of a
-handler. `t` in `makekey` (1789) is now a `long long`, the 64-bit time
+The signal handler pointer in `getkey` (1702) has the new type of a
+handler. `t` in `makekey` (1796) is now a `long long`, the 64-bit time
 which `time` stores (#f("param.h")); as before, only its low 32 bits
-reach the key. `seed` in `crinit` (1730) is now `unsigned long`, as in
+reach the key. `seed` in `crinit` (1737) is now `unsigned long`, as in
 the `crypt` command: multiplied by thirteen characters, it overflows 32
 bits within a few steps, which is undefined for v7's signed `long`. The
 unsigned product wraps round to the same bits, and the cast at 1767
 keeps v7's signed remainder, so that a file encrypted by `crypt` can
 still be read with `ed -x`.
 
-#lines(1663, 1799)
+#lines(1670, 1806)
 #source("/usr/src/cmd/grep.c")
 
 `grep` prints the lines of its files which match a regular expression.
@@ -11218,7 +11218,7 @@ are noted below as they occur.
 
 The whole file is v7's apart from C99 declarations, a `goto`, and the
 masks, all discussed below. The `&0377` masks on subscripts of type `char`
-(122, 364--386) are new: such a subscript draws a warning from `-Wall`,
+(122, 365--387) are new: such a subscript draws a warning from `-Wall`,
 and the mask makes it an `int`. On the PDP-11, where `char` was signed,
 v7's `islower(*p)` (122) would have indexed the character table with a
 negative number for a byte with the top bit set; on the ARM `char` is
@@ -11263,19 +11263,19 @@ stores a class as a count followed by the characters themselves,
 expanding a range such as `a-z` into all its members, and `cclass`
 searches the list for each character of the line. `grep` stores a map
 of 16 bytes, one bit for each of the 128 seven-bit characters, so that
-testing a character costs one index and one mask (357--358), and a
+testing a character costs one index and one mask (358--359), and a
 range costs no more space than a single character. A negated class has
-every bit inverted, except the bit for the null byte (220), which must
+every bit inverted, except the bit for the null byte (221), which must
 never match: it marks the end of the line.
 
-The masks `&0177` in (211) and (215) are new. Each character of the
+The masks `&0177` in (211) and (216) are new. Each character of the
 class set the bit `c`, and a character with its top bit set would have
 set a bit beyond the 16 bytes, in whatever followed in `expbuf`. The
 matcher looks only at the low seven bits of each character of the line
-(357), so the compiler now does the same with the members of a class
+(358), so the compiler now does the same with the members of a class
 and the ends of a range.
 
-#lines(197, 226)
+#lines(197, 227)
 
 Parentheses `\(` and `\)` compile to `CBRA` and `CKET` with the number
 of the subexpression; `\1` to `\9` to `CBACK`. Unlike `ed`, `grep`
@@ -11283,11 +11283,11 @@ checks at compile time that at least that many subexpressions have
 been closed (`closed`, 248). Any other escaped character stands for
 itself.
 
-The `goto defchar` (254) is new. v7 fell through from the escape case
+The `goto defchar` (255) is new. v7 fell through from the escape case
 into the default case below; the jump says so explicitly, which
 `-Wextra`'s warning about implicit fall-through demands.
 
-#lines(227, 265)
+#lines(228, 266)
 
 `execute` reads each line into `linebuf` and tries the expression at
 each position in turn. A line longer than the buffer is cut, and its
@@ -11298,25 +11298,25 @@ only at the start; if the expression begins with a literal character,
 `loc2` where the match lies, for the substitute command, and carries a
 flag for matches resumed in the middle of a line.
 
-#lines(266, 327)
+#lines(267, 328)
 
 `advance` matches the expression at `ep` against the line at `lp`,
 returning 1 for a match. Each code consumes one character or tests a
 position. `CEOF`, the end of the expression, is success whatever
 remains of the line, since a match need not extend to its end.
 
-#lines(328, 362)
+#lines(329, 363)
 
 `CBRA` and `CKET` record where a subexpression began and ended, and
 `CBACK` compares the text so recorded with the line. A back reference
 under `*` matches the text as many times as it can, then gives back one
 copy at a time until the rest of the expression matches. Note the
-`return(0)` (394) when no number of copies will do. v7's `ed` ended the
+`return(0)` (395) when no number of copies will do. v7's `ed` ended the
 same case with `continue`, which went on to match the rest of the
 expression from a point before the repetition started; `grep`'s version
 is the correct one, and `ed` now has it too (#f("cmd/ed.c")).
 
-#lines(363, 396)
+#lines(364, 397)
 
 The closures. Each first consumes as many characters as it can,
 leaving `curlp` at the start of the run and `lp` one beyond its end.
@@ -11324,25 +11324,25 @@ Then, at `star`, it tries the rest of the expression from each
 possible end of the run in turn, longest first, so that the match found
 is the leftmost-longest one which allows the remainder to match.
 
-Here `grep` is more careful than `ed`. If the run is empty (417), it
+Here `grep` is more careful than `ed`. If the run is empty (418), it
 carries on without a recursive call. If the next item is a literal
 character, it tries only the ends at which that character follows,
 which saves a call of `advance` for each position that cannot succeed.
 `ed`'s loop instead calls `advance` at every position, but stops at
 `locs` (#f("cmd/ed.c")), which `grep` does not need.
 
-#lines(397, 442)
+#lines(398, 443)
 
 `succeed` prints a matching line, preceded as the flags require by the
 file name, the block number (counted in `BSIZE` units of 512 bytes from
 #f("param.h")), and the line number. With `-c` it only counts; with
 `-l` it prints the name of the file and seeks to its end, so that the
-next read ends the file at once. `printf("%D")` (286) is v7's form for
+next read ends the file at once. `printf("%D")` (287) is v7's form for
 a `long`, which the port's `printf` still accepts
 (#f("stdio/doprnt.c")). v7's local declaration of `ftell` in `succeed`
 has gone, since #f("stdio.h") declares it.
 
-#lines(443, 481)
+#lines(444, 482)
 #source("/usr/src/cmd/diff.c")
 
 `diff` reports the differences between two files as the smallest set of
@@ -11385,15 +11385,15 @@ The lone `#` (1) is the same relic as in #f("mem.c").
 `main`.
 
 v7's declarations of `fopen` and `mktemp` are gone, since the port's
-#f("stdio.h") declares both. The prototypes (106--110) are for the
+#f("stdio.h") declares both. The prototypes (106--112) are for the
 procedures used before their definitions; those defined before use
 have been made `static` instead, which spares them a prototype.
 
-#lines(65, 112)
+#lines(65, 114)
 
 `done` is also the handler for the signals caught while a temporary
 file exists, and now takes the signal number; the direct calls of it
-pass 0. `talloc` gains a `return(p)` (128) after `noroom`. `noroom`
+pass 0. `talloc` gains a `return(p)` (130) after `noroom`. `noroom`
 never returns, but the compiler is not told so, and would otherwise
 warn that control reaches the end of a function which returns a value;
 `p` is null there. The local declarations of `malloc` in `talloc` and
@@ -11401,7 +11401,7 @@ warn that control reaches the end of a function which returns a value;
 
 `ralloc` is v7's "compacting reallocation". It frees the block, frees
 `dummy`, and allocates `dummy` again. `dummy` was the first block
-allocated (326), so it lies low in the arena. v7's `free` leaves the
+allocated (328), so it lies low in the arena. v7's `free` leaves the
 allocator's search pointer at the block just freed, `malloc(1)` takes
 that block again and leaves the pointer just beyond it, and the
 `malloc` inside `realloc` therefore starts searching from near the
@@ -11409,18 +11409,18 @@ bottom of the arena (#f("gen/malloc.c")). The block is moved to the lowest place
 which will hold it, and the arena is kept compact. Like `cron`'s use
 (#f("cmd/cron.c")), it relies on `realloc` of a freed block.
 
-#lines(113, 149)
+#lines(115, 151)
 
 `sort` is a Shell sort, ordering by hash value and, among equal values,
 by serial number, so that each equivalence class ends up with its lines
-in their order in the file. The test for "wraparound" (166) guarded
+in their order in the file. The test for "wraparound" (168) guarded
 against a pointer passing the top of the PDP-11's 64 KB address space;
 it can no longer succeed.
 
-Three changes. `m` is now initialized (154): for an empty file the first
+Three changes. `m` is now initialized (156): for an empty file the first
 loop does not run, and v7 then halved an undefined `m`, which the
 compiler's analysis at `-Os` reports. The inner loop counts with an
-index `i` (163, 164), where v7 stepped the pointer `ai` down by `m`
+index `i` (165, 166), where v7 stepped the pointer `ai` down by `m`
 until it was no longer above `a`. The last step took `ai` below the
 start of the array, and C defines neither such a pointer nor its
 comparison; the index may go below zero freely. The parentheses at 169
@@ -11429,23 +11429,23 @@ and 170 are new, as in #f("slp.c").
 `unsort` uses the serial numbers to put the class indices of the first
 file back into the file's own order.
 
-#lines(150, 195)
+#lines(152, 197)
 
 If one argument is a directory, the file of the same base name within
 it is meant. v7 built that name in 100 bytes, whatever the lengths of
 the two names; the port allocates what the directory, the `/`, the
-other argument, and the null need (206), the whole of the other
+other argument, and the null need (208), the whole of the other
 argument being copied before its base name is moved down. An argument
 `-` names the standard input, which is copied
 to a temporary file, since `diff` reads each file more than once. Its
-name is made by `mktemp` (219) in the array `tempname` (105), which is
+name is made by `mktemp` (221) in the array `tempname` (105), which is
 new: v7 passed the string constant, which is now in read-only text,
 where `mktemp` cannot write.
 
 `prepare` reads a file, storing one hash per line from index 1 up, and
 grows the array by one element per line with `ralloc`.
 
-#lines(196, 248)
+#lines(198, 250)
 
 `prune` counts the identical lines at the start and at the end of the
 two files, and renumbers the lines in between from 1; `sfile` and
@@ -11459,7 +11459,7 @@ equivalence classes, each listing its lines in increasing order, are
 simply concatenated, and the first element of each class is negated to
 mark its start. A final -1 stops the scan of the last class.
 
-#lines(249, 293)
+#lines(251, 295)
 
 `main`. Memory is reused as soon as it is free: `member` is written
 over the array of the second file, and `class` over that of the first,
@@ -11468,7 +11468,7 @@ the `struct line` it replaces. The comment's estimate of six words per
 line was made for the PDP-11; with four-byte `int`s and `long`s the
 proportions are much the same.
 
-#lines(294, 362)
+#lines(296, 364)
 
 `stone` is the heart of the program. A k-candidate is a match `(x, y)`,
 line `x` of the first file with line `y` of the second, which ends a
@@ -11486,8 +11486,8 @@ by bisection, the length `l` of the shortest candidate whose `y` is at
 least `y`. If that candidate's `y` equals `y`, nothing is gained.
 Otherwise `(i, y)` extends the candidate of length `l-1` to a common
 subsequence of length `l` ending lower in the second file than the
-present one, and replaces it (389). If `l` exceeds every length so far,
-the table grows by one (393--395), and the rest of the class, whose
+present one, and replaces it (391). If `l` exceeds every length so far,
+the table grows by one (395--397), and the rest of the class, whose
 `y`s are larger, cannot do better.
 
 The subtle part is `oldc`. Several members of the same class may
@@ -11495,13 +11495,13 @@ replace entries during one line `i`, at increasing lengths. The
 predecessor of a new candidate must come from an earlier line of the
 first file, so when `l` is one more than the length just replaced,
 the predecessor must be the candidate which was there before the
-replacement, saved in `tc` (388, 390), not the new one, whose `x` is
+replacement, saved in `tc` (390, 392), not the new one, whose `x` is
 `i` itself. Likewise a `y` no greater than the `y` of that saved
-predecessor (380) cannot extend it, and is passed over. Note that
-`continue` in a `do`-`while` goes to the test (397), which advances to
+predecessor (382) cannot extend it, and is passed over. Note that
+`continue` in a `do`-`while` goes to the test (399), which advances to
 the next member of the class.
 
-#lines(363, 401)
+#lines(365, 403)
 
 `newcand` adds a candidate to `clist`, a store from which nothing is
 ever removed, growing it by one element at a time. `search` first tries
@@ -11511,7 +11511,7 @@ the commonest case, a `y` beyond every candidate.
 lines their counterparts, and the rest are filled in by following
 `pred` back from the longest candidate.
 
-#lines(402, 447)
+#lines(404, 449)
 
 `check` reads both files again, line by line in step with `J`. Each
 pair of lines which `J` claims to match is compared character by
@@ -11525,26 +11525,26 @@ the same time the byte offset of the end of every line is recorded in
 `ixold` and `ixnew`, so that `fetch` can later seek straight to any
 line.
 
-`c` and `d` (459) are now `int`, where v7 had `char`, for two reasons.
+`c` and `d` (461) are now `int`, where v7 had `char`, for two reasons.
 `isspace` is a macro which indexes a table, and a `char` subscript draws
 a warning from `-Wall`. And on the ARM, whose `char` is unsigned, the
 `EOF` returned by `getc` would become 255, which with `-b` indexes
 `isspace`'s table beyond its end; the PDP-11's signed `char` kept it
 -1, as the `int` now does.
 
-#lines(448, 524)
+#lines(450, 526)
 
 `output` scans `J` for runs of unmatched lines and reports each run as
 a `change`: lines `a` to `b` of the first file are replaced by lines `c`
 to `d` of the second. An empty first range means an addition, an empty
-second range a deletion. The sentinels `J[0]` and `J[m+1]` (534--535)
+second range a deletion. The sentinels `J[0]` and `J[m+1]` (536--537)
 spare the loops tests for the ends. With `-e` the commands form an
 `ed` script, and are produced from the end of the file backwards, so
 that the line numbers in each command are not disturbed by the
 commands already applied. `-f` gives the same commands in forward
 order and a different form, for reading, not for `ed`.
 
-#lines(525, 601)
+#lines(527, 603)
 
 `readhash` computes a line's hash: each character is added to an
 `unsigned long` after a shift of seven bits more than the last, taken
@@ -11555,7 +11555,7 @@ never hashes to 0: the sum starts at 1, so that after the fold the
 halves can never cancel. A last line without a newline is dropped, as
 in v7.
 
-v7's sum was a signed `long` (610). A line of some 2,000 bytes of
+v7's sum was a signed `long` (612). A line of some 2,000 bytes of
 `0377`, or of some 5,000 letters, overflows it, which C99 leaves undefined; and where the sum wrapped to
 a negative number, `high` shifted its sign in, and the halves could
 cancel after all. 16,384 `@` characters sum to `0xFFFF0001`, which
@@ -11563,7 +11563,7 @@ folds to 0, and `diff` took the line for the end of the file and
 compared nothing after it. Unsigned, the sum wraps round and `high`
 brings in zeros, so the halves cancel only if the whole sum has wrapped
 to exactly 0. A line built for the purpose could still do that, and the
-first fold then adds one (642). A first fold of 1 to
+first fold then adds one (644). A first fold of 1 to
 131070 cannot fold to 0.
 
 On the PDP-11 the result was reduced to a 16-bit `int`; on the ARM the
@@ -11571,7 +11571,7 @@ sum of the two `short` halves is kept in 32 bits. Two results which
 differ by 65536, and which the PDP-11 would have reduced to the same
 value, now stay distinct; otherwise only the values change.
 
-#lines(602, 650)
+#lines(604, 652)
 #source("/usr/src/cmd/ps.c")
 
 `ps` reports on processes, and it has no system call to ask. It reads
@@ -11662,7 +11662,7 @@ A slot with `p_stat` zero is unused. Processes of the super-user which
 have no process group, that is, which never opened a terminal, such
 as process 0, are shown only with `x`.
 
-#lines(101, 156)
+#lines(101, 157)
 
 `getdev` builds a table of the character special files in `/dev`, by
 name and device number, so that a terminal can later be named from the
@@ -11676,11 +11676,11 @@ it with `strncpy` into the larger `dname`, whose last byte remains
 zero, and passes the copy to `stat`; the copy is made before the type
 is known, and a slot which is not a character device is simply
 overwritten by the next. The loop also stops at the 256 entries the
-table holds (171), where v7 had no limit.
+table holds (172), where v7 had no limit.
 
-The `#include` of `<sys/stat.h>` inside the procedure (161) is v7's.
+The `#include` of `<sys/stat.h>` inside the procedure (162) is v7's.
 
-#lines(157, 187)
+#lines(158, 189)
 
 `round` is now `static`; it is used only after its definition, and a
 static procedure needs no separate prototype. `datmap` describes how
@@ -11691,7 +11691,7 @@ members are now `unsigned long`, since the stack lies above 0x80000000,
 and a physical offset in `/dev/mem` may too, where a `long` would turn
 negative.
 
-#lines(188, 202)
+#lines(190, 204)
 
 `prcom` handles one process. If it is loaded (`SLOAD`), its image is at
 `p_addr` pages in `/dev/mem`. In the port, as on the PDP-11, `p_addr`
@@ -11706,20 +11706,20 @@ in both cases.
 The maps follow from the shape of the image, which is v7's on the ARM
 too (#f("machdep.c")): the `USIZE` pages of the `user` area, then the
 data, then the stack, packed together; the stack segment, at the top of
-the address space, follows the data in the image. `f2` (239) is
+the address space, follows the data in the image. `f2` (241) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
 area. The data map begins after the text (`b1`), which is a whole
 number of pages; the text itself is not in the image, and is not
 mapped.
 
-#lines(203, 240)
+#lines(205, 242)
 
-The fields of the line. The mask `&0377` (246) is new. `p_stat` is a
+The fields of the line. The mask `&0377` (248) is new. `p_stat` is a
 `char`, and an array subscript of type `char` draws a warning from
 `-Wall`; the mask makes it an `int`, and on the PDP-11, where `char`
 was signed, it would also have kept the subscript positive. The
 formats were made for the PDP-11, and three fields of the long listing
-are widened for 32-bit values (138, 250, 255, 257): `ADDR`, the page
+are widened for 32-bit values (138, 252, 258, 260): `ADDR`, the page
 number in octal, from six digits to eight, since the 512 MB of the
 MP135 machine's memory reaches page 917504, 03400000; `SZ` from four
 columns to five, since a large image is thousands of blocks, which
@@ -11727,12 +11727,12 @@ v7's `%4d` would run into the address; and
 `WCHAN`, a kernel address in octal, from seven columns to twelve, room
 for eleven digits and a space. `p_wchan` is a pointer, and `%o` takes an
 `unsigned`; passing the pointer as it stands, as v7 did, is undefined,
-so it is converted (255). `SZ` is the image in blocks of 512 bytes:
+so it is converted (258). `SZ` is the image in blocks of 512 bytes:
 v7 converted its 64-byte clicks with `(p_size+7)>>3`, and the port with
 `ptod` (#f("param.h")), which serves 4096-byte pages. The times
 assume `HZ` of 60, which holds (#f("param.h")).
 
-#lines(241, 283)
+#lines(243, 286)
 
 The arguments are sought in the last 512 bytes of the image, the top of
 the stack. First the last word below `USRSIZE` is examined: `exec` leaves
@@ -11742,7 +11742,7 @@ pointer to its own argument list (`execargs`, #f("sh/main.c")), so that
 and the strings are fetched one byte at a time through `getptr` and
 `getbyte`, which apply `datmap`.
 
-#lines(284, 306)
+#lines(287, 309)
 
 Otherwise the strings themselves are found. `exec` (#f("sys1.c")) puts
 the argument and environment strings at the top of the stack, preceded
@@ -11761,12 +11761,12 @@ for `int` accesses. The present compiler happens to place v7's array
 on a word boundary, but nothing requires it to. An `int` array may be
 read as characters, as the rest of the loop does.
 
-#lines(307, 341)
+#lines(310, 345)
 
 `gettty` names the terminal by searching the table of `getdev` for the
 device number `u_ttyd`, dropping the prefix "tty".
 
-#lines(342, 360)
+#lines(346, 364)
 
 `getptr` assembles a pointer from the image byte by byte, through
 `getbyte`. Its counter is now `unsigned`, so that the comparison with
@@ -11781,7 +11781,7 @@ and the user addresses reach 0xc0000000, which a `long` cannot hold.
 The bounds are therefore `unsigned long`, and the address is cast to
 `unsigned long` too, so that the comparison is exact again.
 
-#lines(361, 403)
+#lines(365, 407)
 #source("/usr/src/cmd/dmesg.c")
 
 Everything the kernel prints with `printf` (#f("prf.c")) passes through
@@ -12151,18 +12151,18 @@ empty room. The `=|` and `=&` of v7's source, the assignment operators
 of early C which v7's compiler still accepted, are written `|=` and
 `&=`.
 
-#lines(98, 184)
+#lines(98, 185)
 
 Each turn reports the room, kills the player in a pit or with the
 wumpus, and moves the player at random if a bat is there. The warnings look at
 the rooms one tunnel away, and for the wumpus two. A move must be along
 a tunnel. An arrow follows the list of rooms given, as far as five, but
 where the next room is not joined to the arrow's room it goes down a
-random tunnel instead (246--251). A shot, or entering the wumpus's
+random tunnel instead (247--252). A shot, or entering the wumpus's
 room, wakes the wumpus, which moves along one of its tunnels or, one
 time in four, stays.
 
-#lines(185, 289)
+#lines(186, 290)
 
 `rline` reads a line and returns its first non-blank character, leaving
 the character that ended the word in `tchar`, so that `m 5` on one line
@@ -12176,7 +12176,7 @@ cannot overflow.
 the time on the first call; v7 kept the time in two words and mixed
 them, and the port keeps it in a `long long`.
 
-#lines(290, 384)
+#lines(291, 385)
 
 #source("/usr/src/games/fortune.c")
 
@@ -12283,7 +12283,7 @@ The digits are accumulated only while `n` is below `BIG` (51), so that a
 long argument cannot overflow, and `put` prints a `long long` without
 `printf`, with the five spaces of v7's output.
 
-#lines(1, 72)
+#lines(1, 73)
 
 #source("/usr/src/cmd/primes.c")
 
@@ -12333,7 +12333,7 @@ in `fperrc`, but the ARM's hard floating point raises no signal, so a
 result that is zero or not finite now reports "underflow or overflow"
 instead of printing an infinity.
 
-#lines(54, 111)
+#lines(54, 112)
 
 `units` prints a unit as its factor and the names of its dimensions,
 those with negative exponents after a `/`. `convr` reads a quantity, a
@@ -12341,28 +12341,28 @@ number and then names separated by blanks, `-`, or `/`, a digit after a
 name being its power, and `lookup` multiplies or divides it by each.
 A name not in the table is tried again without each prefix that it
 starts with, and then without a final `s`. A name longer than 19
-characters is now cut short instead of overrunning `name` (201), and the
+characters is now cut short instead of overrunning `name` (202), and the
 end of the input (`c == 0`) ends the quantity, so that a table without a
 final newline cannot make `convr` loop.
 
-#lines(112, 256)
+#lines(113, 257)
 
 `init` reads `/usr/lib/units`: each line defines a name as a quantity of
 other units, and the first ten lines make `m`, `kg`, `sec`, and the
 rest the fundamental dimensions, by defining them as `*a*` to `*j*`,
 the names `init` gives the ten dimensions before it reads the file
-(281--291). Lines starting with `/` are comments. The names are kept in `names`, and the table is a hash table
+(282--292). Lines starting with `/` are comments. The names are kept in `names`, and the table is a hash table
 of 601 entries probed in sequence. Running out of either now stops
-`units` with "too many units" (320); v7 wrote past the arrays.
+`units` with "too many units" (321); v7 wrote past the arrays.
 
-#lines(257, 367)
+#lines(258, 368)
 
 `getflt` reads a number, with an optional fraction and exponent; `a|b`
 means `a` divided by `b`. The exponent's digits now stop accumulating
-at five (405). `get` returns the next character, or 0 at the end of the
+at five (406). `get` returns the next character, or 0 at the end of the
 table; at the end of the standard input `units` exits.
 
-#lines(368, 484)
+#lines(369, 485)
 
 #source("/usr/src/cmd/yes.c")
 
@@ -12417,7 +12417,7 @@ and `FPRS` for one whose process id is printed. A tree node is a few
 flags, and for a command its words from `DCOM`. `NSIG` is redefined to
 the sixteen signals `mesg` names, since #f("signal.h") now gives 32.
 
-#lines(1, 88)
+#lines(1, 90)
 
 `main` closes stray descriptors, makes `$$` from the process id (now
 taking each digit before dividing, 99, 100, where v7 divided first and
@@ -12425,19 +12425,19 @@ so gave a tenth of the id), and
 takes `-c` for a command from the argument, `-t` for a single line, or a
 file to read; a login shell (`-` in `argv[0]`) ignores QUIT, and
 INTR unless it was already ignored. The `int` conversion of the
-previous handler (131) tests whether it was `SIG_IGN`, as v7 did with
+previous handler (133) tests whether it was `SIG_IGN`, as v7 did with
 the number 1.
 
 `main1` reads one line into words and executes its tree. A syntax
 error found deep in the parse returns through `jmpbuf`.
 
-#lines(89, 175)
+#lines(91, 177)
 
 `word` collects one word. Characters inside quotes, and those escaped
 with `\`, carry the bit `QUOTE`, 0200, so that they are not taken as
 special; `trim` takes it away before the command runs. A quoted string
 which runs past the end of the line buffer is now refused like any
-other overflow (195--200); v7 wrote past `line`.
+other overflow (197--202); v7 wrote past `line`.
 
 `getc` returns the next character, expanding `$n` and `$$` from a
 saved pointer `dolp`; `readc` reads the input itself, from the `-c`
@@ -12445,7 +12445,7 @@ argument or one character at a time. The redefinitions of `getc` and
 `putc`, the shell's own, are why #f("stdio.h")'s macros are undefined
 (7, 8).
 
-#lines(176, 335)
+#lines(178, 337)
 
 The parser works on the array of words, by recursive descent: `syn1`
 splits at `;`, `&`, and newline, `syn2` at `|` or `^`, and `syn3` takes
@@ -12453,24 +12453,24 @@ a simple command or a parenthesised list with its redirections. Each
 returns a tree node allocated from `trebuf` by `tree`, which escapes
 through `jmpbuf` when the buffer is full.
 
-#lines(336, 537)
+#lines(338, 539)
 
 `execute` runs a tree. A few commands are built in: `chdir`, `shift`,
 `login`, `newgrp`, `wait`, and `:`. Others fork, redirect, and execute:
 a word with `[`, `?`, or `*` hands the command to `/etc/glob`, which v7
 did not ship either, so such a command fails here as there. The command
 is tried as given, in `/bin`, and in `/usr/bin`, the name being built
-in a buffer allocated to its length (706); v7 built it in the line
+in a buffer allocated to its length (708); v7 built it in the line
 buffer. A file which is not an executable is run by `/bin/osh` itself,
-as a script (757); v7 named `/usr/bin/osh`, which did not exist.
+as a script (759); v7 named `/usr/bin/osh`, which did not exist.
 
-#lines(538, 745)
+#lines(540, 747)
 
 `pwait` waits for a child and reports one which a signal killed,
 `(s>>8)|e` being the exit status the script returns. `prn` prints a
 process id in decimal.
 
-#lines(746, 866)
+#lines(748, 868)
 
 #source("/usr/src/games/arithmetic.c")
 
@@ -12478,20 +12478,20 @@ process id in decimal.
 `+-x/`, and a range of numbers, 10 unless given; every twenty problems,
 and on an interrupt, it prints the score and the time taken. A problem
 answered wrongly is added to the pool, so that it is more likely to
-come again (122, 123), and `skrand` favours numbers near the middle of
+come again (123, 124), and `skrand` favours numbers near the middle of
 the range.
 
 The operations are now copied with a limit of nine (34), and from
 `argv[1][k]` rather than `argv[1][dif]`: v7 indexed the argument by the
 count of operations so far, so a second argument such as `x` after `+-`
-read past its end. A range below 2 with division is refused (48--52),
+read past its end. A range below 2 with division is refused (49--53),
 since every divisor would be zero and the search for one at 99 would not
 end. `getline` stops at end of input, which v7 tested by looking for a
 null character that never comes, and no longer steps before its buffer
-on a blank line (145). `getnum` stops accumulating above 100000. The
+on a blank line (146). `getnum` stops accumulating above 100000. The
 times are `long long`, as `time` returns them.
 
-#lines(1, 206)
+#lines(1, 208)
 
 #source("/usr/src/games/hangman.c")
 
@@ -12504,14 +12504,14 @@ lost word counting two more.
 
 v7 seeded the generator with `tvec[1]+tvec[2]`, the second word of the
 time and a word beyond the end of the array; the time is now a single
-`long long` (37--40). The dictionary's words are read with a width of
-127 (58, 130), so that a long line cannot overrun the buffers, and words
-longer than 25 letters are skipped (141), since `word` holds 25. The
-guess is read with `fgets` in place of `gets` (78), and a dictionary
-with no usable word now stops the game with "no words" (131) instead of
+`long long` (38--41). The dictionary's words are read with a width of
+127 (59, 131), so that a long line cannot overrun the buffers, and words
+longer than 25 letters are skipped (142), since `word` holds 25. The
+guess is read with `fgets` in place of `gets` (79), and a dictionary
+with no usable word now stops the game with "no words" (132) instead of
 searching it for ever.
 
-#lines(1, 160)
+#lines(1, 161)
 
 #source("/usr/src/games/quiz.c")
 
@@ -12526,54 +12526,54 @@ in more than one way.
 `score` is now `signed char` (12), since in the `-t` mode a question
 answered wrongly scores $-1$ and comes again, and the ARM's plain
 `char` cannot hold it. `line` has room for `NC` characters and two more
-(23). The prototypes (26--31) are new.
+(23). The prototypes (26--34) are new.
 
 `readline` reads a line of the file, dropping repeated blanks and
 joining a line ended by `\`; `nc` counts the characters read, which
 `readindex` uses as the offset of each line. It no longer steps its
 pointer before the start of `line` to drop a leading blank: the loop is
 now a `while` which advances only past characters it keeps. The test
-for end of file masks the character (58), since the ARM's `char` makes
+for end of file masks the character (61), since the ARM's `char` makes
 0377 a positive number.
 
-#lines(1, 66)
+#lines(1, 69)
 
 `cmp` matches an answer against a pattern. `disj` tries the
 alternatives in turn, `string` a sequence of characters and bracketed
 parts, and `eat` a single character, compared without regard to case by
 `fold`. Each returns 1 for a match, 0 for none, and 2 for a malformed
 pattern; with `s` zero they only skip over the pattern. The `|` in
-`t|(x&s)` (97) gains parentheses, which change nothing, for a warning.
+`t|(x&s)` (100) gains parentheses, which change nothing, for a warning.
 
-#lines(67, 190)
+#lines(70, 193)
 
 `publish` prints the first of a pattern's alternatives. `segment` splits
 a line at its colons into `w`, each part now limited to `SL` characters
-(237), and `talloc` gives each part two more bytes, for the escape which
-a part may end with (310). `perm` finds, for each kind of fact asked
+(240), and `talloc` gives each part two more bytes, for the escape which
+a part may end with (313). `perm` finds, for each kind of fact asked
 for, the field of an index line which matches it, and `find` the index
 line for which all match.
 
-#lines(191, 311)
+#lines(194, 314)
 
 `main` reads the index, finds the subject, and then asks questions from
 it in a random order until interrupted. More than `NF` arguments are now
-refused (352), since `select` has `NF` entries. A subject file with no
-facts in it now stops `quiz` with "I don't know about that" (361); v7
+refused (355), since `select` has `NF` entries. A subject file with no
+facts in it now stops `quiz` with "I don't know about that" (364); v7
 went on to compute a question number modulo zero. A fact longer than
-`NC` characters is cut there (368). The time is a `long long`, and the
+`NC` characters is cut there (371). The time is a `long long`, and the
 increment for the generator takes its low bits as v7 did, now with the
-parentheses which make the order of `&` and `|` explicit (325).
+parentheses which make the order of `&` and `|` explicit (328).
 
-#lines(312, 401)
+#lines(315, 404)
 
 `query` reads an answer with `read`, a character at a time, dropping
 repeated blanks; characters beyond the size of `response` are now
-dropped (411), and end of input ends the game. `next` picks the next
+dropped (414), and end of input ends the game. `next` picks the next
 question with a linear congruential generator, skipping those already
 answered.
 
-#lines(402, 497)
+#lines(405, 502)
 
 #source("/usr/src/games/fish.c")
 
@@ -12584,22 +12584,22 @@ the professional mode, asked for at the start, remembers what the
 player has asked for, since the player must hold it, and otherwise picks the
 rank asked about longest ago; without it the guess is random.
 
-The source is v7's, in its own layout, with prototypes (22--26) and
+The source is v7's, in its own layout, with prototypes (22--29) and
 declarations in the modern style. The changes which are not mechanical
 are three. The player's input now ends the game at end of file: `guess`
 exits on `EOF` and the loops which skip the rest of a line stop there
 too, where v7 read for ever. The ranks kept in the `char` array `try`
 are masked with `0377` before they index `hehas` and `haveguessed`
-(497--512), so that the program behaves the same whatever the
+(500--516), so that the program behaves the same whatever the
 signedness of `char`; with ranks from 1 to 13 the masks change no
-value. And `mark` (85) takes the hand first, as every call passes it.
+value. And `mark` (88) takes the hand first, as every call passes it.
 v7 defined it as `mark(cd, hand)`, the reverse of its calls; on the
 PDP-11, where a pointer and an `int` were passed alike, `hand[cd]` still
 reached the right count, since `a[i]` is `*(a+i)` whichever of the two
 is the address, but the test against `NOMORE` looked at the address
 instead of the card.
 
-#lines(1, 526)
+#lines(1, 530)
 
 #source("/usr/src/games/backgammon.c")
 
@@ -12612,16 +12612,16 @@ skill. It keeps its own random-number generator, seeded from the time;
 another type.
 
 The moves typed are read into an array that now has room for the end
-marker after five of them (41), and `getstr` now stops at the end of its
-100-byte buffer and at end of input (114--119), where v7 overran the
+marker after five of them (47), and `getstr` now stops at the end of its
+100-byte buffer and at end of input (120--125), where v7 overran the
 buffer and read for ever. An empty answer, for which `sscanf` returns
-$-1$, no longer indexes before the array (87), and `sum=+` becomes
-`sum+=` (219): the old spelling of `+=` would now assign a positive
-value. The initialisers without `=` (25--33) are written in C99's form,
+$-1$, no longer indexes before the array (93), and `sum=+` becomes
+`sum+=` (225): the old spelling of `+=` would now assign a positive
+value. The initialisers without `=` (31--39) are written in C99's form,
 and the braces added to `movegen` mark statements v7's indentation
 already showed.
 
-#lines(1, 613)
+#lines(1, 621)
 
 == Files and Directories <ch-files>
 
@@ -12644,30 +12644,30 @@ The arguments are sorted, the files among them printed, and each
 directory read and its entries sorted and printed after them; `compar`
 puts directories given as arguments last unless `-d` is set.
 
-#lines(1, 162)
+#lines(1, 163)
 
 `pentry` prints one entry. The i-number, kept as a `short`, is printed
-through `ino_t` (175), so that one above 32767 is not shown negative.
+through `ino_t` (176), so that one above 32767 is not shown negative.
 `getname` looks up a user or group id in the password or group file,
 remembering the last one found. It now stores at most 15 characters of
-the name (226), since `tbuf` holds 16; v7 copied the whole field. The
+the name (227), since `tbuf` holds 16; v7 copied the whole field. The
 modes come from the tables `m1` to `m9`: each gives the number of bits
 to test, then pairs of a bit and the character it prints, and the
 character for none of them.
 
-#lines(163, 274)
+#lines(164, 275)
 
 `makename` joins a directory name and an entry name. Its buffer now has
 room for the longest name `exec` can pass as an argument, `NCARGS`, with
-a slash, an entry name, and a null (279); v7's held 100 characters,
+a slash, an entry name, and a null (280); v7's held 100 characters,
 which a long argument overran. `readdir` reads a directory a `direct`
 at a time, skipping empty slots and, without `-a`, `.` and `..`; it now
-ends the copied name with a null (321), since a 14-character name has
+ends the copied name with a null (324), since a 14-character name has
 none in the directory. `gstat` makes the `lbuf`, calling `stat` only
 when the options need what it returns; after `NFILES` entries it reuses
 the last slot and says once that there are too many.
 
-#lines(275, 422)
+#lines(276, 425)
 
 #source("/usr/src/cmd/cp.c")
 
@@ -12676,11 +12676,11 @@ time. A copy into a directory takes the source's last component, and a
 copy of a file onto itself is refused by comparing device and i-number.
 The new file is created with the source's mode.
 
-The name built in a directory is now allocated to its length (52--56);
+The name built in a directory is now allocated to its length (52--57);
 v7 built it in `iobuf`, the 512-byte buffer of the copy, which a long
 directory overran.
 
-#lines(1, 95)
+#lines(1, 96)
 
 #source("/usr/src/cmd/mv.c")
 
@@ -12691,29 +12691,29 @@ so that `link` fails, it runs `cp` and removes the original. Only the
 super-user may link or unlink a directory (#f("sys2.c"),
 #f("sys4.c")), so `mv` is
 set-user-id root; `main` gives up that privilege at once unless the
-source is a directory (41).
+source is a directory (42).
 
 `move` handles a file. The name built inside a target directory is now
-an array sized to the two names (59); v7 used `MAXN`, 100 bytes, and
+an array sized to the two names (60); v7 used `MAXN`, 100 bytes, and
 overran it with long names. A target which is not writable is replaced
 only if the user, at a terminal, answers `y`.
 
-#lines(1, 121)
+#lines(1, 123)
 
 `mvdir` renames a directory, after checks for which the privilege is
 needed: the user must be able to write both parents and the directory
 itself, and the move must stay on one device. It now refuses either
-name if it does not fit in `MAXN` (130--133), and checks the length of
-the built name exactly (139), where v7 assumed that the last component
+name if it does not fit in `MAXN` (132--135), and checks the length of
+the built name exactly (141), where v7 assumed that the last component
 was at most `DIRSIZ` long, which a name given by the user need not be.
 A directory which changes parent must also have its `..` relinked
-(202--218); v7 built that name with `strcat` onto `dst`, which held
-whatever the stack held, and the copy is now `strcpy` (202). `check`
+(204--220); v7 built that name with `strcat` onto `dst`, which held
+whatever the stack held, and the copy is now `strcpy` (204). `check`
 walks up from the new parent through `..` to the root, refusing to
 move a directory under itself, and `chkdot` refuses names containing
 `..`, which would defeat that walk.
 
-#lines(122, 299)
+#lines(124, 301)
 
 #source("/usr/src/cmd/ln.c")
 
@@ -12725,7 +12725,7 @@ Linking a directory needs `-f`, and even then only the super-user's
 The name built in a directory is now allocated to its length (47); v7
 built it in a 100-byte array, which a long name overran.
 
-#lines(1, 55)
+#lines(1, 56)
 
 #source("/usr/src/cmd/rm.c")
 
@@ -12763,11 +12763,11 @@ The name is now copied into an array sized to it, with room for the
 past the last slash (38--39), so that `a/.` and `a/..` are refused by
 the test at 75; v7 left it on the slash, and the test saw `/.`, which it
 did not match. And a missing `.` or `..` is now recognised by `errno`
-being `ENOENT` (81, 86): v7 took any failure of `access` for absence,
+being `ENOENT` (81, 87): v7 took any failure of `access` for absence,
 so that a `..` it could not reach skipped the check of permission and
 was unlinked.
 
-#lines(1, 104)
+#lines(1, 106)
 
 #source("/usr/src/cmd/find.c")
 
@@ -12778,28 +12778,28 @@ evaluates it and two operands. In v7 every predicate read the same node
 through a structure of its own, `{ int f, t, s; }` for `-mtime` and the
 like; here there is the one structure, and a predicate's number and
 sign are stored in the pointer fields `L` and `R`, converted to
-pointers and back (179, 316). `Node` holds 100 nodes, and `mk` now
-says so when an expression needs more (260--263); v7 wrote past the
+pointers and back (188, 326). `Node` holds 100 nodes, and `mk` now
+says so when an expression needs more (270--273); v7 wrote past the
 array.
 
 `find` returns to the directory it started from, `Home`, before each
 path, and runs commands from there. `Home` and `Pathname` now hold 4096
-characters (12, 41), where v7 had 128 and 200, and `main` refuses a
-path which does not fit (90--93). It also now copes with `pwd` failing
-to run (63--68), where v7 cut the last character off whatever it had.
+characters (12, 42), where v7 had 128 and 200, and `main` refuses a
+path which does not fit (98--102). It also now copes with `pwd` failing
+to run (71--76), where v7 cut the last character off whatever it had.
 `ctime` is renamed by the preprocessor (3), since the predicate would
 otherwise clash with the library's `ctime`, which the headers declare.
 
-#lines(1, 113)
+#lines(1, 122)
 
 The expression is parsed by recursive descent: `exp` for `-o`, `e1`
 for concatenation, which means "and", `e2` for `!`, and `e3` for
 parentheses and the predicates. `nxtarg` hands out the arguments, and
 returns an empty string, three times at most, once they run out. `-perm`
 now stops reading digits once the mode has more than twelve bits
-(212), so that a long argument does not overflow `i`.
+(221), so that a long argument does not overflow `i`.
 
-#lines(114, 283)
+#lines(123, 293)
 
 The functions after the parse evaluate the nodes against `Statb`, the
 status of the current file. A time predicate compares the file's age in
@@ -12807,36 +12807,36 @@ days with its argument: the age is computed by `AGE` (9) in unsigned
 arithmetic, so that a time far in the past or future cannot overflow
 the subtraction, which C leaves undefined for signed numbers. `scomp`
 compares with a sign: `+n` means more than `n`, `-n` less than `n`.
-The negation is now made in `long long` (480), so that it cannot
+The negation is now made in `long long` (495), so that it cannot
 overflow either.
 
 `-cpio` writes the files found to an archive in `cpio`'s format. The
 modification time in its header is now four 16-bit halves, most
-significant first (413, 435--436), where v7 had two: the port's
+significant first (426, 448--450), where v7 had two: the port's
 `time_t` is 64 bits. The archives are therefore not v7's; the system
 has no `cpio` command to read them. A name longer than the header's 256 bytes
-is now refused (423--426) instead of overrunning `h_name`.
+is now refused (436--439) instead of overrunning `h_name`.
 
-#lines(284, 482)
+#lines(294, 497)
 
 `doex` runs the command of `-exec` or `-ok`, with `{}` replaced by the
-path; it now refuses more than 49 arguments (495--498), the size of
+path; it now refuses more than 49 arguments (510--513), the size of
 `nargv`. `getunum` finds a name in the password or group file; the
 name and number it reads now stop at the 20 bytes of `str`
-(529--538). `descend` evaluates the expression on a file and, for a
+(544--554). `descend` evaluates the expression on a file and, for a
 directory, on each entry in it, a block of 32 entries at a time,
 changing into the directory to keep the names short. It keeps a
 directory open while it descends only if the descriptor is a low one
-(599), so that a deep tree does not run out of them. It now refuses to
-descend when a further name would not fit in `Pathname` (578--581).
+(615), so that a deep tree does not run out of them. It now refuses to
+descend when a further name would not fit in `Pathname` (594--597).
 
 `gmatch` and `amatch` match a name against a pattern in the manner of
-the shell. The characters are now taken as unsigned (664--680), so that
+the shell. The characters are now taken as unsigned (680--697), so that
 the comparisons of ranges hold whatever the signedness of `char`.
 `chgreel` asks, on `/dev/tty`, for another output device when a write
-fails; it now gives up if `/dev/tty` cannot be opened or read (745).
+fails; it now gives up if `/dev/tty` cannot be opened or read (762).
 
-#lines(483, 762)
+#lines(498, 779)
 
 #source("/usr/src/cmd/od.c")
 
@@ -12849,14 +12849,14 @@ and `line` prints one row for each bit set, in the order of the bits.
 octal, hexadecimal with `x`, or decimal with a point, and in blocks with
 `b`.
 
-The offset is now an `unsigned long` (12, 193, 220), so that it prints
+The offset is now an `unsigned long` (12, 194, 221), so that it prints
 correctly at 2 GB and beyond, where v7's `long` turned negative. And
-`line` now stops after the seven bits which name formats (105); v7 shifted
+`line` now stops after the seven bits which name formats (106); v7 shifted
 `c` until it became zero, which with a 16-bit `int` happened after
 sixteen shifts, but with a 32-bit `int` reaches the sign bit, where a
 further shift is undefined.
 
-#lines(1, 253)
+#lines(1, 254)
 
 #source("/usr/src/cmd/cat.c")
 
@@ -12893,7 +12893,7 @@ since `<stdio.h>` declares a `puts` of its own.
 `tar` writes files to an archive, and lists or extracts them again.
 The archive was meant for magnetic tape, by default `/dev/mt1`, but
 `f` names any file, `-` the standard input or output. Each file is a
-header block of 512 bytes, `hblock` (13--26), followed by its
+header block of 512 bytes, `hblock` (23--36), followed by its
 contents rounded up to whole blocks; two empty blocks end the archive.
 The header holds the file's name, mode, owners, size, and time as
 ASCII octal numbers, so that an archive is the same whatever the byte
@@ -12905,74 +12905,74 @@ newer than their copies in the archive, `x` extracts, and `t` lists;
 `v` reports each file, `w` asks about each, `m` leaves the extracted
 files with the present time, and `l` reports links it could not find.
 
-#lines(1, 197)
+#lines(1, 207)
 
 `dorep` adds files. Without `c` it first reads to the end of the
 archive; for `u` it writes each name and time to a temporary file,
 sorted, which `checkupdate` searches later. The command's buffer is now
-initialised (214) before the `strcat`s which `sprintf` then overwrites;
+initialised (224) before the `strcat`s which `sprintf` then overwrites;
 v7 appended to whatever the stack held. `dorep` changes into the
 directory of each argument and passes the last component to
 `putfile`; when the directory cannot be entered it now passes the
-whole name instead (238), where v7 carried on in the wrong directory.
+whole name instead (248), where v7 carried on in the wrong directory.
 The current directory, read through `pwd` into `wdir`, now has 512
-bytes (203) where v7 had 60.
+bytes (213) where v7 had 60.
 
 `getdir` reads a header and converts its fields. The time is now read
-as a `long long` (282), the port's `time_t`. A header whose size is
-negative or does not fit a `long` is treated as damaged (284), and the
-two names are now ended with a null (288), since a name of 100
+as a `long long` (292), the port's `time_t`. A header whose size is
+negative or does not fit a `long` is treated as damaged (294), and the
+two names are now ended with a null (299), since a name of 100
 characters fills its field and has none; v7 read on into the next
 field. The time written to the temporary file stops at the field's 12
-characters (290) for the same reason.
+characters (302) for the same reason.
 
-#lines(198, 307)
+#lines(208, 320)
 
 `putfile` writes one file, or, for a directory, calls itself on each
 entry, closing the directory meanwhile and reopening it at the entry
 after, as `rm` does. A directory whose name will not fit in a header is
-now refused, and one which cannot be entered is reported (337--346);
+now refused, and one which cannot be entered is reported (350--361);
 v7 called `chdir` without looking at the result, and then wrote the
 entries of the wrong directory under the right names. A file with more
 than one link is written in full only the first time; afterwards a
 header with `linkflag` set names the first copy.
 
-#lines(308, 448)
+#lines(321, 463)
 
 `doxtract` extracts the files named, or all, making the directories
 on their paths with `mkdir` (`checkdir`), and gives each file its
 owners and, unless `m`, its time from the archive. `dotable` lists the
 archive, in the manner of `ls -l` with `v`.
 
-#lines(449, 566)
+#lines(464, 581)
 
 `tomodes` fills a header from a file's status. The time field holds 11
 octal digits, 33 bits, so a 64-bit time is now kept within that range
-(680--685): a time before 1970 is written as 0 and one past the year
+(697--702): a time before 1970 is written as 0 and one past the year
 2242 as the largest the field holds. `checksum` adds the bytes of the
 header, with the field for the checksum itself taken as spaces. The
-bytes are now added as `signed char` (698): v7's PDP-11 compiler made
+bytes are now added as `signed char` (715): v7's PDP-11 compiler made
 `char` signed, and the sum must be the same as v7's for archives to
 pass between the systems, whatever the port's compiler makes of
 `char`.
 
-#lines(567, 700)
+#lines(582, 717)
 
-`response` now stops at end of input (725), where v7 read for ever.
+`response` now stops at end of input (742), where v7 read for ever.
 `getwdir` reads the current directory through a pipe from `pwd`; it now
 reads up to the 512 bytes of the buffer and fails cleanly when no
-newline comes (786--791), where v7 read 50 bytes into a 60-byte buffer
+newline comes (803--808), where v7 read 50 bytes into a 60-byte buffer
 and then searched for a newline which might not be there.
 
 `lookup` and `bsrch` binary-search the sorted temporary file for a
 name, reading a window of `N` bytes around the middle of the range and
 taking the first whole line in it. A line is a name of up to 100
-characters, a space, and 12 digits of time, so `N` is now 256 (797),
+characters, a space, and 12 digits of time, so `N` is now 256 (814),
 which holds the end of one line and the whole of the next; v7's 200
-could not. `readtape` now treats end of file as an error (882), where
+could not. `readtape` now treats end of file as an error (899), where
 v7 went on with whatever was in its buffer.
 
-#lines(701, 961)
+#lines(718, 978)
 
 #source("/usr/src/cmd/file.c")
 
@@ -12988,22 +12988,22 @@ judges by the frequencies of letters and the spacing of punctuation.
 The buffer is now an array of `int`s (11--12), so that its first word
 may be read as an `int`, which v7 did by casting a `char` array that
 need not be aligned for one. It has room for a null after the data
-read (99), which stops the scans that look for a character before
+read (100), which stops the scans that look for a character before
 the end. The port's executables are ELF files, whose first four bytes
 are `0x7f` and `ELF`; read as a little-endian `int` they are
-`0x464c457f` (102), and are reported as executable. The PDP-11's magic
+`0x464c457f` (103), and are reported as executable. The PDP-11's magic
 numbers are kept.
 
-Bytes with the top bit set are now tested for as such (152), and
-masked before they index a table or reach `isalpha` (193, 210, 306);
+Bytes with the top bit set are now tested for as such (153), and
+masked before they index a table or reach `isalpha` (194, 212, 309);
 v7 relied on `char` being signed, so that `buf[i] <= 0` caught them.
 The test for `roff` input now also accepts a request at the very start
-of the file (193), where v7 looked at the byte before the buffer.
+of the file (194), where v7 looked at the byte before the buffer.
 A name read with `-f` loses its last character only when that is a
-newline (40), `file -f` exits with 0, and a failed read is reported as
-such (95--96).
+newline (41), `file -f` exits with 0, and a failed read is reported as
+such (96--97).
 
-#lines(1, 332)
+#lines(1, 335)
 
 #source("/usr/src/cmd/cmp.c")
 
@@ -13049,7 +13049,7 @@ not v7's, but `tp` reads its own. `name` has room for twice `NAMELEN`
 (53): a directory's name, already checked to fit, has an entry's name
 appended to it before that is checked in turn.
 
-#lines(1, 84)
+#lines(1, 94)
 
 #source("/usr/src/cmd/tp/tp_defs.h")
 
@@ -13086,7 +13086,7 @@ measures the name without reading past the 32 bytes of a tape entry
 characters (182), which would leave none when written back; v7 called
 `strlen` and allowed 32.
 
-#lines(1, 198)
+#lines(1, 199)
 
 #source("/usr/src/cmd/tp/tp2.c")
 
@@ -13129,11 +13129,11 @@ addresses, so that the tape moves one way. `usage` counts the entries
 and blocks in use.
 
 `taboc` lists an entry. The time is now taken apart through the `tm`
-structure which `localtime` returns (202, 223--224); v7 declared
+structure which `localtime` returns (202, 223--225); v7 declared
 `localtime` as returning an array of `int`s and indexed it, which
 relied on the structure's layout.
 
-#lines(1, 256)
+#lines(1, 257)
 
 == Text Tools <ch-text>
 
@@ -13149,7 +13149,7 @@ as a `long` whose two halves the PDP-11 stored the more significant
 first, which are now exchanged (80). The temporary file's name is now
 an array (21), into which `mktemp` writes.
 
-#lines(1, 99)
+#lines(1, 100)
 #source("/usr/src/cmd/sort.c")
 
 `sort` sorts lines, or merges files already sorted (`-m`), or checks
@@ -13172,22 +13172,22 @@ compiler makes of `char`. `qsort` is renamed by the preprocessor (6),
 since the library's `qsort`, with another interface, is declared by the
 headers.
 
-#lines(1, 174)
+#lines(1, 176)
 
 `main` gathers the options and keys, then lets each key with no options
 of its own inherit those of the whole line. It takes all the memory it
 can get, up to `MEM` beyond the present break, for the pointers and the
-text of the lines. It now starts from the break as it stands (244--245),
+text of the lines. It now starts from the break as it stands (246--247),
 where v7 started from `end`, the end of the program's data, which lies
 below anything the library has already allocated. The name of the
 temporary file is now allocated to the length of the directory, which
-`-T` may give (257); v7's array held 30 characters.
+`-T` may give (259); v7's array held 30 characters.
 
 `sort` reads the lines of all the inputs into a run, and writes each
-run sorted. A line longer than the space left now loses its end (314),
-where v7 wrote past the space; `tend` marks its last byte (254).
+run sorted. A line longer than the space left now loses its end (318),
+where v7 wrote past the space; `tend` marks its last byte (256).
 
-#lines(175, 351)
+#lines(177, 355)
 
 `merge` merges files: each has a line buffer in `merg`, the buffers are
 kept ordered by their current lines, and the least is written and
@@ -13195,32 +13195,32 @@ replaced by its file's next line. For `-u`, a line equal to the one
 written before is dropped, by comparing it with a copy kept in a spare
 buffer; with only one file left, v7 compared with the buffer below the
 first, which does not exist, and the copy is now used then too
-(405--406).
+(409--410).
 
 `setfil` names an input or a temporary file; the temporaries end in two
 letters which count them. `safeoutfil` notices, for `-m -o`, that the
 output is also an input, in which case even the last merge goes to a
 temporary file first. It now starts its search at the first input when
-there are fewer than `N` (541); v7 started `N` before the last, which
+there are fewer than `N` (545); v7 started `N` before the last, which
 with fewer inputs indexed before the array.
 
-#lines(352, 583)
+#lines(356, 587)
 
 `cmp` compares two lines key by key; `cmpa` compares whole lines when
 there are no keys, or to break a tie. A numeric key is compared as a
 decimal number with optional sign and fraction, digit by digit, so that
 there is no limit on its size. `cmpa` now compares bytes as unsigned
-(691), as the tables of `cmp` order them.
+(698), as the tables of `cmp` order them.
 
 `skip` finds the start or end of a key, `m` fields and then `n`
 characters along. `field` reads the options and positions of a key. The
-position after a point is now stored explicitly in `n` (804); v7 wrote
+position after a point is now stored explicitly in `n` (811); v7 wrote
 it at an offset from `m` computed from the layout of the structure.
-`number` now saturates (818) instead of overflowing, and `copyproto`
-copies the prototype key by structure assignment (744), where v7
+`number` now saturates (825) instead of overflowing, and `copyproto`
+copies the prototype key by structure assignment (751), where v7
 copied it as an array of `int`s.
 
-#lines(584, 913)
+#lines(588, 920)
 
 #source("/usr/src/cmd/uniq.c")
 
@@ -13264,16 +13264,16 @@ each line of the first file with the same key, so that every pairing is
 printed.
 
 `input` splits a line into at most `NFLD` fields. It now reports a line
-with more (167--168), where v7 wrote past `ppi`; it no longer steps
-past the null that ends a line without a newline (172--174), which v7's
+with more (169--170), where v7 wrote past `ppi`; it no longer steps
+past the null that ends a line without a newline (174--176), which v7's
 own comment admitted it did; and it fills the unused pointers with
-empty strings (176--177), where v7 set only the next one to null, so
+empty strings (178--179), where v7 set only the next one to null, so
 that a short line left `output` printing a field from the line before
 or a null pointer. The field numbers given with `-o` and `-j` are now
-checked against `NFLD` (89--90, 95--96), and `-o` and `-j` no longer
+checked against `NFLD` (89--90, 96--97), and `-o` and `-j` no longer
 read past the last argument (59, 73--74). `top2` starts at zero (32).
 
-#lines(1, 225)
+#lines(1, 227)
 
 #source("/usr/src/cmd/tr.c")
 
@@ -13332,23 +13332,23 @@ optionally in several columns (`-n`), or several files side by side
 only by its owner (`fixtty`), so that messages from `write` do not
 break up the pages, and restores the mode when done or interrupted.
 
-#lines(1, 137)
+#lines(1, 139)
 
 `print` prints one file. For columns, the text of a whole page must be
 read before its first line can be printed, so `nexbuf` reads the file
 into `buffer`, used circularly, ending what it has with the mark
 `0375`, or `0376` at the end of the file; `tpgetc` takes a column's next
 character, and `colp` points at the start of each column. The number of
-columns is now at least one (164--165): with `-0`, or `-m` and no file
+columns is now at least one (166--167): with `-0`, or `-m` and no file
 that could be opened, v7 divided the width by zero. The header is now
-cut to 80 characters (207), since the line is built in a buffer of 150
+cut to 80 characters (209), since the line is built in a buffer of 150
 bytes, which v7 overran with a long name given with `-h`.
 
 `put` turns runs of spaces back into tabs where that is shorter, and
 `putcp` discards everything before the first page asked for with
 `+n`.
 
-#lines(138, 432)
+#lines(140, 435)
 
 #source("/usr/src/cmd/sed/sed.h")
 
@@ -13384,50 +13384,50 @@ labels and runs the script over each file named, or the input.
 address or a right-hand side, not while it does so, and one regular
 expression may take `ESIZE` bytes and one text a whole line; v7 put
 `reend` at the end of `respace`, so that the last thing compiled could
-run past it. It is now that much short of the end (50), and `RESIZE`
+run past it. It is now that much short of the end (55), and `RESIZE`
 was doubled to keep the room which v7 had. `-f` with no file now stops
-`sed` (72), where v7 opened a null name.
+`sed` (77), where v7 opened a null name.
 
-#lines(1, 127)
+#lines(1, 132)
 
 `fcomp` compiles the script, a line at a time, read by `rline`. For
 each command it compiles up to two addresses, then the command itself:
 `{` and `}` nest through `cmpend`, now refusing more than `DEPTH` levels
-(224--227), where v7 wrote past the array; `:` defines a label and `b`
+(229--233), where v7 wrote past the array; `:` defines a label and `b`
 and `t` refer to one, which `dechain` resolves once all are known;
 `a`, `i`, `c`, and `r` take a text; `s` a regular expression, a
 right-hand side, and flags; `w` a file, opened at once; and `y` two
 strings, compiled by `ycomp` into a table of 128 characters.
 
-#lines(128, 578)
+#lines(133, 584)
 
 `compsub` compiles a right-hand side, with `\n` for the subexpressions
 and `&` for the whole match. `compile` compiles a regular expression
 into the codes of #f("sed/sed.h"), as `ed` does. It now refuses an
-expression with no delimiter at all (615--616), which v7 compiled by
+expression with no delimiter at all (621--622), which v7 compiled by
 taking the null at the end of the line as the delimiter. A null within
-an expression now ends it as an error (690--693), where v7 skipped it
+an expression now ends it as an error (696--699), where v7 skipped it
 and went on reading past the end of the line. Character classes are
 bit maps of 128 bits, and the characters entered in them, and the ends
-of ranges, are now masked to seven bits (736, 747), so that a byte with
+of ranges, are now masked to seven bits (742, 754), so that a byte with
 the top bit set cannot index outside the map.
 
-#lines(579, 765)
+#lines(585, 772)
 
 `rline` reads a line of script, from the argument of `-e` or from the
 file, joining lines that end with a backslash. It now stores each
-character before it advances (780--842), where v7 started its pointer
+character before it advances (787--849), where v7 started its pointer
 one byte before the buffer, an address C does not promise; and it now
-stops with "Line too long" at the end of `linebuf` (766--771), where v7
-wrote on past it. `address` reads a line number, now saturating (867--870),
+stops with "Line too long" at the end of `linebuf` (773--778), where v7
+wrote on past it. `address` reads a line number, now saturating (874--877),
 a `$`, or a regular expression. `cmp` likewise no longer starts before
-its strings (891--895). `text` copies the text of `a`, `i`, `c`, and
+its strings (898--902). `text` copies the text of `a`, `i`, `c`, and
 `r`, removing escapes; `search` finds a label; and `dechain` links each
 branch to its label and each `{` to its `}`. `ycomp` now refuses a `y`
-with no delimiter (967--968) and stops at the end of the line (974),
+with no delimiter (974--975) and stops at the end of the line (981),
 where v7 read on past it.
 
-#lines(766, 1000)
+#lines(773, 1007)
 
 #source("/usr/src/cmd/sed/sed1.c")
 
@@ -13446,13 +13446,13 @@ followed by any text queued by `a` and `r`.
 loops which walked back through the line now stop at its start (281,
 318, 329, 337), where v7 stepped the pointer one byte before it, an
 address C does not define. A repeated back-reference to an empty
-subexpression now matches at once (273--274), where v7 looped for ever
+subexpression now matches at once (274--275), where v7 looped for ever
 advancing by nothing. And an empty match at the point where the last
-match ended is now refused (239--240), as the loops of `star` already
+match ended is now refused (240--241), as the loops of `star` already
 refused it, so that `s/x*/y/g` cannot match there twice. The numbers of
-subexpressions are masked to a byte before they index (253--272).
+subexpressions are masked to a byte before they index (254--273).
 
-#lines(161, 343)
+#lines(161, 344)
 
 `substitute` replaces a match, or every match with `g`, by building
 the new line in `genbuf` with `dosub` and `place`. A line which grows
@@ -13461,24 +13461,24 @@ past `LBSIZE` now stops `sed` with "Output line too long" (381--391,
 
 `command` performs a command. `a` and `r` queue their text in `abuf`;
 when more than `ABUFSIZE` are queued, the last is now overwritten
-(430, 609) instead of the array overrun. `G` and `H` append one space
+(431, 610) instead of the array overrun. `G` and `H` append one space
 to the other after a newline; they now check the room before writing
-the newline as well as the characters (476--481, 494--499). `N` does
-the same (571--572). `l` prints a line with its control characters
-made visible, now taking bytes as unsigned (517). `y` now leaves bytes
-with the top bit set as they are (658), where v7 used them to index
+the newline as well as the characters (477--482, 495--500). `N` does
+the same (572--573). `l` prints a line with its control characters
+made visible, now taking bytes as unsigned (518). `y` now leaves bytes
+with the top bit set as they are (659), where v7 used them to index
 its table of 128 characters with a negative number.
 
-#lines(344, 663)
+#lines(345, 665)
 
 `gline` reads a line from the input, a block at a time; at the end of
 the last file it sets `dolflag`, so that `$` matches the line just
-read. A failed read is now treated as an empty block (685), where v7
+read. A failed read is now treated as an empty block (687), where v7
 set the end of its buffer from the $-1$ which `read` returned. `arout`
 writes the queued text after the line, and no longer starts its
-pointer before `abuf` (719).
+pointer before `abuf` (721).
 
-#lines(664, 736)
+#lines(666, 738)
 
 #source("/usr/src/cmd/tsort.c")
 
@@ -13493,11 +13493,11 @@ node repeats, prints the cycle, and lets the walk continue from it.
 `index` of its own.
 
 The names are now read into buffers of 512 bytes with their length
-limited (47, 54), where v7 read with `%s` into 50 bytes and overran
+limited (48, 55), where v7 read with `%s` into 50 bytes and overran
 them with a long name; and a failed `malloc` for an edge is now
-reported (64--65).
+reported (65--66).
 
-#lines(1, 198)
+#lines(1, 199)
 
 #source("/usr/src/cmd/rev.c")
 
@@ -13592,32 +13592,32 @@ characters which break words.
 
 `main` reads the word list into a buffer and a hash table, `hasht`,
 whose search wraps round and stops only at an empty slot; `storeh` now
-refuses the last slot (547--548), so that one is always empty, where v7
+refuses the last slot (552--553), so that one is always empty, where v7
 filled the table and the search could go round for ever. An empty word,
-between two adjacent breaks, is no longer stored (209). The break table
-now has 256 entries (46), since `getc` returns bytes up to 255 and v7's
+between two adjacent breaks, is no longer stored (211). The break table
+now has 256 entries (48), since `getc` returns bytes up to 255 and v7's
 128 were overrun by a break file with such a byte; the bytes of the
-text are masked before they index it (322, 328). The options which take
-an argument no longer read past the last one (107--153), and a width
-which leaves no room for the gap is refused (166--167).
+text are masked before they index it (325, 331). The options which take
+an argument no longer read past the last one (109--155), and a width
+which leaves no room for the gap is refused (168--169).
 
 `cmpline` writes, for each word kept, the rotated line to a temporary
 file, with `TILDE` marking where the line originally began, and
-`/bin/sort` sorts it. The file's name is now an array (65), into which
+`/bin/sort` sorts it. The file's name is now an array (67), into which
 `mktemp` writes; v7 passed it a string constant. An exec of `sort`
-that fails is now reported (246).
+that fails is now reported (249).
 
-#lines(1, 306)
+#lines(1, 309)
 
 `getsort` reads the sorted lines and lays out each in the four fields,
 trimming at word boundaries with `rtrim` and `ltrim` and marking
-truncation with `/`. `line` now has room for twice `LMAX` (45), since
+truncation with `/`. `line` now has room for twice `LMAX` (47), since
 each `"` is doubled for `troff`, and both copies are checked against
-its end (458--463), as `getline` now leaves room for the newline (280).
+its end (463--468), as `getline` now leaves room for the newline (283).
 `onintr` removes the temporary file; it now exits with 0 when called at
-the normal end (511), where v7 always exited with 1.
+the normal end (516), where v7 always exited with 1.
 
-#lines(307, 562)
+#lines(310, 567)
 
 #source("/usr/src/cmd/deroff.c")
 
@@ -13633,16 +13633,16 @@ the arguments of a few macros; other lines go to `regline`, which drops
 the backslash constructions through `backsl`.
 
 The class table `chars` now has 256 entries (33), and bytes are masked
-before they index it (273, 294--301), where v7's 128 entries were
+before they index it (277, 299--307), where v7's 128 entries were
 indexed by `char`s that could be negative. `regline` now stops filling
-`line` at its end (227--228), dropping the rest of a long line; v7 wrote
+`line` at its end (231--232), dropping the rest of a long line; v7 wrote
 past it. The name of a file to include now has 256 bytes (46), and the
 nesting of included files stops with a message at the 15 that `files`
-holds (346--347); v7 had 50 bytes for the name and no check of the
+holds (352--353); v7 had 50 bytes for the name and no check of the
 depth. And `\s` at the very start of a line no longer backs `lp` up
-before `line` (456--457).
+before `line` (462--463).
 
-#lines(1, 510)
+#lines(1, 516)
 
 #source("/usr/src/cmd/checkeq.c")
 
@@ -13662,16 +13662,16 @@ braces, parentheses, and `if`s in small arrays and the text of the
 current statement in `string`.
 
 The arrays of levels now have 20 entries, and `string` 1000 bytes
-(6--36), where v7 had 10 and 200, and each is now checked: nesting
+(7--37), where v7 had 10 and 200, and each is now checked: nesting
 deeper, or a statement longer, now stops `cb` with a message
 (`toodeep`, 81, 253, 276), where v7 wrote past the arrays; and a closing
-brace without an opening one no longer makes the level negative (104).
-End of input now writes what is pending and stops (279--282), where the
+brace without an opening one no longer makes the level negative (105).
+End of input now writes what is pending and stops (280--283), where the
 loops which skip to a semicolon or parenthesis went on reading `EOF`
 for ever. `puts` and `gets`, the program's own, are renamed by the
 preprocessor (2--3), since `<stdio.h>` declares the library's.
 
-#lines(1, 389)
+#lines(1, 390)
 #source("/usr/src/cmd/sp.c")
 
 `sp` saves paper by printing short lines several to a line, each
@@ -13694,10 +13694,10 @@ gathered into a second line printed over the first. The banner's
 letters come from `chrtab`, sixteen bytes of dots per character. v7
 declared it as an array of 16-byte rows whose size was given only by
 the later definition, which C does not allow; it is now a flat array of
-`unsigned char`, indexed by character and row (24, 222, 238). The time
-of the banner is a `long long` (211).
+`unsigned char`, indexed by character and row (24, 223, 239). The time
+of the banner is a `long long` (212).
 
-#lines(1, 335)
+#lines(1, 336)
 #source("/usr/src/cmd/tk.c")
 
 `tk` shows text, such as the output of `nroff`, on a Tektronix 4014
@@ -13708,9 +13708,9 @@ reverse and half-line motions of `nroff` are honoured. When the screen
 is full `tk` waits for a newline from `/dev/tty`; `!` there runs a
 shell command. Apart from prototypes and a signal handler's argument it
 is v7's; the shell it runs on `!` now ends the child if it cannot be
-executed (226), where v7's child went on running `tk`.
+executed (227), where v7's child went on running `tk`.
 
-#lines(1, 255)
+#lines(1, 256)
 #source("/usr/src/cmd/tc.c")
 
 `tc` simulates the C/A/T phototypesetter on the Tektronix 4014: it
@@ -13723,12 +13723,12 @@ renamed by the preprocessor (8), and `oput` loses the trailing `else`
 which made it a statement that swallowed the next `else` (9).
 
 The reply typed at the end of a page now stops at the end of its
-buffer (285), a character with no entry in the tables is now skipped
-(208), and a number read from the input stops growing before it
-overflows (364); v7 overran the buffer, followed a null pointer, and
+buffer (286), a character with no entry in the tables is now skipped
+(209), and a number read from the input stops growing before it
+overflows (365); v7 overran the buffer, followed a null pointer, and
 overflowed.
 
-#lines(1, 646)
+#lines(1, 647)
 #source("/usr/src/cmd/graph.c")
 
 `graph` draws a graph of pairs of numbers read from its input, with
@@ -13740,17 +13740,17 @@ line, `t` for a label, followed by 16-bit coordinates, low byte first.
 In v7 the routines that wrote it, `space`, `move`, `line`, and the
 rest, came from the plotting library, `-lplot`; that library is not
 part of this system, so the few `graph` needs are now defined at its
-end (699--762).
+end (704--767).
 
 Since the format's coordinates are 16-bit, every coordinate now goes
-through `fix` (77--80), which clamps it to that range, where v7's
+through `fix` (80--83), which clamps it to that range, where v7's
 conversion of a large `float` to `int` was undefined. `conv` now
 computes in `double` and tests the range so that a NaN falls outside
-(604--608). The title and labels are now read with their lengths
-limited (132, 633--644), the table of tick marks stops at its 50 entries
-(565, 572), and the first value structure is cleared by `calloc` (87).
+(609--613). The title and labels are now read with their lengths
+limited (135, 638--649), the table of tick marks stops at its 50 entries
+(570, 577), and the first value structure is cleared by `calloc` (90).
 
-#lines(1, 762)
+#lines(1, 767)
 #source("/usr/src/cmd/spline.c")
 
 `spline` reads pairs of numbers and writes, for `graph`, a smooth curve
@@ -13762,11 +13762,11 @@ the first, through `i_`. v7 used `i_` for the differences of `y` but
 `i` for those of `x` in the same quotient (146), so that at the last
 point it divided the wrong difference and read past the data; both now
 use `i_`. The number of points interpolated between two given ones is
-now computed in `double` and kept within range (203--204), and the
+now computed in `double` and kept within range (204--205), and the
 buffer for a number has room for the null after its 30 characters
-(226).
+(227).
 
-#lines(1, 330)
+#lines(1, 331)
 #source("/usr/src/cmd/diff3.c")
 
 `diff3` compares three versions of a file. It does not compare them
@@ -13784,13 +13784,13 @@ array of `diff`s, and adds one more entry after the last, giving the
 positions at the end. The arrays now have room for that entry (28--30):
 v7 refused more than `NC` changes but then wrote the extra entry past
 the end of a full array, and wrote one before the start of an empty
-one, which is now skipped (132--135). A report which cannot be opened
-is now reported (100--103), and an unreadable one makes `diff3` exit
-with 1 rather than 0 (107). `number` now stops growing before it
-overflows (145--149).
+one, which is now skipped (135--138). A report which cannot be opened
+is now reported (103--106), and an unreadable one makes `diff3` exit
+with 1 rather than 0 (110). `number` now stops growing before it
+overflows (148--152).
 
 `getline` reads a line, keeping as much of it as `line` holds. It now
-reads a long line to its end and returns its whole length (172--184),
+reads a long line to its end and returns its whole length (175--187),
 since the caller counts bytes to position itself in the files; v7
 returned a long line in pieces of 255 characters, which threw the
 counts of lines out.
@@ -13800,7 +13800,7 @@ each that concern the same lines of the third file, and calls `change`
 and `edit` to report them; `duplicate` notices when the first two files
 were changed alike.
 
-#lines(1, 444)
+#lines(1, 447)
 
 #source("/usr/src/cmd/diffh.c")
 
@@ -13812,14 +13812,14 @@ both: `easysynch` tries cheaply, `hardsynch` searches the whole window.
 It cannot find the shortest set of changes, and gives up on changes
 longer than the window, but it needs little memory.
 
-The test for an option now checks that there is an argument (80). The
-character given to `isspace` is masked to a byte (204--206), since a
+The test for an option now checks that there is an argument (83). The
+character given to `isspace` is masked to a byte (207--209), since a
 negative `char` is not a valid argument. When a file is given as a
 directory, `dopen` builds the name of the file in it in a buffer which
-now has 512 bytes and is checked first (219--237); v7 built it in 100
+now has 512 bytes and is checked first (222--240); v7 built it in 100
 bytes without looking.
 
-#lines(1, 268)
+#lines(1, 271)
 
 #source("/usr/src/cmd/fgrep.c")
 
@@ -13835,11 +13835,11 @@ prints each line in which some word ends; the options are those of
 `grep`. Its messages now name it rather than `egrep` (82, 91), from
 which it was adapted.
 
-The words are now read as unsigned bytes (231, 266), so that a word
+The words are now read as unsigned bytes (232, 267), so that a word
 with bytes above 127 can match. In `execute`, an empty entry, whose
-character is a null, no longer matches a null in the input (148, 161).
+character is a null, no longer matches a null in the input (149, 162).
 
-#lines(1, 235)
+#lines(1, 236)
 
 `cfail` computes the failure links breadth first, with a circular
 queue. v7's version was wrong in two ways. To find where a state fails
@@ -13849,12 +13849,12 @@ failure links further; and after finding one it left the loop with
 `continue`, so that the other alternatives of the state being processed
 got no links at all. Both made `fgrep` miss matches of words which
 overlap others. The search now follows the failure links until a match
-or the start (333--343), and sets the link on every entry of the new
-state (336--338), all of which share it. The queue now has a slot for
+or the start (334--345), and sets the link on every entry of the new
+state (338--340), all of which share it. The queue now has a slot for
 every state (13), where v7's 400 overflowed for large word lists, and
-its wrapping is simpler (329--331).
+its wrapping is simpler (330--332).
 
-#lines(236, 348)
+#lines(237, 350)
 
 #source("/usr/src/cmd/crypt.c")
 
@@ -13902,10 +13902,10 @@ the comparisons, `+` and `-`, `*`, `/`, and `%`, and `:`, which matches a
 regular expression; `substr`, `length`, `index`, and `match` are
 prefix functions. Every value is a string, and the exit status is 1
 when the result is zero or empty. The actions are now written without
-the `=` before the brace (32--57), an old form of `yacc`'s which
+the `=` before the brace (35--60), an old form of `yacc`'s which
 `bison`, the parser generator the build uses, does not accept.
 
-#lines(1, 60)
+#lines(1, 63)
 
 `yylex` returns each argument as a token: an operator from the table,
 or a string. `index` is renamed by the preprocessor (19), since the
@@ -13914,34 +13914,34 @@ longer has the name of the C++ keyword `operator`.
 
 `rel` compares as numbers when both operands are integers, else as
 strings. Several of v7's errors are corrected here: `<=` returned
-`i>=0`, the result of `>=` (117); a negative right operand was not
-taken as a number (108); and the comparison subtracted the two numbers,
-which can overflow, where it now compares them (109). `arith` likewise
-now accepts negative operands (127), reports division by zero (131--132),
+`i>=0`, the result of `>=` (120); a negative right operand was not
+taken as a number (111); and the comparison subtracted the two numbers,
+which can overflow, where it now compares them (112). `arith` likewise
+now accepts negative operands (130), reports division by zero (134--135),
 and computes in `long long`, reporting a result which does not fit in a
-`long` (124, 141--142); v7 let the machine trap or wrap. `substr` now
-treats a position or length of zero or less as nothing (183, 187), and
-returns a copy of the substring (189--191), where v7 wrote a null into
+`long` (127, 144--145); v7 let the machine trap or wrap. `substr` now
+treats a position or length of zero or less as nothing (186, 190), and
+returns a copy of the substring (192--194), where v7 wrote a null into
 the argument itself.
 
-#lines(61, 229)
+#lines(64, 232)
 
 The regular expressions are those of `ed`, compiled by `compile` and
 matched by `advance`, with `\{m,n\}` for repetition. `ematch` keeps
 the text matched by `\(...\)` in `Mstring`, now allocated to its length
-(253), where v7 copied it into 128 bytes. `RETURN` and `ERROR` (234--235)
+(256), where v7 copied it into 128 bytes. `RETURN` and `ERROR` (237--238)
 now return values, as `compile` requires. `compile` now checks its room
-one byte early (333), since a code may take two; refuses an unclosed
-`\(` (338--339), an unended class (379--380, 386--387), and a `\{`
-after anything but a single character (428--429); and stops reading a
-count once it is too large (440). Characters entered in a class are
-masked to seven bits (282), and subexpression numbers masked to a byte
-before they index (560--628), where the `char` might be negative. A
+one byte early (336), since a code may take two; refuses an unclosed
+`\(` (341--342), an unended class (382--383, 389--390), and a `\{`
+after anything but a single character (431--433); and stops reading a
+count once it is too large (444). Characters entered in a class are
+masked to seven bits (285), and subexpression numbers masked to a byte
+before they index (565--633), where the `char` might be negative. A
 repeated back-reference to an empty subexpression now matches at once
-(628--629) instead of looping for ever, and `getrnge` compares the
-marker for "no upper bound" as unsigned (675).
+(633--634) instead of looping for ever, and `getrnge` compares the
+marker for "no upper bound" as unsigned (680).
 
-#lines(230, 693)
+#lines(233, 698)
 
 #source("/usr/src/cmd/bc.y")
 
@@ -13962,42 +13962,42 @@ The grammar is now free of conflicts. In v7 a statement could be any
 expression, `e`, including an assignment, which the statement rules
 also covered, so the parser generator met two ways to read `a=1`, and
 v7's `yacc` settled them by the order of the rules. Expressions without assignment are now `ex`
-(168), assignments are added to make `e` (260--281), and a statement is
+(171), assignments are added to make `e` (263--284), and a statement is
 `ex`, whose value is printed, or one of the assignment statements,
-whose value is not (61--74). `break` outside a loop is now an error
-(75--77), where v7 indexed `bstack` with $-1$. The actions are written
+whose value is not (62--76). `break` outside a loop is now an error
+(77--80), where v7 indexed `bstack` with $-1$. The actions are written
 without the `=` before the brace, as for `expr`.
 
-#lines(1, 166)
+#lines(1, 169)
 
 Values on the parser's stack are now `char *` (3). A digit is a pointer
-to its character in a string of the sixteen digits (407), where v7 put
+to its character in a string of the sixteen digits (411), where v7 put
 the character itself in an `int` and stored that; `constant` now copies
-the character it points to (299, 301). The remainder operator is `"%"`
-(179): the strings are now printed with `printf("%s", ...)` (508),
+the character it points to (302, 304). The remainder operator is `"%"`
+(182): the strings are now printed with `printf("%s", ...)` (515),
 where v7 used each string as its own format, so that a `%` had to be
 doubled and any `%` in a quoted string misprinted. `CRS` now stops at
-the 14 nested levels which `bstack` and `numb` can hold (308), and
-`crs+=3` replaces `crs=+3` (306), the old spelling of `+=` which would
+the 14 nested levels which `bstack` and `numb` can hold (311), and
+`crs+=3` replaces `crs=+3` (309), the old spelling of `+=` which would
 now mean an assignment of 3.
 
-#lines(167, 340)
+#lines(170, 344)
 
 `yylex` reads characters through `getch`, looking ahead one character
 for the two-character operators and recognising a keyword by its first
 two letters. It now stops before the code buffer `cary` overflows
-(362--364). `getch` reads the files named and then the standard input;
-a file which cannot be opened is now skipped (477), where v7 fell off
+(366--368). `getch` reads the files named and then the standard input;
+a file which cannot be opened is now skipped (481), where v7 fell off
 the end of the function and returned whatever was in the register.
 
-`bundle` now takes its arguments through `<stdarg.h>` (484--499); v7
+`bundle` now takes its arguments through `<stdarg.h>` (488--505); v7
 took the address of its first argument and walked up the stack, which
 worked only with the PDP-11's way of passing arguments. A macro of the
 same name (22) also stores the result in `yyval`, as v7's function
 did. `routput` tells a bundle from a string by whether it points into
 `b_space`.
 
-#lines(341, 616)
+#lines(345, 623)
 
 #source("/usr/src/cmd/dc/dc.h")
 
@@ -14011,7 +14011,7 @@ significant first, each in a byte; a negative number is kept as its
 complement, so that its last digit is $-1$. On the stack a number
 carries one more byte after its digits, its scale, the number of
 decimal digits after the point. Registers are a symbol table of `sym`s
-(89--94), one list for each byte that names a register, so that `S`
+(90--95), one list for each byte that names a register, so that `S`
 and `L` can stack values in a register; a register also holds an
 array, as a block of pointers to blocks.
 
@@ -14023,7 +14023,7 @@ now used everywhere but the PDP-11 (22, 29), since the port's compiler
 makes `char` unsigned. `savk`, which holds a scale, is now an `int`
 (60).
 
-#lines(1, 116)
+#lines(1, 117)
 
 #source("/usr/src/cmd/dc/dc.c")
 
@@ -14037,16 +14037,16 @@ set the scale and the input and output bases; `[...]` pushes a string,
 conditionally; `!` runs a shell command and `q` quits.
 
 Several of the commands are corrected here. The output base, read from
-a number by `o`, now stops growing before it overflows a `long` (246).
+a number by `o`, now stops growing before it overflows a `long` (247).
 `S`, `s`, `:`, and `L` took an entry from the free list of symbols and
 only then checked whether the list was empty, through the null pointer
-it had just followed; the check now comes first (396, 429, 479). A new
-array register now starts as one null pointer (404--405), and clearing
-an array skips the null entries in it (423--424), where v7 released
+it had just followed; the check now comes first (399, 433, 483). A new
+array register now starts as one null pointer (407--408), and clearing
+an array skips the null entries in it (426--428), where v7 released
 them. The test of an index against an array's length is now made in
-signed arithmetic (488, 523); v7 subtracted `PTRSZ`, an unsigned size,
+signed arithmetic (492, 527); v7 subtracted `PTRSZ`, an unsigned size,
 so that the comparison was unsigned and a short array looked long
-enough. An element never stored now loads as the number zero (533--534),
+enough. An element never stored now loads as the number zero (537--538),
 where v7 pushed a block holding a null pointer. And `x` and `?` now
 check the depth of nested strings before they go deeper (541--547,
 555--558); v7 compared after incrementing, and in one path not at all,
@@ -14054,52 +14054,52 @@ so that deep recursion wrote past `readstk`. `x` reuses the slot of a
 string it has finished, so that a string which ends by executing
 another, as a loop does, does not grow the stack.
 
-#lines(1, 585)
+#lines(1, 590)
 
 `div` divides by long division in base 100, estimating each quotient
 digit from the leading digits and correcting it. Division by zero now
-prints its message and gives zero (596--600); v7 returned the integer 1
+prints its message and gives zero (601--605); v7 returned the integer 1
 in place of a pointer to a number. `dscale` and `removr` handle the
 scales, `sqrt` takes a square root by Newton's method, and `exp`
 raises to a power by repeated squaring.
 
-#lines(586, 868)
+#lines(591, 873)
 
 `init` sets up the stack, the free list of symbols, and the constants.
-The free list now ends at the last entry (918), where v7 linked that to
+The free list now ends at the last entry (923), where v7 linked that to
 the entry past the array. `readin` reads a number from the input,
 `add0` appends zeros, `mult` multiplies, and `chsign` complements. In
 `readc`, v7 tested `readptr != &readptr[0]`, which is always true; the
-test is now against `readstk` (1128), so that at the bottom of the
+test is now against `readstk` (1133), so that at the bottom of the
 stack of strings `readc` reads from the input as intended, and the
-function now returns a value at its end (1139).
+function now returns a value at its end (1144).
 
-#lines(869, 1173)
+#lines(874, 1178)
 
 `print` prints a number in the output base: `tenot` for base ten,
 `hexot` and `bigot` for others, breaking lines at `ll` characters.
 
-#lines(1174, 1422)
+#lines(1179, 1427)
 
 `add` adds two numbers digit by digit with carry; `eqk` brings two
 numbers to the same scale. `command` runs a shell command for `!`; the
-line is now kept within its buffer (1574--1579), where v7 copied it
+line is now kept within its buffer (1579--1584), where v7 copied it
 without a limit. `cond` executes a register for the comparisons, and
 `load` loads one. `log2` finds the position of a number's top bit; it
-now shifts up to bit 30 and stops (1675--1678), where v7 shifted until
+now shifts up to bit 30 and stops (1680--1683), where v7 shifted until
 the number went negative, an overflow C does not define.
 
-#lines(1423, 1682)
+#lines(1428, 1687)
 
 The rest manages storage. `salloc` allocates a block and its header;
 `more` doubles a block when it fills; `garbage` reclaims; and `copy`
 makes a copy of a given size. `nalloc` now takes both the number of
-bytes to copy and the size to allocate (1940--1949), and `copy` copies
-only the length of the original (1735--1738): v7 copied the full new
+bytes to copy and the size to allocate (1949--1958), and `copy` copies
+only the length of the original (1740--1743): v7 copied the full new
 size, reading past the end of a smaller block. `getwd`, `putwd`, and
 `lookwd` handle arrays, whose words are pointers.
 
-#lines(1683, 1949)
+#lines(1688, 1958)
 
 #source("/usr/src/cmd/egrep.y")
 
@@ -14115,18 +14115,18 @@ runs each line through the automaton once, never backing up, so the
 time is linear in the input. The options are those of `grep`.
 
 The automaton's table now has 256 columns (21): `execute` indexes it
-with each input byte made positive (538), and v7's 128 columns let a
+with each input byte made positive (541), and v7's 128 columns let a
 byte above 127 read the next state's row. For the same reason `chars`,
 which holds the characters of the classes and their counts, is now an
-array of `int`s (34), and `nextch` returns bytes unsigned (175). The
+array of `int`s (34), and `nextch` returns bytes unsigned (178). The
 grammar's last conflict, which `bison` would report, is resolved by
 declaring a precedence for `error` (14). The checks for a full state table and position array
 were one short, and now leave room for the entry about to be written
-(325, 392). An escaped character now jumps to `defchar` (164) instead
+(328, 395). An escaped character now jumps to `defchar` (167) instead
 of falling into it, and the old initialisations without `=` (27, 36)
 are written in C99's form.
 
-#lines(1, 616)
+#lines(1, 619)
 
 #source("/usr/src/cmd/awk/awk.g.y")
 
@@ -14153,10 +14153,10 @@ where the two have the same size, preserves them.
 The grammar is now free of conflicts. v7's left `yacc` to resolve them
 by its defaults, and `bison` reports each; the precedences added to
 the declarations (30) and the `%prec ASGNOP` on several rules
-(120--255) settle each the way those defaults did, so that programs
+(122--264) settle each the way those defaults did, so that programs
 parse as before.
 
-#lines(1, 285)
+#lines(1, 294)
 
 #source("/usr/src/cmd/awk/awk.lx.l")
 
@@ -14166,20 +14166,20 @@ regular expressions (`reg`), which `startreg` enters when the grammar
 sees a `/` that begins one. A name becomes a variable in the symbol
 table at once, and a number or string a constant, so that the token's
 value is a pointer to its `cell`; as in the grammar, it passes through
-`yylval`, an `int` (75--140).
+`yylval`, an `int` (77--153).
 
 The analyser is now written for `flex`, which takes the place of v7's
 `lex`. `flex` does its own buffering and calls `YY_INPUT` (12--17) for
 more, which is made to call `input` a character at a time, so that
-`input` no longer handles pushed-back characters (157--172); its start
-state is read with `YY_START` (37), where v7 computed it from `lex`'s
+`input` no longer handles pushed-back characters (170--185); its start
+state is read with `YY_START` (39), where v7 computed it from `lex`'s
 internal tables, as its comment admits. The program text given as an
-argument is read as unsigned bytes (164), and so is a one-character
-token (117). The escapes in strings and classes now go through `CADD`
-(142--148), which checks the length of `cbuf`, where v7 stored them
+argument is read as unsigned bytes (177), and so is a one-character
+token (127). The escapes in strings and classes now go through `CADD`
+(155--161), which checks the length of `cbuf`, where v7 stored them
 without a check.
 
-#lines(1, 178)
+#lines(1, 191)
 
 #source("/usr/src/cmd/awk/main.c")
 
@@ -14188,11 +14188,11 @@ separator, and otherwise the first argument is the program; the rest
 are the files to read. It then parses the program and, if there were
 no errors, runs it. `logit` appended each use of `awk` to a file of its
 author's, if the file exists; it now takes the time in a `long long`
-(83), the port's `time_t`, where v7 used an array of two `int`s. The
+(84), the port's `time_t`, where v7 used an array of two `int`s. The
 option `-i` and `msgfiles` let `awk` be driven as a server, reading the
 names of the files for each run from a descriptor.
 
-#lines(1, 147)
+#lines(1, 148)
 
 #source("/usr/src/cmd/awk/b.c")
 
@@ -14205,19 +14205,19 @@ and `cgotofn` builds the states, each the set of positions that may be
 active, with their transitions packed as pairs of a character and a
 state. `match` runs a string through the automaton.
 
-`penter` now stops at `MAXLIN` leaves (65--66), and `cclenter`, which
-expands the ranges of a class, at `MAXLIN` characters (122--135); v7
+`penter` now stops at `MAXLIN` leaves (66--67), and `cclenter`, which
+expands the ranges of a class, at `MAXLIN` characters (123--136); v7
 wrote past both arrays. The ranges are now compared as unsigned bytes
-(120--121). The tables of symbols in `cgotofn` now have a slot for each
+(121--122). The tables of symbols in `cgotofn` now have a slot for each
 of the 256 bytes, and the table of transitions room for a pair for each
-(303, 311--313); bytes are masked before they index them (331--431).
+(307, 315--317); bytes are masked before they index them (335--435).
 v7 sized them for 128 characters and indexed them with `char`s that
 could be negative. The check for a full table of states was one short
-(454). And the states are freed except the first (490--491), whose set
+(458). And the states are freed except the first (494--495), whose set
 is the follow set of the first leaf, which `freetr` frees later; v7
 freed it twice.
 
-#lines(1, 538)
+#lines(1, 542)
 
 #source("/usr/src/cmd/awk/lib.c")
 
@@ -14230,17 +14230,17 @@ the single character `FS`; it is called only when a field is used.
 `recbld` rebuilds `$0` from the fields after one is assigned.
 
 `getrec` now checks the length of the record before each character it
-stores (65--66); v7 checked once the record was complete, after any
+stores (65--68); v7 checked once the record was complete, after any
 overrun. `recbld` now stops at the end of `fldtab` and of `record`
-(173--183), and `fieldadr` refuses a negative field number (190),
+(175--185), and `fieldadr` refuses a negative field number (192),
 where v7 indexed before the array.
 
-`error` takes a variable list of arguments (203--209), passed on to
+`error` takes a variable list of arguments (205--211), passed on to
 the library's `_doprnt`; v7 declared seven arguments, used or not, and
 relied on the PDP-11's passing them all on the stack. `isnumber`
 decides whether a string looks like a number.
 
-#lines(1, 285)
+#lines(1, 287)
 
 #source("/usr/src/cmd/awk/run.c")
 
@@ -14252,56 +14252,56 @@ value, or a jump for `next`, `exit`, `break`, or `continue`. Values
 computed along the way live in temporary cells, which `tempfree`
 releases. `program` runs the `BEGIN` actions, then the patterns for
 each record, then the `END` actions. It no longer frees the last
-temporary a second time after its loop (86--87); v7 freed it again, or,
+temporary a second time after its loop (87--88); v7 freed it again, or,
 with no input, freed a value it had never set.
 
-#lines(1, 96)
+#lines(1, 97)
 
 `array` finds an element, creating it, in the array's own symbol
 table. `matchop` matches a string against a regular expression's
 automaton; it now matches before it frees the temporary which holds the
-string (137), where v7 matched a string it had already freed. `substr`
+string (138), where v7 matched a string it had already freed. `substr`
 and `sindex` free their temporaries only once their strings are done
-with (281--286, 309--310). `substr` now returns a copy of any length
-(282--285), where v7 built the result in 100 bytes. `indirect`, which
+with (282--287, 311--312). `substr` now returns a copy of any length
+(283--286), where v7 built the result in 100 bytes. `indirect`, which
 gives the field `$n`, and `substr` convert their numbers through `ftol`
-(244, 263, 271), which saturates instead of overflowing.
+(245, 264, 272), which saturates instead of overflowing.
 
-#lines(97, 311)
+#lines(98, 313)
 
 `format` carries out a `printf` format with the program's values. It
-now grows its buffer as it writes (314--325, 338, 381, 394), where v7
+now grows its buffer as it writes (316--327, 340, 388, 401), where v7
 wrote into a fixed `RECSIZE` bytes. It refuses a format item too long
-for `fmt` before copying past it (348--351), refuses a `*` width and a
-width over 100000 (355--358), whose effect on the length could not be
-bounded, and passes `%c` an integer (370), as C requires.
+for `fmt` before copying past it (350--355), refuses a `*` width and a
+width over 100000 (359--365), whose effect on the length could not be
+bounded, and passes `%c` an integer (377), as C requires.
 
-#lines(312, 423)
+#lines(314, 430)
 
 `arith`, `incrdecr`, and `assign` do the arithmetic. The remainder is
-now `i - j*ipart(i/j)` (459, 522), where v7 converted the quotient to
+now `i - j*ipart(i/j)` (466, 529), where v7 converted the quotient to
 `long`, which overflows for large ones. `cat` concatenates, `pastat`
 runs a pattern and its action, and `dopa2` handles the range patterns
 `p1, p2`, keeping in `pairstack` which ranges are open. `aprintf` now
-prints a string as an argument of `%s` (599), where v7 used it as the
+prints a string as an argument of `%s` (606), where v7 used it as the
 format itself.
 
-#lines(424, 606)
+#lines(431, 613)
 
 `split` splits a string into an array. It now works on a copy of the
-string and builds each piece in a copy of it (618--619, 656--657), where
+string and builds each piece in a copy of it (625--626, 664--665), where
 v7 built the pieces in 100 bytes and could be splitting the very value
-it was replacing; the element's name has room for any `int` (612).
+it was replacing; the element's name has room for any `int` (619).
 `ifstat`, `whilestat`, `forstat`, and `instat` are the control
 statements; `instat`, the `for (i in a)` loop, now returns a value
-(752), as `nullproc` does (835), where v7 fell off the end of the
+(760), as `nullproc` does (845), where v7 fell off the end of the
 function. `fncn` gives the built-in functions; `int` now uses `ipart`
-(795). `print` checks the length of the line before it adds each field
-and separator (818--819), where v7 checked once the line was built,
+(803). `print` checks the length of the line before it adds each field
+and separator (826--829), where v7 checked once the line was built,
 after any overrun. `redirprint` writes to a file or a pipe, keeping
-them open in `files`; it now skips slots that hold no file (857).
+them open in `files`; it now skips slots that hold no file (867).
 
-#lines(607, 876)
+#lines(614, 887)
 
 #source("/usr/src/cmd/awk/tran.c")
 
@@ -14332,17 +14332,17 @@ goes through `ftol` (187, 236--245), which converts saturating, and
 `awk.def` declares what the parts share: the built-in variables, which
 are pointers into their cells; the `cell` (26--32), holding a name, a
 string, a number, and the type bits of 41--45; the `obj` that every
-operator returns (60--64); and the `node` of the tree (67--74), whose
+operator returns (62--66); and the `node` of the tree (69--76), whose
 operands follow it in an array allocated to the right length. The macros
 of 112--124 classify nodes and results.
 
 All the functions of the parts are now declared here with their
-prototypes (47--51, 125--146), where v7 declared the few that did not
+prototypes (49--53, 127--160), where v7 declared the few that did not
 return `int`; and `PA2NUM`, the number of range patterns, moves here
-from #f("awk/run.c") (109), since #f("awk/parse.c") now checks it.
+from #f("awk/run.c") (111), since #f("awk/parse.c") now checks it.
 `yfree` takes any pointer (2).
 
-#lines(1, 150)
+#lines(1, 164)
 
 #source("/usr/src/cmd/awk/token.c")
 
@@ -14353,7 +14353,7 @@ from 258, where v7's `yacc` started at 257, so every entry moves up by
 one (10--84), and `ptoken` and `tokname` index from `FIRSTTOKEN` (90,
 99), not from a number written in.
 
-#lines(1, 100)
+#lines(1, 101)
 
 #source("/usr/src/cmd/awk/parse.c")
 
@@ -14379,7 +14379,7 @@ declarations of them; it writes its initialisers with `=` (69, 74),
 and an empty string where a token has no printed name (78), where v7
 printed a null pointer.
 
-#lines(1, 80)
+#lines(1, 81)
 
 = Part Five: Administration
 
@@ -14434,10 +14434,10 @@ bits (`u`, `g`, `o`), with several clauses separated by commas. Without
 a who, the clause applies to all classes except the bits masked by the
 user's `umask`. `newmode` parses the mode afresh for each file, since a
 symbolic mode is relative to the file's own. The octal number is now
-gathered in an `unsigned` (93), so that a long string of digits wraps
+gathered in an `unsigned` (94), so that a long string of digits wraps
 instead of overflowing.
 
-#lines(1, 182)
+#lines(1, 183)
 
 #source("/usr/src/cmd/who.c")
 
@@ -14446,11 +14446,11 @@ instead of overflowing.
 terminal, and the time of login. With two arguments, as in `who am i`,
 it prints the entry of the terminal on its standard input. The name
 and terminal fields of a `utmp` are eight bytes with no null when full,
-so the terminal is now compared with `strncmp` (40) and the name from
+so the terminal is now compared with `strncmp` (41) and the name from
 the password file copied with `strncpy` (27), where v7 used `strcmp`
 and `strcpy`, which ran past the fields.
 
-#lines(1, 62)
+#lines(1, 64)
 
 #source("/usr/src/cmd/write.c")
 
@@ -14461,11 +14461,11 @@ writes `EOF` and stops. The target's terminal must be writable by
 others, which `mesg` controls. Opening it is given five seconds
 (`timout`), since the open of a terminal can wait for a carrier. The
 `utmp` fields of eight bytes are now compared and copied with their
-lengths bounded (50, 53, 76), and the user's name printed as an argument
-of `%s` (91), where v7 used it as a format. The buffer of a line now has
-room for the null which `ex` needs after 128 characters (119).
+lengths bounded (50, 53, 77), and the user's name printed as an argument
+of `%s` (93), where v7 used it as a format. The buffer of a line now has
+room for the null which `ex` needs after 128 characters (121).
 
-#lines(1, 184)
+#lines(1, 186)
 
 #source("/usr/src/cmd/mesg.c")
 
@@ -14489,17 +14489,17 @@ current directory and the current environment, so that they run as
 they would have run now. Times are kept in "grains" of hours times 100
 plus minutes.
 
-The year in the file's name is now taken modulo 100 (85): `tm_year`
+The year in the file's name is now taken modulo 100 (86): `tm_year`
 counts from 1900, and from 2000 on it has three digits, which would
 break the fixed format of the name that `atrun` reads. `makeutime` now
-stops reading digits once the time is past a day (128), so that a long
+stops reading digits once the time is past a day (129), so that a long
 string cannot overflow it. `filename`, which adds a number to the name
 to make it unique, now gives up after the hundred numbers there are
-(294--301); v7 searched for ever once all were taken. The time is taken
-into a `long long` (210), and the variable `utime` is renamed by the
+(295--302); v7 searched for ever once all were taken. The time is taken
+into a `long long` (211), and the variable `utime` is renamed by the
 preprocessor (11), since the library has a function of that name.
 
-#lines(1, 310)
+#lines(1, 311)
 
 #source("/usr/src/cmd/atrun.c")
 
@@ -14511,7 +14511,7 @@ afterwards. `atrun` is set-user-id root, so that it can take on any
 user's ids.
 
 The year is now taken modulo 100 (64), as `at` writes it. The job's
-group now comes from its owner's entry in the password file (96--98),
+group now comes from its owner's entry in the password file (96--99),
 where v7 used the group of the spool file. The spool directory is
 writable by everyone, so its files' groups can be chosen by whoever
 makes them; a user in a privileged group, such as `sys`, which may read
@@ -14519,7 +14519,7 @@ the memory and disk special files (#f("rootfs.proto")), could give a
 job that group and have it run with it later, as anyone could who
 could write such a file there.
 
-#lines(1, 112)
+#lines(1, 113)
 
 #source("/usr/src/cmd/newgrp.c")
 
@@ -14556,9 +14556,9 @@ in `/etc/utmp`, forking a child for each terminal so that one which
 blocks does not hold up the rest. It is meant for the super-user, whose
 writes are not stopped by a terminal's mode. The message is now read
 only up to the size of `mesg` (30), and the terminal's name appended
-with its length bounded (57), where v7 overran both.
+with its length bounded (58), where v7 overran both.
 
-#lines(1, 67)
+#lines(1, 68)
 
 #source("/usr/src/cmd/kill.c")
 
@@ -14604,12 +14604,12 @@ escape sequences of the terminal named: the DASI 300 and 450, the
 Teletype 37, the GE TermiNet, and the Hewlett-Packard 2645, terminals
 of v7's time. Padding characters give a slow terminal time to clear its
 old stops. With no name it guesses the terminal from the modes and
-speed the driver has for it (86--97). For two of them it first turns
+speed the driver has for it (87--98). For two of them it first turns
 off the driver's delays. The terminal modes it reads are now cleared
-first (62, 165, 188), so that when the input is not a terminal and
+first (63, 166, 189), so that when the input is not a terminal and
 `gtty` fails, the guess and `stty` do not use whatever the stack held.
 
-#lines(1, 209)
+#lines(1, 210)
 #source("/usr/src/cmd/tty.c")
 
 `tty` prints the name of the terminal on its standard input, found by
@@ -14633,11 +14633,11 @@ name has no null when it is 14 characters long, so it is now copied to
 `dname`, which has room for one, before `stat` or `cat` uses it (12,
 52, 75); v7 used the entry itself and ran on into whatever followed.
 The test of each `read` now compares with the size of an entry
-converted to `int` (41, 48): v7 compared the `int` result with the
+converted to `int` (41, 49): v7 compared the `int` result with the
 `unsigned` size, so that a failure, $-1$, became a large unsigned
 number and passed the test.
 
-#lines(1, 86)
+#lines(1, 89)
 
 == Accounting and Status <ch-acct>
 
@@ -14654,11 +14654,11 @@ times of a change of the date, by which the open sessions are shifted.
 digits of its name, and `ubuf` the total for each user. At the end a
 pseudo-record logs everyone out at the present time.
 
-The times are now `time_t` (23, 28--30, 179, 233, 250), the port's 64
+The times are now `time_t` (23, 28--30, 180, 234, 251), the port's 64
 bits. When `ubuf` is full, `update` now charges further users to its
-last entry (197), where v7's search ran past the end of the array.
+last entry (198), where v7's search ran past the end of the array.
 
-#lines(1, 256)
+#lines(1, 257)
 
 #source("/usr/src/cmd/sa.c")
 
@@ -14677,19 +14677,19 @@ exponent.
 `enter` hashes the command name, all `NC` bytes of it. The names it is
 given for the merged entries are now arrays of that size (46, 168,
 464); v7 passed string constants of nine bytes, from which the hash
-read one byte more. The hash is now computed unsigned (439--440) where
+read one byte more. The hash is now computed unsigned (442--443) where
 v7 negated a sum that might have overflowed, and a full table now stops
-`sa` with a message (442--446) instead of a search for ever. Merging
-into `***other` now skips that entry itself (169--170), which v7 could
+`sa` with a message (445--449) instead of a search for ever. Merging
+into `***other` now skips that entry itself (171--172), which v7 could
 add to itself and then empty.
 
-`printmoney` now finds a user's name with `getpwuid` (228); v7 used
+`printmoney` now finds a user's name with `getpwuid` (231); v7 used
 `getpw`, which copies the whole line of the password file, up to
 `BUFSIZ` bytes, into the caller's buffer, here of 128. The comparison
 functions for `qsort` take `char *` arguments, as its declaration
-requires (336--371). Times are `time_t` (279).
+requires (339--374). Times are `time_t` (282).
 
-#lines(1, 493)
+#lines(1, 496)
 
 #source("/usr/src/cmd/pstat.c")
 
@@ -14704,23 +14704,23 @@ The tables are now read from `/dev/kmem` (17), by kernel address. On
 the PDP-11 the kernel's data lay at the same addresses in physical
 memory, so v7 read `/dev/mem`; here the kernel runs at its own virtual
 addresses. A `user` structure, found by its physical page, is still
-read from `/dev/mem` (18, 314--315), now converting the page number
+read from `/dev/mem` (18, 315--316), now converting the page number
 with `ptob` where v7 shifted it by the PDP-11's 64-byte click. When the
 memory is taken from a file named as an argument, `pstat` now first
-gives up the group `sys` (96--99), so that it cannot be used to read
+gives up the group `sys` (97--100), so that it cannot be used to read
 any file the group may read.
 
 The kernel's structures are taken from the kernel's own headers
 (9--15), since several, such as `user.h`, differ from what the library's
 copies give to ordinary programs. `nlist` marks a symbol it did not
-find with a type of 0 (107, 265), as the port's `nlist` for ELF files
+find with a type of 0 (108, 266), as the port's `nlist` for ELF files
 does, where v7's used $-1$. The number of terminal lines read from the
-kernel is kept within the array (269--270). In `dousr`, the PDP-11's
+kernel is kept within the array (270--271). In `dousr`, the PDP-11's
 segmentation registers give way to the sizes of the process's
-segments (327--329), and the times, now `long long`, are printed as
-such (346--347).
+segments (329--331), and the times, now `long long`, are printed as
+such (348--349).
 
-#lines(1, 398)
+#lines(1, 400)
 
 #source("/usr/src/cmd/iostat.c")
 
@@ -14742,13 +14742,13 @@ block from there, relying on the PDP-11 kernel's placing them together
 in that order, and then took the differences of 40 `long`s starting at
 `etime`, running on through the structure into the counters after it.
 Each counter is now looked up by its own name (16--23) and read from its
-own address (97--108), and the differences are taken counter by
-counter (109--129); the loader of the port's kernel promises no order.
-The sums are now kept in `double` (186, 214), the times of each reading
-in `long long` (138), and the table of buffers has `NBUF` entries
-(41, 298), where v7 wrote 50 and printed 30.
+own address (98--109), and the differences are taken counter by
+counter (110--130); the loader of the port's kernel promises no order.
+The sums are now kept in `double` (187, 215), the times of each reading
+in `long long` (139), and the table of buffers has `NBUF` entries
+(41, 299), where v7 wrote 50 and printed 30.
 
-#lines(1, 307)
+#lines(1, 308)
 
 #source("/usr/src/cmd/accton.c")
 
@@ -14787,35 +14787,35 @@ programs are ELF files, and `prof` now finds the table as `nlist`
 does (#f("gen/nlist.c")): the ELF header is read into `eh` (107), and
 the section headers are searched from the last for the symbol table,
 type 2, whose offset and size go to `sa` and `n`, and whose string
-table's offset to `st` (111--124). A short or damaged file ends the
+table's offset to `st` (112--125). A short or damaged file ends the
 search rather than leaving `sh` unread.
 
-Each 16-byte symbol is then read into `sym` (143--161). Its last word
+Each 16-byte symbol is then read into `sym` (145--168). Its last word
 holds the type, the binding, and the section. A symbol is taken if it
 names a function or nothing in particular, which is what an assembler
-label is (147), is global unless `-a` asks for local ones too (149),
-and lies in a section of instructions, flag 4 (151--153). The ARM's
+label is (151), is global unless `-a` asks for local ones too (154),
+and lies in a section of instructions, flag 4 (156--159). The ARM's
 mapping symbols, `$a` for instructions and `$d` for data, are skipped
-(156). v7 took only the eight characters an `a.out` name held; names
-of up to fifteen are now kept (13, 155), and the table is printed in a
-column that wide (275, 281). C names in ELF have no leading underscore.
+(163). v7 took only the eight characters an `a.out` name held; names
+of up to fifteen are now kept (13, 161), and the table is printed in a
+column that wide (283, 289). C names in ELF have no leading underscore.
 
 v7 credited a call count to a function whose address lay within ten
 units below the counted address, the distance from the entry of a
 PDP-11 function to its call of `mcount`. The count now goes to the
 function containing the address, the last whose entry is not above it,
-found after the table is sorted by address (168--176); empty slots of
+found after the table is sorted by address (175--184); empty slots of
 the count table are passed over.
 
 The program is otherwise v7's, made safe on any input: the header of
-`mon.out` is checked as it is read (130--134), and the addresses, which
+`mon.out` is checked as it is read (131--136), and the addresses, which
 v7 converted by subtracting null pointers, are divided by the size of a
-counting unit (135--136). The variable `ftime` is renamed `ftim` (41),
+counting unit (137--138). The variable `ftime` is renamed `ftim` (41),
 since the library's `ftime` is declared in the headers; the plotting
 code, which used a library this system lacks, is left out by
 `#ifdef plot`.
 
-#lines(1, 339)
+#lines(1, 348)
 #source("/usr/src/cmd/icheck.c")
 
 `icheck` checks the consistency of the blocks of a file system. It
@@ -14829,19 +14829,19 @@ and builds a new one from the blocks not claimed, which is the usual
 repair for a damaged free list.
 
 The free list is now followed for at most as many blocks as the file
-system has (177), so that a list which loops back on itself ends; v7
+system has (178), so that a list which loops back on itself ends; v7
 followed it for ever. The total of used blocks now adds the
-triple-indirect count (196), where v7 added the double-indirect count
+triple-indirect count (197), where v7 added the double-indirect count
 twice and left the triple out. `-b` no longer reads past the last
-argument (73), and `blist` has room for the $-1$ that ends it after a
+argument (74), and `blist` has room for the $-1$ that ends it after a
 full list (18). The offset of a block is now computed unsigned
-(395, 411), so that it does not overflow for blocks beyond 2 GB, and
-a failed read clears the bytes asked for (402), where v7 cleared one
+(396, 412), so that it does not overflow for blocks beyond 2 GB, and
+a failed read clears the bytes asked for (403), where v7 cleared one
 block, too few for a read of the inodes and too many for the
 superblock. A free-list block is read through a union that names the
-structure, `fb` (336--339), since C99 has no unnamed members.
+structure, `fb` (337--340), since C99 has no unnamed members.
 
-#lines(1, 473)
+#lines(1, 474)
 
 #source("/usr/src/cmd/dcheck.c")
 
@@ -14854,13 +14854,13 @@ every entry naming one of the listed inodes is reported. The counts are
 kept in bytes, held at 255 once they reach it.
 
 `bmap` now refuses the first block index beyond the single indirect
-block (209), where v7's test let one through, reading an entry past the
+block (210), where v7's test let one through, reading an entry past the
 end of `ibuf`. The other changes are those of `icheck`: `-i` stops at the
-last argument and `ilist` has room for its terminator (20, 45), a
-block's offset is computed unsigned (192), and a failed read clears the
-bytes asked for (195).
+last argument and `ilist` has room for its terminator (20, 46), a
+block's offset is computed unsigned (193), and a failed read clears the
+bytes asked for (196).
 
-#lines(1, 215)
+#lines(1, 216)
 
 #source("/usr/src/cmd/ncheck.c")
 
@@ -14873,12 +14873,12 @@ of the inodes asked for, or any with `-a` and `-i`, its path, which
 lists only special files and set-id files, which is a check of
 security: they are collected into `ilist` in the first pass.
 
-`-s` now stops collecting one short of the end of `ilist` (144), which
+`-s` now stops collecting one short of the end of `ilist` (145), which
 needs a zero after the last inode, and `-i` stops at the last argument
-(60); v7 could fill the list with no terminator. The changes to `bmap`
-and `bread` are those of `dcheck` (301--317).
+(61); v7 could fill the list with no terminator. The changes to `bmap`
+and `bread` are those of `dcheck` (302--318).
 
-#lines(1, 323)
+#lines(1, 324)
 
 #source("/usr/src/cmd/df.c")
 
@@ -14900,13 +14900,13 @@ walks the tree as `find` does, changing into each directory. A file
 with several links is counted once: `ml` remembers up to `ML` such
 files by device and i-number.
 
-The search of `ml` now stops at the entries in use (84), where v7 also
+The search of `ml` now stops at the entries in use (85), where v7 also
 looked at the next, unset one. The path now has 4096 bytes (9), and both
 a name given and one built in the walk are checked against it (39--42,
 109--112), where v7 had 256 bytes and no checks. An empty name no
-longer makes `du` look at the byte before it (103).
+longer makes `du` look at the byte before it (104).
 
-#lines(1, 172)
+#lines(1, 173)
 
 #source("/usr/src/cmd/mount.c")
 
@@ -14934,32 +14934,32 @@ map of which of its blocks follow, then the blocks; the format is that
 of `<dumprestor.h>`, and `restor` and `dumpdir` read it.
 
 The options' arguments are now checked: a density of zero is refused
-(99--102), which v7 divided by later, and a tape size is held within
-what a `long` can hold once multiplied (111--112). The defaults still
+(100--103), which v7 divided by later, and a tape size is held within
+what a `long` can hold once multiplied (112--113). The defaults still
 name v7's disk and tape.
 
-#lines(1, 184)
+#lines(1, 185)
 
 `pass` applies a function to every inode selected by a map; `icat` and
 `indir` walk a file's blocks, through the indirect blocks, calling one
 function per block and another per array of addresses. `bitmap` writes
 a map to tape, and `spclrec` writes a header record, with a checksum
 that makes the record's words sum to `CHECKSUM`; the sum is now
-unsigned (367), so that it wraps instead of overflowing. The
+unsigned (368), so that it wraps instead of overflowing. The
 headers hold times as the port's 64-bit `time_t`, so its tapes are not
 v7's.
 
-#lines(185, 533)
+#lines(186, 534)
 
 `getitime` and `putitime` read and update `/etc/ddate`, which holds an
 `idates` for each file system and level. The names are now compared
 and copied at most `DIRSIZ` characters, and the copy ended with a null
-(562, 605, 616--621), where v7 went on until it met a null. `putitime`
+(563, 606, 617--622), where v7 went on until it met a null. `putitime`
 now rewrites the entry for the same file system and level in place
-(613); v7 counted that entry too, and so wrote the new one after it,
+(614); v7 counted that entry too, and so wrote the new one after it,
 over the next entry or at the end of the file.
 
-#lines(534, 657)
+#lines(535, 658)
 
 #source("/usr/src/cmd/restor.c")
 
@@ -14973,51 +14973,51 @@ disk, so that a file gets the same i-number it had, and directories
 need not be rebuilt.
 
 `main` now refuses `f` without a tape name and `r` without a file
-system (115--116, 130--131), where v7 read past the arguments. The
-temporary file for `x` is removed at once once opened (145), so that
+system (125--126, 140--141), where v7 read past the arguments. The
+temporary file for `x` is removed at once once opened (155), so that
 it does not survive an interruption; v7 removed it at the end.
 
-#lines(1, 153)
+#lines(1, 163)
 
 `doit` carries out the command. The answers read from the terminal are
-now read with `fgets`, limited to the buffer (212, 305), and the end of
-input stops `restor` where v7 waited for ever for a newline (321--323);
-so it does when `readtape` asks for the next volume (527--529).
+now read with `fgets`, limited to the buffer (222, 315), and the end of
+input stops `restor` where v7 waited for ever for a newline (331--333);
+so it does when `readtape` asks for the next volume (538--540).
 
-#lines(154, 406)
+#lines(164, 416)
 
 For `x`, `pass1` reads the directories from the tape into a temporary
 file, recording where each begins in `inotab`, now refusing more than
-`MAXINO` of them (441--444), where v7 wrote past the table. `getfile`
+`MAXINO` of them (451--454), where v7 wrote past the table. `getfile`
 reads a file's blocks from the tape, calling one function for each
 block present and another for each hole; the count of blocks taken from
-a header is now kept within the header's map (478). `psearch` follows
+a header is now kept within the header's map (489). `psearch` follows
 a path through the directories by `search`; it now starts each
-component at the component itself (686), where v7 started one byte in,
+component at the component itself (697), where v7 started one byte in,
 so that an empty component, from a path ending in a slash, began past
 the end of the name.
 
-#lines(407, 718)
+#lines(417, 729)
 
 For `r`, the file system is written through a small cache of blocks.
-`clri` clears an inode by assigning an empty one (791--793), where v7
+`clri` clears an inode by assigning an empty one (802--804), where v7
 cleared it as an array of `int`s; `itrunc` and `tloop` free a file's
 blocks, and `bfree` and `alloc` keep the free list as the kernel does
 (#f("alloc.c")). `alloc` now checks that the count of free blocks is in
-range before it indexes with it (891--892), and `bfree` that it is not
-negative (867). The offsets of blocks are computed unsigned (737,
+range before it indexes with it (902--903), and `bfree` that it is not
+negative (878). The offsets of blocks are computed unsigned (737,
 769). A free-list block is read through a union which names its
 structure, `frees`, since C99 has no unnamed members.
 
-#lines(719, 975)
+#lines(730, 986)
 
 `gethead`, `ishead`, `checktype`, `checksum`, `checkvol`, and `readhdr`
 read and check the header records; `xtrfile`, `skip`, `rstrfile`,
 `rstrskip`, and `putdir` are the functions which `getfile` calls.
 `readbits` reads a map from the tape; a count of blocks larger than the
-map is now reduced to its size (1135--1136), where v7 read past it.
+map is now reduced to its size (1146--1147), where v7 read past it.
 
-#lines(976, 1154)
+#lines(987, 1165)
 
 #source("/usr/src/cmd/clri.c")
 
@@ -15036,11 +15036,11 @@ v7's.
 
 `umount` unmounts a file system and removes it from `/etc/mtab`. When
 the table is left empty, the search for its last entry now stops at the
-start (47), where v7 went on before the array. The entry is cleared
+start (48), where v7 went on before the array. The entry is cleared
 through a pointer to the whole structure (44), where v7 indexed `file`
 past its end into `spec`, which C does not allow.
 
-#lines(1, 55)
+#lines(1, 57)
 
 #source("/usr/src/cmd/sync.c")
 
@@ -15069,30 +15069,30 @@ input and output block sizes, records to skip on input and to seek
 past on output, a count of records, and conversions between ASCII and
 the EBCDIC of IBM's machines, of case, and of byte order, with `noerror`
 and `sync` for reading damaged tapes. The tables `etoa`, `atoe`, and
-`atoibm` (38--142) give the character codes, now `unsigned char`, since
+`atoibm` (39--143) give the character codes, now `unsigned char`, since
 they hold values above 127. It reads records into `ibuf` and moves the
 bytes one at a time through the conversion function into `obuf`; with
 `bs` and no conversion it writes each record as read.
 
 `BIG`, the largest argument, is now that of a 32-bit `int` (4), where
 v7's was that of a 16-bit one. Errors in the arguments and in opening
-the files now make `dd` exit with 1 (236--273), where v7 exited with 0;
-`term` passes on a status (537--543), 1 after an error of reading or
+the files now make `dd` exit with 1 (237--274), where v7 exited with 0;
+`term` passes on a status (539--545), 1 after an error of reading or
 writing and the signal's number after an interrupt. `skip` now stops at
-the end of the input (283--284), where v7 went on reading nothing for
+the end of the input (284--285), where v7 went on reading nothing for
 the rest of the count. Note that `skip` reads its way past the records,
 so that skipping far into a large input takes as long as copying it.
 
-#lines(1, 362)
+#lines(1, 363)
 
 `number` reads a size, with `k`, `b`, and `w` for units of 1024, 512,
 and 2 bytes, and `x` for a product. It now works in `long long` and
-stops at the limit (386--393), so that an overflow is reported instead
-of wrapping. A "word" is now two bytes (400), the 16-bit word of the
+stops at the limit (387--394), so that an overflow is reported instead
+of wrapping. A "word" is now two bytes (401), the 16-bit word of the
 tapes `dd` was made for; v7 multiplied by `sizeof(int)`, which on the
 PDP-11 was the same but on the port would be four.
 
-#lines(363, 553)
+#lines(364, 555)
 
 #source("/usr/src/cmd/dumpdir.c")
 
@@ -15102,18 +15102,18 @@ temporary file, and then walking them from the root, printing every
 file the dump holds. Much of it is `restor`'s code.
 
 The temporary file is now opened twice, once for writing and once for
-reading, and removed at once (69--74), so that it does not outlive the
+reading, and removed at once (71--76), so that it does not outlive the
 program. `printem` walks a directory and calls itself for each
 subdirectory; it now remembers its place in the one reading stream and
-seeks back to it after the call (161--173), where v7 opened the file
+seeks back to it after the call (163--176), where v7 opened the file
 afresh for every level and so ran out of streams in a deep tree. A path
 too long for `prebuf` is now reported instead of overrunning it
-(164--167). As in `restor`, the table of directories, the count of
+(166--170). As in `restor`, the table of directories, the count of
 blocks in a header, and the size of a map are now checked (130--133,
 205, 482--483), and the end of input stops the wait for a new volume
-(250--252).
+(253--255).
 
-#lines(1, 492)
+#lines(1, 495)
 
 #source("/usr/src/cmd/quot.c")
 
@@ -15131,12 +15131,12 @@ went to the wrong users and on top of the first's totals. An inode with
 a negative size is now ignored (137), the number of blocks is computed
 without first adding to the size (142, 152), which could overflow, and
 a user id is checked as unsigned (57, 150). With `-n`, the copying of
-the rest of a line now stops at the end of the input (173--178), where
+the rest of a line now stops at the end of the input (174--179), where
 v7 printed the value of `EOF` as a character. `qcmp` compares users
-with no name as having an empty one (202), where v7 passed a null
+with no name as having an empty one (203), where v7 passed a null
 pointer to `strcmp`.
 
-#lines(1, 248)
+#lines(1, 249)
 
 == Building the System <ch-build>
 
@@ -15211,7 +15211,7 @@ fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
 `-Wl,-z,max-page-size=4096,-Ttext=0x94` are options for the linker,
 which the compiler ignores when it only compiles; they apply to the
-link of every user program (20), never to the kernel, which is linked by
+link of every user program (22), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
 segments: the text, with the read-only constants, readable and
 executable, and the data, readable and writable. This is the ELF
@@ -15235,12 +15235,12 @@ below the text, the text would still have to start at the same offset
 in its page of the file as in memory, and the file would carry a page
 of padding before it. `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
-(95).
+(110).
 
 `HOSTCFLAGS` are the warnings alone: the host programs are compiled
 as any other program of the build machine.
 
-#lines(7, 14)
+#lines(7, 16)
 
 `T` and `Q` shorten the output. `T` prints the name of a tool and the
 target in place of the whole command, and `Q` silences commands which
@@ -15259,10 +15259,10 @@ the library's variant for hard floating point from the same flags. That
 variant is compiled to Thumb code, so a user program does sometimes run
 in Thumb state (see `sendsig`, #f("machdep.c")).
 
-#lines(15, 20)
+#lines(17, 22)
 
 `all` is the default goal: the QEMU machine's kernel and the root file system
-images of both machines, and, after the fragments are read (32), the
+images of both machines, and, after the fragments are read (34), the
 kernels of both machines, whose names `KERNELS` only #f("sys.mk")
 supplies.
 
@@ -15270,17 +15270,17 @@ supplies.
 `unix.ld` of each machine and the output of `bison`. `.SECONDARY` keeps
 `make` from deleting them as intermediate files once the objects are
 made. Every object and generated file depends on the `Makefile`
-itself (37), and every object on its own fragment as well, so that a
+itself (40), and every object on its own fragment as well, so that a
 change of flags or of a rule remakes everything it could affect.
 
-The fragments (24--30) build the parts of the system: the kernels
+The fragments (26--32) build the parts of the system: the kernels
 (#f("sys.mk")), the two libraries, the commands, the games, and the
 regression tests, whose fragment `test.mk` compiles the test programs
 and makes the small file system on which the tests run the file system
 checkers; the tests themselves run on the target, from
 `/usr/local/test`.
 
-#lines(21, 37)
+#lines(23, 40)
 
 `bison` replaces v7's `yacc`. It is run as itself, not in its POSIX
 mode, since the grammars use both v7's `%term` and some of `bison`'s
@@ -15293,7 +15293,7 @@ device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
 on the standard input and output. `-m 512M` gives the machine the 512 MB of
 memory which #f("qemuconf") describes; QEMU's default is 128 MB.
 
-#lines(38, 48)
+#lines(41, 53)
 
 The disk which `make qemu` gives the machine is not the root image
 itself but a copy of it, `boot/qemu.img`, so the image stays as `mkfs`
@@ -15305,7 +15305,7 @@ host for the blocks never written. The copy is made again only when the
 image or the configuration changes, so what one session writes on its
 disk is there for the next.
 
-#lines(49, 53)
+#lines(54, 59)
 
 The tree is built in place, and the programs are made where they will
 lie in the target's file system: `bin/cat`, `etc/init`,
@@ -15316,7 +15316,7 @@ the shell scripts `1`, `true`, `false`, and `nohup`, the files of
 #f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
 the dictionary, the fortunes, `bc`'s library, and `cron`'s table. All
 but the files of `etc` and the table `usr/lib/crontab` are copied from
-the v7 tree (84). The image also holds the regression tests, in
+the v7 tree (96). The image also holds the regression tests, in
 `/usr/local/test`: the test scripts and the data files from the
 repository, and the programs and the file system image which
 `test.mk` makes.
@@ -15342,7 +15342,7 @@ go on using the empty list it had not read; and the kernel takes its
 first idea of the date from the super-block of the root file system
 (`iinit`, #f("main.c")).
 
-#lines(54, 68)
+#lines(60, 79)
 
 `mkfs` must include the port's `<sys/param.h>`, `<sys/filsys.h>`, and
 the rest, but the host's `<stdio.h>`, `<stdlib.h>`, and `<fcntl.h>`.
@@ -15368,7 +15368,7 @@ records, its headers and the `Makefile` are named as prerequisites
 explicitly: a `mkfs` built from stale headers would write a file system
 which the kernel misreads.
 
-#lines(69, 79)
+#lines(80, 91)
 
 The directories of the image which hold built programs or copied files,
 and the copying of the files from the v7 tree. `etc` is left out: its
@@ -15376,19 +15376,19 @@ files are kept in the repository, where the image expects them. So is
 `usr/lib/crontab`, v7's table without its last line (#f("cmd/cron.c")). `cp -f`
 replaces a previous copy, which is read-only like its original.
 
-#lines(80, 85)
+#lines(92, 98)
 
 `clean` removes everything the build has made except the copied files
 and their directories. `.DELETE_ON_ERROR` removes a target whose
 command fails, so that a half-written image or object is never taken
 for a finished one; `mkfs` can therefore write the image in place.
 
-The dependency files are read only for sources which still exist (95).
+The dependency files are read only for sources which still exist (110).
 When a file in C is replaced by one in assembler, its old `.d` file
 still names the `.c` file as a prerequisite of the object, and `make`
 would otherwise stop for want of a rule to make it.
 
-#lines(86, 95)
+#lines(99, 110)
 #source("/usr/sys/sys.mk")
 
 #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
@@ -15407,7 +15407,7 @@ machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
 machine (#f("otg.c"), #f("sd.c"), #f("ddr.c"), #f("pmic.c")). The two sets
 take the same v7 names, such as `klopen` and `rkstrategy`, and so could
 not share one archive; each kernel is instead linked with its own
-machine's drivers (33, 34). `SYS_OBJ` names every kernel object, so that
+machine's drivers (36, 37). `SYS_OBJ` names every kernel object, so that
 the `Makefile` can make them all depend on itself.
 
 v7's `conf/makefile` had a target `allsystems`, which ran `mkconf` and
@@ -15416,10 +15416,10 @@ in turn. Here `BOARDS` lists the two configurations, and each kernel is
 made in a directory of its own, `conf/qemu/unix` and `conf/mp135/unix`,
 so that both are built by one `make`.
 
-#lines(1, 12)
+#lines(1, 15)
 
-Every kernel object depends on #f("sys.mk") (13), and is compiled with
-`-mfloat-abi=soft` (14), which overrides the `hard` of the common
+Every kernel object depends on #f("sys.mk") (16), and is compiled with
+`-mfloat-abi=soft` (17), which overrides the `hard` of the common
 `CFLAGS`: the compiler then uses no floating point instruction or
 register in the kernel, and the registers are left to the user
 processes (#f("Makefile")).
@@ -15429,7 +15429,7 @@ keep a member which had been deleted from the sources. v7's `mklib`
 named the members one by one, in a fixed order; GNU `ar` writes an index
 of the symbols, and the order no longer matters.
 
-#lines(13, 19)
+#lines(16, 22)
 
 `mkconf` is a host program, built with the host compiler and the strict
 flags. It is run, as in v7, in the directory which is to receive its
@@ -15440,13 +15440,13 @@ is made by one run of its recipe, which suits `mkconf`, since it writes
 `c.c` and `unix.ld` together.
 
 `c.c` lies one directory deeper than v7's, but `mkconf` still writes
-v7's `#include "../h/param.h"`; the search path `-I$S/conf` (31) lets
+v7's `#include "../h/param.h"`; the search path `-I$S/conf` (34) lets
 `"../h/..."` be found from `conf`.
 
 `mkstm32` is another host program, built the same way; it is described
 below.
 
-#lines(20, 32)
+#lines(23, 35)
 
 The link. In place of v7's
 `ld -X -i l.o mch.o c.o ../sys/LIB1 ../dev/LIB2`, the compiler driver links `low.o`, `mch.o`, `c.o`, and
@@ -15460,7 +15460,7 @@ unless told otherwise. The kernel is not stripped:
 in the symbol table of `/unix`. `low.o` comes first, so that its
 `_start` is the first instruction of the text, at the origin of `RAM`.
 
-#lines(33, 37)
+#lines(36, 42)
 
 The MP135 machine's boot ROM does not load an ELF file. It loads an
 image with a header of its own, 512 bytes long, from the SD card or
@@ -15469,7 +15469,7 @@ kernel into the bare bytes of its loaded sections, `unix-mp135.bin`,
 and `mkstm32`, a host program kept in `conf` (#f("mkstm32.c")), puts
 the header in front, making `unix-mp135.stm32`, which `all` includes.
 
-#lines(38, 42)
+#lines(43, 47)
 #source("/usr/src/libc/lib.mk")
 
 #f("libc/lib.mk") builds the C library, `libc.a`, and the start-up files
@@ -15490,7 +15490,7 @@ The search path puts the port's `usr/include` ahead of the toolchain's
 headers, so that `<stdio.h>` and the rest are v7's, while `<stdarg.h>`,
 which v7 did not have, comes from the compiler.
 
-#lines(1, 13)
+#lines(1, 14)
 #source("/usr/src/libm/lib.mk")
 
 #f("libm/lib.mk") builds the mathematical library, `libm.a`, from every
@@ -15508,18 +15508,18 @@ assembler. Commands are linked with it before `libc.a`
 compiler options and the directory in which it was installed, and of
 the makefiles in the directories of the larger commands. Here the
 single-file commands need no line each: every C or `yacc` file in
-`cmd` is a command (6), and it is installed in `/bin` unless it is one
+`cmd` is a command (7), and it is installed in `/bin` unless it is one
 of those which v7's `cmake` put elsewhere. `CMD_ETC` and `CMD_USRLIB`
 are those exceptions, `/etc` and `/usr/lib`. `CMD_DIRS` are the
 commands of several files, each in a directory of its own.
 
-`mkfs` is left out (6): it is compiled for the build machine by the
+`mkfs` is left out (7): it is compiled for the build machine by the
 `Makefile` (#f("Makefile")), and the target has no copy. v7's `cmake`
 also distinguished commands linked with `-n`, shared pure text, from
 those linked with `-i`, separate instruction and data, which needed
 the larger address space; every program here is linked the same way.
 
-#lines(1, 9)
+#lines(1, 11)
 
 The objects. `awk` is listed by hand, because three of its objects come
 from generated sources and one of its C files, `proc.c`, is not part of
@@ -15527,17 +15527,17 @@ from generated sources and one of its C files, `proc.c`, is not part of
 `GEN` names the files which `bison`, `flex`, and `awk`'s `proc` write,
 and `proc` itself.
 
-#lines(10, 16)
+#lines(12, 21)
 
 Commands are compiled with v7's headers ahead of the toolchain's.
 
-`YYSTACK_USE_ALLOCA` (20) is for the four parsers which `bison`
+`YYSTACK_USE_ALLOCA` (25) is for the four parsers which `bison`
 writes. With it, the parser grows its stack with the compiler's built-in
 `alloca`; without it, it calls `malloc` and `free`, and, finding no
 `<stdlib.h>`, declares them itself, with types which need not agree
 with those of v7's library.
 
-#lines(17, 20)
+#lines(22, 26)
 
 The links. Each command is linked from `crt0.o`, its own object, and the
 libraries, by `LINK` (#f("Makefile")). The commands of `/bin` all get
@@ -15547,7 +15547,7 @@ after the `|`: it must exist before the link, but its date, which
 changes whenever a file is added to it, must not make every command in
 it out of date.
 
-#lines(21, 40)
+#lines(27, 46)
 
 `awk`. `bison` writes the parser and, with `--defines`, the header of
 token numbers (`awk.h`), as v7's `yacc -d` wrote `y.tab.h`; the `&:`
@@ -15567,7 +15567,7 @@ the attribute is dropped. The generated file includes `<string.h>` and
 toolchain's declarations; `<stddef.h>` is included instead, for
 `size_t`.
 
-#lines(41, 50)
+#lines(47, 58)
 #source("/usr/src/games/games.mk")
 
 #f("games/games.mk") builds the games, each from a single C file of
@@ -15630,7 +15630,7 @@ asked with `-fcommon`, which the port does not use, so it collects
 nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
 kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
 
-#lines(8, 16)
+#lines(8, 19)
 
 `.ddrbss` holds the table `kl3u` reserved in #f("mch.s"), which must
 lie on a 4 KB boundary. `NOLOAD` makes it like `.bss`: it occupies
@@ -15641,7 +15641,7 @@ and the section simply follows `.bss` in `RAM`; it exists for the MP135
 machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
 written until `machine_init` has started it.
 
-#lines(17, 22)
+#lines(20, 25)
 #source("/usr/sys/conf/mp135/unix.ld")
 
 #f("mp135/unix.ld") is the MP135 machine's linker script, written by `mkconf`
@@ -15673,37 +15673,37 @@ The tables of the configuration, from `buf` to `cfree`
 (#f("mp135/c.c")), are the uninitialised data of `c.o`. At the sizes
 which #f("mp135conf") gives them they take some three quarters of a
 megabyte, six times SYSRAM, so `EXCLUDE_FILE` (16) keeps them out of
-`.bss`, and the pattern `*/c.o` (21) puts them into `.ddrbss` after
+`.bss`, and the pattern `*/c.o` (24) puts them into `.ddrbss` after
 `kl3u`. Nothing in `c.o`'s uninitialised data is used before
 `machine_init` has started the DDR and cleared the section: `corebase`
 and `coreoff` are set only after that.
 
-#lines(1, 24)
+#lines(1, 27)
 #source("/usr/sys/conf/mkstm32.c")
 
 #f("mkstm32.c") puts the boot ROM's header on the MP135 machine's
 kernel (#f("sys.mk")). Like `mkconf`, it runs on the build machine,
 never on the target.
 
-The header is that of the chip's documentation, version 2 (46--55):
+The header is that of the chip's documentation, version 2 (47--56):
 the magic `STM2`; 64 bytes of signature, left zero, since the chip is
-not set to demand one; the checksum (47), the sum of the image's bytes
-(43--45), which the ROM recomputes; the version (48); the image's
-length (49); the entry point and the load address (50, 51), both the
+not set to demand one; the checksum (48), the sum of the image's bytes
+(44--46), which the ROM recomputes; the version (49); the image's
+length (50); the entry point and the load address (51, 52), both the
 start of SYSRAM, `0x2ffe0000` (8), where `_start` lies
-(#f("mp135/unix.ld")); and flag bit 31 with a length of 384 (52, 53),
+(#f("mp135/unix.ld")); and flag bit 31 with a length of 384 (53, 54),
 which say that an extension header follows and fills the rest of the
-512 bytes: a padding header (54, 55), `ST` followed by two bytes of
+512 bytes: a padding header (55, 56), `ST` followed by two bytes of
 `0xff`, of the same length. Every other byte is zero, since `hdr` is
 external and so starts out cleared.
 
 The fields are little-endian, and `put4` (13--20) stores them a byte at
 a time, so that the header does not depend on the byte order of the
 build machine. An image longer than SYSRAM less the header (9) is
-refused (39--42): `img` has room for one byte more than that, so that
+refused (39--43): `img` has room for one byte more than that, so that
 `fread` shows a longer file by filling it.
 
-#lines(1, 65)
+#lines(1, 67)
 #source("/usr/src/cmd/standalone/stand.mk")
 
 `stand.mk` builds `sdwrite` (#f("standalone/sdwrite.c")), the one
@@ -15711,20 +15711,20 @@ program for the MP135 machine which runs on the bare chip, without the
 system. It is compiled with the cross compiler but none of the system's
 headers, start-up file, or library (`-ffreestanding -nostdlib`), for
 the processor in ARM state, with floating point done in software
-(2--4). With the memory management unit off, all memory is treated as
+(2--5). With the memory management unit off, all memory is treated as
 device memory, where an unaligned access faults, so the compiler is
 told not to make any (`-mno-unaligned-access`). The section `.start`
 is placed at the start of SYSRAM, where the boot ROM loads an image,
 so that the entry point is the first instruction, and the text follows
-it (4); `-N` makes text and data one writable segment, as a program
+it (5); `-N` makes text and data one writable segment, as a program
 without memory management has no use for more. `-Os` keeps it small,
 since the ROM loads at most 128 KB less its header.
 `-fno-tree-loop-distribute-patterns` stops the compiler from replacing
 the program's copying loops by calls of `memcpy`, which there is no
 library to supply. `objcopy` and `mkstm32` (#f("mkstm32.c")) then make
-the ROM's image, as for the kernel (11--15).
+the ROM's image, as for the kernel (12--16).
 
-#lines(1, 15)
+#lines(1, 16)
 #source("/usr/src/cmd/standalone/sdwrite.c")
 
 `sdwrite` writes an image, such as the root file system, onto the SD
@@ -15741,15 +15741,15 @@ and the ROM is ready to load again, 33 seconds after the last one.
 
 The registers are those of `otg.c` (#f("otg.c")) and `sd.c`
 (#f("sd.c")), at their physical addresses, since there is no memory
-management here. `_start` (117--137) turns on the instruction cache,
+management here. `_start` (118--138) turns on the instruction cache,
 sets a stack at the top of SYSRAM, clears the uninitialised data, and
 calls `main`; `now` reads the processor's counter, which runs at
 64 MHz, and `delay` waits on it.
 
-#lines(1, 171)
+#lines(1, 173)
 
 The USB side is a minimal CDC-ACM device, polled rather than driven by
-interrupts. Its descriptors (97--115) are much those `otg.c` gives
+interrupts. Its descriptors (98--116) are much those `otg.c` gives
 for the console; `dosetup` answers the host's control requests, setting
 the address, giving the descriptors with the bulk endpoints' packet
 size set to what the bus speed allows, configuring the endpoints, and
@@ -15764,12 +15764,12 @@ behind it is not held up, and the endpoint takes no more until
 
 `usbsend` sends a buffer, a packet at a time as the transmit FIFO has
 room, and gives up after a second if the host has stopped taking
-packets. It then calls `epabort` (408--424), which sets the endpoint to
+packets. It then calls `epabort` (412--428), which sets the endpoint to
 answer the host with NAK, disables it, and empties its FIFO. Without
 that, the abandoned packet stayed in the FIFO and the reply to the next
 command arrived behind it, as 512 bytes of stale card data.
 
-#lines(172, 518)
+#lines(174, 523)
 
 `sdinit` brings the card up as `rkinit` does (#f("sd.c")): the pins,
 the clock at 400 kHz, identification, the size from the CSD, selection,
@@ -15787,13 +15787,13 @@ program reading on the build machine must keep up: Linux's terminal
 layer, behind the serial port, discards what it cannot hold when its
 reader falls far behind, without telling either end.
 
-#lines(519, 714)
+#lines(524, 728)
 
 `main` starts the watchdog, initialises the card and USB, and serves
 commands: a line is read by `getln`, and `w` and `r` are refused unless
 the card answered and the request is whole blocks within it.
 
-#lines(715, 803)
+#lines(729, 819)
 #source("/usr/local/mp135/dfu.py")
 
 `dfu.py` runs on the build machine and loads an image made by
@@ -15814,13 +15814,13 @@ each a `DNLOAD` request numbered by its block (44--48). After each block
 2, idle (19--26): state 4, busy, is not done, and a block sent while
 the ROM is busy can leave it stuck in that state for good. An empty
 `DNLOAD` ends the download (49). The ROM then checks the header and
-checksum; if it accepts the image the phase reads 0 (51--54), and only
-then does `DETACH` (55) tell it to run the image. A `DETACH` sent to a
+checksum; if it accepts the image the phase reads 0 (51--55), and only
+then does `DETACH` (56) tell it to run the image. A `DETACH` sent to a
 ROM which had not accepted the image left the chip with its USB off and
 no watchdog running, to be revived only by its reset button; the program
 refuses rather than risk that.
 
-#lines(1, 59)
+#lines(1, 60)
 #source("/usr/src/cmd/mkfs.c")
 
 `mkfs` makes an empty file system, or, given a prototype file, one
@@ -15885,7 +15885,7 @@ member, `filsys.fs.s_fsize`, while the unions keep their v7 names: a
 macro is not expanded again within its own expansion. v7's
 `struct exec head`, the header of the bootstrap program, is gone with the bootstrap.
 
-#lines(35, 69)
+#lines(35, 72)
 
 `main`. The time stamped on every file and on the super-block is taken
 from the environment variable `V7_MKFS_TIME` if it is set, so that the
@@ -15898,7 +15898,7 @@ The arguments are the file to be written and the prototype. Under
 program for the bare machine, asking for its arguments on the console;
 that code is kept but never compiled.
 
-#lines(70, 122)
+#lines(73, 125)
 
 If the second argument is not a file which can be opened, it must be a
 number, the size of an empty file system in blocks, with one inode for
@@ -15910,20 +15910,20 @@ which the `sizeof` in `NIPB` gives, as an unsigned number
 `%D`; C99 spells it `%ld`. The doubled parentheses at 125, and in
 `getnum` at 338, are those of #f("malloc.c").
 
-#lines(123, 142)
+#lines(126, 145)
 
 From a prototype, the first word names a bootstrap program. v7 copied
 its text and data into block 0, which the PDP-11's boot ROMs read to
 start the system. QEMU loads the kernel from its ELF file, and reads no
 bootstrap from the disk; the prototype names `/dev/null`, and the file
 is opened only to be closed again. The `else` and the blank
-line which follow (153, 154) are what is left of v7's code around the
+line which follow (156, 157) are what is left of v7's code around the
 deleted lines, as is the comment, which has lost its second line.
 
 The next two words are the size of the file system in blocks and the
 number of inodes.
 
-#lines(143, 167)
+#lines(146, 170)
 
 `s_m` and `s_n` describe the interleaving of the free list, three and
 500 unless the command line says otherwise (see `bflist`). The i-list
@@ -15935,7 +15935,7 @@ since `s_isize` is an `unsigned short`, and the format is corrected to
 cast to the `long` which `%ld` expects; so is `bno` in the messages of
 `rdfs` and `wtfs`.
 
-#lines(168, 201)
+#lines(171, 205)
 
 `cfile` makes one file, from the next entry of the prototype, and, if
 the file is a directory, all the files within it, by calling itself.
@@ -15950,7 +15950,7 @@ now has room for `MAXFILEBLK` of them, not `NINDIR`. It lies on the
 stack and takes 66 KB in every level of the recursion, which on the
 host is of no consequence.
 
-#lines(202, 253)
+#lines(206, 257)
 
 A regular file is copied from the named file a block at a time, each
 block written as soon as it is full (`newblk`). A special file's
@@ -15961,29 +15961,29 @@ to which it refers; the inode number in the entry is `ino+1`, the
 number which `cfile` will give that file. The first call, with `par`
 zero, makes the root, whose `..` is itself.
 
-#lines(254, 313)
+#lines(258, 317)
 
 `gmode` translates a character of the mode by its position in `s`. v7
 returned `(&m0)[i]`, taking the four arguments `m0` to `m3` to lie one
 after another on the stack, as they did on the PDP-11. The ARM passes
 the first four arguments of a call in registers and only the rest on
-the stack, so the four are copied into an array (319).
+the stack, so the four are copied into an array (323).
 
-#lines(314, 327)
+#lines(318, 331)
 
 `getnum` and `getstr` read a number and a word of the prototype; a `:`
 begins a comment which runs to the end of the line.
 
-#lines(328, 378)
+#lines(332, 382)
 
 `rdfs` and `wtfs` read and write block `bno` of the image, through the
 host's `lseek`, `read`, and `write`. `rdfs` is now `static`: nothing
 calls it before its definition, so it needs no separate declaration,
 which `-Wmissing-prototypes` would demand of an external function.
-`wtfs`, called first by `main`, is declared at (64). Its message (401)
+`wtfs`, called first by `main`, is declared at (64). Its message (405)
 had v7's `%D`, now `%ld`, which `rdfs` already used.
 
-#lines(379, 404)
+#lines(383, 408)
 
 `alloc` and `bfree` take blocks from the free list and return them to it
 exactly as the kernel's `alloc` and `free` do (#f("alloc.c")):
@@ -15991,7 +15991,7 @@ the super-block holds up to `NICFREE` free blocks, and when it is
 exhausted or full, the list is read from or written to the block at
 hand. `bfree` is `static` for the same reason as `rdfs`.
 
-#lines(405, 441)
+#lines(409, 445)
 
 `entry` adds a directory entry to the directory's current block and,
 when the block is full, writes it with `newblk`. `newblk` allocates and
@@ -16000,12 +16000,12 @@ clears the buffer. v7 reported "indirect block full" when `ib` held
 `NINDIR` numbers; the limit is now `MAXFILEBLK`, but the message is
 v7's.
 
-#lines(442, 480)
+#lines(446, 485)
 
 `getch` reads the prototype, or, for an empty file system, the string
 in `charp` which describes its root directory.
 
-#lines(481, 493)
+#lines(486, 498)
 
 `bflist` builds the free list, and makes inode 1, which holds the bad
 blocks of the disk; `badblk` reports none, so it is empty. The root is
@@ -16020,17 +16020,17 @@ order is harmless on an SD card or a file. Block 0 is freed first and
 so lies at the bottom of the stack, where `alloc` takes it as the sign
 that no space is left.
 
-The braces added around the inner `if` (537--548) only make explicit
+The braces added around the inner `if` (542--553) only make explicit
 that the `else` belongs to it, as it always did; without them GCC warns
 of an ambiguous `else`.
 
-#lines(494, 551)
+#lines(499, 556)
 
 `iput` writes a file's inode into the i-list. If the i-list is full, it
 is the prototype's fault, and an error is reported. All three times are
 the time of the build.
 
-#lines(552, 580)
+#lines(557, 585)
 
 The block addresses. The first `LADDR` (ten) are copied into the inode.
 If there are ten or more, an indirect block is allocated and written
@@ -16039,7 +16039,7 @@ blocks, as in v7, thus gets an indirect block of zeros. v7 stopped
 there: it moved the remaining numbers down to the start of `ib` and
 wrote them, so no file could exceed `NINDIR` blocks, 64 KB. The kernel
 itself, installed as `/unix`, and the dictionary are larger than that, so the
-port adds a double indirect block (594--604): it allocates as many
+port adds a double indirect block (600--611): it allocates as many
 indirect blocks as the file needs, each written from the next 128
 entries of `ib`, and writes their numbers into a block of its own,
 addressed by `i_addr[11]`. This is the layout the kernel's `bmap`
@@ -16048,14 +16048,14 @@ which the file does not need is set to zero.
 
 The block addresses of all files, and the device numbers of special
 files, are then packed into the disk inode by `ltol3`. The comment at
-(605) tells GCC that the fall into the next case is intended, which it
+(612) tells GCC that the fall into the next case is intended, which it
 would otherwise warn about.
 
-#lines(581, 617)
+#lines(586, 624)
 
 `badblk` says that no block is bad; v7 left the parameter unused.
 
-#lines(618, 625)
+#lines(625, 632)
 #source("/boot/rootfs.proto")
 
 #f("rootfs.proto") is the prototype from which `mkfs` (#f("cmd/mkfs.c"))
@@ -16313,37 +16313,37 @@ file in `cases` whose name has no dot, that is, every case but none of
 the `.exp` and `.sed` files (2--4). Each case runs under `sh`, with its
 standard output and standard error together, through its `.sed` if it
 has one, into `cmp`, which compares it with the expected output
-(9--11). Once `cmp` has found a difference it exits; the `cat` behind
+(9--12). Once `cmp` has found a difference it exits; the `cat` behind
 it then reads the rest of the output, so that a failing case still runs
 to its end and cannot overlap the next. A case passes when `cmp` prints
-nothing (13--15). The exit status is not used, since the status `sh`
+nothing (14--16). The exit status is not used, since the status `sh`
 gives a pipeline is that of the first of its processes it reaps, which
 depends on timing. The counts are kept with `expr`, as v7's shell has
 no arithmetic of its own.
 
-#lines(1, 20)
+#lines(1, 21)
 #source("/usr/local/test/test.mk")
 
 `test.mk` is the build's fragment for the suite (#f("Makefile")). Every
 C file in `utils` becomes a program in `obj` (2), and every other file
 there, with `run.sh` and the cases, is data for the file system (5). The
 programs are compiled with `usr/sys` on the search path as well as
-`usr/include` (7), so that a test can include the kernel's own headers,
+`usr/include` (10), so that a test can include the kernel's own headers,
 such as `h/user.h`, to find a register in a stopped process's saved
 frame. They are linked as the commands are, except `proft`, which is
 compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
-not stripped, since `prof` needs its symbols (11--16).
+not stripped, since `prof` needs its symbols (14--19).
 
 Four small file systems are made by `mkfs` for the tests of the
 file-system commands: `fs.img`, from the prototype `fs.proto`, with a
-few files of known content (17--19); `deep.img`, a chain of 40
-directories (20--24); `many.img`, 3001 directories in one (25--28); and
+few files of known content (20--23); `deep.img`, a chain of 40
+directories (24--30); `many.img`, 3001 directories in one (31--38); and
 `big.img`, holding a copy of the dictionary, which gives `icheck` a file
-with a double indirect block (29--31). `V7_MKFS_TIME` fixes the time `mkfs` stamps on
+with a double indirect block (39--42). `V7_MKFS_TIME` fixes the time `mkfs` stamps on
 every inode, so that the images, and the cases' outputs, are the same at
 every build.
 
-#lines(1, 35)
+#lines(1, 46)
 #source("/usr/local/test/utils/argt.c")
 
 `argt` prints how many arguments it received, their total length, and
@@ -16394,10 +16394,10 @@ the system call, the inode, and the library's calendar unharmed.
 
 `cpt` reads the header which `find -cpio` writes and prints the file's
 name and time. The modification time is kept in four 16-bit halves,
-most significant first (6, 25--28), the port's widening of the two
+most significant first (7, 26--29), the port's widening of the two
 halves of v7's format, so that a time after 2106 survives.
 
-#lines(1, 31)
+#lines(1, 32)
 #source("/usr/local/test/utils/dit.c")
 
 `dit` reads, and with a third argument rewrites, the times of one inode
@@ -16407,19 +16407,19 @@ way to treat a file as a disk, so `time64` plants a time after 2038 in
 one with `dit`, dumps the image, and restores it to see the time come
 back.
 
-#lines(1, 27)
+#lines(1, 28)
 #source("/usr/local/test/utils/tt.c")
 
 `tt` checks the library's corners and prints `PASS` or `FAIL` for each:
 `sscanf` with characters above 127, an unterminated `%[`, a number of
-150 digits, and every conversion (27--50); `malloc` refusing sizes it
-cannot meet and reusing freed space (52--59); `atof` at the extremes of
-the exponent (61--66); `modf` and `frexp`, including a denormal number
-(68--75); `swab` in place (77--82); and `rand`'s sequence (84--87). It
+150 digits, and every conversion (27--54); `malloc` refusing sizes it
+cannot meet and reusing freed space (56--64); `atof` at the extremes of
+the exponent (66--72); `modf` and `frexp`, including a denormal number
+(74--81); `swab` in place (83--88); and `rand`'s sequence (90--93). It
 ends by calling itself through `execvp` with a `PATH` whose first
-directory is 300 characters long (92--104), which `execvp` must skip.
+directory is 300 characters long (98--110), which `execvp` must skip.
 
-#lines(1, 107)
+#lines(1, 113)
 #source("/usr/local/test/utils/k12.c")
 
 `k12` checks three things from the mathematics library and its
@@ -16428,7 +16428,7 @@ raises a negative number to an integral power and reports `EDOM` for a
 fractional one, and that a NaN, made from infinity minus infinity,
 compares unequal to itself and passes through `sin` and `exp`.
 
-#lines(1, 21)
+#lines(1, 23)
 
 == Probing the Kernel <ch-probe>
 
@@ -16447,10 +16447,10 @@ instruction later (#f("sys1.c")), each with the other's process id in
 branch after `svc` to `1:` and records what it received in `rawchild`;
 the parent skips the branch and records `rawpar`. `main` checks that
 the child received its parent's id and the parent a new, larger one
-(31--36), then repeats the check through the library's `fork`, which
+(31--37), then repeats the check through the library's `fork`, which
 leaves the parent's id in `par_uid` (#f("sys/fork.s")).
 
-#lines(1, 47)
+#lines(1, 48)
 #source("/usr/local/test/utils/regs.c")
 
 A process starts life after `exec` with its registers cleared, so that
@@ -16470,15 +16470,15 @@ that is not zero; the stack pointer, which `exec` sets, is passed over
 with a signal; the parent reads a word of its data (27), writes $-1$
 there and reads it back with `errno` set beforehand, which the stub
 must clear (28--31, #f("sys/ptrace.s")), and reads `r0` and `pc` from
-the saved frame (32, 33). It may write `r0` (34) but not `r9` (35):
+the saved frame (32, 33). It may write `r0` (35) but not `r9` (36):
 only `r0`--`r5`, the stack pointer, the program counter, the processor
 status, and the floating point registers are writable
 (#f("sig.c")). A status written with every bit set comes back with the
-mode forced to user and the privileged bits cleared (36--39). The child
+mode forced to user and the privileged bits cleared (37--40). The child
 then resumes with the 40 written into its `r0` and a `glob` of 2, and
 exits with their sum, 42.
 
-#lines(1, 45)
+#lines(1, 46)
 #source("/usr/local/test/utils/ptw.c")
 
 A traced process's text can be written, for a debugger's breakpoints,
@@ -16497,12 +16497,12 @@ see it (#f("sig.c")).
 program, including `r12`, which the entries in #f("low.s") once
 clobbered before saving it. An undefined instruction and a load from an
 unmapped address are each executed with a known value in `r12`
-(36--42); the handlers, written in assembly so as not to disturb it,
+(36--44); the handlers, written in assembly so as not to disturb it,
 record the signal, and for the load step the saved `pc` past the
 faulting instruction (10--16), at its place in the signal frame. The
 value printed afterwards must be the one loaded.
 
-#lines(1, 45)
+#lines(1, 47)
 #source("/usr/local/test/utils/r5h.c")
 
 User programs may be compiled to the ARM's 16-bit Thumb instructions,
@@ -16513,24 +16513,24 @@ must carry on, so that the `movne` after `svceq` is skipped and the
 result is 0. `tudf` (28--32) executes Thumb's undefined instructions of
 both widths, each of which must raise `SIGILL` and be stepped over.
 A 64-bit division, done by a library routine, runs while alarms
-interrupt it (79--83). With arguments, `r5h` gives `utime` an invalid
+interrupt it (81--85). With arguments, `r5h` gives `utime` an invalid
 address and checks, by a `stat` from a child, that the failure did not
-leave the file's inode locked (61--71).
+leave the file's inode locked (61--73).
 
-#lines(1, 85)
+#lines(1, 87)
 #source("/usr/local/test/utils/r5i.c")
 
 `tsig4` (12--23) is `tsig` with a four-instruction `IT` block, whose
 condition changes after the `svc`; only the `addeq` must take effect.
 The rest of the program checks the library's `sscanf` with numbers too
-large for their type, and `printf`'s zero precisions (79--82). With
+large for their type, and `printf`'s zero precisions (80--84). With
 arguments it reports whether any executable's first loadable segment
 is padded, that is, starts at a nonzero offset in its file rather than
 taking in the ELF header (36--57). The link options start every program
 at `0x94`, just past its headers (#f("Makefile")), so that no file
 carries a page of padding.
 
-#lines(1, 84)
+#lines(1, 86)
 #source("/usr/local/test/utils/r5t.c")
 
 `phys`, v7's call for mapping physical memory into a process, is a
@@ -16558,10 +16558,10 @@ nothing in the file (58--60). These are `getxfile`'s checks
 #source("/usr/local/test/utils/bigx.c")
 
 `bigx` passes `exec` 700 arguments of ten characters, 7700 bytes, more
-than `NCARGS` allows, and prints the failure, `E2BIG` (12--22); then
-500 of them, which fit, and `argt` reports them (23, 24).
+than `NCARGS` allows, and prints the failure, `E2BIG` (12--24); then
+500 of them, which fit, and `argt` reports them (25, 26).
 
-#lines(1, 27)
+#lines(1, 29)
 #source("/usr/local/test/utils/bigv.c")
 
 `bigv` passes `exec` thousands of empty arguments (11--16). The limit
@@ -16632,11 +16632,11 @@ reached `addupc` (#f("clock.c")).
 
 `prs` profiles itself while it spends its time in system calls, then
 reports the ticks counted and its user and system times from `times`
-(16--26). A tick taken in the kernel is charged as system time and does
+(16--27). A tick taken in the kernel is charged as system time and does
 not reach the histogram, since `clock` profiles only a program counter
 interrupted in user mode.
 
-#lines(1, 28)
+#lines(1, 29)
 #source("/usr/local/test/utils/proft.c")
 
 `proft` is the profiled program of the `prof` case. It calls `tick` a
@@ -16650,14 +16650,14 @@ of the time in `work`.
 
 `physt` reads a block of the root disk through the raw device, into a
 buffer in the data and one on the stack, and compares both with the
-block read through the buffered device (12--23). Raw transfers go
+block read through the buffered device (12--24). Raw transfers go
 straight between the disk and the user's memory (`physio`,
 #f("bio.c")), so the address must lie wholly within the process: a
 buffer in the gap fails, as does one that crosses the end of the data,
-while one ending exactly there succeeds (24--32). A negative offset
-fails too (33--36).
+while one ending exactly there succeeds (25--35). A negative offset
+fails too (36--39).
 
-#lines(1, 38)
+#lines(1, 41)
 #source("/usr/local/test/utils/kcmp.c")
 
 `kcmp` compares the text of the running kernel, read through
@@ -16666,18 +16666,18 @@ in `/unix`, a block at a time (11--31). `ps`, `pstat`, and `iostat` find
 the kernel's tables by the symbols of `/unix`, so the file must be the
 kernel that is running; the `kimage` case checks that it is.
 
-#lines(1, 34)
+#lines(1, 35)
 #source("/usr/local/test/utils/kmt.c")
 
 `kmt` reads the kernel's memory as the status commands do. The process
 table must lie above the user's address space (24); the process finds
 its own entry in it (25--32), and reads its `user` structure twice,
 through `/dev/kmem` at `UBASE` and through `/dev/mem` at the physical
-address of its u-area, which must agree (33--39). `/dev/mem` has no
+address of its u-area, which must agree (33--41). `/dev/mem` has no
 memory at the virtual address `UBASE`, and `/dev/kmem` none below the
-kernel (40--43) (#f("mem.c")).
+kernel (42--45) (#f("mem.c")).
 
-#lines(1, 45)
+#lines(1, 47)
 #source("/usr/local/test/utils/swb.c")
 
 `swb` prints the first and last blocks of the swap area, from the
@@ -16695,32 +16695,32 @@ A device's registers are mapped only into the kernel's address space.
 #source("/usr/local/test/utils/r5r.c")
 
 `r5r` has two uses. `pw` fills a buffer of `BUFSIZ` + 1 bytes for
-`getpw`, with a guard area behind it that must stay zero (13--21),
+`getpw`, with a guard area behind it that must stay zero (13--23),
 since `getpw` once copied a long line past the end of its caller's
 buffer. `ch` runs a program
 inside a `chroot`, so that `write` and `wall` can be tested against a
-private `/etc/utmp` and private terminals (23--31).
+private `/etc/utmp` and private terminals (25--33).
 
-#lines(1, 34)
+#lines(1, 36)
 #source("/usr/local/test/utils/fpt.c")
 
 `fpt` tests the vector floating point unit, whose state, thirty-two
 `double` registers and the status and control register `FPSCR`, the
 kernel saves for each process (#f("user.h")). Its argument selects a
-test. `ieee` (34--66) prints the bit patterns of IEEE results, the
+test. `ieee` (35--67) prints the bit patterns of IEEE results, the
 exception flags each sets, and `1/10` rounded in each of the four
-rounding modes. `fork` (224--242) checks that the child inherits the
+rounding modes. `fork` (227--246) checks that the child inherits the
 parent's rounding mode and registers, and that `exec` resets the mode
-(268--270).
+(272--274).
 
-`switch` (103--142) runs two processes, each in its own rounding mode,
+`switch` (104--143) runs two processes, each in its own rounding mode,
 that hand a byte back and forth through pipes 2000 times, while a third
 reads the raw disk to keep interrupts coming; each checks after every
-exchange that its registers and mode are its own. `sig` (158--193)
+exchange that its registers and mode are its own. `sig` (159--195)
 lets a signal handler change the mode and the registers in the middle
 of a computation, once by the process's own `kill` and many times from
 another process, and the computation must not notice. `core` and
-`rcore` (195--222) check that a core image holds the floating point
+`rcore` (197--225) check that a core image holds the floating point
 state.
 
-#lines(1, 273)
+#lines(1, 277)
