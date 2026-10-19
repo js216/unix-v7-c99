@@ -247,7 +247,7 @@ usr/local
 +-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))
 
 % boot/rootfs.proto /dev/null
-@@ -0,0 +1,367 @@
+@@ -0,0 +1,366 @@
 +/dev/null
 +32768 1024
 +d--755 0 0
@@ -557,7 +557,6 @@ usr/local
 +					asm	---644 0 0 usr/local/test/utils/asm
 +					bcf	---644 0 0 usr/local/test/utils/bcf
 +					big.img	---644 0 0 usr/local/test/obj/big.img
-+					bigb	---755 0 0 usr/local/test/obj/bigb
 +					bigm	---755 0 0 usr/local/test/obj/bigm
 +					bigv	---755 0 0 usr/local/test/obj/bigv
 +					bigx	---755 0 0 usr/local/test/obj/bigx

@@ -307,7 +307,6 @@ d--755 0 0
 					asm	---644 0 0 usr/local/test/utils/asm
 					bcf	---644 0 0 usr/local/test/utils/bcf
 					big.img	---644 0 0 usr/local/test/obj/big.img
-					bigb	---755 0 0 usr/local/test/obj/bigb
 					bigm	---755 0 0 usr/local/test/obj/bigm
 					bigv	---755 0 0 usr/local/test/obj/bigv
 					bigx	---755 0 0 usr/local/test/obj/bigx
