@@ -117,6 +117,7 @@ void	ifree(dev_t dev, ino_t ino);
 void	install_sigtramp(void);
 void	intr_enable(void);
 void	intr_restore(int s);
+void	intrstart(void);
 void	ioctl(void);
 void	iodone(struct buf *bp);
 void	iomove(caddr_t cp, int n, int flag);

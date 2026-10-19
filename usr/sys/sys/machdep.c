@@ -95,19 +95,30 @@ gicen(int n)
 void
 clkstart(void)
 {
-	register struct intr *ip;
 
 	if((clkreload = cntfrq_get()/HZ) == 0)
 		panic("no clock");
 	clkrem = cntfrq_get()%HZ;
+	cntv_cval_set(clkcval = cntvct_get() + clkreload);
+	cntv_ctl_set(1);
+}
+
+/*
+ * Enable every configured interrupt,
+ * turn the interrupt controller on,
+ * and unmask the processor.
+ */
+void
+intrstart(void)
+{
+	register struct intr *ip;
+
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)
 			gicen(*ip->i_irq);
 	GICD(0) = 1;
 	GICC(4) = 0xff;
 	GICC(0) = 1;
-	cntv_cval_set(clkcval = cntvct_get() + clkreload);
-	cntv_ctl_set(1);
 	intr_enable();
 }
 

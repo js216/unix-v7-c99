@@ -74,6 +74,7 @@ main(void)
 	 */
 
 	clkstart();
+	intrstart();
 	cinit();
 	binit();
 	updlock = 0;

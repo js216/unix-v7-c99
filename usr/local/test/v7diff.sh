@@ -26267,7 +26267,7 @@ usr/local
 +extern	unsigned clkrem, clkfrac;	/* remainder, and its sum */
 +extern	unsigned long long *l1tab;	/* user first-level tables */
 +extern	unsigned l1pa;		/* their physical address */
-@@ -48,16 +52,242 @@
+@@ -48,16 +52,243 @@
 -dev_t getmdev();
 -daddr_t	bmap();
 -struct inode *ialloc();
@@ -26352,6 +26352,7 @@ usr/local
 +void	install_sigtramp(void);
 +void	intr_enable(void);
 +void	intr_restore(int s);
++void	intrstart(void);
 +void	ioctl(void);
 +void	iodone(struct buf *bp);
 +void	iomove(caddr_t cp, int n, int flag);
@@ -26526,7 +26527,7 @@ usr/local
 +#define	suiword	suword
 +#define	copyiin	copyin
 +#define	copyiout	copyout
-@@ -67,6 +297,6 @@
+@@ -67,6 +298,6 @@
 -int	dk_busy;
 -long	dk_time[32];
 -long	dk_numb[3];
@@ -26539,7 +26540,7 @@ usr/local
 +extern	long	dk_wds[3];
 +extern	long	tk_nin;
 +extern	long	tk_nout;
-@@ -80 +310 @@
+@@ -80 +311 @@
 -	int	(*sy_call)();		/* handler */
 +	void	(*sy_call)(void);	/* handler */
 
@@ -27019,7 +27020,7 @@ usr/local
 -	return;
 -
 -bad:
-@@ -125,11 +81,44 @@
+@@ -125,11 +81,23 @@
 -#define	CLOCK1	((physadr)0177546)
 -#define	CLOCK2	((physadr)0172540)
 -clkstart()
@@ -27048,19 +27049,31 @@ usr/local
 +void
 +clkstart(void)
 +{
-+	register struct intr *ip;
 +
 +	if((clkreload = cntfrq_get()/HZ) == 0)
 +		panic("no clock");
 +	clkrem = cntfrq_get()%HZ;
++	cntv_cval_set(clkcval = cntvct_get() + clkreload);
++	cntv_ctl_set(1);
+@@ -139 +107,3 @@
+- * Let a process handle a signal by simulating an interrupt
++ * Enable every configured interrupt,
++ * turn the interrupt controller on,
++ * and unmask the processor.
+@@ -141,2 +111,2 @@
+-sendsig(p, signo)
+-caddr_t p;
++void
++intrstart(void)
+@@ -143,0 +114,15 @@
++	register struct intr *ip;
++
 +	for(ip = intrtab; ip->i_irq; ip++)
 +		if(*ip->i_irq)
 +			gicen(*ip->i_irq);
 +	GICD(0) = 1;
 +	GICC(4) = 0xff;
 +	GICC(0) = 1;
-+	cntv_cval_set(clkcval = cntvct_get() + clkreload);
-+	cntv_ctl_set(1);
 +	intr_enable();
 +}
 +
@@ -27068,31 +27081,37 @@ usr/local
 +irq(int *r)
 +{
 +	register struct intr *ip;
-+	register unsigned n;
-+
-+	n = GICC(0xc);
-+	for(ip = intrtab; ip->i_irq; ip++)
-+		if(*ip->i_irq == (int)(n&0x3ff))
-+			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
-+	GICC(0x10) = n;
-@@ -141,2 +130,2 @@
--sendsig(p, signo)
--caddr_t p;
-+void
-+sendsig(caddr_t p, int signo)
-@@ -144 +133 @@
--	register unsigned n;
-+	register unsigned n, m;
-@@ -146 +135,2 @@
+@@ -146,7 +131,5 @@
 -	n = u.u_ar0[R6] - 4;
-+	m = (PSR+1)*sizeof(int);
-+	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
-@@ -148,5 +138,12 @@
+-	grow(n);
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
 -	u.u_ar0[R6] = n;
 -	u.u_ar0[RPS] &= ~TBIT;
 -	u.u_ar0[R7] = (int)p;
++	n = GICC(0xc);
++	for(ip = intrtab; ip->i_irq; ip++)
++		if(*ip->i_irq == (int)(n&0x3ff))
++			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
++	GICC(0x10) = n;
+@@ -156,6 +139 @@
+- * 11/70 routine to allocate the
+- * UNIBUS map and initialize for
+- * a unibus device.
+- * The code here and in
+- * rhstart assumes that an rh on an 11/70
+- * is an rh70 and contains 22 bit addressing.
++ * Let a process handle a signal by simulating an interrupt
+@@ -163 +141,80 @@
+-int	maplock;
++void
++sendsig(caddr_t p, int signo)
++{
++	register unsigned n, m;
++
++	m = (PSR+1)*sizeof(int);
++	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
++	grow(n);
 +	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
 +	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),
 +	    sizeof(u.u_fps)) < 0) {
@@ -27105,16 +27124,8 @@ usr/local
 +	u.u_ar0[PC] = (int)p;
 +	u.u_ar0[R0] = signo;
 +	u.u_ar0[PSR] &= ~0x0600fe20;
-@@ -155,9 +152,58 @@
--/*
-- * 11/70 routine to allocate the
-- * UNIBUS map and initialize for
-- * a unibus device.
-- * The code here and in
-- * rhstart assumes that an rh on an 11/70
-- * is an rh70 and contains 22 bit addressing.
-- */
--int	maplock;
++}
++
 +extern struct memregion board_map[];
 +extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];
 +extern unsigned long long kl2[], kl3u[], bootl1[];
@@ -27173,15 +27184,16 @@ usr/local
 +		*p = 0;
 +	return((caddr_t)UBASE + ptob(USIZE));
 +}
-@@ -165,2 +211,2 @@
+@@ -165,2 +222,2 @@
 -mapalloc(bp)
 -register struct buf *bp;
 +void
 +copyseg(int from, int to)
-@@ -168 +214,17 @@
+@@ -168 +225 @@
 -	register i, a;
 +	register int *s, *d, i;
-+
+@@ -170 +227,29 @@
+-	if(cputype != 70)
 +	s = (int *)PGADDR(from);
 +	d = (int *)PGADDR(to);
 +	for(i = 0; i < PGSIZE/4; i++)
@@ -27197,8 +27209,7 @@ usr/local
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = 0;
 +}
-@@ -170 +232,13 @@
--	if(cputype != 70)
++
 +void
 +sigreturn(void)
 +{
@@ -27212,12 +27223,12 @@ usr/local
 +	    sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-@@ -172,4 +245,0 @@
+@@ -172,4 +256,0 @@
 -	spl6();
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +247,78 @@
+@@ -177,19 +258,78 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -27352,28 +27363,30 @@ usr/local
 @@ -38 +63 @@
 -	proc[0].p_addr = ka6->r[0];
 +	proc[0].p_addr = btop(corebase);
-@@ -53,0 +79 @@
+@@ -51,0 +77 @@
++	intrstart();
+@@ -53,0 +80 @@
 +	updlock = 0;
-@@ -68,2 +94,2 @@
+@@ -68,2 +95,2 @@
 -		expand(USIZE + (int)btoc(szicode));
 -		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 +		expand(USIZE + (int)btop(szicode));
 +		estabur((unsigned)0, btop(szicode), (unsigned)0, 0, RO);
-@@ -70,0 +97,2 @@
+@@ -70,0 +98,2 @@
 +		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),
 +		    szicode);
-@@ -90 +118,2 @@
+@@ -90 +119,2 @@
 -iinit()
 +void
 +iinit(void)
-@@ -119 +148 @@
+@@ -119 +149 @@
 -char	buffers[NBUF][BSIZE+BSLOP];
 +extern int	buffers[][(BSIZE+BSLOP+63)/64*16];
-@@ -125 +154,2 @@
+@@ -125 +155,2 @@
 -binit()
 +void
 +binit(void)
-@@ -137 +167,2 @@
+@@ -137 +168,2 @@
 -		bp->b_un.b_addr = buffers[i];
 +		bp->b_un.b_addr = (caddr_t)buffers[i] +
 +		    (-(unsigned)buffers&63);
