@@ -74,6 +74,10 @@
 #define	STALL	(1U<<21)
 #define	USBAEP	(1U<<15)
 #define	XFRC	01
+#define	EPDISD	02
+#define	INEPNE	0100
+#define	EPDIS	(1U<<30)
+#define	TXFFLSH	(1U<<5)
 #define	STUP	010
 #define	RXFLVL	(1U<<4)
 #define	USBRST	(1U<<12)
@@ -397,6 +401,29 @@ usbtake(unsigned *p)
 }
 
 /*
+ * Give up a transfer the host has stopped taking:
+ * disable the endpoint and empty its FIFO, so that
+ * the next transfer starts clean.
+ */
+static int
+epabort(void)
+{
+	if (R(DIEPCTL(1)) & EPENA) {
+		R(DIEPCTL(1)) |= SNAK;
+		while ((R(DIEPINT(1)) & INEPNE) == 0)
+			;
+		R(DIEPCTL(1)) |= EPDIS|SNAK;
+		while ((R(DIEPINT(1)) & EPDISD) == 0)
+			;
+	}
+	R(GRSTCTL) = TXFFLSH | 1U<<6;
+	while (R(GRSTCTL) & TXFFLSH)
+		;
+	R(DIEPINT(1)) = R(DIEPINT(1));
+	return(-1);
+}
+
+/*
  * Send n bytes, a packet at a time as the
  * transmit FIFO has room for it.
  */
@@ -413,12 +440,12 @@ usbsend(const unsigned char *p, unsigned n)
 		k = n-i < mps ? n-i : mps;
 		while ((R(DTXFSTS(1)) & 0xffff) < (k+3)/4)
 			if (now() - t > 64000000)
-				return(-1);
+				return(epabort());
 		fifowrite(1, p+i, k);
 	}
 	while ((R(DIEPINT(1)) & XFRC) == 0)
 		if (now() - t > 64000000)
-			return(-1);
+			return(epabort());
 		else
 			usbpoll();
 	R(DIEPINT(1)) = XFRC;
