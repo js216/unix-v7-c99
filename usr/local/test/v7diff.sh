@@ -21229,7 +21229,7 @@ usr/local
 +tanh(double arg)
 
 % usr/sys/conf/low.s usr/sys/conf/l.s
-@@ -1,72 +1,207 @@
+@@ -1,72 +1,213 @@
 -/ low core
 -
 -.data
@@ -21303,6 +21303,12 @@ usr/local
 -.globl	_htintr
 -htio:	jsr	r0,call; jmp _htintr
 +.set BLK_KERN, 0x701
++.set PGSIZE, 4096
++.set UMODE, 037
++.set SIGINS, 4
++.set SIGSEG, 11
++.set PC, 15
++.set PSR, 16
 +.globl _start, kl2, bootl1
 +_start:
 +	cpsid if
@@ -21425,7 +21431,7 @@ usr/local
 +
 +svc_entry:
 +	srsdb sp!, #0x13
-+	sub sp, sp, #60
++	sub sp, sp, #PC*4
 +	stmia sp, {r0-r14}^
 +	mov r0, sp
 +	cpsie i
@@ -21437,14 +21443,14 @@ usr/local
 +	sub lr, lr, #4
 +	srsdb sp!, #0x13
 +	cpsid if, #0x13
-+	sub sp, sp, #60
++	sub sp, sp, #PC*4
 +	stmia sp, {r0-r14}^
 +	mov r5, lr
 +	mov r0, sp
 +	bl irq
 +	mov lr, r5
-+	ldr r0, [sp, #64]
-+	and r0, r0, #0x1f
++	ldr r0, [sp, #PSR*4]
++	and r0, r0, #UMODE
 +	cmp r0, #0x10
 +	bne 2f
 +	ldr r0, =runrun
@@ -21463,32 +21469,32 @@ usr/local
 +undef_entry:
 +	srsdb sp!, #0x13
 +	cpsid if, #0x13
-+	sub sp, sp, #60
++	sub sp, sp, #PC*4
 +	stmia sp, {r0-r14}^
-+	mov r0, #4
++	mov r0, #SIGINS
 +	mov r2, #0
 +	b 1f
 +pabort_entry:
 +	sub lr, lr, #4
 +	srsdb sp!, #0x13
 +	cpsid if, #0x13
-+	sub sp, sp, #60
++	sub sp, sp, #PC*4
 +	stmia sp, {r0-r14}^
-+	mov r0, #11
++	mov r0, #SIGSEG
 +	mov r2, #0
 +	b 1f
 +dabort_entry:
 +	sub lr, lr, #8
 +	srsdb sp!, #0x13
 +	cpsid if, #0x13
-+	sub sp, sp, #60
++	sub sp, sp, #PC*4
 +	stmia sp, {r0-r14}^
 +	ldr r0, =nofault
 +	ldr r0, [r0]
 +	cmp r0, #0
-+	strne r0, [sp, #60]
++	strne r0, [sp, #PC*4]
 +	bne 2f
-+	mov r0, #11
++	mov r0, #SIGSEG
 +	mrc p15, 0, r2, c6, c0, 0
 +1:
 +	mov r1, sp
@@ -21497,12 +21503,12 @@ usr/local
 +	cpsid i
 +2:
 +	ldmia sp, {r0-r14}^
-+	add sp, sp, #60
++	add sp, sp, #PC*4
 +	rfeia sp!
 +
 +.bss
 +.balign 8
-+	.space 4096
++	.space PGSIZE
 +stack_top:
 +.balign 4096
 +kl2:
@@ -21511,13 +21517,14 @@ usr/local
 +	.space 32
 
 % usr/sys/conf/mch.s
-@@ -1,2 +1,160 @@
+@@ -1,2 +1,177 @@
 -/ machine language assist
 -/ for 11/45 or 11/70 CPUs
 +.set BLK_KERN, 0x701
 +.set PTE_TAB, 3
 +.set PGSHIFT, 12
 +.set PGSIZE, 4096
++.set USIZE, 1
 +.globl dmbsy, intr_enable, intr_disable, intr_restore
 +.globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set
 +.globl save, resume
@@ -21582,10 +21589,18 @@ usr/local
 +	lsl r3, r0, #PGSHIFT
 +	movw ip, #BLK_KERN|PTE_TAB
 +	orr r3, r3, ip
-+	str r3, [r2, #0]
++	mov r0, #USIZE
++1:	str r3, [r2], #8
++	add r3, r3, #PGSIZE
++	subs r0, r0, #1
++	bne 1b
 +	dsb ish
 +	ldr r3, =u
-+	mcr p15, 0, r3, c8, c7, 3
++	mov r0, #USIZE
++1:	mcr p15, 0, r3, c8, c7, 3
++	add r3, r3, #PGSIZE
++	subs r0, r0, #1
++	bne 1b
 +	dsb ish
 +	isb
 +	ldmia r1, {r4-r11}
@@ -21596,29 +21611,48 @@ usr/local
 +	bx r2
 +
 +dcinval:
-+	mov r12, #1
-+	b 2f
-+dcflush:
-+	mov r12, #0
-+2:	mrc p15, 0, r2, c0, c0, 1
-+	lsr r2, r2, #16
-+	and r2, r2, #0xf
-+	mov r3, #4
-+	lsl r2, r3, r2
-+	add r1, r0, r1
-+	sub r3, r2, #1
-+	bic r0, r0, r3
-+1:	cmp r12, #0
-+	mcreq p15, 0, r0, c7, c14, 1
-+	mcrne p15, 0, r0, c7, c6, 1
++	cmp r1, #0
++	bxeq lr
++	mov r12, lr
++	bl dline
++1:	mcr p15, 0, r0, c7, c6, 1	@ DCIMVAC: invalidate line
 +	add r0, r0, r2
 +	cmp r0, r1
 +	blo 1b
 +	dsb
-+	bx lr
++	bx r12
++
++dcflush:
++	cmp r1, #0
++	bxeq lr
++	mov r12, lr
++	bl dline
++1:	mcr p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean and invalidate line
++	add r0, r0, r2
++	cmp r0, r1
++	blo 1b
++	dsb
++	bx r12
 +
 +arm_sync_icache:
-+	mrc p15, 0, r2, c0, c0, 1
++	cmp r1, #0
++	bxeq lr
++	mov r12, lr
++	bl dline
++1:	mcr p15, 0, r0, c7, c11, 1	@ DCCMVAU: clean line to PoU
++	add r0, r0, r2
++	cmp r0, r1
++	blo 1b
++	dsb ish
++	mov r0, #0
++	mcr p15, 0, r0, c7, c5, 0	@ ICIALLU
++	mcr p15, 0, r0, c7, c5, 6	@ BPIALL
++	dsb ish
++	isb
++	bx r12
++
++dline:
++	mrc p15, 0, r2, c0, c0, 1	@ CTR: cache type
 +	lsr r2, r2, #16
 +	and r2, r2, #0xf
 +	mov r3, #4
@@ -21626,24 +21660,13 @@ usr/local
 +	add r1, r0, r1
 +	sub r3, r2, #1
 +	bic r0, r0, r3
-+1:	cmp r0, r1
-+	bhs 2f
-+	mcr p15, 0, r0, c7, c11, 1
-+	add r0, r0, r2
-+	b 1b
-+2:	dsb ish
-+	mov r0, #0
-+	mcr p15, 0, r0, c7, c5, 0
-+	mcr p15, 0, r0, c7, c5, 6
-+	dsb ish
-+	isb
 +	bx lr
 +
 +tlbflush:
 +	mov r0, #0
 +	dsb ish
-+	mcr p15, 0, r0, c8, c7, 0
-+	mcr p15, 0, r0, c7, c5, 6
++	mcr p15, 0, r0, c8, c7, 0	@ TLBIALL
++	mcr p15, 0, r0, c7, c5, 6	@ BPIALL
 +	dsb ish
 +	isb
 +	bx lr
@@ -21651,10 +21674,10 @@ usr/local
 +ttbset:
 +	mov r1, #0
 +	dsb ish
-+	mcrr p15, 0, r0, r1, c2
++	mcrr p15, 0, r0, r1, c2	@ TTBR0
 +	isb
-+	mcr p15, 0, r1, c8, c7, 2
-+	mcr p15, 0, r1, c7, c5, 6
++	mcr p15, 0, r1, c8, c7, 2	@ TLBIASID
++	mcr p15, 0, r1, c7, c5, 6	@ BPIALL
 +	dsb ish
 +	isb
 +	bx lr
@@ -21674,7 +21697,7 @@ usr/local
 +	strbt r1, [r0]
 +	mov r0, #0
 +	b uok
-@@ -4,541 +161,0 @@
+@@ -4,541 +178,0 @@
 -
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
@@ -22216,7 +22239,7 @@ usr/local
 -
 -_fuword:
 -	mov	2(sp),r1
-@@ -546,2 +163,6 @@
+@@ -546,2 +180,6 @@
 -	jsr	pc,gword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22225,7 +22248,7 @@ usr/local
 +	ldrt r1, [r0]
 +	mov r0, r1
 +	b uok
-@@ -549,28 +169,0 @@
+@@ -549,28 +186,0 @@
 -giword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22254,7 +22277,7 @@ usr/local
 -_suword:
 -	mov	2(sp),r1
 -	mov	4(sp),r0
-@@ -578,2 +171,82 @@
+@@ -578,2 +188,82 @@
 -	jsr	pc,pword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22313,9 +22336,9 @@ usr/local
 +	bx lr
 +
 +idle:
-+	cpsie i
 +	wfi
-+1:	cpsid i
++	cpsie i
++waitpc:	cpsid i
 +	bx lr
 +
 +savfp:
@@ -22333,13 +22356,13 @@ usr/local
 +	bx lr
 +
 +dfar:
-+	mrc p15, 0, r0, c6, c0, 0
++	mrc p15, 0, r0, c6, c0, 0	@ DFAR
 +	bx lr
 +
 +dfsr:
-+	mrc p15, 0, r0, c5, c0, 0
++	mrc p15, 0, r0, c5, c0, 0	@ DFSR
 +	bx lr
-@@ -581,444 +253,0 @@
+@@ -581,444 +270,0 @@
 -piword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22784,7 +22807,7 @@ usr/local
 -	.=.+[6*340.]
 -
 -.globl countbase
-@@ -1026,25 +255,2 @@
+@@ -1026,25 +272,2 @@
 -countbase:
 -	_profcnts
 -_profsize:
@@ -22811,8 +22834,8 @@ usr/local
 -2:
 -	rts	pc
 +waitloc:
-+	.word 1b
-@@ -1053,6 +259,8 @@
++	.word waitpc
+@@ -1053,6 +276,8 @@
 -_xprobuf:.=.+512.
 -_proloc:.=.+2
 -_mode:	.=.+16.

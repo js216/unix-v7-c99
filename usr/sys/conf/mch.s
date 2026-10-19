@@ -2,6 +2,7 @@
 .set PTE_TAB, 3
 .set PGSHIFT, 12
 .set PGSIZE, 4096
+.set USIZE, 1
 .globl dmbsy, intr_enable, intr_disable, intr_restore
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set
 .globl save, resume
@@ -66,10 +67,18 @@ resume:
 	lsl r3, r0, #PGSHIFT
 	movw ip, #BLK_KERN|PTE_TAB
 	orr r3, r3, ip
-	str r3, [r2, #0]
+	mov r0, #USIZE
+1:	str r3, [r2], #8
+	add r3, r3, #PGSIZE
+	subs r0, r0, #1
+	bne 1b
 	dsb ish
 	ldr r3, =u
-	mcr p15, 0, r3, c8, c7, 3
+	mov r0, #USIZE
+1:	mcr p15, 0, r3, c8, c7, 3
+	add r3, r3, #PGSIZE
+	subs r0, r0, #1
+	bne 1b
 	dsb ish
 	isb
 	ldmia r1, {r4-r11}
@@ -80,29 +89,48 @@ resume:
 	bx r2
 
 dcinval:
-	mov r12, #1
-	b 2f
-dcflush:
-	mov r12, #0
-2:	mrc p15, 0, r2, c0, c0, 1
-	lsr r2, r2, #16
-	and r2, r2, #0xf
-	mov r3, #4
-	lsl r2, r3, r2
-	add r1, r0, r1
-	sub r3, r2, #1
-	bic r0, r0, r3
-1:	cmp r12, #0
-	mcreq p15, 0, r0, c7, c14, 1
-	mcrne p15, 0, r0, c7, c6, 1
+	cmp r1, #0
+	bxeq lr
+	mov r12, lr
+	bl dline
+1:	mcr p15, 0, r0, c7, c6, 1	@ DCIMVAC: invalidate line
 	add r0, r0, r2
 	cmp r0, r1
 	blo 1b
 	dsb
-	bx lr
+	bx r12
+
+dcflush:
+	cmp r1, #0
+	bxeq lr
+	mov r12, lr
+	bl dline
+1:	mcr p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean and invalidate line
+	add r0, r0, r2
+	cmp r0, r1
+	blo 1b
+	dsb
+	bx r12
 
 arm_sync_icache:
-	mrc p15, 0, r2, c0, c0, 1
+	cmp r1, #0
+	bxeq lr
+	mov r12, lr
+	bl dline
+1:	mcr p15, 0, r0, c7, c11, 1	@ DCCMVAU: clean line to PoU
+	add r0, r0, r2
+	cmp r0, r1
+	blo 1b
+	dsb ish
+	mov r0, #0
+	mcr p15, 0, r0, c7, c5, 0	@ ICIALLU
+	mcr p15, 0, r0, c7, c5, 6	@ BPIALL
+	dsb ish
+	isb
+	bx r12
+
+dline:
+	mrc p15, 0, r2, c0, c0, 1	@ CTR: cache type
 	lsr r2, r2, #16
 	and r2, r2, #0xf
 	mov r3, #4
@@ -110,24 +138,13 @@ arm_sync_icache:
 	add r1, r0, r1
 	sub r3, r2, #1
 	bic r0, r0, r3
-1:	cmp r0, r1
-	bhs 2f
-	mcr p15, 0, r0, c7, c11, 1
-	add r0, r0, r2
-	b 1b
-2:	dsb ish
-	mov r0, #0
-	mcr p15, 0, r0, c7, c5, 0
-	mcr p15, 0, r0, c7, c5, 6
-	dsb ish
-	isb
 	bx lr
 
 tlbflush:
 	mov r0, #0
 	dsb ish
-	mcr p15, 0, r0, c8, c7, 0
-	mcr p15, 0, r0, c7, c5, 6
+	mcr p15, 0, r0, c8, c7, 0	@ TLBIALL
+	mcr p15, 0, r0, c7, c5, 6	@ BPIALL
 	dsb ish
 	isb
 	bx lr
@@ -135,10 +152,10 @@ tlbflush:
 ttbset:
 	mov r1, #0
 	dsb ish
-	mcrr p15, 0, r0, r1, c2
+	mcrr p15, 0, r0, r1, c2	@ TTBR0
 	isb
-	mcr p15, 0, r1, c8, c7, 2
-	mcr p15, 0, r1, c7, c5, 6
+	mcr p15, 0, r1, c8, c7, 2	@ TLBIASID
+	mcr p15, 0, r1, c7, c5, 6	@ BPIALL
 	dsb ish
 	isb
 	bx lr
@@ -224,9 +241,9 @@ uerr:
 	bx lr
 
 idle:
-	cpsie i
 	wfi
-1:	cpsid i
+	cpsie i
+waitpc:	cpsid i
 	bx lr
 
 savfp:
@@ -244,16 +261,16 @@ restfp:
 	bx lr
 
 dfar:
-	mrc p15, 0, r0, c6, c0, 0
+	mrc p15, 0, r0, c6, c0, 0	@ DFAR
 	bx lr
 
 dfsr:
-	mrc p15, 0, r0, c5, c0, 0
+	mrc p15, 0, r0, c5, c0, 0	@ DFSR
 	bx lr
 
 .data
 waitloc:
-	.word 1b
+	.word waitpc
 
 .bss
 .balign 4

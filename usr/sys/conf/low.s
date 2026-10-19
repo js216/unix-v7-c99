@@ -1,4 +1,10 @@
 .set BLK_KERN, 0x701
+.set PGSIZE, 4096
+.set UMODE, 037
+.set SIGINS, 4
+.set SIGSEG, 11
+.set PC, 15
+.set PSR, 16
 .globl _start, kl2, bootl1
 _start:
 	cpsid if
@@ -121,7 +127,7 @@ vectors:
 
 svc_entry:
 	srsdb sp!, #0x13
-	sub sp, sp, #60
+	sub sp, sp, #PC*4
 	stmia sp, {r0-r14}^
 	mov r0, sp
 	cpsie i
@@ -133,14 +139,14 @@ irq_entry:
 	sub lr, lr, #4
 	srsdb sp!, #0x13
 	cpsid if, #0x13
-	sub sp, sp, #60
+	sub sp, sp, #PC*4
 	stmia sp, {r0-r14}^
 	mov r5, lr
 	mov r0, sp
 	bl irq
 	mov lr, r5
-	ldr r0, [sp, #64]
-	and r0, r0, #0x1f
+	ldr r0, [sp, #PSR*4]
+	and r0, r0, #UMODE
 	cmp r0, #0x10
 	bne 2f
 	ldr r0, =runrun
@@ -159,32 +165,32 @@ badtrap:
 undef_entry:
 	srsdb sp!, #0x13
 	cpsid if, #0x13
-	sub sp, sp, #60
+	sub sp, sp, #PC*4
 	stmia sp, {r0-r14}^
-	mov r0, #4
+	mov r0, #SIGINS
 	mov r2, #0
 	b 1f
 pabort_entry:
 	sub lr, lr, #4
 	srsdb sp!, #0x13
 	cpsid if, #0x13
-	sub sp, sp, #60
+	sub sp, sp, #PC*4
 	stmia sp, {r0-r14}^
-	mov r0, #11
+	mov r0, #SIGSEG
 	mov r2, #0
 	b 1f
 dabort_entry:
 	sub lr, lr, #8
 	srsdb sp!, #0x13
 	cpsid if, #0x13
-	sub sp, sp, #60
+	sub sp, sp, #PC*4
 	stmia sp, {r0-r14}^
 	ldr r0, =nofault
 	ldr r0, [r0]
 	cmp r0, #0
-	strne r0, [sp, #60]
+	strne r0, [sp, #PC*4]
 	bne 2f
-	mov r0, #11
+	mov r0, #SIGSEG
 	mrc p15, 0, r2, c6, c0, 0
 1:
 	mov r1, sp
@@ -193,12 +199,12 @@ dabort_entry:
 	cpsid i
 2:
 	ldmia sp, {r0-r14}^
-	add sp, sp, #60
+	add sp, sp, #PC*4
 	rfeia sp!
 
 .bss
 .balign 8
-	.space 4096
+	.space PGSIZE
 stack_top:
 .balign 4096
 kl2:
