@@ -12,8 +12,11 @@ def done():
     global ok
     if cur and nxt <= total:
         print(f'{cur}: lines {nxt}..{total} not shown'); ok = False
+STR = r'"((?:[^"\\]|\\.)*)"'
 pat = (r'#source\("([^"]+)"\)|#lines\((\d+),\s*(\d+)\)|listing\('
-       r'|#lines-to\((none|"((?:[^"\\]|\\.)*)"(?:,\s*lead:\s*(true|false))?)\)')
+       r'|#lines-to\((none|' + STR + r'((?:,\s*(?:lead:\s*(?:true|false)|exact:\s*(?:true|false)|after:\s*' + STR + r'))*))\)')
+def unesc(t):
+    return re.sub(r'\\(.)', lambda m: {'t': '\t', 'n': '\n'}.get(m.group(1), m.group(1)), t)
 for m in re.finditer(pat, src):
     if m.group(4):
         # lines-to: up to the line before the next one beginning with the
@@ -21,16 +24,28 @@ for m in re.finditer(pat, src):
         if m.group(4) == 'none':
             b = total
         else:
-            needle = re.sub(r'\\(.)', r'\1', m.group(5))
-            hits = [i for i in range(nxt, total + 1) if text[i-1].strip().startswith(needle)]
+            needle = unesc(m.group(5))
+            opts = m.group(6) or ''
+            start = nxt
+            am = re.search(r'after:\s*' + STR, opts)
+            if am:
+                anchor = unesc(am.group(1))
+                ah = [i for i in range(nxt, total + 1) if text[i-1].strip().startswith(anchor)]
+                if not ah:
+                    print(f'{cur}: no line after {nxt} begins with {anchor!r}'); ok = False
+                    continue
+                start = ah[0] + 1
+            exact = re.search(r'exact:\s*true', opts)
+            hits = [i for i in range(start, total + 1)
+                    if (text[i-1].strip() == needle if exact else text[i-1].strip().startswith(needle))]
             if not hits:
                 print(f'{cur}: no line after {nxt} begins with {needle!r}'); ok = False
                 continue
             b = hits[0] - 1
-            if m.group(6) == 'true':
+            if re.search(r'lead:\s*true', opts):
                 while b >= nxt and not text[b-1].strip():
                     b -= 1
-        if b < nxt - 1: print(f'{cur}: empty fragment before {m.group(4)}'); ok = False
+        if b < nxt: print(f'{cur}: empty fragment before {m.group(4)}'); ok = False
         nxt = b + 1
     elif m.group(1):
         done(); cur = m.group(1); nxt = 1
@@ -42,7 +57,9 @@ for m in re.finditer(pat, src):
         if b < a or b > total: print(f'{cur}: bad range {a},{b} (file has {total})'); ok = False
         nxt = b + 1
 done()
-for m in re.finditer(r'(?<!`)`(?!`)([^`]*?)`(?!`)', src):
+# the strings given to #l, #at, and #lines-to are source text, not markup
+prose = re.sub(r'((?:#l\(|#at\(|#lines-to\(|after:\s*|,\s*)' + STR + ')', lambda m: m.group(0)[:m.group(0).index('"')] + '"' + ' ' * (len(m.group(2))) + '"', src)
+for m in re.finditer(r'(?<!`)`(?!`)([^`]*?)`(?!`)', prose):
     if '\n' in m.group(1):
         print(f'line {src.count(chr(10), 0, m.start()) + 1}: inline code spans a line break'); ok = False
 print('OK' if ok else 'FAILED')
