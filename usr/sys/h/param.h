@@ -13,7 +13,7 @@
 #define	NOFILE	20		/* max open files per process */
 #define	CANBSIZ	256		/* max size of typewriter line */
 #define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
-#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
+#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* swap allocation area size */
 #define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
 #define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
 #define	NCALL	20		/* max simultaneous time callouts */

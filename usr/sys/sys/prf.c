@@ -48,7 +48,8 @@ loop:
 		return;
 	}
 	if(c == 'd' || c == 'u' || c == 'o' || c == 'x')
-		printn(va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
+		printn(va_arg(adx, unsigned),
+		    c=='o'? 8: (c=='x'? 16:10));
 	else if(c == 's') {
 		s = va_arg(adx, char *);
 		while((c = *s++))

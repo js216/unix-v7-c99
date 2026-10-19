@@ -257,7 +257,8 @@ loop:
 			continue;
 		if (rp->p_textp && rp->p_textp->x_flag&XLOCK)
 			continue;
-		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) || rp->p_stat==SSTOP) {
+		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||
+		    rp->p_stat==SSTOP) {
 			if (maxsize < rp->p_size) {
 				p = rp;
 				maxsize = rp->p_size;
@@ -313,7 +314,8 @@ swapin(register struct proc *p)
 			xp->x_caddr = x;
 			if ((xp->x_flag&XLOAD)==0) {
 				swap(xp->x_daddr,x,xp->x_size,B_READ);
-				arm_sync_icache(PGADDR(x), ptob(xp->x_size));
+				arm_sync_icache(PGADDR(x),
+				    ptob(xp->x_size));
 			}
 		}
 		xp->x_ccount++;

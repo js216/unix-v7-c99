@@ -94,7 +94,8 @@ main(void)
 		expand(USIZE + (int)btop(szicode));
 		estabur((unsigned)0, btop(szicode), (unsigned)0, 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
-		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE), szicode);
+		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),
+		    szicode);
 		/*
 		 * Return goes to loc. 0 of user init
 		 * code just copied out.
@@ -163,7 +164,8 @@ binit(void)
 	for (i=0; i<NBUF; i++) {
 		bp = &buf[i];
 		bp->b_dev = NODEV;
-		bp->b_un.b_addr = (caddr_t)buffers[i] + (-(unsigned)buffers&63);
+		bp->b_un.b_addr = (caddr_t)buffers[i] +
+		    (-(unsigned)buffers&63);
 		bp->b_back = &bfreelist;
 		bp->b_forw = bfreelist.b_forw;
 		bfreelist.b_forw->b_back = bp;

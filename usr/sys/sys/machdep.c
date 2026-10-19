@@ -136,7 +136,8 @@ sendsig(caddr_t p, int signo)
 	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
 	grow(n);
 	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
-	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
+	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),
+	    sizeof(u.u_fps)) < 0) {
 		u.u_signal[SIGSEG] = 0;
 		psignal(u.u_procp, SIGSEG);
 		return;
@@ -162,7 +163,8 @@ kmap(int dev)
 	for(m = board_map; m->end != 0; m++)
 		if((m->attr == BLK_DEV) == dev)
 			for(a = m->start; a < m->end; a += 0x200000)
-				kl2[((m->va+a-m->start)>>21) & 0x1ff] = a | m->attr;
+				kl2[((m->va+a-m->start)>>21) & 0x1ff] =
+				    a | m->attr;
 	tlbflush();
 }
 
@@ -236,7 +238,8 @@ sigreturn(void)
 
 	a = (caddr_t)u.u_ar0[SP];
 	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
-	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
+	    copyin(a+sizeof(f), (caddr_t)&u.u_fps,
+	    sizeof(u.u_fps)) < 0) {
 		u.u_signal[SIGSEG] = 0;
 		psignal(u.u_procp, SIGSEG);
 		return;
@@ -259,7 +262,8 @@ memaddr(int dev, off_t off)
 		return((char *)off);
 	for(i = 0; i < 2; i++) {
 		b = (unsigned)(i ? __ddrbss_start : _start);
-		e = i ? (unsigned)PGADDR(btop(coretop)) : (unsigned)__bss_end;
+		e = i ? (unsigned)PGADDR(btop(coretop)) :
+		    (unsigned)__bss_end;
 		a = off;
 		if(minor(dev) == 0)
 			a += b - vtop((caddr_t)b);
@@ -278,8 +282,10 @@ devaddr(off_t off)
 	register struct memregion *m;
 
 	for(m = board_map; m->end != 0; m++)
-		if(m->attr == BLK_DEV && (unsigned)off - m->start < m->end - m->start)
-			return((char *)(m->va + (unsigned)off - m->start));
+		if(m->attr == BLK_DEV &&
+		    (unsigned)off - m->start < m->end - m->start)
+			return((char *)(m->va +
+			    (unsigned)off - m->start));
 	return(NULL);
 }
 
@@ -307,8 +313,9 @@ sumem(int dev, off_t off, int c)
 void
 install_sigtramp(void)
 {
-	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
-	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
+	/* mov r7, #63; svc #0 */
+	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);
+	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);
 }
 
 void

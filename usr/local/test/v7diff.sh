@@ -857,7 +857,7 @@ usr/local
 -#define	CMAPSIZ	50		/* size of core allocation area */
 -#define	SMAPSIZ	50		/* size of swap allocation area */
 +#define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
-+#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
++#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* swap allocation area size */
 +#define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
 +#define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
 @@ -48 +50 @@
@@ -21626,7 +21626,7 @@ usr/local
 +	bxeq lr
 +	mov r12, lr
 +	bl dline
-+1:	mcr p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean and invalidate line
++1:	mcr p15, 0, r0, c7, c14, 1 @ DCCIMVAC: clean and invalidate line
 +	add r0, r0, r2
 +	cmp r0, r1
 +	blo 1b
@@ -25592,7 +25592,7 @@ usr/local
 -#define	CMAPSIZ	50		/* size of core allocation area */
 -#define	SMAPSIZ	50		/* size of swap allocation area */
 +#define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
-+#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* size of swap allocation area */
++#define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* swap allocation area size */
 +#define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
 +#define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
 @@ -48 +50 @@
@@ -25736,10 +25736,10 @@ usr/local
 -int	cputype;		/* type of cpu =40, 45, or 70 */
 -int	lbolt;			/* time of day in 60th not in time */
 -time_t	time;			/* time in sec from 1970 */
-+extern	char	canonb[CANBSIZ];	/* buffer for erase and kill (#@) */
-+extern	struct inode *rootdir;		/* pointer to inode of root directory */
-+extern	struct proc *runq;		/* head of linked list of running processes */
-+extern	int	lbolt;			/* time of day in 60th not in time */
++extern	char	canonb[CANBSIZ];	/* buffer for erase and kill */
++extern	struct inode *rootdir;		/* inode of root directory */
++extern	struct proc *runq;		/* list of running processes */
++extern	int	lbolt;			/* ticks not yet in time */
 +extern	time_t	time;			/* time in sec from 1970 */
 @@ -21 +20 @@
 -int	nblkdev;
@@ -25759,12 +25759,12 @@ usr/local
 -int	nswap;			/* size of swap space */
 -int	updlock;		/* lock for sync */
 -daddr_t	rablock;		/* block to be read ahead */
-+extern	int	mpid;			/* generic for unique process id's */
++extern	int	mpid;			/* last process id given out */
 +extern	char	runin;			/* scheduling flag */
 +extern	char	runout;			/* scheduling flag */
 +extern	char	runrun;			/* scheduling flag */
 +extern	char	curpri;			/* more scheduling */
-+extern	int	maxmem;			/* actual max memory per process */
++extern	int	maxmem;			/* max memory per process */
 +extern	daddr_t	swplo;			/* block number of swap space */
 +extern	int	nswap;			/* size of swap space */
 +extern	int	updlock;		/* lock for sync */
@@ -25779,12 +25779,13 @@ usr/local
 +extern	dev_t	rootdev;		/* device of the root */
 +extern	dev_t	swapdev;		/* swapping device */
 +extern	dev_t	pipedev;		/* pipe device */
-@@ -46,0 +46,4 @@
+@@ -46,0 +46,5 @@
 +extern	unsigned long long clkcval;	/* when the clock is next due */
-+extern	unsigned clkreload, clkrem, clkfrac;	/* ticks: counts, remainder, its sum */
++extern	unsigned clkreload;		/* counts per tick */
++extern	unsigned clkrem, clkfrac;	/* remainder, and its sum */
 +extern	unsigned long long *l1tab;	/* user first-level tables */
 +extern	unsigned l1pa;		/* their physical address */
-@@ -48,16 +51,240 @@
+@@ -48,16 +52,242 @@
 -dev_t getmdev();
 -daddr_t	bmap();
 -struct inode *ialloc();
@@ -25905,7 +25906,8 @@ usr/local
 +void	panic(char *s);
 +void	panictrap(void);
 +void	pause(void);
-+void	physio(void (*strat)(struct buf *bp), struct buf *bp, int dev, int rw);
++void	physio(void (*strat)(struct buf *bp), struct buf *bp,
++	    int dev, int rw);
 +void	pipe(void);
 +void	plock(struct inode *ip);
 +void	prdev(char *str, dev_t dev);
@@ -25998,7 +26000,8 @@ usr/local
 +int	cpass(void);
 +int	dfar(void);
 +int	dfsr(void);
-+int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
++int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep,
++	    int xrw);
 +int	expand(int newsize);
 +int	fsig(struct proc *p);
 +int	fubyte(caddr_t a);
@@ -26041,7 +26044,7 @@ usr/local
 +#define	suiword	suword
 +#define	copyiin	copyin
 +#define	copyiout	copyout
-@@ -67,6 +294,6 @@
+@@ -67,6 +297,6 @@
 -int	dk_busy;
 -long	dk_time[32];
 -long	dk_numb[3];
@@ -26054,7 +26057,7 @@ usr/local
 +extern	long	dk_wds[3];
 +extern	long	tk_nin;
 +extern	long	tk_nout;
-@@ -80 +307 @@
+@@ -80 +310 @@
 -	int	(*sy_call)();		/* handler */
 +	void	(*sy_call)(void);	/* handler */
 
@@ -26115,7 +26118,7 @@ usr/local
 @@ -51,2 +53,2 @@
 -	int	u_uisa[16];		/* prototype of segmentation addresses */
 -	int	u_uisd[16];		/* prototype of segmentation descriptors */
-+	unsigned u_ptsize, u_pdsize, u_pssize;	/* prototype of segment sizes */
++	unsigned u_ptsize, u_pdsize, u_pssize;	/* prototype sizes */
 +	int	u_pxrw;			/* prototype of text access */
 @@ -56,3 +58,3 @@
 -	unsigned u_tsize;		/* text size (clicks) */
@@ -26598,14 +26601,15 @@ usr/local
 -	n = u.u_ar0[R6] - 4;
 +	m = (PSR+1)*sizeof(int);
 +	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
-@@ -148,5 +138,11 @@
+@@ -148,5 +138,12 @@
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
 -	u.u_ar0[R6] = n;
 -	u.u_ar0[RPS] &= ~TBIT;
 -	u.u_ar0[R7] = (int)p;
 +	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
-+	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m), sizeof(u.u_fps)) < 0) {
++	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),
++	    sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
 +		return;
@@ -26615,7 +26619,7 @@ usr/local
 +	u.u_ar0[PC] = (int)p;
 +	u.u_ar0[R0] = signo;
 +	u.u_ar0[PSR] &= ~0x0600fe20;
-@@ -155,9 +151,57 @@
+@@ -155,9 +152,58 @@
 -/*
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
@@ -26639,7 +26643,8 @@ usr/local
 +	for(m = board_map; m->end != 0; m++)
 +		if((m->attr == BLK_DEV) == dev)
 +			for(a = m->start; a < m->end; a += 0x200000)
-+				kl2[((m->va+a-m->start)>>21) & 0x1ff] = a | m->attr;
++				kl2[((m->va+a-m->start)>>21) & 0x1ff] =
++				    a | m->attr;
 +	tlbflush();
 +}
 +
@@ -26682,12 +26687,12 @@ usr/local
 +		*p = 0;
 +	return((caddr_t)UBASE + ptob(USIZE));
 +}
-@@ -165,2 +209,2 @@
+@@ -165,2 +211,2 @@
 -mapalloc(bp)
 -register struct buf *bp;
 +void
 +copyseg(int from, int to)
-@@ -168 +212,17 @@
+@@ -168 +214,17 @@
 -	register i, a;
 +	register int *s, *d, i;
 +
@@ -26706,7 +26711,7 @@ usr/local
 +	for(i = 0; i < PGSIZE/4; i++)
 +		d[i] = 0;
 +}
-@@ -170 +230,12 @@
+@@ -170 +232,13 @@
 -	if(cputype != 70)
 +void
 +sigreturn(void)
@@ -26717,15 +26722,16 @@ usr/local
 +
 +	a = (caddr_t)u.u_ar0[SP];
 +	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
-+	    copyin(a+sizeof(f), (caddr_t)&u.u_fps, sizeof(u.u_fps)) < 0) {
++	    copyin(a+sizeof(f), (caddr_t)&u.u_fps,
++	    sizeof(u.u_fps)) < 0) {
 +		u.u_signal[SIGSEG] = 0;
 +		psignal(u.u_procp, SIGSEG);
-@@ -172,4 +242,0 @@
+@@ -172,4 +245,0 @@
 -	spl6();
 -	while(maplock&B_BUSY) {
 -		maplock |= B_WANTED;
 -		sleep((caddr_t)&maplock, PSWP+1);
-@@ -177,19 +244,74 @@
+@@ -177,19 +247,78 @@
 -	maplock |= B_BUSY;
 -	spl0();
 -	bp->b_flags |= B_MAP;
@@ -26763,7 +26769,8 @@ usr/local
 +		return((char *)off);
 +	for(i = 0; i < 2; i++) {
 +		b = (unsigned)(i ? __ddrbss_start : _start);
-+		e = i ? (unsigned)PGADDR(btop(coretop)) : (unsigned)__bss_end;
++		e = i ? (unsigned)PGADDR(btop(coretop)) :
++		    (unsigned)__bss_end;
 +		a = off;
 +		if(minor(dev) == 0)
 +			a += b - vtop((caddr_t)b);
@@ -26782,8 +26789,10 @@ usr/local
 +	register struct memregion *m;
 +
 +	for(m = board_map; m->end != 0; m++)
-+		if(m->attr == BLK_DEV && (unsigned)off - m->start < m->end - m->start)
-+			return((char *)(m->va + (unsigned)off - m->start));
++		if(m->attr == BLK_DEV &&
++		    (unsigned)off - m->start < m->end - m->start)
++			return((char *)(m->va +
++			    (unsigned)off - m->start));
 +	return(NULL);
 +}
 +
@@ -26811,8 +26820,9 @@ usr/local
 +void
 +install_sigtramp(void)
 +{
-+	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);	/* mov r7, #63 */
-+	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);	/* svc #0 */
++	/* mov r7, #63; svc #0 */
++	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);
++	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);
 +}
 +
 +void
@@ -26863,22 +26873,24 @@ usr/local
 -		estabur((unsigned)0, btoc(szicode), (unsigned)0, 0, RO);
 +		expand(USIZE + (int)btop(szicode));
 +		estabur((unsigned)0, btop(szicode), (unsigned)0, 0, RO);
-@@ -70,0 +97 @@
-+		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE), szicode);
-@@ -90 +117,2 @@
+@@ -70,0 +97,2 @@
++		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),
++		    szicode);
+@@ -90 +118,2 @@
 -iinit()
 +void
 +iinit(void)
-@@ -119 +147 @@
+@@ -119 +148 @@
 -char	buffers[NBUF][BSIZE+BSLOP];
 +extern int	buffers[][(BSIZE+BSLOP+63)/64*16];
-@@ -125 +153,2 @@
+@@ -125 +154,2 @@
 -binit()
 +void
 +binit(void)
-@@ -137 +166 @@
+@@ -137 +167,2 @@
 -		bp->b_un.b_addr = buffers[i];
-+		bp->b_un.b_addr = (caddr_t)buffers[i] + (-(unsigned)buffers&63);
++		bp->b_un.b_addr = (caddr_t)buffers[i] +
++		    (-(unsigned)buffers&63);
 
 % usr/sys/sys/malloc.c
 @@ -11 +11 @@
@@ -26988,15 +27000,16 @@ usr/local
 +		va_end(adx);
 +		return;
 +	}
-@@ -43 +51 @@
+@@ -43 +51,2 @@
 -		printn((long)*adx, c=='o'? 8: (c=='x'? 16:10));
-+		printn(va_arg(adx, unsigned), c=='o'? 8: (c=='x'? 16:10));
-@@ -45,2 +53,2 @@
++		printn(va_arg(adx, unsigned),
++		    c=='o'? 8: (c=='x'? 16:10));
+@@ -45,2 +54,2 @@
 -		s = (char *)*adx;
 -		while(c = *s++)
 +		s = va_arg(adx, char *);
 +		while((c = *s++))
-@@ -49,2 +57,9 @@
+@@ -49,2 +58,9 @@
 -		printn(*(long *)adx, 10);
 -		adx += (sizeof(long) / sizeof(int)) - 1;
 +		l = va_arg(adx, long);
@@ -27008,35 +27021,35 @@ usr/local
 +	} else {
 +		putchar('%');
 +		putchar(c);
-@@ -52 +66,0 @@
+@@ -52 +67,0 @@
 -	adx++;
-@@ -59,2 +73,2 @@
+@@ -59,2 +74,2 @@
 -printn(n, b)
 -long n;
 +void
 +printn(unsigned long n, int b)
-@@ -64,5 +78 @@
+@@ -64,5 +79 @@
 -	if (n<0) {	/* shouldn't happen */
 -		putchar('-');
 -		n = -n;
 -	}
 -	if(a = n/b)
 +	if((a = n/b))
-@@ -79,2 +89,2 @@
+@@ -79,2 +90,2 @@
 -panic(s)
 -char *s;
 +void
 +panic(char *s)
-@@ -95,3 +105,2 @@
+@@ -95,3 +106,2 @@
 -prdev(str, dev)
 -char *str;
 -dev_t dev;
 +void
 +prdev(char *str, dev_t dev)
-@@ -104 +113 @@
+@@ -104 +114 @@
 - * deverr prints a diagnostic from
 + * deverror prints a diagnostic from
-@@ -110,2 +119,2 @@
+@@ -110,2 +120,2 @@
 -deverror(bp, o1, o2)
 -register struct buf *bp;
 +void
@@ -27434,85 +27447,87 @@ usr/local
 @@ -247 +250 @@
 -	spl6();
 +	intr_disable();
-@@ -257 +260 @@
+@@ -257 +260,2 @@
 -		if (rp->p_stat==SSLEEP&&rp->p_pri>=PZERO || rp->p_stat==SSTOP) {
-+		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) || rp->p_stat==SSTOP) {
-@@ -269 +272 @@
++		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||
++		    rp->p_stat==SSTOP) {
+@@ -269 +273 @@
 -	spl0();
 +	intr_enable();
-@@ -278,2 +281,3 @@
+@@ -278,2 +282,3 @@
 -		xswap(p, 1, 0);
 -		goto loop;
 +		if (xswap(p, 1, 0))
 +			goto loop;
 +		p->p_flag |= SLOAD;
-@@ -281 +285 @@
+@@ -281 +286 @@
 -	spl6();
 +	intr_disable();
-@@ -292,2 +296,2 @@
+@@ -292,2 +297,2 @@
 -swapin(p)
 -register struct proc *p;
 +int
 +swapin(register struct proc *p)
-@@ -301 +305 @@
+@@ -301 +306 @@
 -	if (xp = p->p_textp) {
 +	if ((xp = p->p_textp)) {
-@@ -310 +314 @@
+@@ -310 +315 @@
 -			if ((xp->x_flag&XLOAD)==0)
 +			if ((xp->x_flag&XLOAD)==0) {
-@@ -311,0 +316,2 @@
-+				arm_sync_icache(PGADDR(x), ptob(xp->x_size));
+@@ -311,0 +317,3 @@
++				arm_sync_icache(PGADDR(x),
++				    ptob(xp->x_size));
 +			}
-@@ -317 +323 @@
+@@ -317 +325 @@
 -	mfree(swapmap, ctod(p->p_size), p->p_addr);
 +	mfree(swapmap, ptod(p->p_size), p->p_addr);
-@@ -329 +335,2 @@
+@@ -329 +337,2 @@
 -qswtch()
 +void
 +qswtch(void)
-@@ -347 +354,2 @@
+@@ -347 +356,2 @@
 -swtch()
 +void
 +swtch(void)
-@@ -349 +357 @@
+@@ -349 +359 @@
 -	register n;
 +	register int n;
-@@ -380 +388 @@
+@@ -380 +390 @@
 -	spl6();
 +	intr_disable();
-@@ -412 +419,0 @@
+@@ -412 +421,0 @@
 -	spl0();
-@@ -426 +433,2 @@
+@@ -426 +435,2 @@
 -newproc()
 +int
 +newproc(void)
-@@ -431 +439 @@
+@@ -431 +441 @@
 -	register n;
 +	register int n;
-@@ -498,0 +507,4 @@
+@@ -498,0 +509,4 @@
 +	if (u.u_fpsaved==0) {
 +		savfp(&u.u_fps);
 +		u.u_fpsaved = 1;
 +	}
-@@ -526,0 +539 @@
+@@ -526,0 +541 @@
 +	sureg();
-@@ -545 +558,2 @@
+@@ -545 +560,2 @@
 -expand(newsize)
 +int
 +expand(int newsize)
-@@ -547 +561 @@
+@@ -547 +563 @@
 -	register i, n;
 +	register int i, n;
-@@ -549 +563 @@
+@@ -549 +565 @@
 -	register a1, a2;
 +	register int a1, a2;
-@@ -557 +571 @@
+@@ -557 +573 @@
 -		return;
 +		return(1);
-@@ -561 +575 @@
+@@ -561 +577 @@
 -		return;
 +		return(1);
-@@ -565 +579,8 @@
+@@ -565 +581,8 @@
 -		xswap(p, 1, n);
 +		if (u.u_fpsaved==0) {
 +			savfp(&u.u_fps);
@@ -27522,9 +27537,9 @@ usr/local
 +			p->p_size = n;
 +			return(0);
 +		}
-@@ -569,0 +591 @@
+@@ -569,0 +593 @@
 +	ptfree(p);
-@@ -574,0 +597 @@
+@@ -574,0 +599 @@
 +	return(1);
 
 % usr/sys/sys/subr.c

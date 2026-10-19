@@ -105,7 +105,7 @@ dcflush:
 	bxeq lr
 	mov r12, lr
 	bl dline
-1:	mcr p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean and invalidate line
+1:	mcr p15, 0, r0, c7, c14, 1 @ DCCIMVAC: clean and invalidate line
 	add r0, r0, r2
 	cmp r0, r1
 	blo 1b

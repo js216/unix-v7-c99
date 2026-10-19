@@ -3,10 +3,10 @@
  * used by more than one
  * routine.
  */
-extern	char	canonb[CANBSIZ];	/* buffer for erase and kill (#@) */
-extern	struct inode *rootdir;		/* pointer to inode of root directory */
-extern	struct proc *runq;		/* head of linked list of running processes */
-extern	int	lbolt;			/* time of day in 60th not in time */
+extern	char	canonb[CANBSIZ];	/* buffer for erase and kill */
+extern	struct inode *rootdir;		/* inode of root directory */
+extern	struct proc *runq;		/* list of running processes */
+extern	int	lbolt;			/* ticks not yet in time */
 extern	time_t	time;			/* time in sec from 1970 */
 
 /*
@@ -25,12 +25,12 @@ extern	int	nblkdev;
  */
 extern	int	nchrdev;
 
-extern	int	mpid;			/* generic for unique process id's */
+extern	int	mpid;			/* last process id given out */
 extern	char	runin;			/* scheduling flag */
 extern	char	runout;			/* scheduling flag */
 extern	char	runrun;			/* scheduling flag */
 extern	char	curpri;			/* more scheduling */
-extern	int	maxmem;			/* actual max memory per process */
+extern	int	maxmem;			/* max memory per process */
 extern	daddr_t	swplo;			/* block number of swap space */
 extern	int	nswap;			/* size of swap space */
 extern	int	updlock;		/* lock for sync */
@@ -44,7 +44,8 @@ extern	dev_t	pipedev;		/* pipe device */
 extern	int	icode[];	/* user init code */
 extern	int	szicode;	/* its size */
 extern	unsigned long long clkcval;	/* when the clock is next due */
-extern	unsigned clkreload, clkrem, clkfrac;	/* ticks: counts, remainder, its sum */
+extern	unsigned clkreload;		/* counts per tick */
+extern	unsigned clkrem, clkfrac;	/* remainder, and its sum */
 extern	unsigned long long *l1tab;	/* user first-level tables */
 extern	unsigned l1pa;		/* their physical address */
 
@@ -152,7 +153,8 @@ void	openi(struct inode *ip, int rw);
 void	panic(char *s);
 void	panictrap(void);
 void	pause(void);
-void	physio(void (*strat)(struct buf *bp), struct buf *bp, int dev, int rw);
+void	physio(void (*strat)(struct buf *bp), struct buf *bp,
+	    int dev, int rw);
 void	pipe(void);
 void	plock(struct inode *ip);
 void	prdev(char *str, dev_t dev);
@@ -245,7 +247,8 @@ int	copyout(caddr_t f, caddr_t t, unsigned n);
 int	cpass(void);
 int	dfar(void);
 int	dfsr(void);
-int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw);
+int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep,
+	    int xrw);
 int	expand(int newsize);
 int	fsig(struct proc *p);
 int	fubyte(caddr_t a);
