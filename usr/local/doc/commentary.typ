@@ -1,6 +1,7 @@
 #set page(width: 6in, height: 9in, margin: (x: 0.75in, y: 50pt), header-ascent: 18pt)
 #set text(size: 10pt)
 #import "defs.typ": *
+#set page(numbering: "1", header: running, footer: [])
 #set raw(tab-size: 8)
 #show heading: set block(below: 1em)
 #show heading.where(level: 1): it => { pagebreak(weak: true); v(1fr); align(center, text(size: 1.6em, it.body)); v(2fr); pagebreak(weak: true) }
@@ -50,9 +51,6 @@ up to date with C99 to run on hardware available nowadays.
 #show outline.entry.where(level: 3): it => pad(left: -1.2em, it)
 #columns(2, outline(title: none))
 #pagebreak()
-#set page(numbering: "1", header: running, footer: [])
-#counter(page).update(1)
-#metadata(none) <main>
 
 #include "intro.typ"
 

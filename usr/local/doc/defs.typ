@@ -1,9 +1,11 @@
 #let running = context {
   let p = here().page()
-  let k = p - locate(<main>).page() + 1
+  let k = p
   let n = str(k)
   let here-p(h) = h.location().page() == p
-  if query(heading.where(level: 1)).any(here-p) or query(heading.where(level: 2)).any(here-p) {
+  if p == 1 {
+    none
+  } else if query(heading.where(level: 2).before(here())).len() == 0 or query(heading.where(level: 1)).any(here-p) or query(heading.where(level: 2)).any(here-p) {
     if calc.even(k) { n } else { align(right, n) }
   } else if calc.even(k) {
     let sec = query(heading.where(level: 2).before(here())).last()
