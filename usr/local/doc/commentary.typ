@@ -5353,6 +5353,59 @@ the signal trampoline at 8 (`sendsig`, #f("machdep.c")), so no object of the pro
 lie at address 0, and the padding is gone.
 
 #lines(13, 13)
+#source("/usr/src/libc/csu/mcrt0.s")
+
+`mcrt0.o` takes the place of `crt0.o` in a program to be profiled, one
+compiled with `-pg` and linked with this file first. It starts as
+#f("csu/crt0.s") does (4--9), and keeps `argc`, `argv`, and the
+environment in registers which survive calls (10--12). It then
+obtains, with `sbrk`, a buffer for `monitor` (#f("gen/mon.c")): six
+halfwords of header, four for each of `CBUFS` call counts, and a
+histogram of one halfword for every eight bytes of the program's text,
+from `eprol`, the end of this file, to `etext`, which the linker defines
+(13--19). That is v7's density: one counter for every two
+instructions. A fifth argument goes on the stack, which is kept a
+multiple of 8 (24, 25). If there is no room, a message is written and
+the program ends (35--41).
+
+`exit` is defined here (43--49), so that the library's
+(#f("gen/cuexit.c")) is not loaded: it flushes the standard I/O
+buffers, calls `monitor` with a null address to stop the sampling and
+write `mon.out`, and ends the process. v7's file did the same.
+
+v7's compiler made each function call `mcount` with the address of a
+word of its own, in which `mcount` kept a pointer to the function's
+counter, so that the counter was found at once. GCC's `-pg` instead
+makes each function begin by pushing its return address and calling
+`__gnu_mcount_nc` (51--57), whose return address then lies within the
+function. The routine saves the argument registers, passes that
+address to `mcount`, and returns to the function with its own return
+address restored from the stack.
+
+#lines(1, 63)
+#source("/usr/src/libc/gen/mon.c")
+
+`monitor` is v7's, for 32-bit words. Called with a range of text
+addresses, a buffer, its size in halfwords, and a number of call
+counters, it lays out the buffer as `mon.out` will hold it: the header
+`hdr`, the counters `cnt`, and the histogram (33--40), the layout which
+`prof` reads (#f("cmd/prof.c")). It then asks the kernel through
+`profil` to count the program counter into the histogram at each clock
+tick. The scale is a fraction of 0x10000 by which the offset of the
+program counter from the start of the range is multiplied to index the
+histogram (`addupc`, #f("clock.c")): 0x10000 gives a counter to every
+two bytes, and a smaller histogram a proportionally coarser one
+(44--48). Called with a null address, `monitor` stops the counting and
+writes the whole buffer to `mon.out` (25--31).
+
+`mcount`, new in this file, counts a call of the function from which
+`__gnu_mcount_nc` (#f("csu/mcrt0.s")) passes an address. Lacking v7's
+per-function word, it searches the counters filled so far for the
+address, and takes a new one if it is not there and one is free
+(55--70). A program with a few hundred functions is profiled at the cost
+of that search on every call.
+
+#lines(1, 70)
 #source("/usr/src/libc/gen/cuexit.c")
 
 `exit` flushes the program's output streams, through `_cleanup`
@@ -5586,13 +5639,6 @@ list, which becomes the second argument (4); `environ` is the third
 words and returns $-1$. v7's built the same list from its stack frame.
 
 #lines(1, 12)
-#source("/usr/src/libc/sys/execv.s")
-
-`execv(file, argv)` already has its file and argument list in `r0` and
-`r1`; the stub adds `environ` as the third argument (3--4) and makes the
-call `exece`, 59, through `cerror`.
-
-#lines(1, 6)
 #source("/usr/src/libc/sys/dup.s")
 
 `dup` duplicates a descriptor. `dup2(f, nf)` makes `nf` a copy of `f`;
@@ -5614,12 +5660,13 @@ place three words after its `sys` instruction.
 `ptrace(req, pid, addr, data)` lets a parent read and write a stopped
 child's memory and registers. The kernel takes the data word in `r0`
 and the request last, as v7's PDP-11 call did, so the stub exchanges
-`r0` and `r3` through `ip` (3--5) before the call. v7's stub also
-cleared `errno` first, so that a caller reading a word could tell a
-word of $-1$ from a failure by testing `errno`; the port's does not, so
-such a caller must clear `errno` itself.
+`r0` and `r3` through `ip` (8--10) before the call. It first clears
+`errno` (3--7), so that a caller reading a word can tell a word of $-1$
+from a failure by testing `errno`: `cerror` stores `errno` only when
+the call fails. Every argument register is in use, so `r0` is lent to
+the store and taken back from the stack.
 
-#lines(1, 7)
+#lines(1, 12)
 #source("/usr/src/libc/sys/sbrk.s")
 
 `brk` sets the end of the program's data, the break, to an address,
@@ -5654,11 +5701,6 @@ into `r0` and `r1` (4), where the kernel takes the argument.
 The kernel's `getuid` returns the real user id in `r0` and the
 effective one in `r1` (#f("sys4.c")). `getuid` returns the first;
 `geteuid` makes the same call and returns the second (5--9).
-
-#lines(1, 9)
-#source("/usr/src/libc/sys/getgid.s")
-
-`getgid` and `getegid` are made in the same way for the group ids.
 
 #lines(1, 9)
 #source("/usr/src/cmd/init.c")
@@ -8592,10 +8634,14 @@ variadic functions, `printf` and `scanf` and their relatives and `execl`
 and `execlp` (68--72), are declared with `...`; their definitions use
 `stdarg.h` (#f("stdio/printf.c")).
 
-`environ` (100) is defined in #f("csu/crt0.s"); the declaration lets the
+`profil` and `monitor` (96, 97), which v7 left undeclared, start and
+stop the kernel's sampling of the program counter and keep the counts
+of a profiled program (#f("gen/mon.c")).
+
+`environ` (102) is defined in #f("csu/crt0.s"); the declaration lets the
 `exec` routines and `getenv` find it.
 
-#lines(36, 100)
+#lines(36, 102)
 #source("/usr/src/libc/stdio/filbuf.c")
 
 `_filbuf` is called by `getc` (#f("stdio.h")) when the buffer of an
@@ -10099,9 +10145,12 @@ which this file keeps. The parameter is now the `struct sgttyb` of
 the number of its line in `/etc/ttys`, from the name `ttyname` finds for
 the standard input, output, or error. `getttys` reads a line of
 `/etc/ttys` and returns the name after its two leading characters,
-which are flags for `init`. It is v7's, with prototypes.
+which are flags for `init`. v7 tested the length of the line only after
+storing a character, so a line of more than 32 characters was stored one
+byte past the end of `line`, and returned without a terminating null.
+The test is now made on the last byte (50), which ends the name.
 
-#lines(1, 58)
+#lines(1, 56)
 #source("/usr/src/libc/gen/nlist.c")
 
 `nlist` looks up names in the symbol table of an executable file, for
@@ -13577,10 +13626,10 @@ itself: it reads two reports from `diff`, of the first file against
 the third and of the second against the third, and the three files,
 and prints the places where they differ, marked by which of them
 disagrees, or with `-e` an `ed` script that folds the differences
-between the second and third files into the first. In v7 a shell
-script in `/bin` ran the two `diff`s into temporary files and then
-this program, which lives in `/usr/lib`; the script is not part of
-this system, so the program is run directly.
+between the second and third files into the first. The command a user
+types is v7's shell script `/bin/diff3`, which runs the two `diff`s
+into temporary files and then this program, which lives in
+`/usr/lib`.
 
 `readin` reads the line numbers of each change in a report into an
 array of `diff`s, and adds one more entry after the last, giving the
@@ -14577,22 +14626,48 @@ program is v7's, with prototypes.
 
 #source("/usr/src/cmd/prof.c")
 
-`prof` printed an execution profile: from the symbol table of an
-object file and the counts in `mon.out`, which the library's `monitor`
-wrote for a program compiled with `-p`, a histogram of where the
-program counter was found at each clock tick, it estimated the time
-spent in each function and the number of calls. It reads the PDP-11's
-`a.out` format, and the port's programs are ELF files, so it now refuses
-them as being in a bad format; the library has no `monitor` either. The
-program is kept as part of v7, and made safe on any input: the header
-of `mon.out` and the symbol table are now checked as they are read
-(107--108, 121--125, 136--137), and the addresses, which v7 converted
-by subtracting null pointers, are divided by the size of a counting unit
-(126--127). The variable `ftime` is renamed `ftim` (42), since the
-library's `ftime` is declared in the headers; the plotting code, which
-used a library this system lacks, is left out by `#ifdef plot`.
+`prof` prints an execution profile. A program to be profiled is
+compiled with `-pg` and linked with #f("csu/mcrt0.s") in place of
+`crt0.o`; when it exits it leaves `mon.out`, written by `monitor`
+(#f("gen/mon.c")): a header giving the range of addresses watched, the
+call counts, and a histogram of where the program counter was found at
+each clock tick. From that file and the program's symbol table `prof`
+estimates the time spent in each function and the number of calls.
 
-#lines(1, 323)
+v7 read the symbol table of the PDP-11's `a.out` format. The port's
+programs are ELF files, and `prof` now finds the table as `nlist`
+does (#f("gen/nlist.c")): the ELF header is read into `eh` (107), and
+the section headers are searched from the last for the symbol table,
+type 2, whose offset and size go to `sa` and `n`, and whose string
+table's offset to `st` (111--124). A short or damaged file ends the
+search rather than leaving `sh` unread.
+
+Each 16-byte symbol is then read into `sym` (143--161). Its last word
+holds the type, the binding, and the section. A symbol is taken if it
+names a function or nothing in particular, which is what an assembler
+label is (147), is global unless `-a` asks for local ones too (149),
+and lies in a section of instructions, flag 4 (151--153). The ARM's
+mapping symbols, `$a` for instructions and `$d` for data, are skipped
+(156). v7 took only the eight characters an `a.out` name held; names
+of up to fifteen are now kept (13, 155), and the table is printed in a
+column that wide (275, 281). C names in ELF have no leading underscore.
+
+v7 credited a call count to a function whose address lay within ten
+units below the counted address, the distance from the entry of a
+PDP-11 function to its call of `mcount`. The count now goes to the
+function containing the address, the last whose entry is not above it,
+found after the table is sorted by address (168--176); empty slots of
+the count table are passed over.
+
+The program is otherwise v7's, made safe on any input: the header of
+`mon.out` is checked as it is read (130--134), and the addresses, which
+v7 converted by subtracting null pointers, are divided by the size of a
+counting unit (135--136). The variable `ftime` is renamed `ftim` (41),
+since the library's `ftime` is declared in the headers; the plotting
+code, which used a library this system lacks, is left out by
+`#ifdef plot`.
+
+#lines(1, 339)
 #source("/usr/src/cmd/icheck.c")
 
 `icheck` checks the consistency of the blocks of a file system. It
@@ -15249,9 +15324,10 @@ the header in front, making `unix-mp135.stm32`, which `all` includes.
 #lines(38, 42)
 #source("/usr/src/libc/lib.mk")
 
-#f("libc/lib.mk") builds the C library, `libc.a`, and the start-up file
-`crt0.o` (#f("csu/crt0.s")), which every program is linked with first
-but which is not a member of the library. It replaces v7's `compall`,
+#f("libc/lib.mk") builds the C library, `libc.a`, and the start-up files
+`crt0.o` (#f("csu/crt0.s")), which every program is linked with first,
+and `mcrt0.o` (#f("csu/mcrt0.s")), which takes its place in a program
+to be profiled; neither is a member of the library. It replaces v7's `compall`,
 a list of `cc -c -O` commands, one per source file, and `mklib`, a
 single `ar` command naming every object. Here the members are simply
 all the C and assembler files of the library's four directories: the
@@ -15266,7 +15342,7 @@ The search path puts the port's `usr/include` ahead of the toolchain's
 headers, so that `<stdio.h>` and the rest are v7's, while `<stdarg.h>`,
 which v7 did not have, comes from the compiler.
 
-#lines(1, 12)
+#lines(1, 13)
 #source("/usr/src/libm/lib.mk")
 
 #f("libm/lib.mk") builds the mathematical library, `libm.a`, from every
@@ -15768,7 +15844,7 @@ which dumps core and read the image, with whatever it had read from
 `/dev/kmem`, in the core file: `core` (#f("sig.c")) makes no file at all
 for a process whose user or group was changed by `exec`.
 
-#lines(4, 111)
+#lines(4, 112)
 
 The special files. Each gives a type (`b` or `c`), and the major and
 minor device numbers, which are v7's (#f("qemu/c.c")): the console is
@@ -15789,7 +15865,7 @@ readable by anyone, mode 644, which let any user read every file on
 the disk and every process's memory. There are no other terminals, so the
 lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 
-#lines(112, 121)
+#lines(113, 122)
 
 `/etc` holds the programs which v7 installed there, and its data:
 #f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
@@ -15805,7 +15881,7 @@ the programs fail.
 mounts something, and #f("rc") empties the second, creating it on the
 first boot.
 
-#lines(122, 140)
+#lines(123, 141)
 
 `/tmp` may be written by anyone. Under `/usr`, `adm` holds three empty
 files. `messages` and `msgbuf` belong to `daemon`, so that `dmesg`, run
@@ -15834,7 +15910,7 @@ whose directory does not exist, so without his `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
-#lines(141, 359)
+#lines(142, 365)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -15843,7 +15919,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(360, 361)
+#lines(366, 367)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
