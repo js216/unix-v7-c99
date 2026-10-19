@@ -194,7 +194,7 @@ Every expired callout is called, in order, with its argument,
 and the remainder of the list is then moved down to the front of the
 table. v7's `spl5` here was meant to lower the PDP-11 priority from 6
 to 5, admitting other clock-level work; on the ARM the IRQ is already
-masked and `intr_disable` changes nothing. The doubled parentheses at 72 are those of
+masked and `intr_disable` changes nothing. The doubled parentheses at #l("while((p2->c_func = p1->c_func)) {") are those of
 #f("malloc.c").
 
 #lines-to("/*")
@@ -485,7 +485,7 @@ execute bits set, so that the super-user, to whom `access` grants
 everything, cannot execute a data file.
 
 The initialisation of `cp` (#l("register char *cp = NULL;")) is new; it quiets the compiler, which
-cannot see that `cp` is always set (at 92) before it is used.
+cannot see that `cp` is always set (at #l("cp = bp->b_un.b_addr;", after: "bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));")) before it is used.
 
 #lines-to("/*", after: "}")
 
@@ -532,7 +532,7 @@ without adjusting it.
 
 The new stack, from `ap` upwards, holds the argument count, the
 argument pointers and a zero, the environment pointers and a zero, and
-then the strings, followed by a zero word (#l("suword((caddr_t)ucp, 0);")). The `0377` mask at 132
+then the strings, followed by a zero word (#l("suword((caddr_t)ucp, 0);")). The `0377` mask at #l("} while(c&0377);")
 is v7's; here `c` is never negative.
 
 #lines-to("setregs();")
@@ -612,7 +612,7 @@ given `SSIZE` pages plus room for the strings and the pointer vector,
 `nargc` bytes.
 
 The overlay branch (#l("if (overlay) {")--#l("} else {")) is dead, since `overlay` is never set; it
-is kept as v7 wrote it, but for the parentheses at 225, as in #f("slp.c").
+is kept as v7 wrote it, but for the parentheses at #l("if ((u.u_sep==0 && ts != u.u_tsize) || nargc) {"), as in #f("slp.c").
 
 #lines-to("/*", after: "goto bad;")
 
@@ -793,7 +793,7 @@ a function, so the library's `time` need only store the pair.
 `ftime` returns the time with a fraction, read from `lbolt`, the count
 of ticks within the current second. Interrupts are masked while `time`
 and `lbolt` are read together, so that the clock cannot advance one
-without the other between the two reads. The test at 42 allowed for v7's
+without the other between the two reads. The test at #l("if (ms > HZ) {") allowed for v7's
 `clock`, which could let `lbolt` run past `HZ` when it postponed its
 once-a-second work; on the ARM that never happens (#f("clock.c")). The
 time zone is the one compiled into the system (#f("param.h")).
@@ -1108,7 +1108,7 @@ shares it, or it is sticky, the request fails. The inode loses `ITEXT`,
 so that the altered text is never attached by a later `exec`, and the
 text is mapped writable for the one store (`RW`, #f("seg.h")) and then
 read-only again; `XWRIT` makes sure the altered text, not the file's,
-is what is swapped back in. The doubled parentheses at 362 are those of
+is what is swapped back in. The doubled parentheses at #l("if ((xp = u.u_procp->p_textp)) {") are those of
 #f("malloc.c").
 
 The word is stored through the data cache, and the processor fetches
@@ -1211,7 +1211,7 @@ its files but while its `u` is still intact, and writes one record
 saved by `exec`; the user and system times are in ticks, the elapsed
 time in seconds. `ac_mem` and `ac_io` are always zero, here as in v7.
 
-The cast at 63 is new: `sizeof` yields an unsigned value, and the
+The cast at #l("for (i=0; i<(int)sizeof(acctbuf.ac_comm); i++)") is new: `sizeof` yields an unsigned value, and the
 compiler warns of a comparison between it and the signed `i`.
 
 #lines-to("siz = ip->i_size;")
@@ -2089,7 +2089,7 @@ space which are mapped, and which lie in different places in core. The
 check is v7's, with the page size changed and the top of the address
 space, which v7 wrote as 1024 clicks, now `btop(USRSIZE)`. v7 also
 masked the addresses with `01777` to keep them within the 64 KB address
-space; the test at 487 has already done that here. v7 tested the click
+space; the test at #l("if (base&01 || u.u_count&01 || base>=base+u.u_count ||") has already done that here. v7 tested the click
 of the byte after the transfer, so that a transfer which ended exactly
 at the end of the data was refused. With pages of 4096 bytes in place
 of clicks of 64, such a buffer is 64 times as likely, and the test is
@@ -2358,7 +2358,7 @@ directory. The `mkdir` command, which runs as the super-user, calls
 third argument, the device number, goes into the first block address
 (#l("ip->i_un.i_rdev = (dev_t)uap->dev;")). Nothing checks that a non-special inode receives a zero there.
 
-Note the way an error from `suser` is handled: the test at 284 also
+Note the way an error from `suser` is handled: the test at #l("if(u.u_error)", after: "if(ip != NULL) {") also
 catches it, so that the `goto out` path is taken only when `ip` has been
 set.
 
@@ -3965,7 +3965,7 @@ and passes everything else to the character device's `ioctl` routine.
 number fails the test against `nldisp`, which is 1 here. The cast
 (#l("if (t >= (unsigned)nldisp) {")) is new. It makes explicit the conversion of `nldisp` to unsigned
 which C performs in any case (#f("fio.c")). Likewise `t_line`, a `char`, is
-now converted to `int` (201, and again at 266) before it subscripts
+now converted to `int` (201, and again at #l("(*linesw[(int)tp->t_line].l_ioctl)(com, tp, addr);")) before it subscripts
 `linesw`: a `char` subscript draws a warning, since `char` is signed on
 some machines.
 
@@ -5765,7 +5765,7 @@ only when no terminal is served: none is enabled in `/etc/ttys`, or
 
 The `setjmp` (#l("setjmp(sjbuf);")) marks the point to which `reset` (#l("void", after: "lseek(f, (long)0, 2);")) returns when a
 hangup arrives. `reset` was declared locally in v7 (deleted), as a
-function returning `int`; it is now declared at 39 as a `void` function
+function returning `int`; it is now declared at #l("rmut(struct tab *p), reset(int sig);") as a `void` function
 of the signal number, the form which `signal` requires (#f("sys/signal.s")).
 
 `merge` is called with an argument (#l("merge(0);")) because it doubles as the
@@ -5779,7 +5779,7 @@ kills every other process. `kill(-1, SIGKILL)` (#l("kill(-1, SIGKILL);")) from t
 sends the signal to every process but 0 and 1 (`kill`, #f("sys4.c")).
 `init` then waits for all its children. Should some child fail to die
 (a process sleeping in the kernel at a priority below `PZERO` does not
-see signals), the alarm set at 67 fires after a minute, `reset` jumps
+see signals), the alarm set at #l("alarm(60);") fires after a minute, `reset` jumps
 back to the `setjmp`, and the shutdown begins again. Finally the file
 descriptors are closed, so that the next stage starts clean.
 
@@ -6998,7 +6998,7 @@ read raw and marked not to undergo substitution.
 
 `nosubst` (#l("extern BOOL\tnosubst;")) is now declared `extern`. v7 defined it both here and
 in #f("sh/service.c"), which worked only because the loader merged the
-two. The doubled parentheses at 120 are those of #f("malloc.c").
+two. The doubled parentheses at #l("IF (iop=ioparg)") are those of #f("malloc.c").
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/word.c")
@@ -7135,7 +7135,7 @@ symbol the caller expects to end the command, such as `fi` or `)`;
 
 The comments `/* fallthrough */` (#l("/* fallthrough */", after: "ELSE\tsynbad();"), #l("/* fallthrough */", after: "THEN\tbreak;")) are new, and tell GCC that the
 missing `break` is intended; it warns of one otherwise. The doubled
-parentheses at 85 are those of #f("malloc.c").
+parentheses at #l("IF (e=cmd(sym,flg|MTFLG))") are those of #f("malloc.c").
 
 #lines-to("/*", lead: true, after: "}")
 
@@ -7329,7 +7329,7 @@ The port names the node through `c`, a `COMPTR`, where v7 used the
 generic `t` for every field. In particular v7 read the I/O list of a
 command node as `t->treio`; it is now `c->comio`, the same word, since
 both structures put it after the type (#f("sh/mode.h")). The doubled
-parentheses at 53 are those of #f("malloc.c").
+parentheses at #l("IF ((internal=syslook(com[0],commands)) ORF") are those of #f("malloc.c").
 
 #lines-to("SWITCH internal IN")
 
@@ -7385,13 +7385,13 @@ out; `test` is a separate program.
 `set` with arguments processes options and replaces the positional
 parameters; without, and without assignments, it lists the variables.
 `readonly` and `export` share code, with `exitval` borrowed to hold the
-attribute until it is reset (#l("exitval=0;")). The comment at 189 is new.
+attribute until it is reset (#l("exitval=0;")). The comment at #l("/* fallthrough */", after: "exitval=N_RDONLY;") is new.
 
 `eval` runs its arguments as commands with `execexp`. The second
 parameter of `execexp` is declared `UFD`, an `int`, but serves two
 purposes: a file descriptor when the first is null, otherwise the
 address of the list of further arguments. v7 passed the address
-without a cast; C99 requires one each way, here and at 426, and the
+without a cast; C99 requires one each way, here and at #l("THEN\testabf(s); fb.feval=(STRING *)f;"), and the
 conversion is exact because an `int` and a pointer are both 32 bits on
 the ARM, as both were 16 on the PDP-11.
 
@@ -7473,7 +7473,7 @@ node. Its diagnostic output, `output`, is a private copy of descriptor
 2 made by `exfile` (#f("sh/main.c")); it is replaced by a fresh copy of
 the present descriptor 2, so that a redirection of the standard error
 around the parentheses applies to the subshell's own messages too. The
-`break` (#l("break;", after: "execute(((PARPTR)t)->partre,execflg,0,0);")) is new, as at 304.
+`break` (#l("break;", after: "execute(((PARPTR)t)->partre,execflg,0,0);")) is new, as at #l("break;", after: "execa(com);").
 
 #lines-to("case TFIL:")
 
@@ -7592,7 +7592,7 @@ on the stack the next candidate, the first directory of `path` joined to
 
 `execa` tries each directory in turn. Before the first `exec` the
 exported variables are marked (`exname`) and the environment is built
-(`setenv`, #f("sh/name.c")). The doubled parentheses at 119 are those
+(`setenv`, #f("sh/name.c")). The doubled parentheses at #l("WHILE (path=execs(path,t)) DONE") are those
 of #f("malloc.c").
 
 `execs` calls `execve` (`exece` in #f("sys1.c")); if it returns at all,
@@ -7646,14 +7646,14 @@ as well; the port does not (#l("IF sig != SIGPIPE THEN newline() FI")). A writer
 happens to fall, and the blank line would come and go with it.
 The status kept, `rc`, is the first nonzero one collected,
 a signal being marked with `SIGFLG`; with the option `-e` any failure
-ends the shell. The parentheses at 224 are new.
+ends the shell. The parentheses at #l("IF (sig = w&0177)") are new.
 
 #lines-to("BOOL\t\tnosubst;")
 
 `trim` strips the quote bit, 0200, which #f("sh/macro.c") sets on
 quoted characters, and records in `nosubst` whether any was found.
 `nosubst` is defined here; v7 defined it in #f("sh/io.c") as well. The
-parentheses at 258 and 259 are new.
+parentheses at #l("IF (p=at)") and #l("THEN\tWHILE (c = *p)") are new.
 
 `mactrim` substitutes parameters in a word and removes its quoting.
 
@@ -7773,7 +7773,7 @@ inherited them, except those ignored by `trap ''`.
 #lines-to("VOID", after: "trapflg[i] &= ~SIGMOD;")
 
 `chktrap` runs the traps of the signals which have arrived since the
-last call, preserving `$?` across them. The parentheses at 106 are new.
+last call, preserving `$?` across them. The parentheses at #l("IF (t=trapcom[i])") are new.
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/builtin.c")
@@ -7819,7 +7819,7 @@ reads the next command. Anything else exits through `done`.
 
 `done` runs the trap set on signal 0, the shell's exit, clearing it
 first so that an error within it does not run it again, removes the
-temporary files, and exits. The parentheses at 71 are new.
+temporary files, and exits. The parentheses at #l("IF (t=trapcom[0])") are new.
 
 `rmtemp` unlinks the temporary files made since `base`, which hold
 here documents. The I/O nodes naming them are chained through `iolst`
@@ -7969,7 +7969,7 @@ has no `unset`. A name which is not an identifier is reported by
 
 `prev` is initialised to zero (#l("REG NAMPTR\t*prev = 0;")) in the port. The loop always runs
 at least once, since `namep` is never null, and so always sets `prev`
-before the store at 188; GCC cannot see this and would warn that it
+before the store at #l("return(*prev = nscan);")\; GCC cannot see this and would warn that it
 might be used unset. The cast of `alloc`'s result to `NAMPTR` (#l("nscan=(NAMPTR)alloc(sizeof *nscan);")) is
 new: `alloc` returns an `ADDRESS`, a `char *` (#f("sh/defs.h")), which
 C99 does not assign to another pointer type without a cast.
@@ -8121,7 +8121,7 @@ needs no conversion.
 zero. `v` is initialised (#l("REG STRING\targp, v=0;")) in the port. Every path assigns it or
 leaves by `error`, but `error` is an ordinary function, not declared
 to return never, and GCC would warn that `v` might be used unset. The
-parentheses at 68 are new.
+parentheses at #l("IF (bra=(c==BRACE)) THEN c=readc() FI") are new.
 
 #lines-to("c = readc();")
 
@@ -8146,7 +8146,7 @@ only within double quotes, and only in that space: for `"$*"` it is
 quoted, so that the whole is a single word, while for `"$@"` it is not,
 so that `split` will divide the result into one word per parameter, the
 characters of each parameter remaining quoted. This is the whole of the
-difference between the two in v7. The parentheses at 114 are new.
+difference between the two in v7. The parentheses at #l("THEN\tLOOP WHILE (c = *v++)") are new.
 
 If the parameter is unset, `?` prints the word, or a standard message,
 and abandons the command by way of `failed`; `=` assigns the word to the
@@ -8216,7 +8216,7 @@ newlines are then removed from the result, and `pop` restores the
 input; the reading end of the pipe was closed by `readc` when it met
 the end of the output (#f("sh/word.c")).
 
-The parentheses at 195 are new.
+The parentheses at #l("WHILE (d=readc()) DO pushstak(d|quote) OD") are new.
 
 #lines-to("#define CPYSIZ\t512", lead: true)
 
@@ -8228,7 +8228,7 @@ switched on: within a here document `$` and backquotes are
 interpreted but double quotes are not. The quote bits are stripped
 from the result, which is written in pieces of `CPYSIZ` bytes from the
 stack. With `-x` the substituted text is shown on the diagnostic output
-as well. The parentheses at 216 are new.
+as well. The parentheses at #l("WHILE (c=(getch(DQUOTE)&STRIP))") are new.
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/expand.c")
@@ -8314,7 +8314,7 @@ The original word is repaired, every character whose seven bits are
 zero becoming `/` again. `split` may yet use the word itself, when
 nothing matched. The names are not sorted here; `scan` sorts each
 group of names as it builds the argument list (#f("sh/service.c")).
-The parentheses at 107 are new.
+The parentheses at #l("WHILE (c = *s)") are new.
 
 #lines-to("INT", lead: true)
 
@@ -8412,8 +8412,8 @@ The cast of `copyargs`' result to `DOLPTR` (#l("dolh=(DOLPTR)copyargs(argi,argn)
 
 `freeargs` drops one reference to a parameter block and returns the
 next block on the chain `argfor`. When the count reaches zero the
-strings and the block are freed. The parentheses at 87 are new, and
-the cast at 90 is explained below.
+strings and the block are freed. The parentheses at #l("IF (argblk=blk)") are new, and
+the cast at #l("THEN\tFOR argp=(STRING *)argblk->dolarg;") is explained below.
 
 #lines-to("LOCAL STRING *\tcopyargs(STRING from[], INT n)", lead: true)
 
@@ -8447,9 +8447,9 @@ input file, closing their descriptors.
 present parameters and links them on `argfor`. If the body of the loop
 then does `set`, `setargs` replaces `dolh`, but the old block survives
 with the loop's reference until the loop ends and calls `freeargs`.
-The parentheses at 118 are new.
+The parentheses at #l("WHILE (argfor=freeargs(argfor)) DONE") are new.
 
-The test at 128 is new. A `for` without a list inside another such loop
+The test at #l("IF dolh!=argfor THEN dolh->dolnxt=argfor FI") is new. A `for` without a list inside another such loop
 finds `dolh` already at the head of `argfor`, and v7 set its `dolnxt`
 to the block itself. The two loops then ended with `argfor` still
 naming the block, and the next `clearup` freed the parameters in use,
@@ -8479,14 +8479,14 @@ which script failed.
 
 `prs` writes a string. `length` (#f("sh/string.c")) counts the
 terminating null, hence the `-1`. `prc` writes a single character, and
-ignores a null. The parentheses at 39 are new.
+ignores a null. The parentheses at #l("IF (s=as)") are new.
 
 #lines-to("VOID", lead: true, after: "THEN\twrite(output,&c,1);")
 
 `prt` prints a time given in ticks, for `times` (#f("sh/xec.c")),
 rounded to the nearest second, as hours, minutes, and seconds. The
 divisor 60 is the clock rate of v7's PDP-11, which `HZ` (#f("param.h"))
-keeps on the ARM, so the figures remain correct. The parentheses at 59
+keeps on the ARM, so the figures remain correct. The parentheses at #l("IF (hr=t/60)")
 are new.
 
 #lines-to("VOID", lead: true, after: "}")
@@ -8530,14 +8530,14 @@ the C library.
 `movstr` copies `a` to `b` and returns the address of the null it
 stored, not of the start, so that copies may be chained, each
 continuing where the last ended; `staknam` (#f("sh/name.c")) builds
-`name=value` with three calls in a row. The parentheses at 18 are new.
+`name=value` with three calls in a row. The parentheses at #l("WHILE (*b++ = *a++) DONE") are new.
 
 #lines-to("INT\tany(REG CHAR c, STRING s)", lead: true)
 
 `any` tells whether `c` occurs in `s`. When `split` (#f("sh/service.c"))
 asks whether a character is one of `$IFS`, a quoted character still
 carries the quote bit and so equals none of them: this is how a quoted
-blank is kept within a word. The parentheses at 26 are new.
+blank is kept within a word. The parentheses at #l("WHILE (d = *s++)") are new.
 
 `cf` compares two strings and returns zero if they are equal, or the
 difference of the first two characters that differ, whose sign gives
@@ -8555,7 +8555,7 @@ containing such a byte can show the difference.
 which is the number of bytes needed to copy it (`make`,
 #f("sh/name.c")), and one more than the number to write (`prs`,
 #f("sh/print.c")). It returns zero for a null pointer. The parentheses
-at 48 are new.
+at #l("IF (s=as) THEN WHILE *s++ DONE FI") are new.
 
 #lines-to(none)
 
@@ -9398,7 +9398,7 @@ negation of a negative number (#l("lcval = -lcval;")) is defined too. A floating
 is accumulated in the same way, uselessly,
 but its characters are also kept in `numbuf`. A point is accepted only
 in a floating conversion, and an exponent only after a digit has been
-seen. The parentheses at 158 are new, as in #f("slp.c").
+seen. The parentheses at #l("|| (base==16 &&") are new, as in #f("slp.c").
 
 #lines-to("if (negflg)")
 
@@ -11199,7 +11199,7 @@ which `time` stores (#f("param.h")); as before, only its low 32 bits
 reach the key. `seed` in `crinit` (#l("unsigned long seed;")) is now `unsigned long`, as in
 the `crypt` command: multiplied by thirteen characters, it overflows 32
 bits within a few steps, which is undefined for v7's signed `long`. The
-unsigned product wraps round to the same bits, and the cast at 1767
+unsigned product wraps round to the same bits, and the cast at #l("random = (long)seed % 65521;")
 keeps v7's signed remainder, so that a file encrypted by `crypt` can
 still be read with `ed -x`.
 
@@ -11423,8 +11423,8 @@ compiler's analysis at `-Os` reports. The inner loop counts with an
 index `i` (#l("for(i = j; i > 0; i -= m) {"), #l("ai = &a[i];")), where v7 stepped the pointer `ai` down by `m`
 until it was no longer above `a`. The last step took `ai` below the
 start of the array, and C defines neither such a pointer nor its
-comparison; the index may go below zero freely. The parentheses at 169
-and 170 are new, as in #f("slp.c").
+comparison; the index may go below zero freely. The parentheses at #l("(aim->value == ai[0].value &&")
+and #l("aim->serial > ai[0].serial))") are new, as in #f("slp.c").
 
 `unsort` uses the serial numbers to put the class indices of the first
 file back into the file's own order.
@@ -12761,7 +12761,7 @@ judges by the real user id.
 The name is now copied into an array sized to it, with room for the
 `/..` appended later (#l("char\t*np, name[strlen(d)+4];")); v7's held 500 characters. `np` now points
 past the last slash (#l("else")--#l("np++;")), so that `a/.` and `a/..` are refused by
-the test at 75; v7 left it on the slash, and the test saw `/.`, which it
+the test at #l("if(!strcmp(np, \".\") || !strcmp(np, \"..\")) {")\; v7 left it on the slash, and the test saw `/.`, which it
 did not match. And a missing `.` or `..` is now recognised by `errno`
 being `ENOENT` (#l("/* name/. non-existent */"), #l("/* name/.. non-existent */")): v7 took any failure of `access` for absence,
 so that a `..` it could not reach skipped the check of permission and
@@ -15907,8 +15907,8 @@ every 25 blocks, up to the limit of 65500 inodes which a two-byte
 that an `int` or a `long` is compared with a value of type `size_t`,
 which the `sizeof` in `NIPB` gives, as an unsigned number
 (#f("fio.c")). v7 printed a `long` with its own
-`%D`; C99 spells it `%ld`. The doubled parentheses at 125, and in
-`getnum` at 338, are those of #f("malloc.c").
+`%D`; C99 spells it `%ld`. The doubled parentheses at #l("for(f=0; (c=proto[f]); f++) {"), and in
+`getnum` at #l("for(i=0; (c=string[i]); i++) {"), are those of #f("malloc.c").
 
 #lines-to("#ifndef STANDALONE", lead: true)
 
