@@ -83,7 +83,6 @@ sysphys(void)
 extern struct intr intrtab[];
 unsigned long long clkcval;
 unsigned	clkreload, clkrem, clkfrac;
-int	irq_ready;
 int	clkirq = 27;
 
 static void
@@ -109,7 +108,6 @@ clkstart(void)
 	GICC(0) = 1;
 	cntv_cval_set(clkcval = cntvct_get() + clkreload);
 	cntv_ctl_set(1);
-	irq_ready = 1;
 	intr_enable();
 }
 
@@ -189,6 +187,8 @@ machine_init(void)
 	register char *p;
 
 	kmap(1);
+	GICD(0) = 0;
+	GICC(0) = 0;
 	cninit();
 	clock_ddr_init();
 	kmap(0);

@@ -17,11 +17,6 @@ dmbsy:
 	bx lr
 
 intr_enable:
-	mrs r0, cpsr
-	ldr r1, =irq_ready
-	ldr r1, [r1]
-	cmp r1, #0
-	bxeq lr
 	cpsie i
 	bx lr
 
@@ -33,10 +28,6 @@ intr_disable:
 intr_restore:
 	tst r0, #0x80
 	bne 1f
-	ldr r1, =irq_ready
-	ldr r1, [r1]
-	cmp r1, #0
-	bxeq lr
 	cpsie i
 	bx lr
 1:

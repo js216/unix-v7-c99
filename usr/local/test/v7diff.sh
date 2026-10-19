@@ -21424,7 +21424,7 @@ usr/local
 +	.space 32
 
 % usr/sys/conf/mch.s
-@@ -1,2 +1,169 @@
+@@ -1,2 +1,160 @@
 -/ machine language assist
 -/ for 11/45 or 11/70 CPUs
 +.set BLK_KERN, 0x701
@@ -21446,11 +21446,6 @@ usr/local
 +	bx lr
 +
 +intr_enable:
-+	mrs r0, cpsr
-+	ldr r1, =irq_ready
-+	ldr r1, [r1]
-+	cmp r1, #0
-+	bxeq lr
 +	cpsie i
 +	bx lr
 +
@@ -21462,10 +21457,6 @@ usr/local
 +intr_restore:
 +	tst r0, #0x80
 +	bne 1f
-+	ldr r1, =irq_ready
-+	ldr r1, [r1]
-+	cmp r1, #0
-+	bxeq lr
 +	cpsie i
 +	bx lr
 +1:
@@ -21596,7 +21587,7 @@ usr/local
 +	strbt r1, [r0]
 +	mov r0, #0
 +	b uok
-@@ -4,541 +170,0 @@
+@@ -4,541 +161,0 @@
 -
 -/ non-UNIX instructions
 -mfpi	= 6500^tst
@@ -22138,7 +22129,7 @@ usr/local
 -
 -_fuword:
 -	mov	2(sp),r1
-@@ -546,2 +172,6 @@
+@@ -546,2 +163,6 @@
 -	jsr	pc,gword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22147,7 +22138,7 @@ usr/local
 +	ldrt r1, [r0]
 +	mov r0, r1
 +	b uok
-@@ -549,28 +178,0 @@
+@@ -549,28 +169,0 @@
 -giword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22176,7 +22167,7 @@ usr/local
 -_suword:
 -	mov	2(sp),r1
 -	mov	4(sp),r0
-@@ -578,2 +180,82 @@
+@@ -578,2 +171,82 @@
 -	jsr	pc,pword
 -	rts	pc
 +	ldr r3, =nofault
@@ -22261,7 +22252,7 @@ usr/local
 +dfsr:
 +	mrc p15, 0, r0, c5, c0, 0
 +	bx lr
-@@ -581,444 +262,0 @@
+@@ -581,444 +253,0 @@
 -piword:
 -	mov	PS,-(sp)
 -	spl	HIGH
@@ -22706,7 +22697,7 @@ usr/local
 -	.=.+[6*340.]
 -
 -.globl countbase
-@@ -1026,25 +264,2 @@
+@@ -1026,25 +255,2 @@
 -countbase:
 -	_profcnts
 -_profsize:
@@ -22734,7 +22725,7 @@ usr/local
 -	rts	pc
 +waitloc:
 +	.word 1b
-@@ -1053,6 +268,8 @@
+@@ -1053,6 +259,8 @@
 -_xprobuf:.=.+512.
 -_proloc:.=.+2
 -_mode:	.=.+16.
@@ -26430,7 +26421,7 @@ usr/local
 -	return;
 -
 -bad:
-@@ -125,11 +81,46 @@
+@@ -125,11 +81,44 @@
 -#define	CLOCK1	((physadr)0177546)
 -#define	CLOCK2	((physadr)0172540)
 -clkstart()
@@ -26447,7 +26438,6 @@ usr/local
 +extern struct intr intrtab[];
 +unsigned long long clkcval;
 +unsigned	clkreload, clkrem, clkfrac;
-+int	irq_ready;
 +int	clkirq = 27;
 +
 +static void
@@ -26473,7 +26463,6 @@ usr/local
 +	GICC(0) = 1;
 +	cntv_cval_set(clkcval = cntvct_get() + clkreload);
 +	cntv_ctl_set(1);
-+	irq_ready = 1;
 +	intr_enable();
 +}
 +
@@ -26488,19 +26477,19 @@ usr/local
 +		if(*ip->i_irq == (int)(n&0x3ff))
 +			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
 +	GICC(0x10) = n;
-@@ -141,2 +132,2 @@
+@@ -141,2 +130,2 @@
 -sendsig(p, signo)
 -caddr_t p;
 +void
 +sendsig(caddr_t p, int signo)
-@@ -144 +135 @@
+@@ -144 +133 @@
 -	register unsigned n;
 +	register unsigned n, m;
-@@ -146 +137,2 @@
+@@ -146 +135,2 @@
 -	n = u.u_ar0[R6] - 4;
 +	m = (PSR+1)*sizeof(int);
 +	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
-@@ -148,5 +140,11 @@
+@@ -148,5 +138,11 @@
 -	suword((caddr_t)n+2, u.u_ar0[RPS]);
 -	suword((caddr_t)n, u.u_ar0[R7]);
 -	u.u_ar0[R6] = n;
@@ -26517,7 +26506,7 @@ usr/local
 +	u.u_ar0[PC] = (int)p;
 +	u.u_ar0[R0] = signo;
 +	u.u_ar0[PSR] &= ~0x0600fe20;
-@@ -155,9 +153,55 @@
+@@ -155,9 +151,57 @@
 -/*
 - * 11/70 routine to allocate the
 - * UNIBUS map and initialize for
@@ -26566,6 +26555,8 @@ usr/local
 +	register char *p;
 +
 +	kmap(1);
++	GICD(0) = 0;
++	GICC(0) = 0;
 +	cninit();
 +	clock_ddr_init();
 +	kmap(0);
@@ -28506,7 +28497,7 @@ usr/local
 +}
 
 % usr/src/cmd/standalone/sdwrite.c /dev/null
-@@ -0,0 +1,776 @@
+@@ -0,0 +1,803 @@
 +/*
 + * Standalone SD card writer for the STM32MP135,
 + * loaded through the boot ROM's USB DFU mode.
@@ -28583,6 +28574,10 @@ usr/local
 +#define	STALL	(1U<<21)
 +#define	USBAEP	(1U<<15)
 +#define	XFRC	01
++#define	EPDISD	02
++#define	INEPNE	0100
++#define	EPDIS	(1U<<30)
++#define	TXFFLSH	(1U<<5)
 +#define	STUP	010
 +#define	RXFLVL	(1U<<4)
 +#define	USBRST	(1U<<12)
@@ -28906,6 +28901,29 @@ usr/local
 +}
 +
 +/*
++ * Give up a transfer the host has stopped taking:
++ * disable the endpoint and empty its FIFO, so that
++ * the next transfer starts clean.
++ */
++static int
++epabort(void)
++{
++	if (R(DIEPCTL(1)) & EPENA) {
++		R(DIEPCTL(1)) |= SNAK;
++		while ((R(DIEPINT(1)) & INEPNE) == 0)
++			;
++		R(DIEPCTL(1)) |= EPDIS|SNAK;
++		while ((R(DIEPINT(1)) & EPDISD) == 0)
++			;
++	}
++	R(GRSTCTL) = TXFFLSH | 1U<<6;
++	while (R(GRSTCTL) & TXFFLSH)
++		;
++	R(DIEPINT(1)) = R(DIEPINT(1));
++	return(-1);
++}
++
++/*
 + * Send n bytes, a packet at a time as the
 + * transmit FIFO has room for it.
 + */
@@ -28922,12 +28940,12 @@ usr/local
 +		k = n-i < mps ? n-i : mps;
 +		while ((R(DTXFSTS(1)) & 0xffff) < (k+3)/4)
 +			if (now() - t > 64000000)
-+				return(-1);
++				return(epabort());
 +		fifowrite(1, p+i, k);
 +	}
 +	while ((R(DIEPINT(1)) & XFRC) == 0)
 +		if (now() - t > 64000000)
-+			return(-1);
++			return(epabort());
 +		else
 +			usbpoll();
 +	R(DIEPINT(1)) = XFRC;
