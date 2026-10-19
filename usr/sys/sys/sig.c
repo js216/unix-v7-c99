@@ -395,7 +395,7 @@ procxmt(void)
 				goto ok;
 		if (p == &u.u_ar0[PSR]) {
 			/* assure user space */
-			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;
+			ipc.ip_data = (ipc.ip_data&UBITS) | USRMODE;
 			goto ok;
 		}
 		goto error;

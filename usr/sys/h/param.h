@@ -137,6 +137,9 @@ typedef	long		off_t;
  * Machine-dependent bits and macros
  */
 #define	UMODE	037		/* mode bits of the CPSR */
-#define	USERMODE(ps)	((ps & UMODE)==020)
+#define	USRMODE	020		/* user mode */
+#define	USERMODE(ps)	((ps & UMODE)==USRMODE)
+#define	UBITS	0xfe0ffe20	/* flags, GE, IT, E, and T: a user may set these */
+#define	TBITS	0x0600fe20	/* the Thumb state: T, IT, and E */
 
 extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;

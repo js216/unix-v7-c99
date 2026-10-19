@@ -147,7 +147,7 @@ sendsig(caddr_t p, int signo)
 	u.u_ar0[14] = UENTRY_SIGTRAMP;
 	u.u_ar0[PC] = (int)p;
 	u.u_ar0[R0] = signo;
-	u.u_ar0[PSR] &= ~0x0600fe20;
+	u.u_ar0[PSR] &= ~TBITS;
 }
 
 extern struct memregion board_map[];
@@ -248,7 +248,7 @@ sigreturn(void)
 	u.u_fpsaved = 1;
 	for(i = 0; i < PSR; i++)
 		u.u_ar0[i] = f[i];
-	u.u_ar0[PSR] = (f[PSR] & 0xfe0ffe20) | 0x10;
+	u.u_ar0[PSR] = (f[PSR] & UBITS) | USRMODE;
 	u.u_r.r_val1 = f[R0];
 	u.u_r.r_val2 = f[R1];
 }

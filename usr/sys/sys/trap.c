@@ -61,7 +61,7 @@ trap(int *r)
 void
 user_trap_handler(int signo, int *r, unsigned a)
 {
-	if((r[PSR] & 0x1f) != 0x10) {
+	if(!USERMODE(r[PSR])) {
 		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x "
 		    "dfsr=0x%x\n",
 		    signo, r[PC], r[PSR], dfar(), dfsr());
