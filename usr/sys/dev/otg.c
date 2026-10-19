@@ -62,6 +62,9 @@ extern struct cblock	*cfreelist;
 static unsigned char setup[8], ep0buf[64], rxbuf[512], out[NOUT];
 static unsigned rxlen, rxpos, outlen, bulkmps = 512, ep0len;
 static int config, inbusy, dtr;
+static const unsigned char *ep0p;
+static unsigned ep0n;
+static int ep0zlp;
 
 static const unsigned char devdesc[18] = {
 	18, 1, 0x00, 0x02, 2, 0, 0, 64, 0x09, 0x12, 0x01, 0x00,
@@ -126,10 +129,6 @@ ep0out(void)
 	DOEPTSIZ(0) = 3U<<29 | 1U<<19 | 64;
 	DOEPCTL(0) |= EPENA|CNAK;
 }
-
-static const unsigned char *ep0p;
-static unsigned ep0n;
-static int ep0zlp;
 
 static void
 ep0next(void)

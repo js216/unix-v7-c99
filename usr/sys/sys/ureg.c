@@ -28,8 +28,8 @@ ptbuild(register struct proc *p)
 		taddr = p->p_textp->x_caddr;
 	n = u.u_ptsize + u.u_pdsize;
 	n2 = (n+PTPGB-1) / PTPGB;
-	n3lo = (n+511) / 512;
-	n3hi = (u.u_pssize+511) / 512;
+	n3lo = (n+NPTE-1) / NPTE;
+	n3hi = (u.u_pssize+NPTE-1) / NPTE;
 	n = n2 + n3lo + (n3hi != 0) + n3hi;
 	if(n == 0)
 		return;
@@ -41,7 +41,7 @@ ptbuild(register struct proc *p)
 	p->p_ptab = a;
 	p->p_nptab = n;
 	t = (unsigned long long *)PGADDR(a);
-	for(i = 0; i < 512*n; i++)
+	for(i = 0; i < NPTE*n; i++)
 		t[i] = 0;
 	l1 = &l1tab[4*(p-proc)];
 	a = ptob(a);
@@ -49,7 +49,7 @@ ptbuild(register struct proc *p)
 		l1[i] = a | PTE_TAB;
 	for(i = 0; i < n3lo; i++, a += PGSIZE)
 		t[i] = a | PTE_TAB;
-	t += 512*n2;
+	t += NPTE*n2;
 	b = ptob(taddr);
 	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
 		*t++ = b | PGUSER | u.u_pxrw;
@@ -58,11 +58,11 @@ ptbuild(register struct proc *p)
 		*t++ = b | PGUSER | RW;
 	if(n3hi == 0)
 		return;
-	t = (unsigned long long *)PGADDR(p->p_ptab) + 512*(n2+n3lo);
+	t = (unsigned long long *)PGADDR(p->p_ptab) + NPTE*(n2+n3lo);
 	l1[2] = a | PTE_TAB;
 	for(i = 0; i < n3hi; i++)
-		t[512-n3hi+i] = (a += PGSIZE) | PTE_TAB;
-	t += 512 + 512*n3hi - u.u_pssize;
+		t[NPTE-n3hi+i] = (a += PGSIZE) | PTE_TAB;
+	t += NPTE + NPTE*n3hi - u.u_pssize;
 	for(i = 0; i < u.u_pssize; i++, b += PGSIZE)
 		*t++ = b | PGUSER | RW;
 }

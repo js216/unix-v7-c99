@@ -1,5 +1,6 @@
 .set BLK_KERN, 0x701
 .set PGSIZE, 4096
+.set BLKSHIFT, 21
 .set UMODE, 037
 .set SIGINS, 4
 .set SIGSEG, 11
@@ -37,13 +38,13 @@ _start:
 	ldr r5, =kl2
 	add r5, r5, r4
 	ldr r0, =_start
-	lsr r0, r0, #21
+	lsr r0, r0, #BLKSHIFT
 	ldr r1, =__bss_end
 	sub r1, r1, #1
-	lsr r1, r1, #21
+	lsr r1, r1, #BLKSHIFT
 	movw r3, #BLK_KERN
 1:
-	add ip, r4, r0, lsl #21
+	add ip, r4, r0, lsl #BLKSHIFT
 	orr ip, ip, r3
 	ubfx r6, r0, #0, #9
 	add r6, r5, r6, lsl #3

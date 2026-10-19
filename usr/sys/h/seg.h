@@ -11,6 +11,11 @@
 #define	PTE_TAB	3
 #define	PGUSER	0xf03
 #define	PGSHIFT	12
+#define	BLKSHIFT	21	/* 2 MB blocks */
+#define	L1SHIFT	30	/* 1 GB first-level entries */
+#define	NPTE	512	/* entries per translation table */
 #define	PGSIZE	4096
-#define	PTPGB	(512*512)
+#define	PTPGB	(NPTE*NPTE)
 struct memregion { unsigned va, start, end; unsigned long long attr; };
+extern struct memregion board_map[];
+extern unsigned long long kl2[], kl3u[], bootl1[];

@@ -21,6 +21,11 @@
 #define	IAR	0x0c
 #define	EOIR	0x10
 
+extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];
+unsigned long long clkcval;
+unsigned	clkreload, clkrem, clkfrac;
+int	clkirq = 27;
+
 /*
  * Icode is the hex bootstrap
  * program executed in user mode
@@ -69,11 +74,6 @@ startup(void)
 	mfree(swapmap, nswap, 1);
 	swplo--;
 }
-
-extern struct intr intrtab[];
-unsigned long long clkcval;
-unsigned	clkreload, clkrem, clkfrac;
-int	clkirq = 27;
 
 static void
 gicen(int n)
@@ -150,21 +150,16 @@ sendsig(caddr_t p, int signo)
 	u.u_ar0[PSR] &= ~TBITS;
 }
 
-extern struct memregion board_map[];
-extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];
-extern unsigned long long kl2[], kl3u[], bootl1[];
-char	*msgbufp = msgbuf;
-
 static void
-kmap(int dev)
+kmap(unsigned long long attr)
 {
 	register struct memregion *m;
 	register unsigned a;
 
 	for(m = board_map; m->end != 0; m++)
-		if((m->attr == BLK_DEV) == dev)
-			for(a = m->start; a < m->end; a += 0x200000)
-				kl2[((m->va+a-m->start)>>21) & 0x1ff] =
+		if(m->attr == attr)
+			for(a = m->start; a < m->end; a += 1U<<BLKSHIFT)
+				kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =
 				    a | m->attr;
 	tlbflush();
 }
@@ -189,20 +184,20 @@ machine_init(void)
 	register unsigned a;
 	register char *p;
 
-	kmap(1);
+	kmap(BLK_DEV);
 	GICD(DCTLR) = 0;
 	GICC(CCTLR) = 0;
 	cninit();
 	clock_ddr_init();
-	kmap(0);
+	kmap(BLK_KERN);
 	for(p = __ddrbss_start; p < __ddrbss_end; p++)
 		*p = 0;
 	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
 	corebase = ptob(btop(vtop(__ddrbss_end)));
 	for(a = 0; a < USIZE; a++)
 		kl3u[a] = (corebase + ptob(a)) | BLK_KERN | PTE_TAB;
-	kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;
-	bootl1[vtop(_start)>>30] = 0;
+	kl2[(UBASE>>BLKSHIFT) & (NPTE-1)] = vtop((caddr_t)kl3u) | PTE_TAB;
+	bootl1[vtop(_start)>>L1SHIFT] = 0;
 	tlbflush();
 	for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)
 		*p = 0;

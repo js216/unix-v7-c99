@@ -27,6 +27,7 @@ int	maxmem;
 int	updlock = 1;
 daddr_t	rablock;
 char	msgbuf[MSGBUFS];
+char	*msgbufp = msgbuf;
 int	dk_busy;
 long	dk_time[32];
 long	dk_numb[3];
