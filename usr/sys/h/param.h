@@ -110,7 +110,7 @@
 #define	itoo(x)	(int)((x+7)&03)
 
 /* pages to bytes */
-#define	ptob(x)	(x<<12)
+#define	ptob(x)	((unsigned)(x)<<12)
 
 /* bytes to pages */
 #define	btop(x)	((((unsigned)x+4095)>>12))

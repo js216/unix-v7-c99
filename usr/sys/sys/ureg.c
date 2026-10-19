@@ -50,10 +50,10 @@ ptbuild(register struct proc *p)
 	for(i = 0; i < n3lo; i++, a += PGSIZE)
 		t[i] = a | PTE_TAB;
 	t += 512*n2;
-	b = ptob((unsigned)taddr);
+	b = ptob(taddr);
 	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
 		*t++ = b | PGUSER | u.u_pxrw;
-	b = ptob((unsigned)daddr) + ptob(USIZE);
+	b = ptob(daddr) + ptob(USIZE);
 	for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)
 		*t++ = b | PGUSER | RW;
 	if(n3hi == 0)

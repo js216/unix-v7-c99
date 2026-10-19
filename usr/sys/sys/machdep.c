@@ -45,7 +45,7 @@ startup(void)
 
 	i = btop(corebase) + USIZE;
 	l1tab = (unsigned long long *)PGADDR(i);
-	l1pa = ptob((unsigned)i);
+	l1pa = ptob(i);
 	for(a = 0; a < 4*NPROC; a++)
 		l1tab[a] = 0;
 	i += btop(32*NPROC);
@@ -53,7 +53,7 @@ startup(void)
 	i += NPTAB;
 	maxmem = btop(coretop) - i;
 	mfree(coremap, maxmem, i);
-	printf("mem = %D\n", ptob((long)maxmem));
+	printf("mem = %d\n", ptob(maxmem));
 	if(MAXMEM < maxmem)
 		maxmem = MAXMEM;
 	mfree(swapmap, nswap, 1);

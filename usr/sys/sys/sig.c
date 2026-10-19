@@ -349,7 +349,7 @@ procxmt(void)
 	/* read u */
 	case 3:
 		i = (int)ipc.ip_addr;
-		if (i<0 || i >= ptob(USIZE))
+		if (i<0 || (unsigned)i >= ptob(USIZE))
 			goto error;
 		ipc.ip_data = ((physadr)&u)->r[i>>2];
 		break;
