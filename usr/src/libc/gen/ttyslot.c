@@ -47,12 +47,10 @@ getttys(int f)
 	for (;;) {
 		if (read(f, lp, 1) != 1)
 			return(NULL);
-		if (*lp =='\n') {
+		if (*lp =='\n' || lp == &line[31]) {
 			*lp = '\0';
 			return(line+2);
 		}
-		if (lp >= &line[32])
-			return(line+2);
 		lp++;
 	}
 }
