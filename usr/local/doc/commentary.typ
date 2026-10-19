@@ -1559,7 +1559,7 @@ its device: the virtio disk (#f("virtio_blk.c")) does. `i_fn` is called
 with the interrupted `pc` and `ps`, as every PDP-11 handler was called
 with the interrupt's frame. Only `clock` (#f("clock.c")) uses them, to
 charge the tick to user or system time and to profile; the device
-handlers discard them. `clkstart` and `irq` (#f("machdep.c")) enable and
+handlers discard them. `intrstart` and `irq` (#f("machdep.c")) enable and
 dispatch interrupts from the table, the clock's among them.
 
 #lines-to(none)
@@ -1786,7 +1786,7 @@ the physical address, which `vtop` (#f("machdep.c")) supplies. Status 7
 
 The interrupt of the n-th transport (#l("rkirq = 48 + (vbase-0xF0400000)/0x200;")) is shared peripheral
 interrupt 16 + n of the interrupt controller, number 48 + n. `intrtab`
-reaches `rkirq` through a pointer for that reason, and `clkstart`
+reaches `rkirq` through a pointer for that reason, and `intrstart`
 (#f("machdep.c")), which enables the interrupts in the table, runs after
 `rkinit`.
 
@@ -1814,7 +1814,7 @@ v7's call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is gone
 with the map. The IRQ is masked with `intr_disable` and unmasked with `intr_enable`: the
 routine is called at process level. During startup the unmasking lets
 nothing in, since the interrupt controller stays switched off until
-`clkstart` (#f("machdep.c")).
+`intrstart` (#f("machdep.c")).
 
 The queue is that of v7, threaded through `av_forw` and headed in
 `rktab` (#f("buf.h")).
