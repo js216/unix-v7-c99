@@ -80,7 +80,8 @@ struct	blk *pop(void),*readin(void),*add0(struct blk *p, int ct),
 struct	blk *scalint(struct blk *p);
 struct	blk *removc(struct blk *p, int n);
 struct	blk *add(struct blk *a1, struct blk *a2),
-	*div(struct blk *ddivd, struct blk *ddivr),*removr(struct blk *p, int n);
+	*div(struct blk *ddivd, struct blk *ddivr),
+	    *removr(struct blk *p, int n);
 struct	blk *exp(struct blk *base, struct blk *ex);
 struct	blk *sqrt(struct blk *p);
 struct	blk *salloc(int size),*copy(struct blk *hptr, int size);

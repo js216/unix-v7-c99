@@ -38,18 +38,21 @@ main(void)
 			if(d.st_ino == dd.st_ino)
 				prname();
 			do
-				if (read(file, (char *)&dir, sizeof(dir)) < (int)sizeof(dir)) {
+				if (read(file, (char *)&dir,
+				    sizeof(dir)) < (int)sizeof(dir)) {
 					fprintf(stderr,"read error in ..\n");
 					exit(1);
 				}
 			while (dir.d_ino != d.st_ino);
 		}
 		else do {
-				if(read(file, (char *)&dir, sizeof(dir)) < (int)sizeof(dir)) {
+				if(read(file, (char *)&dir,
+				    sizeof(dir)) < (int)sizeof(dir)) {
 					fprintf(stderr,"read error in ..\n");
 					exit(1);
 				}
-				stat(strncpy(dname, dir.d_name, DIRSIZ), &dd);
+				stat(strncpy(dname, dir.d_name, DIRSIZ),
+				    &dd);
 			} while(dd.st_ino != d.st_ino || dd.st_dev != d.st_dev);
 		close(file);
 		cat();

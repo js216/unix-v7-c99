@@ -51,7 +51,8 @@ STKPTR	endstak(REG STRING argp)
 {	/* tidy up after `locstak' */
 	REG STKPTR	oldstak;
 	*argp++=0;
-	oldstak=stakbot; stakbot=staktop=(STKPTR)round(argp,BYTESPERWORD);
+	oldstak=stakbot;
+	stakbot=staktop=(STKPTR)round(argp,BYTESPERWORD);
 	return(oldstak);
 }
 

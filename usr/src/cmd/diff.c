@@ -103,8 +103,10 @@ int bflag;
 
 char *tempfile;	/*used when comparing against std input*/
 char tempname[] = "/tmp/dXXXXX";
-void noroom(void), unravel(int p), check(char **argv), output(char **argv);
-void change(int a,int b,int c,int d), range(int a,int b,char *separator);
+void noroom(void), unravel(int p), check(char **argv),
+    output(char **argv);
+void change(int a,int b,int c,int d),
+    range(int a,int b,char *separator);
 void fetch(long *f,int a,int b,FILE *lb,char *s), mesg(char *s,char *t);
 int stone(int *a,int n,int *b,int *c), newcand(int x,int y,int pred);
 int search(int *c, int k, int y), skipline(int f), readhash(FILE *f);

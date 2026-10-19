@@ -1,5 +1,6 @@
 STAND = usr/src/cmd/standalone
-SAFLAGS = $W -ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=soft \
+SAFLAGS = $W -ffreestanding -nostdlib -mcpu=cortex-a7 -marm \
+	-mfloat-abi=soft \
 	-mno-unaligned-access -Os -fno-tree-loop-distribute-patterns \
 	-Wl,-N,--section-start=.start=0x2ffe0000,-Ttext=0x2ffe0100
 

@@ -135,7 +135,8 @@ bbreak:
 	getdev();
 	uid = getuid();
 	if (lflg)
-	printf(" F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD\n"); else
+	printf(" F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       "
+	    "WCHAN TTY TIME CMD\n"); else
 		if (chkpid==0) printf("   PID TTY TIME CMD\n");
 	for (i=0; i<NPROC; i++) {
 		read(mem, (char *)&mproc, sizeof mproc);
@@ -168,7 +169,8 @@ getdev(void)
 		exit(1);
 	}
 	ndev = 0;
-	while (ndev < 256 && fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
+	while (ndev < 256 &&
+	    fread((char *)&dbuf, sizeof(dbuf), 1, df) == 1) {
 		if(dbuf.d_ino == 0)
 			continue;
 		strncpy(devl[ndev].dname, dbuf.d_name, DIRSIZ);
@@ -247,7 +249,8 @@ prcom(int puid)
 	}
 	printf("%6u", mproc.p_pid);
 	if (lflg) {
-		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid, mproc.p_cpu&0377,
+		printf("%6u%4d%4d%5d%8o%5d", mproc.p_ppid,
+		    mproc.p_cpu&0377,
 			mproc.p_pri,
 			mproc.p_nice,
 			mproc.p_addr, ptod(mproc.p_size));
@@ -314,7 +317,8 @@ prcom(int puid)
 			if (*cp==0)
 				cp++;
 			nbad = 0;
-			for (cp1 = cp; cp1 < (char *)abuf + sizeof(abuf); cp1++) {
+			for (cp1 = cp;
+			    cp1 < (char *)abuf + sizeof(abuf); cp1++) {
 				c = *cp1&0177;
 				if (c==0)
 					*cp1 = ' ';

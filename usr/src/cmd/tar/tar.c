@@ -4,8 +4,18 @@
 #include <sys/dir.h>
 #include <signal.h>
 
-void	usage(void), dorep(char *argv[]), getdir(void), passtape(void), putfile(char *longname, char *shortname), doxtract(char *argv[]), dotable(void), putempty(void), longt(struct stat *st), pmode(struct stat *st), select(int *pairp, struct stat *st), checkdir(char *name), tomodes(struct stat *sp), done(int n), getwdir(char *s), backtape(void), flushtape(void), copy(char *to, char *from), onintr(int sig), onquit(int sig), onhup(int sig), onterm(int sig);
-int	endtape(void), checksum(void), checkw(int c, char *name), response(void), checkupdate(char *arg), prefix(char *s1, char *s2), cmp(char *b, char *s, int n), readtape(char *buffer), writetape(char *buffer);
+void	usage(void), dorep(char *argv[]), getdir(void), passtape(void),
+    putfile(char *longname, char *shortname), doxtract(char *argv[]),
+    dotable(void), putempty(void), longt(struct stat *st),
+    pmode(struct stat *st), select(int *pairp, struct stat *st),
+    checkdir(char *name), tomodes(struct stat *sp), done(int n),
+    getwdir(char *s), backtape(void), flushtape(void),
+    copy(char *to, char *from), onintr(int sig), onquit(int sig),
+    onhup(int sig), onterm(int sig);
+int	endtape(void), checksum(void), checkw(int c, char *name),
+    response(void), checkupdate(char *arg), prefix(char *s1, char *s2),
+    cmp(char *b, char *s, int n), readtape(char *buffer),
+    writetape(char *buffer);
 daddr_t	bsrch(char *s, int n, daddr_t l, daddr_t h), lookup(char *s);
 #define TBLOCK	512
 #define NBLOCK	20
@@ -281,13 +291,16 @@ getdir(void)
 	sscanf(dblock.dbuf.size, "%lo", &sp->st_size);
 	sscanf(dblock.dbuf.mtime, "%llo", &sp->st_mtime);
 	sscanf(dblock.dbuf.chksum, "%o", &chksum);
-	if (chksum != checksum() || sp->st_size < 0 || sp->st_size > 017777777000) {
+	if (chksum != checksum() || sp->st_size < 0 ||
+	    sp->st_size > 017777777000) {
 		fprintf(stderr, "directory checksum error\n");
 		done(2);
 	}
-	dblock.dbuf.name[NAMSIZ-1] = dblock.dbuf.linkname[NAMSIZ-1] = '\0';
+	dblock.dbuf.name[NAMSIZ-1] = dblock.dbuf.linkname[NAMSIZ-1] =
+	    '\0';
 	if (tfile != NULL)
-		fprintf(tfile, "%s %.12s\n", dblock.dbuf.name, dblock.dbuf.mtime);
+		fprintf(tfile, "%s %.12s\n", dblock.dbuf.name,
+		    dblock.dbuf.mtime);
 }
 
 void
@@ -335,12 +348,14 @@ putfile(char *longname, char *shortname)
 
 	if ((stbuf.st_mode & S_IFMT) == S_IFDIR) {
 		if (strlen(longname) >= NAMSIZ) {
-			fprintf(stderr, "%s: file name too long\n", longname);
+			fprintf(stderr, "%s: file name too long\n",
+			    longname);
 			close(infile);
 			return;
 		}
 		if (chdir(shortname) < 0) {
-			fprintf(stderr, "tar: %s: cannot search\n", longname);
+			fprintf(stderr, "tar: %s: cannot search\n",
+			    longname);
 			close(infile);
 			return;
 		}
@@ -620,8 +635,10 @@ checkdir(register char *name)
 			*cp = '\0';
 			if (access(name, 01) < 0) {
 				if (fork() == 0) {
-					execl("/bin/mkdir", "mkdir", name, (char *)0);
-					execl("/usr/bin/mkdir", "mkdir", name, (char *)0);
+					execl("/bin/mkdir", "mkdir",
+					    name, (char *)0);
+					execl("/usr/bin/mkdir", "mkdir",
+					    name, (char *)0);
 					fprintf(stderr, "tar: cannot find mkdir!\n");
 					done(0);
 				}

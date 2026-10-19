@@ -52,7 +52,8 @@ void	pass(void (*fn)(struct dinode *ip), short *map);
 void	indir(daddr_t d, void (*fn1)(daddr_t d),
 	void (*fn2)(daddr_t *dp, int n), int n);
 void	bitmap(short *map, int typ), spclrec(void);
-void	bread(daddr_t da, char *ba, int c), CLR(short *map), taprec(char *dp);
+void	bread(daddr_t da, char *ba, int c), CLR(short *map),
+    taprec(char *dp);
 void	flusht(void), otape(void), getitime(void), putitime(void);
 void	est(struct dinode *ip), bmapest(short *map);
 

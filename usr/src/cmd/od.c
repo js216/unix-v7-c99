@@ -12,7 +12,8 @@ int	max;
 unsigned long	addr;
 
 void offset(char *s), line(unsigned long a, unsigned short *w, int n);
-void putx(unsigned n, int c), cput(int c), putn(unsigned long n, int b, int c), pre(int n);
+void putx(unsigned n, int c), cput(int c),
+    putn(unsigned long n, int b, int c), pre(int n);
 int
 main(int argc, char **argv)
 {

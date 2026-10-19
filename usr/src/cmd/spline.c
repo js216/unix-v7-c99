@@ -143,7 +143,8 @@ rhs(int i){
 	double zz;
 	i_ = i==n-1?0:i;
 	zz = (y.val[i]-y.val[i-1])/(x.val[i]-x.val[i-1]);
-	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i_+1]-x.val[i_]) - zz));
+	return(6*((y.val[i_+1]-y.val[i_])/(x.val[i_+1]-x.val[i_]) -
+	    zz));
 }
 
 static int

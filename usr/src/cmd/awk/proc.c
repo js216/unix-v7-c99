@@ -75,6 +75,7 @@ main(void)
 	for(p=proc; p->token!=0; p++)
 		names[p->token-FIRSTTOKEN] = p->pname;
 	for(i=0; i<SIZE; i++)
-		printf("/*%s*/\t\"%s\",\n",tokname(i+FIRSTTOKEN),names[i]?names[i]:"");
+		printf("/*%s*/\t\"%s\",\n",tokname(i+FIRSTTOKEN),
+		    names[i]?names[i]:"");
 	printf("};\n");
 }

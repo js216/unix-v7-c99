@@ -25,7 +25,9 @@ main(int argc, char **argv)
 		return 0;
 	}
 	n = sscanf("\351abc def", "%s %s", buf, b2);
-	ck("8bit %s", n == 2 && strcmp(buf, "\351abc") == 0 && strcmp(b2, "def") == 0);
+	ck("8bit %s",
+	    n == 2 && strcmp(buf, "\351abc") == 0 &&
+	    strcmp(b2, "def") == 0);
 	n = sscanf("\351\352\351x", "%[\351\352]", buf);
 	ck("8bit %[", n == 1 && strcmp(buf, "\351\352\351") == 0);
 	n = sscanf("\377 ab", "%s", buf);
@@ -40,16 +42,19 @@ main(int argc, char **argv)
 	x = 7;
 	n = sscanf(big, "%d", &x);
 	ck("long number", n == 1);
-	n = sscanf("-12 34 56789 2.5 3.25 Z hello", "%hd %d %ld %f %lf %c %s",
+	n = sscanf("-12 34 56789 2.5 3.25 Z hello",
+	    "%hd %d %ld %f %lf %c %s",
 	    &h, &x, &l, &f, &d, buf, b2);
-	ck("types", n == 7 && h == -12 && x == 34 && l == 56789 && f == 2.5 &&
+	ck("types",
+	    n == 7 && h == -12 && x == 34 && l == 56789 && f == 2.5 &&
 	    d == 3.25 && buf[0] == 'Z' && strcmp(b2, "hello") == 0);
 	n = sscanf("1 2", "%*d %d", &x);
 	ck("suppress", n == 1 && x == 2);
 	n = sscanf("17 ff 1.5E2", "%o %x %F", &x, &y, &d);
 	ck("o x F", n == 3 && x == 15 && y == 255 && d == 150.0);
 
-	ck("malloc huge", malloc(0xffffffff) == 0 && malloc(0xfffffffc) == 0 &&
+	ck("malloc huge",
+	    malloc(0xffffffff) == 0 && malloc(0xfffffffc) == 0 &&
 	    malloc(0x80000000) == 0 && malloc(0x7fffff00) == 0);
 	p = malloc(100);
 	q = malloc(5000);
@@ -63,7 +68,8 @@ main(int argc, char **argv)
 	d = atof("0e500");
 	ck("atof 0e500", d == 0);
 	ck("atof 0e99999999999", atof("0e99999999999") == 0);
-	ck("atof plain", atof("1.5e3") == 1500 && atof("-2.25") == -2.25);
+	ck("atof plain",
+	    atof("1.5e3") == 1500 && atof("-2.25") == -2.25);
 
 	d = modf(-3.75, &ip);
 	ck("modf", d == -0.75 && ip == -3);

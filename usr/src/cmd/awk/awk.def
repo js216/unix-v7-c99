@@ -31,8 +31,10 @@ typedef struct val {	/* general value during processing */
 	struct val	*nextval;	/* ptr to next if chained */
 } cell;
 extern cell *symtab[];
-cell	*setsymtab(char *n, char *s, awkfloat f, unsigned t, cell **tab);
-cell	*lookup(char *s, cell **tab), **makesymtab(void), *fieldadr(int n);
+cell	*setsymtab(char *n, char *s, awkfloat f, unsigned t,
+    cell **tab);
+cell	*lookup(char *s, cell **tab), **makesymtab(void),
+    *fieldadr(int n);
 
 extern cell	*recloc;	/* location of input record */
 extern cell	*nrloc;		/* NR */
@@ -124,22 +126,34 @@ extern int	pairstack[], paircnt;
 #define isrec(n)	(donefld && n.osub==CFLD && n.otype==OCELL && n.optr->nval!=0)
 obj	nullproc(node **a, int n);
 obj	relop(node **a, int n);
-obj	program(node **a, int n), array(node **a, int n), matchop(node **a, int n);
-obj	boolop(node **a, int n), indirect(node **a, int n), substr(node **a, int n);
-obj	sindex(node **a, int n), asprintf(node **a, int n), arith(node **a, int n);
-obj	incrdecr(node **a, int n), assign(node **a, int n), cat(node **a, int n);
-obj	pastat(node **a, int n), dopa2(node **a, int n), aprintf(node **a, int n);
-obj	split(node **a, int n), ifstat(node **a, int n), whilestat(node **a, int n);
-obj	forstat(node **a, int n), instat(node **a, int n), jump(node **a, int n);
+obj	program(node **a, int n), array(node **a, int n),
+    matchop(node **a, int n);
+obj	boolop(node **a, int n), indirect(node **a, int n),
+    substr(node **a, int n);
+obj	sindex(node **a, int n), asprintf(node **a, int n),
+    arith(node **a, int n);
+obj	incrdecr(node **a, int n), assign(node **a, int n),
+    cat(node **a, int n);
+obj	pastat(node **a, int n), dopa2(node **a, int n),
+    aprintf(node **a, int n);
+obj	split(node **a, int n), ifstat(node **a, int n),
+    whilestat(node **a, int n);
+obj	forstat(node **a, int n), instat(node **a, int n),
+    jump(node **a, int n);
 obj	fncn(node **a, int n), print(node **a, int n);
-node	*exptostat(node *a), *stat2(int a, node *b, node *c), *op1(int a, node *b);
-node	*stat3(int a, node *b, node *c, node *d), *op2(int a, node *b, node *c);
-node	*stat4(int a, node *b, node *c, node *d, node *e), *genjump(int a);
-node	*op3(int a, node *b, node *c, node *d), *valtonode(cell *a, int b);
+node	*exptostat(node *a), *stat2(int a, node *b, node *c),
+    *op1(int a, node *b);
+node	*stat3(int a, node *b, node *c, node *d),
+    *op2(int a, node *b, node *c);
+node	*stat4(int a, node *b, node *c, node *d, node *e),
+    *genjump(int a);
+node	*op3(int a, node *b, node *c, node *d),
+    *valtonode(cell *a, int b);
 node	*pa2stat(node *a, node *b, node *c), *linkum(node *a, node *b);
 node	*genprint(void), *stat1(int a, node *b);
 struct	fa *makedfa(node *p);
-int	match(struct fa *pfa, char *p), member(char c, char *s), getrec(void);
+int	match(struct fa *pfa, char *p), member(char c, char *s),
+    getrec(void);
 int	isnumber(char *s), yylex(void), run(void);
 void	error(int f, char *s, ...), yyerror(char *s), PUTS(char *s);
 void	fldbld(void), recbld(void), syminit(void), freesymtab(cell *ap);

@@ -22,6 +22,7 @@ main(int argc, char **argv)
 		lseek(f, itod(i)*(long)BSIZE, 0);
 		write(f, (char *)buf, BSIZE);
 	}
-	printf("%lld %lld %lld\n", dp->di_atime, dp->di_mtime, dp->di_ctime);
+	printf("%lld %lld %lld\n", dp->di_atime, dp->di_mtime,
+	    dp->di_ctime);
 	return 0;
 }

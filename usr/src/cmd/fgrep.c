@@ -88,7 +88,8 @@ out:
 	if (fflag) {
 		wordf = fopen(*argv, "r");
 		if (wordf==NULL) {
-			fprintf(stderr, "fgrep: can't open %s\n", *argv);
+			fprintf(stderr, "fgrep: can't open %s\n",
+			    *argv);
 			exit(2);
 		}
 	}
@@ -330,7 +331,8 @@ init:	if ((s->inp) != 0) {
 				rear = queue;
 			if (rear == front) overflo();
 			state = s->fail;
-		floop:	for (t = state? state: w; t != 0 && t->inp != c; t = t->link)
+		floop:	for (t = state? state: w; t != 0 && t->inp != c;
+		    t = t->link)
 				;
 			if (t != 0) {
 			qloop:	q->fail = t->nst;

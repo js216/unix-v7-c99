@@ -23,7 +23,8 @@ FILE		standin = &stdfile;
 INT		ioset, dolc, wdval, wdnum, wdset, serial, peekc, flags;
 INT		exitval, execbrk, loopcnt, breakcnt;
 IOPTR		iotemp, iopend;
-STRING		*dolv, cmdadr, exitadr, dolladr, pcsadr, pidadr, tmpnam, comdiv;
+STRING		*dolv, cmdadr, exitadr, dolladr, pcsadr, pidadr, tmpnam,
+    comdiv;
 DOLPTR		argfor;
 ARGPTR		gchain, wdarg;
 BOOL		reserv, trapnote;
@@ -117,7 +118,10 @@ LOCAL VOID	exfile(BOOL prof)
 	userid=getuid();
 
 	/* decide whether interactive */
-	IF (flags&intflg) ORF ((flags&oneflg)==0 ANDF gtty(output,(struct sgttyb *)&statb)==0 ANDF gtty(input,(struct sgttyb *)&statb)==0)
+	IF (flags&intflg) ORF
+	    ((flags&oneflg)==0 ANDF
+	    gtty(output,(struct sgttyb *)&statb)==0 ANDF
+	    gtty(input,(struct sgttyb *)&statb)==0)
 	THEN	dfault(&ps1nod, (userid?stdprompt:supprompt));
 		dfault(&ps2nod, readmsg);
 		flags |= ttyflg|prompt; ignsig(KILL);

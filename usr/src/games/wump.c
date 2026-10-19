@@ -141,7 +141,8 @@ init:
 				if(p->tunn[j] == p->tunn[k])
 					goto init;
 		}
-		qsort((char *)&p->tunn[0], NTUNN, sizeof(p->tunn[0]), icomp);
+		qsort((char *)&p->tunn[0], NTUNN, sizeof(p->tunn[0]),
+		    icomp);
 		p++;
 	}
 

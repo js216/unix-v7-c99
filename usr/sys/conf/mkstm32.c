@@ -37,7 +37,8 @@ main(int argc, char **argv)
 	n = fread(img, 1, sizeof img, f);
 	fclose(f);
 	if (n > MAXIMG) {
-		fprintf(stderr, "mkstm32: %s too big for SYSRAM\n", argv[1]);
+		fprintf(stderr, "mkstm32: %s too big for SYSRAM\n",
+		    argv[1]);
 		return 1;
 	}
 	sum = 0;
@@ -57,7 +58,8 @@ main(int argc, char **argv)
 		perror(argv[2]);
 		return 1;
 	}
-	if (fwrite(hdr, 1, 512, f) != 512 || fwrite(img, 1, n, f) != (size_t)n || fclose(f)) {
+	if (fwrite(hdr, 1, 512, f) != 512 ||
+	    fwrite(img, 1, n, f) != (size_t)n || fclose(f)) {
 		perror(argv[2]);
 		return 1;
 	}

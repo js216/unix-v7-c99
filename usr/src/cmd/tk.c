@@ -34,7 +34,8 @@ int	alpha;
 int	ry;
 FILE	*ttyin;
 
-void	init(void), sendpt(int a), kwait(void), execom(void), ex(int sig);
+void	init(void), sendpt(int a), kwait(void), execom(void),
+    ex(int sig);
 int
 main(int argc, char **argv)
 {

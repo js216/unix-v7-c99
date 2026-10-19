@@ -15,9 +15,12 @@ long n0,n1;		/*scan pointer in each*/
 int bflag;
 int debug = 0;
 FILE *file[2];
-int	hardsynch(void), easysynch(void), output(int a, int b), cmp(char *s, char *t);
-void	progerr(char *s), movstr(char *s, char *t), error(char *s, char *t);
-void	change(long a, int b, long c, int d, char *s), range(long a, int b);
+int	hardsynch(void), easysynch(void), output(int a, int b),
+    cmp(char *s, char *t);
+void	progerr(char *s), movstr(char *s, char *t),
+    error(char *s, char *t);
+void	change(long a, int b, long c, int d, char *s),
+    range(long a, int b);
 FILE	*dopen(char *f1, char *f2);
 
 	/* return pointer to line n of file f*/

@@ -13,14 +13,20 @@ int j;
 int l;
 int m;
 int count;
-void getstr(char *s), prtmov(int k), update(int *player, int *playee, int k), roll(void);
-void movegen(int *mover, int *movee), moverecord(int *mover), instructions(void);
-void prtbrd(void), numline(int *upcol, int *downcol, int start, int fin), srand(void);
-void colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin);
+void getstr(char *s), prtmov(int k),
+    update(int *player, int *playee, int k), roll(void);
+void movegen(int *mover, int *movee), moverecord(int *mover),
+    instructions(void);
+void prtbrd(void),
+    numline(int *upcol, int *downcol, int start, int fin), srand(void);
+void colorline(int *upcol, char c1, int *downcol, char c2, int start,
+    int fin);
 void _store(int *p, int numb);
-int play(int *player, int *playee, int pos[]), nextmove(int *player, int *playee);
+int play(int *player, int *playee, int pos[]),
+    nextmove(int *player, int *playee);
 int piececount(int *player, int startrow, int endrow), _look(int *p);
-int strategy(int *player, int *playee), eval(int *player, int *playee, int k, int *prob);
+int strategy(int *player, int *playee),
+    eval(int *player, int *playee, int k, int *prob);
 int getprob(int *player, int *playee, int start, int finish);
 int red[]     = {0,2,0,0,0,0,0,0,0,0,0,0,5,
 		 0,0,0,0,3,0,5,0,0,0,0,0,
@@ -471,7 +477,8 @@ eval(int *player, int *playee, int k, int *prob)
 		if(*p++ == 1)sum--;	/*singles are bad after 1st 6 points
 					  if they can be hit*/
 	    q=newtry+3;
-	    for(p=newtry;p<q;)sum-= *p++;  /*bad to be on 1st three points*/
+	    /*bad to be on 1st three points*/
+	    for(p=newtry;p<q;)sum-= *p++;
 	}
 
 	for(n=1;n<=4;n++)
@@ -576,7 +583,8 @@ numline(int *upcol, int *downcol, int start, int fin)
 	}
 }
 void
-colorline(int *upcol, char c1, int *downcol, char c2, int start, int fin)
+colorline(int *upcol, char c1, int *downcol, char c2, int start,
+    int fin)
 {
 	int k;
 	char c;

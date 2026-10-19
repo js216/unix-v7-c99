@@ -114,7 +114,8 @@ rkinit(void)
 	for (i = 8; i <= 12; i++) {
 		GPIO(2, 0x00) = (GPIO(2, 0x00) & ~(3<<2*i)) | 2<<2*i;
 		GPIO(2, 0x08) |= 1<<2*i;
-		GPIO(2, 0x24) = (GPIO(2, 0x24) & ~(0xF<<(i-8)*4)) | 12<<(i-8)*4;
+		GPIO(2, 0x24) = (GPIO(2, 0x24) & ~(0xF<<(i-8)*4)) |
+		    12<<(i-8)*4;
 	}
 	GPIO(3, 0x00) = (GPIO(3, 0x00) & ~(3<<4)) | 2<<4;
 	GPIO(3, 0x08) |= 1<<4;
@@ -143,10 +144,12 @@ rkinit(void)
 	rca = SD(RESP1) & 0xFFFF0000;
 	rkcmd(9, rca, 3);
 	if ((unsigned)SD(RESP1)>>30 == 1)
-		nrkblk = ((SD(RESP1+4)&077)<<16 | (unsigned)SD(RESP1+8)>>16) * 1024 + 1024;
+		nrkblk = ((SD(RESP1+4)&077)<<16 |
+		    (unsigned)SD(RESP1+8)>>16) * 1024 + 1024;
 	else {
 		c = (SD(RESP1+4)&01777)<<2 | (unsigned)SD(RESP1+8)>>30;
-		nrkblk = (c+1) << (((SD(RESP1+8)>>15)&7) + 2 + ((SD(RESP1+4)>>16)&017) - 9);
+		nrkblk = (c+1) << (((SD(RESP1+8)>>15)&7) + 2 +
+		    ((SD(RESP1+4)>>16)&017) - 9);
 	}
 	rkcmd(7, rca, 1);
 	rkcmd(55, rca, 1);
@@ -174,7 +177,8 @@ void
 rkstrategy(register struct buf *bp)
 {
 
-	if (bp->b_blkno >= nrkblk || bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
+	if (bp->b_blkno >= nrkblk || bp->b_bcount&BMASK ||
+	    (int)bp->b_un.b_addr&3) {
 		bp->b_flags |= B_ERROR;
 		iodone(bp);
 		return;
@@ -220,7 +224,8 @@ rkstart(void)
 	SD(IDMABASER) = vtop(bp->b_un.b_addr+rkoff);
 	SD(IDMACTRL) = 1;
 	SD(MASK) = IENABLE;
-	SD(ARG) = (bp->b_blkno+(rkoff>>BSHIFT)) << (rkbyte ? BSHIFT : 0);
+	SD(ARG) = (bp->b_blkno+(rkoff>>BSHIFT)) << (rkbyte ? BSHIFT :
+	    0);
 	com = GO;
 	if(bp->b_flags & B_READ)
 		com |= RCOM; else

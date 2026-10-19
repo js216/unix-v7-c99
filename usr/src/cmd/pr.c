@@ -39,8 +39,10 @@ int	tabc;
 char	*tty;
 int	mode;
 int	tpgetc(int ai), pgetc(int i);
-void	done(void), onintr(int sig), fixtty(void), print(char *fp, char **argp);
-void	mopen(char **ap), putpage(void), nexbuf(void), put(int ac), putcp(int c);
+void	done(void), onintr(int sig), fixtty(void),
+    print(char *fp, char **argp);
+void	mopen(char **ap), putpage(void), nexbuf(void), put(int ac),
+    putcp(int c);
 
 int
 main(int argc, char **argv)
@@ -204,7 +206,8 @@ print(char *fp, char **argp)
 		}
 		line = 0;
 		if (ntflg==0) {
-			sprintf(linebuf, "\n\n%s %s  %.80s Page %d\n\n\n",
+			sprintf(linebuf,
+			    "\n\n%s %s  %.80s Page %d\n\n\n",
 				cbuf+4, cbuf+20, header, page);
 			for(cp=linebuf;*cp;) put(*cp++);
 		}

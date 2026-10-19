@@ -29,7 +29,8 @@ struct predlist {
 
 struct nodelist *index(char *s);
 struct nodelist *findloop(void);
-int present(struct nodelist *i, struct nodelist *j), anypred(struct nodelist *i);
+int present(struct nodelist *i, struct nodelist *j),
+    anypred(struct nodelist *i);
 int cmp(char *s, char *t);
 void error(char *s, char *t), note(char *s, char *t);
 char *empty = "";

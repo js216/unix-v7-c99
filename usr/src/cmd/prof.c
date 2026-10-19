@@ -104,7 +104,8 @@ main(int argc, char **argv)
 		fprintf(stderr, "%s: not found\n", namfil);
 		done();
 	}
-	if (fread((char *)eh, sizeof eh, 1, nfile) != 1 || eh[0] != 0x464c457f) {
+	if (fread((char *)eh, sizeof eh, 1, nfile) != 1 ||
+	    eh[0] != 0x464c457f) {
 		fprintf(stderr, "%s: bad format\n", namfil);
 		done();
 	}
@@ -128,7 +129,8 @@ main(int argc, char **argv)
 	}
 	fstat(fileno(pfile), &stbuf);
 	if (fread((char *)&h, sizeof(struct hdr), 1, pfile) != 1 ||
-	    (unsigned)h.ncount > 350 || (unsigned)h.highpc <= (unsigned)h.lowpc) {
+	    (unsigned)h.ncount > 350 ||
+	        (unsigned)h.highpc <= (unsigned)h.lowpc) {
 		fprintf(stderr, "mon.out: bad format\n");
 		done();
 	}
@@ -140,19 +142,24 @@ main(int argc, char **argv)
 	pfpos = ftell(pfile);
 #endif
 	npe = nl;
-	for (nname = 0; n >= sizeof sym; n -= sizeof sym, sa += sizeof sym) {
+	for (nname = 0; n >= sizeof sym; n -= sizeof sym,
+	    sa += sizeof sym) {
 		fseek(nfile, sa, 0);
-		if (npe >= &nl[1199] || fread((char *)sym, sizeof sym, 1, nfile) != 1)
+		if (npe >= &nl[1199] ||
+		    fread((char *)sym, sizeof sym, 1, nfile) != 1)
 			break;
-		if ((sym[3]&017) > 2 || (sym[3]>>16) == 0 || (sym[3]>>16) >= (eh[12]&0xffff))
+		if ((sym[3]&017) > 2 || (sym[3]>>16) == 0 ||
+		    (sym[3]>>16) >= (eh[12]&0xffff))
 			continue;
 		if (aflg==0 && (sym[3]&0360) != 020)
 			continue;
 		fseek(nfile, eh[8] + (sym[3]>>16)*40, 0);
-		if (fread((char *)sh, sizeof sh, 1, nfile) != 1 || (sh[2]&4) == 0)
+		if (fread((char *)sh, sizeof sh, 1, nfile) != 1 ||
+		    (sh[2]&4) == 0)
 			continue;
 		fseek(nfile, st + sym[0], 0);
-		npe->name[fread(npe->name, 1, sizeof npe->name - 1, nfile)] = 0;
+		npe->name[fread(npe->name, 1, sizeof npe->name - 1,
+		    nfile)] = 0;
 		if (npe->name[0] == '$')
 			continue;
 		npe->value = sym[1]/sizeof(UNIT);
@@ -169,7 +176,8 @@ main(int argc, char **argv)
 	for (cp = cbuf; cp < &cbuf[h.ncount]; cp++) {
 		if (cp->cvalue == 0)
 			continue;
-		for (np = nl; np[1].value <= cp->cvalue/sizeof(UNIT); np++)
+		for (np = nl; np[1].value <= cp->cvalue/sizeof(UNIT);
+		    np++)
 			;
 		if (np->value <= cp->cvalue/sizeof(UNIT))
 			np->ncall = cp->cncall;
@@ -278,7 +286,8 @@ print:
 	for (np = nl; np<npe-1; np++) {
 		ftim = np->time/totime;
 		actime += np->time;
-		printf("%15.15s%6.1f%9.2f", np->name, 100*ftim, actime/60);
+		printf("%15.15s%6.1f%9.2f", np->name, 100*ftim,
+		    actime/60);
 		if(np->ncall!=0) {
 			printf("%6ld", np->ncall);
 			printf(" %7.2f\n", np->time/(np->ncall*.06));

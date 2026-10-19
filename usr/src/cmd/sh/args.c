@@ -87,7 +87,8 @@ freeargs(DOLPTR blk)
 	IF (argblk=blk)
 	THEN	argr = argblk->dolnxt;
 		IF (--argblk->doluse)==0
-		THEN	FOR argp=(STRING *)argblk->dolarg; Rcheat(*argp)!=ENDARGS; argp++
+		THEN	FOR argp=(STRING *)argblk->dolarg;
+		Rcheat(*argp)!=ENDARGS; argp++
 			DO free(*argp) OD
 			free(argblk);
 		FI
@@ -97,7 +98,8 @@ freeargs(DOLPTR blk)
 
 LOCAL STRING *	copyargs(STRING from[], INT n)
 {
-	REG STRING *	np=(STRING *)alloc(sizeof(STRING*)*n+3*BYTESPERWORD);
+	REG STRING *	np=(STRING *)alloc(sizeof(STRING*)*n+
+			    3*BYTESPERWORD);
 	REG STRING *	fp=from;
 	REG STRING *	pp=np;
 

@@ -61,7 +61,8 @@ main(int argc, char **argv)
 					put(d);
 					n /= d;
 				} else
-					d += d < 17 ? 1 + (d > 2) : tab[i++ % 48];
+					d += d < 17 ? 1 + (d > 2) :
+					    tab[i++ % 48];
 			}
 			if(n != 1)
 				put(n);

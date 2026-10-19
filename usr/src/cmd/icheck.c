@@ -41,7 +41,8 @@ int	nerror;
 daddr_t	alloc(void);
 int	chk(daddr_t bno, char *s), duped(daddr_t bno);
 void	check(char *file), pass1(struct dinode *ip);
-void	bread(daddr_t bno, char *buf, int cnt), bwrite(daddr_t bno, char *buf);
+void	bread(daddr_t bno, char *buf, int cnt),
+    bwrite(daddr_t bno, char *buf);
 void	makefree(void);
 
 int

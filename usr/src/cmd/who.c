@@ -24,7 +24,8 @@ main(int argc, char **argv)
 			tp = index(tp+1, '/') + 1;
 		else {	/* no tty - use best guess from passwd file */
 			pw = getpwuid(getuid());
-			strncpy(utmp.ut_name, pw?pw->pw_name: "?", sizeof(utmp.ut_name));
+			strncpy(utmp.ut_name, pw?pw->pw_name: "?",
+			    sizeof(utmp.ut_name));
 			strcpy(utmp.ut_line, "tty??");
 			time(&utmp.ut_time);
 			putline();
@@ -37,7 +38,8 @@ main(int argc, char **argv)
 	}
 	while (fread((char *)&utmp, sizeof(utmp), 1, fi) == 1) {
 		if(argc==3) {
-			if (strncmp(utmp.ut_line, tp, sizeof utmp.ut_line))
+			if (strncmp(utmp.ut_line, tp,
+			    sizeof utmp.ut_line))
 				continue;
 #ifdef interdata
 			printf("(Interdata) ");

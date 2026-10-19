@@ -114,4 +114,5 @@ struct tchars {
 #define	FIONCLEX	(('f'<<8)|2)
 #define	MXLSTN		(('x'<<8)|1)
 #define	MXNBLK		(('x'<<8)|2)
-int	gtty(int fd, struct sgttyb *ap), stty(int fd, struct sgttyb *ap);
+int	gtty(int fd, struct sgttyb *ap),
+    stty(int fd, struct sgttyb *ap);

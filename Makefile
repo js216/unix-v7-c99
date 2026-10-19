@@ -8,7 +8,9 @@ LEX = flex
 W = -std=c99 -Wall -Wextra -Wpedantic -Werror -Wstrict-prototypes \
 	-Wold-style-definition -Wmissing-prototypes
 CFLAGS = $W \
-	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm -mfloat-abi=hard -Os -Wl,-z,max-page-size=4096,-Ttext=0x94 \
+	-ffreestanding -nostdlib -mcpu=cortex-a7 -marm \
+	-mfloat-abi=hard -Os \
+	-Wl,-z,max-page-size=4096,-Ttext=0x94 \
 	-MMD -MP
 ASFLAGS = -mcpu=cortex-a7 -mfpu=neon-vfpv4
 HOSTCFLAGS = $W
@@ -33,7 +35,8 @@ all: $(KERNELS)
 
 .SECONDARY: $(GEN)
 
-OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(MCRT) $(LIBM_OBJ) $(CMD_OBJ) $(GAMES_OBJ) $(TEST_OBJ)
+OBJ = $(SYS_OBJ) $(LIBC_OBJ) $(CRT) $(MCRT) $(LIBM_OBJ) $(CMD_OBJ) \
+	$(GAMES_OBJ) $(TEST_OBJ)
 $(OBJ) $(GEN): Makefile
 
 %.c: %.y
@@ -43,36 +46,45 @@ boot/unix: usr/sys/conf/qemu/unix
 	$(call T,CP)cp $< $@
 
 qemu: boot/unix boot/qemu.img
-	qemu-system-arm -machine virt -cpu cortex-a7 -m 512M -nographic \
-	    -kernel boot/unix -drive if=none,file=boot/qemu.img,format=raw,id=hd0 \
+	qemu-system-arm -machine virt -cpu cortex-a7 -m 512M \
+	    -nographic \
+	    -kernel boot/unix \
+	    -drive if=none,file=boot/qemu.img,format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0
 
 boot/qemu.img: boot/rootfs.img $S/conf/qemuconf
 	$(call T,CP)cp --sparse=always $< $@
-	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
+	$Qtruncate -s \
+	    $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 	    $S/conf/qemuconf) $@
 
 ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \
 	etc/passwd etc/group etc/ttys etc/rc \
-	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
+	usr/dict/words usr/games/lib/fortunes usr/lib/units \
+	usr/lib/crontab \
 	usr/lib/lib.b
 
-ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) $(TEST_DATA)
+ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) \
+	$(TEST_DATA)
 
 DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
 boot/rootfs.img: boot/unix
 boot/rootfs-mp135.img: $S/conf/mp135/unix
-boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto $(ROOT)
-	$(call T,MKFS)sed 's| boot/unix$$| $(filter boot/unix $S/conf/%/unix,$^)|' boot/rootfs.proto | \
+KERN = $(filter boot/unix $S/conf/%/unix,$^)
+boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto \
+    $(ROOT)
+	$(call T,MKFS)sed 's| boot/unix$$| $(KERN)|' \
+	    boot/rootfs.proto | \
 	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin
 
+TOINT = s/^\(typedef[[:space:]]*\)long\([[:space:]]*[a-z]*_t;\)/\1int\2/
 etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
 	    trap 'rm -rf "$$tmpinc"' EXIT; \
 	    mkdir -p "$$tmpinc/sys"; \
 	    for h in param ino inode filsys fblk dir; do \
-		sed -e 's/^typedef\([[:space:]]*\)long\([[:space:]]*[a-z]*_t;\)/typedef\1int\2/' \
+		sed -e '$(TOINT)' \
 		    -e 's/off_t/v7_off_t/g' -e 's/time_t/v7_time_t/g' \
 		    usr/include/sys/$$h.h >"$$tmpinc/sys/$$h.h"; \
 	    done; \
@@ -81,13 +93,16 @@ etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 $(DIRS):
 	$Qmkdir -p $@
 
-$(filter-out etc/% usr/lib/crontab,$(ROOTFS_STATIC)): %: usr/local/test/v7/% | $(DIRS)
+$(filter-out etc/% usr/lib/crontab,$(ROOTFS_STATIC)): %: \
+    usr/local/test/v7/% | $(DIRS)
 	$(call T,CP)cp -f $< $@
 
 clean:
-	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) $(TEST_IMG)
+	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) \
+	    $(TEST_IMG)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
-	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img boot/qemu.img
+	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img \
+	    boot/qemu.img
 
 .PHONY: all clean qemu
 .DELETE_ON_ERROR:

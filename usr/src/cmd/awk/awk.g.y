@@ -54,7 +54,9 @@
 %%
 
 program:
-	  begin pa_stats end	{ if (errorflag==0) winner = (node *)stat3(PROGRAM, $1, $2, $3); }
+	  begin pa_stats end
+		{ if (errorflag==0)
+			winner = (node *)stat3(PROGRAM, $1, $2, $3); }
 	| error			{ yyclearin; yyerror("bailing out"); }
 	;
 
@@ -152,7 +154,8 @@ term:
 
 expr:
 	  term %prec ASGNOP	{ PUTS("term"); }
-	| expr term %prec ASGNOP	{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
+	| expr term %prec ASGNOP
+		{ PUTS("expr term"); $$ = op2(CAT, $1, $2); }
 	| var ASGNOP expr	{ PUTS("var=expr"); $$ = stat2($2, $1, $3); }
 	;
 
@@ -162,9 +165,11 @@ optNL:
 	;
 
 pa_stat:
-	  pattern %prec ASGNOP	{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
+	  pattern %prec ASGNOP
+		{ PUTS("pattern"); $$ = stat2(PASTAT, $1, genprint()); }
 	| pattern '{' stat_list '}'	{ PUTS("pattern {...}"); $$ = stat2(PASTAT, $1, $3); }
-	| pattern ',' pattern %prec ASGNOP	{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
+	| pattern ',' pattern %prec ASGNOP
+		{ PUTS("srch,srch"); $$ = pa2stat($1, $3, genprint()); }
 	| pattern ',' pattern '{' stat_list '}'	
 					{ PUTS("srch, srch {...}"); $$ = pa2stat($1, $3, $5); }
 	| '{' stat_list '}'	{ PUTS("null pattern {...}"); $$ = stat2(PASTAT, nullstat, $2); }
@@ -173,7 +178,8 @@ pa_stat:
 pa_stats:
 	  pa_stats pa_stat st	{ PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
 	| %prec ASGNOP	{ PUTS("null pa_stat"); $$ = nullstat; }
-	| pa_stats pa_stat %prec ASGNOP	{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
+	| pa_stats pa_stat %prec ASGNOP
+		{PUTS("pa_stats pa_stat"); $$ = linkum($1, $2); }
 	;
 
 pattern:
@@ -188,7 +194,9 @@ pattern:
 print_list:
 	  expr %prec ASGNOP	{ PUTS("expr"); }
 	| pe_list %prec ASGNOP	{ PUTS("pe_list"); }
-	| %prec ASGNOP	{ PUTS("null print_list"); $$ = valtonode(lookup("$record", symtab), CFLD); }
+	| %prec ASGNOP
+		{ PUTS("null print_list");
+		  $$ = valtonode(lookup("$record", symtab), CFLD); }
 	;
 
 pe_list:
@@ -252,7 +260,8 @@ simple_stat:
 
 statement:
 	  simple_stat st	{ PUTS("simple stat"); }
-	| if statement %prec ASGNOP	{ PUTS("if stat"); $$ = stat3(IF, $1, $2, nullstat); }
+	| if statement %prec ASGNOP
+		{ PUTS("if stat"); $$ = stat3(IF, $1, $2, nullstat); }
 	| if statement else statement
 		{ PUTS("if-else stat"); $$ = stat3(IF, $1, $2, $4); }
 	| while statement	{ PUTS("while stat"); $$ = stat2(WHILE, $1, $2); }

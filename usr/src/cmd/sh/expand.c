@@ -76,7 +76,8 @@ INT	expand(STRING as, INT rflg)
 		REP	IF *rs=='/' THEN rescan=rs; *rs=0; gchain=0 FI
 		PER	*rs++ DONE
 
-		WHILE read(dirf, (char *)&entry, 16) == 16 ANDF (trapnote&SIGSET) == 0
+		WHILE read(dirf, (char *)&entry, 16) == 16 ANDF
+		    (trapnote&SIGSET) == 0
 		DO	IF entry.d_ino==0 ORF
 			    (*entry.d_name=='.' ANDF *cs!='.')
 			THEN	continue;
@@ -130,7 +131,8 @@ gmatch(REG STRING s, REG STRING p)
 		DO	IF c==']'
 			THEN	return(ok?gmatch(s,p):0);
 			ELIF c==MINUS
-			THEN	IF lc<=scc ANDF scc<=((*p++)&STRIP) THEN ok++ FI
+			THEN	IF lc<=scc ANDF
+			    scc<=((*p++)&STRIP) THEN ok++ FI
 			ELSE	IF scc==(lc=(c&STRIP)) THEN ok++ FI
 			FI
 		OD

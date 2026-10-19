@@ -52,8 +52,10 @@ int	readhdr(struct spcl *b), checkvol(struct spcl *b, int t);
 int	gethead(struct spcl *buf), checktype(struct spcl *b, int t);
 int	direq(char *s1, char *s2), search(ino_t inum), readc(void);
 int	checksum(int *b);
-void	pass1(void), printem(char *prefix, ino_t inum), readbits(short *m);
-void	flsh(void), putent(char *cp), mseek(daddr_t pt), getent(char *bf);
+void	pass1(void), printem(char *prefix, ino_t inum),
+    readbits(short *m);
+void	flsh(void), putent(char *cp), mseek(daddr_t pt),
+    getent(char *bf);
 void	getfile(ino_t n, void (*f1)(char *b, long size),
 	void (*f2)(char *b, long size), long size);
 void	readtape(char *b), clearbuf(char *cp), flsht(void);
@@ -162,7 +164,8 @@ found:
 
 			len = strlen(prefix);
 			if (len + DIRSIZ + 2 > (int)sizeof(prebuf)) {
-				printf("%s%-.14s: name too long\n", prefix, dir.d_name);
+				printf("%s%-.14s: name too long\n",
+				    prefix, dir.d_name);
 				continue;
 			}
 			pos = ftell(df);

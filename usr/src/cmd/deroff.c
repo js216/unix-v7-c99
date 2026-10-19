@@ -51,8 +51,10 @@ FILE *infile;
 FILE *opn(char *p);
 char *copys(char *s);
 int skeqn(void), eof(void);
-void backsl(void), fatal(char *s, char *p), work(void), regline(int macline);
-void putmac(char *s), putwords(int macline), comline(void), macro(void), tbl(void), eqn(void);
+void backsl(void), fatal(char *s, char *p), work(void),
+    regline(int macline);
+void putmac(char *s), putwords(int macline), comline(void), macro(void),
+    tbl(void), eqn(void);
 
 
 
@@ -169,7 +171,9 @@ static struct chain *namechain	= NULL;
 
 while(C == ' ') ;
 
-for(p = fname ; p<&fname[sizeof fname-1] && (*p=c)!= '\n' && c!=' ' && c!='\t' && c!='\\' ; ++p)
+for(p = fname ;
+    p<&fname[sizeof fname-1] && (*p=c)!= '\n' && c!=' ' && c!='\t' &&
+    c!='\\' ; ++p)
 	C;
 *p = '\0';
 while(c != '\n')
@@ -270,7 +274,8 @@ while(*s)
 		putchar(*s++);
 	for(t = s ; *t!=' ' && *t!='\t' && *t!='\0' ; ++t)
 		;
-	if(t>s+2 && chars[ s[0]&0377 ]==LETTER && chars[ s[1]&0377 ]==LETTER)
+	if(t>s+2 && chars[ s[0]&0377 ]==LETTER &&
+	    chars[ s[1]&0377 ]==LETTER)
 		while(s < t)
 			putchar(*s++);
 	else
@@ -298,7 +303,8 @@ for(p1 = line ; ;)
 		if(i == LETTER) ++nlet;
 
 	if( (!macline && nlet>1)   /* MDM definition of word */
-	   || (macline && nlet>2 && chars[ p1[0]&0377 ]==LETTER && chars[ p1[1]&0377 ]==LETTER) )
+	   || (macline && nlet>2 && chars[ p1[0]&0377 ]==LETTER &&
+	       chars[ p1[1]&0377 ]==LETTER) )
 		{
 		/* delete trailing ampersands and apostrophes */
 		while(p[-1]=='\'' || p[-1]=='&')

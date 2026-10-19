@@ -87,7 +87,8 @@ ptoken(int n)
 {
 	if(n<128) printf("lex: %c\n",n);
 	else	if(n<=256) printf("lex:? %o\n",n);
-	else	if(n<LASTTOKEN) printf("lex: %s\n",tok[n-FIRSTTOKEN].tnm);
+	else	if(n<LASTTOKEN) printf("lex: %s\n",
+	    tok[n-FIRSTTOKEN].tnm);
 	else	printf("lex:? %o\n",n);
 	return;
 }

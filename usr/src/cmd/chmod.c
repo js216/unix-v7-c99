@@ -20,7 +20,8 @@
 char	*ms;
 int	um;
 struct	stat st;
-int newmode(unsigned nm), abs(void), who(void), what(void), where(int om);
+int newmode(unsigned nm), abs(void), who(void), what(void),
+    where(int om);
 
 int
 main(int argc, char **argv)

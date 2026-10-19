@@ -14,10 +14,12 @@ main(int argc, char **argv)
 		for (i = 0; i < (int)sizeof pw.buf; i++)
 			pw.buf[i] = ':';
 		r = getpw(atoi(argv[2]), pw.buf);
-		for (i = 0; i < (int)sizeof pw.canary && pw.canary[i] == 0; i++)
+		for (i = 0;
+		    i < (int)sizeof pw.canary && pw.canary[i] == 0; i++)
 			;
 		printf("getpw %d canary %s: %.20s\n", r,
-		    i == (int)sizeof pw.canary ? "kept" : "hit", r ? "" : pw.buf);
+		    i == (int)sizeof pw.canary ? "kept" : "hit",
+		        r ? "" : pw.buf);
 		return 0;
 	}
 	if (argc >= 4 && strcmp(argv[1], "ch") == 0) {

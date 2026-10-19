@@ -53,7 +53,8 @@ trap(int *r)
 	if (runrun)
 		qswtch();
 	if(u.u_prof.pr_scale)
-		addupc((caddr_t)r[PC], &u.u_prof, (int)(u.u_stime-syst));
+		addupc((caddr_t)r[PC], &u.u_prof,
+		    (int)(u.u_stime-syst));
 	if (u.u_fpsaved)
 		restfp(&u.u_fps);
 }
@@ -61,13 +62,15 @@ void
 user_trap_handler(int signo, int *r, unsigned a)
 {
 	if((r[PSR] & 0x1f) != 0x10) {
-		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x dfsr=0x%x\n",
+		printf("kernel trap sig=%d pc=0x%x cpsr=0x%x dfar=0x%x "
+		    "dfsr=0x%x\n",
 		    signo, r[PC], r[PSR], dfar(), dfsr());
 		panic("kernel trap");
 	}
 	u.u_fpsaved = 0;
 	u.u_ar0 = r;
-	if(signo == SIGINS && r[PSR]&0x20 && (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
+	if(signo == SIGINS && r[PSR]&0x20 &&
+	    (fubyte((caddr_t)r[PC]-1)&0xf8) >= 0xe8)
 		r[PC] += 2;
 	if(signo && (signo != SIGSEG || a+256 < (unsigned)r[SP] ||
 	    grow(a) == 0))

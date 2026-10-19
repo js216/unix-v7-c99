@@ -221,7 +221,8 @@ taboc(struct dent *dd)
 		if (mode&2)		s[5] = 's';
 		printf("%s%4d%4d%5d%9D ",s,dd->d_uid, dd->d_gid,dd->d_tapea,dd->d_size);
 		m = localtime(&dd->d_time);
-		printf("%2d/%2d/%2d %2d:%2d ",m->tm_year,m->tm_mon+1,m->tm_mday,m->tm_hour,m->tm_min);
+		printf("%2d/%2d/%2d %2d:%2d ",m->tm_year,m->tm_mon+1,
+		    m->tm_mday,m->tm_hour,m->tm_min);
 	}
 	printf("%s\n", name);
 }

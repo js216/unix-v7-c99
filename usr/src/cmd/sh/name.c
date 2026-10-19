@@ -296,7 +296,8 @@ STRING	*setenv(void)
 
 	namec=0;
 	namscan(countnam);
-	argnam = er = (STRING *)getstak(namec*BYTESPERWORD+BYTESPERWORD);
+	argnam = er =
+	    (STRING *)getstak(namec*BYTESPERWORD+BYTESPERWORD);
 	namscan(pushnam);
 	*argnam++ = 0;
 	return(er);

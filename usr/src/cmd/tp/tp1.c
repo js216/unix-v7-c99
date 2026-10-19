@@ -180,7 +180,8 @@ encode(char *pname, struct dent *dptr)	/* pname points to the pathname
 	for(n=0; n<NAMELEN && pname[n]; n++)
 		;
 	if(n >= NAMELEN) {
-		printf("Pathname too long - %.32s\nFile ignored\n",pname);
+		printf("Pathname too long - %.32s\nFile ignored\n",
+		    pname);
 		clrent(dptr);
 	}
 	else {

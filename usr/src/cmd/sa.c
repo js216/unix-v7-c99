@@ -47,11 +47,13 @@ char	other[NC] = "***other", junk[NC] = "**junk**";
 char	*sname;
 float	ncom;
 time_t	expand(unsigned t);
-int	tcmp(char *q1, char *q2), ncmp(char *q1, char *q2), bcmp(char *q1, char *q2);
+int	tcmp(char *q1, char *q2), ncmp(char *q1, char *q2),
+    bcmp(char *q1, char *q2);
 int	enter(char *np);
 float	sum(struct tab *p);
 void	init(void), doacct(char *f), strip(void), printmoney(void);
-void	column(double n, double a, double b, double c), col(double n, double a, double m);
+void	column(double n, double a, double b, double c),
+    col(double n, double a, double m);
 
 int
 main(int argc, char **argv)
@@ -206,7 +208,8 @@ main(int argc, char **argv)
 		printmoney();
 		exit(0);
 	}
-	qsort((char *)tab, k, sizeof(tab[0]), nflg? ncmp: (bflg?bcmp:tcmp));
+	qsort((char *)tab, k, sizeof(tab[0]),
+	    nflg? ncmp: (bflg?bcmp:tcmp));
 	column(ncom, treal, tcpu, tsys);
 	printf("\n");
 	for (i=0; i<k; i++)

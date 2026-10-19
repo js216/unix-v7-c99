@@ -7,7 +7,8 @@
 
 #include <stdio.h>
 #include <math.h>
-static char	*cvt(double arg, int ndigits, int *decpt, int *sign, int eflag);
+static char	*cvt(double arg, int ndigits, int *decpt, int *sign,
+    int eflag);
 
 #define	NDIG	80
 char*

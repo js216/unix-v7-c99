@@ -61,9 +61,12 @@ int	error;
 ino_t	ino;
 long	getnum(void);
 daddr_t	alloc(void);
-void	cfile(struct inode *par), getstr(void), wtfs(daddr_t bno, char *bf);
-void	entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib);
-void	newblk(int *adbc, char *db, int *aibc, daddr_t *ib), bflist(void);
+void	cfile(struct inode *par), getstr(void),
+    wtfs(daddr_t bno, char *bf);
+void	entry(ino_t inum, char *str, int *adbc, char *db, int *aibc,
+    daddr_t *ib);
+void	newblk(int *adbc, char *db, int *aibc, daddr_t *ib),
+    bflist(void);
 void	iput(struct inode *ip, int *aibc, daddr_t *ib);
 int	gmode(char c, char *s, int m0, int m1, int m2, int m3);
 int	getch(void), badblk(daddr_t bno);
@@ -178,7 +181,8 @@ f3:
 	filsys.s_n = f_n;
 	printf("m/n = %d %d\n", f_m, f_n);
 	if(filsys.s_isize >= filsys.s_fsize) {
-		printf("%ld/%d: bad ratio\n", (long)filsys.s_fsize, filsys.s_isize-2);
+		printf("%ld/%d: bad ratio\n", (long)filsys.s_fsize,
+		    filsys.s_isize-2);
 		exit(1);
 	}
 	filsys.s_tfree = 0;
@@ -441,7 +445,8 @@ bfree(daddr_t bno)
 }
 
 void
-entry(ino_t inum, char *str, int *adbc, char *db, int *aibc, daddr_t *ib)
+entry(ino_t inum, char *str, int *adbc, char *db, int *aibc,
+    daddr_t *ib)
 {
 	struct direct *dp;
 	int i;
@@ -589,13 +594,15 @@ iput(struct inode *ip, int *aibc, daddr_t *ib)
 		}
 		if(*aibc >= LADDR) {
 			ip->i_un.i_addr[LADDR] = alloc();
-			wtfs(ip->i_un.i_addr[LADDR], (char *)&ib[LADDR]);
+			wtfs(ip->i_un.i_addr[LADDR],
+			    (char *)&ib[LADDR]);
 		}
 		if((unsigned)*aibc > LADDR+NINDIR) {
 			ip->i_un.i_addr[LADDR+1] = alloc();
 			for(i=0; (unsigned)i<NINDIR; i++) {
 				dbl[i] = 0;
-				if((unsigned)*aibc > LADDR+NINDIR+i*NINDIR) {
+				if((unsigned)*aibc >
+				    LADDR+NINDIR+i*NINDIR) {
 					dbl[i] = alloc();
 					wtfs(dbl[i], (char *)&ib[LADDR+NINDIR+i*NINDIR]);
 				}

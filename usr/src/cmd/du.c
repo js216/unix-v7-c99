@@ -37,7 +37,8 @@ main(int argc, char **argv)
 
 	do {
 		if(!Noarg && strlen(argv[i]) >= (int)sizeof path) {
-			fprintf(stderr, "--name too long < %s >\n", argv[i]);
+			fprintf(stderr, "--name too long < %s >\n",
+			    argv[i]);
 			continue;
 		}
 		strcpy(path, Noarg? ".": argv[i]);

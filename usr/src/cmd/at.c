@@ -55,7 +55,8 @@ FILE	*ifile;
 extern char	**environ;
 char	*prefix(char *begin, char *full);
 
-void makeutime(char *pp), filename(char *dir, int y, int d, int t), onintr(int sig);
+void makeutime(char *pp), filename(char *dir, int y, int d, int t),
+    onintr(int sig);
 int makeuday(int argc, char **argv);
 int
 main(int argc, char **argv)

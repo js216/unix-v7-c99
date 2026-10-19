@@ -26,7 +26,8 @@ i2cwait(unsigned int bit)
 static int
 pmic(unsigned int reg, int val)
 {
-	I2C(0x04) = 0x33<<1 | (val < 0 ? 1 : 2)<<16 | 1<<13 | (val < 0 ? 0 : 1<<25);
+	I2C(0x04) = 0x33<<1 | (val < 0 ? 1 : 2)<<16 | 1<<13 |
+	    (val < 0 ? 0 : 1<<25);
 	if (i2cwait(2))
 		return(-1);
 	I2C(0x28) = reg;
@@ -51,9 +52,12 @@ pmic(unsigned int reg, int val)
 static void
 pinmode(int port, int pin, int mode)
 {
-	GPIO(port, 0x00) = (GPIO(port, 0x00) & ~(3<<2*pin)) | mode<<2*pin;
+	GPIO(port, 0x00) = (GPIO(port, 0x00) & ~(3<<2*pin)) |
+	    mode<<2*pin;
 	GPIO(port, 0x04) |= 1<<pin;
-	GPIO(port, 0x20+pin/8*4) = (GPIO(port, 0x20+pin/8*4) & ~(0xF<<pin%8*4)) | 6<<pin%8*4;
+	GPIO(port,
+	    0x20+pin/8*4) = (GPIO(port, 0x20+pin/8*4) &
+	    ~(0xF<<pin%8*4)) | 6<<pin%8*4;
 }
 
 /*

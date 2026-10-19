@@ -81,17 +81,27 @@ struct	cache {
 } cache[NCACHE];
 int	curcache;
 
-int readc(void), psearch(char *n), direq(char *s1, char *s2), gethead(struct spcl *buf);
-int ishead(struct spcl *buf), checktype(struct spcl *b, int t), checksum(int *b);
+int readc(void), psearch(char *n), direq(char *s1, char *s2),
+    gethead(struct spcl *buf);
+int ishead(struct spcl *buf), checktype(struct spcl *b, int t),
+    checksum(int *b);
 int checkvol(struct spcl *b, int t), readhdr(struct spcl *b);
-void pass1(void), putent(char *cp), doit(char command, int argc, char *argv[]);
-void getfile(ino_t n, void (*f1)(char *b, long size), void (*f2)(char *b, long size), long size);
-void readtape(char *b), flsht(void), copy(char *f, char *t, int s), clearbuf(char *cp);
-void writec(char c), flsh(void), dwrite(daddr_t bno, char *b), dread(daddr_t bno, char *buf, int cnt);
-void clri(struct dinode *ip), itrunc(struct dinode *ip), tloop(daddr_t bn, int f1, int f2);
-void bfree(daddr_t bn), getdino(ino_t inum, struct dinode *b), putdino(ino_t inum, struct dinode *b);
-void readbits(short *m), xtrfile(char *b, long size), null(char *b, long size), skip(char *b, long size);
-void rstrfile(char *b, long s), rstrskip(char *b, long s), putdir(char *b, long size), done(int sig);
+void pass1(void), putent(char *cp),
+    doit(char command, int argc, char *argv[]);
+void getfile(ino_t n, void (*f1)(char *b, long size),
+    void (*f2)(char *b, long size), long size);
+void readtape(char *b), flsht(void), copy(char *f, char *t, int s),
+    clearbuf(char *cp);
+void writec(char c), flsh(void), dwrite(daddr_t bno, char *b),
+    dread(daddr_t bno, char *buf, int cnt);
+void clri(struct dinode *ip), itrunc(struct dinode *ip),
+    tloop(daddr_t bn, int f1, int f2);
+void bfree(daddr_t bn), getdino(ino_t inum, struct dinode *b),
+    putdino(ino_t inum, struct dinode *b);
+void readbits(short *m), xtrfile(char *b, long size),
+    null(char *b, long size), skip(char *b, long size);
+void rstrfile(char *b, long s), rstrskip(char *b, long s),
+    putdir(char *b, long size), done(int sig);
 int
 main(int argc, char *argv[])
 {
@@ -455,7 +465,8 @@ finish:
  * with the blocks
  */
 void
-getfile(ino_t n, void (*f1)(char *b, long size), void (*f2)(char *b, long size), long size)
+getfile(ino_t n, void (*f1)(char *b, long size),
+    void (*f2)(char *b, long size), long size)
 {
 	register int i;
 	struct spcl addrblock;

@@ -20,15 +20,18 @@ main(void)
 	for (i = 0; i < 512; i++)
 		if (dbuf[i] != bbuf[i] || sbuf[i] != bbuf[i])
 			break;
-	printf("data %d stack %d %s\n", r1, r2, i == 512 ? "same" : "differ");
+	printf("data %d stack %d %s\n", r1, r2,
+	    i == 512 ? "same" : "differ");
 	errno = 0;
 	r1 = read(fd, (char *)0x80000, 512);
 	printf("gap: %d errno %d\n", r1, errno);
 	errno = 0;
-	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512, 1024);
+	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512,
+	    1024);
 	printf("across end of data: %d errno %d\n", r2, errno);
 	errno = 0;
-	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512, 512);
+	r2 = read(fd, (char *)(((int)sbrk(0) + 4095) & ~4095) - 512,
+	    512);
 	printf("at end of data: %d errno %d\n", r2, errno);
 	errno = 0;
 	lseek(fd, -512L, 0);

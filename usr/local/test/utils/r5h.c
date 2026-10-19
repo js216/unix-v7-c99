@@ -59,7 +59,8 @@ main(int argc, char **argv)
 	int st;
 
 	if (argc > 2) {
-		printf("utime %d\n", utime(argv[2], (long long *)0x50000000));
+		printf("utime %d\n",
+		    utime(argv[2], (long long *)0x50000000));
 		fflush(stdout);
 		if (fork() == 0) {
 			stat(argv[2], &sb);
@@ -67,7 +68,8 @@ main(int argc, char **argv)
 		}
 		signal(SIGALRM, count);
 		alarm(10);
-		printf("%s\n", wait(&st) < 0 ? "inode locked" : "stat done");
+		printf("%s\n",
+		    wait(&st) < 0 ? "inode locked" : "stat done");
 		return 0;
 	}
 	signal(SIGALRM, count);

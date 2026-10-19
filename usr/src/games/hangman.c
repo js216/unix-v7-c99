@@ -10,7 +10,8 @@ char *dictfile;
 int alive,lost;
 FILE *dict;
 long int dictlen;
-void	setup(void), fatal(char *s), startnew(void), stateout(void), getguess(void);
+void	setup(void), fatal(char *s), startnew(void), stateout(void),
+    getguess(void);
 void	wordout(void), youwon(void), getword(void), pscore(void);
 double	frand(void);
 float errors=0, words=0;

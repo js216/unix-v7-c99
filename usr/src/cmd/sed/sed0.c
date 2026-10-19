@@ -4,14 +4,19 @@
 void	fcomp(void), dechain(void);
 int	rline(char *lbuf), cmp(char *a, char *b);
 FILE	*fin, *fcode[12];
-struct reptr	*abuf[ABUFSIZE], **aptr, *ptrend, ptrspace[PTRSIZE], *rep;
+struct reptr	*abuf[ABUFSIZE], **aptr, *ptrend, ptrspace[PTRSIZE],
+    *rep;
 struct reptr	**cmpend[DEPTH], *pending;
 struct label	ltab[LABSIZE], *lab, *labend;
-char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE+1], *loc1, *loc2, *locs;
+char	*lastre, ibuf[512], *cbp, *ebp, genbuf[LBSIZE+1], *loc1, *loc2,
+    *locs;
 char	seof, *reend, *lbend, *hend, *lcomend, linebuf[LBSIZE+1];
-char	holdsp[LBSIZE+1], *spend, *hspend, *braelist[NBRA], *braslist[NBRA];
-char	fname[12][LBSIZE], *cp, respace[RESIZE], **eargv, *badp, bad, compfl;
-int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag, nlno;
+char	holdsp[LBSIZE+1], *spend, *hspend, *braelist[NBRA],
+    *braslist[NBRA];
+char	fname[12][LBSIZE], *cp, respace[RESIZE], **eargv, *badp, bad,
+    compfl;
+int	eflag, dolflag, sflag, jflag, numbra, delflag, nflag, gflag,
+    nlno;
 int	nfiles, f, depth, eargc;
 long	lnum, tlno[NLINES];
 struct label	*labtab = ltab;
@@ -222,7 +227,8 @@ swit:
 				rep->command = BCOM;
 				rep->negfl = !(rep->negfl);
 				if(depth >= DEPTH) {
-					fprintf(stderr, "Too many {'s\n");
+					fprintf(stderr,
+					    "Too many {'s\n");
 					exit(2);
 				}
 				cmpend[depth++] = &rep->lb1;
@@ -733,7 +739,8 @@ char *compile(char *expbuf)
 					exit(2);
 				}
 				if (c=='-' && sp>cstart && *sp!=']') {
-					for (c = sp[-2]&0177; c<(*sp&0177); c++)
+					for (c = sp[-2]&0177;
+					    c<(*sp&0177); c++)
 						ep[c>>3] |= bittab[c&07];
 				}
 				if(c == '\\') {

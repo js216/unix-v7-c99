@@ -22,7 +22,9 @@ int	lineno = 1;
 #else
 #	define	RETURN(x)	return(x)
 #endif
-#define	CADD	cbuf[clen++]=yytext[0]; if(clen>=CBUFLEN-1) {yyerror("string too long"); BEGIN A;}
+#define	CADD	cbuf[clen++]=yytext[0]; \
+		if(clen>=CBUFLEN-1) { \
+			yyerror("string too long"); BEGIN A; }
 #define	CBUFLEN	150
 char	cbuf[CBUFLEN];
 int	clen, cflag;
@@ -80,9 +82,14 @@ WS	[ \t]
 			}
 		}
 <A>"$"{WS}*	{ RETURN(INDIRECT); }
-<A>NF		{ mustfld=1; yylval = (int)setsymtab(yytext, NULL, 0.0, NUM, symtab); RETURN(VAR); }
+<A>NF		{ mustfld=1;
+		  yylval = (int)setsymtab(yytext, NULL, 0.0, NUM,
+		    symtab);
+		  RETURN(VAR); }
 <A>({D}+("."?){D}*|"."{D}+)((e|E)("+"|-)?{D}+)?	{
-		yylval = (int)setsymtab(yytext, NULL, atof(yytext), CON|NUM, symtab); RETURN(NUMBER); }
+		yylval = (int)setsymtab(yytext, NULL, atof(yytext),
+		    CON|NUM, symtab);
+		RETURN(NUMBER); }
 <A>"}"{WS}*\n	{ BEGIN sc; lineno++; RETURN(';'); }
 <A>"}"		{ BEGIN sc; RETURN(';'); }
 <A>;\n		{ lineno++; RETURN(';'); }
@@ -107,7 +114,10 @@ WS	[ \t]
 <A>int		{ yylval = FINT; RETURN(FNCN); }
 <A>exp		{ yylval = FEXP; RETURN(FNCN); }
 <A>sqrt		{ yylval = FSQRT; RETURN(FNCN); }
-<A>{A}{B}*	{ yylval = (int)setsymtab(yytext, tostring(""), 0.0, STR, symtab); RETURN(VAR); }
+<A>{A}{B}*	{
+		  yylval = (int)setsymtab(yytext, tostring(""), 0.0,
+		    STR, symtab);
+		  RETURN(VAR); }
 <A>\"		{ BEGIN str; clen=0; }
 
 <A>#		{ BEGIN comment; }
@@ -137,7 +147,10 @@ WS	[ \t]
 <reg>\n		{ yyerror("newline in regular expression"); lineno++; BEGIN A; }
 <reg>.		{ yylval = yytext[0]; RETURN(CHAR); }
 
-<str>\"		{ BEGIN A; cbuf[clen]=0; yylval = (int)setsymtab(cbuf, tostring(cbuf), 0.0, CON|STR, symtab); RETURN(STRING); }
+<str>\"		{ BEGIN A; cbuf[clen]=0;
+		  yylval = (int)setsymtab(cbuf, tostring(cbuf), 0.0,
+		    CON|STR, symtab);
+		  RETURN(STRING); }
 <str>\n		{ yyerror("newline in string"); lineno++; BEGIN A; }
 <str>"\\\""	{ yytext[0]='"'; CADD; }
 <str,chc>"\\"n	{ yytext[0]='\n'; CADD; }

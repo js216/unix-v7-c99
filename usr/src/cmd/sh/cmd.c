@@ -211,7 +211,9 @@ LOCAL TREPTR	item(BOOL flag)
 		   ((IFPTR)t)->iftyp=TIF;
 		   ((IFPTR)t)->iftre=cmd(THSYM,NLFLG);
 		   ((IFPTR)t)->thtre=cmd(ELSYM|FISYM|EFSYM,NLFLG);
-		   ((IFPTR)t)->eltre=((w=wdval)==ELSYM ? cmd(FISYM,NLFLG) : (w==EFSYM ? (wdval=IFSYM, item(0)) : 0));
+		   ((IFPTR)t)->eltre=((w=wdval)==ELSYM ?
+		       cmd(FISYM,NLFLG) :
+		       (w==EFSYM ? (wdval=IFSYM, item(0)) : 0));
 		   IF w==EFSYM THEN return(t) FI
 		   break;
 		END
@@ -232,7 +234,8 @@ LOCAL TREPTR	item(BOOL flag)
 			chkpr(wdval); skipnl();
 		   FI
 		   chksym(DOSYM|BRSYM);
-		   ((FORPTR)t)->fortre=cmd(wdval==DOSYM?ODSYM:KTSYM,NLFLG);
+		   ((FORPTR)t)->fortre=cmd(wdval==DOSYM?ODSYM:KTSYM,
+		       NLFLG);
 		   break;
 		END
 
@@ -278,16 +281,19 @@ LOCAL TREPTR	item(BOOL flag)
 		   WHILE wdval==0
 		   DO	argp = wdarg;
 			IF wdset ANDF keywd
-			THEN	argp->argnxt=(ARGPTR)argset; argset=(ARGPTR *)argp;
+			THEN	argp->argnxt=(ARGPTR)argset;
+			argset=(ARGPTR *)argp;
 			ELSE	*argtail=argp; argtail = &(argp->argnxt); keywd=flags&keyflg;
 			FI
 			word();
 			IF flag
-			THEN ((COMPTR)t)->comio=inout(((COMPTR)t)->comio);
+			THEN ((COMPTR)t)->comio=
+				    inout(((COMPTR)t)->comio);
 			FI
 		   OD
 
-		   ((COMPTR)t)->comtyp=TCOM; ((COMPTR)t)->comset=(ARGPTR)argset; *argtail=0;
+		   ((COMPTR)t)->comtyp=TCOM;
+		   ((COMPTR)t)->comset=(ARGPTR)argset; *argtail=0;
 		   return(t);
 		END
 
@@ -342,7 +348,8 @@ LOCAL IOPTR	inout(IOPTR lastio)
 	ENDSW
 
 	chkword();
-	iop=(IOPTR)getstak(IOTYPE); iop->ioname=wdarg->argval; iop->iofile=iof;
+	iop=(IOPTR)getstak(IOTYPE); iop->ioname=wdarg->argval;
+	iop->iofile=iof;
 	IF iof&IODOC
 	THEN iop->iolst=iopend; iopend=iop;
 	FI

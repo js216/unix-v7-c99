@@ -79,7 +79,8 @@ retry:
 				THEN	dolg=1; c='1';
 				FI
 				c -= '0';
-				v=((c==0) ? cmdadr : (c<=dolc) ? dolv[c] : (STRING)(dolg=0));
+				v=((c==0) ? cmdadr : (c<=dolc) ?
+				    dolv[c] : (STRING)(dolg=0));
 			ELIF c=='$'
 			THEN	v=pidadr;
 			ELIF c=='!'

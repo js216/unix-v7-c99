@@ -30,7 +30,8 @@ main(void)
 	r = ptrace(2, pid, &glob, 0);
 	printf("neg %d errno %d\n", r, errno);
 	r = ptrace(3, pid, (int *)(off + R0*4), 0);
-	printf("r0 %d pcok %d\n", r, ptrace(3, pid, (int *)(off + PC*4), 0) > 0x10);
+	printf("r0 %d pcok %d\n", r,
+	    ptrace(3, pid, (int *)(off + PC*4), 0) > 0x10);
 	printf("w %d\n", ptrace(6, pid, (int *)(off + R0*4), 40));
 	printf("wr9 %d\n", ptrace(6, pid, (int *)(off + 9*4), 1));
 	ptrace(6, pid, (int *)(off + PSR*4), -1);

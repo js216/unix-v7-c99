@@ -44,7 +44,8 @@ double	etime;
 
 int	mf;
 
-void stats(int dn), stat1(int o), stats2(double t), stats3(double t), biostats(void);
+void stats(int dn), stat1(int o), stats2(double t), stats3(double t),
+    biostats(void);
 int
 main(int argc, char *argv[])
 {

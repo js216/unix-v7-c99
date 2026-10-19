@@ -29,6 +29,7 @@ main(void)
 		if (i >= 0)
 			break;
 	}
-	printf("kernel text %s /unix\n", n >= size && size > 0 ? "is" : "is not");
+	printf("kernel text %s /unix\n",
+	    n >= size && size > 0 ? "is" : "is not");
 	return 0;
 }

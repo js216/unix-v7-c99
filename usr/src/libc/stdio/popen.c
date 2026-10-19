@@ -34,7 +34,8 @@ int
 pclose(FILE *ptr)
 {
 	register int f, r;
-	register void (*hstat)(int sig), (*istat)(int sig), (*qstat)(int sig);
+	register void (*hstat)(int sig), (*istat)(int sig),
+	    (*qstat)(int sig);
 	int status;
 
 	f = fileno(ptr);

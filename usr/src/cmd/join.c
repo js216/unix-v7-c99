@@ -89,7 +89,8 @@ main(int argc, char *argv[])
 		if (--olist[i] < 0 || olist[i] >= NFLD)	/* 0 origin */
 			error("bad field number", "");
 	if (argc != 3)
-		error("usage: join [-j1 x -j2 y] [-o list] file1 file2", "");
+		error("usage: join [-j1 x -j2 y] [-o list] file1 file2",
+		    "");
 	j1--;
 	j2--;	/* everyone else believes in 0 origin */
 	if (j1 < 0 || j1 >= NFLD || j2 < 0 || j2 >= NFLD)
@@ -129,7 +130,8 @@ main(int argc, char *argv[])
 				if(n1>0 && n2>0 && comp()==0) {
 					output(n1, n2);
 					get2();
-				} else if((n1>0 && n2>0 && comp()<0) || n2==0) {
+				} else if((n1>0 && n2>0 && comp()<0) ||
+				    n2==0) {
 					fseek(f[F2], bot2, 0);
 					get2();
 					get1();

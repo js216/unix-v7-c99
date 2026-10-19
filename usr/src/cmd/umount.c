@@ -41,10 +41,12 @@ main(int argc, char **argv)
 		p2 = &mp->spec[0];
 		while (*p1++ == *p2)
 			if (*p2++ == 0) {
-				for (p1 = (char *)mp; p1 < (char *)(mp+1);)
+				for (p1 = (char *)mp;
+				    p1 < (char *)(mp+1);)
 					*p1++ = 0;
 				mp = &mtab[NMOUNT];
-				while (mp > mtab && (--mp)->file[0] == 0);
+				while (mp > mtab &&
+				    (--mp)->file[0] == 0);
 				mf = creat("/etc/mtab", 0644);
 				write(mf, (char *)mtab, (mp-mtab+1)*2*NAMSIZ);
 				return(0);

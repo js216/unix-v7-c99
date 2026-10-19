@@ -94,19 +94,26 @@ char	*getblock(int atl, int iof);
 char	*place(char *sp, char *l1, char *l2);
 jmp_buf	savej;
 
-void	commands(void), setdot(void), setall(void), setnoaddr(void), nonzero(void);
-void	newline(void), filename(int comm), exfile(void), error(char *s), dosub(void);
+void	commands(void), setdot(void), setall(void), setnoaddr(void),
+    nonzero(void);
+void	newline(void), filename(int comm), exfile(void), error(char *s),
+    dosub(void);
 void	blkio(int b, char *buf, int (*iofcn)(int fd, char *buf, int n));
-void	callunix(void), compile(int aeof), delete(void), global(int k), init(void);
-void	join(void), move(int cflag), putchr(int ac), putd(void), putfile(void);
+void	callunix(void), compile(int aeof), delete(void), global(int k),
+    init(void);
+void	join(void), move(int cflag), putchr(int ac), putd(void),
+    putfile(void);
 void	reverse(int *a1, int *a2), substitute(int inglob);
 void	crblock(char *permp, char *buf, int nchar, long startn);
 void	rdelete(int *ad1, int *ad2), makekey(char *a, char *b);
 void	onintr(int sig), onhup(int sig), quit(int sig);
 int	advance(char *lp, char *ep), append(int (*f)(void), int *a);
-int	backref(int i, char *lp), cclass(char *set, char c, int af), compsub(void);
-int	crinit(char *keyp, char *permp), execute(int gf, int *addr), getchr(void);
-int	getkey(void), putline(void), getfile(void), gettty(void), getsub(void);
+int	backref(int i, char *lp), cclass(char *set, char c, int af),
+    compsub(void);
+int	crinit(char *keyp, char *permp), execute(int gf, int *addr),
+    getchr(void);
+int	getkey(void), putline(void), getfile(void), gettty(void),
+    getsub(void);
 int	getcopy(void);
 int
 main(int argc, char **argv)

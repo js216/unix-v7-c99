@@ -44,7 +44,8 @@ struct sysnod tty[] = {
 int	margset = 1;
 
 void delay(int n), escape(int c), nl(void);
-void dasi450(void), tty37(void), dasi300(void), tn300(void), hp2645(void), misc(void);
+void dasi450(void), tty37(void), dasi300(void), tn300(void),
+    hp2645(void), misc(void);
 static int
 syslook(char *w)
 {

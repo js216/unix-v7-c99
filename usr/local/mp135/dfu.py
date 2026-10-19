@@ -49,7 +49,8 @@ def load(img):
     d.ctrl_transfer(0x21, 1, 0, 0, None)
     st, state = wait(d, 'manifest')
     ph = phase(d)
-    print('%d bytes, status %d state %d phase %s' % (len(img), st, state, ph.hex()))
+    print('%d bytes, status %d state %d phase %s' %
+          (len(img), st, state, ph.hex()))
     if st or ph[0] != 0:
         sys.exit('not accepted')
     d.ctrl_transfer(0x21, 0, 1000, 0, None)

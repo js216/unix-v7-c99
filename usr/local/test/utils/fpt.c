@@ -4,7 +4,8 @@
 #include "h/dir.h"
 #include "h/user.h"
 
-volatile double one = 1.0, three = 3.0, ten = 10.0, zero = 0.0, big = 1e308;
+volatile double one = 1.0, three = 3.0, ten = 10.0, zero = 0.0,
+    big = 1e308;
 volatile double v = 1234.5, h[32];
 volatile int got;
 
@@ -187,7 +188,8 @@ sig(void)
 	}
 	kill(kid, SIGKILL);
 	wait(&st);
-	printf("async %s %s fpscr %08x\n", got >= 20 ? "done" : "timeout",
+	printf("async %s %s fpscr %08x\n",
+	    got >= 20 ? "done" : "timeout",
 	    b == 3*a && c == -10*a && d == a ? "ok" : "bad",
 	    __builtin_arm_get_fpscr() & 0x07ffffffU);
 }
@@ -218,7 +220,8 @@ rcore(void)
 	for (n = i = 0; i < 32; i++)
 		if (cu.u_fps.u_fpregs[i] == 2469.0)
 			n++;
-	printf("core fpscr %08x 2469 %s\n", cu.u_fps.u_fpsr, n ? "found" : "missing");
+	printf("core fpscr %08x 2469 %s\n", cu.u_fps.u_fpsr,
+	    n ? "found" : "missing");
 }
 
 static void
@@ -230,7 +233,8 @@ forkt(char *self)
 	__builtin_arm_set_fpscr(RP);
 	x = v * 2;
 	if (fork() == 0) {
-		printf("child fpscr %08x %s\n", CTL(__builtin_arm_get_fpscr()),
+		printf("child fpscr %08x %s\n",
+		    CTL(__builtin_arm_get_fpscr()),
 		    x == 2469.0 ? "ok" : "bad");
 		fflush(stdout);
 		execl(self, "fpt", "exec", (char *)0);

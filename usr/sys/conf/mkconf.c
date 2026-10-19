@@ -83,7 +83,7 @@ struct tab
 	"",
 	"",
 	"",
-	"	nulldev, nulldev, mmread, mmwrite, noioctl, nulltty, 0, ",
+	"nulldev, nulldev, mmread, mmwrite, noioctl, nulltty, 0, ",
 	"",
 	"",
 	},
@@ -210,7 +210,7 @@ struct tab
 	".globl	_rkintr\n",
 	"rkio:	jsr	r0,call; jmp _rkintr\n",
 	"	nulldev, nulldev, rkstrategy, &rktab,",
-	"	nulldev, nulldev, rkread, rkwrite, noioctl, nulltty, 0,",
+	"nulldev, nulldev, rkread, rkwrite, noioctl, nulltty, 0,",
 	"extern struct	buf	rktab;",
 	"",
 	},
@@ -223,7 +223,8 @@ struct tab
 	"tmio:	jsr	r0,call; jmp _tmintr\n",
 	"	tmopen, tmclose, tmstrategy, &tmtab, ",
 	"	tmopen, tmclose, tmread, tmwrite, nodev, nulldev, 0,",
-	"int	tmopen(), tmclose(), tmstrategy();\nstruct	buf	tmtab;",
+	"int	tmopen(), tmclose(), tmstrategy();\n"
+	"struct	buf	tmtab;",
 	"int	tmread(), tmwrite();",
 	},
 
@@ -235,7 +236,8 @@ struct tab
 	"htio:	jsr	r0,call; jmp _htintr\n",
 	"	htopen, htclose, htstrategy, &httab,",
 	"	htopen, htclose, htread, htwrite, nodev, nulldev, 0,",
-	"int	htopen(), htclose(), htstrategy();\nstruct	buf	httab;",
+	"int	htopen(), htclose(), htstrategy();\n"
+	"struct	buf	httab;",
 	"int	htread(), htwrite();",
 	},
 
@@ -291,9 +293,10 @@ struct tab
 	".globl	_dcrint\ndcin:	jsr	r0,call; jmp _dcrint\n",
 	".globl	_dcxint\ndcou:	jsr	r0,call; jmp _dcxint\n",
 	"",
-	"	dcopen, dcclose, dcread, dcwrite, dcioctl, nulldev, dc11,",
+	"dcopen, dcclose, dcread, dcwrite, dcioctl, nulldev, dc11,",
 	"",
-	"int	dcopen(), dcclose(), dcread(), dcwrite(), dcioctl();\nstruct	tty	dc11[];",
+	"int	dcopen(), dcclose(), dcread(), dcwrite(), dcioctl();\n"
+	"struct	tty	dc11[];",
 	},
 
 	{
@@ -380,9 +383,10 @@ struct tab
 	".globl	_dhrint\ndhin:	jsr	r0,call; jmp _dhrint\n",
 	".globl	_dhxint\ndhou:	jsr	r0,call; jmp _dhxint\n",
 	"",
-	"	dhopen, dhclose, dhread, dhwrite, dhioctl, dhstop, dh11,",
+	"dhopen, dhclose, dhread, dhwrite, dhioctl, dhstop, dh11,",
 	"",
-	"int	dhopen(), dhclose(), dhread(), dhwrite(), dhioctl(), dhstop();\nstruct	tty	dh11[];",
+	"int	dhopen(), dhclose(), dhread(), dhwrite(), dhioctl(), "
+	"dhstop();\nstruct	tty	dh11[];",
 	},
 
 /*
@@ -411,7 +415,7 @@ struct tab
 	"",
 	"",
 	"",
-	"	syopen, nulldev, syread, sywrite, sysioctl, nulltty, 0,",
+	"syopen, nulldev, syread, sywrite, sysioctl, nulltty, 0,",
 	"",
 	"",
 	},
@@ -514,7 +518,8 @@ char	*strh[] =
 
 char	*stri[] =
 {
-	"int	pkopen(), pkclose(), pkread(), pkwrite(), pkioctl(), pkrint(), pkxint();",
+	"int	pkopen(), pkclose(), pkread(), pkwrite(), pkioctl(), "
+	"pkrint(), pkxint();",
 	0
 };
 
@@ -522,13 +527,15 @@ char	*strj[] =
 {
 	"struct	linesw	linesw[] =",
 	"{",
-	"	{ttyopen, nulltty, ttread, ttwrite, nolioctl, ttyinput, 0, 0, ttstart, 0}, /* 0 */",
+	"\t{ttyopen, nulltty, ttread, ttwrite, nolioctl, ttyinput,",
+	"\t    0, 0, ttstart, 0}, /* 0 */",
 	0
 };
 
 char	*strk[] =
 {
-	"	{pkopen, pkclose, pkread, pkwrite, pkioctl, pkrint, pkxint, 0, 0, 0}, /* 1 */",
+	"\t{pkopen, pkclose, pkread, pkwrite, pkioctl, pkrint, pkxint,",
+	"\t    0, 0, 0}, /* 1 */",
 	0
 };
 
@@ -566,23 +573,31 @@ main(void)
  */
 	freopen("unix.ld", "w", stdout);
 	printf("MEMORY\n{\n");
-	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramv, ramn);
+	printf("\tRAM (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", ramv,
+	    ramn);
 	if (tabn)
-		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n", tabv, tabn);
+		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n",
+		    tabv, tabn);
 	printf("}\nu = 0xFFE00000;\nENTRY(start)\n");
 	printf("start = _start - 0x%lx;\nSECTIONS\n{\n", ramv-ramb);
-	printf("\t.text : AT(ADDR(.text) - 0x%lx) { *(.text*) } > RAM\n", ramv-ramb);
-	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) { *(.rodata*) } > RAM\n", ramv-ramb);
-	printf("\t.data : AT(ADDR(.data) - 0x%lx) { *(.data*) } > RAM\n", ramv-ramb);
+	printf("\t.text : AT(ADDR(.text) - 0x%lx) "
+	    "{ *(.text*) } > RAM\n", ramv-ramb);
+	printf("\t.rodata : AT(ADDR(.rodata) - 0x%lx) "
+	    "{ *(.rodata*) } > RAM\n", ramv-ramb);
+	printf("\t.data : AT(ADDR(.data) - 0x%lx) "
+	    "{ *(.data*) } > RAM\n", ramv-ramb);
 	printf("\t. = ALIGN(4);\n\t__bss_start = .;\n");
 	x = tabn ? "EXCLUDE_FILE(*/c.o) " : "";
-	printf("\t.bss : AT(ADDR(.bss) - 0x%lx) { *(%s.bss*) *(%sCOMMON) } > RAM\n", ramv-ramb, x, x);
+	printf("\t.bss : AT(ADDR(.bss) - 0x%lx) {\n"
+	    "\t\t*(%s.bss*)\n\t\t*(%sCOMMON)\n\t} > RAM\n",
+	    ramv-ramb, x, x);
 	printf("\t__bss_end = .;\n");
 	printf("\t.ddrbss (NOLOAD) : ALIGN(4096) {\n");
 	printf("\t\t__ddrbss_start = .;\n\t\t*(.ddrbss*)\n");
 	if (tabn)
 		printf("\t\t*/c.o(.bss* COMMON)\n");
-	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n", tabn ? "TAB" : "RAM");
+	printf("\t\t__ddrbss_end = .;\n\t} > %s\n}\n",
+	    tabn ? "TAB" : "RAM");
 
 /*
  * pass 2 -- create configuration table
@@ -604,7 +619,8 @@ main(void)
 		for(p=table; p->name; p++)
 		if(equal(q, p->name) &&
 		   (p->key&BLOCK) && p->count) {
-			printf("	{%s},	/* %s = %d */\n", p->coded, q, i);
+			printf("\t/* %s %d */\n\t{%s},\n", q, i,
+			    p->coded + (*p->coded == '\t'));
 			if(p->key & ROOT)
 				rootmaj = i;
 			if (p->key & SWAP)
@@ -613,7 +629,8 @@ main(void)
 				pipemaj = i;
 			goto newb;
 		}
-		printf("	{nodev, nodev, nostrat, 0}, /* %s = %d */\n", q, i);
+		printf("\t{nodev, nodev, nostrat, 0}, /* %s %d */\n", q,
+		    i);
 	newb:;
 	}
 	if (swapmaj == -1) {
@@ -636,10 +653,13 @@ main(void)
 		for(p=table; p->name; p++)
 		if(equal(q, p->name) &&
 		   (p->key&CHAR) && p->count) {
-			printf("	{%s},	/* %s = %d */\n", p->codee, q, i);
+			printf("\t/* %s %d */\n\t{%s},\n", q, i,
+			    p->codee + (*p->codee == '\t'));
 			goto newc;
 		}
-		printf("	{nodev, nodev, nordwr, nordwr, noioctl, nulltty, 0}, /* %s = %d */\n", q, i);
+		printf("\t{nodev, nodev, nordwr, nordwr, noioctl, "
+		    "nulltty, 0},"
+		    " /* %s %d */\n", q, i);
 	newc:;
 	}
 	puke(strh);
@@ -660,19 +680,24 @@ main(void)
 	printf(strg3);
 	if(rootmaj < 0)
 		fprintf(stderr, "No root device given\n");
-	printf("\nunsigned int\tcorebase, coreoff, coretop = 0x%lx;\n", coret);
-	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n", gicd, gicc);
+	printf("\nunsigned int\tcorebase, coreoff, coretop = 0x%lx;\n",
+	    coret);
+	printf("unsigned int\tgicdbase = 0x%lx, giccbase = 0x%lx;\n",
+	    gicd, gicc);
 	printf("\nstruct\tmemregion\tboard_map[] =\n{\n");
 	for (i=0; i<nmap; i++)
-		printf("\t{0x%lx, 0x%lx, 0x%lx, %s},\n", mapv[i], mapb[i], mape[i], mapa[i]);
+		printf("\t{0x%lx, 0x%lx, 0x%lx, %s},\n", mapv[i],
+		    mapb[i], mape[i], mapa[i]);
 	printf("\t{0, 0, 0, 0}\n};\n");
 	printf("\nextern int\tclkirq, klirq, rkirq;\n");
 	printf("struct\tintr\tintrtab[] =\n{\n");
-	printf("\t{&clkirq, clock},\n\t{&klirq, klintr},\n\t{&rkirq, rkintr},\n");
+	printf("\t{&clkirq, clock},\n\t{&klirq, klintr},\n\t"
+	    "{&rkirq, rkintr},\n");
 	printf("\t{0, 0}\n};\n");
 	printf("\nvoid\tcninit(void) { klinit(); }\n");
 	printf("void\tbdinit(void) { rkinit(); }\n");
-	printf("void\tclock_ddr_init(void) { %s}\n", ddr ? "ddrinit(); " : "");
+	printf("void\tclock_ddr_init(void) { %s}\n",
+	    ddr ? "ddrinit(); " : "");
 }
 
 void
@@ -706,19 +731,24 @@ input(void)
 	if (n<2)
 		goto badl;
 	if (equal(keyw, "map") && nmap < NMAP) {
-		if (sscanf(line, "%*s%lx%lx%lx%s", &mapv[nmap], &mapb[nmap], &mape[nmap], mapa[nmap]) != 4)
+		if (sscanf(line, "%*s%lx%lx%lx%s", &mapv[nmap],
+		    &mapb[nmap], &mape[nmap], mapa[nmap]) != 4)
 			goto badl;
 		nmap++;
 		return(1);
 	}
 	if (equal(keyw, "ram"))
-		return(sscanf(line, "%*s%lx%lx%lx", &ramv, &ramb, &ramn) == 3 || badline(line));
+		return(sscanf(line, "%*s%lx%lx%lx", &ramv, &ramb,
+		    &ramn) == 3 || badline(line));
 	if (equal(keyw, "tables"))
-		return(sscanf(line, "%*s%lx%lx%lx", &tabv, &tabb, &tabn) == 3 || badline(line));
+		return(sscanf(line, "%*s%lx%lx%lx", &tabv, &tabb,
+		    &tabn) == 3 || badline(line));
 	if (equal(keyw, "core"))
-		return(sscanf(line, "%*s%lx", &coret) == 1 || badline(line));
+		return(sscanf(line, "%*s%lx", &coret) == 1 ||
+		    badline(line));
 	if (equal(keyw, "gic"))
-		return(sscanf(line, "%*s%lx%lx", &gicd, &gicc) == 2 || badline(line));
+		return(sscanf(line, "%*s%lx%lx", &gicd, &gicc) == 2 ||
+		    badline(line));
 	if (equal(keyw, "ddr")) {
 		ddr++;
 		return(1);

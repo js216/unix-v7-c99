@@ -473,7 +473,8 @@ loop:
  * validating them.
  */
 void
-physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev, int rw)
+physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,
+    int rw)
 {
 	register unsigned base;
 	register int nb;

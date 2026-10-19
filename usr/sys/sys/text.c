@@ -183,7 +183,8 @@ xexpand(register struct text *xp)
 	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
 		if ((xp->x_flag&XLOAD)==0) {
 			swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);
-			arm_sync_icache(PGADDR(xp->x_caddr), ptob(xp->x_size));
+			arm_sync_icache(PGADDR(xp->x_caddr),
+			    ptob(xp->x_size));
 		}
 		xp->x_ccount++;
 		xunlock(xp);

@@ -77,7 +77,8 @@ loop:
 	nh.ar_uid = oh.ouid;
 	nh.ar_gid = 1;
 	nh.ar_mode = 0666;
-	nh.ar_date = (unsigned long)oh.odate<<16 | (oh.odate>>16 & 0177777);
+	nh.ar_date = (unsigned long)oh.odate<<16 |
+	    (oh.odate>>16 & 0177777);
 	n = (oh.siz+1) & ~01;
 	write(tf, (char *)&nh, sizeof(nh));
 	while(n > 0) {

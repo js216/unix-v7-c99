@@ -41,12 +41,15 @@ float	dx;
 char	*plotsymb;
 
 int	numb(float *np, int *argcp, char ***argvp), copystring(int k);
-int	setmark(int *xmark, struct xy *p), conv(float xv, struct xy *p, int *ip);
-int	getfloat(float *p), getstring(void), symbol(int ix, int iy, int k);
+int	setmark(int *xmark, struct xy *p),
+    conv(float xv, struct xy *p, int *ip);
+int	getfloat(float *p), getstring(void),
+    symbol(int ix, int iy, int k);
 void	init(struct xy *p), setopt(int argc, char *argv[]);
 void	limread(struct xy *p, int *argcp, char ***argvp), readin(void);
 void	transpose(void), scale(struct xy *p, struct val *v), axes(void);
-void	submark(int *xmark, int *pxn, float x, struct xy *p), plot(void);
+void	submark(int *xmark, int *pxn, float x, struct xy *p),
+    plot(void);
 void	title(void), axlab(char c, struct xy *p), badarg(void);
 void	space(int x0, int y0, int x1, int y1), erase(void);
 void	move(int xi, int yi), cont(int xi, int yi);
@@ -129,7 +132,8 @@ again:		switch(argv[0][0]) {
 				argv++;
 				argc--;
 				p2 = argv[0];
-				while ((*p1++ = *p2++) && p1 < &titlebuf[BSIZ-1]);
+				while ((*p1++ = *p2++) &&
+				    p1 < &titlebuf[BSIZ-1]);
 			}
 			break;
 
@@ -236,7 +240,8 @@ numb(float *np, int *argcp, register char ***argvp)
 		return(0);
 	while((c=(*argvp)[1][0]) == '+')
 		(*argvp)[1]++;
-	if(!(isdigit(c&0377) || (c=='-'&&((*argvp)[1][1]&0377)<'A') || c=='.'))
+	if(!(isdigit(c&0377) || (c=='-'&&((*argvp)[1][1]&0377)<'A') ||
+	    c=='.'))
 		return(0);
 	*np = atof((*argvp)[1]);
 	(*argcp)--;

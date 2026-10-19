@@ -213,7 +213,8 @@ advance(char *alp, char *aep)
 	char *bbeg;
 	int	ct;
 
-/*fprintf(stderr, "*lp = %c, %o\n*ep = %c, %o\n", *lp, *lp, *ep, *ep);	*DEBUG*/
+/*fprintf(stderr, "*lp = %c, %o\n*ep = %c, %o\n", *lp, *lp, *ep,
+    *ep);	*DEBUG*/
 
 	lp = alp;
 	ep = aep;
@@ -655,7 +656,8 @@ command(struct reptr *ipc)
 		case YCOM:
 			p1 = linebuf;
 			p2 = ipc->re1;
-			while((*p1 = *p1 & 0200 ? *p1 : p2[*p1&0377]))	p1++;
+			while((*p1 = *p1 & 0200 ? *p1 :
+			    p2[*p1&0377]))	p1++;
 			break;
 	}
 

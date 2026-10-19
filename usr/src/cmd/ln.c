@@ -44,7 +44,8 @@ main(int argc, char **argv)
 	}
 	statres = stat(arg2, &statb);
 	if (statres>=0 && (statb.st_mode&S_IFMT) == S_IFDIR)
-		sprintf(name = malloc(strlen(arg2)+strlen(np)+2), "%s/%s", arg2, np);
+		sprintf(name = malloc(strlen(arg2)+strlen(np)+2),
+		    "%s/%s", arg2, np);
 	else
 		name = arg2;
 	if (link(argv[1], name)<0) {

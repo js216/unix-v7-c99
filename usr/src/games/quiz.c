@@ -23,11 +23,14 @@ char line[NC+2];
 char response[100];
 char *tmp[NF];
 int select[NF];
-int	readline(void), cmp(char *u, char *v), disj(int s), string(int s);
+int	readline(void), cmp(char *u, char *v), disj(int s),
+    string(int s);
 int	eat(int s, char c), fold(char c), segment(char *u, char *w[]);
-int	perm(char *u[], int m, char *v[], int n, int p[]), find(char *u[], int m);
+int	perm(char *u[], int m, char *v[], int n, int p[]),
+    find(char *u[], int m);
 int	query(char *r), next(void);
-void	publish(char *t), done(int sig), instruct(char *info), dunno(void);
+void	publish(char *t), done(int sig), instruct(char *info),
+    dunno(void);
 void	pub1(int s), readindex(void), talloc(void), badinfo(void);
 
 int
@@ -408,7 +411,8 @@ query(char *r)
 	again:
 		if(read(0,t,1)<=0)
 			done(0);
-		if((*t==' '&&(t==r||t[-1]==' ')) || (t>=&r[sizeof response-1]&&*t!='\n'))
+		if((*t==' '&&(t==r||t[-1]==' ')) ||
+		    (t>=&r[sizeof response-1]&&*t!='\n'))
 			goto again;
 		if(*t=='\n') {
 			while(t>r&&t[-1]==' ')
@@ -443,7 +447,8 @@ done(int sig)
 	printf("\nRights %d, wrongs %d, ", rights, wrongs);
 	if(guesses)
 		printf("extra guesses %d, ", guesses);
-	printf("score %d%%\n",rights+wrongs?100*rights/(rights+wrongs):0);
+	printf("score %d%%\n",
+	    rights+wrongs?100*rights/(rights+wrongs):0);
 	exit(0);
 }
 void

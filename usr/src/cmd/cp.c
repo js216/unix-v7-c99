@@ -49,7 +49,8 @@ copy(char *from, char *to)
 	   (stbuf2.st_mode&S_IFMT) == S_IFDIR) {
 		p1 = from;
 		p2 = to;
-		if ((bp = malloc(strlen(from) + strlen(to) + 2)) == NULL) {
+		if ((bp = malloc(strlen(from) + strlen(to) + 2)) ==
+		    NULL) {
 			fprintf(stderr, "cp: out of memory\n");
 			close(fold);
 			return(1);

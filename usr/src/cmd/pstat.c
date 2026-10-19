@@ -52,7 +52,8 @@ int	filf;
 int	allflg;
 
 int oatoi(char *s);
-void doinode(void), dotext(void), doproc(void), dotty(void), dousr(void), dofil(void);
+void doinode(void), dotext(void), doproc(void), dotty(void),
+    dousr(void), dofil(void);
 void putf(int v, int n), ttyprt(int n, struct tty *atp);
 int
 main(int argc, char **argv)
@@ -318,7 +319,8 @@ dousr(void)
 	printf("segflg, error %d, %d\n", up->u_segflg, up->u_error);
 	printf("uids %d,%d,%d,%d\n", up->u_uid,up->u_gid,up->u_ruid,up->u_rgid);
 	printf("procp %.1o\n", (unsigned)up->u_procp);
-	printf("base, count, offset %.1o %.1o %ld\n", (unsigned)up->u_base,
+	printf("base, count, offset %.1o %.1o %ld\n",
+	    (unsigned)up->u_base,
 		up->u_count, up->u_offset);
 	printf("cdir %.1o\n", (unsigned)up->u_cdir);
 	printf("dbuf %.14s\n", up->u_dbuf);

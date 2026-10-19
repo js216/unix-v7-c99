@@ -18,7 +18,8 @@
 
 char	*pname(char *name);
 char	*dname(char *name);
-int	move(char *source, char *target), mvdir(char *source, char *target);
+int	move(char *source, char *target),
+    mvdir(char *source, char *target);
 int	check(char *spth, ino_t dinode), chkdot(char *s);
 struct	stat s1, s2;
 
@@ -103,7 +104,8 @@ move(char *source, char *target)
 			return(1);
 		}
 		if (i == 0) {
-			execl("/bin/cp", "cp", source, target, (char *)0);
+			execl("/bin/cp", "cp", source, target,
+			    (char *)0);
 			fprintf(stderr, "mv: cannot exec cp\n");
 			exit(1);
 		}

@@ -52,7 +52,8 @@ int	peekc;
 int	dumpflg;
 
 void	units(struct unit *up);
-int	convr(struct unit *up), lookup(char *name, struct unit *up, int den, int c);
+int	convr(struct unit *up),
+    lookup(char *name, struct unit *up, int den, int c);
 int
 main(int argc, char *argv[])
 {

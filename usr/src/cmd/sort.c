@@ -166,8 +166,10 @@ int 	error = 1;
 char	*setfil(int i);
 char	*brk(char *addr);
 void	copyproto(void), field(char *s, int k), diag(char *s, char *t);
-void	safeoutfil(void), sort(void), newfile(void), merge(int a, int b);
-void	oldfile(void), disorder(char *s, char *t), cant(char *f), term(int sig);
+void	safeoutfil(void), sort(void), newfile(void),
+    merge(int a, int b);
+void	oldfile(void), disorder(char *s, char *t), cant(char *f),
+    term(int sig);
 void	qsort(char **a, char **l);
 int	blank(int c), number(char **ppa);
 char	*skip(char *pp, struct field *fp, int j);
@@ -254,7 +256,8 @@ main(int argc, char **argv)
 	tend = ep - 1;
 	a = -1;
 	for(dirs=dirtry; *dirs; dirs++) {
-		sprintf(filep=file=malloc(strlen(*dirs)+16), "%s/stm%05uaa", *dirs, getpid());
+		sprintf(filep=file=malloc(strlen(*dirs)+16),
+		    "%s/stm%05uaa", *dirs, getpid());
 		while (*filep)
 			filep++;
 		filep -= 2;
@@ -276,7 +279,8 @@ main(int argc, char **argv)
 		sort();
 		fclose(stdin);
 	}
-	for(a = mflg|cflg?0:eargc; a+N<nfiles || (unsafeout&&a<eargc); a=i) {
+	for(a = mflg|cflg?0:eargc; a+N<nfiles || (unsafeout&&a<eargc);
+	    a=i) {
 		i = a+N;
 		if(i>=nfiles)
 			i = nfiles;
@@ -538,7 +542,7 @@ safeoutfil(void)
 		return;
 	if(stat(outfil,&obuf)==-1)
 		return;
-	for(i=eargc>N?eargc-N:0;i<eargc;i++) {	/*-N is suff., not nec.*/
+	for(i=eargc>N?eargc-N:0;i<eargc;i++) { /*-N is suff., not nec.*/
 		if(stat(eargv[i],&ibuf)==-1)
 			continue;
 		if(obuf.st_dev==ibuf.st_dev&&
@@ -621,8 +625,10 @@ cmp(char *i, char *j)
 				pb++;
 				sb = -sb;
 			}
-			for(ipa = pa; ipa<la&&isdigit(*ipa&0377); ipa++) ;
-			for(ipb = pb; ipb<lb&&isdigit(*ipb&0377); ipb++) ;
+			for(ipa = pa; ipa<la&&isdigit(*ipa&0377);
+			    ipa++) ;
+			for(ipb = pb; ipb<lb&&isdigit(*ipb&0377);
+			    ipb++) ;
 			jpa = ipa;
 			jpb = ipb;
 			a = 0;
@@ -668,7 +674,8 @@ loop:
 		}
 		if(pb>=lb || *pb=='\n')
 			return(-fp->rflg);
-		if((sa = code[(signed char)*pb++]-code[(signed char)*pa++]) == 0)
+		if((sa = code[(signed char)*pb++] -
+		    code[(signed char)*pa++]) == 0)
 			goto loop;
 		return(sa*fp->rflg);
 	}

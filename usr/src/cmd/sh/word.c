@@ -45,10 +45,14 @@ word(void)
 		IF !letter(((ARGPTR)argp)->argval[0]) THEN wdset=0 FI
 
 		peekc=c|MARK;
-		IF ((ARGPTR)argp)->argval[1]==0 ANDF (d=((ARGPTR)argp)->argval[0], digit(d)) ANDF (c=='>' ORF c=='<')
+		IF ((ARGPTR)argp)->argval[1]==0 ANDF
+		    (d=((ARGPTR)argp)->argval[0], digit(d)) ANDF
+		    (c=='>' ORF c=='<')
 		THEN	word(); wdnum=d-'0';
 		ELSE	/*check for reserved words*/
-			IF reserv==FALSE ORF (wdval=syslook(((ARGPTR)argp)->argval,reserved))==0
+			IF reserv==FALSE ORF
+			    (wdval=syslook(((ARGPTR)argp)->argval,
+			    reserved))==0
 			THEN	wdarg=(ARGPTR)argp; wdval=0;
 			FI
 		FI

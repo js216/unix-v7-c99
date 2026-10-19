@@ -182,7 +182,9 @@ getxfile(register struct inode *ip, int nargc)
 	sep = 0;
 	overlay = 0;
 	n = 0;
-	for(i = 0; u.u_exdata.ux_mag == 0x464c457f && i < u.u_exdata.ux_phnum && n < 2; i++) {
+	for(i = 0;
+	    u.u_exdata.ux_mag == 0x464c457f &&
+	    i < u.u_exdata.ux_phnum && n < 2; i++) {
 		u.u_base = (caddr_t)&u.u_exdata.ux_ph[n];
 		u.u_count = 24;
 		u.u_offset = u.u_exdata.ux_phoff + 32*i;
@@ -213,7 +215,8 @@ getxfile(register struct inode *ip, int nargc)
 	 * overflow of max sizes
 	 */
 	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
-	lsize = (long)u.u_exdata.ux_ph[1].p_addr + u.u_exdata.ux_ph[1].p_msize;
+	lsize = (long)u.u_exdata.ux_ph[1].p_addr +
+	    u.u_exdata.ux_ph[1].p_msize;
 	if ((unsigned)lsize < u.u_exdata.ux_ph[1].p_msize ||
 	    u.u_exdata.ux_ph[1].p_addr < ptob(ts)) {
 		u.u_error = ENOMEM;

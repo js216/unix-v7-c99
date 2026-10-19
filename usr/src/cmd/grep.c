@@ -208,7 +208,8 @@ compile(char *astr)
 				if (c=='\0')
 					goto cerror;
 				if (c=='-' && sp>cstart && *sp!=']') {
-					for (c = sp[-2]&0177; c<(*sp&0177); c++)
+					for (c = sp[-2]&0177;
+					    c<(*sp&0177); c++)
 						ep[c>>3] |= bittab[c&07];
 					sp++;
 				}

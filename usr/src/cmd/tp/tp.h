@@ -22,7 +22,7 @@
 #define	tapeblk	&tpentry[0]
 #define tapeb	&tpentry[0]
 
-extern struct 	tent	{	/* Structure of a tape directory block */
+extern struct 	tent	{ /* Structure of a tape directory block */
 	char	pathnam[NAMELEN];
 	short	mode;
 	char	uid;
@@ -67,7 +67,17 @@ extern short	ndirent, ndentb;
 extern struct	dent	*edir;
 extern struct	dent *lastd;		/* for improvement */
 extern void	(*command)(void);
-void	optap(void), setcom(void (*newcom)(void)), useerr(void), check(void), done(void), encode(char *pname, struct dent *dptr), decode(char *pname, struct dent *dptr), clrdir(void), clrent(struct dent *ptr), rddir(void), wrdir(void), tread(void), twrite(void), rseek(int blk), wseek(int blk), seekerr(void), getfiles(void), expand(void), fserr(void), callout(void), swabdir(struct tent *tp), gettape(void (*how)(struct dent *d)), delete(struct dent *dd), update(void), update1(void), phserr(void), bitmap(void), setmap(struct dent *d), maperr(void), usage(void), taboc(struct dent *dd), extract(struct dent *d), cmd(void), cmr(void), cmx(void), cmt(void);
+void	optap(void), setcom(void (*newcom)(void)), useerr(void),
+    check(void), done(void), encode(char *pname, struct dent *dptr),
+    decode(char *pname, struct dent *dptr), clrdir(void),
+    clrent(struct dent *ptr), rddir(void), wrdir(void), tread(void),
+    twrite(void), rseek(int blk), wseek(int blk), seekerr(void),
+    getfiles(void), expand(void), fserr(void), callout(void),
+    swabdir(struct tent *tp), gettape(void (*how)(struct dent *d)),
+    delete(struct dent *dd), update(void), update1(void), phserr(void),
+    bitmap(void), setmap(struct dent *d), maperr(void), usage(void),
+    taboc(struct dent *dd), extract(struct dent *d), cmd(void),
+    cmr(void), cmx(void), cmt(void);
 int	verify(int key);
 
 extern char	*nameblk;

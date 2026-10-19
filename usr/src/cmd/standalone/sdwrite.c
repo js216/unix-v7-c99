@@ -10,7 +10,8 @@
  * From the host's shell:
  *	stty -F /dev/ttyACM0 raw -echo; exec 3<>/dev/ttyACM0
  *	printf 'w 0 %d\r' `stat -c %s img` >&3; cat img >&3; head -1 <&3
- *	printf 'r 0 %d\r' `stat -c %s img` >&3; head -c `stat -c %s img` <&3 | cmp - img
+ *	printf 'r 0 %d\r' `stat -c %s img` >&3; head -c `stat -c %s img`
+ *	<&3 | cmp - img
  */
 
 #define	R(a)	(*(volatile unsigned *)(a))
@@ -141,7 +142,8 @@ now(void)
 {
 	unsigned lo, hi;
 
-	__asm__ volatile("mrrc p15, 0, %0, %1, c14" : "=r"(lo), "=r"(hi));
+	__asm__ volatile("mrrc p15, 0, %0, %1, c14" : "=r"(lo),
+	    "=r"(hi));
 	return(lo);
 }
 
@@ -244,7 +246,8 @@ rxarm(void)
 static void
 carrier(void)
 {
-	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
+	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0,
+	    2, 0, 3, 0 };
 
 	if (R(DIEPCTL(2)) & EPENA)
 		return;
@@ -286,7 +289,8 @@ dosetup(void)
 		}
 		if (val>>8 == 2) {
 			for (i = 0; i < sizeof cfgdesc; i += cfgdesc[i])
-				if (cfgdesc[i+1] == 5 && cfgdesc[i+3] == 2) {
+				if (cfgdesc[i+1] == 5 &&
+				    cfgdesc[i+3] == 2) {
 					cfgdesc[i+4] = mps;
 					cfgdesc[i+5] = mps>>8;
 				}
@@ -465,7 +469,8 @@ usbinit(void)
 	while (R(GRSTCTL) & 1)
 		;
 	R(OTG+0x008) = 0;
-	R(OTG+0x00c) = (R(OTG+0x00c) & ~(1U<<29|1U<<30|017U<<10)) | 1U<<30 | 9U<<10;
+	R(OTG+0x00c) = (R(OTG+0x00c) & ~(1U<<29|1U<<30|017U<<10)) |
+	    1U<<30 | 9U<<10;
 	delay(50000);
 	R(OTG+0x038) &= ~(1U<<21);
 	R(OTG+0x000) |= 1U<<6 | 1U<<7;
@@ -548,7 +553,8 @@ sdinit(void)
 	for (i = 8; i <= 12; i++) {
 		R(GPIOC+0x00) = (R(GPIOC+0x00) & ~(3U<<2*i)) | 2U<<2*i;
 		R(GPIOC+0x08) |= 1U<<2*i;
-		R(GPIOC+0x24) = (R(GPIOC+0x24) & ~(0xfU<<(i-8)*4)) | 12U<<(i-8)*4;
+		R(GPIOC+0x24) = (R(GPIOC+0x24) & ~(0xfU<<(i-8)*4)) |
+		    12U<<(i-8)*4;
 	}
 	R(GPIOD+0x00) = (R(GPIOD+0x00) & ~(3U<<4)) | 2U<<4;
 	R(GPIOD+0x08) |= 1U<<4;
@@ -563,7 +569,8 @@ sdinit(void)
 	if (sdcmd(0, 0, 0) || sdcmd(8, 0x1aa, 1))
 		return(-1);
 	for (i = 0; ; i++) {
-		if (i == 1000 || sdcmd(55, 0, 1) || sdcmd(41, 0x40ff8000, 2))
+		if (i == 1000 || sdcmd(55, 0, 1) ||
+		    sdcmd(41, 0x40ff8000, 2))
 			return(-1);
 		if (R(RESP1) & 1U<<31)
 			break;
@@ -607,7 +614,8 @@ sdstop(int wr)
 	while (R(STA) & BUSYD0)
 		;
 	if (wr)
-		while (sdcmd(13, rca, 1) == 0 && (R(RESP1)>>9 & 017) != 4)
+		while (sdcmd(13, rca, 1) == 0 &&
+		    (R(RESP1)>>9 & 017) != 4)
 			;
 }
 
@@ -646,9 +654,11 @@ sdwrite(unsigned bn, unsigned n)
 			break;
 		while (in - out >= 32 && (sta = R(STA)) & TXFIFOHE) {
 			register unsigned *p = &ring[(out%NRING)/4];
-			__asm__ volatile("ldm %0, {r4-r11}\n\tstm %1, {r4-r11}"
+			__asm__ volatile("ldm %0, {r4-r11}\n\t"
+			    "stm %1, {r4-r11}"
 			    : : "r"(p), "r"(SDFIFO)
-			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
+			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10",
+			        "r11", "memory");
 			out += 32;
 		}
 		if (sta & DATAEND)
@@ -681,11 +691,14 @@ sdread(unsigned bn, unsigned n)
 		sta = R(STA);
 		if (sta & DERR || now() - t > 640000000)
 			break;
-		while (in - out <= NRING - 32 && (sta = R(STA)) & RXFIFOHF) {
+		while (in - out <= NRING - 32 &&
+		    (sta = R(STA)) & RXFIFOHF) {
 			register unsigned *p = &ring[(in%NRING)/4];
-			__asm__ volatile("ldm %1, {r4-r11}\n\tstm %0, {r4-r11}"
+			__asm__ volatile("ldm %1, {r4-r11}\n\t"
+			    "stm %0, {r4-r11}"
 			    : : "r"(p), "r"(SDFIFO)
-			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
+			    : "r4", "r5", "r6", "r7", "r8", "r9", "r10",
+			        "r11", "memory");
 			in += 32;
 		}
 		if (sta & DATAEND && in < n)
@@ -699,7 +712,8 @@ sdread(unsigned bn, unsigned n)
 				k = 16384;
 			if (k > NRING - out%NRING)
 				k = NRING - out%NRING;
-			if (usbsend((unsigned char *)ring + out%NRING, k))
+			if (usbsend((unsigned char *)ring + out%NRING,
+			    k))
 				break;
 			out += k;
 			t = now();
@@ -740,7 +754,8 @@ getln(void)
 			continue;
 		usbtake(buf);
 		for (i = 0; i < rxn; i++) {
-			if (((unsigned char *)buf)[i] == '\r' || ((unsigned char *)buf)[i] == '\n') {
+			if (((unsigned char *)buf)[i] == '\r' ||
+			    ((unsigned char *)buf)[i] == '\n') {
 				line[n] = 0;
 				return(n);
 			}
@@ -789,7 +804,8 @@ main(void)
 				break;
 			}
 			if (line[0] == 'w')
-				say(sdwrite(bn, n) ? "error\n" : "ok\n");
+				say(sdwrite(bn, n) ? "error\n" :
+				    "ok\n");
 			else if (sdread(bn, n))
 				say("error\n");
 			break;

@@ -34,7 +34,8 @@ monitor(char *lowpc, char *highpc, short *buf, int bufsiz, int cntsiz)
 	((struct hdr *)buf)->highpc = highpc;
 	((struct hdr *)buf)->ncount = cntsiz;
 	sbuf = buf;
-	cntnext = cntbase = (struct cnt *)(buf + sizeof(struct hdr)/sizeof(short));
+	cntnext = cntbase = (struct cnt *)(buf +
+	    sizeof(struct hdr)/sizeof(short));
 	cntend = cntbase + cntsiz;
 	buf = (short *)cntend;
 	bufsiz -= (buf - sbuf);

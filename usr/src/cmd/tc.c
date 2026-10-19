@@ -55,7 +55,8 @@ int erase = 1;
 void	(*sigint)(int sig);
 void	(*sigquit)(int sig);
 
-void lig(char *x), init(void), kwait(void), callunix(char line[]), sendpt(void);
+void lig(char *x), init(void), kwait(void), callunix(char line[]),
+    sendpt(void);
 void ex(int sig);
 long tscale(int n);
 int readch(void), atoi(void), getch(void);

@@ -22,7 +22,8 @@ char *as[] = {
 int	ifile;
 
 void type(char *file);
-int ccom(void), ascom(void), english(char *bp, int n), lookup(char *tab[]);
+int ccom(void), ascom(void), english(char *bp, int n),
+    lookup(char *tab[]);
 int
 main(int argc, char **argv)
 {
@@ -190,7 +191,8 @@ notfort:
 			printf("assembler program text"); 
 			goto outa;
 		}
-		else if((j < 0 || buf[j] == '\n') && isalpha(buf[j+2]&0377)){
+		else if((j < 0 || buf[j] == '\n') &&
+		    isalpha(buf[j+2]&0377)){
 			printf("roff, nroff, or eqn input text");
 			goto outa;
 		}
@@ -207,7 +209,8 @@ notfort:
 				printf("assembler program text"); 
 				goto outa; 
 			}
-			else if(buf[j] == '\n' && isalpha(buf[j+2]&0377)){
+			else if(buf[j] == '\n' &&
+			    isalpha(buf[j+2]&0377)){
 				printf("roff, nroff, or eqn input text");
 				goto outa;
 			}

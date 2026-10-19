@@ -69,7 +69,9 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 			return;
 		case 'd':
 		case 'D':
-			u = ll? va_arg(*argp, long long): c=='d'? va_arg(*argp, int): va_arg(*argp, long);
+			u = ll? va_arg(*argp,
+			    long long): c=='d'? va_arg(*argp,
+			    int): va_arg(*argp, long);
 			if ((long long)u < 0) {
 				*p++ = '-';
 				u = -u;
@@ -86,7 +88,9 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 		case 'u':
 		case 'U':
 		unum:
-			u = ll? va_arg(*argp, unsigned long long): c>='a'? va_arg(*argp, unsigned): va_arg(*argp, unsigned long);
+			u = ll? va_arg(*argp,
+			    unsigned long long): c>='a'? va_arg(*argp,
+			    unsigned): va_arg(*argp, unsigned long);
 		num:
 			if (ndigit && u)
 				*p++ = '0';
@@ -106,12 +110,14 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 			if (ndigit > 70)
 				ndigit = 70;
 			if (c == 'g') {
-				gcvt(va_arg(*argp, double), ndigit, buf);
+				gcvt(va_arg(*argp, double), ndigit,
+				    buf);
 				while (*p)
 					p++;
 				break;
 			}
-			s = (c=='e'? ecvt: fcvt)(va_arg(*argp, double), ndigit+(c=='e'), &decpt, &sign);
+			s = (c=='e'? ecvt: fcvt)(va_arg(*argp, double),
+			    ndigit+(c=='e'), &decpt, &sign);
 			if (sign)
 				*p++ = '-';
 			if (c == 'e') {
@@ -141,7 +147,8 @@ _doprnt(char *fmt, va_list *argp, FILE *iop)
 				if (ndigit)
 					*p++ = '.';
 				for (c = ndigit; c > 0; c--)
-					*p++ = decpt++ < 0 || !*s? '0': *s++;
+					*p++ = decpt++ < 0 ||
+					    !*s? '0': *s++;
 			}
 			s = buf;
 			break;

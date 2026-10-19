@@ -82,7 +82,8 @@ static unsigned char cfgdesc[67] = {
 };
 
 static const unsigned char lang[4] = { 4, 3, 0x09, 0x04 };
-static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0, 8 };
+static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0,
+    8 };
 
 static void
 fifowrite(int ep, const unsigned char *p, unsigned n)
@@ -182,7 +183,8 @@ rxarm(void)
 static void
 carrier(void)
 {
-	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0, 2, 0, 3, 0 };
+	static const unsigned char state[10] = { 0xa1, 0x20, 0, 0, 0, 0,
+	    2, 0, 3, 0 };
 
 	if (DIEPCTL(2) & EPENA)
 		return;
@@ -239,7 +241,8 @@ dosetup(void)
 			return;
 		case 2:
 			for (i = 0; i < sizeof cfgdesc; i += cfgdesc[i])
-				if (cfgdesc[i+1] == 5 && cfgdesc[i+3] == 2) {
+				if (cfgdesc[i+1] == 5 &&
+				    cfgdesc[i+3] == 2) {
 					cfgdesc[i+4] = bulkmps;
 					cfgdesc[i+5] = bulkmps >> 8;
 				}
@@ -270,9 +273,11 @@ dosetup(void)
 	case 9:
 		config = val&0xff;
 		if (config) {
-			DIEPCTL(1) = USBAEP | 2U<<18 | 1U<<22 | SD0PID | bulkmps;
+			DIEPCTL(1) = USBAEP | 2U<<18 | 1U<<22 | SD0PID |
+			    bulkmps;
 			DOEPCTL(1) = USBAEP | 2U<<18 | SD0PID | bulkmps;
-			DIEPCTL(2) = USBAEP | 3U<<18 | 2U<<22 | SD0PID | 16;
+			DIEPCTL(2) = USBAEP | 3U<<18 | 2U<<22 | SD0PID |
+			    16;
 			inbusy = 0;
 			rxlen = rxpos = 0;
 			rxarm();
@@ -419,7 +424,8 @@ klinit(void)
 	while (GRSTCTL & 1)
 		;
 	GAHBCFG = 0;
-	GUSBCFG = (GUSBCFG & ~(1U<<29|1U<<30|017U<<10)) | 1U<<30 | 9U<<10;
+	GUSBCFG = (GUSBCFG & ~(1U<<29|1U<<30|017U<<10)) | 1U<<30 |
+	    9U<<10;
 	t = cntvct_get() + cntfrq_get()/20;
 	while (cntvct_get() < t)
 		;
@@ -554,7 +560,8 @@ klintr(caddr_t pc, int ps)
 			txflush();
 		else if (tp->t_state&ISOPEN) {
 			ttstart(tp);
-			if (tp->t_state&ASLEEP && tp->t_outq.c_cc<=TTLOWAT)
+			if (tp->t_state&ASLEEP &&
+			    tp->t_outq.c_cc<=TTLOWAT)
 				wakeup((caddr_t)&tp->t_outq);
 		}
 	}

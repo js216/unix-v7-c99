@@ -102,37 +102,53 @@ VOID		prs(STRING as);
 VOID		prc(CHAR c);
 VOID		getenv(void);
 STRING		*setenv(void);
-INT		any(CHAR c, STRING s), builtin(void), cf(STRING s1, STRING s2),
+INT		any(CHAR c, STRING s), builtin(void),
+    cf(STRING s1, STRING s2),
 		chkopen(STRING idf), create(STRING s), estabf(STRING s),
 		execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2),
 		expand(STRING as, INT rflg), getarg(COMPTR ac),
-		gmatch(STRING s, STRING p), ignsig(INT n), length(STRING as),
+		gmatch(STRING s, STRING p), ignsig(INT n),
+		    length(STRING as),
 		nextc(CHAR quote), options(INT argc, STRING *argv),
-		pathopen(STRING path, STRING name), pop(void), readc(void),
+		pathopen(STRING path, STRING name), pop(void),
+		    readc(void),
 		readvar(STRING *names), stoi(STRING icp),
-		syslook(STRING w, SYSTAB syswds), tmpfil(void), word(void),
+		syslook(STRING w, SYSTAB syswds), tmpfil(void),
+		    word(void),
 		alarm(unsigned sec), chdir(char *dir), close(int fd),
-		creat(char *name, int mode), dup(int fd), dup2(int fd, int fd2),
-		execve(char *name, char **argv, char **envp), fork(void),
-		getpid(void), getuid(void), ioctl(int fd, int req, void *argp),
+		creat(char *name, int mode), dup(int fd),
+		    dup2(int fd, int fd2),
+		execve(char *name, char **argv, char **envp),
+		    fork(void),
+		getpid(void), getuid(void),
+		    ioctl(int fd, int req, void *argp),
 		open(char *name, int mode), pause(void), pipe(int *fd),
 		read(int fd, char *buf, int n), times(long long *t),
 		umask(int mask), unlink(char *name), wait(int *status),
 		write(int fd, char *buf, int n);
 VOID		assign(NAMPTR n, STRING v), assnum(STRING *p, INT i),
-		blank(void), chkpipe(INT *pv), chkpr(char eor), chktrap(void),
-		clearup(void), copy(IOPTR ioparg), dfault(NAMPTR n, STRING v),
+		blank(void), chkpipe(INT *pv), chkpr(char eor),
+		    chktrap(void),
+		clearup(void), copy(IOPTR ioparg),
+		    dfault(NAMPTR n, STRING v),
 		done(void), error(STRING s), execa(STRING at[]),
-		execexp(STRING s, UFD f), exitset(void), exitsh(INT xno),
-		failed(STRING s1, STRING s2), free(void *ap), getsig(INT n),
+		execexp(STRING s, UFD f), exitset(void),
+		    exitsh(INT xno),
+		failed(STRING s1, STRING s2), free(void *ap),
+		    getsig(INT n),
 		initf(UFD fd), initio(IOPTR iop), itos(INT n),
 		Ldup(INT fa, INT fb), makearg(ARGPTR args),
-		namscan(VOID (*fn)(NAMPTR n)), newline(void), oldsigs(void),
+		namscan(VOID (*fn)(NAMPTR n)), newline(void),
+		    oldsigs(void),
 		postclr(void), prn(INT n), prp(void), prt(L_INT t),
-		push(FILE af), rename(INT f1, INT f2), replace(STRING *a, STRING v),
-		rmtemp(IOPTR base), setlist(ARGPTR arg, INT xp), settmp(void),
-		sigchk(void), stakchk(void), stdsigs(void), subst(INT in, INT ot),
-		tdystak(STKPTR x), trim(STRING at), clrsig(INT i), exit(int status);
+		push(FILE af), rename(INT f1, INT f2),
+		    replace(STRING *a, STRING v),
+		rmtemp(IOPTR base), setlist(ARGPTR arg, INT xp),
+		    settmp(void),
+		sigchk(void), stakchk(void), stdsigs(void),
+		    subst(INT in, INT ot),
+		tdystak(STKPTR x), trim(STRING at), clrsig(INT i),
+		    exit(int status);
 DOLPTR		freeargs(DOLPTR blk);
 BYTPTR		setbrk(INT incr);
 L_INT		lseek(int fd, long off, int ptr);
@@ -148,8 +164,8 @@ STRING		sbrk(int incr);
 /* temp files and io */
 extern UFD		output;
 extern INT		ioset;
-extern IOPTR		iotemp;		/* files to be deleted sometime */
-extern IOPTR		iopend;		/* documents waiting to be read at NL */
+extern IOPTR		iotemp;	/* files to be deleted sometime */
+extern IOPTR		iopend;	/* documents waiting to be read at NL */
 
 /* substitution */
 extern INT		dolc;

@@ -23,7 +23,8 @@ char	*ban;
 int	npages	= 1;
 unsigned char	chrtab[];
 int	lineno;
-int	send(void), getline(void); void putline(int ff), banner(char *s);
+int	send(void), getline(void);
+void putline(int ff), banner(char *s);
 
 int
 main(int argc, char **argv)

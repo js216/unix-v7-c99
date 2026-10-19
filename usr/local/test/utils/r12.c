@@ -33,12 +33,14 @@ main(void)
 	int out;
 
 	signal(SIGILL, count);
-	__asm__ volatile("mov r12, %1\n\t.word 0xe7f000f0\n\tmov %0, r12"
+	__asm__ volatile("mov r12, %1\n\t.word 0xe7f000f0\n\t"
+	    "mov %0, r12"
 	    : "=r"(out) : "r"(0x5a5a1234) : "r12");
 	printf("undef: sig=%d r12=%x calls=%d\n", gotsig, out, calls);
 	gotsig = 0;
 	signal(SIGSEGV, skip);
-	__asm__ volatile("mov r12, %1\n\tmov r0, #0x30000000\n\tldr r0, [r0]\n\tmov %0, r12"
+	__asm__ volatile("mov r12, %1\n\tmov r0, #0x30000000\n\t"
+	    "ldr r0, [r0]\n\tmov %0, r12"
 	    : "=r"(out) : "r"(0x1234a5a5) : "r0", "r12");
 	printf("dabort: sig=%d r12=%x\n", gotsig, out);
 	return 0;

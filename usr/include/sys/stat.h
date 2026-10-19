@@ -26,4 +26,5 @@ struct	stat
 #define	S_IREAD	0000400		/* read permission, owner */
 #define	S_IWRITE	0000200		/* write permission, owner */
 #define	S_IEXEC	0000100		/* execute/search permission, owner */
-int	stat(char *name, struct stat *buf), fstat(int fd, struct stat *buf);
+int	stat(char *name, struct stat *buf),
+    fstat(int fd, struct stat *buf);

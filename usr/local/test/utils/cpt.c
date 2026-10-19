@@ -2,7 +2,8 @@
 #include <sys/types.h>
 
 struct {
-	short	h_magic, h_dev, h_ino, h_mode, h_uid, h_gid, h_nlink, h_rdev;
+	short	h_magic, h_dev, h_ino, h_mode, h_uid, h_gid, h_nlink,
+	    h_rdev;
 	unsigned short	h_mtime[4];
 	short	h_namesize;
 	short	h_filesize[2];

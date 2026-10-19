@@ -274,7 +274,8 @@ STRING	*scan(INT argn)
 	REG ARGPTR	argp = (ARGPTR)(Rcheat(gchain)&~ARGMK);
 	REG STRING	*comargn, *comargm;
 
-	comargn=(STRING *)getstak(BYTESPERWORD*argn+BYTESPERWORD); comargm = comargn += argn; *comargn = ENDARGS;
+	comargn=(STRING *)getstak(BYTESPERWORD*argn+BYTESPERWORD);
+	comargm = comargn += argn; *comargn = ENDARGS;
 
 	WHILE argp
 	DO	*--comargn = argp->argval;

@@ -4,5 +4,6 @@ struct	group { /* see getgrent(3) */
 	int	gr_gid;
 	char	**gr_mem;
 };
-struct	group	*getgrent(void), *getgrgid(int gid), *getgrnam(char *name);
+struct	group	*getgrent(void), *getgrgid(int gid),
+    *getgrnam(char *name);
 void	setgrent(void), endgrent(void);

@@ -50,7 +50,8 @@ main(int argc, char *argv[])
 		strncat(histty, histtya, sizeof histty - 6);
 	}
 	while (fread((char *)&ubuf, sizeof(ubuf), 1, uf) == 1) {
-		if (strncmp(ubuf.ut_line, mytty, sizeof ubuf.ut_line)==0) {
+		if (strncmp(ubuf.ut_line, mytty,
+		    sizeof ubuf.ut_line)==0) {
 			for(i=0; i<8; i++) {
 				c1 = ubuf.ut_name[i];
 				if(c1 == ' ')
@@ -73,7 +74,8 @@ main(int argc, char *argv[])
 		logcnt++;
 		if (histty[0]==0) {
 			strcpy(histty, "/dev/");
-			strncat(histty, ubuf.ut_line, sizeof ubuf.ut_line);
+			strncat(histty, ubuf.ut_line,
+			    sizeof ubuf.ut_line);
 		}
 	nomat:
 		;

@@ -26,7 +26,8 @@ mmread(int dev)
 	if(minor(dev) == 2)
 		return;
 	if(minor(dev) == 0 && devaddr(u.u_offset)) {
-		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
+		while(u.u_error==0 && u.u_count >= 4 &&
+		    (u.u_offset&3) == 0 &&
 		    (a = devaddr(u.u_offset)) != NULL) {
 			w = *(volatile int *)a;
 			iomove((caddr_t)&w, 4, B_READ);
@@ -53,7 +54,8 @@ mmwrite(int dev)
 		return;
 	}
 	if(minor(dev) == 0 && devaddr(u.u_offset)) {
-		while(u.u_error==0 && u.u_count >= 4 && (u.u_offset&3) == 0 &&
+		while(u.u_error==0 && u.u_count >= 4 &&
+		    (u.u_offset&3) == 0 &&
 		    (a = devaddr(u.u_offset)) != NULL) {
 			iomove((caddr_t)&w, 4, B_WRITE);
 			*(volatile int *)a = w;

@@ -32,7 +32,8 @@ long	day	= 86400L;
 int	pcount;
 char	**pptr;
 
-void	update(struct tbuf *tp, int f), upall(int f), print(void), loop(void);
+void	update(struct tbuf *tp, int f), upall(int f), print(void),
+    loop(void);
 int	among(int i);
 void	pdate(void), newday(void);
 int

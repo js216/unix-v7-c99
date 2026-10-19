@@ -14,7 +14,8 @@
 
 int	_doscan(FILE *iop, char *fmt, va_list *argp);
 char	*_getccl(char *s);
-int	_innum(char *ptr, int type, int len, int size, FILE *iop, int *eofptr);
+int	_innum(char *ptr, int type, int len, int size, FILE *iop,
+    int *eofptr);
 int	_instr(char *ptr, int type, int len, FILE *iop, int *eofptr);
 
 char	_sctab[256] = {
@@ -79,12 +80,14 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 			if (ch=='c' || ch=='s' || ch=='[')
 				ptr = va_arg(*argp, char *);
 			else if (ch=='e' || ch=='f')
-				ptr = size==LONG? (char *)va_arg(*argp, double *):
+				ptr = size==LONG? (char *)va_arg(*argp,
+				    double *):
 				    (char *)va_arg(*argp, float *);
 			else if (size==LONG)
 				ptr = (char *)va_arg(*argp, long *);
 			else if (size==LLONG)
-				ptr = (char *)va_arg(*argp, long long *);
+				ptr = (char *)va_arg(*argp,
+				    long long *);
 			else if (size==SHORT)
 				ptr = (char *)va_arg(*argp, short *);
 			else
@@ -118,7 +121,8 @@ _doscan(FILE *iop, register char *fmt, va_list *argp)
 }
 
 int
-_innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
+_innum(char *ptr, int type, int len, int size, struct _iobuf *iop,
+    int *eofptr)
 {
 	register char *np;
 	char numbuf[64];
@@ -155,7 +159,8 @@ _innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 	}
 	for ( ; --len>=0; *np++ = c, c = getc(iop)) {
 		if (isdigit(c)
-		 || (base==16 && (('a'<=c && c<='f') || ('A'<=c && c<='F')))) {
+		 || (base==16 &&
+		     (('a'<=c && c<='f') || ('A'<=c && c<='F')))) {
 			ndigit++;
 			if (base==8)
 				lcval <<=3;
@@ -230,7 +235,8 @@ _innum(char *ptr, int type, int len, int size, struct _iobuf *iop, int *eofptr)
 }
 
 int
-_instr(register char *ptr, int type, int len, register struct _iobuf *iop,
+_instr(register char *ptr, int type, int len,
+    register struct _iobuf *iop,
     int *eofptr)
 {
 	register int ch;

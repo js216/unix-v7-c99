@@ -27,7 +27,8 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 	}
-	while(msize < (int)sizeof mesg && (i = getc(f)) != EOF) mesg[msize++] = i;
+	while(msize < (int)sizeof mesg &&
+	    (i = getc(f)) != EOF) mesg[msize++] = i;
 	fclose(f);
 	for(i=0; i<USERS; i++) {
 		p = &utmp[i];

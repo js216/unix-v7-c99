@@ -27,7 +27,8 @@ unsigned	nfiles;
 
 int	nerror;
 daddr_t	bmap(int i);
-void	check(char *file), pass1(struct dinode *ip), pass2(struct dinode *ip);
+void	check(char *file), pass1(struct dinode *ip),
+    pass2(struct dinode *ip);
 void	bread(daddr_t bno, char *buf, int cnt);
 
 int

@@ -2,7 +2,8 @@
 #include "stdio.h"
 #include "awk.h"
 int first(node *p), notin(int **array, int n, int *prev), *add(int n);
-void overflo(void), penter(node *p), follow(node *v), cfoll(node *v), freetr(node *p);
+void overflo(void), penter(node *p), follow(node *v), cfoll(node *v),
+    freetr(node *p);
 
 extern struct fa *cgotofn(void);
 #define MAXLIN 256
@@ -39,7 +40,7 @@ int	setcnt;
 int	line;
 
 
-struct fa *makedfa(node *p)	/* returns dfa for tree pointed to by p */
+struct fa *makedfa(node *p) /* returns dfa for tree pointed to by p */
 {
 	node *p1;
 	struct fa *fap;
@@ -146,7 +147,8 @@ overflo(void)
 }
 
 void
-cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[leaf] */
+/* enter follow set of each leaf of vertex v into foll[leaf] */
+cfoll(register node *v)
 {
 	register int i;
 	int prev;
@@ -177,8 +179,9 @@ cfoll(register node *v)		/* enter follow set of each leaf of vertex v into foll[
 }
 
 int
-first(register node *p)			/* collects initially active leaves of p into setvec */
-				/* returns 0 or 1 depending on whether p matches empty string */
+/* collects initially active leaves of p into setvec */
+first(register node *p)
+	/* returns 0 or 1 depending on whether p matches empty string */
 {
 	register int b;
 
@@ -212,7 +215,7 @@ first(register node *p)			/* collects initially active leaves of p into setvec *
 }
 
 void
-follow(node *v)		/* collects leaves that can follow v into setvec */
+follow(node *v)	/* collects leaves that can follow v into setvec */
 {
 	node *p;
 
@@ -256,7 +259,8 @@ member(register char c, register char *s)	/* is c in s? */
 }
 
 int
-notin(int **array, int n, int *prev) {		/* is setvec in array[0] thru array[n]? */
+/* is setvec in array[0] thru array[n]? */
+notin(int **array, int n, int *prev) {
 	register int i, j;
 	int *ptr;
 	for (i=0; i<=n; i++) {

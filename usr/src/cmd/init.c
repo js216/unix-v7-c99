@@ -35,8 +35,10 @@ struct	tab
 int	fi;
 char	tty[20];
 jmp_buf	sjbuf;
-void	shutdown(void), single(void), runcom(void), merge(int sig), multiple(void);
-void	term(struct tab *p), maktty(char *lin), dfork(struct tab *p), rmut(struct tab *p), reset(int sig);
+void	shutdown(void), single(void), runcom(void), merge(int sig),
+    multiple(void);
+void	term(struct tab *p), maktty(char *lin), dfork(struct tab *p),
+    rmut(struct tab *p), reset(int sig);
 int	rline(void), get(void);
 
 int

@@ -9,7 +9,8 @@ int	svargc;
 char	**svargv, **xargv;
 extern FILE	*yyin;	/* lex input file */
 char	*lexprog;	/* points to program argument if it exists */
-extern int	errorflag;	/* non-zero if any syntax errors; set by yyerror */
+/* non-zero if any syntax errors; set by yyerror */
+extern int	errorflag;
 
 int filefd, iflag, symnum, ansfd;
 char *filelist;

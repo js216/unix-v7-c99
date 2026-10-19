@@ -2,7 +2,8 @@
 #define	puts	cb_puts
 #define	gets	cb_gets
 int	getch(void), lookup(char *tab[]), getnl(void), gets(void);
-void	ptabs(void), comment(void), puts(void), gotelse(void), toodeep(void);
+void	ptabs(void), comment(void), puts(void), gotelse(void),
+    toodeep(void);
 int	slevel[20];
 int	clevel	= 0;
 int	spflg[20][10];

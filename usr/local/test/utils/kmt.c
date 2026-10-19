@@ -32,9 +32,11 @@ main(void)
 	printf("found self %d\n", i < NPROC);
 	pa = ptob((unsigned long)pr.p_addr);
 	lseek(k, (long)UBASE, 0);
-	printf("kmem u %d\n", read(k, (char *)&uk, sizeof(uk)) == sizeof(uk));
+	printf("kmem u %d\n",
+	    read(k, (char *)&uk, sizeof(uk)) == sizeof(uk));
 	lseek(m, pa, 0);
-	printf("mem u %d\n", read(m, (char *)&um, sizeof(um)) == sizeof(um));
+	printf("mem u %d\n",
+	    read(m, (char *)&um, sizeof(um)) == sizeof(um));
 	printf("comm %.14s %.14s procp same %d\n", uk.u_comm, um.u_comm,
 		uk.u_procp == um.u_procp);
 	lseek(m, (long)UBASE, 0);

@@ -149,7 +149,8 @@ acct(register struct dinode *ip)
 	}
 	if ((unsigned)ip->di_uid >= NUID)
 		return;
-	du[ip->di_uid].blocks += ip->di_size/BSIZE + (ip->di_size%BSIZE != 0);
+	du[ip->di_uid].blocks += ip->di_size/BSIZE +
+	    (ip->di_size%BSIZE != 0);
 	du[ip->di_uid].nfiles++;
 	if (nflg) {
 	tryagain:

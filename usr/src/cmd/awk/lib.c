@@ -63,7 +63,9 @@ getrec(void)
 		for (rr = record; ; ) {
 			for (; (c=getc(infile)) != sep && c != EOF; *rr++ = c)
 				if (rr >= record+RECSIZE-3)
-					error(FATAL, "record `%.20s...' too long", record);
+					error(FATAL,
+					    "record `%.20s...' too "
+					    "long", record);
 			if (**RS == sep || c == EOF)
 				break;
 			if ((c = getc(infile)) == '\n' || c == EOF)	/* 2 in a row */

@@ -50,7 +50,8 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			com=scan(argn);
 			a1=com[1]; gchain=schain;
 
-			IF ((internal=syslook(com[0],commands)) ORF argn==0)
+			IF ((internal=syslook(com[0],commands)) ORF
+			    argn==0)
 			THEN	setlist(c->comset, 0);
 			FI
 
@@ -200,7 +201,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 	
 				case SYSEVAL:
 					IF a1
-					THEN	execexp(a1,(UFD)&com[2]);
+					THEN execexp(a1,(UFD)&com[2]);
 					FI
 					break;
 
@@ -273,7 +274,8 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				/* except for those `lost' by trap   */
 				oldsigs();
 				IF treeflgs&FINT
-				THEN	signal(INTR,SIG_IGN); signal(QUIT,SIG_IGN);
+				THEN	signal(INTR,SIG_IGN);
+				signal(QUIT,SIG_IGN);
 				FI
 
 				/* pipe in or out */
@@ -294,9 +296,11 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 				/* io redirection */
 				initio(t->treio);
 				IF type!=TCOM
-				THEN	execute(((FORKPTR)t)->forktre,1,0,0);
+				THEN	execute(((FORKPTR)t)->forktre,1,
+				    0,0);
 				ELIF com[0]!=ENDARGS
-				THEN	setlist(((COMPTR)t)->comset,N_EXPORT);
+				THEN	setlist(((COMPTR)t)->comset,
+				    N_EXPORT);
 					execa(com);
 				FI
 				done();
@@ -327,13 +331,15 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 
 		case TAND:
 			IF execute(((LSTPTR)t)->lstlef,0,0,0)==0
-			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,0);
+			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,
+			    0);
 			FI
 			break;
 
 		case TORF:
 			IF execute(((LSTPTR)t)->lstlef,0,0,0)!=0
-			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,0);
+			THEN	execute(((LSTPTR)t)->lstrit,execflg,0,
+			    0);
 			FI
 			break;
 
@@ -371,7 +377,8 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			   INT		i=0;
 
 			   loopcnt++;
-			   WHILE execbrk==0 ANDF (execute(w->whtre,0,0,0)==0)==(type==TWH)
+			   WHILE execbrk==0 ANDF
+			       (execute(w->whtre,0,0,0)==0)==(type==TWH)
 			   DO i=execute(w->dotre,0,0,0);
 			      IF execbrk<0 THEN execbrk=0 FI
 			   OD

@@ -31,7 +31,8 @@ main(int argc, char *argv[])
 		case '-':
 		case 'x':
 		case '/':
-			for(k = 0; dif < 9 && (types[dif] = argv[1][k]); k++)
+			for(k = 0; dif < 9 && (types[dif] = argv[1][k]);
+			    k++)
 				dif++;
 			break;
 
@@ -184,7 +185,8 @@ score(void)
 		(rights * 100)/(rights + wrongs));
 
 	if(rights == 0)	return;
-	printf("Total time %lld seconds; %.1f seconds per problem\n\n\n",
+	printf("Total time %lld seconds; %.1f seconds per "
+	    "problem\n\n\n",
 		etvec - stvec,
 		(etvec - stvec) / (rights + 0.));
 

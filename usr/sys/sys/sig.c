@@ -387,13 +387,15 @@ procxmt(void)
 	case 6:
 		i = (int)ipc.ip_addr;
 		p = (int *)&((physadr)&u)->r[i>>2];
-		if (p >= (int *)&u.u_fps && p < (int *)&u.u_fps.u_fpregs[32])
+		if (p >= (int *)&u.u_fps &&
+		    p < (int *)&u.u_fps.u_fpregs[32])
 			goto ok;
 		for (i=0; i<8; i++)
 			if (p == &u.u_ar0[regloc[i]&0377])
 				goto ok;
 		if (p == &u.u_ar0[PSR]) {
-			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;	/* assure user space */
+			/* assure user space */
+			ipc.ip_data = (ipc.ip_data&0xfe0ffe20) | 020;
 			goto ok;
 		}
 		goto error;

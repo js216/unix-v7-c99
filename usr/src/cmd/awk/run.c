@@ -46,7 +46,8 @@ obj execute(node *u)
 			proc=dopa2;
 		else {
 			if (notlegal(a->nobj))
-				error(FATAL, "illegal statement %o", a->nobj);
+				error(FATAL, "illegal statement %o",
+				    a->nobj);
 			proc = proctab[a->nobj-FIRSTTOKEN];
 		}
 		x = (*proc)(a->narg,a->nobj);
@@ -302,7 +303,8 @@ obj sindex(node **a, int nnn)
 		for (q=p1, p2=s2; *p2 != '\0' && *q == *p2; q++, p2++)
 			;
 		if (*p2 == '\0') {
-			setfval(z.optr, (awkfloat) (p1 - s1 + 1));	/* origin 1 */
+			/* origin 1 */
+			setfval(z.optr, (awkfloat) (p1 - s1 + 1));
 			break;
 		}
 	}
@@ -347,14 +349,19 @@ char *format(char *s, node *a)
 		}
 		for (t=fmt; (*t++ = *s) != '\0'; s++) {
 			if (t >= fmt + sizeof fmt - 2)
-				error(FATAL, "format item %.20s... too long", os);
+				error(FATAL,
+				    "format item %.20s... too long",
+				    os);
 			if (*s >= 'a' && *s <= 'z' && *s != 'l')
 				break;
 		}
 		*t = '\0';
 		for (w = 0, t = fmt; *t != '\0'; t++)
-			if (*t == '*' || (*t >= '0' && *t <= '9' && (w = 10*w + *t - '0') > 100000))
-				error(FATAL, "bad format item %.20s...", os);
+			if (*t == '*' ||
+			    (*t >= '0' && *t <= '9' &&
+			    (w = 10*w + *t - '0') > 100000))
+				error(FATAL, "bad format item %.20s...",
+				    os);
 		w += t - fmt;
 		switch (*s) {
 		case 'f': case 'e': case 'g':
@@ -648,7 +655,8 @@ obj split(node **a, int nnn)
 		*t = '\0';
 		dprintf("n=%d, s=|%s|, temp=|%s|\n", n, s, temp);
 		sprintf(num, "%d", n);
-		setsymtab(num, tostring(temp), 0.0, STR, (cell **)ap->sval);
+		setsymtab(num, tostring(temp), 0.0, STR,
+		    (cell **)ap->sval);
 		if (*p == '\0')	/* all done */
 			break;
 		s = p + 1;
@@ -815,8 +823,10 @@ obj print(node **a, int n)
 	s[0] = '\0';
 	for (x=a[0]; x!=NULL; x=x->nnext) {
 		y = execute(x);
-		if (strlen(s) + strlen(getsval(y.optr)) + strlen(x->nnext==NULL ? *ORS : *OFS) >= RECSIZE)
-			error(FATAL, "string %.20s ... too long to print", s);
+		if (strlen(s) + strlen(getsval(y.optr)) +
+		    strlen(x->nnext==NULL ? *ORS : *OFS) >= RECSIZE)
+			error(FATAL,
+			    "string %.20s ... too long to print", s);
 		strcat(s, getsval(y.optr));
 		tempfree(y);
 		if (x->nnext==NULL)
@@ -854,7 +864,8 @@ redirprint(char *s, int a, node *b)
 	x = execute(b);
 	getsval(x.optr);
 	for (i=0; i<FILENUM; i++)
-		if (files[i].fname != NULL && strcmp(x.optr->sval, files[i].fname) == 0)
+		if (files[i].fname != NULL &&
+		    strcmp(x.optr->sval, files[i].fname) == 0)
 			goto doit;
 	for (i=0; i<FILENUM; i++)
 		if (files[i].fp == 0)

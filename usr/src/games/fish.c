@@ -19,9 +19,12 @@ HAND yourhand;
 char deck[DECK];
 short nextcd;
 int proflag;
-int	choose(char a[], int n), draw(void), empty(HAND h), mark(HAND hand, int cd);
-int	game(void), move(HAND hs, HAND ht, int g, int v), guess(void), myguess(void);
-void	shuffle(void), error(char *s), score(void), deal(HAND hand, int n), stats(void);
+int	choose(char a[], int n), draw(void), empty(HAND h),
+    mark(HAND hand, int cd);
+int	game(void), move(HAND hs, HAND ht, int g, int v), guess(void),
+    myguess(void);
+void	shuffle(void), error(char *s), score(void),
+    deal(HAND hand, int n), stats(void);
 void	phand(HAND h), instruct(void), madebook(int x), start(HAND h);
 void	hedrew(int d), heguessed(int d);
 
@@ -500,7 +503,8 @@ myguess(void){
 	/* is there one that has never been guessed; if so, guess it */
 	lg = 101;
 	for( i=0; i<ntry; ++i ){
-		if( haveguessed[try[i]&0377] < lg ) lg = haveguessed[try[i]&0377];
+		if( haveguessed[try[i]&0377] <
+		    lg ) lg = haveguessed[try[i]&0377];
 		}
 	/* remove all those not guessed longest ago */
 

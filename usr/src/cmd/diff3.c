@@ -42,11 +42,14 @@ int last[4];
 int eflag;
 int debug  = 0;
 
-int readin(char *name, struct diff *dd), number(char **lc), digit(int c);
-int getchange(FILE *b), getline(FILE *b), skip(int i, int from, char *pr);
+int readin(char *name, struct diff *dd), number(char **lc),
+    digit(int c);
+int getchange(FILE *b), getline(FILE *b),
+    skip(int i, int from, char *pr);
 int duplicate(struct range *r1, struct range *r2);
 int edit(struct diff *diff, int dup, int j);
-void merge(int m1, int m2), separate(char *s), prange(struct range *rold);
+void merge(int m1, int m2), separate(char *s),
+    prange(struct range *rold);
 void change(int i, struct range *rold, int dup), repos(int nchar);
 void keep(int i, struct range *rold, struct range *rnew);
 void trouble(void), edscript(int n);

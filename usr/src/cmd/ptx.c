@@ -32,8 +32,10 @@
 #define isabreak(c) (btable[c])
 
 extern char *getline(void);
-void diag(char *s,char *arg), msg(char *s,char *arg), cmpline(char *pend);
-void getsort(void), putline(char *strt, char *end), putout(char *strt,char *end);
+void diag(char *s,char *arg), msg(char *s,char *arg),
+    cmpline(char *pend);
+void getsort(void), putline(char *strt, char *end),
+    putout(char *strt,char *end);
 void onintr(int sig);
 int storeh(int num,char *strtp), hash(char *strtp,char *endp);
 int cmpword(char *cpp,char *pend,char *hpp);
@@ -206,7 +208,8 @@ main(int argc,char **argv)
 
 	while(bufp < endbufp && (c = getc(xptr)) != EOF) {
 		if(isabreak(c)) {
-			if(bufp > strtbufp && storeh(hash(strtbufp,bufp),strtbufp))
+			if(bufp > strtbufp &&
+			    storeh(hash(strtbufp,bufp),strtbufp))
 				diag("Too many words",xfile);
 			*bufp++ = '\0';
 			strtbufp = bufp;
@@ -419,11 +422,13 @@ getsort(void)
 			p2a = ltrim(ref,p2b=linep,halflen-1);
 			if(p2b-p2a>halflen-1)
 				p2a = p2b-halflen-1;
-			p1b = rtrim(p1a=p3b+(isspace(p3b[0]&0377)!=0),tilde,
+			p1b = rtrim(p1a=p3b+(isspace(p3b[0]&0377)!=0),
+			    tilde,
 				w=halflen-(p2b-p2a)-gap);
 			if(p1b-p1a>w)
 				p1b = p1a;
-			p4a = ltrim(ref,p4b=p2a-(isspace(p2a[-1]&0377)!=0),
+			p4a = ltrim(ref,
+			    p4b=p2a-(isspace(p2a[-1]&0377)!=0),
 				w=halflen-(p3b-p3a)-gap);
 			if(p4b-p4a>w)
 				p4a = p4b;

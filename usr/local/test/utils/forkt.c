@@ -32,7 +32,8 @@ main(void)
 	if (sfork() == 0)
 		exit(rawchild == me ? 3 : 4);
 	wait(&st);
-	printf("raw: child sees parent pid %s, parent skipped branch %s\n",
+	printf("raw: child sees parent pid %s, parent skipped branch "
+	    "%s\n",
 	    (st>>8) == 3 ? "yes" : "no", rawpar > me ? "yes" : "no");
 	fflush(stdout);
 	pid = fork();

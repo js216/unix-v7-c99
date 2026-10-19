@@ -93,7 +93,8 @@ run(char *file)
 	sprintf(sbuf, "/bin/mv %.14s %s", file, PDIR);
 	system(sbuf);
 	chdir(PDIR);
-	if (stat(file, &stbuf) == -1 || (pw = getpwuid(stbuf.st_uid)) == NULL)
+	if (stat(file, &stbuf) == -1 ||
+	    (pw = getpwuid(stbuf.st_uid)) == NULL)
 		exit(1);
 	setgid(pw->pw_gid);
 	setuid(stbuf.st_uid);

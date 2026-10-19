@@ -70,21 +70,26 @@ extern unsigned char	_ctype1[];
 
 /* nb these args are not call by value !!!! */
 #define	space(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_SPC))
-#define eofmeta(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(_META|T_EOF))
+#define eofmeta(c)	(((c)&QUOTE)==0 ANDF \
+	_ctype1[c&0377]&(_META|T_EOF))
 #define qotchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_QOT))
-#define eolchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_EOR|T_EOF))
+#define eolchar(c)	(((c)&QUOTE)==0 ANDF \
+	_ctype1[c&0377]&(T_EOR|T_EOF))
 #define dipchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_DIP))
-#define subchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_SUB|T_QOT))
+#define subchar(c)	(((c)&QUOTE)==0 ANDF \
+	_ctype1[c&0377]&(T_SUB|T_QOT))
 #define escchar(c)	(((c)&QUOTE)==0 ANDF _ctype1[c&0377]&(T_ESC))
 
 extern unsigned char	_ctype2[];
 
 #define	digit(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_DIG))
 #define fngchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_FNG))
-#define dolchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_AST|T_BRC|T_DIG|T_IDC|T_SHN))
+#define dolchar(c)	(((c)&QUOTE)==0 ANDF \
+	_ctype2[c&0377]&(T_AST|T_BRC|T_DIG|T_IDC|T_SHN))
 #define defchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_DEF))
 #define setchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_SET))
-#define digchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_AST|T_DIG))
+#define digchar(c)	(((c)&QUOTE)==0 ANDF \
+	_ctype2[c&0377]&(T_AST|T_DIG))
 #define	letter(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_IDC))
 #define alphanum(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(_IDCH))
 #define astchar(c)	(((c)&QUOTE)==0 ANDF _ctype2[c&0377]&(T_AST))

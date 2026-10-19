@@ -57,9 +57,12 @@ int	nsucc;
 
 int	f;
 char	*fname;
-int	yylex(void), nextch(void), enter(int x), cclenter(int x), node(int x, int l, int r);
-int	unary(int x, int d), cstate(int v), member(int symb, int set, int torf), notin(int n);
-void	yyerror(char *s), synerror(void), overflo(void), add(int *array, int n);
+int	yylex(void), nextch(void), enter(int x), cclenter(int x),
+    node(int x, int l, int r);
+int	unary(int x, int d), cstate(int v),
+    member(int symb, int set, int torf), notin(int n);
+void	yyerror(char *s), synerror(void), overflo(void),
+    add(int *array, int n);
 void	follow(int v), execute(char *file);
 %}
 

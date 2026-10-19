@@ -22,7 +22,8 @@
 #define bundle(...) (yyval = (bundle)(__VA_ARGS__))
 char *yyval;
 char *(bundle)(int i, ...);
-void output(char *p), conout(char *p, char *s), yyerror(char *s), pp(char *s), tp(char *s);
+void output(char *p), conout(char *p, char *s), yyerror(char *s),
+    pp(char *s), tp(char *s);
 char *getf(char *p), *geta(char *p);
 int yylex(void), cpeek(int c, int yes, int no), getch(void);
 FILE *in;
@@ -71,9 +72,11 @@ stat	:  ex
 	|  LETTER EQOP e
 		{ bundle(6, "l", $1, $3, $2, "s", $1 ); }
 	|  LETTER '[' e ']' EQOP e
-		{ bundle(8,$3, ";", geta($1), $6, $5, $3, ":", geta($1));}
+		{ bundle(8,$3, ";", geta($1), $6, $5, $3, ":",
+		    geta($1));}
 	|  _BREAK
-		{ if(bindx == 0){ yyerror("break outside loop"); bundle(1, "" ); }
+		{ if(bindx == 0){
+			yyerror("break outside loop"); bundle(1, "" ); }
 		  else bundle(2, numb[lev-bstack[bindx-1]], "Q" ); }
 	|  _RETURN '(' e ')'
 		{ bundle(4, $3, post, numb[lev], "Q" ); }
@@ -305,7 +308,8 @@ CRS	:
 		{ $$ = cp; *cp++ = crs++; *cp++ = '\0';
 			if(crs == '[')crs+=3;
 			if(crs == 'a')crs='{';
-			if(crs >= 0241 || lev >= 14){yyerror("program too big");
+			if(crs >= 0241 || lev >= 14){
+				yyerror("program too big");
 				getout();
 			}
 			bstack[bindx++] = lev++; }
@@ -487,9 +491,11 @@ char *(bundle)(int i, ...){
 
 	va_start(p, i);
 	q = b_sp_nxt;
-	if( bdebug ) printf("bundle %d elements at %o\n",i, (unsigned)q );
+	if( bdebug ) printf("bundle %d elements at %o\n",i,
+	    (unsigned)q );
 	while(i-- > 0){
-		if( b_sp_nxt >= & b_space[b_sp_max-1] ) yyerror( "bundling space exceeded" );
+		if( b_sp_nxt >= & b_space[b_sp_max-1] )
+			yyerror( "bundling space exceeded" );
 		* b_sp_nxt++ = va_arg(p, char *);
 	}
 	va_end(p);
@@ -500,7 +506,8 @@ char *(bundle)(int i, ...){
 
 static void routput(char *p){
 	if( bdebug ) printf("routput(%o)\n", (unsigned)p );
-	if( (char **)p >= &b_space[0] && (char **)p < &b_space[b_sp_max]){
+	if( (char **)p >= &b_space[0] &&
+	    (char **)p < &b_space[b_sp_max]){
 		/* part of a bundle */
 		char **q = (char **)p;
 		while( *q != 0 ) routput( *q++ );

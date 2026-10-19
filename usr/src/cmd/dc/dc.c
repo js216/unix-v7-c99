@@ -5,7 +5,8 @@ void init(int argc, char *argv[]), commnds(void), unreadc(char c),
     pushp(struct blk *p), sdump(char *s1, struct blk *hptr),
     chsign(struct blk *p), binop(char c), release(struct blk *p),
     print(struct blk *hptr), load(void), seekc(struct blk *hptr, int n),
-    salterwd(struct wblk *hptr, struct blk *n), putwd(struct blk *p, struct blk *c),
+    salterwd(struct wblk *hptr, struct blk *n),
+        putwd(struct blk *p, struct blk *c),
     more(struct blk *hptr), garbage(char *s), ospace(char *s),
     redef(struct blk *p), tenot(struct blk *p, int sc),
     oneot(struct blk *p, int sc, char ch);
@@ -243,7 +244,9 @@ casediv:
 					l = c = sbackc(q);
 				}
 				if(n != 1){
-					while(sfbeg(q) == 0 && l < 10000000)l = l*100+sbackc(q);
+					while(sfbeg(q) == 0 &&
+					    l < 10000000)
+						l = l*100+sbackc(q);
 				}
 			}
 			logo = log2(l);
@@ -421,7 +424,8 @@ sempty:
 				if(c >= ARRAYST){
 					rewind(p);
 					while(sfeof(p) == 0)
-						if((q = getwd(p)) != 0)release(q);
+						if((q = getwd(p)) !=
+						    0)release(q);
 				}
 				release(p);
 			}
@@ -538,7 +542,8 @@ sempty:
 execute:
 			p = pop();
 			EMPTY;
-			if((readptr != &readstk[0]) && (*readptr != 0) &&
+			if((readptr != &readstk[0]) &&
+			    (*readptr != 0) &&
 			    ((*readptr)->rd == (*readptr)->wt))
 				release(*readptr);
 			else if(++readptr == &readstk[RDSKSZ]){
@@ -1738,7 +1743,8 @@ copy(struct blk *hptr, int size)
 	ptr = nalloc(hptr->beg, sz, (unsigned)size);
 	if(ptr == 0){
 		garbage("copy");
-		if((ptr = nalloc(hptr->beg, sz, (unsigned)size)) == NULL){
+		if((ptr = nalloc(hptr->beg, sz, (unsigned)size)) ==
+		    NULL){
 			printf("copy size %d\n",size);
 			ospace("copy");
 		}
@@ -1756,7 +1762,9 @@ void
 sdump(char *s1, struct blk *hptr)
 {
 	char *p;
-	printf("%s %o rd %o wt %o beg %o last %o\n",s1,(unsigned)hptr,(unsigned)hptr->rd,(unsigned)hptr->wt,(unsigned)hptr->beg,(unsigned)hptr->last);
+	printf("%s %o rd %o wt %o beg %o last %o\n",s1,(unsigned)hptr,
+	    (unsigned)hptr->rd,(unsigned)hptr->wt,(unsigned)hptr->beg,
+	    (unsigned)hptr->last);
 	p = hptr->beg;
 	while(p < hptr->wt)printf("%d ",*p++);
 	printf("\n");
@@ -1878,7 +1886,8 @@ redef(struct blk *p)
 	register char *newp;
 
 	if ((int)p->beg&01) {
-		printf("odd ptr %o hdr %o\n",(unsigned)p->beg,(unsigned)p);
+		printf("odd ptr %o hdr %o\n",(unsigned)p->beg,
+		    (unsigned)p);
 		ospace("redef-bad");
 	}
 	free(p->beg);

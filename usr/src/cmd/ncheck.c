@@ -36,7 +36,8 @@ int	nxfile;
 int	nerror;
 daddr_t	bmap(int i);
 struct htab *lookup(ino_t i, int ef);
-void	check(char *file), pass1(struct dinode *ip), pass2(struct dinode *ip);
+void	check(char *file), pass1(struct dinode *ip),
+    pass2(struct dinode *ip);
 void	pass3(struct dinode *ip), pname(ino_t i, int lev);
 void	bread(daddr_t bno, char *buf, int cnt);
 int	dotname(struct direct *dp);

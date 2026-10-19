@@ -21,9 +21,12 @@ int yylex(void), ematch(char *s, char *p), step(char *p1, char *p2);
 int advance(char *lp, char *ep), ecmp(char *a, char *b, int count);
 void errxx(int c), getrnge(char *str), yyerror(char *s);
 char *compile(char *instring, char *ep, char *endbuf, int seof);
-char *rel(int op, char *r1, char *r2), *arith(int op, char *r1, char *r2);
-char *conj(int op, char *r1, char *r2), *substr(char *v, char *s, char *w);
-char *length(char *s), *index(char *s, char *t), *match(char *s, char *p);
+char *rel(int op, char *r1, char *r2),
+    *arith(int op, char *r1, char *r2);
+char *conj(int op, char *r1, char *r2),
+    *substr(char *v, char *s, char *w);
+char *length(char *s), *index(char *s, char *t),
+    *match(char *s, char *p);
 %}
 %%
 
@@ -425,7 +428,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 			case '{':
 				if(lastep == (char *) (0))
 					goto defchar;
-				if(*lastep < CCHR || *lastep > (CCL|STAR) || *lastep & 2)
+				if(*lastep < CCHR ||
+				    *lastep > (CCL|STAR) || *lastep & 2)
 					ERROR(44);
 				*lastep |= RNGE;
 				cflg = 0;
@@ -437,7 +441,8 @@ compile(char *instring, register char *ep, char *endbuf, int seof)
 						i = 10 * i + c - '0';
 					else
 						ERROR(16);
-				} while(((c = GETC()) != '\\') && (c != ',') && i <= 255);
+				} while(((c = GETC()) != '\\') &&
+				    (c != ',') && i <= 255);
 				if (i > 255)
 					ERROR(11);
 				*ep++ = i;

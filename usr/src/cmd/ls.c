@@ -150,7 +150,8 @@ main(int argc, char *argv[])
 			lastp = slastp;
 			readdir(ep->ln.namep);
 			if (fflg==0)
-				qsort((char *)slastp,lastp - slastp,sizeof *lastp,compar);
+				qsort((char *)slastp,lastp - slastp,
+				    sizeof *lastp,compar);
 			if (lflg || sflg)
 				printf("total %D\n", tblocks);
 			for (ep1=slastp; ep1<lastp; ep1++)
@@ -308,8 +309,10 @@ readdir(char *dir)
 		if (fread((char *)&dentry, sizeof(dentry), 1, dirf) != 1)
 			break;
 		if (dentry.d_ino==0
-		 || (aflg==0 && dentry.d_name[0]=='.' && (dentry.d_name[1]=='\0'
-			|| (dentry.d_name[1]=='.' && dentry.d_name[2]=='\0'))))
+		 || (aflg==0 && dentry.d_name[0]=='.' &&
+		     (dentry.d_name[1]=='\0'
+			|| (dentry.d_name[1]=='.' &&
+			    dentry.d_name[2]=='\0'))))
 			continue;
 		ep = gstat(makename(dir, dentry.d_name), 0);
 		if (ep==NULL)

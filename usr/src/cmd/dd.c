@@ -18,7 +18,8 @@ char	*ifile;
 char	*ofile;
 char	*ibuf;
 char	*obuf;
-void	flsh(void), null(int c), stats(void), term(int sig), cnull(int cc);
+void	flsh(void), null(int c), stats(void), term(int sig),
+    cnull(int cc);
 void	ascii(int cc), ebcdic(int cc), ibm(int cc);
 int	match(char *s), number(int big);
 int	ibs	= 512;
@@ -412,7 +413,8 @@ number(int big)
 
 	case '\0':
 		if (n>=big || n<0) {
-			fprintf(stderr, "dd: argument %lld out of range\n", n);
+			fprintf(stderr,
+			    "dd: argument %lld out of range\n", n);
 			exit(1);
 		}
 		return(n);

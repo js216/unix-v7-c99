@@ -78,12 +78,14 @@ rmdir(char *d)
 		return;
 	}
 	strcat(name, "/.");
-	if((access(name, 0)) < 0 && errno == ENOENT) {	/* name/. non-existent */
+	/* name/. non-existent */
+	if((access(name, 0)) < 0 && errno == ENOENT) {
 		strcat(name, ".");
 		goto unl;
 	}
 	strcat(name, ".");
-	if((access(name, 0)) < 0 && errno == ENOENT)	/* name/.. non-existent */
+	/* name/.. non-existent */
+	if((access(name, 0)) < 0 && errno == ENOENT)
 		goto unl2;
 	if(access(name, 02)) {
 		name[strlen(name)-3] = '\0';

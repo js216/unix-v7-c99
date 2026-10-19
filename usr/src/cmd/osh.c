@@ -82,9 +82,11 @@ int	trebuf[TRESIZ];
 
 int	*syntax(char **p1, char **p2), *syn1(char **p1, char **p2);
 int	*syn2(char **p1, char **p2), *syn3(char **p1, char **p2);
-int	readc(void), getc(void), any(int c, char *as), equal(char *as1, char *as2);
+int	readc(void), getc(void), any(int c, char *as),
+    equal(char *as1, char *as2);
 void	main1(void), word(void), prs(char *as), prn(int n), putc(int c);
-void	err(char *s, int exitno), texec(char *f, int *at), pwait(int i, int *t);
+void	err(char *s, int exitno), texec(char *f, int *at),
+    pwait(int i, int *t);
 void	execute(int *t, int *pf1, int *pf2);
 int
 main(int c, char **av)

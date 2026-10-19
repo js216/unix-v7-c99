@@ -36,20 +36,28 @@ struct	anode	*exp(void),
 		*e1(void),
 		*e2(void),
 		*e3(void),
-		*mk(int (*f)(struct anode *p), struct anode *l, struct anode *r);
+		*mk(int (*f)(struct anode *p), struct anode *l,
+		    struct anode *r);
 char	*nxtarg(void);
 char	Home[4096];
 long	Blocks;
 void	pr(char *s), bwrite(short *rp, int c);
 int	descend(char *name, char *fname, struct anode *exlist);
-int	getunum(char *f, char *s), gmatch(char *s, char *p), scomp(int a, int b, char s);
-int	doex(int com), chgreel(int x, int fl), amatch(char *s, char *p), umatch(char *s, char *p);
+int	getunum(char *f, char *s), gmatch(char *s, char *p),
+    scomp(int a, int b, char s);
+int	doex(int com), chgreel(int x, int fl), amatch(char *s, char *p),
+    umatch(char *s, char *p);
 int	and(struct anode *p), or(struct anode *p), not(struct anode *p);
-int	exeq(struct anode *p), ok(struct anode *p), glob(struct anode *p);
-int	mtime(struct anode *p), atime(struct anode *p), ctime(struct anode *p);
-int	user(struct anode *p), group(struct anode *p), size(struct anode *p);
-int	perm(struct anode *p), links(struct anode *p), print(struct anode *p);
-int	type(struct anode *p), ino(struct anode *p), cpio(struct anode *p);
+int	exeq(struct anode *p), ok(struct anode *p),
+    glob(struct anode *p);
+int	mtime(struct anode *p), atime(struct anode *p),
+    ctime(struct anode *p);
+int	user(struct anode *p), group(struct anode *p),
+    size(struct anode *p);
+int	perm(struct anode *p), links(struct anode *p),
+    print(struct anode *p);
+int	type(struct anode *p), ino(struct anode *p),
+    cpio(struct anode *p);
 int	newer(struct anode *p);
 int
 main(int argc, char *argv[])
@@ -88,7 +96,8 @@ usage:		pr("Usage: find path-list predicate-list\n");
 		sp = 0;
 		chdir(Home);
 		if(strlen(Argv[Pi]) >= (int)sizeof Pathname) {
-			pr("find: path too long-- "), pr(Argv[Pi]), pr("\n");
+			pr("find: path too long-- "), pr(Argv[Pi]),
+			    pr("\n");
 			continue;
 		}
 		strcpy(Pathname, Argv[Pi]);
@@ -255,7 +264,8 @@ err:	pr("find: bad option "), pr(a), pr("\n");
 	exit(1);
 	return(0);
 }
-struct anode *mk(int (*f)(struct anode *p), struct anode *l, struct anode *r)
+struct anode *mk(int (*f)(struct anode *p), struct anode *l,
+    struct anode *r)
 {
 	if(Nn >= 100) {
 		pr("find: too many predicates\n");
@@ -348,13 +358,15 @@ links(register struct anode *p)
 int
 size(register struct anode *p)
 {
-	return(scomp((int)((Statb.st_size+511)>>9), (int)p->L, (int)p->R));
+	return(scomp((int)((Statb.st_size+511)>>9), (int)p->L,
+	    (int)p->R));
 }
 int
 perm(register struct anode *p)
 {
 	register int i;
-	i = ((int)p->R=='-') ? (int)p->L : 07777; /* '-' means only arg bits */
+	/* '-' means only arg bits */
+	i = ((int)p->R=='-') ? (int)p->L : 07777;
 	return((Statb.st_mode & i & 07777) == (int)p->L);
 }
 int
@@ -374,7 +386,8 @@ ok(struct anode *p)
 	int c;  int yes;
 	yes = 0;
 	fflush(stdout); /* to flush possible `-print' */
-	pr("< "), pr(Argv[(int)p->L]), pr(" ... "), pr(Pathname), pr(" >?   ");
+	pr("< "), pr(Argv[(int)p->L]), pr(" ... "), pr(Pathname),
+	    pr(" >?   ");
 	fflush(stderr);
 	if((c=getchar())=='y') yes = 1;
 	while(c!='\n')
@@ -433,7 +446,8 @@ cpio(struct anode *p)
 	hdr.h_ino = Statb.st_ino;
 	hdr.h_mode = Statb.st_mode;
 	for(i = 0; i < 4; i++)
-		hdr.h_mtime[i] = (unsigned long long)Statb.st_mtime >> (48-16*i);
+		hdr.h_mtime[i] =
+		    (unsigned long long)Statb.st_mtime >> (48-16*i);
 	hdr.h_nlink = Statb.st_nlink;
 	fsz = hdr.h_mode & S_IFREG? Statb.st_size: 0L;
 	MKSHORT(hdr.h_filesize, fsz);
@@ -472,7 +486,8 @@ newer(struct anode *p)
 
 /* support functions */
 int
-scomp(register int a, register int b, register char s) /* funny signed compare */
+/* funny signed compare */
+scomp(register int a, register int b, register char s)
 {
 	if(s == '+')
 		return(a > b);
@@ -535,7 +550,8 @@ getunum(char *f, char *s) { /* find user/group name and return number */
 				while((c=getc(pin)) != ':')
 					if(c == EOF) goto RET;
 				sp = str;
-				while((*sp = c = getc(pin)) != ':' && c != EOF && sp < &str[19]) sp++;
+				while((*sp = c = getc(pin)) != ':' &&
+				    c != EOF && sp < &str[19]) sp++;
 				*sp = '\0';
 				i = atoi(str);
 				goto RET;
@@ -677,7 +693,8 @@ amatch(register char *s, register char *p)
 					return(0);
 
 			case '-':
-				k |= (lc <= scc) & (scc <= (cc=p[1]&0377));
+				k |= (lc <= scc) &
+				    (scc <= (cc=p[1]&0377));
 			}
 			if (scc==(lc=cc)) k++;
 		}

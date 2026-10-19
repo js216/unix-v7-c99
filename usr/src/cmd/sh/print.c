@@ -90,7 +90,8 @@ stoi(STRING icp)
 	REG CHAR	c;
 
 	WHILE (c = *cp, digit(c)) ANDF c ANDF r>=0
-	DO r = r <= ((INT)(~0u>>1) - (c - '0'))/10 ? r*10 + c - '0' : -1; cp++ OD
+	DO r = r <= ((INT)(~0u>>1) - (c - '0'))/10 ? r*10 + c - '0' :
+	    -1; cp++ OD
 	IF r<0 ORF cp==icp
 	THEN	failed(icp,badnum);
 	ELSE	return(r);

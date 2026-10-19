@@ -75,10 +75,12 @@ main(int argc, char **argv)
 		return 0;
 	}
 	signal(SIGALRM, count);
-	printf("thumb it4: %d hits %d\n", tsig4(getpid(), SIGALRM), hits);
+	printf("thumb it4: %d hits %d\n", tsig4(getpid(), SIGALRM),
+	    hits);
 	sscanf("99999999999999999999", "%lld", &ll);
 	sscanf("777777777777777777777777", "%o", &i);
 	printf("scan %lld %o\n", ll, i);
-	printf("[%.s][%.f][%.e][%.2s][%.*s][%.0f]\n", "abc", 1.5, 1.5, "abc", 1, "abc", 1.25);
+	printf("[%.s][%.f][%.e][%.2s][%.*s][%.0f]\n", "abc", 1.5, 1.5,
+	    "abc", 1, "abc", 1.25);
 	return 0;
 }
