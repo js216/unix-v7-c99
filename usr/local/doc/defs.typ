@@ -21,6 +21,6 @@
   show raw.line: l => box(width: 3em, align(right, text(fill: gray, str(l.number + a - 1)))) + h(1em) + box(width: 1fr, l.body)
   raw(text-of(file.get()).slice(a - 1, b).join("\n"), block: true)
 }
-#let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
+#let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") or path.starts-with("/usr/include/sys/") or path.starts-with("/usr/local/test/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
 #let f(name) = link(label(name), raw(name))
 #let listing(path) = { source(path); lines(1, text-of(path).len()) }

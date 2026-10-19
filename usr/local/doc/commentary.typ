@@ -54,6 +54,8 @@ up to date with C99 to run on hardware available nowadays.
 #counter(page).update(1)
 #metadata(none) <main>
 
+#include "intro.typ"
+
 = Part One: The Kernel
 
 #include "startup.typ"
@@ -726,7 +728,7 @@ swap device between two large ones could leave no hole of `MAXMEM`
 pages, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
 to the swap device, is the size of the caller's. The comment (454) is
-changed to match. The last slot of `proc` is reserved for the super-user, so that he can
+changed to match. The last slot of `proc` is reserved for the super-user, so that root can
 still log in and kill something when the table is full.
 
 `newproc` (#f("slp.c")) returns 1 in the child and 0 in the parent, but
@@ -873,7 +875,7 @@ changed. Any instance of the signal already pending is discarded (306).
 `kill` sends a signal to a process, or (pid 0) to every process in the
 caller's process group, or, for the super-user only, (pid -1) to every
 process. In the last two cases processes 0 and 1, the scheduler and
-`init`, are spared (334). An ordinary user may only signal his own
+`init`, are spared (334). An ordinary user may only signal their own
 processes.
 
 #lines(288, 343)
@@ -5639,6 +5641,13 @@ list, which becomes the second argument (4); `environ` is the third
 words and returns $-1$. v7's built the same list from its stack frame.
 
 #lines(1, 12)
+#source("/usr/src/libc/sys/execv.s")
+
+`execv(file, argv)` already has its file and argument list in `r0` and
+`r1`; the stub adds `environ` as the third argument (3--4) and makes the
+call `exece`, 59, through `cerror`.
+
+#lines(1, 6)
 #source("/usr/src/libc/sys/dup.s")
 
 `dup` duplicates a descriptor. `dup2(f, nf)` makes `nf` a copy of `f`;
@@ -5701,6 +5710,11 @@ into `r0` and `r1` (4), where the kernel takes the argument.
 The kernel's `getuid` returns the real user id in `r0` and the
 effective one in `r1` (#f("sys4.c")). `getuid` returns the first;
 `geteuid` makes the same call and returns the second (5--9).
+
+#lines(1, 9)
+#source("/usr/src/libc/sys/getgid.s")
+
+`getgid` and `getegid` are made in the same way for the group ids.
 
 #lines(1, 9)
 #source("/usr/src/cmd/init.c")
@@ -8642,6 +8656,114 @@ of a profiled program (#f("gen/mon.c")).
 `exec` routines and `getenv` find it.
 
 #lines(36, 102)
+#source("/usr/include/sys/types.h")
+
+#f("sys/types.h") names the types in which the system's interfaces are
+written, for programs, which include it before the other headers of
+`<sys/>`. The kernel defines the same types in #f("param.h"). Three
+have changed from v7. `time_t` is the port's 64-bit time (4). `ino_t`
+is written `unsigned short` (3), the 16 bits which v7's `unsigned int`
+was on the PDP-11 and which an inode number in a directory entry
+holds. `label_t`, the registers that `save` and `resume` keep
+(#f("mch.s")), has ten words, for `r4` to `r11`, the stack pointer, and
+the link register (5), where v7 kept six.
+
+#lines(1, 11)
+#source("/usr/include/sys/param.h")
+
+#f("sys/param.h") is the kernel's #f("param.h") for programs that read
+kernel structures, such as `ps` and `pstat`, which must agree with the
+kernel on the sizes of its tables. It is the same file but for one
+guard: `NULL` is defined only if not already defined (88--90), since a
+program may include `<stdio.h>`, which defines it too, before it; the
+kernel includes no `<stdio.h>`, and its copy needs no guard.
+
+#lines(1, 144)
+#source("/usr/include/sys/stat.h")
+
+`struct stat` is what `stat` and `fstat` return, the parts of an inode
+a program may see (#f("sys2.c")). The mode bits give the file's type,
+in the field `S_IFMT`, and its permissions. The kernel's copy
+(#f("stat.h")) is the same but for the last line (29), which declares
+the two calls for programs.
+
+#lines(1, 29)
+#source("/usr/include/sys/times.h")
+
+`times` fills a `struct tms` with the user and system time of the
+process and of its waited-for children, in clock ticks
+(#f("sys4.c")). The fields are `time_t`s, and so 64 bits wide. The
+declaration of `times` (10) is new, since every program calling it
+includes this header.
+
+#lines(1, 10)
+#source("/usr/include/sys/timeb.h")
+
+`ftime` gives the time with its milliseconds, and the local time zone
+in minutes west of Greenwich and whether daylight saving time applies,
+as `TIMEZONE` and `DSTFLAG` set them in #f("param.h"). `date` and the
+library's `ctime` use it. Its declaration (10) is added here, as for
+`times`.
+
+#lines(1, 10)
+#source("/usr/include/a.out.h")
+
+The PDP-11's executable format, the `a.out` header, no longer
+describes any program on the system, whose executables are ELF files
+(#f("sys1.c")); nothing uses `struct exec` or its magic numbers now.
+The header is kept for `struct nlist`, through which `nlist`
+(#f("gen/nlist.c")) returns the addresses of named kernel symbols to
+`ps`, `pstat`, and `iostat`; `nlist`'s declaration (34) is new.
+
+#lines(1, 34)
+#source("/usr/include/execargs.h")
+
+The shell stores a pointer to its arguments at the top of its stack,
+through `execargs` (#f("sh/main.c")), so that `ps` can show what
+script a shell is running. On the PDP-11 the top word was at $-2$, the
+last two bytes of the 64 KB address space; here the user's space ends
+at `USRSIZE` (#f("param.h")), and the top word is four bytes below it.
+
+#lines(1, 1)
+#source("/usr/include/ctype.h")
+
+The classifying macros look a character up in `_ctype_`
+(#f("gen/ctype_.c")), indexed from its second entry so that `EOF`, $-1$,
+finds the first. Each argument is now masked to a byte (11--20), so
+that a character above 127 indexes inside the table, which now has
+room for 256; on the PDP-11 such a `char` was negative and indexed
+before it. `toupper` and `tolower` do no test, as in v7: they are
+only for a character known to be of the right case.
+
+#lines(1, 24)
+#source("/usr/include/ar.h")
+
+The header of each member of an archive, as `ar` writes and `ld` would
+read it. The member's date is a `long long` (4), the port's `time_t`,
+so the archive format is no longer v7's; `arcv` (#f("cmd/arcv.c"))
+converts an archive of the older kinds, filling in the wider date.
+
+#lines(1, 9)
+#source("/usr/include/dumprestor.h")
+
+`dump`, `restor`, and `dumpdir` share the format of a dump tape: each
+record begins with a `spcl` header of type `TS_TAPE`, `TS_INODE`, and
+so on, carrying the inode it describes and a map of which of its blocks
+follow. The header is v7's; the dates in it and in `idates`, the record
+of past dumps in `/etc/ddate`, are `time_t`s and so 64 bits wide, which
+changes the format along with the inode (#f("ino.h")).
+
+#lines(1, 33)
+#source("/usr/include/tp_defs.h")
+
+The defaults of `tp` (#f("tp/tp0.c")), defined in this header so that
+each installation could change them: the magnetic tape and DECtape
+devices, the default flag, and the two boot programs which `tp` wrote
+at the start of a tape. The header is v7's; the system has no tape
+drive, so the device names matter only to a tape file named on the
+command line.
+
+#lines(1, 5)
 #source("/usr/src/libc/stdio/filbuf.c")
 
 `_filbuf` is called by `getc` (#f("stdio.h")) when the buffer of an
@@ -11759,7 +11881,7 @@ table `/usr/lib/crontab`, and starts the commands whose times have
 come. The image's table runs `dmesg` (#f("cmd/dmesg.c")) every ten
 minutes and `atrun`, which starts the jobs queued by `at`, every five.
 v7's table had a third entry, which ran `/usr/bin/calendar` once a day
-to mail each user his reminders; with no mail, the command and its
+to mail each user their reminders; with no mail, the command and its
 helper `/usr/lib/calendar` are gone, and the entry with them. Since the
 commands run as
 the user `daemon` (31), the first entry works only because `dmesg` is
@@ -12028,7 +12150,7 @@ of early C which v7's compiler still accepted, are written `|=` and
 #lines(98, 184)
 
 Each turn reports the room, kills the player in a pit or with the
-wumpus, and moves him at random if a bat is there. The warnings look at
+wumpus, and moves the player at random if a bat is there. The warnings look at
 the rooms one tunnel away, and for the wumpus two. A move must be along
 a tunnel. An arrow follows the list of rooms given, as far as five, but
 where the next room is not joined to the arrow's room it goes down a
@@ -12455,7 +12577,7 @@ answered.
 thirteen counts, one for each rank, and four of a rank make a book,
 which scores. The program's own guesses come from `myguess`, which in
 the professional mode, asked for at the start, remembers what the
-player has asked for, since he must hold it, and otherwise picks the
+player has asked for, since the player must hold it, and otherwise picks the
 rank asked about longest ago; without it the guess is random.
 
 The source is v7's, in its own layout, with prototypes (22--26) and
@@ -15556,6 +15678,123 @@ refused (39--42): `img` has room for one byte more than that, so that
 `fread` shows a longer file by filling it.
 
 #lines(1, 65)
+#source("/usr/src/cmd/standalone/stand.mk")
+
+`stand.mk` builds `sdwrite` (#f("standalone/sdwrite.c")), the one
+program for the MP135 machine which runs on the bare chip, without the
+system. It is compiled with the cross compiler but none of the system's
+headers, start-up file, or library (`-ffreestanding -nostdlib`), for
+the processor in ARM state, with floating point done in software
+(2--4). With the memory management unit off, all memory is treated as
+device memory, where an unaligned access faults, so the compiler is
+told not to make any (`-mno-unaligned-access`). The section `.start`
+is placed at the start of SYSRAM, where the boot ROM loads an image,
+so that the entry point is the first instruction, and the text follows
+it (4); `-N` makes text and data one writable segment, as a program
+without memory management has no use for more. `-Os` keeps it small,
+since the ROM loads at most 128 KB less its header.
+`-fno-tree-loop-distribute-patterns` stops the compiler from replacing
+the program's copying loops by calls of `memcpy`, which there is no
+library to supply. `objcopy` and `mkstm32` (#f("mkstm32.c")) then make
+the ROM's image, as for the kernel (11--15).
+
+#lines(1, 15)
+#source("/usr/src/cmd/standalone/sdwrite.c")
+
+`sdwrite` writes an image, such as the root file system, onto the SD
+card of the MP135 machine, and reads the card back to check it. The
+boot ROM's USB loader loads it into SYSRAM from the build machine
+(#f("dfu.py")), and it then presents itself on USB as a serial
+port, of the class CDC-ACM, which takes four commands as lines of text:
+`i` reports the card's size in blocks, `w` _lba_ _n_ takes _n_ bytes and
+writes them from block _lba_, `r` _lba_ _n_ sends _n_ bytes read from
+there, and `x` resets the chip. The comment at the head shows the use
+from a shell on the build machine. It starts the chip's independent
+watchdog and feeds it at each command, so that the chip resets itself,
+and the ROM is ready to load again, 33 seconds after the last one.
+
+The registers are those of `otg.c` (#f("otg.c")) and `sd.c`
+(#f("sd.c")), at their physical addresses, since there is no memory
+management here. `_start` (117--137) turns on the instruction cache,
+sets a stack at the top of SYSRAM, clears the uninitialised data, and
+calls `main`; `now` reads the processor's counter, which runs at
+64 MHz, and `delay` waits on it.
+
+#lines(1, 171)
+
+The USB side is a minimal CDC-ACM device, polled rather than driven by
+interrupts. Its descriptors (97--115) are much those `otg.c` gives
+for the console; `dosetup` answers the host's control requests, setting
+the address, giving the descriptors with the bulk endpoints' packet
+size set to what the bus speed allows, configuring the endpoints, and
+answering the class's requests for the line coding and the control
+lines; on the request which sets the control lines it reports carrier
+(`carrier`), for a host which waits for it. `usbpoll` services the
+controller: a reset of the bus, the end of enumeration, packets in the
+receive FIFO, and transfers completed on endpoint 0. A data packet from
+the host is taken into `rxbuf` at once, so that a control packet
+behind it is not held up, and the endpoint takes no more until
+`usbtake` has used it.
+
+`usbsend` sends a buffer, a packet at a time as the transmit FIFO has
+room, and gives up after a second if the host has stopped taking
+packets. It then calls `epabort` (408--424), which sets the endpoint to
+answer the host with NAK, disables it, and empties its FIFO. Without
+that, the abandoned packet stayed in the FIFO and the reply to the next
+command arrived behind it, as 512 bytes of stale card data.
+
+#lines(172, 518)
+
+`sdinit` brings the card up as `rkinit` does (#f("sd.c")): the pins,
+the clock at 400 kHz, identification, the size from the CSD, selection,
+four data lines, and high speed if the card offers it. Unlike the
+kernel's driver, `sdwrite` moves data by the CPU, not by DMA, through
+the controller's FIFO, eight words at a time with `ldm` and `stm` while
+the FIFO has room, so that the card's clock can run without the FIFO
+starving. `sdwrite` and `sdread` move a whole request with one
+multi-block command, `CMD25` or `CMD18`, through `ring`, a buffer of
+64 KB between the card and USB, each side waiting while it is empty or
+full; `sdstop` ends the command with `CMD12` and, after a write, waits
+until the card has finished programming. A read sends each 16 KB as the
+host takes it, and gives up if the host takes nothing for a second. The
+program reading on the build machine must keep up: Linux's terminal
+layer, behind the serial port, discards what it cannot hold when its
+reader falls far behind, without telling either end.
+
+#lines(519, 714)
+
+`main` starts the watchdog, initialises the card and USB, and serves
+commands: a line is read by `getln`, and `w` and `r` are refused unless
+the card answered and the request is whole blocks within it.
+
+#lines(715, 803)
+#source("/usr/local/mp135/dfu.py")
+
+`dfu.py` runs on the build machine and loads an image made by
+`mkstm32` (#f("mkstm32.c")), the kernel or `sdwrite`, into the MP135
+machine through its boot ROM. Started with no bootable storage, or
+reset to it, the ROM presents itself on USB as a device of the DFU
+class (vendor 0x0483, product 0xdf11), with two alternate settings:
+alternate 0 is the first-stage boot loader's slot, which takes up to
+128 KB, and alternate 1 a virtual one whose upload reports the
+_phase_, what the ROM expects next. The program needs the `pyusb`
+module.
+
+`load` resets the device's USB port to bring it to a known state, and
+checks that the phase is 1, a first-stage image (41--43). It then sends
+the image in blocks of 1024 bytes, the transfer size the ROM declares,
+each a `DNLOAD` request numbered by its block (44--48). After each block
+`wait` polls `GETSTATUS` until the state is 5, ready for the next, or
+2, idle (19--26): state 4, busy, is not done, and a block sent while
+the ROM is busy can leave it stuck in that state for good. An empty
+`DNLOAD` ends the download (49). The ROM then checks the header and
+checksum; if it accepts the image the phase reads 0 (51--54), and only
+then does `DETACH` (55) tell it to run the image. A `DETACH` sent to a
+ROM which had not accepted the image left the chip with its USB off and
+no watchdog running, to be revived only by its reset button; the program
+refuses rather than risk that.
+
+#lines(1, 59)
 #source("/usr/src/cmd/mkfs.c")
 
 `mkfs` makes an empty file system, or, given a prototype file, one
@@ -15905,8 +16144,8 @@ enough to need a double indirect block.
 
 `dmr`, `sys`, and `uucp`, the last in `/usr/lib`, are the home
 directories which #f("passwd") gives those users, owned by each user
-and his group. `login` changes to the home directory and refuses a user
-whose directory does not exist, so without his `dmr` could not log in;
+and that user's group. `login` changes to the home directory and refuses a user
+whose directory does not exist, so without it `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
@@ -16016,3 +16255,446 @@ at once, by setting the system reset bit of the reset controller,
 fails.
 
 #lines(1, 22)
+
+= Part Six: Testing
+
+== The Test Harness <ch-harness>
+
+The system is tested on itself. The root file system carries a suite of
+regression tests in `/usr/local/test`: each test, or _case_, is a shell
+script in `cases`, with the output it must produce in a file of the same
+name ending in `.exp`, and, where some of the output legitimately varies
+from run to run (process ids, clock ticks, times of day, kernel
+addresses), a `sed` script ending in `.sed` which replaces the varying
+parts with fixed words before the comparison. A case uses the ordinary
+commands, and, where no command reaches what it wants to test, a small
+program of its own from `utils`. The build machine boots the system
+under the QEMU machine, or loads it into the MP135 machine, and types
+`/usr/local/test/run.sh` at the shell's prompt; nothing else is needed,
+since the cases and their programs were placed on the file system when
+it was made (#f("rootfs.proto")).
+
+The programs fall into two groups. Some are helpers, which write a
+forged file, print a field that no command shows, or start a command
+in a way the shell cannot; they are described in this chapter. The
+others each exercise one mechanism of the kernel, often at its edges,
+and are the subject of the next.
+
+#source("/usr/local/test/run.sh")
+
+`run.sh` runs the cases named as its arguments, or, with none, every
+file in `cases` whose name has no dot, that is, every case but none of
+the `.exp` and `.sed` files (2--4). Each case runs under `sh`, with its
+standard output and standard error together, through its `.sed` if it
+has one, into `cmp`, which compares it with the expected output
+(9--11). Once `cmp` has found a difference it exits; the `cat` behind
+it then reads the rest of the output, so that a failing case still runs
+to its end and cannot overlap the next. A case passes when `cmp` prints
+nothing (13--15). The exit status is not used, since the status `sh`
+gives a pipeline is that of the first of its processes it reaps, which
+depends on timing. The counts are kept with `expr`, as v7's shell has
+no arithmetic of its own.
+
+#lines(1, 20)
+#source("/usr/local/test/test.mk")
+
+`test.mk` is the build's fragment for the suite (#f("Makefile")). Every
+C file in `utils` becomes a program in `obj` (2), and every other file
+there, with `run.sh` and the cases, is data for the file system (5). The
+programs are compiled with `usr/sys` on the search path as well as
+`usr/include` (7), so that a test can include the kernel's own headers,
+such as `h/user.h`, to find a register in a stopped process's saved
+frame. They are linked as the commands are, except `proft`, which is
+compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
+not stripped, since `prof` needs its symbols (11--16).
+
+Four small file systems are made by `mkfs` for the tests of the
+file-system commands: `fs.img`, from the prototype `fs.proto`, with a
+few files of known content (17--19); `deep.img`, a chain of 40
+directories (20--24); `many.img`, 3001 directories in one (25--28); and
+`big.img`, holding a copy of the dictionary, which gives `icheck` a file
+with a double indirect block (29--31). `V7_MKFS_TIME` fixes the time `mkfs` stamps on
+every inode, so that the images, and the cases' outputs, are the same at
+every build.
+
+#lines(1, 35)
+#source("/usr/local/test/utils/argt.c")
+
+`argt` prints how many arguments it received, their total length, and
+the last. The `exec` case runs it with the names in `/bin` repeated
+until the list reaches the limit `NCARGS` of 5120 bytes (#f("param.h")),
+and once past it, when the shell reports the list too long.
+
+#lines(1, 12)
+#source("/usr/local/test/utils/ob.c")
+
+`ob` writes bytes given in octal, each optionally repeated, `n*v`, on
+its standard output. The cases use it to forge damaged files: a
+`mon.out` with an impossible count for `prof`, a file system with a
+corrupted superblock for the checkers, and an accounting record for
+`sa`.
+
+#lines(1, 22)
+#source("/usr/local/test/utils/pidf.c")
+
+`pidf` writes its process id into a file, then executes the command
+named after it. The process keeps its id across `exec`, so a case can
+start a command in the middle of a pipeline and still send it a
+signal, which is how the interrupt tests reach `ed`, `sort`, and `yes`.
+
+#lines(1, 17)
+#source("/usr/local/test/utils/fmode.c")
+
+`fmode` prints a file's permission bits in octal, so that a case can
+save the mode of the console before changing it, and restore it after.
+
+#lines(1, 14)
+#source("/usr/local/test/utils/spd.c")
+
+`spd` sets the speed of the terminal on its standard output by `gtty`
+and `stty`, so that `stty`'s report of a speed can be checked.
+
+#lines(1, 14)
+#source("/usr/local/test/utils/ut.c")
+
+`ut` sets a file's access and modification times by `utime`, from two
+numbers given in seconds, and prints the modification time with
+`ctime`. The `r5f` case gives it times in 2100 and 2400, beyond what a
+32-bit `time_t` could hold, to check that the 64-bit times pass through
+the system call, the inode, and the library's calendar unharmed.
+
+#lines(1, 23)
+#source("/usr/local/test/utils/cpt.c")
+
+`cpt` reads the header which `find -cpio` writes and prints the file's
+name and time. The modification time is kept in four 16-bit halves,
+most significant first (6, 25--28), the port's widening of the two
+halves of v7's format, so that a time after 2106 survives.
+
+#lines(1, 31)
+#source("/usr/local/test/utils/dit.c")
+
+`dit` reads, and with a third argument rewrites, the times of one inode
+in a file-system image, found as the kernel finds it, by `itod` and
+`itoo` (#f("param.h")). A test image cannot be mounted, there being no
+way to treat a file as a disk, so `time64` plants a time after 2038 in
+one with `dit`, dumps the image, and restores it to see the time come
+back.
+
+#lines(1, 27)
+#source("/usr/local/test/utils/tt.c")
+
+`tt` checks the library's corners and prints `PASS` or `FAIL` for each:
+`sscanf` with characters above 127, an unterminated `%[`, a number of
+150 digits, and every conversion (27--50); `malloc` refusing sizes it
+cannot meet and reusing freed space (52--59); `atof` at the extremes of
+the exponent (61--66); `modf` and `frexp`, including a denormal number
+(68--75); `swab` in place (77--82); and `rand`'s sequence (84--87). It
+ends by calling itself through `execvp` with a `PATH` whose first
+directory is 300 characters long (92--104), which `execvp` must skip.
+
+#lines(1, 107)
+#source("/usr/local/test/utils/k12.c")
+
+`k12` checks three things from the mathematics library and its
+neighbours: that `mktemp` puts the process id into the name, that `pow`
+raises a negative number to an integral power and reports `EDOM` for a
+fractional one, and that a NaN, made from infinity minus infinity,
+compares unequal to itself and passes through `sin` and `exp`.
+
+#lines(1, 21)
+
+== Probing the Kernel <ch-probe>
+
+The programs of this chapter each exercise one part of the kernel, as
+a user program sees it, usually at its edges: what `exec` refuses, what
+a fault leaves in the registers, which addresses a system call may
+touch. Several were written to pin down a bug, and stay to keep it
+fixed.
+
+#source("/usr/local/test/utils/forkt.c")
+
+`fork` returns in two processes from one system call. The kernel
+resumes the child at the instruction after `svc`, and the parent one
+instruction later (#f("sys1.c")), each with the other's process id in
+`r0`. `sfork` (6--24) makes the call directly: the child takes the
+branch after `svc` to `1:` and records what it received in `rawchild`;
+the parent skips the branch and records `rawpar`. `main` checks that
+the child received its parent's id and the parent a new, larger one
+(31--36), then repeats the check through the library's `fork`, which
+leaves the parent's id in `par_uid` (#f("sys/fork.s")).
+
+#lines(1, 47)
+#source("/usr/local/test/utils/regs.c")
+
+A process starts life after `exec` with its registers cleared, so that
+nothing of the old program leaks into the new. `regs` checks this. Its
+child asks to be traced and executes the program again from `xexec`
+(13--29), which first loads every register with a recognisable pattern.
+The `exec` stops the traced child, and the parent reads the saved
+registers of its frame through `ptrace`, finding the frame by the
+pointer `u_ar0` in the child's `user` structure (47--49), and prints any
+that is not zero; the stack pointer, which `exec` sets, is passed over
+(50--56). A request `ptrace` does not know fails with `EIO` (57--59).
+
+#lines(1, 64)
+#source("/usr/local/test/utils/ptt.c")
+
+`ptt` exercises `ptrace`'s reading and writing. The child stops itself
+with a signal; the parent reads a word of its data (27), writes $-1$
+there and reads it back with `errno` set beforehand, which the stub
+must clear (28--31, #f("sys/ptrace.s")), and reads `r0` and `pc` from
+the saved frame (32, 33). It may write `r0` (34) but not `r9` (35):
+only `r0`--`r5`, the stack pointer, the program counter, the processor
+status, and the floating point registers are writable
+(#f("sig.c")). A status written with every bit set comes back with the
+mode forced to user and the privileged bits cleared (36--39). The child
+then resumes with the 40 written into its `r0` and a `glob` of 2, and
+exits with their sum, 42.
+
+#lines(1, 45)
+#source("/usr/local/test/utils/ptw.c")
+
+A traced process's text can be written, for a debugger's breakpoints,
+although text is otherwise read-only and shared. `ptw` runs a copy of
+itself under trace, so that its text is shared with no one else, and
+stops it in `main`. It reads the first word of `f`, `mov r0, #1`, and
+replaces the function with `mov r0, #2; bx lr` (35--38). The child has
+already called `f` once, so it exits with 10 × 1 + 2, which shows both
+that the write took effect and that the instruction cache was made to
+see it (#f("sig.c")).
+
+#lines(1, 43)
+#source("/usr/local/test/utils/r12.c")
+
+`r12` checks that a fault preserves every register of the interrupted
+program, including `r12`, which the entries in #f("low.s") once
+clobbered before saving it. An undefined instruction and a load from an
+unmapped address are each executed with a known value in `r12`
+(36--42); the handlers, written in assembly so as not to disturb it,
+record the signal, and for the load step the saved `pc` past the
+faulting instruction (10--16), at its place in the signal frame. The
+value printed afterwards must be the one loaded.
+
+#lines(1, 45)
+#source("/usr/local/test/utils/r5h.c")
+
+User programs may be compiled to the ARM's 16-bit Thumb instructions,
+and the kernel must then resume them correctly. `tsig` (15--24) makes
+the `kill` system call from inside an `IT` block, Thumb's way of making
+instructions conditional: when the kernel returns, the block's state
+must carry on, so that the `movne` after `svceq` is skipped and the
+result is 0. `tudf` (28--32) executes Thumb's undefined instructions of
+both widths, each of which must raise `SIGILL` and be stepped over.
+A 64-bit division, done by a library routine, runs while alarms
+interrupt it (79--83). With arguments, `r5h` gives `utime` an invalid
+address and checks, by a `stat` from a child, that the failure did not
+leave the file's inode locked (61--71).
+
+#lines(1, 85)
+#source("/usr/local/test/utils/r5i.c")
+
+`tsig4` (12--23) is `tsig` with a four-instruction `IT` block, whose
+condition changes after the `svc`; only the `addeq` must take effect.
+The rest of the program checks the library's `sscanf` with numbers too
+large for their type, and `printf`'s zero precisions (79--82). With
+arguments it reports whether any executable's first loadable segment
+is padded, that is, starts at a nonzero offset in its file rather than
+taking in the ELF header (36--57). The link options start every program
+at `0x94`, just past its headers (#f("Makefile")), so that no file
+carries a page of padding.
+
+#lines(1, 84)
+#source("/usr/local/test/utils/r5t.c")
+
+`phys`, v7's call for mapping physical memory into a process, is a
+PDP-11 facility which the port refuses with `EINVAL` (28--30,
+#f("machdep.c")). `malloc` must return blocks aligned to 8 bytes, as
+the ARM's `double`s require, whatever sizes are asked for and freed
+(31--40). Signal 31, the highest, is delivered, and 32 is refused
+(41--46), since `NSIG` is 32 (#f("param.h")).
+
+#lines(1, 48)
+#source("/usr/local/test/utils/elft.c")
+
+`elft` reads an executable, `/bin/echo` in the `exec` case, and writes
+four damaged copies of it, each of which `exec` must refuse with
+`ENOEXEC` while the process goes on (18--35). `phdr` finds the program
+headers of the two loadable segments (6--16). The copies are the ELF
+header alone, with no segments (49); a data segment whose size in the
+file exceeds its size in memory (50--53); a text segment that starts at
+the beginning of the file but is too short to hold the program header
+table, which it must then contain (54--57); and a text segment with
+nothing in the file (58--60). These are `getxfile`'s checks
+(#f("sys1.c")).
+
+#lines(1, 62)
+#source("/usr/local/test/utils/bigx.c")
+
+`bigx` passes `exec` 700 arguments of ten characters, 7700 bytes, more
+than `NCARGS` allows, and prints the failure, `E2BIG` (12--22); then
+500 of them, which fit, and `argt` reports them (23, 24).
+
+#lines(1, 27)
+#source("/usr/local/test/utils/bigv.c")
+
+`bigv` passes `exec` thousands of empty arguments (11--16). The limit
+counts the bytes of the strings, each empty one costing its null, so
+5000 of them fit; the pointers to them are not counted against it.
+
+#lines(1, 19)
+#source("/usr/local/test/utils/bigm.c")
+
+`bigm` makes a process large in each of the three ways the kernel lets
+it grow. A 3 MB array on the stack grows the stack by faults, page by
+page (6--19); 8 MB of uninitialised data come with the image, and their
+end lies above 8 MB (29--35); `sbrk` adds 16 MB to the data (36--42).
+Every page is written and read back. A further `sbrk` of 128 MB must
+fail, since it would take the process past `MAXMEM` (43).
+
+#lines(1, 45)
+#source("/usr/local/test/utils/stkt.c")
+
+`stkt` recurses 400 levels deep with 1000 bytes of stack at each, and
+sends itself a signal at every level (15--27), so that signals are
+delivered while the stack is being extended, onto the new pages. The
+sum of the buffers and the count of 401 signals must come out right.
+
+#lines(1, 35)
+#source("/usr/local/test/utils/memt.c")
+
+A system call given an address the process does not own fails with
+`EFAULT` rather than touching it. `memt` passes `read` and `write` an
+address in the gap between data and stack, and one in the kernel's
+space (13--22), then valid buffers on the stack and in the data
+(23--26). With an argument it stores into the gap itself, and dies of
+a memory fault, leaving a core image (28, 29).
+
+#lines(1, 31)
+#source("/usr/local/test/utils/txtt.c")
+
+Text is read-only. `txtt` asks `read` to fill a string in the text,
+which fails with `EFAULT` and leaves the string as it was (20--23), then
+stores into it directly, which raises `SIGSEGV` (24--26).
+
+#lines(1, 28)
+#source("/usr/local/test/utils/szt.c")
+
+`szt` forks and both processes pause, so that the `r5b` case can check
+the size `ps -l` reports for a process whose text is shared, then wake
+them with an alarm signal.
+
+#lines(1, 9)
+#source("/usr/local/test/utils/clock.c")
+
+`clock` prints the time in seconds or, given a time, sets it with
+`stime`; given two, it sets the clock forward by their difference
+(12--17). Cases that move the date far into the future, to 2038 and
+beyond, use it to note the time first and to put it back after.
+
+#lines(1, 18)
+#source("/usr/local/test/utils/prt.c")
+
+`prt` profiles itself with `profil` (#f("sys4.c")) for three seconds
+of computing, with a histogram of 4096 counters and a scale of a half,
+and prints the number of ticks counted (12--20); the case's `.sed`
+replaces the number, which varies, but the line shows that the clock
+reached `addupc` (#f("clock.c")).
+
+#lines(1, 22)
+#source("/usr/local/test/utils/prs.c")
+
+`prs` profiles itself while it spends its time in system calls, then
+reports the ticks counted and its user and system times from `times`
+(16--26). A tick taken in the kernel is charged as system time and does
+not reach the histogram, since `clock` profiles only a program counter
+interrupted in user mode.
+
+#lines(1, 28)
+#source("/usr/local/test/utils/proft.c")
+
+`proft` is the profiled program of the `prof` case. It calls `tick` a
+thousand times through a pointer, which the compiler cannot inline
+away (30, 31), and spends two seconds in `work` (13--23), so that
+`prof` must report a thousand calls of `tick`, one of `work`, and most
+of the time in `work`.
+
+#lines(1, 34)
+#source("/usr/local/test/utils/physt.c")
+
+`physt` reads a block of the root disk through the raw device, into a
+buffer in the data and one on the stack, and compares both with the
+block read through the buffered device (12--23). Raw transfers go
+straight between the disk and the user's memory (`physio`,
+#f("bio.c")), so the address must lie wholly within the process: a
+buffer in the gap fails, as does one that crosses the end of the data,
+while one ending exactly there succeeds (24--32). A negative offset
+fails too (33--36).
+
+#lines(1, 38)
+#source("/usr/local/test/utils/kcmp.c")
+
+`kcmp` compares the text of the running kernel, read through
+`/dev/kmem` at the address its ELF section header gives, with the text
+in `/unix`, a block at a time (11--31). `ps`, `pstat`, and `iostat` find
+the kernel's tables by the symbols of `/unix`, so the file must be the
+kernel that is running; the `kimage` case checks that it is.
+
+#lines(1, 34)
+#source("/usr/local/test/utils/kmt.c")
+
+`kmt` reads the kernel's memory as the status commands do. The process
+table must lie above the user's address space (24); the process finds
+its own entry in it (25--32), and reads its `user` structure twice,
+through `/dev/kmem` at `UBASE` and through `/dev/mem` at the physical
+address of its u-area, which must agree (33--39). `/dev/mem` has no
+memory at the virtual address `UBASE`, and `/dev/kmem` none below the
+kernel (40--43) (#f("mem.c")).
+
+#lines(1, 45)
+#source("/usr/local/test/utils/swb.c")
+
+`swb` prints the first and last blocks of the swap area, from the
+kernel's `swplo` and `nswap`, so that the cases testing `/dev/swap` and
+`dd` near the end of a device know where the area lies on the disk.
+
+#lines(1, 24)
+#source("/usr/local/test/utils/devt.c")
+
+A device's registers are mapped only into the kernel's address space.
+`devt` reads the QEMU machine's UART flag register from user mode
+(6--10), and must die of a memory fault, on either machine.
+
+#lines(1, 12)
+#source("/usr/local/test/utils/r5r.c")
+
+`r5r` has two uses. `pw` fills a buffer of `BUFSIZ` + 1 bytes for
+`getpw`, with a guard area behind it that must stay zero (13--21),
+since `getpw` once copied a long line past the end of its caller's
+buffer. `ch` runs a program
+inside a `chroot`, so that `write` and `wall` can be tested against a
+private `/etc/utmp` and private terminals (23--31).
+
+#lines(1, 34)
+#source("/usr/local/test/utils/fpt.c")
+
+`fpt` tests the vector floating point unit, whose state, thirty-two
+`double` registers and the status and control register `FPSCR`, the
+kernel saves for each process (#f("user.h")). Its argument selects a
+test. `ieee` (34--66) prints the bit patterns of IEEE results, the
+exception flags each sets, and `1/10` rounded in each of the four
+rounding modes. `fork` (224--242) checks that the child inherits the
+parent's rounding mode and registers, and that `exec` resets the mode
+(268--270).
+
+`switch` (103--142) runs two processes, each in its own rounding mode,
+that hand a byte back and forth through pipes 2000 times, while a third
+reads the raw disk to keep interrupts coming; each checks after every
+exchange that its registers and mode are its own. `sig` (158--193)
+lets a signal handler change the mode and the registers in the middle
+of a computation, once by the process's own `kill` and many times from
+another process, and the computation must not notice. `core` and
+`rcore` (195--222) check that a core image holds the floating point
+state.
+
+#lines(1, 273)
