@@ -1,6 +1,6 @@
       1      6      28
-argc 425 chars 3754 last /bin/yes
-argc 955 chars 3644 last yes
+argc 429 chars 3794 last /bin/yes
+argc 964 chars 3689 last yes
 exec: /usr/local/test/utils/argt: arg list too long
 rc=1
 spawned

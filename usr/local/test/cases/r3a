@@ -54,5 +54,5 @@ echo T-SHLONG
 a=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx; b=
 b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; : $b
 b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; b=$b$a; echo $b | wc -c
-cd /bin; echo * * * * * * * * * * | wc -w
+cd /bin; echo * * * * * * * * * | wc -w
 cd /; rm -rf $T

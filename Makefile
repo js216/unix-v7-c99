@@ -52,7 +52,7 @@ boot/qemu.img: boot/rootfs.img $S/conf/qemuconf
 	$Qtruncate -s $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
 	    $S/conf/qemuconf) $@
 
-ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup \
+ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \
 	etc/passwd etc/group etc/ttys etc/rc \
 	usr/dict/words usr/games/lib/fortunes usr/lib/units usr/lib/crontab \
 	usr/lib/lib.b

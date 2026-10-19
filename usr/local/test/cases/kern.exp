@@ -5,8 +5,8 @@ ready
 caught
 rc=3
    1601
-   1060 
-    106
+    963 
+    107
 sys ticks N utime N stime N
 reading uart flag register from user mode
 kern: PID Memory fault - core dumped

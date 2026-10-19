@@ -29,6 +29,7 @@ d--755 0 0
 		dd	---755 0 0 bin/dd
 		df	--g755 0 2 bin/df
 		diff	---755 0 0 bin/diff
+		diff3	---755 0 0 bin/diff3
 		deroff	---755 0 0 bin/deroff
 		du	---755 0 0 bin/du
 		dump	---755 0 0 bin/dump
@@ -217,6 +218,8 @@ d--755 0 0
 					ddend.exp	---644 0 0 usr/local/test/cases/ddend.exp
 					devperm	---644 0 0 usr/local/test/cases/devperm
 					devperm.exp	---644 0 0 usr/local/test/cases/devperm.exp
+					diff3	---644 0 0 usr/local/test/cases/diff3
+					diff3.exp	---644 0 0 usr/local/test/cases/diff3.exp
 					exec	---644 0 0 usr/local/test/cases/exec
 					exec.exp	---644 0 0 usr/local/test/cases/exec.exp
 					exec.sed	---644 0 0 usr/local/test/cases/exec.sed

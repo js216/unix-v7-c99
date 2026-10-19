@@ -1,0 +1,19 @@
+====
+1:2,3c
+  b
+  c
+2:2,3c
+  B
+  c
+3:2,3c
+  b
+  C
+2,3c
+b
+C
+.
+test: argument expected
+usage: diff3 file1 file2 file3
+st0
+642
+    642
