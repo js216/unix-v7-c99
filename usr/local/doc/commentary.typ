@@ -1812,8 +1812,9 @@ lets through as an even count, would otherwise be tried eleven times.
 
 v7's call of `mapalloc`, for the UNIBUS map of the PDP-11/70, is gone
 with the map. The IRQ is masked with `intr_disable` and unmasked with `intr_enable`: the
-routine is called at process level. During startup `intr_enable` leaves
-interrupts masked until `clkstart` has set `irq_ready` (#f("mch.s")).
+routine is called at process level. During startup the unmasking lets
+nothing in, since the interrupt controller stays switched off until
+`clkstart` (#f("machdep.c")).
 
 The queue is that of v7, threaded through `av_forw` and headed in
 `rktab` (#f("buf.h")).
