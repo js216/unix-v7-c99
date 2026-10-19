@@ -16432,9 +16432,11 @@ interrupted in user mode.
 
 The profiled program of the `prof` case is `proft`. It calls `tick` a
 thousand times through a pointer, which the compiler cannot inline
-away (#l("for (i = 0; i < 1000; i++)", after: "main(void)"), #l("(*fp)();")), and spends two seconds in `work` (#l("void", after: "tick(void)")--#l("}", after: "while (time(0) < t + 2)")), so that
+away (#l("for (i = 0; i < 1000; i++)", after: "main(void)"), #l("(*fp)();")), and spends a second of its own user time in `work` (#l("void", after: "tick(void)")--#l("}", after: "while (times(&tb), tb.tms_utime < HZ);")), so that
 `prof` must report a thousand calls of `tick`, one of `work`, and most
-of the time in `work`.
+of the time in `work`. The bound is user time, not the time of day,
+so that a host which starves QEMU still leaves `work` a second of
+clock ticks to be sampled in.
 
 #lines-to(none)
 #source("/usr/local/test/utils/physt.c")
