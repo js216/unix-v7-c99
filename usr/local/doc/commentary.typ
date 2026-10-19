@@ -8563,7 +8563,7 @@ at 48 are new.
 
 = Part Three: The Library
 
-== The C Library <ch-libc>
+== Headers <ch-headers>
 
 #source("/usr/include/stdio.h")
 
@@ -8706,25 +8706,54 @@ library's `ctime` use it. Its declaration (10) is added here, as for
 `times`.
 
 #lines(1, 10)
-#source("/usr/include/a.out.h")
+#source("/usr/include/time.h")
 
-The PDP-11's executable format, the `a.out` header, no longer
-describes any program on the system, whose executables are ELF files
-(#f("sys1.c")); nothing uses `struct exec` or its magic numbers now.
-The header is kept for `struct nlist`, through which `nlist`
-(#f("gen/nlist.c")) returns the addresses of named kernel symbols to
-`ps`, `pstat`, and `iostat`; `nlist`'s declaration (34) is new.
+`struct tm`, which `localtime` and `gmtime` (#f("gen/ctime.c")) fill in, is
+v7's, unchanged; the year is counted from 1900 and kept modulo 10000.
 
-#lines(1, 34)
-#source("/usr/include/execargs.h")
+#lines(1, 11)
 
-The shell stores a pointer to its arguments at the top of its stack,
-through `execargs` (#f("sh/main.c")), so that `ps` can show what
-script a shell is running. On the PDP-11 the top word was at $-2$, the
-last two bytes of the 64 KB address space; here the user's space ends
-at `USRSIZE` (#f("param.h")), and the top word is four bytes below it.
+#source("/usr/include/errno.h")
 
-#lines(1, 1)
+The error numbers which a failing system call leaves in `errno` are
+v7's and the kernel's (#f("user.h")). The one addition is the
+declaration of `errno` itself (41). v7 left each program to declare it,
+and the libraries defined it in every file which set it, relying on the
+loader to merge the copies; here it is defined once, in
+#f("libc/syscall.s").
+
+#lines(1, 41)
+
+#source("/usr/include/signal.h")
+
+`NSIG` follows the kernel's 32 signals (#f("param.h")). `signal` is
+declared with its prototype: it takes a signal number and a function
+taking the signal number, and returns the previous such function. v7's
+`int (*signal())()` gave handlers no parameters and an `int` result.
+`SIG_DFL` and `SIG_IGN` are cast to the same type. The signals beyond 15
+have no names, as in v7.
+
+#lines(1, 21)
+
+#source("/usr/include/setjmp.h")
+
+A `jmp_buf` holds what `setjmp` (#f("gen/setjmp.s")) saves: the registers
+`r4` to `r11`, the stack pointer, and the return address, ten words,
+and the floating point registers `d8` to `d15`, which the ARM's calling
+convention also asks a function to preserve, sixteen words more. v7's
+three words held the PDP-11's frame pointer, stack pointer, and return
+address. The prototypes are new.
+
+#lines(1, 2)
+
+#source("/usr/include/sgtty.h")
+
+The terminal modes, kept in `struct sgttyb` by `gtty` and `stty`, are
+v7's, with the ioctl requests of #f("tty.c") and #f("tty.h"). The
+prototypes of `gtty` and `stty` (117) are new.
+
+#lines(1, 117)
+
 #source("/usr/include/ctype.h")
 
 The classifying macros look a character up in `_ctype_`
@@ -8736,6 +8765,55 @@ before it. `toupper` and `tolower` do no test, as in v7: they are
 only for a character known to be of the right case.
 
 #lines(1, 24)
+#source("/usr/include/math.h")
+
+The mathematical routines of `libm` are declared with prototypes, and
+`modf` and `frexp`, which are in the C library, are added (13). `fmod`
+and `gamma` are declared because v7's header declared them, although
+neither v7's `libm` nor this one supplies them.
+
+`HUGE` is the largest IEEE double, which the ARM's floating point
+represents; v7's value was the largest number of the PDP-11's format.
+`LOGHUGE` is its decimal exponent.
+
+#lines(1, 16)
+
+#source("/usr/include/pwd.h")
+
+The fields of a line of `/etc/passwd` (#f("passwd")), as
+#f("stdio/getpwent.c") unpacks them. The prototypes of the routines which read
+the file (12, 13) are new.
+
+#lines(1, 13)
+
+#source("/usr/include/grp.h")
+
+The fields of a line of `/etc/group` (#f("group")); the members are an
+array of names ended by a null pointer. The prototypes (7, 8) are new.
+
+#lines(1, 8)
+
+#source("/usr/include/utmp.h")
+
+`/etc/utmp` holds one such record for each terminal on which a user is
+logged in, and `/usr/adm/wtmp` a record for each login and logout.
+`ut_line` and `ut_name` are not terminated when they are full, so
+programs copy and compare them with a length (#f("cmd/wall.c")). The
+time has 64 bits (`types.h`), which makes the record 24 bytes; it is
+therefore not v7's format.
+
+#lines(1, 5)
+
+#source("/usr/include/a.out.h")
+
+The PDP-11's executable format, the `a.out` header, no longer
+describes any program on the system, whose executables are ELF files
+(#f("sys1.c")); nothing uses `struct exec` or its magic numbers now.
+The header is kept for `struct nlist`, through which `nlist`
+(#f("gen/nlist.c")) returns the addresses of named kernel symbols to
+`ps`, `pstat`, and `iostat`; `nlist`'s declaration (34) is new.
+
+#lines(1, 34)
 #source("/usr/include/ar.h")
 
 The header of each member of an archive, as `ar` writes and `ld` would
@@ -8744,6 +8822,15 @@ so the archive format is no longer v7's; `arcv` (#f("cmd/arcv.c"))
 converts an archive of the older kinds, filling in the wider date.
 
 #lines(1, 9)
+#source("/usr/include/execargs.h")
+
+The shell stores a pointer to its arguments at the top of its stack,
+through `execargs` (#f("sh/main.c")), so that `ps` can show what
+script a shell is running. On the PDP-11 the top word was at $-2$, the
+last two bytes of the 64 KB address space; here the user's space ends
+at `USRSIZE` (#f("param.h")), and the top word is four bytes below it.
+
+#lines(1, 1)
 #source("/usr/include/dumprestor.h")
 
 `dump`, `restor`, and `dumpdir` share the format of a dump tape: each
@@ -8764,6 +8851,9 @@ drive, so the device names matter only to a tape file named on the
 command line.
 
 #lines(1, 5)
+
+== Standard I/O <ch-stdio>
+
 #source("/usr/src/libc/stdio/filbuf.c")
 
 `_filbuf` is called by `getc` (#f("stdio.h")) when the buffer of an
@@ -9379,6 +9469,154 @@ afterwards. `_doscan` is declared locally (3), being internal to the
 library.
 
 #lines(1, 43)
+#source("/usr/src/libc/stdio/popen.c")
+
+`popen` runs a command with its standard input or output connected to
+the calling program by a pipe, and returns a stream for the other end;
+`pclose` closes the stream and waits for the command to finish.
+
+The mode is `"r"` if the caller will read the command's output, `"w"` if
+it will write the command's input. `tst` (3) chooses between its two
+arguments by the mode, and so decides which end of the pipe the caller
+keeps (`myside`) and which the child gets (`hisside`). The child closes
+the caller's end, moves its own end to descriptor 0 or 1 with `dup2`,
+and executes the command with `sh -c`. `_exit` (24), not `exit`, ends a child whose `execl` fails,
+so that the parent's stdio buffers, copied by `fork`, are not flushed a
+second time.
+
+`dup2` has no system call of its own: as in v7, the library's `dup2`
+(`dup.s`) makes the call `dup` with 0100 added to the first descriptor,
+and the kernel's `dup` (#f("sys3.c")) then takes the second argument as
+the descriptor wanted, closing it first if it is open.
+
+The terminating 0 of `execl`'s arguments (23) is cast to `char *`, as
+in #f("cmd/getty.c"). `execl` (`execl.s`)
+is one of the few places where the PDP-11's way with arguments survives:
+it pushes `r1` to `r3` just below any arguments which the caller
+stacked, so that the arguments after the name lie in memory as a vector
+ended by the 0, and hands the address of that vector to `exece`
+(#f("sys1.c")) as `argv`.
+
+The parent records the child's process id under the descriptor of its
+end of the pipe, in `popen_pid`, which has one entry for each of the 20
+descriptors a process may have (`NOFILE`, #f("param.h")).
+
+#lines(1, 31)
+
+`pclose` closes the stream, which sends an end of file to a command
+reading from it, and waits for the child whose process id was recorded
+for the descriptor. Other children which end meanwhile are reaped and
+forgotten, as in `system` (#f("stdio/system.c")). Interrupt, quit, and
+hangup are ignored during the wait, so that a signal meant for the
+command, which shares the terminal, does not also kill the caller.
+
+The three saved actions are now pointers to functions of one `int`
+returning nothing (37), the type with which `signal.h` declares
+`signal` (#f("sys/signal.s")); v7 declared them, in one declaration
+with the `int`s `f` and `r`, as pointers to functions returning `int`.
+
+#lines(32, 53)
+#source("/usr/src/libc/stdio/system.c")
+
+`system` runs a command line through the shell and waits for it,
+returning its status as `wait` reports it: the exit code shifted left
+eight bits, or, if a signal ended the command, the signal's number in
+the low byte. If the shell cannot be executed the child exits with
+127.
+
+The parent ignores interrupt and quit while it waits, so that a
+character typed at the terminal to stop the command stops only the
+command; the previous actions are restored afterwards. Any other child
+which ends during the wait is collected and lost. Note that the signals
+are ignored only after the `fork`, so the child has the caller's
+actions, which the shell then adjusts for itself.
+
+The include of #f("stdio.h") (1) is new: v7's `system.c` included only
+`signal.h`, and called `fork`, `execl`, `_exit`, and `wait` without
+declarations, which C99 does not allow. The saved actions are now
+pointers to functions of one `int` returning nothing (8), the type of
+handler which `signal` takes and returns (#f("sys/signal.s")); v7's were
+pointers to functions returning `int`. The `execl` (11) ends with
+`(char *)0`, as in #f("cmd/getty.c").
+
+#lines(1, 23)
+#source("/usr/src/libc/stdio/fseek.c")
+
+`fseek` moves the position of a stream. A stream being read keeps a
+buffer of characters ahead of the file's own position, so a seek within
+what the buffer holds is done by moving `_ptr` alone (23--28). `p` is
+then the distance from the current point: for a seek relative to the
+start (`ptrname` 0), the file's position less what remains in the
+buffer is subtracted, and for one relative to the current point the
+characters still in the buffer are taken off the offset. Any other seek
+discards the buffer and calls `lseek`; a stream being written is first
+flushed.
+
+`p` is now initialised to -1 (12). In v7 a stream opened neither for
+reading nor writing returned whatever `p` held; it now fails. v7's
+declaration of `lseek` is gone, since #f("stdio.h") declares it.
+
+#lines(1, 46)
+
+#source("/usr/src/libc/stdio/fgets.c")
+
+`fgets` reads characters into `s` until a newline, which it keeps, or
+until `n-1` characters have been read, and terminates the string. It
+returns `NULL` only when end of file comes before any character.
+
+`c` is now initialised (6). When `n` is 1 the loop reads nothing, and
+v7 then tested an uninitialised `c` (15); the call now returns an empty
+string.
+
+#lines(1, 19)
+
+#source("/usr/src/libc/stdio/ftell.c")
+
+`ftell` returns the position of a stream: the file's own position,
+taken with an `lseek` of zero, adjusted by what the buffer holds. For a
+stream being read the characters not yet taken from the buffer are
+subtracted; for one being written those placed in the buffer but not
+yet written are added. The declaration of `lseek` is gone, as in
+#f("stdio/fseek.c").
+
+#lines(1, 29)
+
+#source("/usr/src/libc/stdio/ungetc.c")
+
+`ungetc` pushes one character back into a stream being read, so that
+the next `getc` returns it. It steps `_ptr` back over the character just
+read and counts it again; on a stream whose buffer is empty and at its
+start, `_ptr` is first moved up one place, so that the step back stays
+within the buffer.
+
+The character is now stored only if it differs from the one already
+there (15, 16). `sscanf` (#f("stdio/scanf.c")) reads from the caller's string
+itself, which may be a string literal, and `doscan` pushes back the
+character it has just read; v7 wrote it back all the same, which C99
+leaves undefined for a literal. v7's `*iop->_ptr++` (10) fetched a
+character it did not use; the port only moves the pointer, and the
+`if` gains braces, both for warnings.
+
+#lines(1, 18)
+
+#source("/usr/src/libc/stdio/gcvt.c")
+
+`gcvt` converts a number to the shortest of its `%e` and `%f` forms,
+for `%g` in #f("stdio/doprnt.c"). `ecvt` (#f("gen/ecvt.c")) gives `ndigit` digits
+and the position of the decimal point; trailing zeros are dropped, and
+the E-style form is chosen when the point lies more than four places
+beyond the digits or more than three before them.
+
+The exponent may now have three digits (34--37). The PDP-11's largest
+number was about $10^38$, so v7 printed two; an IEEE double reaches
+$10^308$. The doubled parentheses (21, 22) are those of #f("malloc.c"),
+and `ecvt` is declared by #f("stdio.h").
+
+#lines(1, 64)
+
+
+== General Routines <ch-gen>
+
 #source("/usr/src/libc/gen/malloc.c")
 
 The storage allocator of user programs. It should not be confused with
@@ -9985,77 +10223,6 @@ characters in all, the form of every encrypted password in the password
 file.
 
 #lines(324, 380)
-#source("/usr/src/libc/stdio/popen.c")
-
-`popen` runs a command with its standard input or output connected to
-the calling program by a pipe, and returns a stream for the other end;
-`pclose` closes the stream and waits for the command to finish.
-
-The mode is `"r"` if the caller will read the command's output, `"w"` if
-it will write the command's input. `tst` (3) chooses between its two
-arguments by the mode, and so decides which end of the pipe the caller
-keeps (`myside`) and which the child gets (`hisside`). The child closes
-the caller's end, moves its own end to descriptor 0 or 1 with `dup2`,
-and executes the command with `sh -c`. `_exit` (24), not `exit`, ends a child whose `execl` fails,
-so that the parent's stdio buffers, copied by `fork`, are not flushed a
-second time.
-
-`dup2` has no system call of its own: as in v7, the library's `dup2`
-(`dup.s`) makes the call `dup` with 0100 added to the first descriptor,
-and the kernel's `dup` (#f("sys3.c")) then takes the second argument as
-the descriptor wanted, closing it first if it is open.
-
-The terminating 0 of `execl`'s arguments (23) is cast to `char *`, as
-in #f("cmd/getty.c"). `execl` (`execl.s`)
-is one of the few places where the PDP-11's way with arguments survives:
-it pushes `r1` to `r3` just below any arguments which the caller
-stacked, so that the arguments after the name lie in memory as a vector
-ended by the 0, and hands the address of that vector to `exece`
-(#f("sys1.c")) as `argv`.
-
-The parent records the child's process id under the descriptor of its
-end of the pipe, in `popen_pid`, which has one entry for each of the 20
-descriptors a process may have (`NOFILE`, #f("param.h")).
-
-#lines(1, 31)
-
-`pclose` closes the stream, which sends an end of file to a command
-reading from it, and waits for the child whose process id was recorded
-for the descriptor. Other children which end meanwhile are reaped and
-forgotten, as in `system` (#f("stdio/system.c")). Interrupt, quit, and
-hangup are ignored during the wait, so that a signal meant for the
-command, which shares the terminal, does not also kill the caller.
-
-The three saved actions are now pointers to functions of one `int`
-returning nothing (37), the type with which `signal.h` declares
-`signal` (#f("sys/signal.s")); v7 declared them, in one declaration
-with the `int`s `f` and `r`, as pointers to functions returning `int`.
-
-#lines(32, 53)
-#source("/usr/src/libc/stdio/system.c")
-
-`system` runs a command line through the shell and waits for it,
-returning its status as `wait` reports it: the exit code shifted left
-eight bits, or, if a signal ended the command, the signal's number in
-the low byte. If the shell cannot be executed the child exits with
-127.
-
-The parent ignores interrupt and quit while it waits, so that a
-character typed at the terminal to stop the command stops only the
-command; the previous actions are restored afterwards. Any other child
-which ends during the wait is collected and lost. Note that the signals
-are ignored only after the `fork`, so the child has the caller's
-actions, which the shell then adjusts for itself.
-
-The include of #f("stdio.h") (1) is new: v7's `system.c` included only
-`signal.h`, and called `fork`, `execl`, `_exit`, and `wait` without
-declarations, which C99 does not allow. The saved actions are now
-pointers to functions of one `int` returning nothing (8), the type of
-handler which `signal` takes and returns (#f("sys/signal.s")); v7's were
-pointers to functions returning `int`. The `execl` (11) ends with
-`(char *)0`, as in #f("cmd/getty.c").
-
-#lines(1, 23)
 #source("/usr/src/libc/gen/sleep.c")
 
 `sleep` suspends the process for a number of seconds with `alarm` and
@@ -10206,7 +10373,6 @@ and after.
 
 #lines(1, 14)
 
-== Library and Mathematics <ch-libm>
 
 #source("/usr/src/libc/gen/getenv.c")
 
@@ -10306,149 +10472,12 @@ reads of names in between move the file offset.
 
 #lines(39, 61)
 
-#source("/usr/src/libc/stdio/fseek.c")
-
-`fseek` moves the position of a stream. A stream being read keeps a
-buffer of characters ahead of the file's own position, so a seek within
-what the buffer holds is done by moving `_ptr` alone (23--28). `p` is
-then the distance from the current point: for a seek relative to the
-start (`ptrname` 0), the file's position less what remains in the
-buffer is subtracted, and for one relative to the current point the
-characters still in the buffer are taken off the offset. Any other seek
-discards the buffer and calls `lseek`; a stream being written is first
-flushed.
-
-`p` is now initialised to -1 (12). In v7 a stream opened neither for
-reading nor writing returned whatever `p` held; it now fails. v7's
-declaration of `lseek` is gone, since #f("stdio.h") declares it.
-
-#lines(1, 46)
-
 #source("/usr/src/libc/gen/tell.c")
 
 `tell` returns the current offset of a descriptor, by an `lseek` that
 moves nowhere. It is v7's, with a prototype.
 
 #lines(1, 10)
-#source("/usr/src/libm/sqrt.c")
-
-`sqrt` takes the square root by Newton's method. `frexp` splits the
-argument into a fraction and a power of two; the exponent is made even
-by doubling the fraction, so that half of it is the exponent of the
-root, and `0.5*(1.0+x)` is a first guess for the root of the fraction.
-The guess is scaled by the halved exponent, 30 bits at a time while it
-is large so that the shifts of `1L` stay within a `long`, and five
-iterations of `temp = (temp + arg/temp)/2` then reach the precision of
-a `double`. A negative argument sets `errno` to `EDOM` and returns zero.
-
-v7 defined `errno` in every file that set it, and declared `frexp`
-itself. Here `errno` is defined once, in #f("libc/syscall.s"),
-and declared by `errno.h`, and `frexp` by #f("math.h"), which is now
-included (10).
-
-#lines(1, 54)
-
-#source("/usr/src/libm/log.c")
-
-`log` reduces its argument with `frexp` to a fraction between
-$sqrt(2)/2$ and $sqrt(2)$ and a power of two, and evaluates a rational
-approximation in `z = (x-1)/(x+1)`, whose coefficients come from Hart
-and Cheney's tables; the power of two adds `exp` times $ln 2$. `log10`
-divides by $ln 10$. An argument that is not positive sets `errno` to
-`EDOM` and returns `-HUGE`.
-
-The changes are those of #f("libm/sqrt.c"): `errno` and `frexp` are declared
-by the headers instead of in the file.
-
-#lines(1, 58)
-
-#source("/usr/include/errno.h")
-
-The error numbers which a failing system call leaves in `errno` are
-v7's and the kernel's (#f("user.h")). The one addition is the
-declaration of `errno` itself (41). v7 left each program to declare it,
-and the libraries defined it in every file which set it, relying on the
-loader to merge the copies; here it is defined once, in
-#f("libc/syscall.s").
-
-#lines(1, 41)
-
-#source("/usr/include/signal.h")
-
-`NSIG` follows the kernel's 32 signals (#f("param.h")). `signal` is
-declared with its prototype: it takes a signal number and a function
-taking the signal number, and returns the previous such function. v7's
-`int (*signal())()` gave handlers no parameters and an `int` result.
-`SIG_DFL` and `SIG_IGN` are cast to the same type. The signals beyond 15
-have no names, as in v7.
-
-#lines(1, 21)
-
-#source("/usr/include/sgtty.h")
-
-The terminal modes, kept in `struct sgttyb` by `gtty` and `stty`, are
-v7's, with the ioctl requests of #f("tty.c") and #f("tty.h"). The
-prototypes of `gtty` and `stty` (117) are new.
-
-#lines(1, 117)
-
-#source("/usr/include/setjmp.h")
-
-A `jmp_buf` holds what `setjmp` (#f("gen/setjmp.s")) saves: the registers
-`r4` to `r11`, the stack pointer, and the return address, ten words,
-and the floating point registers `d8` to `d15`, which the ARM's calling
-convention also asks a function to preserve, sixteen words more. v7's
-three words held the PDP-11's frame pointer, stack pointer, and return
-address. The prototypes are new.
-
-#lines(1, 2)
-
-#source("/usr/include/utmp.h")
-
-`/etc/utmp` holds one such record for each terminal on which a user is
-logged in, and `/usr/adm/wtmp` a record for each login and logout.
-`ut_line` and `ut_name` are not terminated when they are full, so
-programs copy and compare them with a length (#f("cmd/wall.c")). The
-time has 64 bits (`types.h`), which makes the record 24 bytes; it is
-therefore not v7's format.
-
-#lines(1, 5)
-
-#source("/usr/include/pwd.h")
-
-The fields of a line of `/etc/passwd` (#f("passwd")), as
-#f("stdio/getpwent.c") unpacks them. The prototypes of the routines which read
-the file (12, 13) are new.
-
-#lines(1, 13)
-
-#source("/usr/include/grp.h")
-
-The fields of a line of `/etc/group` (#f("group")); the members are an
-array of names ended by a null pointer. The prototypes (7, 8) are new.
-
-#lines(1, 8)
-
-#source("/usr/include/time.h")
-
-`struct tm`, which `localtime` and `gmtime` (#f("gen/ctime.c")) fill in, is
-v7's, unchanged; the year is counted from 1900 and kept modulo 10000.
-
-#lines(1, 11)
-
-#source("/usr/include/math.h")
-
-The mathematical routines of `libm` are declared with prototypes, and
-`modf` and `frexp`, which are in the C library, are added (13). `fmod`
-and `gamma` are declared because v7's header declared them, although
-neither v7's `libm` nor this one supplies them.
-
-`HUGE` is the largest IEEE double, which the ARM's floating point
-represents; v7's value was the largest number of the PDP-11's format.
-`LOGHUGE` is its decimal exponent.
-
-#lines(1, 16)
-
 #source("/usr/src/libc/gen/strcmp.c")
 
 The string routines of v7 are each a loop of a line or two over
@@ -10559,62 +10588,6 @@ state; `srand` sets the state. The state is now an `unsigned long`
 unsigned numbers; the sequence is v7's.
 
 #lines(1, 14)
-#source("/usr/src/libc/stdio/fgets.c")
-
-`fgets` reads characters into `s` until a newline, which it keeps, or
-until `n-1` characters have been read, and terminates the string. It
-returns `NULL` only when end of file comes before any character.
-
-`c` is now initialised (6). When `n` is 1 the loop reads nothing, and
-v7 then tested an uninitialised `c` (15); the call now returns an empty
-string.
-
-#lines(1, 19)
-
-#source("/usr/src/libc/stdio/ftell.c")
-
-`ftell` returns the position of a stream: the file's own position,
-taken with an `lseek` of zero, adjusted by what the buffer holds. For a
-stream being read the characters not yet taken from the buffer are
-subtracted; for one being written those placed in the buffer but not
-yet written are added. The declaration of `lseek` is gone, as in
-#f("stdio/fseek.c").
-
-#lines(1, 29)
-
-#source("/usr/src/libc/stdio/ungetc.c")
-
-`ungetc` pushes one character back into a stream being read, so that
-the next `getc` returns it. It steps `_ptr` back over the character just
-read and counts it again; on a stream whose buffer is empty and at its
-start, `_ptr` is first moved up one place, so that the step back stays
-within the buffer.
-
-The character is now stored only if it differs from the one already
-there (15, 16). `sscanf` (#f("stdio/scanf.c")) reads from the caller's string
-itself, which may be a string literal, and `doscan` pushes back the
-character it has just read; v7 wrote it back all the same, which C99
-leaves undefined for a literal. v7's `*iop->_ptr++` (10) fetched a
-character it did not use; the port only moves the pointer, and the
-`if` gains braces, both for warnings.
-
-#lines(1, 18)
-
-#source("/usr/src/libc/stdio/gcvt.c")
-
-`gcvt` converts a number to the shortest of its `%e` and `%f` forms,
-for `%g` in #f("stdio/doprnt.c"). `ecvt` (#f("gen/ecvt.c")) gives `ndigit` digits
-and the position of the decimal point; trailing zeros are dropped, and
-the E-style form is chosen when the point lies more than four places
-beyond the digits or more than three before them.
-
-The exponent may now have three digits (34--37). The PDP-11's largest
-number was about $10^38$, so v7 printed two; an IEEE double reaches
-$10^308$. The doubled parentheses (21, 22) are those of #f("malloc.c"),
-and `ecvt` is declared by #f("stdio.h").
-
-#lines(1, 64)
-
 #source("/usr/src/libc/gen/perror.c")
 
 `perror` writes its argument, a colon, and the message for the error in
@@ -10665,6 +10638,38 @@ three bytes is therefore the ARM's, which `mkfs` (#f("cmd/mkfs.c")), built
 for the host, shares.
 
 #lines(1, 49)
+
+#source("/usr/src/libm/sqrt.c")
+
+`sqrt` takes the square root by Newton's method. `frexp` splits the
+argument into a fraction and a power of two; the exponent is made even
+by doubling the fraction, so that half of it is the exponent of the
+root, and `0.5*(1.0+x)` is a first guess for the root of the fraction.
+The guess is scaled by the halved exponent, 30 bits at a time while it
+is large so that the shifts of `1L` stay within a `long`, and five
+iterations of `temp = (temp + arg/temp)/2` then reach the precision of
+a `double`. A negative argument sets `errno` to `EDOM` and returns zero.
+
+v7 defined `errno` in every file that set it, and declared `frexp`
+itself. Here `errno` is defined once, in #f("libc/syscall.s"),
+and declared by `errno.h`, and `frexp` by #f("math.h"), which is now
+included (10).
+
+#lines(1, 54)
+
+#source("/usr/src/libm/log.c")
+
+`log` reduces its argument with `frexp` to a fraction between
+$sqrt(2)/2$ and $sqrt(2)$ and a power of two, and evaluates a rational
+approximation in `z = (x-1)/(x+1)`, whose coefficients come from Hart
+and Cheney's tables; the power of two adds `exp` times $ln 2$. `log10`
+divides by $ln 10$. An argument that is not positive sets `errno` to
+`EDOM` and returns `-HUGE`.
+
+The changes are those of #f("libm/sqrt.c"): `errno` and `frexp` are declared
+by the headers instead of in the file.
+
+#lines(1, 58)
 
 #source("/usr/src/libm/exp.c")
 
@@ -10729,6 +10734,7 @@ zero, and moves a negative number with a fraction down by one. `ceil` is
 `modf`.
 
 #lines(1, 28)
+
 
 = Part Four: The Commands
 
@@ -12596,6 +12602,28 @@ is the address, but the test against `NOMORE` looked at the address
 instead of the card.
 
 #lines(1, 526)
+
+#source("/usr/src/games/backgammon.c")
+
+`backgammon` plays the game against the user, who plays red; the
+program chooses its moves by generating all those the dice allow
+(`movegen`), scoring each with a weighted evaluation of the position
+(`strategy`, `eval`), and taking the best, at one of three levels of
+skill. It keeps its own random-number generator, seeded from the time;
+`srand` is renamed by the preprocessor (5), since the library's has
+another type.
+
+The moves typed are read into an array that now has room for the end
+marker after five of them (41), and `getstr` now stops at the end of its
+100-byte buffer and at end of input (114--119), where v7 overran the
+buffer and read for ever. An empty answer, for which `sscanf` returns
+$-1$, no longer indexes before the array (87), and `sum=+` becomes
+`sum+=` (219): the old spelling of `+=` would now assign a positive
+value. The initialisers without `=` (25--33) are written in C99's form,
+and the braces added to `movegen` mark statements v7's indentation
+already showed.
+
+#lines(1, 613)
 
 == Files and Directories <ch-files>
 
@@ -16149,7 +16177,7 @@ whose directory does not exist, so without it `dmr` could not log in;
 `sys` and `uucp` cannot log in at all (#f("passwd")), but keep the
 directories v7 gave them.
 
-#lines(142, 365)
+#lines(142, 364)
 
 `/unix` is the kernel of the machine whose image this is: `boot/unix`,
 the QEMU machine's kernel, as written here, or the MP135 machine's, which the `Makefile`
@@ -16158,7 +16186,7 @@ booted from here, since neither machine loads its kernel from the file
 system; it is there for its symbol table, which `ps`, `pstat`, and
 `iostat` read, and which must therefore be that of the running kernel.
 
-#lines(366, 367)
+#lines(365, 366)
 #source("/etc/rc")
 
 #f("rc") is the command file which `init` (#f("cmd/init.c")) gives to
