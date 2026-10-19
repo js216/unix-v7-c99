@@ -1683,7 +1683,7 @@ of the ARM generic interrupt controller. The attributes of a user page,
 physical bounds, and its attributes: all 512 MB of memory, at
 0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
 machine's devices (the interrupt controller, the UART, and the virtio transports),
-from 0xf0000000, as device memory which may not be executed (@ch-startup).
+from 0xf0000000, as device memory which may not be executed (@ch-intro).
 Since a kernel address is not a physical one, a device performing DMA
 must be given the latter, which `vtop` (#f("machdep.c")) finds in this
 table (#f("virtio_blk.c")).
@@ -3409,7 +3409,7 @@ offset is a physical address, so that a process image is found at
 offset `p_addr` times 4096, the size of a page; in `/dev/kmem` it is a
 kernel address, so that a kernel variable is found at the address which
 `nlist` reports for it. Since the two differ on both machines
-(@ch-startup), `ps` reads the kernel's tables from `/dev/kmem` and the
+(@ch-intro), `ps` reads the kernel's tables from `/dev/kmem` and the
 images from `/dev/mem`, where v7's read both from `/dev/mem`, whose
 offsets on the PDP-11 were the same for the kernel's data.
 
@@ -4191,7 +4191,7 @@ for both machines (#f("param.h")). All the numbers are hexadecimal, without the 
 `ram` gives the kernel address at which the kernel is linked, the
 physical address at which it is loaded, and the length of the region:
 the first 64 MB of the QEMU machine's memory, at `0x40000000`, far more than the
-kernel needs, linked at 0xc0000000 (@ch-startup). The difference of the
+kernel needs, linked at 0xc0000000 (@ch-intro). The difference of the
 two addresses must be a multiple of 2 MB, the size of the blocks by
 which #f("low.s") maps the kernel. `core` gives the physical end of the
 memory which holds process images: the end of the 512 MB with which
@@ -4221,10 +4221,10 @@ is the chip's USB port, driven by #f("otg.c").
 
 The memory of the MP135 machine is in two pieces which are not
 contiguous. The kernel runs in the 128 KB of on-chip SYSRAM at
-`0x2ffe0000` (@ch-startup); this is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
+`0x2ffe0000` (@ch-intro); this is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
 images, and anything else too large for SYSRAM, live in the 512 MB of
 external DDR memory at `0xc0000000`, which the kernel maps 2 MB higher,
-at 0xc0200000, just above the block of SYSRAM (@ch-startup).
+at 0xc0200000, just above the block of SYSRAM (@ch-intro).
 
 `tables` is a keyword which only this configuration uses. It names a second
 region for the linker, by kernel address, physical address, and
@@ -4537,7 +4537,7 @@ the kernel reaches at `0xf0621000` and `0xf0622000` (87).
 
 `board_map` maps nine regions: the 2 MB block which contains SYSRAM,
 cached, for the kernel, at 0xc0000000; DDR, cached likewise, just above
-it; and seven blocks of peripherals, from 0xf0000000 (@ch-startup).
+it; and seven blocks of peripherals, from 0xf0000000 (@ch-intro).
 
 #lines(86, 101)
 
@@ -11649,7 +11649,7 @@ from `/dev/mem` (`swmem`), at their physical ones; with `k`, both come
 from the core file. v7 opened `/dev/mem` twice, for the same two
 purposes, since on the PDP-11 a kernel address of its data was also a
 physical one. The kernel's addresses differ from the physical ones on
-both machines here (@ch-startup), and the two files do the translating
+both machines here (@ch-intro), and the two files do the translating
 (#f("mem.c")).
 
 `ps` first reads two kernel variables. `swapdev` is read into
@@ -15594,7 +15594,7 @@ defined `_etext`, `_edata`, and `_end`, and the start-up code in
 `mch.s` used them to move the text to its resting place above the data
 and to clear the memory from `_edata` to `_end`, before it turned on the
 memory management unit. The ARM kernel is one image, linked at the
-kernel address at which it runs, 0xc0000000 (@ch-startup), and loaded at
+kernel address at which it runs, 0xc0000000 (@ch-intro), and loaded at
 the physical address which that address maps to; there is nothing to
 move.
 
@@ -16070,7 +16070,7 @@ made on the build machine, every time the system is built
 The format is v7's. The first word names the program to be written
 into block 0 as a bootstrap: here `/dev/null`, since QEMU loads the
 kernel from its ELF file, and nothing is written for the MP135
-machine's boot ROM (@ch-startup).
+machine's boot ROM (@ch-intro).
 The second line gives the size of the file system, 32768 blocks of 512
 bytes, 16 MB, and the number of inodes, 1024, one for each 16 KB, four
 to a block; `mkfs` gives the i-list blocks 2 to 257. The system's files and its tests
