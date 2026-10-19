@@ -18,6 +18,7 @@ nested
 deep
 stop 1177
 glob 5
+neg -1 errno 0
 r0 0 pcok 1
 w 40
 wr9 -1

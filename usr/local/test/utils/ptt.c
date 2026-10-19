@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <errno.h>
 #include "h/param.h"
 #include "h/dir.h"
 #include "h/user.h"
@@ -24,6 +25,10 @@ main(void)
 	ar0 = ptrace(3, pid, (int *)off, 0);
 	off = ar0 - UBASE;
 	printf("glob %d\n", ptrace(2, pid, &glob, 0));
+	ptrace(5, pid, &glob, -1);
+	errno = 5;
+	r = ptrace(2, pid, &glob, 0);
+	printf("neg %d errno %d\n", r, errno);
 	r = ptrace(3, pid, (int *)(off + R0*4), 0);
 	printf("r0 %d pcok %d\n", r, ptrace(3, pid, (int *)(off + PC*4), 0) > 0x10);
 	printf("w %d\n", ptrace(6, pid, (int *)(off + R0*4), 40));
