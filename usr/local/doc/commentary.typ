@@ -293,6 +293,8 @@ functions of no arguments, `nosys` and `nullsys` among them.
 The table is indexed by system call number. Each entry gives the number
 of arguments, the number of them passed in registers, and the routine.
 The entries are now in braces, as C99 asks of an array of structures.
+Entry 52, `phys`, mapped physical memory into a process on the PDP-11
+and is now `nosys`.
 
 On the PDP-11 a system call was the instruction `sys n`, and its
 arguments were passed partly in registers and partly as words following
@@ -1696,7 +1698,7 @@ learns its own only when it finds the device.
 The three procedures at the end are the glue by which the
 machine-dependent code calls the configured drivers without naming
 them: `cninit` sets up the console early in `machine_init`, `bdinit`
-finds the disk at the end of `startup`, and `clock_ddr_init`, which on
+finds the disk before `main` enables the interrupts, and `clock_ddr_init`, which on
 the MP135 machine starts the memory controller (#f("ddr.c")), does
 nothing here, since the QEMU machine's memory needs no initialisation. The routine `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
@@ -1769,7 +1771,7 @@ request in the device at a time. Both `rktab` and `rrkbuf` are v7's.
 
 #lines-to("void", after: "int\trkirq;")
 
-At the end of `startup`, `bdinit` (#f("qemu/c.c")) calls `rkinit`.
+Before `main` enables the interrupts, `bdinit` (#f("qemu/c.c")) calls `rkinit`, which must find the device to learn its interrupt.
 Each transport is examined for the magic number `virt` (as a
 little-endian word) and a device type of 2, a block device; an empty
 transport reports type 0.
@@ -4923,8 +4925,8 @@ the controller can check.
 
 #lines-to("/*", after: "panic(\"sd card crc\");")
 
-The routine `bdinit` (#f("mp135/c.c")) calls `rkinit` at the end of
-`startup`. It enables the clocks of GPIO ports C and D (`014`, bits 2
+The routine `bdinit` (#f("mp135/c.c")) calls `rkinit` from `main`, before
+`intrstart`. It enables the clocks of GPIO ports C and D (`014`, bits 2
 and 3), and puts PC8 to PC12, the four data lines and the clock, and
 PD2, the command line, on alternate function 12, SDMMC1, at medium
 speed. It chooses HSI, the internal 64 MHz oscillator, as the
@@ -16535,7 +16537,7 @@ carries a page of padding.
 
 The call `phys`, v7's way of mapping physical memory into a process, is a
 PDP-11 facility which the port refuses with `EINVAL` (#l("errno = 0;", after: "int i, bad, r;")--#l("printf(\"phys: %d errno %d\\n\", r, errno);"),
-#f("machdep.c")). The routine `malloc` must return blocks aligned to 8 bytes, as
+`nosys`, #f("sysent.c")). The routine `malloc` must return blocks aligned to 8 bytes, as
 the ARM's `double`s require, whatever sizes are asked for and freed
 (#l("bad = 0;")--#l("printf(\"malloc: %d of 64 blocks misaligned\\n\", bad);")). Signal 31, the highest, is delivered, and 32 is refused
 (#l("signal(31, catch);")--#l("printf(\"signal 32: %d errno %d\\n\", r, errno);")), since `NSIG` is 32 (#f("param.h")).

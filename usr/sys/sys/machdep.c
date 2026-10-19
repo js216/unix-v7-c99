@@ -11,6 +11,16 @@
 #include "../h/buf.h"
 #include "../h/conf.h"
 
+#define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
+#define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
+#define	DCTLR	0x000
+#define	ISENABLER	0x100
+#define	IPRIORITYR	0x400
+#define	CCTLR	0x00
+#define	PMR	0x04
+#define	IAR	0x0c
+#define	EOIR	0x10
+
 /*
  * Icode is the hex bootstrap
  * program executed in user mode
@@ -58,28 +68,8 @@ startup(void)
 		maxmem = MAXMEM;
 	mfree(swapmap, nswap, 1);
 	swplo--;
-	bdinit();
 }
 
-/*
- * set up a physical address
- * into users virtual address space.
- */
-void
-sysphys(void)
-{
-
-	if(!suser())
-		return;
-	u.u_error = EINVAL;
-}
-
-/*
- * Determine which clock is attached, and start it.
- * panic: no clock found
- */
-#define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
-#define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
 extern struct intr intrtab[];
 unsigned long long clkcval;
 unsigned	clkreload, clkrem, clkfrac;
@@ -88,8 +78,8 @@ int	clkirq = 27;
 static void
 gicen(int n)
 {
-	*(volatile unsigned char *)(gicdbase+0x400+n) = 0x80;
-	GICD(0x100+(n>>5)*4) = 1U << (n&31);
+	*(volatile unsigned char *)(gicdbase+IPRIORITYR+n) = 0x80;
+	GICD(ISENABLER+(n>>5)*4) = 1U << (n&31);
 }
 
 void
@@ -116,9 +106,9 @@ intrstart(void)
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)
 			gicen(*ip->i_irq);
-	GICD(0) = 1;
-	GICC(4) = 0xff;
-	GICC(0) = 1;
+	GICD(DCTLR) = 1;
+	GICC(PMR) = 0xff;
+	GICC(CCTLR) = 1;
 	intr_enable();
 }
 
@@ -128,11 +118,11 @@ irq(int *r)
 	register struct intr *ip;
 	register unsigned n;
 
-	n = GICC(0xc);
+	n = GICC(IAR);
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq == (int)(n&0x3ff))
 			(*ip->i_fn)((caddr_t)r[PC], r[PSR]);
-	GICC(0x10) = n;
+	GICC(EOIR) = n;
 }
 
 /*
@@ -200,8 +190,8 @@ machine_init(void)
 	register char *p;
 
 	kmap(1);
-	GICD(0) = 0;
-	GICC(0) = 0;
+	GICD(DCTLR) = 0;
+	GICC(CCTLR) = 0;
 	cninit();
 	clock_ddr_init();
 	kmap(0);

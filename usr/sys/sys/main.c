@@ -74,6 +74,7 @@ main(void)
 	 */
 
 	clkstart();
+	bdinit();
 	intrstart();
 	cinit();
 	binit();

@@ -207,7 +207,6 @@ void	syread(int dev);
 void	sysacct(void);
 void	sysioctl(int dev, int cmd, caddr_t addr, int flag);
 void	syslock(void);
-void	sysphys(void);
 void	sywrite(int dev);
 void	timeout(void (*fun)(caddr_t arg), caddr_t arg, int tim);
 void	times(void);
