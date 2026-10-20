@@ -433,8 +433,7 @@ by `sureg` (#f("ureg.c")).
 
 #lines-to("struct clist; struct map; struct text; struct tty; struct uprof;")
 
-The list which follows is entirely new. Each procedure which is
-called from another file, or before its definition, is declared once
+Each procedure which is called from another file, or before its definition, is declared once
 here, with a prototype, instead of being declared in each calling file
 or not at all. The routines are grouped by return type and sorted by
 name.
