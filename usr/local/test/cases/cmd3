@@ -4,12 +4,12 @@ mkdir d; cd d
 for i in 1 2 3 4 5 6 7 8 9 10; do mkdir aaaaaaaaaaaaaa; cd aaaaaaaaaaaaaa; done
 echo x >f; cd $T
 du -s d; du d | sed -n '1p;$p' | sed 's/aaaaaaaaaaaaaa/a/g'
-x=`awk 'BEGIN { for (i = 0; i < 4500; i++) printf "x" }' </dev/null`; du -s $x 2>&1 | wc -c
+x=`/usr/local/test/utils/rep -n 4500 'x'`; du -s $x 2>&1 | wc -c
 dd if=/nonexistent; echo st$?; dd xyz=1; echo st$?; dd ibs=0; echo st$?
 dd if=/dev/null skip=2000000000; echo st$?
 dcheck -i 5; echo st$?
 echo aaaaaaaaaaaa | egrep '(a|b)*a(a|b)(a|b)(a|b)(a|b)(a|b)(a|b)|qr'; echo st$?
-awk 'BEGIN { for (i = 0; i < 600; i++) printf "a"; print "" }' </dev/null | deroff | wc -c
+/usr/local/test/utils/rep 600 'a' | deroff | wc -c
 echo '\s-2UNIX\s0 is' | deroff
 for i in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do echo ".so s`expr $i + 1`" >s$i; done; echo end >s16; deroff s0
 awk 'BEGIN { printf ".so "; for (i = 0; i < 100; i++) printf "b"; print "" }' </dev/null >so; deroff so 2>&1 | wc -c

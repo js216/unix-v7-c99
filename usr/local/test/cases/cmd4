@@ -2,31 +2,31 @@ T=/tmp/cmd4 U=/usr/local/test/utils
 mkdir $T; cd $T
 expr 1 \<= 2; expr -3 \< -2; expr -3 + 1; expr 2147483647 + 1; echo st$?; expr 5 / 0; echo st$?
 expr substr abc 0 2; expr substr \( 1 = 1 \) 1 0; echo st$?
-x=`awk 'BEGIN { for (i = 0; i < 200; i++) printf "a" }' </dev/null`; expr $x : '\(.*\)' | wc -c
+x=`/usr/local/test/utils/rep -n 200 'a'`; expr $x : '\(.*\)' | wc -c
 expr a : '\(a\)' \& b : '\(x\)'; expr x : '\(a*\)x\1*'; echo st$?
 expr aa : '\(a\)\{2\}'; echo st$?; expr abc : 'a\'; echo st$?; expr abc : '[a-'; echo st$?
-w=`awk 'BEGIN { for (i = 0; i < 450; i++) printf "a" }' </dev/null`; echo x$w >f; fgrep $w f | wc -c
+w=`/usr/local/test/utils/rep -n 450 'a'`; echo x$w >f; fgrep $w f | wc -c
 fgrep -q zz f; echo st$?; fgrep '' $U/fs.img; echo st$?
 awk 'BEGIN { for (i = 0; i < 500; i++) printf "%c%c%c\n", 97 + i % 26, 97 + int(i / 26), 48 + i % 10 }' </dev/null >wl; sed 's/^/z/' wl | fgrep -c -f wl
 file /bin/ls; echo /bin/ls | tr -d '\012' >fl; file -f fl; echo st$?
 mkdir d; cd d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17; do mkdir bbbbbbbbbbbbbb; cd bbbbbbbbbbbbbb; done; echo x >f; cd $T
 find d -name f -print | wc -c; find d -name f -cpio cp 2>&1 | wc -c
 p=`awk 'BEGIN { for (i = 0; i < 60; i++) printf " -name x -o"; print " -name y" }' </dev/null`; find f $p -print; echo st$?
-a=`awk 'BEGIN { for (i = 0; i < 60; i++) printf " a" }' </dev/null`; find f -exec echo $a \; ; echo st$?; find f -links -2147483648 -print
-q=`awk 'BEGIN { for (i = 0; i < 100; i++) printf "q" }' </dev/null`; graph -l $q </dev/null | tr -cd q | wc -c
+a=`/usr/local/test/utils/rep -n 60 ' a'`; find f -exec echo $a \; ; echo st$?; find f -links -2147483648 -print
+q=`/usr/local/test/utils/rep -n 100 'q'`; graph -l $q </dev/null | tr -cd q | wc -c
 echo "1 2 \"$q\"" | graph | tr -cd q | wc -c; echo 1 1 | graph -x 0 100 .01 | wc -c
 icheck $U/big.img; icheck -b; echo st$?; ncheck -i; echo st$?
 echo a >j1; echo 'a 2' >j2; join -a1 -j1 2 j1 j2
-awk 'BEGIN { for (i = 0; i < 25; i++) printf "f "; print "" }' </dev/null >j3; join j3 j2; echo st$?
+/usr/local/test/utils/rep 25 'f ' >j3; join j3 j2; echo st$?
 join -j1 0 j1 j2; echo st$?; join -o; echo st$?
 echo 'a 1 2 3 4 5' >j5; echo 'b x' | tr -d '\012' >>j5; echo 'b y' >j6; join j5 j6
 kill 4294967294; echo st$?
 c=$T; for i in 1 2 3 4 5 6 7; do c=$c/cccccccccccccc; mkdir $c; done
 echo y >g; ln g $c; echo st$?; ls $c
-awk 'BEGIN { for (i = 0; i < 300; i++) printf "a"; print "" }' </dev/null >lw; look aaa lw | wc -c
+/usr/local/test/utils/rep 300 'a' >lw; look aaa lw | wc -c
 echo abc | /usr/lib/makekey | od -c | sed 1q; /etc/mknod; echo st$?; /etc/mknod x c 99999999999 1; echo st$?
 osh -c 'echo $$' >o & p=$!; wait; expr $p = `cat o`
-r=`awk 'BEGIN { for (i = 0; i < 4000; i++) printf "r" }' </dev/null`; echo "echo '$r'" | osh; echo st$?
+r=`/usr/local/test/utils/rep -n 4000 'r'`; echo "echo '$r'" | osh; echo st$?
 n=`awk 'BEGIN { for (i = 0; i < 500; i++) printf "n"; printf " "; for (i = 0; i < 490; i++) printf "m" }' </dev/null`; osh -c "$n" 2>&1 | wc -c
 echo 'echo script ran' >s.sh; chmod 755 s.sh; osh -c ./s.sh
 echo hi >p; pr -x p | wc -l; pr -h $q p | tr -cd q | wc -c

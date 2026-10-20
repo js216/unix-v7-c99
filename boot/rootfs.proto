@@ -345,6 +345,7 @@ d--755 0 0
           r5r	---755 0 0 usr/local/test/obj/r5r
           r5t	---755 0 0 usr/local/test/obj/r5t
           regs	---755 0 0 usr/local/test/obj/regs
+          rep	---755 0 0 usr/local/test/obj/rep
           roff	---644 0 0 usr/local/test/utils/roff
           sortin	---644 0 0 usr/local/test/utils/sortin
           spd	---755 0 0 usr/local/test/obj/spd

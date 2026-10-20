@@ -3,13 +3,13 @@ mkdir $T; chmod 777 $T; cd $T
 cp /bin/sh ush; chmod 4755 ush; mkdir ro
 cat >s1 <<\E
 cd /tmp/r5j
-l=`awk 'BEGIN { for (i = 0; i < 300; i++) printf "aa" }' </dev/null`
+l=`/usr/local/test/utils/rep -n 300 'aa'`
 rmdir $l 2>&1 | sed 's/aa*/A/'
 mkdir e; rmdir e/.; echo st$?; rmdir e/..; echo st$?; ls -a e; ls -ld . | awk '{ print $2 }'; rmdir e
-x=`awk 'BEGIN { for (i = 0; i < 150; i++) printf "x" }' </dev/null`
+x=`/usr/local/test/utils/rep -n 150 'x'`
 mkdir t abcdefghijklmn; mv abcdefghijklmn$x t; echo st$?
-z=`awk 'BEGIN { for (i = 0; i < 70; i++) printf "z" }' </dev/null`
-w=`awk 'BEGIN { for (i = 0; i < 16; i++) printf "x" }' </dev/null`
+z=`/usr/local/test/utils/rep -n 70 'z'`
+w=`/usr/local/test/utils/rep -n 16 'x'`
 mkdir $z; mv abcdefghijklmn$w $z; echo st$?; ls $z; ls -d abcdefghijklmn
 d=`awk 'BEGIN { for (i = 0; i < 1000; i++) printf "./" }' </dev/null`
 mkdir dd; mv ${d}dd ee; echo st$?; ls -d dd ee

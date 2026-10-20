@@ -16209,6 +16209,14 @@ block after it, which the driver must refuse
 would step through every block before it.
 
 #lines-to(none)
+#source("/usr/local/test/utils/rep.c")
+
+The utility `rep` writes a string a given number of times, then an
+optional tail and a newline, unless `-n` is given. The cases make most
+of their long lines with it, for the buffer limits they test; `awk`,
+which made them before, took a tenth of a second to start each time.
+
+#lines-to(none)
 #source("/usr/local/test/utils/fmode.c")
 
 The utility `fmode` prints a file's permission bits in octal, so that a case can

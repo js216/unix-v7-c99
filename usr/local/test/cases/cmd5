@@ -12,17 +12,17 @@ dd if=mon.out bs=8 count=1 2>/dev/null >m2; $U/ob 350 3 0 0 >>m2; dd if=/unix bs
 mv m2 mon.out; prof x.out; echo st$?; rm mon.out x.out x2 p1
 echo zzz >ig; ptx -i ig -w </dev/null; echo st$?
 awk 'BEGIN { printf "a "; for (i = 0; i < 150; i++) printf "\""; print "" }' </dev/null | ptx -i ig | wc -c
-awk 'BEGIN { for (i = 0; i < 250; i++) printf "b"; print " c" }' </dev/null | ptx -i ig | wc -c
+/usr/local/test/utils/rep 250 'b' ' c' | ptx -i ig | wc -c
 echo 'a b c' >abc; ptx -w 3 -i ig abc; echo st$?; ptx -g 71 -i ig abc; echo st$?
 awk 'BEGIN { for (i = 0; i < 2048; i++) print "w" i }' </dev/null >ig; echo hello world | ptx -i ig; echo st$?; rm ig
 cp $U/fs.img fs; quot fs fs; echo '8 words' | tr -d '\012' | quot -n fs | od -c
 cp /etc/passwd pw; echo 'x::300:1::/:' >>/etc/passwd; quot -c fs | sed 4q; cp pw /etc/passwd
 dd if=fs bs=1924 count=1 2>/dev/null >fs3; $U/ob 100 234 2 0 0 377 377 377 >>fs3; dd if=fs bs=1932 skip=1 2>/dev/null >>fs3
 quot fs3; quot -c fs3; rm fs3
-awk 'BEGIN { for (i = 0; i < 600; i++) printf "r"; print "" }' </dev/null >rl; random 1 <rl | cmp - rl && echo same; random -e 1e30; echo st$?
+/usr/local/test/utils/rep 600 'r' >rl; random 1 <rl | cmp - rl && echo same; random -e 1e30; echo st$?
 awk 'BEGIN { for (i = 0; i < 1001; i++) printf "c%04d%35s", i, "" }' </dev/null >ac; sa -i ac; echo st$?
 (echo big | tr -d '\012'; $U/ob '11*0' 377 377 '24*0') >ac; sa -i ac
-q=`awk 'BEGIN { for (i = 0; i < 200; i++) printf "q" }' </dev/null`; echo "long::9:1:$q:/:" >>/etc/passwd
+q=`/usr/local/test/utils/rep -n 200 'q'`; echo "long::9:1:$q:/:" >>/etc/passwd
 (echo cat | tr -d '\012'; $U/ob '21*0' 11 '15*0') >ac; sa -mi ac; cp pw /etc/passwd; rm pw ac
 sleep; echo st$?; sleep x; echo st$?
 echo 0 0 1 1 2 0 3 -1 4 0 | spline -p -n 8; echo 0 000000000000000000000000000001 1 1 2 4 | spline -n 2
@@ -40,7 +40,7 @@ awk 'BEGIN { for (i = 0; i < 21; i++) { print "a\\"; print "t" i } }' </dev/null
 awk 'BEGIN { for (i = 0; i < 300; i++) printf "%019d\n", i }' </dev/null >sl; sed -n -e :a -e '$!N' -e '$!ba' -e p sl | wc -c
 sed -n 'H;${x;p;}' sl | wc -c; echo abc | sed 's/\(x*\)\1*/y/'; sed -e <ex; echo st$?; sed -f </dev/null; echo st$?; rm sc sl
 awk 'BEGIN { for (i = 0; i < 1587; i++) print i % 3 }' </dev/null | sort -u
-awk 'BEGIN { for (i = 0; i < 30000; i++) printf "s"; print "" }' </dev/null | sort | wc -c; sort -T $p /etc/group | wc -l
+/usr/local/test/utils/rep 30000 's' | sort | wc -c; sort -T $p /etc/group | wc -l
 dump 0f dmp fs >/dev/null 2>&1; restor xf /etc/passwd x </dev/null; echo st$?; ls rst* 2>&1; restor r; echo st$?; restor xf; echo st$?
 restor rf dmp fs </dev/null; echo st$?
 cd /; rm -rf $T
