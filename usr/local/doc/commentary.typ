@@ -386,7 +386,7 @@ reserved for it.
 
 #lines-to("if(u.u_exdata.ph[0].p_filesz!=0 && (ip->i_flag&ITEXT)==0 &&")
 
-The test from v7 follows unchanged: a program with a text may not be executed
+A program with a text may not be executed
 while some process has the file open, unless that is because it is
 already running as a shared text (`ITEXT`), since the writer could
 change the text under the processes which share it. The counterpart,
@@ -2430,7 +2430,7 @@ count of zero would run on through memory; no caller passes one.
 #lines-to(none)
 #source("/usr/sys/h/dir.h")
 
-The header #f("dir.h") is unchanged from v7. A directory is a file of 16-byte
+A directory is a file of 16-byte
 entries, each an inode number and a name of up to `DIRSIZ` characters,
 padded with nulls but not terminated by one when it is fourteen long.
 An entry whose `d_ino` is zero is empty. The `#ifndef` lets a user
@@ -2705,7 +2705,7 @@ checking that its major number is within `bdevsw`.
 #lines-to(none)
 #source("/usr/sys/h/stat.h")
 
-The header #f("stat.h") is unchanged from v7. It is the structure which `stat` and
+The header #f("stat.h") holds the structure which `stat` and
 `fstat` (#f("sys3.c")) fill in, and user programs see it in `/usr/include/sys/stat.h`, a
 copy of this file to which prototypes for the two calls have been added;
 the `S_` names repeat the mode bits of
@@ -2855,7 +2855,7 @@ is refused. Either way the directory is released.
 #lines-to(none)
 #source("/usr/sys/h/fblk.h")
 
-The header #f("fblk.h") is unchanged from v7. It describes the first words of a
+The header #f("fblk.h") describes the first words of a
 block in the chain of free-block lists: when the super-block's list
 `s_free` is full, `free` (#f("alloc.c")) writes the count and the list
 into the block being freed, in this form, and starts a new list with
@@ -5326,8 +5326,7 @@ elsewhere now take an `int`, and why `signal.h` declares
 
 Since the kernel holds the user's own function, the value it returns
 is the previous action as the user set it, and no translation is
-needed. The one-level semantics noted in v7's deleted comment are
-unchanged: when a signal other than `SIGINS` or `SIGTRC` is caught,
+needed. A signal's action lasts for one delivery: when a signal other than `SIGINS` or `SIGTRC` is caught,
 `psig` (#f("sig.c")) resets the action to the default before calling
 `sendsig`, so a handler which wishes to catch the next one must call
 `signal` again.
@@ -7587,8 +7586,7 @@ exported (`N_EXPORT`), or as having come from the environment
 (`N_ENVNAM`). `N_ENVPOS` is not used anywhere in the shell. The highest
 flag, `0100000`, was the sign bit of a PDP-11 `int`; in the thirty-two
 bit `INT` of the ARM it is an ordinary bit, and nothing compares
-`namflg` with zero except through a mask. The file is unchanged from
-v7.
+`namflg` with zero except through a mask.
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/name.c")
@@ -8446,8 +8444,8 @@ library's `ctime` use it. Its declaration (#l("int\tftime(struct timeb *tp);")) 
 #lines-to(none)
 #source("/usr/include/time.h")
 
-The `struct tm`, which `localtime` and `gmtime` (#f("gen/ctime.c")) fill in, is
-v7's, unchanged; the year is counted from 1900 and kept modulo 10000.
+In the `struct tm`, which `localtime` and `gmtime` (#f("gen/ctime.c")) fill in,
+the year is counted from 1900 and kept modulo 10000.
 
 #lines-to(none)
 
