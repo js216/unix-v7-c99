@@ -35,7 +35,7 @@ X
 find / -name 'pass*' -o -name 'group' -print
 find /etc /bin -type f -size -2 -links 1 -perm 755 -user 0 -group 0 -print | sed 4q
 find /bin \( -name 'ca*' -o -name 'ch*' \) ! -name cal -print
-find $T -newer /unix -type f -print; find /usr/lib -name 'make*' -exec echo found {} \;
+>$T/ref; $U/settime $T/ref 100; find $T -newer $T/ref -type f -print; rm $T/ref; find /usr/lib -name 'make*' -exec echo found {} \;
 find /etc -inum 2 -print; find / -mtime -100000 -name unix -print; find /bin -atime +100000 -print | wc -l
 cat >s <<'X'
 3 b x
