@@ -7316,8 +7316,7 @@ rest. For the command `wait`, `await(-1)` posts -1, which only the
 -1 returned by `wait` when no children remain can strike out. It thus
 waits for all children.
 
-The status is as `wait` delivers it (#f("sys1.c")): the exit code in
-the high byte, and in the low byte the number of the signal which
+The status is as `wait` delivers it (#f("sys1.c")), with the exit code in the high byte, and in the low byte the number of the signal which
 killed the process, with 0200 if a core image was written, or 0177 if it
 is stopped under trace. A death by signal is reported, by the message in
 `sysmsg`, preceded by the pid unless the process was the one awaited
@@ -8954,9 +8953,9 @@ declare it, and `stdarg.h` (#l("#include\t<stdarg.h>")) is needed for the type `
 #source("/usr/src/libc/stdio/fprintf.c")
 
 The routine `fprintf` is `printf` (#f("stdio/printf.c")) with the stream given
-explicitly. The changes from v7 are those made to `printf`: a variadic
-definition, a `va_list` whose address is passed to `_doprnt`
-(#f("stdio/doprnt.c")), and a local declaration of `_doprnt`.
+explicitly. The changes from v7 are those made to `printf`, a variadic definition, a
+`va_list` whose address is passed to `_doprnt` (#f("stdio/doprnt.c")),
+and a local declaration of `_doprnt`.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/sprintf.c")
@@ -8972,11 +8971,9 @@ simply a number which no output is expected to reach, and `putc` will call
 provide a big enough string. The other fields of `_strbuf` are never
 used and are left unset.
 
-As in v7, `sprintf` returns `str`, not the number of characters, which
+The routine `sprintf` returns `str`, not the number of characters, which
 #f("stdio.h") declares accordingly. The changes from v7 are those made
-to `printf` (#f("stdio/printf.c")): a variadic definition, a `va_list`
-whose address is passed to `_doprnt`, and a local declaration of
-`_doprnt`.
+to `printf` (#f("stdio/printf.c")).
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/doscan.c")
@@ -9032,8 +9029,7 @@ value known not to be null, to record that an argument is to be taken.
 #lines-to("if (ptr) {")
 
 The argument itself is taken here (#l("if (ptr) {")--#l("}", after: "ptr = (char *)va_arg(*argp, int *);")), once the conversion letter
-and the size are known, with `va_arg` and the type which the caller
-really passed: `char *` for strings and characters, `float *` or
+and the size are known, with `va_arg` and the type which the caller really passed, `char *` for strings and characters, `float *` or
 `double *` for the floating conversions, and `short *`, `int *`,
 `long *`, or `long long *` for integers. The pointer is converted to `char *` for
 `_innum`, which converts it back. Fetching every argument as an `int **`,
@@ -9115,12 +9111,13 @@ and `_getccl` returns a pointer to the null character, at which
 #lines-to(none)
 #source("/usr/src/libc/stdio/scanf.c")
 
-The three entries to `_doscan` (#f("stdio/doscan.c")): `scanf` reads the
-standard input, `fscanf` a given stream, and `sscanf` a string.
+There are three entries to `_doscan` (#f("stdio/doscan.c")). The
+routine `scanf` reads the standard input, `fscanf` a given stream, and
+`sscanf` a string.
 
-The routine `sscanf` makes a stream of the string, as `sprintf` does
-(#f("stdio/sprintf.c")), but for reading: `_IOREAD` and `_IOSTRG`, the
-buffer and pointer at the string, and the count set to its length, so
+The routine `sscanf` makes a stream of the string, as `sprintf` does (#f("stdio/sprintf.c")), but for reading. It sets
+`_IOREAD` and `_IOSTRG`, points the buffer and pointer at the string,
+and sets the count to its length, so
 that `getc` takes its characters in turn. When the count runs out,
 `getc` calls `_filbuf`, which returns `EOF` at once for a string
 (#f("stdio/filbuf.c")), and `ungetc` can put a character back because the
@@ -9564,7 +9561,7 @@ fails before 1900. Reading a year as two digits, `date` now
 takes one below 70 to be in the twenty-first century, and v7's took it to
 be in the twentieth.
 
-The routine `dysize` gives the number of days in a year: 366 in a leap year, which
+The routine `dysize` gives the number of days in a year, 366 in a leap year, which
 in the Gregorian calendar is every fourth year except the centuries,
 of which only every fourth is one, and 365 otherwise. The v7 code tested only
 the first condition, which agrees with the full rule from 1901 to 2099.
@@ -9765,9 +9762,8 @@ declared with the types of its arguments (#l("static int\t(*qscmp)(char *p1, cha
 
 #lines-to("static void qs1(char *a, char *l)", lead: true, after: "}")
 
-The routine `qs1` sorts the elements from `a` up to, but not including, `l`. It is
-a quicksort which partitions three ways: elements less than the pivot,
-elements equal to it, and elements greater. The equal elements gather
+The routine `qs1` sorts the elements from `a` up to, but not including, `l`. It is a quicksort which partitions three ways, into elements less than
+the pivot, elements equal to it, and elements greater. The equal elements gather
 in a block from `lp` to `hp` in the middle, which takes no further part,
 so that an array with many equal keys does not degrade the sort.
 
@@ -9971,8 +9967,8 @@ The doubled parentheses in the copying loop (#l("for (i=1; (newargs[i+1]=argv[i]
 
 #lines-to("static char *", lead: true)
 
-The routine `execat` builds the name: the next element of the path, a `/` if the
-element was not empty, and the name. It returns a pointer to the
+The routine `execat` builds the name from the next element of the path,
+a `/` if the element was not empty, and the name. It returns a pointer to the
 element after, or 0 at the end of the path. An element ends at a `:`
 (#l("while (*s1 && *s1 != ':')")). The v7 code ended it at a `-` as well, for a reason the code does not
 record, and so could not find a command in a directory such as
@@ -9997,8 +9993,7 @@ The file replaces v7's PDP-11 `setjmp.s`, which depended on the frame
 conventions of the PDP-11 C compiler. There every procedure began by
 calling `csv`, which pushed `r5`, the frame pointer, and the register
 variables `r4` to `r2`, and ended by jumping to `cret`, which restored
-them. In v7, `setjmp` saved only three words: `r5`, the stack pointer, and
-the return address, which is why `jmp_buf` (`setjmp.h`) was an array
+them. In v7, `setjmp` saved only three words, `r5`, the stack pointer, and the return address, which is why `jmp_buf` (`setjmp.h`) was an array
 of three `int`s. Its `longjmp` followed the chain of saved frame pointers
 from its own frame back to the frame of `setjmp`'s caller, and then
 returned through `cret` from the procedure that frame had called last, so
@@ -10010,8 +10005,8 @@ On the ARM no such chain exists: the code is compiled with `-Os`, which
 keeps no frame pointer, and each procedure saves on its stack only the
 registers it will itself use, in a layout known only to the compiler.
 The ARM `setjmp` therefore saves outright everything which the ARM
-procedure call standard requires a procedure to preserve for its
-caller: `r4` to `r11`, the stack pointer, and the link register, which
+procedure call standard requires a procedure to preserve for its caller, `r4` to `r11`, the
+stack pointer, and the link register, which
 holds the return address. It is the same set of ten words that `save`
 stores in a `label_t` (#f("param.h")), and for the same reason. Any call may destroy `r0` to
 `r3` and `ip`, so no caller of `setjmp`
@@ -10292,8 +10287,7 @@ since the port's `int` is 32 bits, and the pairs must stay 16 bits.
 #lines-to(none)
 #source("/usr/src/libc/gen/ctype_.c")
 
-`_ctype_` classifies characters for the macros of `<ctype.h>`: each
-entry holds bits for upper and lower case, digit, space, punctuation,
+The table `_ctype_` classifies characters for the macros of `<ctype.h>`. Each entry holds bits for upper and lower case, digit, space, punctuation,
 control, and hexadecimal digit. The first entry is for `EOF`, and the
 macros index from the second. The table now has room for 256
 characters (#l("char _ctype_[1+256] = {")), since the macros now mask their argument to a byte. The
