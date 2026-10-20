@@ -28,7 +28,7 @@ sed 's/\(.\)\1/<&>/g' a; sed -n '/^.\{4\}$/p' a; sed 's/o*/-/g' a
 sed -n '/o/!p' a; sed '2,3y/o/O/' a; sed -n '$=' a; sed 's/l/L/w out2' a; cat out2
 mkdir td; echo one >td/a; echo two two >td/b; ln td/a td/c; mkdir td/sub; echo deep >td/sub/d
 tar cvf t.tar td; tar tvf t.tar | sed 's/ [A-Z][a-z][a-z] .*19[0-9][0-9]//'; tar tf t.tar
-echo new >td/e; tar rvf t.tar td/e; tar tf t.tar; sleep 2; echo changed >td/b; tar uvf t.tar td; tar tf t.tar
+echo new >td/e; tar rvf t.tar td/e; tar tf t.tar; sleep 1; echo changed >td/b; tar uvf t.tar td; tar tf t.tar
 mv td td.orig; tar xvf t.tar; ls -l td td/sub | sed 's/ [A-Z][a-z][a-z] .*:[0-9][0-9]//'; cat td/a td/b td/c td/sub/d td/e
 rm -r td; tar xf t.tar td/sub/d; ls -R td; tar xf t.tar nonexist; tar cf t2.tar nonexist; echo $?
 tar cbf 4 t3.tar td.orig; tar tvbf 4 t3.tar | wc -l; tar x; tar; echo st $?
