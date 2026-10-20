@@ -10207,7 +10207,11 @@ order (#l("if(buf[0] != 0x464c457f){")). Word 8 is the offset of the section hea
 half of word 12 their number. Each 40-byte section header is read into
 `sh` (#l("read(f, (char *)sh, sizeof sh);", after: "lseek(f, buf[8] + i*40, 0);")) until one of type 2, the symbol table, is found: its offset
 and size go to `sa` and `n`, and `sh[6]` names the section that holds
-its strings, whose offset is kept in `st` (#l("st = sh[4];")).
+its strings, whose offset and size are kept in `st` and `ss` (#l("st = sh[4];"), #l("ss = sh[5];")). The
+string section is then read whole into `strs`
+(#l("if(n == 0 || (strs = malloc(ss + 1)) == NULL) {")--#l("strs[read(f, strs, ss) > 0 ? ss : 0] = 0;")). The kernel's is under 3 KB, and reading
+each name with a seek and a read of its own made `nlist` most of the
+time `ps` takes.
 
 #lines-to("while(n){", lead: true)
 
@@ -10215,12 +10219,12 @@ The symbols are read `SPACE` at a time. Each is 16 bytes: the offset of
 its name in the string section, then its value. ELF names lack the
 leading underscore which v7's compiler gave every external name, and
 which the callers' tables keep (`_proc`, `_swapdev`), so the first eight
-characters of the name are read after an underscore (#l("c[0] = '_';")--#l("c[read(f, c+1, 8) + 1] = 0;")) and
+characters of the name are copied after an underscore (#l("c[0] = '_';")--#l("c[9] = 0;")) and
 compared with `strncmp`, as v7 compared eight characters. Every match is
 given the type `N_EXT|N_DATA`, since the callers use only the value.
 
-The symbols are read with a separate `lseek` each time (#l("lseek(f, sa, 0);")), because the
-reads of names in between move the file offset.
+The symbols are read with a separate `lseek` each time (#l("lseek(f, sa, 0);")), since the
+read of the strings has moved the file offset.
 
 #lines-to(none)
 

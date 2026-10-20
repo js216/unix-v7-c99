@@ -9,8 +9,8 @@ nlist(char *name, struct nlist *list)
 	register unsigned *q;
 	int f, m, i;
 	long sa;
-	unsigned n, buf[13], sh[10], space[4*SPACE], st;
-	char c[10];
+	unsigned n, buf[13], sh[10], space[4*SPACE], st, ss;
+	char c[10], *strs;
 
 	for(p = list; p->n_name[0]; p++) {
 		p->n_type = 0;
@@ -24,7 +24,7 @@ nlist(char *name, struct nlist *list)
 		close(f);
 		return(-1);
 	}
-	n = st = 0;
+	n = st = ss = 0;
 	for(i = buf[12]&0xffff; --i >= 0 && n == 0; ) {
 		lseek(f, buf[8] + i*40, 0);
 		read(f, (char *)sh, sizeof sh);
@@ -34,8 +34,15 @@ nlist(char *name, struct nlist *list)
 			lseek(f, buf[8] + sh[6]*40, 0);
 			read(f, (char *)sh, sizeof sh);
 			st = sh[4];
+			ss = sh[5];
 		}
 	}
+	if(n == 0 || (strs = malloc(ss + 1)) == NULL) {
+		close(f);
+		return(n == 0 ? 0 : -1);
+	}
+	lseek(f, st, 0);
+	strs[read(f, strs, ss) > 0 ? ss : 0] = 0;
 
 	while(n){
 		m = sizeof space;
@@ -47,8 +54,10 @@ nlist(char *name, struct nlist *list)
 		sa += m;
 		for(q = space; (m -= 16) >= 0; q += 4) {
 			c[0] = '_';
-			lseek(f, st + q[0], 0);
-			c[read(f, c+1, 8) + 1] = 0;
+			c[1] = 0;
+			if(q[0] < ss)
+				strncpy(c+1, strs + q[0], 8);
+			c[9] = 0;
 			for(p = list; p->n_name[0]; p++)
 				if(strncmp(p->n_name, c, 8) == 0) {
 					p->n_value = q[1];
@@ -56,6 +65,7 @@ nlist(char *name, struct nlist *list)
 				}
 		}
 	}
+	free(strs);
 	close(f);
 	return(0);
 }
