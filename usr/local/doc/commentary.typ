@@ -101,13 +101,12 @@ decays (#l("a = pp->p_cpu*SCHMAG + pp->p_nice - NZERO;")).
 #lines-to("/*")
 
 On the PDP-11 `clock` was entered from the assembler routine `call`, and
-its parameters were the words which the hardware and `call` had left on
-the stack: the device number, the stack pointer, `r1`, the new PS, `r0`,
-and the `pc` and `ps` of the interrupted program. Only the last two were
+its parameters were the device number, the stack pointer, `r1`, the new
+PS, `r0`, and the `pc` and `ps` of the interrupted program, words which
+the hardware and `call` had left on the stack. Only the last two were
 used. The caller is now `irq` (#f("machdep.c")), an ordinary C
-procedure, which passes every handler in `intrtab` (#f("conf.h")) just
-those two: the interrupted `pc`, and
-for `ps` the interrupted program's status register, whose mode field
+procedure, which passes every handler in `intrtab` (#f("conf.h")) only the interrupted
+`pc` and, for `ps`, the interrupted program's status register, whose mode field
 `USERMODE` tests (#f("param.h")).
 
 Sixty times a second (`HZ`), `clock` runs with interrupts masked, and must
@@ -256,14 +255,13 @@ profiling off.
 #lines-to(none)
 #source("/usr/sys/sys/sys1.c")
 
-The file #f("sys1.c") holds the system calls which make, change, and end
-processes: `exec` and `exece`, with their helpers `getxfile` and
-`setregs`; `exit` (through `rexit`); `wait`; `fork`; and `sbreak`, which
-changes the size of the data area. This is the file in which the port's
-departures from the PDP-11 are most visible to user programs, because
-it defines the shape of a process image: the format of the executable
-file, the layout of the arguments on the stack, and the convention by
-which `fork` tells parent from child.
+The file #f("sys1.c") holds the system calls which make, change, and end processes. They are
+`exec` and `exece`, with their helpers `getxfile` and `setregs`, `exit`
+(through `rexit`), `wait`, `fork`, and `sbreak`, which changes the size
+of the data area. This is the file in which the port's
+departures from the PDP-11 are most visible to user programs, because it defines the format of the executable file, the layout of the
+arguments on the stack, and the convention by which `fork` tells parent
+from child.
 
 The helpers `getxfile` and `setregs` are declared (#l("void\tgetxfile(struct inode *ip, int nargc);"), #l("void\tsetregs(void);")) because they are used
 before they are defined (#f("prf.c")).
@@ -294,10 +292,10 @@ A fault in reading either list gives `EFAULT`, and too much gives
 room for the arguments, `exec` fails with `ENOMEM` (#l("if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")--#l("}", after: "if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")), where v7
 panicked. Nothing has been changed yet.
 
-The new stack's size is passed to `getxfile` (#l("getxfile(ip, nc+(na+3)*NBPW);")): the strings,
-rounded up to a word, and the `na+3` words of the pointer vector built
-below them, the argument count, a pointer to each string, and two
-zeros. In v7 only the strings were passed. When the vector did not fit in the
+The new stack's size, passed to `getxfile` (#l("getxfile(ip, nc+(na+3)*NBPW);")), takes in the
+strings, rounded up to a word, and the `na+3` words of the pointer
+vector built below them, which hold the argument count, a pointer to
+each string, and two zeros. In v7 only the strings were passed. When the vector did not fit in the
 `SSIZE` pages left over, the `suword`s below the stack failed unseen,
 and the program began with an argument count of zero. With 4-byte
 pointers and a 4 KB `SSIZE`, some 1,360 short arguments would have
@@ -561,9 +559,9 @@ mapped until then.
 #lines-to(none)
 #source("/usr/sys/sys/sys4.c")
 
-The file #f("sys4.c") is a collection of small system calls: those concerned
-with time, user and group identity, signals, and a few file operations
-which fitted nowhere else. Apart from the dressing of C99 it is v7's,
+The file #f("sys4.c") collects small system calls concerned with time, user and group
+identity, and signals, and a few file operations which fitted nowhere
+else. Apart from the dressing of C99 it is v7's,
 but for the declaration of `chdirec` (#l("void\tchdirec(struct inode **ipp);")), which `chdir` calls before
 its definition, and one fix in `utime`.
 
@@ -655,9 +653,8 @@ super-user may give a file away (#l("if (!suser() || (ip = owner()) == NULL)")).
 
 #lines-to("void", lead: true, after: "ip->i_gid = uap->gid;")
 
-The system call behind `signal` is `ssig`. It sets the disposition of
-signal `a`: 0 for the default action, 1 to ignore it, or the address of
-a handler, and returns the previous disposition. `SIGKIL` cannot be
+The system call behind `signal` is `ssig`. It sets the disposition of signal `a`, which is 0 for the default
+action, 1 to ignore it, or the address of a handler, and returns the previous disposition. `SIGKIL` cannot be
 changed. Any instance of the signal already pending is discarded (#l("u.u_procp->p_sig &= ~(1<<(a-1));")).
 
 A call of `kill` sends a signal to a process, or (pid 0) to every process in the
@@ -694,7 +691,7 @@ next reference to the file, by any process, slept for good. The
 #lines-to(none)
 #source("/usr/sys/h/timeb.h")
 
-The structure filled in by `ftime` (#f("sys4.c")): the time in seconds,
+The structure filled in by `ftime` (#f("sys4.c")) holds the time in seconds,
 the milliseconds within the second, the local time zone in minutes west
 of Greenwich, and a flag saying whether daylight saving time is
 observed.
@@ -720,10 +717,10 @@ receiver until it next passes through `trap` or `user_trap_handler`
 so, calls `psig` to take the action. A process thus always acts on a
 signal itself, and only on its way back to user mode.
 
-The action is one of three, chosen by `u.u_signal[n]` (#f("user.h")):
-0, the default, which for most signals is to exit, sometimes with a core
-image; 1, to ignore the signal; or otherwise the address of a user
-procedure, the handler, which `sendsig` (#f("machdep.c")) arranges to be
+The action, chosen by `u.u_signal[n]` (#f("user.h")), is one of three.
+A 0 is the default, which for most signals is to exit, sometimes with
+a core image. A 1 ignores the signal. Any other value is the address of
+a user procedure, the handler, which `sendsig` (#f("machdep.c")) arranges to be
 called as if by an interrupt.
 
 The routines `core` and `procxmt` are declared (#l("int\tcore(void), procxmt(void);")) since they are called before
@@ -908,9 +905,9 @@ process is the one being traced.
 #lines-to("/* write user D */", lead: true)
 
 Request 5 writes a word of data. Request 6 writes a word of the
-per-process area, but only in three places: the floating point save
-area, now 32 registers long (#l("if (p >= (int *)&u.u_fps &&")), a saved register named by `regloc`, or
-the saved status register.
+per-process area, but only in the floating point save area, now 32 registers long
+(#l("if (p >= (int *)&u.u_fps &&")), in a saved register named by `regloc`, or in the saved
+status register.
 
 The `&0377` (#l("if (p == &u.u_ar0[regloc[i]&0377])")) is new. In v7 the values of `regloc` were negative,
 and the PDP-11's signed `char` gave the right index. On the ARM they are
@@ -1217,10 +1214,9 @@ searched the table. The search finds nothing for an inode without
 #lines-to(none)
 #source("/usr/sys/h/buf.h")
 
-Each
-`buf` is a header which describes
-a block transfer: the device and block number, the core address, and the
-byte count, and the state of the operation in `b_flags`. The data itself
+Each `buf` is a header which describes a block transfer by its device
+and block number, its core address, and its byte count, with the state
+of the operation in `b_flags`. The data itself
 lies elsewhere: for an entry of the array `buf`, which forms the buffer
 cache, in the rows of `buffers` (#f("qemu/c.c")), to which `binit`
 (#f("main.c")) points `b_addr`. For the headers used by `swap` and `physio`
@@ -1403,9 +1399,8 @@ which use them, at the sizes of #f("param.h"). In v7 this file also defined
 carries neither the multiplexor (`mx1.c`, `mx2.c`) nor its stub
 `fakemx.c`, and the definition is gone.
 
-The remaining tables were defined elsewhere in v7: the buffers, the three maps,
-and the mount table in `main.c`, the callouts in `callo.h`, and the
-character blocks in `prim.c`. The port defines them here too (#l("int\tbuffers[NBUF+1][(BSIZE+BSLOP+63)/64*16];")--#l("struct\tcblock\tcfree[NCLIST];")),
+In v7, `main.c` defined the buffers, the three maps, and the mount
+table, `callo.h` the callouts, and `prim.c` the character blocks. The port defines them here too (#l("int\tbuffers[NBUF+1][(BSIZE+BSLOP+63)/64*16];")--#l("struct\tcblock\tcfree[NCLIST];")),
 so that every large table is in `c.o`, which the MP135 machine's linker
 script places in DDR, beyond the small SYSRAM in which its kernel runs
 (#f("mp135/unix.ld")). The sizes are the same on both machines, and
@@ -1428,8 +1423,7 @@ of the ARM generic interrupt controller. The attributes of a user page,
 (#f("seg.h")).
 
 The table `board_map` (#l("struct\tmemregion\tboard_map[] =")) lists the regions which the kernel maps in 2 MB blocks
-(`machine_init`, #f("machdep.c")), each with its kernel address, its
-physical bounds, and its attributes: all 512 MB of memory, at
+(`machine_init`, #f("machdep.c")), each with its kernel address, its physical bounds, and its attributes. They are all 512 MB of memory, at
 0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
 machine's devices (the interrupt controller, the UART, and the virtio transports),
 from 0xf0000000, as device memory which may not be executed (@ch-intro).
@@ -1439,14 +1433,12 @@ table (#f("virtio_blk.c")).
 
 #lines-to("extern int\tclkirq, klirq, rkirq;")
 
-The table `intrtab` (#l("struct\tintr\tintrtab[] =")) pairs each configured interrupting device with its
-handler (`struct intr`, #f("conf.h")): the clock, the console, and the
-disk. The numbers are reached through pointers, since the disk driver
+The table `intrtab` (#l("struct\tintr\tintrtab[] =")) pairs each configured interrupting device, the clock, the console, and
+the disk, with its handler (`struct intr`, #f("conf.h")). The numbers are reached through pointers, since the disk driver
 learns its own only when it finds the device.
 
 The three procedures at the end are the glue by which the
-machine-dependent code calls the configured drivers without naming
-them: `cninit` sets up the console early in `machine_init`, `bdinit`
+machine-dependent code calls the configured drivers without naming them. The routine `cninit` sets up the console early in `machine_init`, `bdinit`
 finds the disk before `main` enables the interrupts, and `clock_ddr_init`, which on
 the MP135 machine starts the memory controller (#f("ddr.c")), does
 nothing here, since the QEMU machine's memory needs no initialisation. The routine `putchar`, the
@@ -1474,11 +1466,11 @@ virtual machines rather than for hardware. QEMU provides up to 32 virtio
 transports, each a block of registers 0x200 bytes long, from physical
 address `0x0a000000`, which the kernel maps at 0xf0400000 (#f("qemu/c.c")).
 The driver uses the original ("legacy") form of the
-interface. Requests are passed through a "virtqueue" in the machine's
-memory: a table of descriptors, each giving the address and length of
-a piece of memory; an "available" ring, in which the driver places the
-first descriptor of each new request; and a "used" ring, in which the
-device returns the requests it has finished.
+interface. Requests are passed through a "virtqueue" in the machine's memory. It
+has a table of descriptors, each giving the address and length of a
+piece of memory. The driver places the first descriptor of each new
+request in an "available" ring, and the device returns the requests it
+has finished in a "used" ring.
 
 #lines-to("#define\tRKADDR(off)\t(*(volatile int *)(vbase+(off)))")
 
@@ -1489,8 +1481,7 @@ is deleted. Like v7's addresses in the I/O page, which were kernel
 addresses too, the driver's addresses are written into it.
 `NRKBLK`, the size of a pack (#l("#define\tNRKBLK\tRKADDR(0x100)")), is now the size of the disk, which
 the device gives in 512-byte sectors in the first word of its
-configuration space, at offset `0x100`. The rest of v7's definitions
-are kept, although nothing uses them: `NRK`, the number of drives (#l("#define\tNRK\t4")),
+configuration space, at offset `0x100`. The rest of v7's definitions, which nothing uses, are kept. They are `NRK`, the number of drives (#l("#define\tNRK\t4")),
 and the RK11's command and status bits (#l("#define\tRESET\t0")--#l("#define\tCTLRDY\t0200")). `NVQ` (#l("#define\tNVQ\t8")) is the number of
 descriptors in the virtqueue. A request needs three.
 
@@ -1512,8 +1503,7 @@ The declaration of `rkstart` (#l("void rkstart(void);")) is new, needed because 
 calls it before its definition. The buffer `vqbuf` (#l("char\tvqbuf[sizeof(struct vring)+4095];")) is reserved with 4095
 bytes to spare, so that `rkinit` can
 place the virtqueue on a page boundary within it, as the legacy
-interface demands. The header of a request is `vreq`: its type, read or
-write, and the sector, which counts 512-byte units, so that a block
+interface demands. The header of a request, `vreq`, holds its type, read or write, and the sector, which counts 512-byte units, so that a block
 number serves unchanged. The device's report, zero
 for success, is received in `vstatus`. One of each suffices, since the driver has only one
 request in the device at a time.
@@ -1529,9 +1519,8 @@ transport reports type 0.
 
 The device is acknowledged and told that a driver exists, by writing 1
 and then 3 to the status register (#l("RKADDR(0x70) = 1;"), #l("RKADDR(0x70) = 3;")). The
-virtqueue is then described to the device (#l("RKADDR(0x28) = 4096;")--#l("RKADDR(0x40) = vtop((caddr_t)vq) >> 12;")): the page size, the number of
-descriptors, the alignment of the used ring, and the page number of the
-ring itself. The address rounded up to a page is `vq`, and the device needs
+virtqueue is then described to the device (#l("RKADDR(0x28) = 4096;")--#l("RKADDR(0x40) = vtop((caddr_t)vq) >> 12;")) by the page size, the number of descriptors, the alignment of
+the used ring, and the page number of the ring itself. The address rounded up to a page is `vq`, and the device needs
 the physical address, which `vtop` (#f("machdep.c")) supplies. Status 7
 (#l("RKADDR(0x70) = 7;")) says the driver is ready.
 
@@ -1648,9 +1637,8 @@ before its definition and only within this file.
 
 #lines-to("#define\tDISKMON\t1", lead: true)
 
-`DISKMON` compiles in the counters of `io_info`, which `iostat` reads
-from `/dev/kmem`: reads, read-aheads, cache hits, and writes, and in
-`bufcount` how deep in the available list each buffer found in the
+`DISKMON` compiles in the counters of `io_info`, which `iostat` reads from `/dev/kmem`. They count reads, read-aheads,
+cache hits, and writes, and `bufcount` counts how deep in the available list each buffer found in the
 cache was. The counters are unsigned, so that they wrap after a long
 uptime instead of overflowing. As in v7, `bufcount` has `NBUF` entries,
 one for each possible depth, and `iostat` now reads as many, where v7's read
@@ -1907,10 +1895,9 @@ grown to four bytes, and a byte of padding after `f_flag` puts the
 #lines-to(none)
 #source("/usr/sys/h/inode.h")
 
-The in-core inode. The table `inode` holds one entry for each file which
-is in use in any way: open, current or root directory of some process,
-being executed, mounted on, or merely in the middle of a path being
-searched by `namei`. The routine `iget` (#f("iget.c")) finds or fills an entry, and
+The in-core inode. The table `inode` holds one entry for each file which is in use in any way, whether open,
+the current or root directory of some process, being executed, mounted
+on, or merely in the middle of a path being searched by `namei`. The routine `iget` (#f("iget.c")) finds or fills an entry, and
 `iput` releases it. An entry is free when `i_count` is zero, and is
 identified, as the opening comment says, by the pair `i_dev` and
 `i_number`.
@@ -1924,8 +1911,8 @@ and `iupdat` writes the current time straight into the disk copy when
 it next writes the inode out. This is why `stat` (#f("sys3.c")) reads
 the times from the disk.
 
-`NADDR` is 13: ten direct block addresses followed by a single, a
-double, and a triple indirect block, as interpreted by `bmap`
+The 13 addresses of `NADDR` are ten direct block addresses followed by a
+single, a double, and a triple indirect block, as interpreted by `bmap`
 (#f("subr.c")). `NINDEX` and `struct group` belong to v7's multiplexed
 files, which this system does not have (see #f("file.h")).
 
@@ -2125,10 +2112,9 @@ compare with the owner's bits of `IREAD`, `IWRITE`, and `IEXEC`.
 #lines-to(none)
 #source("/usr/sys/sys/fio.c")
 
-The file #f("fio.c") holds the small routines which manage open files and
-permissions: the conversion of a descriptor to a `file`, the allocation
-of descriptors and `file`s, the last close and the first open of a file,
-and the tests of permission. The type of the close routine and two casts are new.
+The file #f("fio.c") holds the small routines which convert a descriptor to a `file`,
+allocate descriptors and `file`s, handle the last close and the first
+open of a file, and test permissions. The type of the close routine and two casts are new.
 
 The routine `getf` checks a descriptor and returns the `file` it refers to, or sets
 `EBADF`. Each process has `NOFILE` descriptors, the slots of the array
@@ -2416,7 +2402,7 @@ routines below do the same.
 
 #lines-to("void", lead: true, after: "nulldev(dev_t dev, int flag)")
 
-The other kinds of slot get new routines of their own: `nostrat` for a
+The other kinds of slot get new routines of their own, `nostrat` for a
 block driver's strategy routine, `nordwr` for a character driver's read
 and write, `noioctl` for its `ioctl`, `nolioctl` for a line discipline's
 `ioctl`, and `nulltty` for the routines which take only a `tty`, such as
@@ -2721,13 +2707,12 @@ declaration, so they agree on its layout, which is not the PDP-11's:
 #lines-to(none)
 #source("/usr/sys/sys/iget.c")
 
-The file #f("iget.c") manages the in-core inode table (#f("inode.h")): `iget`
-brings an inode into it, `iput` lets it go, and `iupdat` writes it back.
+The file #f("iget.c") manages the in-core inode table (#f("inode.h")). The routine `iget` brings an inode
+into it, `iput` lets it go, and `iupdat` writes it back.
 The routine `itrunc` frees a file's blocks, and `maknode` and `wdir` create a file
-and its directory entry. The file is v7's apart from the C99 dressing
-and two real changes: the release of an entry whose inode could not be
-read, in `iget`, and the order in which a block address is packed into
-three bytes, in `iexpand` and `iupdat`.
+and its directory entry. Two changes are real. The routine `iget` releases an entry whose inode
+could not be read, and `iexpand` and `iupdat` pack a block address into
+three bytes in a new order.
 
 The declarations (#l("void\tiexpand(struct inode *ip, struct dinode *dp),"), #l("tloop(dev_t dev, daddr_t bn, int f1, int f2);")) are new: `iexpand` and `tloop` are used before
 their definitions, and only here.
@@ -3296,8 +3281,8 @@ The table `partab` has one entry for each of
 the 128 ASCII characters, and each entry carries two pieces of
 information. The top bit, `0200`, is the bit which gives the character
 even parity. The low bits classify the character for `ttyoutput`
-(#f("tty.c")), which computes the column and the delay after it from the
-class: 0 for a printing character, 1 for one which does not move the
+(#f("tty.c")), which computes the column and the delay after it from the class. The
+class is 0 for a printing character, 1 for one which does not move the
 carriage, 2 for backspace, 3 for newline, 4 for tab, 5 for vertical
 motion (form feed), and 6 for carriage return. Vertical tab (013) is
 classed as non-printing.
@@ -3330,8 +3315,8 @@ defined by the configuration, at the size `NCLIST` which it gives
 #lines-to("/*", lead: true, after: "};")
 
 The special characters which v7 made settable through
-`TIOCSETC` are held in `struct tc`: interrupt, quit, the stop and start characters for output,
-end of file, and an extra input delimiter. The user's view of the same
+`TIOCSETC` are interrupt, quit, the stop and start characters for output, end of
+file, and an extra input delimiter, held in `struct tc`. The user's view of the same
 six bytes is `struct tchars` in `sgtty.h`. The drivers named in the
 comment are v7's. In this system the only one is the console, whose
 drivers (#f("pl011.c"), #f("otg.c")) still use `kl11` as the
@@ -3339,14 +3324,12 @@ name of the `tty` array.
 
 #lines-to("struct tty")
 
-There is one `tty` for each terminal line. It contains the three
-queues: characters as they arrive from the device (`t_rawq`), lines
-after erase and kill processing (`t_canq`), and characters waiting to be
-sent (`t_outq`). The driver's routine to start output, which
+There is one `tty` for each terminal line. It contains three queues, of characters as they arrive from the device
+(`t_rawq`), of lines after erase and kill processing (`t_canq`), and of
+characters waiting to be sent (`t_outq`). The driver's routine to start output, which
 `ttstart` (#f("tty.c")) calls, is `t_oproc`.
 
-Several fields serve devices which this system lacks: `t_chan` belonged
-to the multiplexed files and is always `NULL`, and `t_iproc`, `t_linep`,
+Several fields serve devices which this system lacks. The field `t_chan` belonged to the multiplexed files and is always `NULL`, and `t_iproc`, `t_linep`,
 and `t_addr` are not used (v7's `kl.c` kept the device's address in
 `t_addr`, but the console's registers are at a fixed address). The union `t_un` holds
 the special characters or, when the state bit `CNTLQ` is set, a fourth
@@ -3434,15 +3417,13 @@ The hardware is an ARM PrimeCell PL011 UART. Where the KL11 had four
 registers on the UNIBUS (receiver status and data, transmitter status
 and data), the PL011 has a single data register `UARTDR` for both
 directions, a flag register `UARTFR` which tells whether the
-transmitter has room, and a group of interrupt registers: a mask
-(`UARTIMSC`), the masked status (`UARTMIS`), and a clear register
-(`UARTICR`). The KL11 held one character in each direction. The PL011
+transmitter has room, and three interrupt registers, the mask (`UARTIMSC`), the masked status
+(`UARTMIS`), and the clear register (`UARTICR`). The KL11 held one character in each direction. The PL011
 has a receive and a transmit buffer ("FIFO") of 16 or more characters
 each, disabled after reset, and the driver enables them (#l("UARTLCRH = 0160;")). Then the
 UART goes on taking in characters while the processor is busy
-elsewhere, with interrupts masked or in another interrupt, and the
-driver moves several characters at each interrupt: what typing ahead at
-speed, or a paste into the console, needs.
+elsewhere, with interrupts masked or in another interrupt, and the driver moves several characters at each interrupt, as typing
+ahead at speed, or a paste into the console, needs.
 
 #lines-to("/* base address */")
 
@@ -3515,9 +3496,8 @@ read.
 The interrupt, quit, stop, and start characters are never held:
 `ttyhold` hands them to `ttyinput` at once, and an interrupt or a quit
 discards `t_holdq` along with the other queues (`flushtty`), as it
-discards what was typed ahead in v7. So does every other flush: a
-change of modes by `stty`, which `getpass` also makes, and the last
-close at logout, so that nothing typed ahead is left for the next
+discards what was typed ahead in v7. So does every other flush, such as a change of modes by `stty`, which
+`getpass` also makes, or the last close at logout, so that nothing typed ahead is left for the next
 reader. So a DEL typed behind a held paste stops a program
 which is not reading its terminal, such as one in a loop, at once. Only
 behind more than `t_holdq` can take does it wait, in the FIFO, for the
@@ -3637,8 +3617,7 @@ The file #f("tty.c") holds the code common to all terminals: what a driver such
 as #f("pl011.c") does not need to know about. Under it lie the device
 routines, which move single characters to and from the hardware. Above
 it, the `read`, `write`, and `ioctl` system calls. Between them it
-implements v7's one line discipline, discipline 0 of `linesw`
-(#f("qemu/c.c")): erase and kill processing, echoing, the interrupt,
+implements v7's one line discipline, discipline 0 of `linesw` (#f("qemu/c.c")). It does erase and kill processing, echoing, the interrupt,
 quit, stop, and start characters, the expansion of tabs, the mapping of
 newline to carriage return and line feed, the conventions for upper
 case terminals, and the delays which slow terminals need.
@@ -3667,8 +3646,7 @@ are defined, and only in this file.
 #lines-to("/*", lead: true, after: "ttyblock(struct tty *tp), ttyoutput(int c, struct tty *tp);")
 
 For a character preceded by a backslash, `canon` uses `maptab`.
-A non-zero entry is the character which the pair stands for on an upper
-case terminal: `\(` stands for `{`, `\!` for `|`, and `\a` (typed as
+A non-zero entry is the character which the pair stands for on an upper case terminal. Thus `\(` stands for `{`, `\!` for `|`, and `\a` (typed as
 `\A`, since such a terminal's input is folded to lower case) for a real
 capital. The routine `canon` makes an escaped erase or kill character, whatever it has been
 set to, stand for itself (#l("if (c==tp->t_erase || c==tp->t_kill)"), #l("mc = c;")).
@@ -3833,8 +3811,8 @@ not when a held character finally reaches `ttyinput`, keeps the order
 in which the user typed: a held character typed before a stop must not
 resume output after it. Then, while `TTHOLD` (#f("tty.h")) is true, or
 `t_holdq` already holds characters, which must keep their order, the
-character is put on `t_holdq`, unless it is one of the four which act
-at once: interrupt, quit, stop, and start, in any mode but `RAW`, where
+character is put on `t_holdq`, unless it is one of the four which act at once, interrupt, quit, stop,
+or start, in any mode but `RAW`, where
 no character is special. Those go to `ttyinput` straight away, so that
 a terminal held behind a paste can still be interrupted or its output
 stopped. An interrupt or a quit empties `t_holdq` too, through
@@ -3947,9 +3925,8 @@ Each `map` line names a kernel address, a range of physical addresses
 which the kernel maps there in blocks of 2 MB, and the attributes of the
 block entries, copied into #f("qemu/c.c") as written. `BLK_KERN` and
 `BLK_DEV` are defined in #f("seg.h"). The first line covers all 512 MB
-of memory, kernel and core alike. The others a block each of the
-devices: the interrupt controller, the UART, and the virtio
-transports. The devices which QEMU puts between them are not mapped.
+of memory, kernel and core alike. The others map a block each for the interrupt controller, the UART, and
+the virtio transports. The devices which QEMU puts between them are not mapped.
 
 #lines-to(none)
 #source("/usr/sys/conf/mp135conf")
@@ -3971,9 +3948,8 @@ at 0xc0200000, just above the block of SYSRAM (@ch-intro).
 
 Only this configuration uses the keyword `tables`. It names a second
 region for the linker, by kernel address, physical address, and
-length, into which `mkconf` places the section `.ddrbss`: the table
-`kl3u` reserved in #f("mch.s"), and the tables of the configuration,
-which SYSRAM cannot spare. It takes the
+length, into which `mkconf` places the section `.ddrbss`. It holds the table `kl3u` reserved in
+#f("mch.s") and the tables of the configuration, which SYSRAM cannot spare. It takes the
 start of DDR, and core, which `machine_init` (#f("machdep.c")) begins at
 the first page after it, the rest of it, and `core` gives its physical end.
 
@@ -3992,8 +3968,7 @@ lines. The buffers of the buffer cache occupy whole cache lines of
 their own (#f("main.c")).
 
 The other maps are a 2 MB block each of the peripherals which the
-drivers use, at successive kernel addresses from `0xf0000000`: the
-reset and clock controller with the power controller and the GPIO ports
+drivers use, at successive kernel addresses from `0xf0000000`. They are the reset and clock controller with the power controller and the GPIO ports
 (#l("map f0000000 50000000 50200000 BLK_DEV")); the SD card controller (#l("map f0200000 58000000 58200000 BLK_DEV")); the DDR controller with its PHY
 (#l("map f0400000 5a000000 5a200000 BLK_DEV")); the interrupt controller (#l("map f0600000 a0000000 a0200000 BLK_DEV")), which on this chip lies apart from
 them, and whose two parts the `gic` line (#l("gic f0621000 f0622000")) names within that block;
@@ -4010,13 +3985,13 @@ tables in it are touched.
 
 The program `mkconf` configures a kernel. It reads a
 description of the installation (#f("qemuconf"), #f("mp135conf")) and
-writes the files which differ from one installation to another. In v7
-`mkconf` wrote three: `c.c`, the device switches and tables; `l.s`, the
-PDP-11's interrupt vectors and the assembler stubs which led from each
-vector to its C handler; and `mch0.s`, a few assembler definitions
-which chose the tape on which the system would dump core after a crash.
-This one writes two: `c.c`, as before (#f("qemu/c.c")), and a linker
-script, `unix.ld` (#f("qemu/unix.ld")).
+writes the files which differ from one installation to another. In v7 `mkconf` wrote three files. The file `c.c` held the device
+switches and tables, `l.s` the PDP-11's interrupt vectors and the
+assembler stubs which led from each vector to its C handler, and
+`mch0.s` a few assembler definitions which chose the tape on which the
+system would dump core after a crash.
+This one writes `c.c`, as before (#f("qemu/c.c")), and a linker script,
+`unix.ld` (#f("qemu/unix.ld")).
 
 The port keeps v7's program and its device table, and changes it in
 four ways. The pass which wrote `l.s` is gone, since the ARM's vectors
@@ -4046,10 +4021,11 @@ valid whatever the configuration.
 
 #lines-to("struct tab")
 
-Each `struct tab` describes one kind of device: its name; the number of
-such devices configured (`count`), negative for those which are always
-present and may not be configured; the address of its interrupt
-vector on the PDP-11 (`address`); its flags; and seven strings. The first three, `codea`,
+Each `struct tab` describes one kind of device by its name, the number
+of such devices configured (`count`), the address of its interrupt
+vector on the PDP-11 (`address`), its flags, and seven strings. The
+count is negative for those which are always present and may not be
+configured. The first three, `codea`,
 `codeb`, and `codec`, are PDP-11 assembler, the vector and the stubs for
 `l.s`, and are no longer used, while `coded` and `codee` are the device's
 entries in `bdevsw` and `cdevsw`, and `codef` and `codeg` any
@@ -4123,16 +4099,14 @@ in `l_rend`. The row for the packet driver `pk` (`strk`), which a
 `pack` line would add, gets braces and zeros for the three slots v7
 omitted. Its declarations (`stri`) are v7's.
 
-The new array `strg3` defines the tables which v7 defined elsewhere, at
-the sizes of its `param.h`: the buffers, the maps, the mount table, the
-callouts, and the character blocks (#f("qemu/c.c")). The buffers have
+The new array `strg3` defines the tables which v7 defined elsewhere, at the sizes of its `param.h`, namely the buffers, the maps, the mount
+table, the callouts, and the character blocks (#f("qemu/c.c")). The buffers have
 one row more than `NBUF`, of a whole number of 64-byte cache lines,
 for `binit` to align them (#f("main.c")).
 
 #lines-to("int\tpack;", lead: true)
 
-The variables of v7 come first, followed by new ones (#l("int\tddr;")--#l("int\tnmap;")) which hold the
-description of the machine: whether DDR must be started (`ddr`); the kernel address,
+The variables of v7 come first, followed by new ones (#l("int\tddr;")--#l("int\tnmap;")) which hold the description of the machine. They give whether DDR must be started (`ddr`); the kernel address,
 physical origin, and length of the kernel's memory (`ramv`, `ramb`,
 `ramn`) and of the region for its tables (`tabv`, `tabb`, `tabn`); the
 top of core (`coret`); the addresses of the interrupt
@@ -4203,7 +4177,7 @@ the configuration, so that it may name `BLK_KERN` and `BLK_DEV`; and
 console's and the disk's interrupt numbers with their handlers.
 
 Last come three small procedures by which the machine-dependent code
-starts the configured drivers without naming them: `cninit`, `bdinit`,
+starts the configured drivers without naming them, `cninit`, `bdinit`,
 and `clock_ddr_init`, which calls `ddrinit` only if the configuration
 said `ddr`. The names they call, like those in `intrtab`, are fixed:
 every machine's drivers use v7's `kl` and `rk` names, and only one
@@ -4277,9 +4251,10 @@ its end, physical address `0xe0000000` (#l("unsigned int\tcorebase, coreoff, cor
 is the Cortex-A7's own, at physical `0xa0021000` and `0xa0022000`, which
 the kernel reaches at `0xf0621000` and `0xf0622000` (#l("unsigned int\tgicdbase = 0xf0621000, giccbase = 0xf0622000;")).
 
-The table `board_map` maps nine regions: the 2 MB block which contains SYSRAM,
-cached, for the kernel, at 0xc0000000; DDR, cached likewise, just above
-it; and seven blocks of peripherals, from 0xf0000000 (@ch-intro).
+The table `board_map` maps nine regions. The kernel's 2 MB block, which
+contains SYSRAM, is at 0xc0000000, cached, and DDR is just above it,
+cached likewise. Seven blocks of peripherals follow from 0xf0000000
+(@ch-intro).
 
 #lines-to("extern int\tclkirq, klirq, rkirq;", lead: true)
 
@@ -4433,8 +4408,7 @@ the endpoint is still enabled, `carrier` sends nothing.
 The routine `dosetup` answers a control request. Its first byte gives the type, of
 which `0x60` selects the class requests (`0x20`) and `0x80` marks a
 request whose data goes to the host; its second the request; its third
-and fourth a value. The class requests are those of the ACM model:
-`0x20`, set line coding, whose 7 bytes follow from the host and are
+and fourth a value. The class requests are those of the ACM model. They are `0x20`, set line coding, whose 7 bytes follow from the host and are
 stored by `usbpoll`; `0x21`, get line coding; `0x22`, set the control
 line state, whose bit 0 is DTR, after which the line state is sent if
 the device is configured; and `0x23`, send break, which is accepted and
@@ -4590,9 +4564,7 @@ to send to, and the character is kept only in `msgbuf`.
 #source("/usr/sys/dev/sd.c")
 
 The disk of the MP135 machine is its SD card, and this is its driver.
-Like #f("virtio_blk.c") on the QEMU machine, it replaces v7's `rk.c` and
-takes over its names, its configuration entry, and its shape: a queue
-headed in `rktab`, `rkstrategy` to add a request, `rkstart` to give the
+Like #f("virtio_blk.c") on the QEMU machine, it replaces v7's `rk.c` and takes over its names, its configuration entry, and its shape, with a queue headed in `rktab`, `rkstrategy` to add a request, `rkstart` to give the
 head of the queue to the device, `rkintr` to finish it and start the
 next, and `rkread` and `rkwrite` for the raw disk. It is closer to
 `rk.c` than the virtio driver, because the device is closer to an RK11:
@@ -4617,25 +4589,23 @@ pins (port A is 0), all by their kernel addresses (#f("mp135conf")).
 #f("virtio_blk.c"); a few of the names are given new values. `WCOM` and
 `RCOM` (#l("#define\tWCOM\t25"), #l("#define\tRCOM\t18")) are the commands which write and read many blocks, 25
 and 18, which go on until the card is told to stop. `GO` holds the bits
-of the command register which start a command with data: `CPSMEN`
-(`0x1000`), which enables the command path; a short response
-(`0x100`); and `CMDTRANS` (`0x40`), which starts the data path with
-the command. `STOP` starts command 12, which stops the card, with a
+of the command register which start a command with data. They are `CPSMEN` (`0x1000`), which
+enables the command path, a short response (`0x100`), and `CMDTRANS`
+(`0x40`), which starts the data path with the command. `STOP` starts command 12, which stops the card, with a
 short response and `CMDSTOP` (`0x80`), which tells the data path that
-it ends the transfer. `IENABLE` (#l("#define\tIENABLE\t0x800013f")) is the interrupt mask: command
-and data CRC failures, command and data timeouts, transmit underrun,
-and receive overrun (`0x3f`); the end of the data (`0x100`); and an
-IDMA transfer error (`0x8000000`). `ERR` (#l("#define\tERR\t0x800003f")) is the same set without
+it ends the transfer. `IENABLE` (#l("#define\tIENABLE\t0x800013f")) is the interrupt mask. It enables command and data CRC failures, command
+and data timeouts, transmit underrun, and receive overrun (`0x3f`), the
+end of the data (`0x100`), and an IDMA transfer error (`0x8000000`). `ERR` (#l("#define\tERR\t0x800003f")) is the same set without
 the end of data.
 
-The register offsets (#l("#define\tPOWER\t0x00")--#l("#define\tIDMABASER\t0x58")) follow: power, clock, argument, command,
+The register offsets (#l("#define\tPOWER\t0x00")--#l("#define\tIDMABASER\t0x58")) follow, for power, clock, argument, command,
 the first of four response registers, the receive FIFO, the data
 timer, length, and control, status, interrupt clear, interrupt mask,
 and the IDMA's control and address. In the data control register,
 `BLK512` (#l("#define\tBLK512\t0220")) sets the block size to 2#super[9] bytes and `DTDIR` the
 direction from card to controller. `CLEAR` has a bit for every flag
-that the interrupt clear register clears. Then the status bits:
-response received; end of data; receive FIFO empty; `CMDERR`, a
+that the interrupt clear register clears. Then come the status bits for response received, end of data, receive
+FIFO empty, `CMDERR`, a
 command's CRC failure or timeout; `BUSYD0`, the card holding its first
 data line low while it writes, and `BUSYD0END`, the end of that.
 `WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
@@ -4701,8 +4671,7 @@ shift less 9 gives blocks. The routine `rkstrategy` refuses any block beyond the
 card's end.
 
 Command 7 selects the card, application command 6 sets its bus to four
-lines (argument 2), and the controller follows: four lines, and a
-divider of 2, 16 MHz. The data timeout is set to its largest value, so
+lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz. The data timeout is set to its largest value, so
 that a slow card is waited for. A card may take far longer to finish a
 write than a read.
 
@@ -4824,8 +4793,7 @@ values below are explained in the text.
 #lines-to("static unsigned int ddrc[] = {")
 
 The table `ddrc` is a list of pairs, register offset and value, for the memory
-controller, ended by `0xFFFF`. In turn they set: the type and width of
-the memory (`MSTR`, at offset 0); the mode register access, derating,
+controller, ended by `0xFFFF`. In turn they set the type and width of the memory (`MSTR`, at offset 0); the mode register access, derating,
 power saving, and refresh controls (`0x10`--`0x60`); the parity and
 CRC control (`0xc0`); the impedance
 calibration (`0x180`); the timing of the interface to the PHY, the "DFI"
@@ -4840,7 +4808,7 @@ the reference firmware.
 
 #lines-to("static unsigned int dphy[] = {", lead: true)
 
-The table `dphy` does the same for the PHY: its general configuration, I/O and
+The table `dphy` does the same for the PHY. It sets its general configuration, I/O and
 data lane settings (`0x8`--`0x200`), its timing (`0x18`--`0x3c`), and the
 values of the four DDR3 mode registers, `MR0` to `MR3` (`0x40`--`0x4c`),
 which the PHY writes into the DRAM when it initialises it.
@@ -4849,9 +4817,8 @@ which the PHY writes into the DRAM when it initialises it.
 
 The routine `pgwait` waits for the PHY to finish a piece of work which `PIR` has
 started. The PHY's general status register `PGSR` (`0xc`) reports the
-end in bit 0, or a failure in one of the error bits `0x3e0`: of the
-impedance calibration, of the initialisation of the DRAM, or of the
-training below. Either ends the wait (#l("while (((s = DPHY(0x00C)) & 0x3E1) == 0)"), #l(";", after: "while (((s = DPHY(0x00C)) & 0x3E1) == 0)")). A failure leaves the
+end in bit 0, or a failure of the impedance calibration, of the initialisation of the
+DRAM, or of the training in one of the error bits `0x3e0`. Either ends the wait (#l("while (((s = DPHY(0x00C)) & 0x3E1) == 0)"), #l(";", after: "while (((s = DPHY(0x00C)) & 0x3E1) == 0)")). A failure leaves the
 memory unusable, and the kernel cannot run without it, so the status
 is printed and the system stops with a panic (#l("if (s & 0x3E0) {")--#l("}", after: "panic(\"ddr\");")). The status is
 printed first because `panic` (#f("prf.c")) calls `update`, which the
@@ -5028,10 +4995,9 @@ for the voltages to settle before `ddrinit` starts the memory.
 Every C program begins here. The linker puts `crt0.o` first, ahead of the
 program's own objects and the library, and its `_start` is the entry
 point which the linker writes into the ELF header and `exece`
-(#f("sys1.c")) loads into the saved `pc`. The routine has three jobs: to
-find the arguments and the environment which `exece` left on the stack,
-to call `main` with them, and to pass the value which `main` returns to
-`exit`. It also holds the definition of `environ`, the environment
+(#f("sys1.c")) loads into the saved `pc`. The routine finds the arguments and the environment which `exece` left
+on the stack, calls `main` with them, and passes the value which `main`
+returns to `exit`. It also holds the definition of `environ`, the environment
 which the library shares with every program.
 
 The file is a rewrite of v7's PDP-11 `crt0.s`. Even the names have
