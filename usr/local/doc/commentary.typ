@@ -7836,7 +7836,7 @@ is read up to the closing backquote into a new item. The routine `trim` removes 
 
 #lines-to("BEGIN", after: "END")
 
-The whole string is parsed by `cmd` (#f("sh/cmd.c")) and wrapped in a
+The routine `cmd` parses the whole string (#f("sh/cmd.c")) and wrapped in a
 fork node whose output is a pipe (`FPOU`). As the comment says, the pipe
 is made only after the command has been parsed. A syntax error leaves by
 a jump to the command loop, and in that case no descriptors are left
@@ -7856,8 +7856,7 @@ for the child (`await`, #f("sh/service.c")). The order matters: a pipe
 holds at most `PIPSIZ` bytes (#f("pipe.c")), and a child with more to
 say would block forever if the shell waited for it first. Trailing
 newlines are then removed from the result, and `pop` restores the
-input. The reading end of the pipe was closed by `readc` when it met
-the end of the output (#f("sh/word.c")).
+input. The routine `readc` closed the reading end of the pipe when it met the end of the output (#f("sh/word.c")).
 
 The parentheses at #l("WHILE (d=readc()) DO pushstak(d|quote) OD") are new.
 
@@ -8492,7 +8491,7 @@ command line.
 
 #source("/usr/src/libc/stdio/filbuf.c")
 
-`_filbuf` is called by `getc` (#f("stdio.h")) when the buffer of an
+The macro `getc` calls `_filbuf` (#f("stdio.h")) when the buffer of an
 input stream is empty. It refills the buffer with one `read` and
 returns the first character, or `EOF`.
 
@@ -9292,7 +9291,7 @@ block permanently marked busy.
 larger, for the sake of a type with stricter alignment, and the port
 uses them so. The ARM procedure call standard requires eight-byte
 alignment for a `double` and a `long long`, and code compiled to the
-standard may rely on it, so v7's `int` is replaced by `double` (#l("#define ALIGN double")).
+standard may rely on it, so `double` replaces v7's `int` (#l("#define ALIGN double")).
 
 The arena is measured in units of `union store`, whose size `WORD` is
 that of its largest member: two bytes on the PDP-11, and now eight,
@@ -10460,8 +10459,7 @@ to the precision of a double and the quotients would overflow.
 #source("/usr/src/libm/hypot.c")
 
 The routine `hypot` computes $sqrt(a^2 + b^2)$ without overflowing for large
-arguments, by dividing by the larger first. It is called by `cabs`, the absolute value
-of a complex number.
+arguments, by dividing by the larger first. The routine `cabs`, the absolute value of a complex number, calls it.
 
 #lines-to(none)
 #source("/usr/src/libm/j0.c")
@@ -11110,8 +11108,7 @@ the two names. The port allocates what the directory, the `/`, the
 other argument, and the null need (#l("b1 = *pa1 = malloc(strlen(a1)+strlen(a2)+2);")), the whole of the other
 argument being copied before its base name is moved down. An argument
 `-` names the standard input, which is copied
-to a temporary file, since `diff` reads each file more than once. Its
-name is made by `mktemp` (#l("*pa1 = tempfile = mktemp(tempname);")) in the array `tempname` (#l("char tempname[] = \"/tmp/dXXXXX\";")), which is
+to a temporary file, since `diff` reads each file more than once. The routine `mktemp` (#l("*pa1 = tempfile = mktemp(tempname);")) makes its name in the array `tempname` (#l("char tempname[] = \"/tmp/dXXXXX\";")), which is
 new: v7 passed the string constant, which is now in read-only text,
 where `mktemp` cannot write.
 
@@ -12128,8 +12125,7 @@ a word with `[`, `?`, or `*` hands the command to `/etc/glob`, which v7
 did not ship either, so such a command fails here as there. The command
 is tried as given, in `/bin`, and in `/usr/bin`, the name being built
 in a buffer allocated to its length (#l("if((linep = malloc(strlen((char *)t[DCOM])+10)) == 0)")), and v7 built it in the line
-buffer. A file which is not an executable is run by `/bin/osh` itself,
-as a script (#l("t[DSPR] = (int)\"/bin/osh\";")), and v7 named `/usr/bin/osh`, which did not exist.
+buffer. The shell `/bin/osh` itself runs a file which is not an executable, as a script (#l("t[DSPR] = (int)\"/bin/osh\";")), and v7 named `/usr/bin/osh`, which did not exist.
 
 #lines-to("void", lead: true, after: "return;")
 
@@ -12274,8 +12270,7 @@ The game `backgammon` plays the game against the user, who plays red. The
 program chooses its moves by generating all those the dice allow
 (`movegen`), scoring each with a weighted evaluation of the position
 (`strategy`, `eval`), and taking the best, at one of three levels of
-skill. It keeps its own random-number generator, seeded from the time, and
-`srand` is renamed by the preprocessor (#l("#define srand bg_srand")), since the library's has
+skill. It keeps its own random-number generator, seeded from the time, and the preprocessor renames `srand` (#l("#define srand bg_srand")), since the library's has
 another type.
 
 The moves typed are read into an array that now has room for the end
@@ -12549,8 +12544,7 @@ the input.
 
 A file is now checked by `fstat` on the descriptor just opened (#l("if(fstat(openf[n-1],&buf)>=0) {")), and
 v7 called `stat` on the name, so that a file which existed but could not
-be opened passed the check and kept $-1$ as its descriptor. The
-function which writes messages is renamed by the preprocessor (#l("#define\tputs\ttee_puts")),
+be opened passed the check and kept $-1$ as its descriptor. The preprocessor renames the function which writes messages (#l("#define\tputs\ttee_puts")),
 since `<stdio.h>` declares a `puts` of its own.
 
 #lines-to(none)
@@ -13381,8 +13375,7 @@ reads `troff`'s output for the typesetter, a stream of escapes, size
 and font changes, and character codes, and draws each character at
 its place, in the size and font asked for as nearly as the terminal
 can. Pages are shown one at a time, waiting at the end of each as `tk`
-does. The program's own `atoi`, which reads a number from its input, is
-renamed by the preprocessor (#l("#define\tatoi\ttcatoi")), and `oput` loses the trailing `else`
+does. The program's own `atoi`, which reads a number from its input, is renamed with the preprocessor (#l("#define\tatoi\ttcatoi")), and `oput` loses the trailing `else`
 which made it a statement that swallowed the next `else` (#l("#define\toput(c) if (pgskip==0) putchar(c)")).
 
 The reply typed at the end of a page now stops at the end of its
@@ -15038,8 +15031,7 @@ The fragment #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` a
 the two `mklib` scripts, and follows their plan. The files of `sys` are archived as `LIB1`, those of `dev` as `LIB2`, and a kernel is linked
 from the machine-language files and the configuration followed by the
 two archives, so that only the procedures which something calls are
-taken from them. As in v7, the objects are made by the compiler with
-`-O` (here `-Os`) and the common `CFLAGS`. The kernel sources need no
+taken from them. The compiler makes the objects with `-Os` and the common `CFLAGS`. The kernel sources need no
 search path, since they name their headers relative to themselves, as
 `"../h/param.h"`.
 
@@ -15195,12 +15187,12 @@ token numbers (`awk.h`), as v7's `yacc -d` wrote `y.tab.h`. The `&:`
 says that one run makes both. The program `proc` is run during the build:
 compiled with the token numbers of `awk.h`, it writes `proctab.c`, the table of the
 procedures which evaluate each kind of node. Being run here,
-it is compiled by the host compiler, without v7's headers, with
+the host compiler compiles it, without v7's headers, with
 `token.c`, whose table of token names it uses. Both include `awk.h` and
 `awk.def`, and are recompiled when either changes.
 
-The lexical analyser is written by `flex` and edited on its way out by
-`sed`. The scanner generator `flex` marks its `yy_fatal_error` as a function which never
+The program `flex` writes the lexical analyser, and `sed` edits it on its
+way out. The scanner generator `flex` marks its `yy_fatal_error` as a function which never
 returns, but the function ends with a call of `exit`, which v7's headers
 do not declare in that way, and the compiler rejects the combination.
 The attribute is dropped. The generated file includes `<string.h>` and
@@ -15221,8 +15213,7 @@ among them.
 #lines-to(none)
 #source("/usr/sys/conf/qemu/unix.ld")
 
-The linker script #f("qemu/unix.ld") is the one for the QEMU machine's kernel. It is
-written by `mkconf` (#f("mkconf.c")) from the `ram` line of
+The linker script #f("qemu/unix.ld") is the one for the QEMU machine's kernel. The program `mkconf` (#f("mkconf.c")) writes it from the `ram` line of
 #f("qemuconf"), in the pass which in v7 wrote `l.s`, and is used by the
 link in #f("sys.mk").
 
@@ -15284,8 +15275,7 @@ written until `machine_init` has started it.
 #lines-to(none)
 #source("/usr/sys/conf/mp135/unix.ld")
 
-The MP135 machine's linker script, #f("mp135/unix.ld"), is written by `mkconf`
-from #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
+The MP135 machine's linker script, #f("mp135/unix.ld"), comes from `mkconf`, which reads #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
 regions, in the difference between kernel and physical addresses, and
 in where it puts `.ddrbss` and what it puts there, and `u` and `start` are
 defined in the same way.
@@ -15426,7 +15416,7 @@ reader falls far behind, without telling either end.
 #lines-to("static unsigned")
 
 The routine `main` starts the watchdog, initialises the card and USB, and serves
-commands: a line is read by `getln`, and `w` and `r` are refused unless
+commands: the routine `getln` reads a line, and `w` and `r` are refused unless
 the card answered and the request is whole blocks within it.
 
 #lines-to(none)
@@ -15944,7 +15934,7 @@ has one, into `cmp`, which compares it with the expected output
 (#l("if test -f $n.sed")--#l("(cmp - $n.exp 2>&1; cat >/dev/null)`", after: "else\td=`sh $n 2>&1 | tee /tmp/run.out |")). Once `cmp` has found a difference it exits. The `cat` behind
 it then reads the rest of the output, so that a failing case still runs
 to its end and cannot overlap the next. A case passes when `cmp` prints
-nothing (#l("case \"$d\" in")--#l("pass=`expr $pass + 1`;;")). A copy of the output is kept by `tee` in
+nothing (#l("case \"$d\" in")--#l("pass=`expr $pass + 1`;;")). The program `tee` keeps a copy of the output in
 `/tmp/run.out`, and for a failing case the first 20 lines of its
 difference from the expected output are shown
 (#l("diff $n.exp /tmp/run.out | sed 20q")), so that a failure which
@@ -15967,7 +15957,8 @@ frame. They are linked as the commands are, except `proft`, which is
 compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
 not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^)")).
 
-Three small file systems are made by `mkfs` for the tests of the file-system commands. They are `fs.img`, from the prototype `fs.proto`, with a
+The program `mkfs` makes three small file systems for the tests of the
+file-system commands. They are `fs.img`, from the prototype `fs.proto`, with a
 few files of known content (#l("$(TS)/obj/fs.img: $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \\")--#l("$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null")); `deep.img`, a chain of 40
 directories (#l("$(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "for (i = 0; i <= 40; i++) print \"$$\" }' | \\")); and
 `big.img`, holding a copy of the dictionary, which gives `icheck` a file
