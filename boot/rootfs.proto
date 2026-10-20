@@ -347,6 +347,7 @@ d--755 0 0
           regs	---755 0 0 usr/local/test/obj/regs
           rep	---755 0 0 usr/local/test/obj/rep
           roff	---644 0 0 usr/local/test/utils/roff
+          settime	---755 0 0 usr/local/test/obj/settime
           sortin	---644 0 0 usr/local/test/utils/sortin
           spd	---755 0 0 usr/local/test/obj/spd
           stkt	---755 0 0 usr/local/test/obj/stkt

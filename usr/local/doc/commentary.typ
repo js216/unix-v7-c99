@@ -16217,6 +16217,18 @@ of their long lines with it, for the buffer limits they test; `awk`,
 which made them before, took a tenth of a second to start each time.
 
 #lines-to(none)
+#source("/usr/local/test/utils/settime.c")
+
+The utility `settime` sets a file's access and modification times to a
+given number of seconds ago with `utime`. A case uses it to order files
+by time without sleeping between making them, since times count whole
+seconds. It also gives `find -newer` a reference which is certainly
+older than the case's files. The image's own files will not do, since
+`mkfs` stamps them all with one time and the clock starts there at
+boot, so a case run in the first seconds makes files in the same
+second.
+
+#lines-to(none)
 #source("/usr/local/test/utils/fmode.c")
 
 The utility `fmode` prints a file's permission bits in octal, so that a case can
