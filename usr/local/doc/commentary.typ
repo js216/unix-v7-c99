@@ -218,7 +218,7 @@ with 0377 to undo the sign extension of a PDP-11 `char`.
 A call of `timeout` inserts an entry into the callout list. The list
 is walked (#l("while(p1->c_func != 0 && p1->c_time <= t) {")--#l("}", after: "t -= p1->c_time;")), the delay of each earlier entry being subtracted from `t`,
 until the place is found where the remainder is less than the next
-entry's delay. That entry's delay is reduced by `t` (#l("p1->c_time -= t;")), since it
+entry's delay. The next entry's delay loses `t` (#l("p1->c_time -= t;")), since it
 will now be counted after the new one. The tail of the list,
 including its null terminator, is then moved up one place (#l("p2 = p1;")--#l("}", after: "p2--;")) to make room.
 
@@ -1218,8 +1218,7 @@ cache, in the rows of `buffers` (#f("qemu/c.c")), to which `binit`
 (#f("main.c")) points `b_addr`. For the headers used by `swap` and `physio`
 (#f("bio.c")), in the process image being transferred.
 
-Two lists thread the cache. Every buffer is linked by `b_forw` and `b_back` to
-the device with which it is associated, so that `getblk` can find a
+Two lists thread the cache. The fields `b_forw` and `b_back` link every buffer to the device with which it is associated, so that `getblk` can find a
 block by searching one short list, and `av_forw` and `av_back` link the
 buffers which are not busy, in the order in which they were released, so
 that the one least recently used is at the front. The comment (#l("/*", before: "* Each buffer in the pool is usually doubly linked into 2 lists:")--#l("*/", after: "* are in bio.c."))
@@ -1796,9 +1795,8 @@ list, so the search starts again from the head after each one.
 
 The routine `physio` implements the raw devices, transferring directly between the
 device and the user's memory, using a header which belongs to the
-driver, and does as much in one transfer as the user asks for. The
-transfer is described by `u_base`, `u_count`, and `u_offset`, as for
-`read` and `write`.
+driver, and does as much in one transfer as the user asks for. The fields `u_base`, `u_count`, and `u_offset` describe the transfer, as
+for `read` and `write`.
 
 #lines-to("if (base&01 || u.u_count&01 || base>=base+u.u_count ||")
 
@@ -3187,8 +3185,7 @@ character of a block lies at offset 4, never at offset 0), and the block
 containing any character is found by clearing those four bits. No
 block needs to record how full it is.
 
-The pool `cfree` (#l("extern struct\tcblock\tcfree[];")) of `NCLIST` blocks is fixed in size. It is defined
-by the configuration, which sets `NCLIST` (#f("qemu/c.c")), and only
+The pool `cfree` (#l("extern struct\tcblock\tcfree[];")) of `NCLIST` blocks is fixed in size. The configuration defines it and sets `NCLIST` (#f("qemu/c.c")), and only
 declared here. Calls of `ndflush` with an impossible
 count are counted in `cbad` (#l("int\tcbad;")), which nothing reads.
 
@@ -3657,8 +3654,7 @@ The driver's open routine calls `ttyopen`. If the opening process
 belongs to no process group, as a process descended from `init` does
 until it opens a terminal, this terminal becomes its controlling
 terminal, recorded in `u` for #f("sys.c"), and the process joins the
-terminal's group. The group is named by the process id of the first
-process to join it, normally the child which `init` forks for the line
+terminal's group. The process id of the first process to join the group names it, normally the child which `init` forks for the line
 and which opens it before becoming `getty`. And it is to this group that `ttyinput` sends interrupts and quits.
 
 On the last close, `ttyclose` dissolves the group and waits
@@ -4066,8 +4062,7 @@ is now `{0}`.
 #lines-to("char\t*stre[] =", lead: true)
 
 The array `stre` heads `c.c` with its includes, which v7 followed with
-declarations of `nulldev` and `nodev`. Those are in #f("systm.h"), and
-their place is taken by the include of #f("seg.h"), which defines
+declarations of `nulldev` and `nodev`. Those are in #f("systm.h"), and the include of #f("seg.h"), which defines
 `struct memregion` and the block attributes used at the end of
 `c.c`, and by those of #f("map.h"), #f("mount.h"), and #f("callo.h"),
 for the tables which `strg3` (#l("char\tstrg3[] =")) defines.
@@ -4124,8 +4119,7 @@ The symbols `__bss_start` and `__bss_end` tell `low.s` what to clear, and
 `__bss_start` is aligned to a word, since the clearing is done a word at
 a time before the MMU is on, when an unaligned store faults. The section
 `.ddrbss` holds the large tables. It is aligned to 4 KB, which a table
-requires, is not loaded (`NOLOAD`), and is cleared by `machine_init`
-(#f("machdep.c")) once memory is ready. It is placed in the `tables`
+requires, is not loaded (`NOLOAD`), and `machine_init` (#f("machdep.c")) clears it once memory is ready. It is placed in the `tables`
 region if the configuration has one, as on the MP135 machine, and otherwise in
 `RAM`. With a `tables` region it also takes the uninitialised data of
 `c.o`, the tables of the system, which `EXCLUDE_FILE` keeps out of
@@ -4378,9 +4372,8 @@ allows (`setup[6]` and `setup[7]`), and sets `ep0zlp` if the answer is
 shorter than that length: the host then learns the end from a short
 packet, and an answer of an exact number of full packets must be
 followed by an empty one. A call with no data, `ep0in(0, 0)`, sends
-the empty packet which acknowledges a request without data. Each
-answer is followed by `ep0out`, for the host's acknowledgement or the
-next request. A call of `ep0stall` refuses a request in both directions.
+the empty packet which acknowledges a request without data. After each answer `ep0out` readies the endpoint for the host's
+acknowledgement or the next request. A call of `ep0stall` refuses a request in both directions.
 
 To receive one bulk packet, `rxarm` makes endpoint 1 ready.
 
@@ -4836,10 +4829,10 @@ lies in the block of the reset and clock controller and so at
 `0xf000100c`), the PHY could not drive the memory. Retention is turned
 off (#l("if (R(0xF000100C) & 0x1000) {")--#l("}", after: "R(0xF000100C) &= ~0x1000;")).
 
-DDR is guarded by the TrustZone address space controller, `TZC`, at
-physical `0x5c006000`, mapped at `0xf0806000` (#f("mp135conf")), which
-filters every access by its address and by the
-security state of the bus master. Its clock, and that of the memory
+The TrustZone address space controller, `TZC`, at physical `0x5c006000`
+and mapped at `0xf0806000` (#f("mp135conf")), guards DDR. It filters
+every access by its address and by the security state of the bus
+master. Its clock, and that of the memory
 encryption unit beside it, are enabled (#l("RCC(0x780) = 2;")--#l("(void)RCC(0x740);")). Then, with its
 filter disabled, region 0, which covers the whole of DDR, is opened to
 reading and writing by every master (#l("R(0xF0806008) = 0;")--#l("R(0xF0806008) = 1;")). The SD card's DMA
@@ -4891,8 +4884,7 @@ clock, the strobe which accompanies data read from the memory is valid
 training the controller must not issue refresh commands, so, by the
 same handshake, automatic refresh is turned off (#l("DDRC(0x060) |= 1;")) and the
 controller again told that the PHY is not ready. `PIR` is set to
-`0x81` (#l("DPHY(0x004) = 0x81;")), which runs the training, and its completion is awaited
-by `pgwait` (#l("pgwait();", after: "DPHY(0x004) = 0x81;")), as before. Refresh is turned back on and the PHY declared ready
+`0x81` (#l("DPHY(0x004) = 0x81;")), which runs the training, and `pgwait` (#l("pgwait();", after: "DPHY(0x004) = 0x81;")) waits for its completion, as before. Refresh is turned back on and the PHY declared ready
 (#l("DDRC(0x320) &= ~1;", after: "DPHY(0x004) = 0x81;")--#l(";", after: "DDRC(0x060) = 0;")).
 
 The controller's AXI port, through which the processor and the DMA
@@ -5497,8 +5489,7 @@ must name `/dev/console` explicitly if they wish to be heard, as
 #lines-to("void", lead: true, after: "}")
 
 In `multiple`, `init` spends nearly all its time. It waits for any
-child to die. If the child served a terminal, the logout is recorded
-by `rmut` and a new `getty` is forked by `dfork`. An entry with `pid` -1
+child to die. If the child served a terminal, `rmut` records the logout and `dfork` forks a new `getty`. An entry with `pid` -1
 is one for which `fork` failed in `dfork` (#l("p->pid = pid;")). It is retried whenever
 any child dies.
 
@@ -5682,8 +5673,7 @@ The loop. The modes and speeds of the chosen table are set with
 written. If `getname` returns 1, a name has been read: the erase and
 kill characters are set to v7's `#` and `@`, the final modes adjusted
 by what `getname` learnt about the terminal, and `login` executed with
-the name as its argument. The modes are set by `stty`, which is `ioctl`
-with `TIOCSETP`. Otherwise the next table is tried.
+the name as its argument. The call `stty`, which is `ioctl` with `TIOCSETP`, sets the modes. Otherwise the next table is tried.
 
 The list of arguments to `execl` (#l("execl(\"/bin/login\", \"login\", name, (char *)0);")) ends with `(char *)0`, where v7
 wrote a plain 0. The function is variadic, so the compiler does not
@@ -5837,8 +5827,7 @@ characters with echo turned off. Its chief user is `login` (#f("cmd/login.c")),
 and `su`, `passwd`, `newgrp`, and `crypt` are others.
 
 It reads from `/dev/tty`, the process's controlling terminal, even if
-the standard input has been redirected. The special file is served by
-#f("sys.c"), which passes the request to the terminal recorded in
+the standard input has been redirected. The special file's driver, #f("sys.c"), passes the request to the terminal recorded in
 `u.u_ttyp` when the process group was formed (`ttyopen`, #f("tty.c")). If
 the process has no terminal the open fails and the standard input is
 used instead. The stream is made unbuffered (#l("setbuf(fi, (char *)NULL);")) so that nothing beyond
@@ -5889,8 +5878,7 @@ into `line`. The final field is cut at the newline (#l("while(*p && *p != '\\n')
 numbers are converted with `atoi`. The fields `pw_quota` and `pw_comment` are not
 in the file at all and are set to 0 and the empty string.
 
-Every call reuses the same `line` and the same `passwd`, so
-the result of one call is destroyed by the next. A caller which needs
+Every call reuses the same `line` and the same `passwd`, so the next call destroys the result of one. A caller which needs
 two entries at once must copy the first. And, since `fgets` (#l("p = fgets(line, BUFSIZ, pwf);")) reads at
 most `BUFSIZ` − 1 characters, a longer line would be split and its tail
 read as an entry of its own. A password file has no such lines.
@@ -6287,9 +6275,8 @@ shell simply resets the stack to its base (`tdystak`, #f("sh/main.c")).
 Of the four pointers which describe the stack, `stakbas` is its base and `brkend`
 the current end of the data segment. Items already allocated lie
 between `stakbas` and `stakbot`. The item being built runs from
-`stakbot` to `staktop`. A string of unknown length, such as a word, is
-built by `locstak`, which makes sure there is room, then `pushstak` for
-each character, then `endstak` or `fixstak`, which ends the string and
+`stakbot` to `staktop`. A string of unknown length, such as a word, is built with `locstak`, which
+makes sure there is room, then `pushstak` for each character, then `endstak` or `fixstak`, which ends the string and
 makes it a permanent item.
 
 The heap grows upward into the stack. When it does, `addblok` copies
@@ -6693,8 +6680,7 @@ character has the quote bit or-ed in, and the whole is enclosed in
 double quotes. Within double quotes or backquotes, `nextc` sets the bit on
 escaped characters only, since parameters and commands are still to be
 substituted there (#f("sh/macro.c")). A quoted character fails every
-test of #f("sh/ctype.h"), and so cannot end the word. The quote bits
-are removed by `trim` once substitution is done. On the PDP-11 a `char`
+test of #f("sh/ctype.h"), and so cannot end the word. The routine `trim` removes the quote bits once substitution is done. On the PDP-11 a `char`
 with the quote bit set was negative, on the ARM it is not. Nothing here
 depends on which.
 
@@ -6972,8 +6958,7 @@ unset.
 
 #lines-to("SWITCH type IN")
 
-A simple command. Its words are expanded by `getarg`, which substitutes
-parameters and generates file names, and `scan` gathers the results into
+A simple command. The routine `getarg` expands its words, substitutes parameters, and generates file names, and `scan` gathers the results into
 an argument vector `com` (#f("sh/service.c")). The expansion builds the
 global chain `gchain`, which is saved and restored around it because
 expanding a word may itself execute a command, by command substitution
@@ -7080,8 +7065,7 @@ ignored. It is now declared without parameters and called without
 arguments.
 
 A built-in command may not be redirected, except `exec` and `:`, which
-cleared `io` above. After a built-in, traps raised meanwhile are run by
-`chktrap`. A command with no words and no redirections consisted only
+cleared `io` above. After a built-in, `chktrap` runs the traps raised meanwhile. A command with no words and no redirections consisted only
 of assignments, and is finished. The remaining cases, a program to run
 or redirections with no command, fall through (239, new comment) to be
 forked.
@@ -7129,8 +7113,7 @@ so that they win.
 
 A subtree, from a parenthesised command, an `&`, or a pipeline, is run
 by a recursive `execute` with `execflg` set, so that its last command
-is executed without a further fork. A simple command is executed by
-`execa`. Either way `done` ends the child if control comes back.
+is executed without a further fork. The routine `execa` executes a simple command. Either way `done` ends the child if control comes back.
 
 The `break` (#l("break;", after: "execa(com);")) is new. In v7 the `TFORK` case ended without one,
 since both branches leave by `break` or `done`, and control passed into
@@ -7330,7 +7313,7 @@ The routine `mactrim` substitutes parameters in a word and removes its quoting.
 The routine `scan` makes the argument vector. The words are on `gchain` in reverse
 order, so the vector is filled from its end. The low bit of a link,
 `ARGMK`, marks the end of the group of names which one pattern
-generated. Each group is sorted by `gsort` as it is completed, and the
+generated. The routine `gsort` sorts each group as it is completed, and the
 words otherwise keep their order. Every word but the last taken, which
 is `com[0]`, is trimmed here.
 
@@ -7627,8 +7610,8 @@ The routine `lookup` finds the node of a name, or makes one. It descends the tre
 comparing with `cf`, keeping in `prev` the address of the link it
 followed. When it falls off the tree, a new node is stored through
 `prev`. The tree is never rebalanced, nor are nodes ever removed: v7
-has no `unset`. A name which is not an identifier is reported by
-`failed` before the search.
+has no `unset`. The routine `failed` reports a name which is not an identifier before
+the search.
 
 The port initialises `prev` to zero (#l("REG NAMPTR\t*prev = 0;")). The loop always runs
 at least once, since `namep` is never null, and so always sets `prev`
@@ -7865,8 +7848,7 @@ because of `FPOU`, returns at once. The shell closes its copy of the
 writing end, without which it would never see the end of the output
 (`readp`, #f("pipe.c")).
 
-The parse tree, which lay on the stack above `savptr`, is no longer
-needed in the shell and is discarded by `tdystak`. The partial result
+The parse tree, which lay on the stack above `savptr`, is no longer needed in the shell, and `tdystak` discards it. The partial result
 saved at `savptr` is copied back into place as the current item, and
 the output of the command is appended to it, a character at a time,
 through `readc`. Only after the end of the output does the shell wait
@@ -8048,8 +8030,7 @@ that `set -` turns both off. No other option can be turned off once it
 is on. `-c` takes the next argument as the command string, `comdiv`,
 and only once (#f("sh/main.c")). Each argument consumed is removed by
 moving `argv[0]` up one place over it (#l("argp[1]=argp[0]; argp++; argc--;"), #l("argp[1]=argp[0]; argc--;")), so that the caller
-finds `$0` followed by what is left, and the new count is returned. An
-unknown letter is reported by `failed` (#f("sh/error.c")).
+finds `$0` followed by what is left, and the new count is returned. The routine `failed` reports an unknown letter (#f("sh/error.c")).
 
 #lines-to("/* set up $- */", lead: true)
 
@@ -8253,8 +8234,8 @@ which the sign has no effect.
 #lines-to("#define\t_IOREAD\t01", lead: true)
 
 The flags. `_IOREAD` and `_IOWRT` record the direction, and `_IORW` marks a
-stream opened for both (mode `"r+"` and the like), on which the
-direction is decided by the first operation and changed by `fseek`.
+stream opened for both (mode `"r+"` and the like), on which the first operation decides the direction and `fseek` changes
+it.
 `_IONBF` means unbuffered, `_IOMYBUF` that the buffer was obtained from
 `malloc` and must be freed, `_IOSTRG` that the "file" is a string in
 memory (`sprintf` and `sscanf`), and `_IOEOF` and `_IOERR` record the
@@ -9260,7 +9241,7 @@ beyond the digits or more than three before them.
 The exponent may now have three digits (#l("if (decpt >= 100) {")--#l("}", after: "decpt %= 100;")). The PDP-11's largest
 number was about $10^38$, so v7 printed two. An IEEE double reaches
 $10^308$. The doubled parentheses (#l("if ((decpt >= 0 && decpt-ndigit > 4)"), #l("|| (decpt < 0 && decpt < -3)) { /* use E-style */")) are those of #f("malloc.c"),
-and `ecvt` is declared by #f("stdio.h").
+and #f("stdio.h") declares `ecvt`.
 
 #lines-to(none)
 
@@ -9714,8 +9695,7 @@ exponent field of zero, is first scaled by $2^54$ to make it normal
 The routine `ldexp` multiplies a number by a power of two. The port builds the
 power as a double directly, with the exponent field set and the
 fraction zero (#l("x.u[0] = 0;")--#l("x.u[1] = (k+1023) << 20;")), and multiplies. A power beyond the range of a
-double is applied in steps of at most $2^1000$ (#l("for (; n; n -= k) {")--#l("k = n > 1000? 1000: n < -1000? -1000: n;")). A result which
-overflows is replaced by the largest double of the right sign, and
+double is applied in steps of at most $2^1000$ (#l("for (; n; n -= k) {")--#l("k = n > 1000? 1000: n < -1000? -1000: n;")). An overflowing result becomes the largest double of the right sign, and
 `errno` set to `ERANGE` (#l("if (value > 1.7976931348623157e308 ||")--#l("}", after: "0? -1.7976931348623157e308: 1.7976931348623157e308;")), as v7's did.
 
 #lines-to(none)
@@ -9806,8 +9786,7 @@ The include of #f("stdio.h") (#l("#include <stdio.h>")), for the prototypes of `
 #lines-to("/*", lead: true, after: "33, 1,41, 9,49,17,57,25,")
 
 The tables for the key schedule. Of the 64 bits of a DES key, 56 are
-used, in two halves `C` and `D` of 28 bits. The eight parity bits are
-dropped by `PC1_C` and `PC1_D`. `KS` holds the sixteen 48-bit subkeys.
+used, in two halves `C` and `D` of 28 bits. The tables `PC1_C` and `PC1_D` drop the eight parity bits. `KS` holds the sixteen 48-bit subkeys.
 
 The initialiser of `PC1_D` (#l("static\tchar\tPC1_D[] = {")) lacked its `=` in v7, a form left from
 the earliest C which v7's compiler still accepted, and C99 does not. Other
@@ -9896,7 +9875,7 @@ search.
 
 The includes of #f("stdio.h") and `stdarg.h` (#l("#include <stdio.h>"), #l("#include <stdarg.h>")) are new: the first
 declares `getenv`, `index`, `strlen`, `execv`, and `sleep`, which v7
-called undeclared or declared here. The second is needed by `execlp`.
+called undeclared or declared here. The routine `execlp` needs the second.
 The routine `execat` has a static declaration, since it is used before it is
 defined, and `errno` (#l("extern\tint errno;")) is declared `int` explicitly, C99 having no
 implicit `int`. `NULL` is defined (#l("#define\tNULL\t0")) before #f("stdio.h") is included, as in
@@ -10315,7 +10294,7 @@ programs which print the message themselves.
 #source("/usr/src/libc/gen/mktemp.c")
 
 The routine `mktemp` turns a name ending in `X`s into the name of a file which does
-not exist: the `X`s are replaced by the process id, so that two
+not exist: the process id replaces the `X`s, so that two
 processes choose different names, and if the name is taken anyway the
 first `X`'s place is given the letters `a` to `y` in turn.
 
@@ -10367,8 +10346,7 @@ and Cheney's tables. The power of two adds `exp` times $ln 2$. The routine `log1
 divides by $ln 10$. An argument that is not positive sets `errno` to
 `EDOM` and returns `-HUGE`.
 
-The changes are those of #f("libm/sqrt.c"): `errno` and `frexp` are declared
-by the headers instead of in the file.
+The changes are those of #f("libm/sqrt.c"): the headers declare `errno` and `frexp`, not the file.
 
 #lines-to(none)
 
