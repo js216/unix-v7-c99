@@ -1462,8 +1462,8 @@ names (`rkstrategy`, `rkintr`, `rktab`, and so on), its configuration
 entry in `mkconf` (#f("qemu/c.c")), and as much of its text as the new
 device allows. The reader who compares the two files will find the same
 three procedures doing the same three jobs. The routine `rkstrategy` adds a request
-to the queue and starts the device if it is idle; `rkstart` gives the
-request at the head of the queue to the device; `rkintr`, called when
+to the queue and starts the device if it is idle. The routine `rkstart` gives the
+request at the head of the queue to the device. The routine `rkintr`, called when
 the device has finished, completes that request and starts the next.
 Only one request is in the device at a time. The new procedure, `rkinit`,
 finds and prepares the device, which an RK11 never needed. Even v7's
@@ -2997,9 +2997,8 @@ delayed-write buffer.
 Pipes are implemented in #f("pipe.c"). A pipe is an ordinary inode, allocated on
 the device `pipedev` (the root device, on both machines, by the `c.c`
 which `mkconf` writes) but entered in no directory, and opened twice: by
-one `file` for reading and by another for writing. Data written to the
-pipe is appended to the file; the reader reads from its own offset; and
-when the reader catches up, the file is emptied. Since the file stays
+one `file` for reading and by another for writing. Data written to the pipe is appended to the file, and the reader reads
+from its own offset. When the reader catches up, the file is emptied. Since the file stays
 small and is soon read, its blocks normally live only in the buffer
 cache, but nothing prevents them from being written to the disk.
 
@@ -3913,9 +3912,7 @@ The file #f("qemuconf") describes the QEMU machine to `mkconf`
 (#f("mkconf.c")), which reads it on its standard input and writes
 #f("qemu/c.c") and #f("qemu/unix.ld"). The first five lines are in v7's
 own format, and could have come from v7's `rktmconf`. A line holding
-only a device name (`rk`) configures one such device; `root` and `swap`
-name the device and minor device of the root file system and of the
-swap area; `swplo` and `nswap` give the first block and the length of
+only a device name (`rk`) configures one such device. The names `root` and `swap` give the device and minor device of the root file system and of the swap area, and `swplo` and `nswap` give the first block and the length of
 the swap area. The `rktmconf` of v7 put the swap area at block 4000 of the
 RK05. Here it starts at block 32768, just after the root file system
 of 16 MB (#f("rootfs.proto")). In v7 it had 872 blocks, 436 KB, which held
@@ -4310,9 +4307,8 @@ always the device. It moves data through FIFOs: one receive FIFO for
 everything the host sends, and a transmit FIFO for each endpoint which
 sends to the host. USB is organised in endpoints, numbered channels in
 one direction or the other. Endpoint 0 carries the control requests by
-which the host identifies and configures the device; endpoint 1 carries
-the console's characters, out from the host and in to it, in "bulk"
-transfers; endpoint 2 carries short "interrupt" messages to the host,
+which the host identifies and configures the device. Endpoint 1 carries
+the console's characters, out from the host and in to it, in "bulk" transfers. Endpoint 2 carries short "interrupt" messages to the host,
 here only the state of the line. As the comment says, the transceiver
 and the clocks are left as the boot ROM set them when it loaded the
 kernel over the same port.
@@ -4357,8 +4353,8 @@ the output waiting to be sent (`out`). The counts `rxlen` and `rxpos` say how mu
 of `rxbuf` is filled and how much taken, and `outlen` how much of `out` is
 filled. The variable `bulkmps` holds the largest bulk packet, 512 bytes at high speed
 and 64 at full speed. The variable `config` holds the configuration the host has
-chosen, zero until it chooses one; `inbusy` says that a transfer to the
-host is in progress; `dtr` that the host has raised DTR, which a
+chosen, zero until it chooses one. The flag `inbusy` says that a transfer to the
+host is in progress, and `dtr` that the host has raised DTR, which a
 terminal program does when it opens the port.
 
 #lines-to("static const unsigned char devdesc[18] = {")
@@ -4525,8 +4521,8 @@ cleared) and sets the turnaround time to 9 (bits 10--13), the value
 for the controller's 32-bit bus. A forced mode takes effect after at
 least 25 ms, and 50 are allowed. VBUS sensing is turned off (`GCCFG`
 bit 21), and the "B session valid" signal overridden to true
-(`GOTGCTL` bits 6, 7), so that the controller does not depend on the
-VBUS pin; the clocks are ungated; `DCFG` zero asks for high speed.
+(`GOTGCTL` bits 6, 7), so that the controller does not depend on the VBUS pin. The clocks are ungated, and `DCFG`
+zero asks for high speed.
 
 The controller's 4 KB of FIFO memory is divided in 32-bit words: the
 receive FIFO the first `0x100` (1 KB); endpoint 0's transmit FIFO
@@ -4874,8 +4870,7 @@ with its three outputs (bits 4--6), and waited for (#l("RCC(0x4D0) &= ~0x71;")--
 PLL2 shares its reference with PLL1, which clocks the processor and so
 cannot be stopped. The reference is therefore left as the ROM chose it,
 and only its divider is set to suit. From HSE, the external 24 MHz
-crystal (the source field of `0x480` nonzero), it divides by 3; from
-HSI it divides by 8; either way the reference is 8 MHz. It is
+crystal (the source field of `0x480` nonzero), it divides by 3, and from HSI by 8. Either way the reference is 8 MHz. It is
 multiplied by 66 plus a fraction of 5120/8192, which gives 533 MHz,
 and the R output divides that by 1 (#l("RCC(0x4D4) = RCC(0x480)&3 ? 0x00020041 : 0x00070041;")--#l("RCC(0x4DC) |= 0x10000;")). The outputs and the PLL
 are then enabled, the PLL waited for until it is locked, and the bus
@@ -6015,9 +6010,8 @@ byte (#l("static\tchar\tname[9];"), #l("strncpy(name, ubuf.ut_name, 8);")--#l("*
 The shell is an ordinary user program, `/bin/sh`, but it is the one
 through which nearly everything else is run, and it occupies this and
 the next two sections. Its work divides into three parts. It reads
-characters and assembles them into words (#f("sh/io.c"), #f("sh/word.c"));
-it parses the words into a tree of commands, built by `cmd`
-(#f("sh/cmd.c")); and it walks the tree, forking, redirecting, and
+characters and assembles them into words (#f("sh/io.c"), #f("sh/word.c")). It parses the words into a tree of commands, built by `cmd`
+(#f("sh/cmd.c")). Then it walks the tree, forking, redirecting, and
 executing, in `execute` (#f("sh/xec.c")). Around these lie the variables
 (#f("sh/name.c")), the substitution of parameters and of command output
 (#f("sh/macro.c")), the expansion of file name patterns
@@ -6522,9 +6516,8 @@ would not compile under C99.
 
 The routine `setbrk` moves the end of the data segment by `incr` bytes, which may
 be negative, and records the new end in `brkend`. It returns the old
-end, or `-1` cast to a pointer if the kernel refused; `fault`
-(#f("sh/fault.c")) tests for that, now by comparing with `(BYTPTR)-1`;
-v7, whose `setbrk` returned an `int`, compared with `-1`. The v7 code set
+end, or `-1` cast to a pointer if the kernel refused. The routine `fault` (#f("sh/fault.c")) tests
+for that, now by comparing with `(BYTPTR)-1`, where v7, whose `setbrk` returned an `int`, compared with `-1`. The v7 code set
 `brkend` even after a refusal, to `incr` bytes beyond that `-1`, an
 address of nothing reached by arithmetic which C99 leaves undefined.
 The port keeps the old end then (#l("IF a!=(BYTPTR)-1 THEN brkend=a+incr FI")). The routine `sbrk` is the library's (`sbrk.s`), which calls the `break`
@@ -7924,9 +7917,7 @@ of the `filehdr` as it was, and C99 requires the cast (#l("push((FILE)&fb); esta
 The routine `comsubst` runs the command between backquotes and substitutes its
 output. The part of the result built so far is first made a permanent
 item with `fixstak`, and `savptr` remembers it. The text of the command
-is read up to the closing backquote into a new item; `trim` removes the
-quote bits which `word` set on its escaped characters; and the text is
-pushed as a new input string.
+is read up to the closing backquote into a new item. The routine `trim` removes the quote bits which `word` set on its escaped characters, and the text is pushed as a new input string.
 
 #lines-to("BEGIN", after: "END")
 
@@ -13206,7 +13197,7 @@ stops with "Line too long" at the end of `linebuf` (#l("static void")--#l("}", a
 wrote on past it. The routine `address` reads a line number, now saturating (#l("while(*rcp >= '0' && *rcp <= '9') {")--#l("}", after: "rcp++;")),
 a `$`, or a regular expression. The routine `cmp` likewise no longer starts before
 its strings (#l("ra = a;")--#l("if(ra[-1] == '\\0')\treturn(0);")). The routine `text` copies the text of `a`, `i`, `c`, and
-`r`, removing escapes; `search` finds a label; and `dechain` links each
+`r`, removing escapes. The routine `search` finds a label, and `dechain` links each
 branch to its label and each `{` to its `}`. The routine `ycomp` now refuses a `y`
 with no delimiter (#l("if(seof == '\\0')", after: "char\t*sp;")--#l("return(badp);", after: "char\t*sp;")) and stops at the end of the line (#l("if(*tsp == '\\n' || *tsp == '\\0')")),
 where v7 read on past it.
@@ -13873,9 +13864,8 @@ the number went negative, an overflow C does not define.
 
 #lines-to("salloc(int size)")
 
-The rest manages storage. The routine `salloc` allocates a block and its header;
-`more` doubles a block when it fills; `garbage` reclaims; and `copy`
-makes a copy of a given size. The routine `nalloc` now takes both the number of
+The rest manages storage. The routine `salloc` allocates a block and its header. The routine `more` doubles a block
+when it fills, `garbage` reclaims, and `copy` makes a copy of a given size. The routine `nalloc` now takes both the number of
 bytes to copy and the size to allocate (#l("nalloc(register char *p, unsigned n, unsigned nbytes)")--#l("}", after: "*q++ = *p++;")), and `copy` copies
 only the length of the original (#l("sz = length(hptr);")--#l("ptr = nalloc(hptr->beg, sz, (unsigned)size);")): v7 copied the full new
 size, reading past the end of a smaller block. The routines `getwd`, `putwd`, and
@@ -14712,9 +14702,8 @@ of level _n_ holds the files changed since the last dump of a lower
 level, whose date it finds in `/etc/ddate` (`getitime`) and, with `u`,
 records its own (`putitime`). It works in passes over the inodes, read
 straight from the disk. Pass I marks in `nodmap` the files changed
-since that date and in `dirmap` all directories; pass II, repeated
-until nothing changes, keeps only the directories which lead to a
-marked file; pass III writes the directories and pass IV the files. On
+since that date and in `dirmap` all directories. Pass II, repeated
+until nothing changes, keeps only the directories which lead to a marked file. Pass III writes the directories and pass IV the files. On
 the tape each file is a header record, a `spcl` with the inode and a
 map of which of its blocks follow, then the blocks. The format is that
 of `<dumprestor.h>`, and `restor` and `dumpdir` read it.
