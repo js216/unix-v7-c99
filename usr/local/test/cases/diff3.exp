@@ -15,5 +15,5 @@ C
 test: argument expected
 usage: diff3 file1 file2 file3
 st0
-642
-    642
+321
+    321

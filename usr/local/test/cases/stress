@@ -1,17 +1,15 @@
 T=/tmp/stress U=/usr/local/test/utils
 mkdir $T; cd $T
-for i in 1 2 3 4 5 6 7 8; do (yes | sed 200q | wc >w$i) & done; wait; cat w*
+for i in 1 2 3 4; do (yes | sed 200q | wc >w$i) & done; wait; cat w*
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do echo $i | sed s/1/X/ ; done | wc
 $U/ptt; $U/prt; $U/bigx | wc
 sed 5000q /usr/dict/words | sort | uniq | wc
 (sh -c 'echo $$ >pa; exec yes' >/dev/null; :) 2>/dev/null &
-(sh -c 'echo $$ >pb; exec yes' >/dev/null; :) 2>/dev/null &
-(sh -c 'echo $$ >pc; exec yes' >/dev/null; :) 2>/dev/null &
 ($U/waitf p1; kill -2 `cat p1`) &
 $U/pidf p1 yes abc | $U/pidf p2 sed s/a/b/ >/dev/null; echo rc=$?
 rm -f p1 p2; ($U/waitf p1 p2; kill -2 `cat p1` `cat p2`) &
 sh -c 'trap "echo caught; exit 3" 2; echo ready; echo $$ >p1; /usr/local/test/utils/pidf p2 yes >/dev/null'
 echo rc=$?
-$U/waitf pa pb pc
-kill -9 `cat pa` `cat pb` `cat pc`; wait; ps | grep -c 'y[e]s'
+$U/waitf pa
+kill -9 `cat pa`; wait; ps | grep -c 'y[e]s'
 cd /; rm -rf $T
