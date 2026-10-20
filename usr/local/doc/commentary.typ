@@ -250,8 +250,8 @@ the next counter, as the PDP-11 code did.
 
 The counter is read and written with `copyin` and
 `copyout`, two bytes at a time, since the user's buffer may be
-anywhere. If it cannot be reached, profiling is turned off by clearing
-the scale, as v7 did by way of `nofault`.
+anywhere. If it cannot be reached, the scale is cleared, which turns
+profiling off.
 
 #lines-to(none)
 #source("/usr/sys/sys/sys1.c")
@@ -784,7 +784,7 @@ otherwise demand of an external function.
 The routine `psig` takes the action for the signal which `issig` found.
 
 The floating point registers are stored in the u-area first (#l("if (u.u_fpsaved==0) {")--#l("}", after: "u.u_fpsaved = 1;")),
-as in v7, before a debugger, a handler (`sendsig`, #f("machdep.c")), or
+before a debugger, a handler (`sendsig`, #f("machdep.c")), or
 a core dump can need them.
 
 #lines-to("if((p=u.u_signal[n]) != 0) {")
@@ -995,7 +995,7 @@ The routine `exit` (#f("sys1.c")) calls `acct` after the process has closed
 its files but while its `u` is still intact, and `acct` writes one record
 (#f("acct.h")) at the end of the accounting file. The command name was
 saved by `exec`; the user and system times are in ticks, the elapsed
-time in seconds. Here as in v7, `ac_mem` and `ac_io` are always zero.
+time in seconds. The fields `ac_mem` and `ac_io` are always zero.
 
 The cast at #l("for (i=0; i<(int)sizeof(acctbuf.ac_comm); i++)") is new: `sizeof` yields an unsigned value, and the
 compiler warns of a comparison between it and the signed `i`.
@@ -1609,7 +1609,7 @@ overflowing.
 When the disk interrupts, `irq` (#f("machdep.c")) calls `rkintr`.
 The interrupt is acknowledged by writing back the bits read from
 the interrupt status register (#l("RKADDR(0x64) = RKADDR(0x60);")). It is ignored if no
-request is outstanding, as in v7, or if the device has not yet returned
+request is outstanding or if the device has not yet returned
 it in the used ring. The barrier (#l("dmbsy();", after: "if (rktab.b_active == NULL || vq->uidx != vq->aidx)")) keeps the processor from reading
 `vstatus` or the data before it has seen the device's index.
 
@@ -2172,8 +2172,8 @@ by `iput` (#l("iput(ip);", after: "wakeup((caddr_t)ip+2);")); only its address i
 The routine `openi` calls the open routine of a special file's driver, after
 checking that the major device number is within the switch table. The number `maj`
 is `unsigned` while `nchrdev` and `nblkdev` are `int`; the casts (#l("if(maj >= (unsigned)nchrdev)"),
-#l("if(maj >= (unsigned)nblkdev)")) state the comparison as unsigned, as it was in v7 by the
-rules of C, and keep the compiler from warning of a comparison between
+#l("if(maj >= (unsigned)nblkdev)")) state the comparison as unsigned, which the
+rules of C made it anyway, and keep the compiler from warning of a comparison between
 signed and unsigned. Since the counts are small and positive, the
 meaning is unchanged. Opening an ordinary file or directory needs no
 action.
@@ -3139,7 +3139,7 @@ two routines here. The header #f("buf.h") (#l("#include \"../h/buf.h\"")) is inc
 The routine `mmread` copies bytes, one at a time, from memory at the file offset
 to the user, until `passc` (#f("subr.c")) reports that the request is
 satisfied or `fumem` (#f("machdep.c")) finds that the offset names no
-memory. The second case is an error, `ENXIO`, as it was in v7.
+memory. The second case is an error, `ENXIO`.
 
 In v7 the offset could not simply be dereferenced. The PDP-11 kernel had only
 64 KB of address space, so for each byte `mmread` raised the priority
@@ -3513,9 +3513,9 @@ which passes the UART no more than the FIFO holds and leaves the rest
 with the host. A paste of any length thus arrives whole, where v7 threw
 away everything typed once `TTYHOG` was passed. The hold ends in `klread`:
 before the reader takes a line, it moves what it can from
-`t_holdq` to the raw queue (`ttyunhold`, 90), unmasks the interrupts,
+`t_holdq` to the raw queue (`ttyunhold`, #f("tty.c")), unmasks the interrupts,
 and calls `klrint` itself (#l("UARTIMSC |= RXI|RTI;"), #l("klrint(dev);")), with the IRQ masked, to empty the FIFO as
-far as the queues allow, and then reads as v7 did. A reader can never
+far as the queues allow, and then reads. A reader can never
 wait on a held line, since input is held only while there is a line to
 read.
 
@@ -3783,7 +3783,7 @@ replaced, `bp` steps back over the backslash, unless the backslash was
 itself escaped. The delimiter `0377` cannot be mistaken for a
 character typed in the normal mode, in which `ttyinput` keeps only seven
 bits; only one typed in `RAW` mode and left in the queue by `TIOCSETN`
-could be, as in v7.
+could be.
 
 When the queue has emptied below a fifth of `TTYHOG`, a terminal which
 was told to stop sending (`TBLOCK`, see `ttyblock`) is sent the start
@@ -4154,7 +4154,7 @@ twice (#l("int\tpack;", after: "\"\\t    0, 0, 0}, /* 1 */\","), #l("int\tpack;"
 #lines-to("int", after: "int\tnmap;")
 
 The configuration is read in one go, and then the outputs are written,
-each by redirecting the standard output with `freopen`, as v7 did.
+each by redirecting the standard output with `freopen`.
 
 The first pass, which in v7 wrote `l.s`, now writes the linker script.
 The kernel's text, read-only data, initialised data, and uninitialised
@@ -4185,7 +4185,7 @@ out here, and the two must agree.
 
 #lines-to("/*", after: "tabn ? \"TAB\" : \"RAM\");")
 
-The second pass writes `c.c` as v7 did. The assignments within the
+The second pass writes `c.c`. The assignments within the
 tests of the `for` loops (#l("for (i=0; (q=btab[i]); i++) {"), #l("for(i=0; (q=btab[i]); i++) {"), #l("for (i=0; (q=ctab[i]); i++) {"), #l("for(i=0; (q=ctab[i]); i++) {")) have the doubled
 parentheses of #f("malloc.c"). Each
 configured row is now enclosed in braces. A device which is not
@@ -4198,8 +4198,7 @@ slots `nordwr`, its `ioctl` slot `noioctl`, and its `d_stop` slot
 #lines-to("if (pack) {")
 
 The line disciplines, root, swap, and pipe devices, and the tables
-follow as in v7, except that the definition of `ldmpx` has gone; after
-them `strg3` adds the rest of the tables.
+follow, and after them `strg3` adds the rest of the tables.
 
 #lines-to("printf(\"\\nunsigned int\\tcorebase, coreoff, coretop = 0x%lx;\\n\",")
 
@@ -4248,7 +4247,7 @@ time without the count.
 The keywords which describe the machine are recognised first (#l("if (equal(keyw, \"map\") && nmap < NMAP) {")--#l("}", after: "ddr++;")).
 Their numbers are read in hexadecimal. A malformed line is reported by
 `badline`, a new procedure holding v7's message, which returns 1, so that
-reading continues as in v7. A ninth `map` line falls through to "cannot
+reading continues. A ninth `map` line falls through to "cannot
 find".
 
 #lines-to("for(q=table; q->name; q++)")
@@ -5266,7 +5265,7 @@ system call.
 #source("/usr/src/libc/sys/read.s")
 
 The stub `read` stands for the fifty or so stubs in the library's `sys`
-directory, one file per system call, as in v7. Most are just these
+directory, one file per system call. Most are just these
 three instructions with a different number: the number of the call in
 the table `sysent` (#f("sysent.c")), here 3, is loaded into `ip`, and
 `cerror` (#f("libc/syscall.s")) does the rest. The three arguments of
@@ -5806,7 +5805,7 @@ Coming from `getty`, `login` runs as the super-user, since `init` and
 everything it forks are root's. That is what allows it to change the
 process's identity at all (`setuid`, #f("sys4.c")). Run from an
 ordinary user's shell, it is the super-user too, since `/bin/login` is
-set-user-id root, as in v7 (#f("rootfs.proto")).
+set-user-id root (#f("rootfs.proto")).
 
 The entry `nouser` (#l("struct\tpasswd nouser = {\"\", \"nope\", 0, 0, 0, 0, 0, 0, 0};")) stands in for a name which is not in the
 password file. Its encrypted password "nope" is not one which `crypt`
@@ -6984,7 +6983,7 @@ command whose reader has gone, needs no message. The table ends at
 "Signal 16" (#l("\"Signal 16\",")), the last of the sixteen signals
 (#f("param.h")). The table `commands` holds the
 built-in commands, with their codes from #f("sh/defs.h");
-the entry for `[`, `SYSTST`, is commented out, as in v7.
+the entry for `[`, `SYSTST`, is commented out.
 
 The other changes are the `=` before the initialisers of the three
 tables (#l("SYSTAB reserved = {"), #l("STRING\tsysmsg[] = {"), #l("SYSTAB\tcommands = {")), which v7's compiler did not require.
@@ -7010,7 +7009,7 @@ used nowhere.
 prompt before it gives up. The command loop of #f("sh/main.c") calls
 `alarm(TIMEOUT)` before each read, and `fault` (#f("sh/fault.c"))
 ends the shell if the alarm arrives while it is still waiting. With the
-value 0, as in v7, the call cancels any alarm instead, and an idle shell
+value 0 the call cancels any alarm instead, and an idle shell
 waits indefinitely. A site which wanted the feature changed this file.
 
 #lines-to(none)
@@ -8480,7 +8479,7 @@ declared with its prototype: it takes a signal number and a function
 taking the signal number, and returns the previous such function. The v7 declaration
 `int (*signal())()` gave handlers no parameters and an `int` result.
 `SIG_DFL` and `SIG_IGN` are cast to the same type. The signals beyond 15
-have no names, as in v7.
+have no names.
 
 #lines-to(none)
 
@@ -8977,7 +8976,7 @@ instruction.
 
 The floating conversions take a `double`, the type to which a `float`
 argument is always promoted. The precision, the number of digits after
-the point, is 6 by default as in v7; it is limited to 70 for the sake
+the point, is 6 by default, and is limited to 70 for the sake
 of `buf`. `%g` is wholly the business of `gcvt`.
 
 `%e` asks `ecvt` for one digit more than the precision and lays them out
@@ -8996,7 +8995,7 @@ significant decimal digits, so nothing of value is lost.
 
 #lines-to("case 'c':")
 
-`%c` stores the character unless it is the null character, as in v7. `%s`
+`%c` stores the character unless it is the null character. `%s`
 takes the string, or `"(null)"` for a null pointer, which v7 also
 printed, and uses at most the precision's worth of it. Neither is ever
 padded with zeros. For `%s` the result is not copied into
@@ -10107,7 +10106,7 @@ to a procedure, and a `longjmp` leaves them as they are.
 The routine `longjmp` reloads the ten words and the eight registers, which restores the stack pointer of
 `setjmp`'s caller and discards every frame below it, and returns
 through the saved link register as though from `setjmp`. The value is
-`val`, unless that is 0, in which case it is 1, as in v7, so that the
+`val`, unless that is 0, in which case it is 1, so that the
 caller can always tell the second return from the first; `movs` (#l("movs r0, r1"))
 sets the condition codes as it copies, saving a separate comparison.
 
@@ -10717,7 +10716,7 @@ The commands themselves. Most call `setdot`, `setall`, `setnoaddr`, or
 `newline` to check that nothing follows, and then do their work.
 
 Five comments `/* fallthrough */` are new (#l("/* fallthrough */", after: "c = 'e';"), #l("/* fallthrough */", after: "case 'l':"), #l("/* fallthrough */", after: "case 'Q':"), #l("/* fallthrough */", before: "case 'r':"), #l("/* fallthrough */", after: "wrapp++;")).
-Each marks a case which, as in v7, runs on into the next; `-Wextra`
+Each marks a case which runs on into the next; `-Wextra`
 warns of such a fall-through unless it is marked. The one at (#l("/* fallthrough */", before: "case 'r':"))
 follows a call of `quit`, which in fact never returns: it exits, or
 reports an error and jumps back to `main`. The compiler is not told
@@ -11397,8 +11396,8 @@ headers and must agree with it exactly. The mechanism shared with
 
 `/dev/mem`, `/dev/kmem`, and `/dev/swap` may be read only by root and
 group `sys`, and `ps` is set-group-id `sys` (#f("rootfs.proto")), so
-that it works for every user, as in v7, where the files could be read
-by anyone instead.
+that it works for every user. In v7 the files could be read by
+anyone.
 
 The v7 program included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
@@ -12056,7 +12055,7 @@ which span it.
 The variable `timbuf` is a `time_t` (#l("time_t\ttimbuf;")), now 64 bits (`types.h`), and v7's
 declarations of the time routines give way to #f("stdio.h") and
 #f("time.h"). The time zone of `ftime` (#f("timeb.h")) is in minutes
-west of Greenwich, as in v7.
+west of Greenwich.
 
 #lines-to("int", lead: true, after: "exit(rc);")
 
@@ -12236,8 +12235,8 @@ so gave a tenth of the id), and
 takes `-c` for a command from the argument, `-t` for a single line, or a
 file to read; a login shell (`-` in `argv[0]`) ignores QUIT, and
 INTR unless it was already ignored. The `int` conversion of the
-previous handler (#l("f = (int)signal(INTR, SIG_IGN);")) tests whether it was `SIG_IGN`, as v7 did with
-the number 1.
+previous handler (#l("f = (int)signal(INTR, SIG_IGN);")) tests whether it was `SIG_IGN`, where v7 compared
+it with the number 1.
 
 The routine `main1` reads one line into words and executes its tree. A syntax
 error found deep in the parse returns through `jmpbuf`.
@@ -12373,8 +12372,8 @@ refused (#l("if(argc>NF+1 || find(&argv[1],argc-1)==0)")), since `select` has `N
 facts in it now stops `quiz` with "I don't know about that" (#l("if(na==0)")); v7
 went on to compute a question number modulo zero. A fact longer than
 `NC` characters is cut there (#l("for(j=0;j<z&&j<NC;j++)")). The time is a `long long`, and the
-increment for the generator takes its low bits as v7 did, now with the
-parentheses which make the order of `&` and `|` explicit (#l("inc = ((int)tm&077774)|01;")).
+increment for the generator takes its low bits, with parentheses
+which make the order of `&` and `|` explicit (#l("inc = ((int)tm&077774)|01;")).
 
 #lines-to("int", lead: true, after: "}")
 
@@ -15239,7 +15238,7 @@ of the symbols, and the order no longer matters.
 #lines-to("$S/conf/mkconf: $S/conf/mkconf.c", lead: true)
 
 The configurator `mkconf` is a host program, built with the host compiler and the strict
-flags. It is run, as in v7, in the directory which is to receive its
+flags. It is run in the directory which is to receive its
 output, reading the configuration on its standard input; v7's
 `conf` held one `c.c` at a time, which is why `allsystems` had to
 build its kernels one after the other. A pattern rule with two targets
@@ -15360,7 +15359,7 @@ Then comes `awk`. The parser generator `bison` writes the parser and, with `--de
 token numbers (`awk.h`), as v7's `yacc -d` wrote `y.tab.h`; the `&:`
 says that one run makes both. The program `proc` is run during the build:
 compiled with the token numbers of `awk.h`, it writes `proctab.c`, the table of the
-procedures which evaluate each kind of node, as in v7. Being run here,
+procedures which evaluate each kind of node. Being run here,
 it is compiled by the host compiler, without v7's headers, with
 `token.c`, whose table of token names it uses; both include `awk.h` and
 `awk.def`, and are recompiled when either changes.
@@ -15841,7 +15840,7 @@ the time of the build.
 The block addresses. The first `LADDR` (ten) are copied into the inode.
 If there are ten or more, an indirect block is allocated and written
 straight from `ib`, starting at `ib[LADDR]`; a file of exactly ten
-blocks, as in v7, thus gets an indirect block of zeros. The v7 program stopped
+blocks thus gets an indirect block of zeros. The v7 program stopped
 there: it moved the remaining numbers down to the start of `ib` and
 wrote them, so no file could exceed `NINDIR` blocks, 64 KB. The kernel
 itself, installed as `/unix`, and the dictionary are larger than that, so the
@@ -16002,7 +16001,7 @@ yet, and empties `/etc/utmp`, the record of who is logged in, creating
 it on the first boot; it clears the temporary directories, and starts
 `update` (#f("cmd/update.c")), which calls `sync` every thirty seconds,
 and `cron` (#f("cmd/cron.c")). The line beginning with `:` is a comment,
-as in v7, where accounting was likewise left off.
+which leaves accounting off.
 
 The file is v7's, less one line: v7 mounted `/usr` from a second disk
 partition, `/dev/rp3`, of which this system has none. The lines for the
