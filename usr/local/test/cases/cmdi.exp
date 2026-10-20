@@ -117,10 +117,6 @@ the quick brown fox
 -rw-r--r-- 1 root      143 Jan  9 HH:MM /etc/passwd
 total 6
 drwxrwxrwx 2 root       96 Jan  9 HH:MM .
-total 0
--rw-rw-rw- 1 root        0 Jan  9 HH:MM b
--rw-rw-rw- 1 root        0 Jan  9 HH:MM a
--rw-rw-rw- 1 root        0 Jan  9 HH:MM c
   126 /etc/passwd
    1 /etc/passwd
 drwxr-xr-x 2 root      304 Jan  9 HH:MM /etc

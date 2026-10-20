@@ -44,7 +44,7 @@ sh -c 'exit 7'; echo $?
 (readonly R; R=1; echo r)
 umask; umask 22; umask
 cd /usr; pwd; cd; pwd; cd $T
-(sleep 1; echo bg) & wait; echo waited
+(sleep 0; echo bg) & wait; echo waited
 echo a | sed s/a/b/ | tr b c | cat -
 x=`cat s1 | wc -l`; echo lines $x
 for f in s*; do echo glob $f; done; echo /us*/b*n

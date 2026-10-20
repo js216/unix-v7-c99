@@ -27,7 +27,7 @@ mkdir root root/dev root/etc root/bin; cp /etc/wall root/wall; cp /bin/write roo
 $U/ob 164 61 '6*0' 162 157 157 164 '4*0' '8*0' '24*0' 164 164 164 164 164 164 164 62 144 155 162 '5*0' '8*0' >root/etc/utmp
 >root/dev/t1; >root/dev/ttttttt2
 awk 'BEGIN { for (i = 0; i < 100; i++) printf "%030d\n", i }' </dev/null >m; $U/r5r ch $T/root /wall <m
-until test `cat root/dev/t1 root/dev/ttttttt2 | wc -c` -eq 6052; do sleep 1; done
+until test `cat root/dev/t1 root/dev/ttttttt2 | wc -c` -eq 6052; do $U/nap; done
 sed -n '1,3p;$p' root/dev/t1; cmp root/dev/t1 root/dev/ttttttt2 && echo same
 $U/ob 164 164 '6*0' 162 157 157 164 '4*0' '8*0' 144 155 162 164 164 171 61 62 144 155 162 '5*0' '8*0' >root/etc/utmp
 ln /dev/console root/dev/tt; >root/dev/dmrtty12; chmod 622 root/dev/dmrtty12

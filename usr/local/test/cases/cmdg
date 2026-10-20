@@ -26,9 +26,9 @@ wc /etc/passwd; wc -l /etc/group; wc -wc /etc/passwd /etc/group
 fgrep root /etc/passwd; fgrep -v root /etc/group; fgrep -c bin /etc/passwd; fgrep -n -x other::1: /etc/group
 echo root >pat; echo bin >>pat; fgrep -f pat /etc/passwd /etc/group; rm pat
 cp /etc/group g; chmod 751 g; ls -l g; chmod u-x,o+w g; ls -l g; chmod a=r g; ls -l g; chmod +t,g+s g; ls -l g; rm -f g
-date | wc -c; nice -5 echo hi; nice echo x; time sleep 1; time nosuchcmd
+date | wc -c; nice -5 echo hi; nice echo x; time sleep 0; time nosuchcmd
 write root </dev/null; echo st$?; write nosuchuser </dev/null; echo st$?
-ps >p; sed 1q p; ps a >p; sed 1q p; ps l >p; sed 1q p; ps x >p; sed 1q p; sleep 100 & s=$!; until ps >p; grep -s 'sle[e]p 100' p; do sleep 1; done; grep -c 'sle[e]p 100' p; rm p; kill -13 $s; wait
+ps >p; sed 1q p; ps a >p; sed 1q p; ps l >p; sed 1q p; ps x >p; sed 1q p; sleep 100 & s=$!; until ps >p; grep -s 'sle[e]p 100' p; do $U/nap; done; grep -c 'sle[e]p 100' p; rm p; kill -13 $s; wait
 vpr /etc/passwd; echo st$?; rm -f /dev/vp0
 cp old.a a1; arcv a1; od -c a1
 umount /dev/nothing; su nosuchuser </dev/null; passwd nosuchuser </dev/null

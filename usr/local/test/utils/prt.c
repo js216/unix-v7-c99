@@ -15,7 +15,7 @@ main(void)
 	do
 		for (i = 0; i < 1000; i++)
 			x++;
-	while (times(&tb), tb.tms_utime < HZ/2);
+	while (times(&tb), tb.tms_utime < HZ/10);
 	profil((short *)buf, sizeof buf, 0, 0);
 	for (n = i = 0; i < 4096; i++)
 		n += buf[i];

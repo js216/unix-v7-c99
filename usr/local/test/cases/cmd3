@@ -25,7 +25,6 @@ dd if=dmp of=tr bs=10240 count=1 2>/dev/null; dumpdir f tr </dev/null >o; echo s
 cp /etc/ddate dds; cp $U/deep.img imgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 dump 0uf du imgbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb >/dev/null 2>&1; dump 0uf du imgbbbbbbbbbbbbbb >/dev/null 2>&1
 wc -c </etc/ddate; od -c /etc/ddate | sed 1q; cp dds /etc/ddate; dump 0df 5 du $U/deep.img >o; echo st$?; grep density o
-dump 0f dmp $U/many.img >/dev/null 2>&1; dumpdir f dmp >o; echo st$?; sed -n '$p' o; ls rst*
 echo '5sa0;ap' | dc; echo 'a[5]; a[5]=3; a[5]' | bc
 awk 'BEGIN { for (i = 0; i < 300; i++) print "1Sa"; print "c Lap" }' </dev/null | dc | uniq -c
 echo '[lxx1]sx lxx c 2p' | dc

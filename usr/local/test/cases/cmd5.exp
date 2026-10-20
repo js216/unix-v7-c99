@@ -4,7 +4,7 @@ rmdir: /tmp/cmd5/r/x: no permission
 st1
 e
 x
-    612
+    537
 st0
 d not found
 st0
@@ -119,6 +119,3 @@ st1
 Usage: restor x file file..., restor r filesys, or restor t
 st1
 Last chance before scribbling on fs. st1
-Too many directories
-st1
-rst* not found

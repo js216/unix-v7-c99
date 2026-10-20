@@ -1,6 +1,6 @@
 thumb it: 0 hits 1
 thumb udf: r0 7 hits 2
-ldiv: hits 4
+ldiv: hits 2
 utime -1
 stat done
 x

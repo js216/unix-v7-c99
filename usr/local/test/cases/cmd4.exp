@@ -26,8 +26,8 @@ st1
 /bin/ls:	executable
 /bin/ls:	executable
 st0
-    304
-    322
+    259
+    277
 find: too many predicates
 st1
 find: too many arguments

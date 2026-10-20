@@ -38,7 +38,7 @@ mkdir m1 m2/x; echo st$?; ls -d m1; mkdir; echo st$?
 mount; mount /dev/x /mnt; echo st$?
 mv a a2; ls a2; mv a2 a; mkdir mvd; mv mvd mvd2; ls -d mvd2; mv a mvd2; ls mvd2; mv mvd2/a .; mv nonexist q; echo st$?; mv mvd2 mvd2/sub; mv a; echo st$?
 pwd; cd /usr/lib; pwd; cd $T/dd; pwd; cd $T
-sleep 1; sleep x; echo st$?
+sleep 0; sleep x; echo st$?
 echo walltest >w; /etc/wall <w
 ls
 echo 2 | primes | sed 3q

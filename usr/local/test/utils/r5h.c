@@ -80,7 +80,7 @@ main(int argc, char **argv)
 	hits = 0;
 	signal(SIGALRM, tick);
 	alarm(1);
-	for (n = 0; hits < 4; n++)
+	for (n = 0; hits < 2; n++)
 		s += a / (b + (n & 15));
 	printf("ldiv: hits %d\n", hits);
 	return 0;

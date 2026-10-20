@@ -318,6 +318,7 @@ d--755 0 0
           dit	---755 0 0 usr/local/test/obj/dit
           edscr	---644 0 0 usr/local/test/utils/edscr
           elft	---755 0 0 usr/local/test/obj/elft
+          endblk	---755 0 0 usr/local/test/obj/endblk
           forkt	---755 0 0 usr/local/test/obj/forkt
           fmode	---755 0 0 usr/local/test/obj/fmode
           fpt	---755 0 0 usr/local/test/obj/fpt
@@ -326,9 +327,9 @@ d--755 0 0
           kcmp	---755 0 0 usr/local/test/obj/kcmp
           kmt	---755 0 0 usr/local/test/obj/kmt
           long	---644 0 0 usr/local/test/utils/long
-          many.img	---644 0 0 usr/local/test/obj/many.img
           memt	---755 0 0 usr/local/test/obj/memt
           monout	---644 0 0 usr/local/test/utils/monout
+          nap	---755 0 0 usr/local/test/obj/nap
           ob	---755 0 0 usr/local/test/obj/ob
           olda	---644 0 0 usr/local/test/utils/olda
           physt	---755 0 0 usr/local/test/obj/physt
@@ -354,6 +355,7 @@ d--755 0 0
           txtt	---755 0 0 usr/local/test/obj/txtt
           u2	---644 0 0 usr/local/test/utils/u2
           ut	---755 0 0 usr/local/test/obj/ut
+          waitf	---755 0 0 usr/local/test/obj/waitf
           words	---644 0 0 usr/local/test/utils/words
           xout	---644 0 0 usr/local/test/utils/xout
           $

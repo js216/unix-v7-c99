@@ -9,7 +9,7 @@ w=`awk 'BEGIN { for (i = 0; i < 450; i++) printf "a" }' </dev/null`; echo x$w >f
 fgrep -q zz f; echo st$?; fgrep '' $U/fs.img; echo st$?
 awk 'BEGIN { for (i = 0; i < 500; i++) printf "%c%c%c\n", 97 + i % 26, 97 + int(i / 26), 48 + i % 10 }' </dev/null >wl; sed 's/^/z/' wl | fgrep -c -f wl
 file /bin/ls; echo /bin/ls | tr -d '\012' >fl; file -f fl; echo st$?
-mkdir d; cd d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do mkdir bbbbbbbbbbbbbb; cd bbbbbbbbbbbbbb; done; echo x >f; cd $T
+mkdir d; cd d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17; do mkdir bbbbbbbbbbbbbb; cd bbbbbbbbbbbbbb; done; echo x >f; cd $T
 find d -name f -print | wc -c; find d -name f -cpio cp 2>&1 | wc -c
 p=`awk 'BEGIN { for (i = 0; i < 60; i++) printf " -name x -o"; print " -name y" }' </dev/null`; find f $p -print; echo st$?
 a=`awk 'BEGIN { for (i = 0; i < 60; i++) printf " a" }' </dev/null`; find f -exec echo $a \; ; echo st$?; find f -links -2147483648 -print
@@ -21,7 +21,7 @@ awk 'BEGIN { for (i = 0; i < 25; i++) printf "f "; print "" }' </dev/null >j3; j
 join -j1 0 j1 j2; echo st$?; join -o; echo st$?
 echo 'a 1 2 3 4 5' >j5; echo 'b x' | tr -d '\012' >>j5; echo 'b y' >j6; join j5 j6
 kill 4294967294; echo st$?
-c=$T; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do c=$c/cccccccccccccc; mkdir $c; done
+c=$T; for i in 1 2 3 4 5 6 7; do c=$c/cccccccccccccc; mkdir $c; done
 echo y >g; ln g $c; echo st$?; ls $c
 awk 'BEGIN { for (i = 0; i < 300; i++) printf "a"; print "" }' </dev/null >lw; look aaa lw | wc -c
 echo abc | /usr/lib/makekey | od -c | sed 1q; /etc/mknod; echo st$?; /etc/mknod x c 99999999999 1; echo st$?

@@ -36,10 +36,11 @@ apple	banana	cherry	date
 /usr/local/test/utils/xout
 /bin/cb
 /bin/cp
+found /usr/local/test/utils/waitf
 found /usr/local/test/utils/words
      17
 /
-     53
+     55
 1
    PID TTY TIME CMD
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD

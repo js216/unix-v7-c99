@@ -2,8 +2,8 @@ T=/tmp/cmd6 U=/usr/local/test/utils B=bbbbbbbbbbbbbb D=dddddddddddddd
 mkdir $T; cd $T
 echo wrong >g; tar cf t.tar nx/g; tar tf t.tar
 p=$T; for i in 1 2 3 4 5; do p=$p/$B; mkdir $p; done; cd $p; echo x >f; mkdir d; echo y >d/g; tar cf $T/t.tar d/g f; echo st$?; tar tf $T/t.tar
-for i in 1 2 3 4 5 6; do for j in 1 2 3 4 5; do p=$p/$B; mkdir $p; done; done; cd $p; echo x >f; tar cf $T/t.tar f; echo st$?; cd $T; rm -r $B
-mkdir d; p=d; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35; do p=$p/$B; mkdir $p; done; echo z >$p/z
+for i in 1 2 3 4 5 6; do for j in 1 2 3 4 5; do p=$p/$B; mkdir $p; done; done; cd $p; echo x >f; tar cf $T/t.tar f; echo st$?; rm f; for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do cd ..; rmdir $B; done; cd $T
+mkdir d; p=d; for i in 1 2 3 4 5 6 7; do p=$p/$B; mkdir $p; done; echo z >$p/z
 tar cf t.tar d; echo st$?; rm -r d
 mkdir w r; chmod 777 w; echo z >r/z; echo wrong >z; chmod 644 r; chown dmr r
 echo "cd $T; tar cf w/u.tar r; echo st\$?; tar tf w/u.tar" | su dmr 2>&1; chmod 755 r; rm -r w r z

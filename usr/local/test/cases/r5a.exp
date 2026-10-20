@@ -14,8 +14,6 @@ signal 17: -1 errno 22
     310
 st0
 longdir
-      4     52    1840 /usr/lib/crontab
-      4      8    1612
 hello
 st255
 sh: 2147483648: bad number

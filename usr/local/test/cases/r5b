@@ -1,6 +1,6 @@
 T=/tmp/r5b U=/usr/local/test/utils
 mkdir $T; cd $T
-$U/szt & until test `ps -l | grep -c '/usr/local/test/utils/sz[t]'` = 2; do sleep 1; done
+$U/szt & until test `ps -l | grep -c '/usr/local/test/utils/sz[t]'` = 2; do $U/nap; done
 ps -l | grep '/usr/local/test/utils/sz[t]' | awk '{print $10}'
 kill -14 `ps -l | grep '/usr/local/test/utils/sz[t]' | awk '{print $4}'`; wait
 $U/memt; $U/memt x; echo st$?; wc -c core
@@ -11,7 +11,7 @@ x=`cat /usr/dict/words`; case $x in *Zurich) echo found;; esac
 ps -l | awk '$(NF-1) == "sh" && $NF == "r5b" {print $10}'
 $U/txtt
 cp /bin/sleep $T/sl; $T/sl 100 & a=$!; $T/sl 100 & b=$!
-until test `ps ax | grep -c ':[0-9][0-9] /tmp/r5b/s[l] 100$'` = 2; do sleep 1; done
+until test `ps ax | grep -c ':[0-9][0-9] /tmp/r5b/s[l] 100$'` = 2; do $U/nap; done
 set `ls -i $T/sl`; pstat -i >i; pstat -x >x; l=`awk 'NF > 8 && $(NF-4) == '$1' && $(NF-3) ~ /^10/ {print $1}' i`
 grep "$l  *[0-9][0-9]*  *[0-9][0-9]*$" x | awk '{print $(NF-1), $NF}'
 echo x >$T/sl; echo st$?; cp /bin/echo $T/sl; kill -13 $a $b; wait; cp /bin/echo $T/sl; $T/sl replaced

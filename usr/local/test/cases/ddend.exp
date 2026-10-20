@@ -1,10 +1,6 @@
-0+1 records in
-1+0 records out
-1+0 records in
-1+0 records out
-0000000   e   n   d       o   f       d   i   s   k  \n  \0  \0  \0  \0
-0000020  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0  \0
-*
-0001000
+write 512
+read 512 end of disk
+zeros 1
+past -1
 dd: argument 9999999999 out of range
 st1

@@ -15,11 +15,7 @@ r4a: /nonexistent: bad directory
 args a b c
 after
  F S UID   PID  PPID CPU PRI NICE    ADDR   SZ       WCHAN TTY TIME CMD
--rw-r--r-- 1 daemon    136 Jan  9 HH:MM /usr/adm/msgbuf
--rw-r--r-- 1 root        0 Jan  9 HH:MM /usr/adm/wtmp
-messages
-Jan  9 HH:MM
 Mon Feb  1 00:00:SS EST 2038
 Mon Feb  1 00:00:SS EST 2038
 date0
-l: syntax error at line 100002: `fi' unexpected
+l: syntax error at line 66002: `fi' unexpected

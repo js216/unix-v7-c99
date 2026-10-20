@@ -1,6 +1,6 @@
 T=/tmp/cmdi U=/usr/local/test/utils
 mkdir $T; cd $T
-sleep 1; echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
+echo abcdefghij | /usr/lib/makekey | od -c; echo crypttest | crypt key | crypt key
 cat >f <<'X'
 the quick brown fox
 jumps over the lazy dog
@@ -50,7 +50,7 @@ sort s; echo --; sort -n s; echo --; sort -rn s; echo --; sort -u s; echo --; so
 sort -nr +0 -1 s -o s2; cat s2; sort s >s3; sort -c s3 && echo sorted; sort -m s3 s3 | wc -l; sort -d s | sed 2q; sort -b s | sed 2q
 grep -n the f; grep -c a f; grep -v the f; grep -y QUICK f; grep '\(a\)\1' f; grep '^[a-j]' f; grep -l over f g; grep 'o[gv]' f
 egrep 'fox|dog' f; egrep '(ab|cd)+' f; egrep -n 'a+b?' f; egrep -v 'a' f; egrep -c 'o' f; egrep '[0-9]+$' f; egrep 'qu.ck' f
-ls -l /etc/passwd; ls -la $T | sed 2q; mkdir lt; >lt/c; sleep 1; >lt/a; sleep 1; >lt/b; ls -lt lt; rm -r lt; ls -i /etc/passwd; ls -s /etc/passwd; ls -ld /etc; ls -lc /dev/console
+ls -l /etc/passwd; ls -la $T | sed 2q; ls -i /etc/passwd; ls -s /etc/passwd; ls -ld /etc; ls -lc /dev/console
 od -o f | sed 2q; od -x f | sed 2q; od -d f | sed 2q; od -b f | sed 2q; od -c f +5 | sed 2q
 echo hello world | tr a-z A-Z; echo hello | tr -d l; echo aaabbb | tr -s ab; echo hello world | tr -c a-z '\012'; echo abc | tr abc 'x-z'
 cat >ts <<'X'

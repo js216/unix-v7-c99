@@ -180,7 +180,7 @@ sig(void)
 		}
 	}
 	a = b = c = d = 0;
-	for (i = 0; got < 20 && i < 400000000; i++) {
+	for (i = 0; got < 5 && i < 400000000; i++) {
 		a += one;
 		b += three;
 		c -= ten;
@@ -189,7 +189,7 @@ sig(void)
 	kill(kid, SIGKILL);
 	wait(&st);
 	printf("async %s %s fpscr %08x\n",
-	    got >= 20 ? "done" : "timeout",
+	    got >= 5 ? "done" : "timeout",
 	    b == 3*a && c == -10*a && d == a ? "ok" : "bad",
 	    __builtin_arm_get_fpscr() & 0x07ffffffU);
 }

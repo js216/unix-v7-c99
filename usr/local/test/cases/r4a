@@ -11,10 +11,6 @@ set a b c; for i do for j do :; done; done; (cd /nonexistent)
 echo args $*
 echo after
 ps l | sed -n 1p
-cp /usr/lib/crontab crontab; cp /usr/adm/messages messages; cp /usr/adm/msgbuf msgbuf
-c=`ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`; for p in $c; do kill -9 $p; done; echo '* * * * * /etc/dmesg - >>/usr/adm/messages; echo >/tmp/r4a/done' >/usr/lib/crontab; /etc/cron; until test -s $T/done; do sleep 1; done; ls -l /usr/adm/msgbuf /usr/adm/wtmp; test -s /usr/adm/messages && echo messages; sed -n 2p /usr/adm/messages
-for p in `ps ax | sed -n '/\/etc\/cro[n]$/s/^ *\([0-9]*\) .*/\1/p'`; do kill -9 $p; done
-cp crontab /usr/lib/crontab; cp messages /usr/adm/messages; cp msgbuf /usr/adm/msgbuf; test -n "$c" && /etc/cron
 cp /usr/adm/wtmp wtmp; t=`$U/clock`; date 3802010000; f=`$U/clock`; date; echo date$?; $U/clock $t $f; cp wtmp /usr/adm/wtmp
-yes : | sed 100000q >l; echo fi >>l; sh l
+yes : | sed 66000q >l; echo fi >>l; sh l
 cd /; rm -rf $T

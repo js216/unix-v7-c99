@@ -1,17 +1,17 @@
 T=/tmp/sig U=/usr/local/test/utils
 mkdir $T; cd $T
-(until test -s p; do sleep 1; done; kill -2 `cat p`) &
+($U/waitf p; kill -2 `cat p`) &
 $U/pidf p sleep 100; echo rc=$?; wait
-rm -f p; (until test -s p; do sleep 1; done; kill -2 `cat p`) &
+rm -f p; ($U/waitf p; kill -2 `cat p`) &
 $U/pidf p yes >/dev/null; echo rc=$?; wait
-rm -f p1 p2; (until test -s p1; do sleep 1; done; kill -2 `cat p1`) &
+rm -f p1 p2; ($U/waitf p1; kill -2 `cat p1`) &
 $U/pidf p1 yes | $U/pidf p2 cat >/dev/null; echo rc=$?; wait
-rm -f p1 p2; (until test -s p1 -a -s p2; do sleep 1; done; kill -2 `cat p1` `cat p2`) &
+rm -f p1 p2; ($U/waitf p1 p2; kill -2 `cat p1` `cat p2`) &
 sh -c 'trap "echo caught; exit 3" 2; echo ready; echo $$ >p1; /usr/local/test/utils/pidf p2 sleep 100'
 echo rc=$?; wait
-rm -f p; (until test -s p; do sleep 1; done; kill `cat p`) &
+rm -f p; ($U/waitf p; kill `cat p`) &
 $U/pidf p sleep 100; echo kd=$?; wait
-rm -f p; (until test -s p; do sleep 1; done; kill -9 `cat p`) &
+rm -f p; ($U/waitf p; kill -9 `cat p`) &
 $U/pidf p yes >/dev/null; echo k9=$?; wait
 sh -c 'trap "echo term" 15; kill $$; echo after'
 ls /bin | wc -l

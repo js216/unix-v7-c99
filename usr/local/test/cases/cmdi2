@@ -1,10 +1,10 @@
 T=/tmp/cmdi2 U=/usr/local/test/utils
-mkdir $T; cd $T; sleep 1
+mkdir $T; cd $T
 basename /a/b/c.c .c; basename x/y; basename; echo abcabc | tr a-c A-C; echo hello | tr -d l; echo aabbccdd | tr -s abc; echo abc | tr -c a x; echo
 echo 'a b' >ts; echo 'b c' >>ts; echo 'a c' >>ts; echo 'c d' >>ts; tsort ts; echo 'd a' >>ts; tsort ts; tsort /nonexist
 yes | sed 3q; yes no | sed 2q; tty; tty -s; echo tty$?; sync; echo synced
 /etc/mknod $T/nod c 1 2; ls -l $T/nod; /etc/mknod; /etc/mknod x y 1 2; /etc/mknod $T/bnod b 3 x; rm -f $T/nod
-kill; sleep 30 & sleep 1; kill $!; wait; echo killed; kill -9 29999; kill -x 1
+kill; sleep 30 & $U/nap; kill $!; wait; echo killed; kill -9 29999; kill -x 1
 echo 'ONE two three' >a; echo 'four five' >>a; od a; od -c a; od -x a; od -b a | sed 3q; od -d a +4; od -o a 10.
 cp a b; cmp a b; echo yy >>b; cmp a b; cmp -l a b; cmp -s a b; echo st$?; echo ONE two threX >c; cmp -l a c; cmp a c 4 4; cmp a
 cp a $T/b/x; mkdir dd; cp a b dd; ls dd; cp a; cp /nonexist a2
