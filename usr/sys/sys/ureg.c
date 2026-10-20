@@ -11,28 +11,76 @@ unsigned long long *l1tab;
 unsigned l1pa;
 
 /*
- * Build the page tables of the current
- * process from the software prototype.
+ * A range of user pages: the first page, the number of pages, the
+ * physical address of the first, and the access bits
+ */
+struct urange {
+	unsigned va, n, pa, ap;
+};
+
+/*
+ * Build the page tables of the current process from the prototype:
+ * one second-level table for each gigabyte, and one third-level table
+ * for each 2 MB block, that the text, data, stack, and signal
+ * trampoline touch.
  */
 static void
 ptbuild(register struct proc *p)
 {
-	register unsigned long long *t;
-	register unsigned i, a;
-	unsigned long long *l1;
-	unsigned n, b, n2, n3lo, n3hi;
-	int taddr, daddr;
+	struct urange r[4], t;
+	register struct urange *rp;
+	register unsigned pg;
+	unsigned long long *l1, *l2, *l3;
+	unsigned nr, n, a, gb, blk;
+	int i, j;
 
-	taddr = daddr = p->p_addr;
-	if (p->p_textp != NULL)
-		taddr = p->p_textp->x_caddr;
-	n = u.u_ptsize + u.u_pdsize;
-	n2 = (n+PTPGB-1) / PTPGB;
-	n3lo = (n+NPTE-1) / NPTE;
-	n3hi = (u.u_pssize+NPTE-1) / NPTE;
-	n = n2 + n3lo + (n3hi != 0) + n3hi;
-	if(n == 0)
-		return;
+	nr = 0;
+	if(u.u_ptsize && p->p_textp != NULL) {
+		rp = &r[nr++];
+		rp->va = u.u_ptstart;
+		rp->n = u.u_ptsize;
+		rp->pa = ptob(p->p_textp->x_caddr);
+		rp->ap = u.u_pxrw;
+	}
+	if(u.u_pdsize) {
+		rp = &r[nr++];
+		rp->va = u.u_pdstart;
+		rp->n = u.u_pdsize;
+		rp->pa = ptob(p->p_addr + USIZE);
+		rp->ap = RW;
+	}
+	if(u.u_pssize) {
+		rp = &r[nr++];
+		rp->va = btop(USRSIZE) - u.u_pssize;
+		rp->n = u.u_pssize;
+		rp->pa = ptob(p->p_addr + USIZE + u.u_pdsize);
+		rp->ap = RW;
+	}
+	rp = &r[nr++];
+	rp->va = btop(SIGTRAMP);
+	rp->n = 1;
+	rp->pa = ptob(sigpage);
+	rp->ap = RO;
+	for(i = 1; i < (int)nr; i++)
+		for(j = i; j > 0 && r[j-1].va > r[j].va; j--) {
+			t = r[j];
+			r[j] = r[j-1];
+			r[j-1] = t;
+		}
+
+	n = 0;
+	gb = blk = ~0U;
+	for(rp = r; rp < &r[nr]; rp++)
+		for(pg = rp->va; pg < rp->va+rp->n; pg = (pg|(NPTE-1)) + 1) {
+			if(pg>>(L1SHIFT-PGSHIFT) != gb) {
+				gb = pg>>(L1SHIFT-PGSHIFT);
+				n++;
+			}
+			if(pg>>(BLKSHIFT-PGSHIFT) != blk) {
+				blk = pg>>(BLKSHIFT-PGSHIFT);
+				n++;
+			}
+		}
 	if((a = malloc(ptmap, n)) == 0) {
 		printf("out of page tables\n");
 		psignal(p, SIGKIL);
@@ -40,31 +88,28 @@ ptbuild(register struct proc *p)
 	}
 	p->p_ptab = a;
 	p->p_nptab = n;
-	t = (unsigned long long *)PGADDR(a);
-	for(i = 0; i < NPTE*n; i++)
-		t[i] = 0;
+	l3 = (unsigned long long *)PGADDR(a);
+	for(i = 0; i < (int)(NPTE*n); i++)
+		l3[i] = 0;
+
 	l1 = &l1tab[4*(p-proc)];
-	a = ptob(a);
-	for(i = 0; i < n2; i++, a += PGSIZE)
-		l1[i] = a | PTE_TAB;
-	for(i = 0; i < n3lo; i++, a += PGSIZE)
-		t[i] = a | PTE_TAB;
-	t += NPTE*n2;
-	b = ptob(taddr);
-	for(i = 0; i < u.u_ptsize; i++, b += PGSIZE)
-		*t++ = b | PGUSER | u.u_pxrw;
-	b = ptob(daddr) + ptob(USIZE);
-	for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)
-		*t++ = b | PGUSER | RW;
-	if(n3hi == 0)
-		return;
-	t = (unsigned long long *)PGADDR(p->p_ptab) + NPTE*(n2+n3lo);
-	l1[2] = a | PTE_TAB;
-	for(i = 0; i < n3hi; i++)
-		t[NPTE-n3hi+i] = (a += PGSIZE) | PTE_TAB;
-	t += NPTE + NPTE*n3hi - u.u_pssize;
-	for(i = 0; i < u.u_pssize; i++, b += PGSIZE)
-		*t++ = b | PGUSER | RW;
+	l2 = l3 = NULL;
+	gb = blk = ~0U;
+	for(rp = r; rp < &r[nr]; rp++)
+		for(pg = rp->va; pg < rp->va+rp->n; pg++) {
+			if(pg>>(L1SHIFT-PGSHIFT) != gb) {
+				gb = pg>>(L1SHIFT-PGSHIFT);
+				l1[gb] = ptob(a) | PTE_TAB;
+				l2 = (unsigned long long *)PGADDR(a++);
+			}
+			if(pg>>(BLKSHIFT-PGSHIFT) != blk) {
+				blk = pg>>(BLKSHIFT-PGSHIFT);
+				l2[blk & (NPTE-1)] = ptob(a) | PTE_TAB;
+				l3 = (unsigned long long *)PGADDR(a++);
+			}
+			l3[pg & (NPTE-1)] = (rp->pa + ptob(pg - rp->va)) |
+			    PGUSER | rp->ap;
+		}
 }
 
 /*
@@ -84,10 +129,8 @@ ptfree(register struct proc *p)
 }
 
 /*
- * Load the user hardware segmentation
- * registers from the software prototype.
- * The software registers must have
- * been setup prior by estabur.
+ * Point the processor at the current process's page tables, building
+ * them first if estabur has discarded them.
  */
 void
 sureg(void)
@@ -101,27 +144,42 @@ sureg(void)
 }
 
 /*
- * Set up software prototype segmentation
- * registers to implement the 3 pseudo
- * text,data,stack segment sizes passed
- * as arguments.
- * The argument sep specifies if the
- * text and data+stack segments are to
- * be separated.
- * The last argument determines whether the text
- * segment is read-write or read-only.
+ * Nonzero if the n pages from page a and the m pages from page b
+ * have none in common
+ */
+static int
+apart(unsigned a, unsigned n, unsigned b, unsigned m)
+{
+	return(n == 0 || m == 0 || a+n <= b || b+m <= a);
+}
+
+/*
+ * Set up the prototype of the user's address space: nt pages of text
+ * from page ts, nd pages of data from page ds, and ns pages of stack
+ * ending at USRSIZE.  The segments must lie within the user's space,
+ * apart from each other and from the signal trampoline, and the image
+ * must fit in memory.  xrw is the access to the text, RO or RW.
  */
 int
-estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
+estabur(unsigned ts, unsigned nt, unsigned ds, unsigned nd, unsigned ns,
+    int xrw)
 {
+	register unsigned top, ss, tr;
 
-	if(sep)
+	top = btop(USRSIZE);
+	if(nt > top || ts > top-nt || nd > top || ds > top-nd || ns > top)
 		goto err;
-	if(nt+nd > 2*PTPGB || ns > PTPGB)
+	ss = top - ns;
+	tr = btop(SIGTRAMP);
+	if(!apart(ts, nt, ds, nd) || !apart(ts, nt, ss, ns) ||
+	    !apart(ds, nd, ss, ns) || !apart(ts, nt, tr, 1) ||
+	    !apart(ds, nd, tr, 1) || !apart(ss, ns, tr, 1))
 		goto err;
 	if(nt+nd+ns+USIZE > maxmem)
 		goto err;
+	u.u_ptstart = ts;
 	u.u_ptsize = nt;
+	u.u_pdstart = ds;
 	u.u_pdsize = nd;
 	u.u_pssize = ns;
 	u.u_pxrw = xrw;

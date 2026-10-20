@@ -44,6 +44,7 @@ struct	user
 	caddr_t	u_dirp;			/* pathname pointer */
 	struct direct u_dent;		/* current directory entry */
 	struct inode *u_pdir;		/* inode of parent directory of dirp */
+	unsigned u_ptstart, u_pdstart;	/* prototype first pages */
 	unsigned u_ptsize, u_pdsize, u_pssize;	/* prototype sizes */
 	int	u_pxrw;			/* prototype of text access */
 	struct file *u_ofile[NOFILE];	/* pointers to file structures of open files */
@@ -67,7 +68,6 @@ struct	user
 		unsigned pr_scale;	/* pc scaling */
 	} u_prof;
 	char	u_intflg;		/* catch intr from sys */
-	char	u_sep;			/* flag for I and D separation */
 	struct tty *u_ttyp;		/* controlling tty pointer */
 	struct {			/* header of executable file */
 		unsigned char e_ident[16];	/* magic number */

@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <a.out.h>
-#define TXTRNDSIZ 4096L
 #define stacktop(siz) (USRSIZE)
 #define stackbas(siz) (USRSIZE-siz)
 #include <sys/param.h>
@@ -189,14 +188,6 @@ getdev(void)
 	}
 }
 
-static long
-round(long a, long b)
-{
-	long		w = ((a+b-1)/b)*b;
-
-	return(w);
-}
-
 struct map {
 	unsigned long	b1, e1; unsigned long f1;
 	unsigned long	b2, e2; unsigned long f2;
@@ -213,8 +204,7 @@ prcom(int puid)
 	long tm;
 	int c, nbad;
 	register char *tp;
-	long txtsiz, datsiz, stksiz;
-	int septxt;
+	long datsiz, stksiz;
 	int lw=(lflg?35:80);
 	char **ap;
 
@@ -230,11 +220,9 @@ prcom(int puid)
 		return(0);
 
 	/* set up address maps for user pcs */
-	txtsiz = ptob(u.u_tsize);
 	datsiz = ptob(u.u_dsize);
 	stksiz = ptob(u.u_ssize);
-	septxt = u.u_sep;
-	datmap.b1 = (septxt ? 0 : round(txtsiz,TXTRNDSIZ));
+	datmap.b1 = ptob(u.u_pdstart);
 	datmap.e1 = datmap.b1+datsiz;
 	datmap.f1 = ptob(USIZE)+addr;
 	datmap.b2 = stackbas(stksiz);

@@ -37,7 +37,7 @@ try(char *name, int len)
 int
 main(int argc, char **argv)
 {
-	int fd, len;
+	int fd, len, st;
 	int i;
 	unsigned *t, *d, *p, save;
 
@@ -52,10 +52,6 @@ main(int argc, char **argv)
 	d[4] = d[5] + 4096;
 	try("bigdata", len);
 	d[4] = save;
-	save = t[4];
-	t[4] = *(unsigned *)&buf[28] + 32 * *(short *)&buf[44] - 4;
-	try("bigph", len);
-	t[4] = save;
 	buf[1] = 'X';
 	try("badmag", len);
 	buf[1] = 'E';
@@ -71,5 +67,12 @@ main(int argc, char **argv)
 	t[2] = 4096;
 	t[4] = 0;
 	try("notext", len);
+	fflush(stdout);
+	if (fork() == 0) {
+		*(volatile int *)0 = 1;
+		exit(0);
+	}
+	wait(&st);
+	printf("null: status %d\n", st);
 	return 0;
 }

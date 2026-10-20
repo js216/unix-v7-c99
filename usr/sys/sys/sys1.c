@@ -9,7 +9,7 @@
 #include "../h/inode.h"
 #include "../h/seg.h"
 #include "../h/acct.h"
-int	getxfile(struct inode *ip, int nargc);
+void	getxfile(struct inode *ip, int nargc);
 void	setregs(void);
 
 /*
@@ -99,7 +99,8 @@ exece(void)
 		bawrite(bp);
 	bp = 0;
 	nc = (nc + NBPW-1) & ~(NBPW-1);
-	if (getxfile(ip, nc+(na+3)*NBPW) || u.u_error)
+	getxfile(ip, nc+(na+3)*NBPW);
+	if (u.u_error)
 		goto bad;
 
 	/*
@@ -160,18 +161,14 @@ exread(struct inode *ip, caddr_t base, unsigned count, unsigned off)
 
 /*
  * Read in and set up memory for executed file.
- * Zero return is normal;
- * non-zero means only the text is being replaced
  */
-int
+void
 getxfile(register struct inode *ip, int nargc)
 {
 	register unsigned ds;
-	register int sep;
 	register unsigned ts, ss;
-	register int i, n, overlay;
-	long lsize;
-	unsigned off, type;
+	register int i, n;
+	unsigned off, type, t0, d0, end;
 
 	/*
 	 * read in the ELF header;
@@ -184,10 +181,8 @@ getxfile(register struct inode *ip, int nargc)
 	if(exread(ip, (caddr_t)&u.u_exdata, sizeof(u.u_exdata), 0)) {
 		if(u.u_error == 0)
 			u.u_error = ENOEXEC;
-		goto bad;
+		return;
 	}
-	sep = 0;
-	overlay = 0;
 	n = 0;
 	if(u.u_exdata.e_ident[0] == 0177 && u.u_exdata.e_ident[1] == 'E' &&
 	    u.u_exdata.e_ident[2] == 'L' && u.u_exdata.e_ident[3] == 'F' &&
@@ -209,93 +204,79 @@ getxfile(register struct inode *ip, int nargc)
 	}
 	if(n != 2 ||
 	    u.u_exdata.ph[0].p_filesz == 0 ||
-	    u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz ||
-	    (u.u_exdata.ph[0].p_offset == 0 && u.u_exdata.e_phoff +
-	    u.u_exdata.e_phentsize*u.u_exdata.e_phnum >
-	    u.u_exdata.ph[0].p_filesz)) {
+	    u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz) {
 		u.u_error = ENOEXEC;
-		goto bad;
+		return;
 	}
 	if(u.u_exdata.ph[0].p_filesz!=0 && (ip->i_flag&ITEXT)==0 &&
 	    ip->i_count!=1) {
 		u.u_error = ETXTBSY;
-		goto bad;
+		return;
 	}
 
 	/*
-	 * find text and data sizes
-	 * try them out for possible
-	 * overflow of max sizes
+	 * find the pages of the text
+	 * and data, each at its own
+	 * address, and try them out
 	 */
-	ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);
-	lsize = (long)u.u_exdata.ph[1].p_vaddr +
-	    u.u_exdata.ph[1].p_memsz;
-	if ((unsigned)lsize < u.u_exdata.ph[1].p_memsz ||
-	    u.u_exdata.ph[1].p_vaddr < ptob(ts)) {
-		u.u_error = ENOMEM;
-		goto bad;
-	}
-	ds = btop(lsize) - ts;
+	t0 = u.u_exdata.ph[0].p_vaddr >> PGSHIFT;
+	end = u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz;
+	if(end < u.u_exdata.ph[0].p_filesz || end > USRSIZE)
+		goto nomem;
+	ts = btop(end) - t0;
+	d0 = u.u_exdata.ph[1].p_vaddr >> PGSHIFT;
+	end = u.u_exdata.ph[1].p_vaddr + u.u_exdata.ph[1].p_memsz;
+	if(end < u.u_exdata.ph[1].p_memsz || end > USRSIZE)
+		goto nomem;
+	ds = btop(end) - d0;
 	ss = SSIZE + btop(nargc);
-	if (overlay) {
-		if ((u.u_sep==0 && ts != u.u_tsize) || nargc) {
-			u.u_error = ENOMEM;
-			goto bad;
-		}
-		ds = u.u_dsize;
-		ss = u.u_ssize;
-		sep = u.u_sep;
-		xfree();
-		xalloc(ip);
-		u.u_ar0[PC] = u.u_exdata.e_entry & ~01;
-	} else {
-		if(estabur(ts, ds, ss, sep, RO))
-			goto bad;
-	
-		/*
-		 * allocate and clear core
-		 * at this point, committed
-		 * to the new image
-		 */
-	
-		u.u_prof.pr_scale = 0;
-		xfree();
-		i = USIZE+ds+ss;
-		expand(i);
-		while(--i >= USIZE)
-			clearseg(u.u_procp->p_addr+i);
-		xalloc(ip);
-	
-		/*
-		 * read in data segment
-		 */
-	
-		estabur(ts, ds, (unsigned)0, 0, RO);
-		u.u_base = (caddr_t)u.u_exdata.ph[1].p_vaddr;
-		u.u_offset = u.u_exdata.ph[1].p_offset;
-		u.u_count = u.u_exdata.ph[1].p_filesz;
-		readi(ip);
-		/*
-		 * set SUID/SGID protections, if no tracing
-		 */
-		if ((u.u_procp->p_flag&STRC)==0) {
-			if(ip->i_mode&ISUID)
-				if(u.u_uid != 0) {
-					u.u_uid = ip->i_uid;
-					u.u_procp->p_uid = ip->i_uid;
-				}
-			if(ip->i_mode&ISGID)
-				u.u_gid = ip->i_gid;
-		} else
-			psignal(u.u_procp, SIGTRC);
-	}
+	if(estabur(t0, ts, d0, ds, ss, RO))
+		return;
+
+	/*
+	 * allocate and clear core
+	 * at this point, committed
+	 * to the new image
+	 */
+
+	u.u_prof.pr_scale = 0;
+	xfree();
+	i = USIZE+ds+ss;
+	expand(i);
+	while(--i >= USIZE)
+		clearseg(u.u_procp->p_addr+i);
+	xalloc(ip);
+
+	/*
+	 * read in data segment
+	 */
+
+	estabur(t0, ts, d0, ds, (unsigned)0, RO);
+	u.u_base = (caddr_t)u.u_exdata.ph[1].p_vaddr;
+	u.u_offset = u.u_exdata.ph[1].p_offset;
+	u.u_count = u.u_exdata.ph[1].p_filesz;
+	readi(ip);
+	/*
+	 * set SUID/SGID protections, if no tracing
+	 */
+	if ((u.u_procp->p_flag&STRC)==0) {
+		if(ip->i_mode&ISUID)
+			if(u.u_uid != 0) {
+				u.u_uid = ip->i_uid;
+				u.u_procp->p_uid = ip->i_uid;
+			}
+		if(ip->i_mode&ISGID)
+			u.u_gid = ip->i_gid;
+	} else
+		psignal(u.u_procp, SIGTRC);
 	u.u_tsize = ts;
 	u.u_dsize = ds;
 	u.u_ssize = ss;
-	u.u_sep = sep;
-	estabur(ts, ds, ss, sep, RO);
-bad:
-	return(overlay);
+	estabur(t0, ts, d0, ds, ss, RO);
+	return;
+
+nomem:
+	u.u_error = ENOMEM;
 }
 
 /*
@@ -525,14 +506,14 @@ sbreak(void)
 	 * set n to new total size
 	 */
 
-	n = btop((int)((struct a *)u.u_ap)->nsiz);
-	if(!u.u_sep)
-		n -= u.u_tsize;
+	n = (int)btop((unsigned)((struct a *)u.u_ap)->nsiz) -
+	    (int)u.u_pdstart;
 	if(n < 0)
 		n = 0;
 	d = n - u.u_dsize;
 	n += USIZE+u.u_ssize;
-	if(estabur(u.u_tsize, u.u_dsize+d, u.u_ssize, u.u_sep, RO))
+	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize+d,
+	    u.u_ssize, RO))
 		return;
 	u.u_dsize += d;
 	if(d > 0)

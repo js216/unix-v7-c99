@@ -95,7 +95,7 @@ main(void)
 
 	if(newproc()) {
 		expand(USIZE + (int)btop(szicode));
-		estabur((unsigned)0, btop(szicode), (unsigned)0, 0, RO);
+		estabur(0, 0, 0, btop(szicode), 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
 		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),
 		    szicode);

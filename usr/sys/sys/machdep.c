@@ -45,6 +45,7 @@ int	icode[] =
 	0x00000074,
 };
 int	szicode = sizeof(icode);
+int	sigpage;		/* page of the signal trampoline */
 
 /*
  * Machine-dependent startup code
@@ -53,6 +54,7 @@ void
 startup(void)
 {
 	register int i, a;
+	unsigned *t;
 
 	/*
 	 * free all of core
@@ -66,6 +68,18 @@ startup(void)
 	i += btop(32*NPROC);
 	mfree(ptmap, NPTAB, i);
 	i += NPTAB;
+
+	/*
+	 * the signal trampoline,
+	 * mapped into every process
+	 */
+
+	sigpage = i++;
+	clearseg(sigpage);
+	t = (unsigned *)PGADDR(sigpage);
+	t[0] = 0xe3a0703f;	/* mov r7, #63 */
+	t[1] = 0xef000000;	/* svc #0 */
+	arm_sync_icache((caddr_t)t, 8);
 	maxmem = btop(coretop) - i;
 	mfree(coremap, maxmem, i);
 	printf("mem = %d\n", ptob(maxmem));
@@ -254,14 +268,6 @@ sumem(int dev, off_t off, int c)
 	return(skbyte(a, c));
 }
 
-void
-install_sigtramp(void)
-{
-	/* mov r7, #63; svc #0 */
-	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);
-	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);
-}
-
 /*
  * Let a process handle a signal by simulating an interrupt
  */
@@ -281,7 +287,7 @@ sendsig(caddr_t p, int signo)
 		return;
 	}
 	u.u_ar0[SP] = n;
-	u.u_ar0[14] = UENTRY_SIGTRAMP;
+	u.u_ar0[14] = SIGTRAMP;
 	u.u_ar0[PC] = (int)p;
 	u.u_ar0[R0] = signo;
 	u.u_ar0[PSR] &= ~TBITS;

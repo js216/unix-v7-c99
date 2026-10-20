@@ -124,7 +124,8 @@ xalloc(register struct inode *ip)
 	xp->x_iptr = ip;
 	ip->i_flag |= ITEXT;
 	ip->i_count++;
-	ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);
+	ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz) -
+	    (u.u_exdata.ph[0].p_vaddr >> PGSHIFT);
 	xp->x_size = ts;
 	if((xp->x_daddr = malloc(swapmap, (int)ptod(ts))) == NULL)
 		panic("out of swap space");
@@ -132,23 +133,15 @@ xalloc(register struct inode *ip)
 	xexpand(xp);
 	for(i = 0; i < ts; i++)
 		clearseg(xp->x_caddr+i);
-	estabur(ts, (unsigned)0, (unsigned)0, 0, RW);
+	estabur(u.u_exdata.ph[0].p_vaddr >> PGSHIFT, ts, 0, 0, 0, RW);
 	u.u_count = u.u_exdata.ph[0].p_filesz;
 	u.u_offset = u.u_exdata.ph[0].p_offset;
 	u.u_base = (caddr_t)u.u_exdata.ph[0].p_vaddr;
-	if(u.u_offset == 0) {
-		i = u.u_exdata.e_phoff +
-		    u.u_exdata.e_phentsize*u.u_exdata.e_phnum;
-		u.u_offset += i;
-		u.u_base += i;
-		u.u_count -= i;
-	}
 	u.u_segflg = 2;
 	u.u_procp->p_flag |= SLOCK;
 	readi(ip);
 	u.u_procp->p_flag &= ~SLOCK;
 	u.u_segflg = 0;
-	install_sigtramp();
 	arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));
 	xp->x_flag = XWRIT;
 }

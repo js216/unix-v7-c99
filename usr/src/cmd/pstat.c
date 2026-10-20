@@ -340,7 +340,6 @@ dousr(void)
 	for (i=0; i<4; i++)
 		printf(" %.1o", up->u_arg[i]);
 	printf("\nsizes %.1o %.1o %.1o\n", up->u_tsize, up->u_dsize, up->u_ssize);
-	printf("sep %d\n", up->u_sep);
 	printf("qsav %.1o %.1o\n", up->u_qsav[0], up->u_qsav[1]);
 	printf("ssav %.1o %.1o\n", up->u_ssav[0], up->u_ssav[1]);
 	printf("sigs");

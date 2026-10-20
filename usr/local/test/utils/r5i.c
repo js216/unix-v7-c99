@@ -34,7 +34,7 @@ count(int sig)
 }
 
 static int
-padded(char *name)
+low(char *name)
 {
 	unsigned h[13], p[8], i;
 	int fd, r;
@@ -48,7 +48,7 @@ padded(char *name)
 			if (read(fd, (char *)p, 32) != 32)
 				break;
 			if (p[0] == 1) {
-				r = p[1] != 0;
+				r = p[2] < 4096;
 				break;
 			}
 		}
@@ -70,8 +70,8 @@ main(int argc, char **argv)
 	}
 	if (argc > 1) {
 		for (n = 0, i = 2; i < argc; i++)
-			n += padded(argv[i]);
-		printf("padded %d\n", n);
+			n += low(argv[i]);
+		printf("low %d\n", n);
 		return 0;
 	}
 	signal(SIGALRM, count);

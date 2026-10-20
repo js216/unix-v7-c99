@@ -487,24 +487,19 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,
 	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
 	    base+u.u_count > USRSIZE || u.u_offset < 0)
 		goto bad;
-	ts = u.u_tsize;
-	if (u.u_sep)
-		ts = 0;
 	nb = base>>12;
 	/*
-	 * Check overlap with text. (ts and nb now
-	 * in 4096-byte pages)
-	 */
-	if (nb < ts)
-		goto bad;
-	/*
 	 * Check that transfer is either entirely in the
-	 * data or in the stack: that is, either
-	 * the end is in the data or the start is in the stack
-	 * (remember wraparound was already checked).
+	 * data or in the stack (remember wraparound was
+	 * already checked), and find its first page
+	 * in the image: ts and nb are in 4096-byte pages
 	 */
-	if (((base+u.u_count-1)>>12) >= ts+u.u_dsize
-	    && nb < (int)(btop(USRSIZE)-u.u_ssize))
+	if (nb >= (int)u.u_pdstart &&
+	    (base+u.u_count-1)>>12 < u.u_pdstart+u.u_dsize)
+		ts = USIZE + nb - u.u_pdstart;
+	else if (nb >= (int)(btop(USRSIZE)-u.u_ssize))
+		ts = USIZE + u.u_dsize + nb - (btop(USRSIZE)-u.u_ssize);
+	else
 		goto bad;
 	intr_disable();
 	while (bp->b_flags&B_BUSY) {
@@ -517,12 +512,7 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,
 	 * Compute physical address by simulating
 	 * the segmentation hardware.
 	 */
-	if (nb < (int)(ts+u.u_dsize))
-		ts = u.u_procp->p_addr + USIZE + nb - ts;
-	else
-		ts = u.u_procp->p_addr + USIZE + u.u_dsize + nb -
-		    (btop(USRSIZE)-u.u_ssize);
-	bp->b_un.b_addr = PGADDR(ts) + (base&07777);
+	bp->b_un.b_addr = PGADDR(u.u_procp->p_addr + ts) + (base&07777);
 	bp->b_blkno = u.u_offset >> BSHIFT;
 	bp->b_bcount = u.u_count;
 	bp->b_error = 0;

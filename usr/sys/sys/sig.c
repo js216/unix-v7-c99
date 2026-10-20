@@ -200,7 +200,6 @@ int
 core(void)
 {
 	register struct inode *ip;
-	register unsigned s;
 
 	if(u.u_uid != u.u_ruid || u.u_gid != u.u_rgid)
 		return(0);
@@ -222,11 +221,12 @@ core(void)
 		u.u_count = ptob(USIZE);
 		u.u_segflg = 1;
 		writei(ip);
-		s = u.u_procp->p_size - USIZE;
-		estabur((unsigned)0, s, (unsigned)0, 0, RO);
-		u.u_base = 0;
-		u.u_count = ptob(s);
+		u.u_base = (caddr_t)ptob(u.u_pdstart);
+		u.u_count = ptob(u.u_dsize);
 		u.u_segflg = 0;
+		writei(ip);
+		u.u_base = (caddr_t)(USRSIZE - ptob(u.u_ssize));
+		u.u_count = ptob(u.u_ssize);
 		writei(ip);
 	}
 	iput(ip);
@@ -250,7 +250,8 @@ grow(unsigned sp)
 	si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
 	if(si <= 0)
 		return(0);
-	if(estabur(u.u_tsize, u.u_dsize, u.u_ssize+si, u.u_sep, RO))
+	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize,
+	    u.u_ssize+si, RO))
 		return(0);
 	p = u.u_procp;
 	expand(p->p_size+si);
@@ -362,10 +363,12 @@ procxmt(void)
 				goto error;
 			xp->x_iptr->i_flag &= ~ITEXT;
 		}
-		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RW);
+		estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize,
+		    u.u_ssize, RW);
 		i = suiword((caddr_t)ipc.ip_addr, 0);
 		suiword((caddr_t)ipc.ip_addr, ipc.ip_data);
-		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
+		estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize,
+		    u.u_ssize, RO);
 		if (i<0)
 			goto error;
 		arm_sync_icache((caddr_t)ipc.ip_addr, NBPW);

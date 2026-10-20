@@ -114,7 +114,6 @@ void	gtime(void);
 void	gtty(void);
 void	idle(void);
 void	ifree(dev_t dev, ino_t ino);
-void	install_sigtramp(void);
 void	intr_enable(void);
 void	intr_restore(int s);
 void	intrstart(void);
@@ -247,8 +246,8 @@ int	copyout(caddr_t f, caddr_t t, unsigned n);
 int	cpass(void);
 int	dfar(void);
 int	dfsr(void);
-int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep,
-	    int xrw);
+int	estabur(unsigned ts, unsigned nt, unsigned ds, unsigned nd,
+	    unsigned ns, int xrw);
 void	expand(int newsize);
 int	fsig(struct proc *p);
 int	fkbyte(char *a);
