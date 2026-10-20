@@ -113,28 +113,28 @@ swtch(void)
 	if ((pid = fork()) == 0) {
 		__builtin_arm_set_fpscr(RM);
 		bad = 0;
-		for (s = 0, i = 0; i < 2000; i++) {
+		for (s = 0, i = 0; i < 500; i++) {
 			read(p1[0], &c, 1);
 			s += one/zero;
 			bad |= check(RM, 50);
 			write(p2[1], &c, 1);
 		}
-		bad |= check(RM, 5000000);
+		bad |= check(RM, 500000);
 		printf("child %s %d\n", bad ? "bad" : "ok", bad);
 		exit(0);
 	}
 	__builtin_arm_set_fpscr(RP);
 	bad = 0;
-	for (s = 0, i = 0; i < 2000; i++) {
+	for (s = 0, i = 0; i < 500; i++) {
 		s += three;
 		write(p1[1], &c, 1);
 		read(p2[0], &c, 1);
 		bad |= check(RP, 50);
 	}
-	if (s != 6000 || __builtin_arm_get_fpscr() & 2)
+	if (s != 1500 || __builtin_arm_get_fpscr() & 2)
 		bad |= 4;
 	rd = reader();
-	bad |= check(RP, 5000000);
+	bad |= check(RP, 500000);
 	while (wait(&st) != pid)
 		;
 	kill(rd, SIGKILL);

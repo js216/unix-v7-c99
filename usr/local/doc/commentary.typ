@@ -16567,7 +16567,7 @@ parent's rounding mode and registers, and that `exec` resets the mode
 (#l("case 'e':")--#l("break;", after: "printf(\"exec fpscr %08x\\n\", __builtin_arm_get_fpscr());")).
 
 The routine `switch` (#l("static void", after: "return(pid);")--#l("}", after: "printf(\"parent %s %d\\n\", bad ? \"bad\" : \"ok\", bad);")) runs two processes, each in its own rounding mode,
-that hand a byte back and forth through pipes 2000 times, while a third
+that hand a byte back and forth through pipes 500 times, while a third
 reads the raw disk to keep interrupts coming; each checks after every
 exchange that its registers and mode are its own. The routine `sig` (#l("static void", after: "got++;")--#l("}", after: "__builtin_arm_get_fpscr() & 0x07ffffffU);"))
 lets a signal handler change the mode and the registers in the middle
