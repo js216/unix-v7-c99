@@ -58,7 +58,7 @@ configuration of each machine gives the maps those sizes
 
 #lines-to("int")
 
-`malloc` uses the "first fit" rule: it takes the first area in the list
+The routine `malloc` uses the "first fit" rule: it takes the first area in the list
 which is large enough, and allocates from its low end. The search (#l("for (bp=mp; bp->m_size; bp++) {"))
 stops at the sentinel, whose size is zero.
 
@@ -132,15 +132,15 @@ last case, since in the others adding zero is harmless.
 #lines-to(none)
 #source("/usr/sys/sys/prf.c")
 
-The kernel's means of speaking to the operator. `printf` writes
+The kernel's means of speaking to the operator. The routine `printf` writes
 directly to the console, one character at a time, without buffering
 and without interrupts; it is used at startup, for hardware errors, and
-for the last words of a dying system. `panic`, `prdev`, and `deverror`
-are built on it, and it in turn calls `printn` for numbers and
+for the last words of a dying system. It serves `panic`, `prdev`, and
+`deverror`, and in turn calls `printn` for numbers and
 `putchar` for each character.
 
-`putchar` is defined in #f("pl011.c") for the QEMU machine and in
-#f("otg.c") for the MP135 machine. Both keep a copy of everything printed
+The QEMU machine's `putchar` is in #f("pl011.c"), the MP135 machine's
+in #f("otg.c"). Both keep a copy of everything printed
 in `msgbuf` and follow a newline with a carriage return. The first waits, with a time limit, for the transmitter to have room,
 and writes the character with the transmitter interrupt masked. The
 second gathers the characters, with interrupts off, and sends them to
@@ -149,7 +149,7 @@ tick for the previous transfer.
 
 #lines-to("/*")
 
-`panicstr` is set by `panic` and read by nothing in the system. It
+The variable `panicstr` is set by `panic` and read by nothing in the system. It
 exists so that whoever examines RAM after a crash can find the
 message, even if the console printed nothing.
 
@@ -157,53 +157,53 @@ message, even if the console printed nothing.
 
 The comment promises `%d`, `%u`, `%o`, `%x`, `%s`, and `%D`. There is no
 `%c` and no field width. An unrecognised conversion is printed as written (#l("} else {")--#l("}", after: "putchar('%');")), and a `%` at
-the very end of the format ends it (#l("c = *fmt++;")--#l("}", after: "c = *fmt++;")). v7's `printf` dropped the
+the very end of the format ends it (#l("c = *fmt++;")--#l("}", after: "c = *fmt++;")). In v7, `printf` dropped the
 first silently, leaving its argument to the next conversion, and read
 past the terminating null on the second.
 
-`%D` (#l("} else if (c == 'D') {")) prints a `long`, which here has the same 32~bits as an `int`,
+The conversion `%D` (#l("} else if (c == 'D') {")) prints a `long`, which here has the same 32~bits as an `int`,
 so `%D` and `%d` print the same.
 
 The other numeric conversions fetch their argument as `unsigned` (#l("printn(va_arg(adx, unsigned),")).
-v7 converted it to `long`, which on the PDP-11 widened 16~bits to 32
+The v7 code converted it to `long`, which on the PDP-11 widened 16~bits to 32
 and could never produce a negative value. So `%d` of $-1$ printed 65535,
 which is what the comment means by "`%d` (==`%u`)". Here `unsigned` and
 `long` are the same size, and the conversion would turn any value of
 $2^31$ or more negative: a kernel address such as `0xc0101234` would
 print as `-3FEFEDCC`. The cast is gone and `printn` takes an
-`unsigned long`, so the value arrives intact. `%d` of $-1$ prints 4294967295, as
+`unsigned long`, so the value arrives intact. Printed with `%d`, $-1$ appears as 4294967295, as
 the comment promises.
 
 #lines-to("/*", lead: true, after: "}")
 
-`printn` produces the digits of `n` in base `b` by printing the higher
+The routine `printn` produces the digits of `n` in base `b` by printing the higher
 digits, `n/b`, recursively, and then the lowest. The recursion ends
 because each call divides by at least 8; a 32-bit number has at most
 eleven octal digits.
 
-`printn` takes its number unsigned, as the comment (#l("* Print an unsigned integer in base b.")) says, so v7's
+The number is unsigned, as the comment (#l("* Print an unsigned integer in base b.")) says, so v7's
 test for a negative `n` is gone. The sign of a `%D` argument is printed
 by `printf` instead (#l("l = va_arg(adx, long);")--#l("printn(l, 10);")). It negates the value as `unsigned long`,
 so that even $-2^31$ comes out right.
 
 #lines-to("/*", lead: true, after: "}")
 
-`panic` is the system's response to a state it cannot repair. It
+A call of `panic` is the system's response to a state it cannot repair. It
 records the message, writes out what it can, prints, and stops.
 
-First `update` (93, #f("alloc.c")) writes the super-blocks, the modified
+First `update` (#l("update();"), #f("alloc.c")) writes the super-blocks, the modified
 inodes, and the delayed-write buffers to disk, so that as little as
 possible of the file systems is lost. If the panic arose in the disk
 code itself, this may not succeed, and if `update` was already running
 when the panic came, its lock `updlock` makes it return at once.
-`updlock` starts locked (#f("main.c")), and `main` releases it only once `binit` has built the buffers. Until then `update` would walk
+The lock is held from the start (#f("main.c")), and `main` releases it only once `binit` has built the buffers. Until then `update` would walk
 tables in DDR which the MP135 machine may not yet be able to reach, and
 a free list not yet linked.
 
 #lines-to("for(;;)")
 
-The system does not halt but idles for ever. `idle`
-(#f("mch.s")) was on the PDP-11 a `wait` instruction at processor
+The system does not halt but idles for ever. On the PDP-11, `idle`
+(#f("mch.s")) was a `wait` instruction at processor
 priority zero; on ARM it enables interrupts with `cpsie i`, waits for
 one with `wfi`, and disables them again. Interrupts therefore continue
 to be taken: transfers already under way, including those started by
@@ -212,13 +212,13 @@ to restart the machine.
 
 #lines-to("/*", lead: true)
 
-`prdev` reports a problem with a device, giving its major and minor
+The routine `prdev` reports a problem with a device, giving its major and minor
 numbers. It is used mainly by the file system code in #f("alloc.c"),
 for a full or corrupted file system.
 
 #lines-to("/*", lead: true, after: "}")
 
-`deverror` is called by a disk driver whose transfer has failed. The
+A disk driver whose transfer has failed calls `deverror`. The
 block number is a `daddr_t`, hence `%D`. The two further words were on the PDP-11 copies of the
 controller's error registers, for which octal was the natural form.
 The two disk drivers pass a single status value and a zero:
@@ -246,14 +246,9 @@ statically, once and for all, when the system is built. Among them are
 `NFILE` for the open file table, and `NPROC` for the process table. Doubling `NPROC`
 costs space in every system, whether the processes exist or not.
 
-`MAXMEM` (#l("#define\tMAXMEM\t32768\t\t/* max core per process */")) is the largest image a process may have, in pages. The
-administrator chooses it; it is currently set to 32768, 128~MB, a
-quarter of RAM. `startup`
-(#f("machdep.c")) limits `maxmem` to `MAXMEM`. `fork` (#f("sys1.c"))
-needs room on the swap area for a copy of its caller, since `newproc`
-(#f("slp.c")) may have to swap the child out. It therefore asks for the caller's own
-size. A test for a whole `MAXMEM` image would fail for good once a small
-image lay in the middle of the swap area.
+No constant limits the size of a process. An image may grow to all of
+the free memory, `maxmem` pages, which `startup` (#f("machdep.c"))
+counts at boot.
 
 The disk holds the root file system, and after it the swap area. The
 administrator decides how big each one is. The second line of
@@ -283,7 +278,7 @@ areas, hence `NPROC+NTEXT+3` entries. The swap area holds at most an
 image for each process, a copy of each text, and the argument list of
 each process in the middle of an `exec` (#f("sys1.c")): `2*NPROC+NTEXT`
 allocated areas, hence `2*NPROC+NTEXT+2`. The pool of user page tables
-(below) is allocated with the third map, `ptmap` (#f("ureg.c")); each
+(#l("#define\tNPTAB")) is allocated with the third map, `ptmap` (#f("ureg.c")); each
 process holds one run of pages from it, hence `NPROC+2`.
 
 `NPTAB` (#l("#define\tNPTAB\t(4*NPROC+256)\t/* pages of user page tables */")) is new: the user page tables of the processes in RAM are
@@ -316,12 +311,12 @@ distinction tested in `sleep` (#f("slp.c")).
 
 #lines-to("/*", after: "#define\tPUSER\t50")
 
-`NSIG` is one more than the number of signals, since signal zero means
-"no signal". The pending signals of a process are kept as bits in
-`p_sig` (#f("proc.h")), and v7 allowed sixteen, the bits of a PDP-11
-word. `p_sig` is now an `int`, and `NSIG` has been raised from 17 to 32:
-31 signals, as many as a 32-bit word holds without its sign bit, which
-`1<<(sig-1)` must not reach. Only v7's fifteen signals have names; the others may be sent,
+`NSIG` (#l("#define\tNSIG\t17")) is one more than the number of signals, since signal
+zero means "no signal". The pending signals of a process are kept as
+bits in `p_sig` (#f("proc.h")), and the comment's limit of sixteen is
+that of a PDP-11 word. The field is now an `int`, but the sixteen
+signals are kept, since the shell's tables and the programs which name
+signals expect them. Fifteen have names, and the sixteenth may be sent,
 caught, and ignored by number. FS (#l("#define\tSIGQUIT\t3\t/* quit (FS) */")) is the ASCII file separator,
 control-backslash, the terminal's quit character.
 
@@ -361,11 +356,12 @@ and `CROUND` is 017, as the comment demands.
 
 #lines-to("/*", after: "#define\tCROUND\t017\t\t/* clist rounding: sizeof(int *) + CBSIZE - 1*/")
 
-The conversion macros: `ptob` and `btop` (#l("#define\tptob(x)\t(x<<12)"), #l("#define\tbtop(x)\t((((unsigned)x+4095)>>12))")) convert pages of
-4096~bytes to bytes and back, rounding up, and `ptod` (#l("#define\tptod(x)\t((x)<<3)")) converts
+The conversion macros `ptob` and `btop` (#l("#define\tptob(x)"), #l("#define\tbtop(x)")) convert pages of
+4096~bytes to bytes and back, rounding up, both as `unsigned`, since
+physical addresses on the MP135 machine exceed the largest `int`. The macro `ptod` (#l("#define\tptod(x)\t((x)<<3)")) converts
 pages to 512-byte disk blocks.
 
-`itod` and `itoo` (#l("#define\titod(x)\t(daddr_t)((((unsigned)x+7)>>2))"), #l("#define\titoo(x)\t(int)((x+7)&03)")) find inode `x` on the disk: the block of the
+The macros `itod` and `itoo` (#l("#define\titod(x)\t(daddr_t)((((unsigned)x+7)>>2))"), #l("#define\titoo(x)\t(int)((x+7)&03)")) find inode `x` on the disk: the block of the
 i-list which holds it, and its place in the block. An inode is 128
 bytes, four to a block (#f("ino.h")), so the macros shift by 2 and mask
 with 3. Inodes are numbered from 1 and the i-list begins at block 2, so
@@ -374,23 +370,22 @@ block 2.
 
 #lines-to("typedef\tstruct { int r[1]; } *\tphysadr;")
 
-`label_t` (#l("typedef\tint\t\tlabel_t[10];\t/* regs 4-11, sp, lr */")) has ten words, for the registers which `save`
+The type `label_t` (#l("typedef\tint\t\tlabel_t[10];\t/* regs 4-11, sp, lr */")) has ten words, for the registers which `save`
 (#f("mch.s")) stores: r4 to r11, the stack pointer, and the link
 register.
 
-`time_t` (#l("typedef\tlong long\ttime_t;")) is a `long long`, a signed count of 64~bits, where v7's
+A `time_t` (#l("typedef\tlong long\ttime_t;")) is a `long long`, a signed count of 64~bits, where v7's
 was a `long`. On the PDP-11 and on the ARM alike a `long` is 32~bits,
 and a signed count of seconds since 1970 in 32~bits ends on 19 January
 2038; 64~bits last for some 292 thousand million years. The ARM
 aligns a `long long` on eight bytes, so every structure which holds a `time_t` is laid out anew. These are
 the inode on the disk (#f("ino.h")), the
-super-block (#f("filsys.h")), `stat` (#f("stat.h")), `user` and `xproc`
-(#f("user.h"), #f("proc.h")), and the records of accounting, of the
+super-block (#f("filsys.h")), `stat` (#f("stat.h")), `user` and `proc` (#f("user.h"), #f("proc.h")), and the records of accounting, of the
 login history, and of the archive formats which the commands keep.
 
 #lines-to("/*")
 
-`USERMODE` (#l("#define\tUSERMODE(ps)\t((ps & UMODE)==020)")) tells whether the interrupted program was in user
+`USERMODE` (#l("#define\tUSERMODE(ps)")) tells whether the interrupted program was in user
 mode, from the mode bits of its status register, which `irq`
 (#f("machdep.c")) passes to `clock` (#f("clock.c")).
 
@@ -398,9 +393,9 @@ mode, from the mode bits of its status register, which `irq`
 
 The declarations of variables. The values which differ between the
 two machines are defined by the configuration (#f("qemu/c.c")): the
-end of RAM (`coretop`) and the addresses of the interrupt controller. `corebase` and `coreoff`,
-where RAM begins and how far its kernel addresses lie from its physical
-ones, are computed by `machine_init` (#f("machdep.c")).
+end of RAM (`coretop`) and the addresses of the interrupt controller. Where RAM
+begins (`corebase`) and how far its kernel addresses lie from its
+physical ones (`coreoff`) are computed by `machine_init` (#f("machdep.c")).
 
 #lines-to(none)
 #source("/usr/sys/h/systm.h")
@@ -415,25 +410,26 @@ from 81~lines to 311, nearly all of the growth being one long list.
 
 #lines-to("extern\tint\tmpid;\t\t\t/* last process id given out */", lead: true)
 
-`runin`, `runout`, and `runrun` (29-31) are the flags by which `sched`
-and `swtch` (#f("slp.c")) communicate. `regloc` (#l("extern\tchar\tregloc[];\t/* locs. of saved user registers (trap.c) */")) is defined in
+The scheduler `sched` and `swtch` (#f("slp.c")) communicate through the
+flags `runin`, `runout`, and `runrun`
+(#l("extern\tchar\trunin;")--#l("extern\tchar\trunrun;")). The array `regloc` (#l("extern\tchar\tregloc[];\t/* locs. of saved user registers (trap.c) */")) is defined in
 #f("trap.c").
 
-`msgbufp` (#l("extern\tchar\t*msgbufp;\t/* next place in msgbuf */")) is the place in `msgbuf` where the next character
+The pointer `msgbufp` (#l("extern\tchar\t*msgbufp;\t/* next place in msgbuf */")) is the place in `msgbuf` where the next character
 goes. Both console drivers append to the buffer, so it is defined in
 #f("machdep.c").
 
-`clkstart` (#f("machdep.c")) sets up the clock's variables (#l("extern\tunsigned long long clkcval;\t/* when the clock is next due */"), #l("extern\tunsigned clkreload;\t\t/* counts per tick */")).
+The clock's variables (#l("extern\tunsigned long long clkcval;\t/* when the clock is next due */"), #l("extern\tunsigned clkreload;\t\t/* counts per tick */")) are set up by `clkstart` (#f("machdep.c")).
 On each tick `clock` (#f("clock.c")) adds `clkreload`, the timer's
 frequency divided by `HZ`, to the deadline `clkcval`. It also adds the
 remainder of that division, `clkrem`, to `clkfrac`, and lengthens a
 tick by one count whenever `clkfrac` reaches `HZ`, so that each second
-lasts exactly the timer's frequency. `l1tab` and
+lasts exactly the timer's frequency. The variables `l1tab` and
 `l1pa` (#l("extern\tunsigned long long *l1tab;\t/* user first-level tables */"), #l("extern\tunsigned l1pa;\t\t/* their physical address */")) locate the first-level page tables of the processes,
-one for each slot of the process table. `l1tab` gives their kernel
-address, and `l1pa` the physical address which the hardware needs.
-`startup` (#f("machdep.c")) takes them from RAM, and `sureg`
-(#f("ureg.c")) fills them.
+one for each slot of the process table. The first gives their kernel
+address, and the second the physical address which the hardware needs.
+The tables are taken from RAM by `startup` (#f("machdep.c")) and filled
+by `sureg` (#f("ureg.c")).
 
 #lines-to("dev_t getmdev(void);", lead: true)
 
@@ -494,13 +490,15 @@ they are the access permission bits of a long-format page entry, bits 6
 and 7, and `ptbuild` (#f("ureg.c")) ors them into the entries which map the text. The value 11 lets user
 mode read the page but not write it, and 01 lets it do both. In either
 case the kernel may do both. The data and the stack are
-always mapped `RW`. The page entries' other bits are `PGUSER` (12,
-below).
+always mapped `RW`. The page entries' other bits are `PGUSER` (#l("#define\tPGUSER")).
 
-#lines-to("#define\tUENTRY_SIGTRAMP\t8")
+#lines-to("#define\tSIGTRAMP")
 
-`UENTRY_SIGTRAMP` (#l("#define\tUENTRY_SIGTRAMP\t8")) is the address of the signal trampoline
-(`sendsig`, #f("machdep.c")).
+`SIGTRAMP` (#l("#define\tSIGTRAMP")) is the user address of the signal trampoline,
+one read-only page which `startup` (#f("machdep.c")) fills at boot and
+`ptbuild` (#f("ureg.c")) maps into every process. It is page 1, below
+the programs' text at 0x8000 (#f("Makefile")), and `sigpage`
+(#l("extern int sigpage;")) is its physical page.
 
 `PGADDR` (#l("#define\tPGADDR(c)\t((char *)(((unsigned)(c)<<12)+coreoff))")) converts a page number into a kernel address. On the
 PDP-11, v7's unit number was a physical address divided by 64, and the
@@ -563,9 +561,10 @@ next level, and also the type of a page entry at the third level.
   the user's translations alone.
 
 It is the same on
-both machines. `PGSHIFT` and `PGSIZE` (#l("#define\tPGSHIFT\t12"), #l("#define\tPGSIZE\t4096")) describe the 4~KB page,
-the unit of the user mapping, and `PTPGB` (#l("#define\tPTPGB\t(512*512)")) the number of pages in a
-gigabyte, the reach of a second-level table. `struct memregion` (#l("struct memregion { unsigned va, start, end; unsigned long long attr; };")) is the type of
+both machines. `PGSHIFT` and `PGSIZE` (#l("#define\tPGSHIFT\t12"), #l("#define\tPGSIZE\t4096")) describe the 4~KB page, the unit of the user mapping. `BLKSHIFT` and
+`L1SHIFT` (#l("#define\tBLKSHIFT"), #l("#define\tL1SHIFT")) give the reach of an entry of a
+second-level and of a first-level table, 2~MB and 1~GB, and `NPTE`
+(#l("#define\tNPTE")) the number of entries in a table. The type `struct memregion` (#l("struct memregion { unsigned va, start, end; unsigned long long attr; };")) is that of
 the table `board_map`, which `mkconf` writes into #f("qemu/c.c") from the
 `map` lines of the machine's configuration file. Each entry is a range of
 physical addresses, the kernel address at which it is to be mapped, and
@@ -577,8 +576,8 @@ the block descriptor bits to use.
 #f("low.s") takes the place of v7's `l.s`, the "low core" file. On the
 PDP-11, `l.s` filled the bottom of physical memory with the interrupt vectors, a new PC and PS for each trap and each
 device. It also supplied, for every device, a two-instruction stub which entered the common routine
-`call` with the address of the C handler. `mkconf` generated it anew for
-each configuration. None of that survives. The ARM has eight exception
+`call` with the address of the C handler. It was generated anew by
+`mkconf` for each configuration. None of that survives. The ARM has eight exception
 vectors, and only one of them serves all devices; the interrupt
 controller (GIC) is asked which device interrupted, and `irq`
 (#f("machdep.c")) looks the answer up in `intrtab`, which `mkconf` now
@@ -606,7 +605,7 @@ _Calling Convention._ Assembly language and C meet under the ARM
 Procedure Call Standard (AAPCS). The first four arguments of a function
 are passed in `r0` to `r3`, and its result is returned in `r0`. A
 function may change `r0` to `r3`, `ip` (`r12`), and `lr`, but must
-preserve `r4` to `r11` and `sp`. `bl` calls a function, leaving the
+preserve `r4` to `r11` and `sp`. The instruction `bl` calls a function, leaving the
 return address in `lr`, and `bx lr` returns.
 
 The processor arrives at `_start` (#l("_start:")) from the boot loader in SVC mode.
@@ -616,7 +615,7 @@ v7's `spl 7` state at the start.
 The system control register `SCTLR` is then read, and five bits are
 cleared: the instruction cache (bit 12), the data cache (2), branch
 prediction (11), "high vectors" (13), which would place the vectors at
-`0xffff0000`, and the MMU itself (0). `isb` makes sure that the following instructions are fetched under the
+`0xffff0000`, and the MMU itself (0). The instruction `isb` makes sure that the following instructions are fetched under the
 new setting.
 
 The kernel is linked to run above 0xc0000000, but QEMU, or on the
@@ -634,11 +633,11 @@ The constants at the top (#l(".set BLK_KERN, 0x701")--#l(".set PSR, 16")) repeat
 
 The TLB (the cache of address translations), the instruction
 cache, and the branch predictor are invalidated. The data cache is dealt with
-below. `dsb` waits for these operations to finish.
+later (#l("mcr p15, 0, r9, c7, c6, 2")). A `dsb` then waits for these operations to finish.
 
 #lines-to("adr r4, _start")
 
-`adr` (#l("adr r4, _start")) forms the address of `_start` from the PC, and so yields
+The instruction `adr` (#l("adr r4, _start")) forms the address of `_start` from the PC, and so yields
 where the kernel actually is; the literal `=_start` (#l("ldr r0, =_start", after: "adr r4, _start")) is the address
 at which it was linked. Their difference, kept in `r4`, turns any
 kernel address into a physical one.
@@ -664,19 +663,19 @@ is why it is used. The kernel's table `kl2` (#l("kl2:")) is a second-level
 table of 512~entries, which together map the gigabyte from 0xc0000000.
 
 Here `kl2` receives the blocks which hold the kernel itself, from
-`_start` to the end of `bss`. `r0` runs over the numbers of the 2~MB
-blocks, `r1` is the last, and each entry is the block's physical
-address, the kernel address plus `r4`, or'ed with `BLK_KERN` (38,
-#f("seg.h")). `ubfx` takes the
-low nine bits of the block number, the index in the table. The upper
+`_start` to the end of `bss`. The register `r0` runs over the numbers
+of the 2~MB blocks, `r1` is the last, and each entry is the block's
+physical address, the kernel address plus `r4`, or'ed with `BLK_KERN`
+(#at("/usr/sys/h/seg.h", "#define\tBLK_KERN")). The low nine bits of the
+block number, the index in the table, are taken by `ubfx`. The upper
 word of each entry stays zero. The difference in `r4` is a multiple of
 2~MB on both machines (#f("qemuconf")), as it must be for a block to map
 the kernel exactly.
 
 #lines-to("ldr r6, =bootl1")
 
-`bootl1` (#l("bootl1:")) is a first-level table for the low addresses, with a
-single entry: the gigabyte which contains the kernel's physical
+The first-level table `bootl1` (#l("bootl1:")) serves the low addresses
+and has a single entry: the gigabyte which contains the kernel's physical
 address is mapped onto itself. When the MMU is turned on, the next
 instructions are still fetched at physical addresses, and this mapping
 keeps them in place; `machine_init` removes it.
@@ -695,14 +694,14 @@ The cache size selection register is set to 0 (#l("mcr p15, 2, r2, c0, c0, 0")),
 cache, so that the next read describes it. The cache size
 identification register `CCSIDR` gives the logarithm of the line size
 in bytes (`r1`), the number of ways less one (`r3`), and the number of
-sets less one (`r7`). `ip`, the count of leading zeros of `r3`, is the
-shift which puts a way number into the top bits of a word.
+sets less one (`r7`). The count of leading zeros of `r3`, in `ip`, is
+the shift which puts a way number into the top bits of a word.
 
 #lines-to("1:\tmov r8, r3")
 
 A line of the data cache is found by its set and its way: the cache is
 divided into sets, and each set holds one line from each of its ways.
-`DCISW` (`c7, c6, 2`, 73) discards the line named by its operand, which
+`DCISW` (`c7, c6, 2`, #l("mcr p15, 0, r9, c7, c6, 2")) discards the line named by its operand, which
 carries the way number in its top bits and the set number just above
 the bits that select a byte within a line. The outer loop counts the
 sets down, the inner the ways. The lines are discarded, not written
@@ -736,7 +735,7 @@ A provisional stack, at the start of the kernel's `bss` (#l(".balign 8")--#l("st
 serves until the u-area of process 0 can be mapped.
 
 The vector base address register `VBAR` is loaded with the address of
-`vectors` (118), the table through which the processor takes
+`vectors` (#l("vectors:")), the table through which the processor takes
 exceptions. The table must be aligned on 32~bytes (#l(".balign 32")).
 
 #lines-to("mrc p15, 0, r0, c1, c0, 2")
@@ -754,7 +753,7 @@ the state of the current process, which `savfp` and `restfp`
 
 #lines-to("bl machine_init")
 
-`machine_init` (#f("machdep.c")) then does the rest, in order:
+Then `machine_init` (#f("machdep.c")) does the rest, in order:
 
 + It maps the device registers and starts the console.
 + On the MP135 machine it brings up the DDR memory.
@@ -768,15 +767,15 @@ address `machine_init` returns: `UBASE` (0xffe00000) plus the
 `UBASE` and `USIZE` are written down in one place only. From now on the SVC stack is always the kernel stack of the
 current process, at the same virtual address in every process.
 
-`main` (#f("main.c")) is called (#l("bl main")). Process 0, the swapper, never
+Next `main` (#f("main.c")) is called (#l("bl main")). Process 0, the swapper, never
 returns from it; it ends in `sched`. Process 1, which will become init,
-does return here. `newproc` makes it as a copy of process 0, kernel stack
-included, so it continues from the same point in `main`, which copies
+does return here. It is made by `newproc` as a copy of process 0, kernel
+stack included, so it continues from the same point in `main`, which copies
 `icode` to user address 0 for it and returns.
 
 #lines-to("mov r0, #0x10")
 
-_Return to User Mode._ `spsr` is set to `0x10`, user mode
+_Return to User Mode._ The register `spsr` is set to `0x10`, user mode
 with both interrupt masks clear, `lr` to 0, and `movs pc, lr` copies
 `spsr` into `cpsr` while it jumps: the standard ARM return from an
 exception. No user stack pointer is set: `icode` needs none,
@@ -796,7 +795,7 @@ the user's `cpsr`. The task is to lay down on the kernel stack a frame
 of all the user's registers, in the order which #f("reg.h") describes,
 and to hand its address to C.
 
-`srsdb sp!, #0x13` (#l("srsdb sp!, #0x13", after: "svc_entry:")), "store return state", pushes `lr` and `spsr`
+First `srsdb sp!, #0x13` (#l("srsdb sp!, #0x13", after: "svc_entry:")), "store return state", pushes `lr` and `spsr`
 onto the stack of the mode named (SVC), and updates that stack pointer.
 Room is then made for fifteen words, and `stmia sp, {r0-r14}^`
 stores `r0` to `r14`. The `^` makes the instruction store the *user*
@@ -810,10 +809,10 @@ at 52, the user `lr` at 56, the return PC at 60, and the saved status at
 64. This is why `SP`, `PC`, and `PSR` in #f("reg.h") are 13, 15, and 16:
 `u.u_ar0[SP]` is the user stack pointer, `u.u_ar0[PC]` the PC.
 
-`trap` (#f("trap.c")) is called (#l("bl trap")) with one argument, the address
+Then `trap` (#f("trap.c")) is called (#l("bl trap")) with one argument, the address
 of the frame of saved registers just built, which `mov r0, sp` (#l("mov r0, sp", after: "svc_entry:"))
-puts in `r0`, the register for a function's first argument. `trap`
-keeps it in `u.u_ar0`, through which the system calls reach the user's
+puts in `r0`, the register for a function's first argument. It
+keeps the address in `u.u_ar0`, through which the system calls reach the user's
 registers. Interrupts are enabled (#l("cpsie i", after: "svc_entry:")) for the duration of the system
 call and masked again afterwards (#l("cpsid i", after: "bl trap")). The return is shared with the
 other traps (#l("2:", after: "bl user_trap_handler")).
@@ -855,7 +854,7 @@ is kept in `r5` (#l("mov r5, lr"), #l("mov lr, r5")), which `irq` must preserve.
 
 #lines-to("mov r0, sp")
 
-`irq` (#f("machdep.c")) asks the GIC for the interrupt number,
+The routine `irq` (#f("machdep.c")) asks the GIC for the interrupt number,
 and calls `clock` or the device handler.
 
 #lines-to("mov lr, r5")
@@ -865,8 +864,8 @@ the saved status, at offset 64, is `0x10`) and `runrun` is set, meaning
 a process with a better priority is ready to run (#f("slp.c"),
 #f("clock.c")), the current process must give up the processor before
 it returns. The code then jumps to the call of `user_trap_handler`
-which the traps below use (#l("1:", after: "mrc p15, 0, r2, c6, c0, 0")), with signal 0 and address 0 (150,
-151). Signal 0 posts nothing, so the handler does only what it does at
+which the traps below use (#l("1:", after: "mrc p15, 0, r2, c6, c0, 0")), with signal 0 and address 0
+(#l("mov r0, #0", after: "ldr r0, =runrun"), #l("mov r2, #0", after: "ldr r0, =runrun")). Signal 0 posts nothing, so the handler does only what it does at
 the end of every trap: it takes any pending signal (`issig`, `psig`),
 recomputes the priority (`setpri`), and gives up the processor
 (`qswtch`). Otherwise the frame is unloaded at once (#l("2:", after: "bl user_trap_handler")). Without this
@@ -875,7 +874,7 @@ preempted, nor see a signal.
 
 #lines-to("badtrap:", lead: true)
 
-`badtrap` catches the two vectors which should never be used. It
+The two vectors which should never be used lead to `badtrap`. It
 changes to SVC mode with interrupts masked, so that it runs on the
 kernel stack, and calls `panictrap` (#f("machdep.c")), which panics.
 
@@ -900,13 +899,13 @@ An undefined instruction yields signal 4 (`SIGINS`), either abort
 signal 11 (`SIGSEG`).
 
 The save is repeated, rather than shared by all three, because no register is free to carry the signal number to a common
-save. `r0` to `r12` are the user's until they have been stored, and the banked `sp`
+save. The registers `r0` to `r12` are the user's until they have been stored, and the banked `sp`
 and `lr` of the abort and undefined modes are left behind by the change
 to SVC mode.
 
 The frame is built exactly as for an interrupt (#l("srsdb sp!, #0x13", after: "undef_entry:")--#l("stmia sp, {r0-r14}^", after: "undef_entry:"), #l("srsdb sp!, #0x13", after: "pabort_entry:")--#l("stmia sp, {r0-r14}^", after: "pabort_entry:"),
-#l("srsdb sp!, #0x13", after: "sub lr, lr, #8")--#l("stmia sp, {r0-r14}^", after: "sub lr, lr, #8")). Only then is the signal number loaded, into `r0` (164, 173,
-187), and `user_trap_handler` receives the signal, the frame, and in
+#l("srsdb sp!, #0x13", after: "sub lr, lr, #8")--#l("stmia sp, {r0-r14}^", after: "sub lr, lr, #8")). Only then is the signal number loaded, into `r0` (#l("mov r0, #SIGINS"),
+#l("mov r0, #SIGSEG", after: "pabort_entry:"), #l("mov r0, #SIGSEG", after: "sub lr, lr, #8")), and `user_trap_handler` receives the signal, the frame, and in
 `r2` an address (#l("1:", after: "mrc p15, 0, r2, c6, c0, 0")--#l("bl user_trap_handler")). A prefetch abort passes zero (#l("mov r2, #0", after: "pabort_entry:")), and so does
 an undefined instruction (#l("mov r2, #0", after: "mov r0, #SIGINS")). The handler reads the address only for
 `SIGSEG`, but it is given a defined value in every case, never the
@@ -921,7 +920,7 @@ of the routines which reach user memory runs, `nofault` (#f("mch.s"))
 holds the address at which it wants to continue if a user reference
 fails. That address
 is then written over the saved PC (#l("ldr r0, =nofault")--#l("bne 2f", after: "strne r0, [sp, #PC*4]")), and the exception returns
-there at once, by the common return below, without calling C. The
+there at once, by the common return (#l("rfeia sp!")), without calling C. The
 saved registers are restored as they were at the fault, and SVC mode's
 own `lr`, which C would have destroyed, is never touched. A fault in
 user mode cannot meet `nofault` set, since the routines clear it
@@ -936,7 +935,7 @@ grow (#f("trap.c")).
 
 #lines-to("1:")
 
-`user_trap_handler` runs with interrupts enabled (#l("cpsie i", after: "mov r1, sp")). The work it may do, the copying of a grown stack or the
+The routine `user_trap_handler` runs with interrupts enabled (#l("cpsie i", after: "mov r1, sp")). The work it may do, the copying of a grown stack or the
 writing of a core image, would otherwise hold off the clock and the
 console for its whole length. Unlike v7, the call made for `runrun` also runs with
 interrupts enabled: the interrupt has been acknowledged (#f("machdep.c")), and a further one
@@ -947,8 +946,8 @@ the saved state must not be disturbed between the `ldmia` and the
 
 #lines-to("2:")
 
-_Common Return._ `ldmia ... ^` (#l("ldmia sp, {r0-r14}^")), without the PC in the list, loads the User mode
-registers, as the `stmia` stored them. `rfeia sp!` (#l("rfeia sp!")),
+_Common Return._ The instruction `ldmia ... ^` (#l("ldmia sp, {r0-r14}^")), without the PC in the list, loads the User mode
+registers, as the `stmia` stored them. Then `rfeia sp!` (#l("rfeia sp!")),
 "return from exception", pops the PC and the saved status together into
 `pc` and `cpsr`, so the mode, the interrupt mask, and the condition flags
 of the interrupted program are restored with its PC in one step.
@@ -960,9 +959,9 @@ _Boot Stack and Tables._ The boot stack, one page, is used only until
 of calls from `machine_init`, through a `panic` and its `printf`, needs
 under 700~bytes, and a fault taken during boot under 1.4~KB.
 Interrupts stay masked until long after the switch, so none lands on
-this stack. `kl2` is the kernel's
-second-level table and stays in use after boot. It must be aligned on
-4~KB. `bootl1` is the first-level table which holds the boot identity
+this stack. The kernel's
+second-level table `kl2` stays in use after boot. It must be aligned on
+4~KB. The first-level table `bootl1` holds the boot identity
 mapping. It needs 32-byte alignment and follows `kl2`.
 
 #lines-to(none)
@@ -990,7 +989,7 @@ and must be kept equal to them by hand.
 
 #lines-to("dmbsy:")
 
-_Memory Barrier._ `dmbsy` is a data memory barrier: every memory access before it is
+_Memory Barrier._ The routine `dmbsy` is a data memory barrier: every memory access before it is
 observed before any after it. The virtio disk driver (#f("virtio_blk.c"))
 offers a request to the device by writing descriptors of the request,
 then a counter in memory which tells the device how many requests have
@@ -1004,25 +1003,25 @@ kind.
 #lines-to("intr_enable:")
 
 _Interrupt Masking._ The ARM core has a single interrupt mask bit, `I`
-(bit 7 of `cpsr`). `intr_enable` (#l("intr_enable:")) clears it and `intr_disable` (#l("intr_disable:"))
-sets it. Every interrupt handler runs with interrupts masked.
+(bit 7 of `cpsr`). It is cleared by `intr_enable` (#l("intr_enable:")) and set by `intr_disable`
+(#l("intr_disable:")). Every interrupt handler runs with interrupts masked.
 
-`intr_disable` returns the previous `cpsr` in `r0` (#l("mrs r0, cpsr")), so that
+The routine `intr_disable` returns the previous `cpsr` in `r0` (#l("mrs r0, cpsr")), so that
 `s = intr_disable(); ... intr_restore(s);` puts back the caller's
-state. `intr_restore` (#l("intr_restore:")) looks only at the `I` bit of the value it
-is given.
+state. In the value it is given, `intr_restore` (#l("intr_restore:")) looks only at
+the `I` bit.
 
 #lines-to("cntfrq_get:", lead: true)
 
-_Generic Timer._ `clkstart` (#f("machdep.c")) and `clock`
-(#f("clock.c")) use these routines to produce an interrupt every `1/HZ`
+_Generic Timer._ With these routines `clkstart` (#f("machdep.c")) and
+`clock` (#f("clock.c")) produce an interrupt every `1/HZ`
 second, a sixtieth (`HZ`, #f("param.h")), and the console's `putchar`
 (#f("pl011.c"), #f("otg.c")) times its wait with `cntvct_get`.
-`cntfrq_get` reads `CNTFRQ`, the counter frequency.
+The first, `cntfrq_get`, reads `CNTFRQ`, the counter frequency.
 
 #lines-to("cntvct_get:", lead: true)
 
-`cntvct_get` reads `CNTVCT`, the 64-bit time counter that increases at
+The routine `cntvct_get` reads `CNTVCT`, the 64-bit time counter that increases at
 `CNTFRQ` counts per second from reset, into `r0` and `r1`, the
 registers in which a C function returns an `unsigned long long`. The
 `isb` before it keeps the processor from reading the counter ahead of
@@ -1041,35 +1040,35 @@ timer because its interrupt has the same number, 27, on both machines.
 The physical timer's number depends on whether the processor runs in
 the Secure or the Non-secure state.
 
-`cntv_cval_set` loads the timer's compare register from the
+The timer's compare register is loaded by `cntv_cval_set` from the
 `unsigned long long` argument, passed in the same two registers. The
 timer interrupts once the count reaches it. The `isb` makes the new
 setting take effect before the routine returns.
 
 #lines-to("cntv_ctl_set:", lead: true)
 
-`cntv_ctl_set` writes the timer's control register: 1 enables it, with
+The timer's control register is written by `cntv_ctl_set`: 1 enables it, with
 the interrupt unmasked. Again the `isb` makes the setting take effect
 before the routine returns.
 
 #lines-to("save:", lead: true)
 
-_Process Switching._ `save` and `resume` are the means by which the
-kernel passes the processor from one process to another. `save` records
-where the current process is, and `resume` makes another process
-current and continues it from the point its own `save` recorded. Which
+_Process Switching._<mch-switch> The routines `save` and `resume` are the means by
+which the kernel passes the processor from one process to another. The
+first records where the current process is, and the second makes
+another process current and continues it from the point its own `save` recorded. Which
 process runs next is decided elsewhere, by `swtch` (#f("slp.c")). These
 two routines only carry the decision out. A process also uses them to
 jump back to an earlier point of its own, to abandon an interrupted
 system call or to continue after `expand` has moved it.
 
-`save(lab)` records in `lab` (a `label_t`, #f("param.h")) the registers
+The call `save(lab)` records in `lab` (a `label_t`, #f("param.h")) the registers
 which a function must preserve, `r4` to `r11` and `sp`, together with
 the return address in `lr`, ten words in all, and returns 0.
 
 #lines-to("resume:", lead: true)
 
-`resume(p_addr, lab)` maps the u-area of process `p_addr` at `UBASE` in
+The call `resume(p_addr, lab)` maps the u-area of process `p_addr` at `UBASE` in
 place of the current one, and does not return to its caller. Instead it
 reloads the registers which `save` stored in `lab`, so that the earlier
 call of `save` appears to return a second time, now with the value 1. The 1 means that the process has been resumed. A
@@ -1094,24 +1093,24 @@ store into a small store buffer and goes on with the next instruction,
 and the buffer drains into the cache shortly after. The processor's own
 loads look in the buffer, so a program always sees its own stores at
 once. The MMU, which reads the page tables by itself, is not guaranteed
-to, so it may for a while still find the old entry. `dsb` (#l("dsb ish", after: "1:	str r3, [r2], #8")) waits
+to, so it may for a while still find the old entry. The barrier `dsb` (#l("dsb ish", after: "1:	str r3, [r2], #8")) waits
 until the buffer has drained. Similarly, the TLB, the MMU's own cache of translations, may still hold
 the old translation of `UBASE`, and `TLBIMVAA` discards it, page by page (#l("ldr r3, =u")--#l("bne 1b", after: "1:\tmcr p15, 0, r3, c8, c7, 3")). The
 second `dsb` and the `isb` (#l("dsb ish", after: "1:	mcr p15, 0, r3, c8, c7, 3"), #l("isb", after: "1:\tmcr p15, 0, r3, c8, c7, 3")) wait until the discard has taken
 effect.
 
 The user part of the address space, below 0xc0000000 (`USRSIZE`,
-#f("param.h")), still maps the old process. `sureg` (#f("ureg.c"))
-switches it after the switch is complete.
+#f("param.h")), still maps the old process. It is switched by `sureg` (#f("ureg.c"))
+after the switch is complete.
 
 #lines-to("ldmia r1, {r4-r11}")
 
-`swtch` (#f("slp.c")) usually calls `resume(p->p_addr, u.u_rsav)`. The second
+Usually `swtch` (#f("slp.c")) calls `resume(p->p_addr, u.u_rsav)`. The second
 argument is the address of `u.u_rsav`, which lies at a fixed place in
 the page at `UBASE`. Before the switch, that place holds the old
 process's saved registers. After the switch, the same place holds the
 new process's, since the new process's u-area now appears at `UBASE`.
-`resume` reads `lab` only after the switch (#l("ldmia r1, {r4-r11}")--#l("ldr r2, [r1, #36]")), so it gets the new
+Only after the switch does `resume` read `lab` (#l("ldmia r1, {r4-r11}")--#l("ldr r2, [r1, #36]")), so it gets the new
 process's registers, the ones it saved there with `save(u.u_rsav)` when
 it last gave up the processor.
 
@@ -1120,7 +1119,7 @@ the old process's stack address, but `UBASE` now shows the new
 process's u-area. Anything pushed there would overwrite the new
 process's kernel stack. So the routine uses no stack, and interrupts,
 which would push a frame, stay masked. Once the new stack is in place,
-`intr_enable` (#l("bl intr_enable")) unmasks them. `intr_enable` is a call, which
+`intr_enable` (#l("bl intr_enable")) unmasks them. This is a call, which
 overwrites `lr`, so the saved `lr` is kept in `r2`, which `intr_enable`
 leaves alone, and the return is through it (#l("bx r2")). Without the call,
 interrupts would stay masked until the process next called
@@ -1141,8 +1140,8 @@ that the processor finds what the controller wrote and not stale lines.
 
 #lines-to("arm_sync_icache:", lead: true)
 
-`arm_sync_icache` makes instructions just written to memory visible to
-instruction fetch. The kernel must call it whenever it writes
+The routine `arm_sync_icache` makes instructions just written to memory
+visible to instruction fetch. The kernel must call it whenever it writes
 instructions that will be executed: a text read in from a file or back
 from the swap area, the signal trampoline, `icode`, and a word that a
 debugger stores into a text. A program's data and stack are never
@@ -1161,7 +1160,7 @@ old instructions, and is discarded with it.
 
 #lines-to("dline:", lead: true)
 
-`dline` serves all three routines. The line size differs between
+All three routines call `dline`. The line size differs between
 processors, so it reads it from the cache type register `CTR`. It
 rounds the start down to a line boundary, and returns the end of the
 range in `r1`. The callers keep their return address in `r12` across
@@ -1169,26 +1168,26 @@ the call, which overwrites `lr`.
 
 #lines-to("tlbflush:")
 
-_Translation Tables._ `tlbflush` invalidates the whole TLB (`TLBIALL`) and the branch
-predictor. `machine_init` (#f("machdep.c")) calls it after it changes
-the kernel's own mapping.
+_Translation Tables._ The routine `tlbflush` invalidates the whole TLB (`TLBIALL`) and the branch
+predictor. It is called by `machine_init` (#f("machdep.c")) after a
+change to the kernel's own mapping.
 
 #lines-to("ttbset:")
 
-`ttbset(a)` makes the first-level table at physical address `a` the
+The call `ttbset(a)` makes the first-level table at physical address `a` the
 user's. `TTBR0` is 64~bits wide in the long format, and is loaded from
 two registers (#l("mcrr p15, 0, r0, r1, c2	@ TTBR0")). The upper one, zero, holds the address space
 identifier, so every process runs with identifier 0. Each TLB entry is
 either global, belonging to every address space, or tagged with the
 identifier of one. The kernel's pages are global and the user's are
-not, so discarding the entries of identifier 0 (`TLBIASID`, 140)
+not, so discarding the entries of identifier 0 (`TLBIASID`, #l("mcr p15, 0, r1, c8, c7, 2"))
 removes the old process's translations and keeps the kernel's. The
 branch predictor, which remembers branch targets in the old mapping, is
 discarded too. The caches are left alone, since they do not depend on
 the mapping. The first `dsb` makes sure that `sureg`'s stores to the
 new tables have left the store buffer, and the tables need no cleaning,
-since the MMU reads them through the data cache. `sureg` (#f("ureg.c"))
-calls `ttbset` at every process switch, and whenever it has rebuilt the
+since the MMU reads them through the data cache. The routine `sureg`
+(#f("ureg.c")) calls `ttbset` at every process switch, and whenever it has rebuilt the
 current process's tables.
 
 #lines-to("fubyte:")
@@ -1199,19 +1198,19 @@ load and store with the permissions of user mode even when the kernel
 executes them. A user address which is not mapped, or which only the
 kernel may touch, therefore faults.
 
-`fubyte` and `fuword` return the byte or word at a user address, or -1;
+The routines `fubyte` and `fuword` return the byte or word at a user address, or -1;
 `subyte` and `suword` store one, and return 0 or -1. The byte is loaded
 without sign extension, whatever the signedness of `char`. The loaded
 value goes first into `r1` (#l("ldrbt r1, [r0]"), #l("ldrt r1, [r0]")): a load which wrote back to its
 own base register would be unpredictable, and `ldrt` and `strt` always
-write back. v7 distinguished `fuibyte` from `fubyte`, instruction space
+write back. The v7 code distinguished `fuibyte` from `fubyte`, instruction space
 from data space; #f("systm.h") makes the former names aliases of these.
 
 #lines-to("copyin:")
 
-`copyin(from, to, n)` and `copyout` move `n` bytes from a user address
-to a kernel one, and back, and return 0, or -1 if any user reference
-faults. As v7's did, they move words when both addresses and the count
+The routines `copyin(from, to, n)` and `copyout` move `n` bytes from a
+user address to a kernel one, and back, and return 0, or -1 if any user
+reference faults. They move words when both addresses and the count
 are multiples of the word (#l("1:	subs r2, r2, #4", after: "copyin:")--#l("b 1b", after: "copyin:"),
 #l("1:	subs r2, r2, #4", after: "copyout:")--#l("b 1b", after: "copyout:")), and bytes otherwise
 (#l("2:	subs r2, r2, #1", after: "copyin:")--#l("b 2b", after: "copyin:"),
@@ -1224,30 +1223,33 @@ A fault on a user address must not panic the kernel. The routine
 should instead return -1. So each routine first stores the address of `uerr` (#l("uerr:")) in
 `nofault` (#l("nofault:")). If one of its user references faults, the data abort
 handler (#f("low.s")) finds `nofault` set and continues at `uerr` rather
-than at the faulting instruction. `uerr` clears `nofault` and returns
+than at the faulting instruction. That code clears `nofault` and returns
 -1. A routine which completes clears it at `uok` (#l("uok:")) and returns its
-value. Only these routines set `nofault`, so any other fault in the
-kernel is still a `panic`. `uerr` finds the address of `nofault` still
+value. The routines `fkbyte`, `skbyte`, `fkword`, and `skword`
+(#l("fkbyte:")--#l("b uok", after: "skword:")) use the same guard for kernel addresses, which the
+memory special files may name in a block with nothing behind it
+(`mapaddr`, #f("machdep.c")). Only these routines set `nofault`, so any other fault in the
+kernel is still a `panic`. The code at `uerr` finds the address of `nofault` still
 in `r3`, since the abort restores the registers as they were at the
 fault.
 
 #lines-to("idle:")
 
-_Idle._ `idle` waits for an interrupt. `swtch` calls it with interrupts masked,
-and `wfi` ("wait for interrupt") halts the processor until an interrupt
-is pending, even a masked one. `cpsie i` then lets it be taken at once,
-so the PC it saves is always that of `waitpc` (#l("waitpc:	cpsid i")). `waitloc` (255,
-256) holds that address, and `clock` (#f("clock.c")) compares it with
+_Idle._ The routine `idle` waits for an interrupt. It is called by `swtch` with
+interrupts masked, and `wfi` ("wait for interrupt") halts the processor until an interrupt
+is pending, even a masked one. Then `cpsie i` lets it be taken at once,
+so the PC it saves is always that of `waitpc` (#l("waitpc:	cpsid i")). The variable
+`waitloc` (#l("waitloc:"), #l(".word waitpc")) holds that address, and `clock` (#f("clock.c")) compares it with
 the interrupted PC to count the time spent idle.
 
 #lines-to("savfp:")
 
-_Floating Point._ `savfp` and `restfp` store and load the floating
+_Floating Point._ The routines `savfp` and `restfp` store and load the floating
 point state of the current process. On the ARM the state is the status
 and control register `FPSCR`, which holds the rounding mode and the
 cumulative exception flags, and the 32 double registers `d0` to `d31`,
 which the processor's vector instructions (Advanced SIMD) also use.
-`vmrs` and `vmsr` move `FPSCR`, and `vstmia` and `vldmia` move sixteen
+The instructions `vmrs` and `vmsr` move `FPSCR`, and `vstmia` and `vldmia` move sixteen
 registers each, the most one instruction allows. The layout is that of
 `u_fps` (#f("user.h")): `FPSCR` in the first word, and the registers
 from byte 8, where the alignment of a `double` puts them. Both machines
@@ -1258,29 +1260,241 @@ in the cumulative flags of `FPSCR`.
 
 #lines-to("dfar:")
 
-_Fault Registers._ `dfar` and `dfsr` return the data fault address and status registers,
-which describe the last data abort. `user_trap_handler` (#f("trap.c"))
-prints them before it panics on a fault in kernel mode.
+_Fault Registers._ The routines `dfar` and `dfsr` return the data fault address and status registers,
+which describe the last data abort. They are printed by `user_trap_handler`
+(#f("trap.c")) before it panics on a fault in kernel mode.
 
 #lines-to(".data")
 
-`waitloc` holds the address of `waitpc`. `nofault` is zero except while
-a user reference is made.
+The variable `waitloc` holds the address of `waitpc`, and `nofault` is
+zero except while a user reference is made.
 
 #lines-to(".section .ddrbss,\"aw\",%nobits")
 
-`kl3u` is the page table through which `resume` switches the u-area.
+The u-area is switched by `resume` through the page table `kl3u`.
 The kernel's own table maps only whole 2~MB blocks, but a u-area is one
 page within its process's image. So the 2~MB block at `UBASE` gets a
 third-level table, which maps page by page. Of its 512~entries only the
 first `USIZE` are used. The rest stay invalid, so that a stray
-reference beyond the u-area faults. `machine_init` hooks the table into
-the last entry of `kl2` (#f("low.s")). Like every table of the long
+reference beyond the u-area faults. The table is hooked by `machine_init`
+into the last entry of `kl2` (#f("low.s")). Like every table of the long
 format, it is aligned on 4~KB. It lies in the section `.ddrbss`, which
 on the MP135 machine is in the DDR memory and so cannot be cleared until
 `machine_init` has started the DDR controller. The clearing loop in
 #f("low.s") therefore leaves it alone, and `machine_init` clears it
 afterwards.
+
+#lines-to(none)
+#source("/usr/sys/h/reg.h")
+
+When a process enters the kernel, by a system call, an interrupt, or an
+exception, its registers are saved on the kernel stack, and `u.u_ar0` is
+set to point at the saved `r0`. The header #f("reg.h") gives the position of every
+other saved register as an index from that point, so that the kernel
+may write `u.u_ar0[SP]` for the user's stack pointer without knowing how
+the frame was built.
+
+In v7 the frame was assembled partly by the PDP-11 hardware (`pc` and
+`ps`) and partly by the `call` and `trap` routines of `l.s`, and the
+registers did not lie in order: `r1` was two words below `r0`, `r2` to
+`r5` further below again, and `pc` and `ps` above. Hence v7's indices were
+-2, -9, -8, -7, -6, -3, 1, and 2. On the ARM the frame is built by
+#f("low.s") in a single order: `r0` to `r12` at indices 0 to 12, the
+user's `sp` at 13, its `lr` at 14, the return address at 15, and the
+saved status register (`spsr`) at 16. The registers are named by the
+ARM's names (#l("#define\tSP\t(13)")--#l("#define\tPSR\t(16)")): `SP` for the stack pointer, `PC` for the program
+counter, and `PSR` for the saved status, where v7 had the PDP-11's
+`R6`, `R7`, and `RPS`. The PDP-11's trace bit, v7's `TBIT`, is gone:
+the ARM has no such bit in its status register, and nothing sets it
+(#f("sig.c")).
+
+The ARM registers `r6` to `r12` and `lr` have no names here; code which
+needs one writes the index, as `trap` (#f("trap.c")) does with `r[7]`,
+the register which holds the system call number.
+
+#lines-to(none)
+
+#source("/usr/sys/sys/trap.c")
+
+What remains of v7's trap handling is in #f("trap.c"): `regloc`, a much
+reduced `trap` which handles only system calls, `user_trap_handler`,
+which handles every other exception, and the two dummy calls `nosys`
+and `nullsys`. The headers #f("dir.h") and #f("user.h") are included for `u`, and
+#f("reg.h") for the register indices. `EBIT` (7), the carry bit of the
+saved status register, has the bit's position in the ARM's `CPSR`.
+
+#lines-to("/*")
+
+The table `regloc` maps the PDP-11 register numbers 0 to 7, and the status word,
+onto indices in the saved frame (#f("reg.h")). The system call `ptrace` uses it. It
+comes from v7's `trap.c`.
+
+#lines-to("void")
+
+The `svc` entry in #f("low.s") calls `trap` with a pointer to
+the frame of saved registers, with interrupts enabled. It is v7's
+system call case, taken out of the switch over trap types, with the
+differences which follow.
+
+#lines-to("r[PSR] &= ~EBIT;")
+
+The carry bit is cleared (#l("r[PSR] &= ~EBIT;")), as v7 cleared it on entry; it is set
+again below if the call fails.
+
+The call number (#l("callp = &sysent[r[7] & 077];")) is not fetched from the low six bits of the
+`sys` instruction in user memory, but taken from the register `r7`,
+where the library stub has put it (`r[7]` is the ARM `r7`; the PDP-11's
+`R7`, its `pc`, is `PC` here). This is the convention of ARM Linux. A number
+greater than 63 is reduced modulo 64.
+
+The `sy_narg` arguments are copied from `r0` upwards (#l("for(i = 0; i < callp->sy_narg; i++)"), #l("u.u_arg[i] = r[i];")). In v7 the kernel
+found its register arguments through `regloc`, and then advanced the
+saved `pc` past any inline arguments; there are none here, so the saved
+`pc` already addresses the instruction after the `svc`. No entry of the
+table asks for more than 4 arguments, within the 5 words of `u_arg`
+(#f("user.h")).
+
+Number 0, `indir`, executed the `sys` instruction at an address given
+inline, with that instruction's inline arguments. There being no inline
+arguments, it is reduced to `nullsys`; `trap` no longer has the special
+case for it.
+
+The second return value is preset to the user's `r1` (#l("u.u_r.r_val2 = r[R1];")), as in v7.
+The first is preset to zero (#l("u.u_r.r_val1 = 0;")), where v7 preset it to the user's
+`r0`. The library stubs of v7 cleared `r0` themselves after a call which
+returns no value, such as `close` or `chdir`; here every stub returns
+`r0` as the kernel leaves it (#f("libc/syscall.s")), and the preset makes
+such a call return zero rather than its first argument.
+
+#lines-to("if (save(u.u_qsav)) {")
+
+The call itself is made as in v7. The `save` of `u.u_qsav` provides the point to
+which `sleep` (#f("slp.c")) returns when a signal interrupts a system
+call, and in that event the call fails with `EINTR`.
+
+An error is reported as in v7 (#l("if (u.u_error) {")--#l("}", after: "r[R1] = u.u_r.r_val2;")): the carry bit is set in the
+saved status register, and the error number is returned in `r0`. The
+library's `cerror` (#f("libc/syscall.s")) tests the carry, stores `r0` in
+`errno`, and returns -1. Since the error is not encoded in `r0`, a
+successful call may return any value, a `time` after January 2038
+among them.
+
+#lines-to("if (issig())")
+
+The common tail of v7's `trap` follows (#l("if (issig())", after: "r[R1] = u.u_r.r_val2;")--#l("qswtch();", after: "r[R1] = u.u_r.r_val2;")): any pending signal is acted
+upon, the process's priority is recomputed, and if a more deserving
+process is waiting the processor is given up.
+
+If the process is being profiled (#l("syst = u.u_stime;"), #l("if(u.u_prof.pr_scale)"), #l("addupc((caddr_t)r[PC], &u.u_prof,")), the system time spent
+in the call, the ticks which `clock` added to `u_stime` meanwhile, is
+charged to the user's `pc`, which is the instruction after the `svc`;
+`clock` (#f("clock.c")) charges only ticks in user mode, so without this
+a program which spends its time in system calls would show nothing.
+This is v7's code, but for the `pc`, which v7 received as a parameter
+and here is taken from the frame.
+
+Finally, as in v7, the floating point registers are loaded from the
+u-area if anything since the entry (#l("u.u_fpsaved = 0;", after: "syst = u.u_stime;")) stored them there (#l("if (u.u_fpsaved)", after: "(int)(u.u_stime-syst));"), #l("restfp(&u.u_fps);", after: "(int)(u.u_stime-syst));")): a
+switch to another process, a signal, `fork`, or `exec`, which sets
+`u_fpsaved` itself after clearing the saved registers (#f("sys1.c")). If
+nothing did, the registers still hold the process's own values, and
+nothing need be done.
+
+#lines-to("void")
+
+The routine `user_trap_handler` handles the rest of v7's `trap`: the exceptions
+other than `svc`, and the preemption check after an interrupt. It is
+called from #f("low.s") with a signal number, the saved frame, and, for
+a data abort, the address which could not be reached.
+
+If the exception was not taken in user mode (`0x10`, #l("{", after: "user_trap_handler(int signo, int *r, unsigned a)")--#l("signo, r[PC], r[PSR], dfar(), dfsr());")), the
+kernel itself has faulted, and the system panics, after printing the
+faulting address and its cause from the coprocessor registers `DFAR`
+and `DFSR`. In v7 the PDP-11 equivalents were printed. A fault in one of the
+routines which reach user memory never arrives here: #f("low.s") sends
+it back to the routine through `nofault` (#f("mch.s")).
+
+#lines-to("u.u_fpsaved = 0;")
+
+An undefined instruction in Thumb code (the `T` bit, `0x20`, of the
+saved status) leaves the saved PC two bytes past the start of the
+instruction (#f("low.s")). The top five bits of the instruction's first
+halfword, read with `fubyte` from its upper byte, tell whether it is 32
+bits long (`0xe8` and above); if so, the PC is moved past the second
+halfword (#l("if(signo == SIGINS && r[PSR]&0x20 &&"), #l("r[PC] += 2;")), so that a handler which returns resumes at the next
+instruction, not in the middle of this one. Such code comes only from
+the C compiler's support library (#f("machdep.c") has more on Thumb
+state).
+
+The signal is then posted to the current process and
+the same tail as in `trap` is run, the loading of the floating point
+registers included (#l("if (u.u_fpsaved)", after: "psignal(u.u_procp, signo);"), #l("restfp(&u.u_fps);", after: "psignal(u.u_procp, signo);")). A signal number of zero is passed by
+the interrupt entry, when `runrun` is set; nothing is posted then
+(#l("if(signo && (signo != SIGSEG || a+256 < (unsigned)r[SP] ||")), and the call serves only to reach the tail, as v7's type 12 trap
+did.
+
+The exception is the one which v7's `trap` also made for a segmentation
+fault: if the stack can grow to cover the fault, it is grown and no
+signal is sent (#l("if(signo && (signo != SIGSEG || a+256 < (unsigned)r[SP] ||")--#l("psignal(u.u_procp, signo);")), and the process resumes at the faulting
+instruction, which this time succeeds. In v7 the stack was grown to cover the
+stack pointer, which on the PDP-11 had already been decremented when a
+push faulted. On the ARM a store multiple which pushes registers leaves
+`sp` unchanged when it faults, so the address of the fault is used
+instead. Only a fault close below the stack pointer, or above it, is
+taken for a stack reference: 256 bytes, twice the most that one
+instruction can store below `sp`, the 16 double registers of a `vpush`. A fault
+further down, in the gap between the data and the stack, is a wild
+reference, or the shell asking for more memory (#f("sh/fault.c")), and
+gets its signal. A prefetch abort passes zero for the address, which
+never qualifies.
+
+Most of v7's cases have no counterpart. An undefined instruction gives
+`SIGINS` and both kinds of abort `SIGSEG` (#f("low.s")); a breakpoint
+instruction also arrives as a prefetch abort, and gives `SIGSEG`, not
+`SIGTRC`. There are no `iot` and `emt` instructions, no floating point
+exceptions, and no parity registers.
+
+#lines-to("/*", lead: true)
+
+A call of `nosys` fails with `EINVAL`, and `nullsys` does nothing.
+
+#lines-to(none)
+
+#source("/usr/sys/sys/sysent.c")
+
+The file #f("sysent.c") holds the table of system calls, and nothing else.
+In v7 every system call routine was declared here as an `int` function;
+#f("systm.h") now declares them all with prototypes, as `void`
+functions of no arguments, `nosys` and `nullsys` among them.
+
+#lines-to("/*")
+
+The table is indexed by system call number. Each entry gives the number
+of arguments, the number of them passed in registers, and the routine.
+The entries are now in braces, as C99 asks of an array of structures.
+Entry 52, `phys`, mapped physical memory into a process on the PDP-11
+and is now `nosys`.
+
+On the PDP-11 a system call was the instruction `sys n`, and its
+arguments were passed partly in registers and partly as words following
+the instruction in the program text: `sy_nrarg`, the second column, was
+the number which came in `r0` and `r1`, and the rest were fetched from
+the instruction stream. On the ARM all arguments come in registers, so
+the two columns are now equal and the counts have been corrected for
+the 32-bit word:
+
+- Call 19, `seek` (#l("{3, 3, seek},\t\t\t/* 19 = seek; now 3 args */")), took four words, since its offset was a two-word `long`;
+  now it takes three. The call `stime` (#l("{2, 2, stime},\t\t\t/* 25 = stime */")) keeps v7's two: the `time_t` it
+  receives is now 64 bits, two ARM words, as the PDP-11's `long` was
+  two of its own.
+- No arguments are given to `tell` (#l("{0, 0, nosys},\t\t\t/* 40 = tell (obsolete) */")), which is `nosys` in any case.
+
+Two slots have changed their routine. Slot 56, the multiplexor
+`mpxchan`, was in v7 either the real multiplexed file system or the
+stub in `fakemx.c`, which failed with `EINVAL`. Neither is part of the
+port, and `nosys` gives the same result. Slot 63, which v7 reserved
+"for internal use", is now `sigreturn`, by which a signal handler
+returns (`sendsig`, #f("machdep.c")).
 
 #lines-to(none)
 #source("/usr/sys/sys/main.c")
@@ -1289,66 +1503,45 @@ afterwards.
 itself up, and the two routines it calls to initialise the file system
 and the buffer cache, `iinit` and `binit`.
 
-On the PDP-11 the path to `main` began in `l.s` and `mch.s`. They set up the kernel segmentation registers, placed the per process data area
-of process 0 just above the end of the kernel, cleared the bss, and
-turned memory management on. The ARM path is similar. `_start` in
-#f("low.s") disables the MMU and caches, clears the bss, maps the
-kernel at its kernel addresses, enables the MMU, sets a provisional
-stack, and installs the vectors; it then calls `machine_init`
-(#f("machdep.c")), which completes the kernel's mapping. Only then is
-the stack pointer moved to the top of the per process data area of
-process 0, at `UBASE`+4096, and `main` called.
-
-`iinit` and `binit` are declared (#l("void\tiinit(void), binit(void);")) because `main` calls them before
-their definitions below. v7 needed no such line, since its compiler took an
-undeclared function to return `int`; C99 does not allow the call.
-
-The definitions at #l("char\tcanonb[CANBSIZ];")--#l("struct inode *mpxip;") are new. v7 defined these variables in the
-headers themselves, in #f("systm.h") and, for `mpxip` (#l("struct inode *mpxip;")), in
-#f("inode.h"), and relied on the linker to merge the copies which each
-including file made. The headers now declare them `extern`
-(#f("systm.h") gives the reason), and each is defined here, once. `rootdev`, `swapdev`, `pipedev`, `swplo`, and
-`nswap` are not among them, because the configuration file
-#f("qemu/c.c") defines them with their values; nor are the maps and the
-mount table, which v7's `main.c` defined, since their sizes are now
-part of the configuration too (#f("param.h")). v7's `cputype` is gone
-(#f("systm.h")).
-
-The comment above `main` lists its work. Its first item reads "free
-user core" (#l("*\tfree user core")), where v7's read "clear and free user core", since
-`startup` no longer clears RAM (#f("machdep.c")).
-
 #lines-to("void", after: "*/")
 
-`startup` (#l("startup();")) sets aside the page tables of the processes, frees the
-rest of RAM outside process 0, and initialises the block device.
+_Memory._ The call of `startup` (#l("startup();")) divides the RAM which follows the u-area of
+process 0. First come the processes' first-level page tables, then a
+pool of pages for their other tables (`ptmap`). Everything above, up to
+the top of RAM given by the configuration (`coretop`), goes into the
+core map, the list of memory free for processes.
 
 #lines-to("/*")
 
-`p_addr` of process 0, set at line #l("proc[0].p_addr = btop(corebase);"), is the page at which its per
-process data area begins. v7 read it from the kernel segmentation
-register `KISA6` (`ka6`), whose value `mch.s` had chosen. Here
-`machine_init` has already mapped the first `USIZE` pages of RAM, at
-`corebase`, at `UBASE`, so the page is that of `corebase`.
-
-The remaining fields of `proc[0]` (#l("proc[0].p_size = USIZE;")--#l("u.u_cmask = CMASK;")) are as in v7: the process
-occupies only its `USIZE` pages, is runnable, is in RAM, and is never
-to be swapped. `u` and `proc[0]` are linked through `u_procp`.
+_Process 0._ The field `p_addr` of process 0 (#l("proc[0].p_addr = btop(corebase);")) is the page at which its u-area
+begins: the first page of RAM, `corebase`, which `machine_init` has
+mapped at `UBASE`. The remaining fields
+(#l("proc[0].p_size = USIZE;")--#l("u.u_cmask = CMASK;")) say that the process occupies only its
+`USIZE` pages, is runnable, is in RAM, and is a system process, which is
+never swapped. The field `u_procp` links `u` and `proc[0]`.
 
 #lines-to("/*", after: "u.u_cmask = CMASK;")
 
-`clkstart` (#l("clkstart();")) now does rather more than start the clock: it also
-programs the interrupt controller and is the point at which interrupts
-are first allowed (#f("machdep.c")). Everything which follows may
-therefore sleep: `iinit` waits for the disk.
+_Interrupts._ The timer is programmed to interrupt `HZ` times a second by `clkstart`
+(#l("clkstart();")). Then `bdinit` (#l("bdinit();")), which the
+configuration (#f("qemu/c.c")) defines to call the disk driver's
+`rkinit`, starts the disk. It comes before `intrstart`, because the QEMU
+machine's `virtio` driver learns its interrupt number only when it
+probes the device (#f("virtio_blk.c")). The configured interrupts are
+then enabled and unmasked by `intrstart` (#l("intrstart();"),
+#f("machdep.c")). From here on interrupts are taken.
+This matters to `iinit`, which reads the root's super-block from the
+disk and sleeps until the disk's interrupt reports the block. The routine `cinit`
+(#at("/usr/sys/sys/prim.c", "cinit(void)")) links the character blocks
+of the terminal queues into their free list.
 
-`rootdir` and the current directory of process 0 are obtained as
+The root directory (`rootdir`) and the current directory of process 0 are obtained as
 separate references to the root inode; each `iget` returns it locked,
 and the lock is released at once (#l("rootdir->i_flag &= ~ILOCK;"), #l("u.u_cdir->i_flag &= ~ILOCK;")).
 
 #lines-to("/*", after: "u.u_rdir = NULL;")
 
-`newproc` (#l("if(newproc()) {")) makes process 1 as a copy of process 0 and returns zero
+_Process 1._ The call of `newproc` (#l("if(newproc()) {")) makes process 1 as a copy of process 0 and returns zero
 to the parent, which falls through to `sched` (#l("sched();")) and never comes back.
 Process 1 eventually resumes in `newproc` with a value of one, and
 takes the branch.
@@ -1357,307 +1550,320 @@ takes the branch.
 
 The image is first enlarged to hold `icode`: `btop(szicode)` is 1,
 so the image becomes the u-area and one page.
-`estabur` (#f("ureg.c")) then checks the size and calls `sureg`, which
+Then `estabur` (#f("ureg.c")) checks the size and calls `sureg`, which
 maps the page into the user window at virtual address 0, and
 `copyout` writes `icode` (#f("machdep.c")) through that mapping, to
 user address 0.
 
-`arm_sync_icache` (#l("arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),")) is new. The ARM, unlike the PDP-11, has
-separate instruction and data caches which are not kept coherent by the
-hardware: the instructions just stored may sit in the data cache, and
-stale lines may sit in the instruction cache. The routine (#f("mch.s"))
-writes the copied bytes back from the data cache, through the kernel's
-own address for them, then discards the instruction cache and the branch
-predictor.
+A call of `arm_sync_icache` (#l("arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),")) makes the
+instructions just written visible to instruction fetch (#f("mch.s")). It
+is given the page's kernel address (`PGADDR`), not user address 0. The
+two name the same physical page, and the routine works through the
+kernel's mapping of RAM.
 
 #lines-to("/*")
 
-`main` then returns to `_start` (#f("low.s")), which, as v7's `start` did
-with `rtt`, sets the saved status register to user mode and jumps to
-location 0. Process 1 begins to execute `icode`.
+Then `main` returns to `_start` (#at("/usr/sys/conf/low.s", "_start:")), which enters user
+mode at address 0, where `main` has copied `icode`. Process 1 begins to
+execute it.
 
 #lines-to("/*", lead: true, after: "}")
 
-`iinit` opens the root device, reads its super-block (block 1,
-`SUPERB`), and copies it into a buffer which is never released, the
-first entry of the mount table. The super-block's time of last
-modification becomes the initial time of day, until `date` or
+_Root File System._ The root device is opened by `iinit`, which reads its super-block (block
+1, `SUPERB`). It copies the super-block into a buffer of its own (`geteblk`,
+#at("/usr/sys/dev/bio.c", "geteblk(void)")), and records that buffer and the root device as the first
+entry of the mount table (#at("/usr/sys/h/mount.h", "extern struct\tmount")), the table which pairs each mounted
+device with the buffer holding its super-block. The kernel keeps the
+super-block of every mounted file system in memory for as long as it
+stays mounted. Free blocks and inodes are taken from its lists by `alloc`
+(#at("/usr/sys/sys/alloc.c", "alloc(dev_t dev)")), and it is written back by `update` (#at("/usr/sys/sys/alloc.c", "update(void)")). The root is never
+unmounted, so its buffer is never released. The super-block's time of
+last modification becomes the initial time of day, until `date` or
 `stime` corrects it.
 
 #lines-to("/*", lead: true, after: "}")
 
-The buffers themselves (#l("extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")), defined, as their number now is, by the
-configuration (#f("qemu/c.c")). v7 declared each as `BSIZE+BSLOP`, i.e.
-514, bytes of `char`. With 514~bytes every second buffer would start on
-an address which is only two-byte aligned, and the DMA engine of the SD
-card controller of the MP135 machine requires a word-aligned buffer
-address; the odd buffers would be corrupted on transfer. Alignment on
-a word is not enough either. The same DMA bypasses the data cache,
-whose lines on the Cortex-A7 are 64~bytes, and the driver must clean
-and invalidate the lines a buffer occupies (#f("sd.c")); a line
-shared with the neighbouring buffer, which the processor may be
-changing meanwhile, would be written back over the new data, or
-discarded with the neighbour's changes. Each row is therefore rounded
-up to a multiple of 64~bytes, 576, and made of `int`s, so that the
-array is at least aligned for `int`. Rounding alone would align the
-rows only relative to the start of the array, which C places where it
-will; `binit` therefore moves every buffer up by the same amount, less
-than 64~bytes, to bring the first, and with it all the rest, onto a
-64-byte boundary (#l("bp->b_un.b_addr = (caddr_t)buffers[i] +")). The configuration provides one row more than
-`NBUF` (#f("mkconf.c")), so that the last buffer still fits. The casts
-at 166 are the price.
+_Buffer Cache._ The buffers of the buffer cache (see _Disk I/O_,
+page #pageref(<sec-disk>)) each hold one disk
+block. Each buffer has a header, a `struct buf` (#f("buf.h")), which
+records the device and the block it holds, and `binit` (#l("binit(void)")) pairs
+each header with its buffer. The buffers themselves
+(#l("extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")) are defined, with
+the kernel's other tables, in the file which `mkconf` generates
+(#at("/usr/sys/conf/qemu/c.c", "int\tbuffers[")), and `NBUF`
+(#at("/usr/sys/h/param.h", "#define\tNBUF")) gives their number. Each
+buffer occupies whole cache lines of its own, as the SD card driver
+requires (#f("sd.c")). So a row of the array is rounded up to whole
+64-byte lines, sixteen `int`s each.
 
 #lines-to("/*", after: "extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")
 
-`binit` links every buffer into the free list through `brelse`, then
-makes each block device's queue (`d_tab`) an empty circular list, and
-counts the block devices in `nblkdev`. The scan of `bdevsw` ends at
-the first entry without an open routine, the null entry with which
-#f("qemu/c.c") closes the table.
+The routine `binit` links every buffer into the free list through
+`brelse`. On the way it moves every buffer up by the same amount, less
+than 64~bytes, to bring them all onto a line boundary
+(#l("bp->b_un.b_addr = (caddr_t)buffers[i] +")). The configuration
+provides one row more than `NBUF` (#f("mkconf.c")) to make room for
+the shift.
+
+#lines-to("for (bdp = bdevsw; bdp->d_open; bdp++) {")
+
+Each block device's queue (`d_tab`) is then made an empty circular
+list, and the block devices are counted in `nblkdev`. The scan of
+`bdevsw` ends at the first entry without an open routine, the null
+entry with which #f("qemu/c.c") closes the table.
 
 #lines-to(none)
 #source("/usr/sys/sys/machdep.c")
 
-In v7, #f("machdep.c") collected those parts of the machine-dependent
-code which could be written in C: the bootstrap program `icode`,
-`startup`, `clkstart`, `sendsig`, and the routines for the UNIBUS map
-of the 11/70, which are gone with the map; the ARM's devices address
-all of RAM. The assembly language remainder lived in `mch.s`. The
-port keeps
-v7's procedures in v7's order, rewriting their bodies for the ARM, and
-appends a second half which does the work that `mch.s` did on the
-PDP-11 with the help of the memory management unit: building the
-kernel's page tables, copying and clearing pages, returning from a
-signal, and reading memory for `/dev/mem` and `/dev/kmem`.
-
-The whole port rests on one arrangement of the ARM MMU, which it is
-best to describe before the code. The PDP-11/45 divided the 64~KB user
-address space into eight segments of up to 8~KB, each described by an
-address register (`UISA`) and a descriptor register (`UISD`); the
-kernel had a second set of registers, and its own seventh segment was
-pointed by `KISA6` at the per process data area of the current process.
-The ARM, in the long-descriptor format which the port uses
-(#f("low.s")), likewise translates the address space through two
-tables: the low three gigabytes, 0 to `USRSIZE`, through the table in
-`TTBR0`, and the top gigabyte through the table in `TTBR1`. The port
-uses them thus:
-
-- The top gigabyte is the kernel's. Its table, `kl2`, maps the kernel
-  image, the whole of RAM, and the device registers by 2~MB blocks,
-  once, at boot, and never changes. Kernel addresses are not physical
-  addresses: each region is mapped at the address its `map` line in
-  the configuration gives (#f("qemuconf")). This is the counterpart of
-  v7's kernel segments 0 to 5, which never changed. User mode may not
-  touch any of it.
-
-- The last entry of `kl2` points to `kl3u`, whose entries at `UBASE`
-  map the per process data area of the current process. `resume`
-  (#f("mch.s")) rewrites them on every switch, exactly as v7's `resume`
-  reloaded `KISA6`. Hence `u` is always at `UBASE`.
-
-- The low three gigabytes are the user's. Each process has its own
-  first-level table, of four entries, and the tables below it which its
-  image needs, built by `sureg` (#f("ureg.c")) from the process's
-  sizes and its place in RAM. A process switch loads `TTBR0` with the
-  new process's table, as v7's `sureg` loaded `UISA` and `UISD`.
-
-A process image in RAM keeps v7's form: `USIZE` pages of per process
-data area at `p_addr`, then the data, then the stack, packed together.
-In the user's address space the data begins at the bottom, and the
-stack ends at the top, at `USRSIZE`, with a gap between them which is
-not mapped. Each grows towards the other: the data by `sbreak`
-(#f("sys1.c")) and the stack by `grow` (#f("sig.c")), and each growth
-enlarges the image in RAM. Since every page is mapped separately, and
-tables exist only where something is mapped, the gap costs nothing.
-
-`conf.h` is included (#l("#include \"../h/conf.h\"")) for `struct intr`, the table of device
-interrupts which `clkstart` and `irq` use.
+#f("machdep.c") holds the machine-dependent code which can be written
+in C. Its first half starts the system, sets up the interrupts and
+handles them, and delivers signals. Its second half builds the
+kernel's page tables, copies and clears pages, returns from a signal,
+and serves `/dev/mem` and `/dev/kmem`. The address space which this
+code builds is described in the Introduction (see _The Address Space_,
+page #pageref(<sec-addr>), and _Translation Tables_, page
+#pageref(<sec-tables>)).
 
 #lines-to("/*")
 
-`icode` is the first user program, copied by `main` (#f("main.c")) to user
-address 0 of process 1. In v7 it was eleven words of PDP-11 machine
-code assembled by hand into octal. The ARM version is ten words of
-hand-assembled ARM code, in hexadecimal, and the comment now says so.
+_Bootstrap Program._ The first user program is `icode`, which `main` (#f("main.c")) copies
+to user address 0 of process 1. It is ten words of ARM code, assembled
+by hand into hexadecimal.
 
 #lines-to("0xe3a0001c,\t/* mov r0, #init */")
 
-The first four words perform `exec("/etc/init", initp)`. The arguments
-are passed in `r0` and `r1` and the system call number (11) in `r7`;
-`svc` replaces the PDP-11's `sys` (`trap`) instruction, whose low byte
-carried the number. `exec` (#f("sys1.c")) takes two arguments and
-supplies the null environment itself, so nothing is put in `r2`.
+The first four words perform `exec("/etc/init", initp)`. The two
+arguments, the name of the file and its argument vector, go in `r0`
+and `r1`, and the system call number, 11, goes in `r7`. Then `svc`
+enters the kernel, where system call 11 is `exec` (#f("sys1.c")).
 Should the `exec` fail, the program loops on the branch to itself (#l("0xeafffffe,\t/* b . */")),
-as v7's did, and the system goes no further.
+and the system goes no further.
 
 #lines-to("0x0000001c,\t/* initp: init; 0 */")
 
-`initp`, the argument vector `{init, 0}`, follows at offset `0x14`,
-and then the string `/etc/init`, stored little-endian, at `0x1c`, in
-v7's order. Because the program is loaded at address 0, its own
+The argument vector `{init, 0}` (`initp`) follows at offset `0x14`,
+and then the string `/etc/init`, stored little-endian, at `0x1c`. Because the program is loaded at address 0, its own
 offsets serve as addresses, and both fit the 8-bit immediate field of
 `mov`.
 
 #lines-to("/*", lead: true)
 
-v7's `startup` found the size of RAM by experiment: it slid a user
-segment through physical memory 64~bytes at a time until a reference
-failed, clearing each unit and freeing it into `coremap` as it went.
-On the ARM the limits of RAM are known and nothing is probed:
-`machine_init` (below) has set `corebase` to the physical address of
-the first page after the kernel and its tables, and the configuration
-(#f("qemu/c.c")) gives `coretop`. Both are physical addresses, since
-page numbers are.
+_Memory._ The routine `machine_init` (#l("machine_init(void)")) has set `corebase`
+to the physical address of the first page after the kernel and its
+tables, and the configuration (#f("qemu/c.c")) gives `coretop`. Both
+are physical addresses, because the core map counts physical pages.
+The macro `btop` divides each address by the page size to give the
+page number.
 
 #lines-to("i = btop(corebase) + USIZE;")
 
-RAM begins with the `USIZE` pages of the per process data area of
-process 0 (see `main`), as v7 began at `*ka6 + USIZE`. Two new
-reservations follow it. The first-level user tables, 32~bytes for each
-slot of the process table, take the next pages (#l("l1tab = (unsigned long long *)PGADDR(i);")--#l("i += btop(32*NPROC);")); `l1tab` is
-their kernel address, through which `sureg` writes them, and `l1pa` the
-physical one, which `TTBR0` needs. The page number is converted to
-`unsigned` before `ptob` shifts it (#l("l1pa = ptob((unsigned)i);")): on the MP135 machine RAM lies
-above 0xc0000000, and the shift of a signed `int` past the largest
-`int` would be undefined. They are cleared, so that every
-process starts with an empty address space. The next `NPTAB` pages
-(#l("mfree(ptmap, NPTAB, i);"), #l("i += NPTAB;")) are the pool from which `sureg` takes the lower tables, freed
-into `ptmap` as v7 freed RAM into `coremap`. The rest of RAM is freed
-(#l("maxmem = btop(coretop) - i;"), #l("mfree(coremap, maxmem, i);")). RAM is no longer cleared here; `machine_init` clears the
-area of process 0, and `exec` (#f("sys1.c")) clears each image it
-builds, so the v7 comment (#l("* free all of core")) now says only "free".
+RAM begins with the `USIZE` pages of the u-area of process 0 (see
+`main`). Three reservations follow it. The first-level user tables,
+32~bytes for each slot of the process table, take the next pages
+(#l("l1tab = (unsigned long long *)PGADDR(i);")--#l("i += btop(32*NPROC);")).
+Their kernel address, through which `sureg` writes them, is `l1tab`,
+and `l1pa` is the physical one, which `TTBR0` needs (#l("l1pa = ptob(")).
+They are cleared, so that every process starts with an empty address
+space. The next `NPTAB` pages (#l("mfree(ptmap, NPTAB, i);"),
+#l("i += NPTAB;")) are the pool from which `ptbuild` (#f("ureg.c")) takes
+the lower tables, freed into `ptmap`.
 
-As in v7, `maxmem` (#l("maxmem = btop(coretop) - i;")) is first the amount of RAM, which is printed
-(#l("printf(\"mem = %D\\n\", ptob((long)maxmem));")), and is then limited to `MAXMEM` (#f("param.h")), the largest image
-a process may have (#l("if(MAXMEM < maxmem)"), #l("maxmem = MAXMEM;")). `estabur` (#f("ureg.c")) refuses any image
-larger than `maxmem`.
+#lines-to("sigpage = i++;")
+
+One page then holds the signal trampoline (#l("sigpage = i++;")--#l("arm_sync_icache((caddr_t)t, 8);")). It is
+cleared, so that nothing of the kernel shows through it, and given two
+instructions, `mov r7, #63` and `svc #0`, which make the system call
+`sigreturn`. The copy is then made visible to instruction fetch.
+Every process maps this one page read-only at `SIGTRAMP` (#f("seg.h")).
+
+The rest of RAM is freed (#l("maxmem = btop(coretop) - i;"), #l("mfree(coremap, maxmem, i);")). Memory
+is cleared where it is used. The routine `machine_init` clears the area
+of process 0, and `exec` (#f("sys1.c")) clears each image it builds.
+The variable `maxmem` is the amount of RAM left, which is printed
+(#l("printf(\"mem = ")). The routine `estabur` (#f("ureg.c")) refuses any
+image larger.
 
 #lines-to("mfree(swapmap, nswap, 1);")
 
-The swap area (#l("mfree(swapmap, nswap, 1);"), #l("swplo--;")) is set up as in v7.
+The swap area is freed into `swapmap` from block 1 rather than 0
+(#l("mfree(swapmap, nswap, 1);")), because `malloc` returns 0 when it
+fails. So `swplo` is lowered by one to compensate (#l("swplo--;")).
 
-v7 ended `startup` by pointing user segment 7 at the I/O page.
-Its place is taken by `bdinit` (#l("bdinit();")), which #f("qemu/c.c") defines to call the
-block driver's initialisation routine. This must come before
-`clkstart`, since the `virtio` driver only learns its interrupt number
-when it probes the device.
+#lines-to("static void", lead: true)
 
-#lines-to("/*", lead: true)
-
-`sysphys`, system call 52, let the super-user map a piece of physical
-memory, such as device registers, into a segment of his address space.
-v7's recorded the segment in `u_uisa` and `u_uisd` and called `sureg`.
-The prototype which replaces them describes only text, data, and stack
-(#f("user.h")), and has no place for a physical segment. The body is
-therefore replaced: the super-user is refused with `EINVAL`, the error v7 gave
-for a request it could not satisfy, and anyone else, as in v7, with the
-error of `suser`.
-
-#lines-to("/*", lead: true, after: "}")
-
-Hence to the clock. The PDP-11 had a line clock (KW11-L) or a
-programmable clock (KW11-P) on the UNIBUS, each with its own interrupt
-vector and priority; v7's `clkstart` tried one, then the other, and
-set its interrupt enable bit. On the ARM every device interrupt reaches
+_Interrupts._ Every device interrupt reaches
 the processor through a single line from the Generic Interrupt
 Controller (GIC), whose distributor (`gicdbase`) and processor interface
-(`giccbase`) registers are reached through `GICD` and `GICC` (#l("#define\tGICD(o)\t(*(volatile unsigned *)(gicdbase+(o)))"), #l("#define\tGICC(o)\t(*(volatile unsigned *)(giccbase+(o)))")).
-The clock is the processor's own generic timer: interrupt 27 (`clkirq`,
-86) is the private interrupt of its virtual timer.
+(`giccbase`) registers are reached through `GICD` and `GICC` (#l("#define\tGICD(o)\t(*(volatile unsigned *)(gicdbase+(o)))"), #l("#define\tGICC(o)\t(*(volatile unsigned *)(giccbase+(o)))")),
+at the offsets named after them. The clock is the processor's own
+generic timer. Its interrupt, 27 (`clkirq`, #l("int\tclkirq = 27;")), is the
+virtual timer's private interrupt. Each core has its own private
+interrupts, numbered 16 to 31, which no other core sees.
 
-`intrtab` (#l("extern struct intr intrtab[];")) is generated by `mkconf` in #f("qemu/c.c"): for the
-clock and each configured device, a pointer to the variable holding its interrupt
-number and the routine to call. A pointer, rather than the number,
-because some numbers are not known until the driver has probed its
-device.
+The table `intrtab` (#f("conf.h"), #f("qemu/c.c")) pairs each configured
+interrupt with the routine to call.
 
-`gicen` (#l("gicen(int n)")) gives interrupt `n` a middling priority (0x80) in the
-distributor's byte-per-interrupt priority array at `0x400`, then sets
-its bit in the set-enable registers at `0x100`.
+The routine `gicen` (#l("gicen(int n)")) gives interrupt `n` a middling priority (0x80) in the
+distributor's byte-per-interrupt priority array (`IPRIORITYR`), then
+sets its bit in the set-enable registers (`ISENABLER`).
 
 #lines-to("void")
 
-`clkstart` first reads `CNTFRQ` (#l("if((clkreload = cntfrq_get()/HZ) == 0)")), which gives the frequency of the
-system counter. `clkreload` is the number of its counts in `1/HZ`
+First `clkstart` reads `CNTFRQ` (#l("if((clkreload = cntfrq_get()/HZ) == 0)")), which gives the frequency of the
+system counter. The variable `clkreload` is the number of its counts in `1/HZ`
 second, and `clkrem` (#l("clkrem = cntfrq_get()%HZ;")) what the division leaves over, which
 `clock` (#f("clock.c")) adds in so that the ticks keep exact time. A
 frequency below `HZ` (the register is set by firmware) is the one
 remaining way to "find no clock".
 
-It then enables every configured interrupt whose number is known, the
-timer's among them (#l("for(ip = intrtab; ip->i_irq; ip++)", after: "clkrem = cntfrq_get()%HZ;")--#l("gicen(*ip->i_irq);")); enables the distributor, lets interrupts of
-every priority through the processor interface (the priority mask
-register at 4), and enables the interface (#l("GICD(0) = 1;")--#l("GICC(0) = 1;")); and sets the
-timer's first deadline, `clkreload` counts after the present value of
-the counter, and starts it (#l("cntv_cval_set(clkcval = cntvct_get() + clkreload);"), #l("cntv_ctl_set(1);")). `clkcval` (#l("unsigned long long clkcval;")) keeps the
-deadline, from which `clock` computes the next.
+It then sets the timer's first deadline, `clkreload` counts after the
+present value of the counter, and starts the timer (#l("cntv_cval_set(clkcval = cntvct_get() + clkreload);"), #l("cntv_ctl_set(1);")). The
+deadline is kept in `clkcval` (#l("unsigned long long clkcval;")), from which `clock` computes the next.
 
-Only then are interrupts unmasked (#l("intr_enable();")). An earlier call of
-`intr_enable`, as from a driver, unmasks them too, but none can arrive,
-since `machine_init` has switched the GIC off. Since `main` calls `clkstart` before `iinit`,
-the read of the root super-block is already driven by interrupts.
+#lines-to("/*", after: "cntv_ctl_set(1);")
 
-#lines-to("void", lead: true, after: "}")
+The routine `intrstart` sets up interrupt handling. First it enables every
+configured interrupt whose number is known, the timer's among them
+(#l("for(ip = intrtab; ip->i_irq; ip++)", after: "intrstart(void)")--#l("gicen(*ip->i_irq);")). Then it enables the distributor, lets interrupts of every
+priority through the processor interface (`PMR`, the priority mask),
+and enables the interface (#l("GICD(DCTLR) = 1;")--#l("GICC(CCTLR) = 1;")). Only then does it unmask
+interrupts (#l("intr_enable();", after: "intrstart(void)")). An earlier call of `intr_enable`, as from a driver, unmasks
+them too, but none can arrive, since `machine_init` has switched the
+GIC off.
 
-`irq` is new. It is called from `irq_entry` (#f("low.s")) with a pointer to
-the saved registers of the interrupted program, in the layout of
-#f("reg.h"), and with interrupts masked; it plays the part of v7's
-`call` in `mch.s` together with the PDP-11's vectored interrupts.
+#lines-to("void", lead: true, after: "intr_enable();")
 
-Reading the acknowledge register (`0xc`) at line #l("n = GICC(0xc);") yields the number of
+The routine `irq` is called from `irq_entry` (#f("low.s")) with a
+pointer to the saved registers of the interrupted program, in the
+layout of #f("reg.h"), and with interrupts masked (see _Interrupt
+Handling_, page #pageref(<sec-intr>)).
+
+Reading the acknowledge register (`IAR`, #l("n = GICC(IAR);")) yields the number of
 the highest priority pending interrupt, in its low ten bits, and marks
 it active.
 
-The routine whose number matches is called (#l("for(ip = intrtab; ip->i_irq; ip++)", after: "n = GICC(0xc);")--#l("(*ip->i_fn)((caddr_t)r[PC], r[PSR]);")) with the
+The routine whose number matches is called (#l("for(ip = intrtab; ip->i_irq; ip++)", after: "n = GICC(IAR);")--#l("(*ip->i_fn)((caddr_t)r[PC], r[PSR]);")) with the
 interrupted program counter and status. The timer's routine is `clock`
 (#f("clock.c")), which sets the next deadline and uses the two values to
 charge the tick to the user or the system. The device routines ignore
-them. `main` has set up process 0 before it calls `clkstart`, so `clock`
+them. Process 0 is set up before `main` calls `intrstart`, so `clock`
 always finds a current process. A spurious interrupt (1023) matches
 nothing.
 
-Writing the same value to the end-of-interrupt register (`0x10`) at
-line #l("GICC(0x10) = n;") retires the interrupt.
+Writing the same number to the end-of-interrupt register (`EOIR`,
+#l("GICC(EOIR) = n;")) tells the GIC that the interrupt has been
+handled, so that it may deliver the next one.
 
-All interrupts share one level. The PDP-11's priorities have collapsed
-into "masked" and "unmasked", and until the end of interrupt is written
-the controller delivers no other interrupt, even to a handler which
-unmasks the IRQ, as `clock` does with `intr_enable` (#f("clock.c")). After
-that, an IRQ left unmasked, or unmasked again for the call of
-`user_trap_handler` in the tail of `irq_entry` (#f("low.s")), lets a
-second interrupt in before the first frame is unloaded. It nests
-as any interrupt of the kernel does: its frame goes below the first,
-and the `r5` saved in it, which carries the first entry's `lr`, is
-restored before the first entry uses it.
+#lines-to("static void", lead: true, after: "GICC(EOIR) = n;")
 
-#lines-to("/*", lead: true)
+_Kernel Map._ The table `board_map` (#f("seg.h")) comes from the
+configuration (#f("qemu/c.c"), #f("mp135/c.c")). It holds the regions
+which the machine's configuration file asks to be mapped, each with its
+kernel address, its physical bounds, and the attribute bits of its block
+descriptors. The linker script defines the `__` symbols
+(#l("extern char _start[], __ddrbss_start[], __ddrbss_end[];")). The section `.ddrbss` holds further
+uninitialised data. On the MP135 machine the kernel image runs from
+SYSRAM, and the large tables are placed in the DDR memory, which is
+useless until it has been set up. On the QEMU machine it is ordinary
+RAM. The tables `kl2`, `kl3u`, and `bootl1` (#f("seg.h")) are reserved in
+#f("low.s") and #f("mch.s").
 
-`sendsig` arranges for the signal handler at `p` to be called when the
-process next returns to user mode. On the PDP-11 it pushed the
-processor status and program counter onto the user stack and set the
-program counter to the handler, simulating an interrupt; the handler
-(in fact a stub in the C library) ended with `rtt`, which popped both.
-The ARM has no user-mode instruction which can restore the status
-register from memory, and the C calling convention lets the handler
-clobber `r0` to `r3`, `r12`, and the condition flags, so the whole
-register frame must be saved and a system call is needed to restore it.
-The floating point state is saved with it: the handler may compute in
-floating point, and the program it interrupted, stopped at any
-instruction, needs every register back, its status register `FPSCR`
-included. v7 saved none of it, and a handler which used floating point
-could disturb the program it interrupted.
+The routine `kmap` (#l("kmap(unsigned long long attr)")) enters the regions of `board_map` whose
+attributes are `attr` into the kernel's table `kl2`, 2~MB at a time.
+The entry for a kernel address is its 2~MB block within the top
+gigabyte, bits 21 to 29 of the address (#l("kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =")). The attributes are
+defined in #f("seg.h"). Afterwards `kmap` calls `tlbflush` (#f("mch.s")),
+because a region may be entered twice, as the kernel's own is.
+
+The routine `vtop` (#l("vtop(caddr_t va)")) is the inverse of the kernel's mapping. It finds the
+region of RAM which holds a kernel address, and returns the physical
+address. A device which reads or writes memory by itself (the virtio
+disk of the QEMU machine, the SD card controller of the MP135 machine) must be
+given physical addresses, and its driver calls `vtop` on each buffer.
+A device region has no RAM behind it, and an
+address found in no region is an error.
+
+#lines-to("caddr_t")
+
+The routine `machine_init` is called from `_start` (#f("low.s")), running at its
+kernel address on a small stack in the bss, with only the kernel image
+mapped. It first maps the device registers, switches the GIC off,
+whatever state QEMU or the boot ROM left it in, and initialises the
+console (#l("kmap(BLK_DEV);")--#l("cninit();")), so that `printf` and `panic` work from here on. On the
+MP135 machine that means taking over the USB controller and waiting up
+to ten seconds for the host to open the port (#f("otg.c")).
+
+On the MP135 machine it then has the PMIC power the DDR memory
+(#f("pmic.c")) and starts the DDR controller (#f("ddr.c")), and
+`clock_ddr_init` is empty on the QEMU machine. Only then does it map
+memory (#l("kmap(BLK_KERN);")), the DDR memory among it, since a mapping of RAM which
+does not yet work would invite the processor to touch it
+speculatively. Then it clears `.ddrbss`, which `_start` could not
+(#l("for(p = __ddrbss_start; p < __ddrbss_end; p++)"), #l("*p = 0;", after: "for(p = __ddrbss_start; p < __ddrbss_end; p++)")).
+
+RAM begins at the first page boundary after `.ddrbss`, the last part
+of the kernel to be placed (#f("qemu/unix.ld")). On the QEMU machine
+that is just past the kernel image. On the MP135 machine, whose kernel
+runs from SYSRAM, it is just past the tables in DDR. Neither needs to be
+stated in the configuration, which gives only the top of RAM.
+The physical address of that boundary is `corebase` (#l("corebase = ptob(btop(vtop(__ddrbss_end)));")), and `coreoff` (#l("coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);")) the
+difference between the kernel and physical addresses of all of RAM,
+which lies in one region. The macro `PGADDR` (#f("seg.h")) adds it to
+turn a page into a kernel address.
+
+The `USIZE` pages of the per process data area of process 0, the first
+of RAM, are entered in `kl3u` at `UBASE` (#l("for(a = 0; a < USIZE; a++)"), #l("kl3u[a] = (corebase + ptob(a)) | BLK_KERN | PTE_TAB;")), with the attributes
+of a kernel page, as in `resume` (#f("mch.s")). Then `kl3u` is hooked
+into the entry of `kl2` for `UBASE` (#l("kl2[(UBASE>>BLKSHIFT) & (NPTE-1)] = vtop((caddr_t)kl3u) | PTE_TAB;")), the last, which covers the top
+2~MB of the address space, where no region of `board_map` reaches. The
+identity mapping of `bootl1` (#f("low.s")) is removed (#l("bootl1[vtop(_start)>>L1SHIFT] = 0;")). From
+here on nothing below `USRSIZE` is mapped but the user's. The area of
+process 0 is then cleared (#l("for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)"), #l("*p = 0;", after: "for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)")).
+
+The address returned (#l("return((caddr_t)UBASE + ptob(USIZE));")) is the top of the u-area, where #f("low.s")
+puts the kernel stack.
+
+#lines-to("void", lead: true)
+
+_Pages._ The routines `copyseg` and `clearseg` copy and clear one page,
+1024 words.
+
+#lines-to("/*", lead: true, after: "d[i] = 0;")
+
+_Memory Files._ The routine `mapaddr` (#l("mapaddr(int dev, off_t off, unsigned long long attr)")) turns an offset of a
+memory special file (#f("mem.c")) into the kernel address of the same
+byte, within a region of `board_map` whose attributes are `attr`. For
+`/dev/mem` (minor 0) the offset is a physical address, and for
+`/dev/kmem` (minor 1) a kernel address (#l("base = minor(dev) == 0 ? m->start : m->va;")). The routine `memaddr`
+serves memory, any region of attributes `BLK_KERN`, and for `/dev/kmem`
+also the u-area of the current process at `UBASE`
+(#l("if(minor(dev) == 1 && (unsigned)off - UBASE < ptob(USIZE))")). The routine `devaddr` serves the device
+registers, the `BLK_DEV` regions, which #f("mem.c") reads and writes a
+whole aligned word at a time, since the registers take no narrower
+access.
+
+The routines `fumem` and `sumem` fetch and store one byte through
+`fkbyte` and `skbyte` (#f("mch.s")), which turn an abort into -1 by way
+of `nofault`. A region is mapped in 2~MB blocks, and part of a block
+may have no memory or device behind it. Without the guard a read
+there would panic the kernel. Both return -1 for an offset in no
+region, and the driver sets `ENXIO`.
 
 #lines-to("m = (PSR+1)*sizeof(int);")
 
-`n` (#l("n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;")) is the user stack pointer less the size of the frame,
+_Signals._ The routine `sendsig` makes the process call the signal
+handler at `p` when it next returns to user mode (see _Signals_, page
+#pageref(<sec-signals>)).
+
+The variable `n` (#l("n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;")) is the user stack pointer less the size of the frame,
 rounded down to a multiple of 8 as the ARM calling convention requires.
-The frame is the registers, `m` bytes (#l("m = (PSR+1)*sizeof(int);")), 17~words: `r0` to `r15`
+The frame is the registers, `m` bytes (#l("m = (PSR+1)*sizeof(int);")), 17~words, which are `r0` to `r15`
 and the status register, followed by `u.u_fps` (#f("user.h")), where
 `psig` (#f("sig.c")) has just stored the floating point registers.
 
 First `grow` (#f("sig.c")) is asked to extend the stack to cover the
-frame (#l("grow(n);")), as in v7: the stack segment holds only what the process has
-used so far, and the frame may lie below it. The frame is then copied
+frame (#l("grow(n);")), because the stack holds only what the process
+has used so far, and the frame may lie below it. The frame is then copied
 out (#l("if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||")--#l("}", after: "copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),")), the registers and then the floating point state, with
 `copyout` (#f("mch.s")), which fails if any part of it lies outside the
 process's memory. If the frame cannot be written,
@@ -1666,179 +1872,59 @@ default so that it is not caught in turn.
 
 #lines-to("u.u_ar0[SP] = n;")
 
-The stack pointer is then lowered past the frame; the link
-register, `u_ar0[14]`, for which #f("reg.h") has no name, is set to the
-trampoline at `UENTRY_SIGTRAMP` (see `install_sigtramp`, 314); the
-program counter (`PC`) to the handler; and
-`r0` to the signal number, the handler's argument. v7 also cleared the
-trace bit in the saved status, so that a traced process would not trap
-on the handler's first instruction; the ARM status register has no
-trace bit. What is cleared instead (#l("u.u_ar0[PSR] &= ~0x0600fe20;")) is the Thumb state: the `T`
-bit (5), the `IT` bits (10 to 15, 25, and 26), which make the next
-instructions of a Thumb `if-then` block conditional, and the `E` bit
-(9), big-endian data. Every program here is compiled to ARM code, but
-the compiler's support library `libgcc`, which supplies the 64-bit
-division `__aeabi_ldivmod` and its relatives, is the Thumb build, so a
-signal may well interrupt Thumb code. The handler is ARM code and must
-be entered in ARM state, with no `if-then` block pending.
+The stack pointer is then lowered past the frame. The link register,
+`u_ar0[14]`, for which #f("reg.h") has no name, is set to the
+trampoline at `SIGTRAMP` (#f("seg.h")). The program counter (`PC`) is
+set to the handler, and `r0` to the signal number, the handler's
+argument. The Thumb state is cleared in the saved status
+(#l("u.u_ar0[PSR] &= ~")). That is the `T` bit (5), the `IT` bits (10 to 15, 25,
+and 26), which make the next instructions of a Thumb `if-then` block
+conditional, and the `E` bit (9), big-endian data. Every program built
+here is ARM code, but one may contain Thumb code of its own, and the
+handler, ARM code, must be entered in ARM state with no `if-then`
+block pending.
 
 When the handler returns, it returns to the trampoline, with the stack
 pointer at the frame, and the trampoline issues `sigreturn` (#l("sigreturn(void)")).
 
-#lines-to("extern struct memregion board_map[];")
+#lines-to("void", lead: true, after: "u.u_ar0[PSR] &= ~TBITS;")
 
-The remainder of the file is new.
-
-`board_map` (#l("extern struct memregion board_map[];")) comes from #f("qemu/c.c"): the regions which the
-machine's configuration file asks to be mapped, each with its kernel
-address, its physical bounds, and the attribute bits of its block
-descriptors. The `__` symbols (#l("extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];")) are defined by the linker script.
-`.ddrbss` is a second, uninitialised data section: on the MP135 machine
-the kernel image runs from SYSRAM, and the large tables are placed in
-the DDR memory, which is useless until it has been set up. On the QEMU
-machine it is ordinary RAM. The tables (#l("extern unsigned long long kl2[], kl3u[], bootl1[];")) are reserved in
-#f("low.s") and #f("mch.s").
-
-`msgbufp` (#l("char\t*msgbufp = msgbuf;")), the pointer into the circular buffer of console
-output read by `dmesg`, was defined in v7's console driver `kl.c`. It
-is here because either of two console drivers may be configured
-(#f("pl011.c") or #f("otg.c")), and both use it.
-
-`kmap` enters the regions of `board_map` into the kernel's table
-`kl2`, 2~MB at a time: those of device registers if `dev` is set, the
-others if not. The entry for a kernel address is its block number, the
-address shifted right by 21, less the 0x600 blocks below 0xc0000000,
-which the mask (#l("kl2[((m->va+a-m->start)>>21) & 0x1ff] =")) takes away. The attributes, spelled `BLK_KERN` and
-`BLK_DEV` in the configuration files, are defined in #f("seg.h"):
-kernel memory is normal, cacheable, and accessible only from the
-kernel; device memory is device memory, never executable, and likewise
-closed to user mode. Since entries which were invalid are made valid,
-no stale translation can exist; `tlbflush` (#f("mch.s")) is called all
-the same, since a region may be entered twice, as the kernel's own is.
-
-`vtop` (#l("vtop(caddr_t va)")) is the inverse of the kernel's mapping: it finds the
-region of RAM which holds a kernel address, and returns the physical
-address. A device which reads or writes memory by itself (the virtio
-disk of the QEMU machine, the SD card controller of the MP135 machine) must be
-given physical addresses, and its driver calls `vtop` on each buffer.
-This is the counterpart of v7's `b_xmem` and of the arithmetic by which
-v7's drivers turned a segment and an offset into the 18-bit address of
-the UNIBUS. A device region has no RAM behind it, and an
-address found in no region is an error.
-
-#lines-to("caddr_t")
-
-`machine_init` is called from `_start` (#f("low.s")), running at its
-kernel address on a small stack in the bss, with only the kernel image
-mapped. It first maps the device registers, switches the GIC off,
-whatever state QEMU or the boot ROM left it in, and initialises the
-console (#l("kmap(1);")--#l("cninit();")), so that `printf` and `panic` work from here on. On the
-MP135 machine that means taking over the USB controller and waiting up
-to ten seconds for the host to open the port (#f("otg.c")).
-
-On the MP135 machine it then has the PMIC power the DDR memory
-(#f("pmic.c")) and starts the DDR controller (#f("ddr.c"))
-(`clock_ddr_init` is empty on the QEMU machine). Only then are the other regions mapped (#l("kmap(0);")), the
-DDR memory among them: a mapping of RAM which does not yet work
-would invite the processor to touch it speculatively. `.ddrbss`, which
-`_start` could not clear, is cleared (#l("for(p = __ddrbss_start; p < __ddrbss_end; p++)"), #l("*p = 0;", after: "for(p = __ddrbss_start; p < __ddrbss_end; p++)")).
-
-RAM begins at the first page boundary after `.ddrbss`, the last part
-of the kernel to be placed (#f("qemu/unix.ld")). On the QEMU machine
-that is just past the kernel image; on the MP135 machine, whose kernel
-runs from SYSRAM, it is just past the tables in DDR. Neither needs to be
-stated in the configuration, which gives only the top of RAM.
-`corebase` is the physical address (#l("corebase = ptob(btop(vtop(__ddrbss_end)));")), and `coreoff` (#l("coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);")) the
-difference between the kernel and physical addresses of all of RAM,
-which lies in one region; `PGADDR` (#f("seg.h")) adds it to turn a
-page into a kernel address.
-
-The `USIZE` pages of the per process data area of process 0, the first
-of RAM, are entered in `kl3u` at `UBASE` (#l("for(a = 0; a < USIZE; a++)"), #l("kl3u[a] = (corebase + ptob(a)) | BLK_KERN | PTE_TAB;")), with the attributes
-of a kernel page, as in `resume` (#f("mch.s")), and `kl3u` is hooked
-into the last entry of `kl2` (#l("kl2[511] = vtop((caddr_t)kl3u) | PTE_TAB;")), which covers the top 2~MB of the
-address space; no region of `board_map` reaches so high. The identity
-mapping of `bootl1` (#f("low.s")) is removed (#l("bootl1[vtop(_start)>>30] = 0;")): from here on
-nothing below `USRSIZE` is mapped but the user's. The area of process 0
-is then cleared (#l("for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)"), #l("*p = 0;", after: "for(p = (char *)UBASE; p < (char *)UBASE + ptob(USIZE); p++)")); v7's `start` did the same for process 0.
-
-The address returned (#l("return((caddr_t)UBASE + ptob(USIZE));")) is the top of the u-area, where #f("low.s")
-puts the kernel stack.
-
-#lines-to("void", lead: true)
-
-`copyseg` and `clearseg` copy and clear one page, 1024
-words. In v7 they were in `mch.s`, and had to borrow a user segment to
-reach physical RAM; here RAM is mapped into the kernel's own
-address space, and `PGADDR` (#f("seg.h")) converts a page number to a
-pointer. The routines which move data between the kernel and the user,
-`fubyte`, `copyin`, and the rest, are in #f("mch.s"), as they were in
-v7.
-
-#lines-to("void", lead: true, after: "d[i] = 0;")
-
-`sigreturn`, system call 63, undoes `sendsig`. It is called by the
-trampoline, at which point the user stack pointer addresses the saved
-frame.
+_Signal Return._ System call 63, `sigreturn`, undoes `sendsig`. The
+trampoline calls it when the handler returns, and at that point the
+user stack pointer addresses the frame which `sendsig` wrote.
 
 #lines-to("a = (caddr_t)u.u_ar0[SP];")
 
-The frame is copied in through `copyin`, which fails unless it lies in
-the process's memory; a bad stack pointer earns `SIGSEG`. The floating
-point part goes straight to `u.u_fps`, and `u_fpsaved` (#l("u.u_fpsaved = 1;")) makes the
-return to user mode load it (#f("trap.c")). A forged `FPSCR` can do
-no harm: it holds nothing but the user's own modes and flags.
+The frame is copied back in through `copyin`, which fails unless the
+frame lies in the process's memory. That happens if the handler has
+moved the stack pointer, or if a program calls `sigreturn` without a
+signal, and the process then gets `SIGSEG`. The floating point part
+goes straight to `u.u_fps`, and setting `u_fpsaved`
+(#l("u.u_fpsaved = 1;")) makes `trap` load it into the hardware on the
+return to user mode (#f("user.h")).
 
 #lines-to("for(i = 0; i < PSR; i++)")
 
-`r0` to `r15` are restored (#l("for(i = 0; i < PSR; i++)"), #l("u.u_ar0[i] = f[i];")).
+The frame lies in user memory, so the program can change it before
+`sigreturn` reads it back. Any value of `FPSCR` is harmless, since it
+holds only the user's own modes and flags. The saved `CPSR` is another
+matter. Only the bits a user may set (`UBITS`, #f("param.h")) are
+taken, and the mode is set to user mode (#l("u.u_ar0[PSR] = ")). The
+process continues where the signal interrupted it, with the condition
+flags it had, since it may have been between a comparison and a
+conditional branch.
 
-Of the saved status register (#l("u.u_ar0[PSR] = (f[PSR] & 0xfe0ffe20) | 0x10;")), only the condition flags (bits 27
-to 31), the `GE` flags (16 to 19), and the Thumb state that `sendsig`
-cleared (the `T`, `IT`, and `E` bits) are taken; the mode is set to user
-mode, `0x10`, with the interrupt masks `A`, `I`, and `F` clear. A forged
-frame therefore cannot return the process to the processor in a
-privileged mode, nor with interrupts masked, while a signal which
-interrupted Thumb code, in the middle of a 64-bit division, say,
-returns to it in Thumb state and inside its `if-then` block.
+#lines-to("u.u_r.r_val1 = f[R0];")
 
-`trap` (#f("trap.c")) will store `r_val1` and `r_val2` into
-`r0` and `r1` as the results of this system call; setting them to the
-saved values (#l("u.u_r.r_val1 = f[R0];"), #l("u.u_r.r_val2 = f[R1];")) makes the return restore those two registers too.
+The routine `trap` (#f("trap.c")) will store `r_val1` and `r_val2` into
+`r0` and `r1` as the results of this system call. Setting them to the
+saved values makes the return restore those two registers too.
 
-#lines-to("static char *", lead: true)
+#lines-to("void", lead: true, after: "u.u_r.r_val2 = f[R1];")
 
-`fumem` and `sumem` serve the memory special files (#f("mem.c")) one byte
-at a time, in the role that `fuibyte` and `suibyte`, with a user segment
-pointed at physical memory, played in v7's `mem.c`.
-
-`memaddr` translates a file offset to a kernel address. For `/dev/kmem`
-(minor 1) the offset is a kernel address; for `/dev/mem` (minor 0) it
-is a physical address, which is moved into the kernel's addresses by
-the difference between them (#l("a += b - vtop((caddr_t)b);")). Two stretches of RAM may be read:
-the kernel image, from `_start` to the end of `bss`, and everything from
-`.ddrbss` to the top of RAM, which on both machines lie in one region
-each; `/dev/kmem` may also read the u-area of the current process at
-`UBASE` (#l("if(minor(dev) == 1 && (unsigned)off - UBASE < ptob(USIZE))")). Anything else returns -1, and the driver sets `ENXIO`.
-
-`devaddr` (#l("devaddr(off_t off)")) turns a physical address within one of the board's
-device blocks (the `BLK_DEV` entries of `board_map`) into the kernel
-address at which that block is mapped. `/dev/mem` (#f("mem.c")) reads
-and writes those addresses through it rather than through `fumem` and
-`sumem`, a whole aligned word at a time, since the registers take no
-narrower access.
-
-#lines-to("void", lead: true)
-
-`install_sigtramp` writes the two-instruction signal trampoline,
-`sigreturn` by `svc`, at user address 8 (#f("seg.h")). `xalloc`
-(#f("text.c")) calls it while the text it has just read in is still
-mapped writable, so that the trampoline becomes part of the shared
-text. The stores go through `suword` (#f("mch.s")), with the
-permissions of user mode.
-
-`panictrap` is the target of the vectors which should never be taken
-(#f("low.s")).
+_Unexpected Traps._ The vector table's reserved entry and the FIQ entry
+should never be taken. Both go to `badtrap` (#f("low.s")), which calls
+`panictrap`.
 
 #lines-to(none)
 #source("/usr/sys/h/proc.h")
@@ -1849,342 +1935,340 @@ of the process and holds what the system must know about it even
 when the rest of it is on the swap device: whether it is in memory,
 where it is, why it sleeps, and the information that scheduling and
 signals need. The rest of the process state, the `user` structure
-(#f("user.h")), lives at the bottom of the process's own memory image
-and is swapped with it.
+(#f("user.h"), which is discussed in the next section, page
+#pageref(label("user.h"))), lives at the bottom of the process's memory image, the u-area, data,
+and stack which `p_addr` locates (see _The Address Space_, page
+#pageref(<sec-addr>)), and is swapped with it.
 
-`p_stat` (#l("char\tp_stat;")) takes one of the values on lines 34 to 39; a zero entry
-is free. `p_flag` (#l("char\tp_flag;")) is a set of the bits on lines 42 to 48.
+#lines-to("char\tp_pri;")
 
-`p_pri` (#l("char\tp_pri;\t\t/* priority, negative is high */")) is the scheduling priority, recomputed by `setpri`
+_Scheduling._ The scheduling priority `p_pri` (#l("char\tp_pri;\t\t/* priority, negative is high */")) is recomputed by `setpri`
 (#f("slp.c")) from `p_cpu` and `p_nice`, or set by `sleep` to the
 priority given for the event. A smaller value is more urgent, so the
-comment's "negative" means the highest of all. `p_time` and `p_cpu`
-are kept in a `char`, and `clock` stops each at its maximum so that
-it cannot wrap.
+comment's "negative is high" means more urgent than any positive
+value. Both `p_time` and `p_cpu` stop at 255, so that a process which
+has run long is penalised no further.
 
-`p_sig` (#l("int\tp_sig;\t\t/* signals pending to this process */")) is the set of pending signals, one bit each, the bit for
-signal _n_ being 1 shifted left _n_-1. v7 kept it in a `short`, the
-sixteen bits of which held its sixteen signals; it is now an `int`, for
-the 31 signals which `NSIG` (#f("param.h")) allows. `xp_sig` (#l("int\txp_sig;\t\t/* signals pending to this process */")), its
-counterpart in `struct xproc` below, is widened with it, so that the
-fields after it still lie where `proc`'s do.
+#lines-to("int\tp_sig;")
 
-`p_addr` (#l("int\tp_addr;\t\t/* address of swappable image */")) and `p_size` (#l("int\tp_size;\t\t/* size of swappable image (pages) */")) locate the image. When `SLOAD` is set,
+_Signals._ The field `p_sig` (#l("int\tp_sig;\t\t/* signals pending to this process */")) is the set of pending signals, one bit each, the bit for
+signal _n_ being 1 shifted left _n_-1.
+
+#lines-to("int\tp_addr;")
+
+_Memory._ The fields `p_addr` (#l("int\tp_addr;\t\t/* address of swappable image */")) and `p_size` (#l("int\tp_size;\t\t/* size of swappable image (pages) */")) locate the image. When `SLOAD` is set,
 `p_addr` is a page number, the physical address divided by 4096
 (`PGADDR`, #f("seg.h")); otherwise it is a block number on the swap
-device. `p_size`
+device. The size
 is in pages in both cases, and includes the `USIZE` pages of the
-`user` structure and kernel stack, which come first.
+u-area, which come first.
 
-`p_addr` has been widened from `short` to `int`. On the PDP-11, whose
-largest memory was 4~MB, v7's unit number fitted in sixteen bits. Here
-the MP135 machine's RAM lies above 0xc0000000, at page numbers
-beyond 786432, and a swap address can exceed 65536 as well
-(#f("qemuconf")). `p_size` is bounded by `maxmem`, which is at most
-`MAXMEM` (#f("param.h")), 32768~pages, one more than a `short` holds;
-it has been widened too.
+An image larger than `maxmem`, the free RAM, is refused by `estabur`
+(#f("ureg.c")).
 
-`p_ptab` and `p_nptab` (#l("int\tp_ptab;\t\t/* user page tables (page) */"), #l("int\tp_nptab;\t/* their number, 0 if none */")) are new: the first page and the number
+#lines-to("int\tp_ptab;")
+
+The fields `p_ptab` and `p_nptab` (#l("int\tp_ptab;\t\t/* user page tables (page) */"), #l("int\tp_nptab;\t/* their number, 0 if none */")) are the first page and the number
 of the pages of user page tables which the process holds while it is in
 RAM, taken from the pool by `sureg` and given back by `ptfree`
-(#f("ureg.c")). `p_nptab` is zero while the process has none, as after
+(#f("ureg.c")). The count is zero while the process has none, as after
 it has been swapped out, created, or moved in RAM.
 
-`p_wchan` (#l("caddr_t p_wchan;\t/* event process is awaiting */")) is the address on which a sleeping process waits;
-`wakeup` compares it with its argument. `p_textp` (#l("struct text *p_textp;\t/* pointer to text structure */")) points to the
+#lines-to("caddr_t p_wchan;")
+
+_Waiting._ A sleeping process waits on the address in `p_wchan` (#l("caddr_t p_wchan;\t/* event process is awaiting */")).
+The routine `wakeup` (#f("slp.c")) compares it with its argument. The field `p_textp` (#l("struct text *p_textp;\t/* pointer to text structure */")) points to the
 shared text segment, which every program has (#f("text.c")); only
-process 0, and process 1 while it runs `icode`, have none. `p_link` (#l("struct proc *p_link;\t/* linked list of running processes */")) chains the runnable processes
-into the list headed by `runq` (#f("systm.h")): `setrq` (#f("slp.c")) adds a
+process 0, and process 1 while it runs `icode` (#f("machdep.c")), have no
+text segment. The runnable processes are chained through `p_link` (#l("struct proc *p_link;\t/* linked list of running processes */"))
+into the list headed by `runq` (#f("systm.h")). The routine `setrq` (#f("slp.c")) adds a
 process to it, and `swtch` searches it for the most urgent one that is
-in RAM. `p_clktim` (#l("int\tp_clktim;\t/* time to alarm clock signal */")) counts down the seconds of an `alarm`.
+in RAM. The seconds of an `alarm` are counted down in `p_clktim` (#l("unsigned\tp_clktim;")).
+
+_Zombies._ When a process exits, its image is released, but its `proc`
+entry lingers in the `SZOMB` state until the parent collects it with
+`wait` (#f("sys1.c")). The entry then carries the exit status and the
+times used, in `p_xstat`, `p_utime`, and `p_stime` (#l("short\tp_xstat;"), #l("time_t\tp_utime;"), #l("time_t\tp_stime;")), which `exit` sets.
 
 #lines-to("/* stat codes */")
 
-`SWAIT` is listed but never set by v7 itself. `SIDL` covers the brief
+_States._ The field `p_stat` (#l("char\tp_stat;")) takes one of these values, and a
+zero entry is free. `SWAIT` is a leftover from the Sixth Edition and
+is never set. A sleeping process is `SSLEEP` whatever its priority, and
+`p_pri` tells the kinds apart. `SIDL` covers the brief
 time in `newproc` while a child is being copied, and `SZOMB` the time
 between `exit` and the parent's `wait`.
 
 #lines-to("/* flag codes */")
 
-`SLOAD` is the bit which decides how `p_addr` is to be read. `SSYS`
-marks process 0, which is never swapped. `SLOCK` holds a process in
-RAM temporarily: while it is being swapped out, while its text is
-read in, and while `physio` transfers directly to or from its image.
+_Flags._ The field `p_flag` (#l("char\tp_flag;")) is a set of these bits. `SLOAD` says that the process's image is in RAM, so that `p_addr` is a
+page number and not a swap block. It is set for process 0 by `main`,
+for each new process by `newproc`, and on swapping in by `swapin`
+(#f("slp.c")). It is cleared when the image is written to the swap area
+(`xswap`, #f("text.c")). `SSYS`
+marks process 0, so that `sched` can pass over it in the same test as
+locked processes
+(#at("/usr/sys/sys/slp.c", "|| (rp->p_flag&(SSYS|SLOCK|SULOCK|SLOAD))!=SLOAD)")).
+`SLOCK` keeps a process in RAM while an operation needs its image to
+stay where it is. It is set and cleared around swapping the process
+out, reading in its text, and a transfer by `physio` directly to or
+from its image.
 `SSWAP` marks a process whose image was written to the swap area from
 the middle of `newproc`, `expand`, or `xexpand`, so that `swtch` (#f("slp.c"))
 resumes it through `u_ssav` rather than `u_rsav`. `SULOCK` holds a
 process in RAM at the user's request, through the `lock` system call
-(`syslock`). `STRC` and `SWTED` serve `ptrace`.
-
-#lines-to("/*", after: "#define\tSULOCK\t0100\t\t/* user settable lock in core */")
-
-When a process exits, its image is released, but its `proc` entry
-lingers in the `SZOMB` state until the parent collects it with
-`wait`. At that point the entry must carry the exit status and the
-times used, which no field of `proc` provides. `exit` (#f("sys1.c")) casts
-the `proc` entry to an `xproc` and stores them in place: the first
-eleven fields coincide, and the new ones overlay `p_addr` and the
-fields after it, which are now meaningless.
-
-The overlay works only if `xproc` is no larger than `proc`. With
-`p_addr` now four bytes, `xp_xstat` covers half of it, the two
-`time_t`s, eight bytes each, are aligned to offset 24, and `xproc` ends
-at 40~bytes, inside the 52~bytes of a `proc` entry. The times thus lie
-over `p_size`, `p_ptab`, `p_nptab`, and `p_wchan`. None of these means
-anything in a zombie, but two are read again when the entry is reused,
-so `wait` (#f("sys1.c")) clears them as it frees it: `p_wchan`, as in
-v7, and `p_nptab`, without which `ptfree` (#f("ureg.c")) would hand the
-system time of the dead process to `mfree` as a number of page tables.
+(`syslock`, #f("acct.c")). `STRC` and `SWTED` serve `ptrace`.
 
 #lines-to(none)
 #source("/usr/sys/h/user.h")
 
 The `user` structure is the second half of the description of a
-process, the half that can be swapped. It sits at the base of the
-process's image in RAM, followed by the kernel stack of the
-process, the two together occupying `USIZE` pages (#f("param.h")): the
-"per process data area". Only the data area of the current process is
-addressable, always at the same kernel address, and the kernel calls
-it `u`. To switch processes is, at bottom, to change which data area
-appears there.
+process, the half that can be swapped. It lies at the start of the
+process's u-area, `USIZE` pages (#f("param.h")), and the process's
+kernel stack fills the rest (see _The Address Space_, page
+#pageref(<sec-addr>)). Only the u-area of the current process is
+addressable, always at `UBASE`. The kernel names it `u`
+(#l("extern struct user u;")), which the linker script places at that
+address (#f("qemu/unix.ld"), #f("mp135/unix.ld")). To switch processes
+is, at bottom, to change which u-area appears there.
 
-The opening comment is v7's. `USIZE` is now one page of 4096~bytes rather than 16 units of 64~bytes, and the comment gives the new unit; the
-block appears at virtual address `UBASE`, 0xffe00000, which the
-comment now gives in place of v7's 0140000. That address was
-the start of the seventh kernel segment, and v7
-switched processes by reloading that segment's address register
-(`ka6`). The port maps the window through its own third-level page
-table, `kl3u` (#f("mch.s")), which covers the top 2~MB of the kernel's
-address space. `resume` writes the physical address of the new
-process's data area into that table and discards the old translations,
-after which the same virtual addresses show the new `u`.
+#lines-to("#define\tEXCLOSE", lead: true)
 
 `EXCLOSE` (#l("#define\tEXCLOSE\t01")) is the bit of `u_pofile` (#l("char\tu_pofile[NOFILE];\t/* per-process flags of open files */")) which marks a file to be
 closed by `exec`.
 
 #lines-to("struct\tuser")
 
-`u_rsav` (#l("label_t\tu_rsav;\t\t\t/* save info when exchanging stacks */")) holds the registers saved by `save` (#f("mch.s")) when the
-process gives up the processor in `swtch`, and restored by `resume`.
-`label_t` now has ten words: r4 to r11, the stack pointer, and the link
-register, the registers which the ARM procedure call standard requires
-a callee to preserve.
+A label (`label_t`, #f("param.h")) is the set of registers which `save`
+stores and `resume` reloads, much like a `setjmp` buffer. Reloading it
+makes the original call of `save` return a second time (see _Process
+Switching_, page #pageref(<mch-switch>)). The label `u_rsav` (#l("label_t\tu_rsav;\t\t\t/* save info when exchanging stacks */")) holds the registers saved by `save` (#f("mch.s")) when the
+process gives up the processor in `swtch` (#f("slp.c")), and restored by
+`resume` (#f("mch.s")). The type `label_t` has ten words: r4 to r11, the
+stack pointer, and the link register. Since `save` is called as an
+ordinary function, its caller has already set aside anything it needs
+from the other registers, so `save` keeps only those which the ARM
+procedure call standard requires a called function to preserve (see
+_The ARM Processor_, page #pageref(<sec-arm>)).
 
-The floating point fields (#l("int\tu_fper;\t\t\t/* FP error register */")--#l("} u_fps;")) are v7's. `u_fps` holds the state
-of the floating point unit while the process is not using it: the
-status register `FPSCR` in `u_fpsr`, and the registers in `u_fpregs`,
-of which the ARM has 32 to the PDP-11's 6. `u_fpsaved` says that the
-hardware registers have been stored here, and must be reloaded before
-the return to user mode. `trap` and `user_trap_handler` (#f("trap.c"))
-clear it on entry; `swtch`, `newproc`, and `expand` (#f("slp.c")),
-and `psig` (#f("sig.c")) store the registers and set it whenever another
-process may take the unit or the u-area may be copied; and the return to
-user mode reloads them if it is set. Since the registers are saved only
-when they must be, a process which makes a system call and continues
-pays nothing for them. `exec` clears the area, `ptrace` permits writes to
-it, and a core file, which begins with the u-area, carries it. `u_fper`,
-v7's floating error code, is unused (#f("mch.s")).
+The structure `u_fps` (#l("int\tu_fper;\t\t\t/* FP error register */")--#l("} u_fps;")) holds the state of the floating point unit
+while the process is not using it, the status register `FPSCR` in
+`u_fpsr` and the 32 registers in `u_fpregs`. The flag `u_fpsaved` says
+that the hardware registers have been stored there and must be
+reloaded before the return to user mode.
 
 #lines-to("char\tu_segflg;\t\t/* IO flag: 0:user D; 1:system; 2:user I */")
 
-`u_segflg` (#l("char\tu_segflg;\t\t/* IO flag: 0:user D; 1:system; 2:user I */")) tells `iomove` and its relatives where `u_base`
-points: 1 for kernel space, 0 or 2 for user data or text. Since the
-I-space routines are aliases of the D-space ones (#f("systm.h")), 0 and 2
-now mean the same. `u_error` is the error number that a system call
-returns. The four user and group ids follow, effective and real.
-`u_procp` (#l("struct proc *u_procp;\t\t/* pointer to proc structure */")) links back to the process's `proc` entry, and `u_ap`
-points to the arguments of the current system call.
+The flag `u_segflg` (#l("char\tu_segflg;\t\t/* IO flag: 0:user D; 1:system; 2:user I */")) tells `iomove` (#f("rdwri.c")) and its relatives where
+`u_base` points. Usually it points into the user's memory. But the
+kernel sometimes reads or writes a file for itself, into its own
+memory: `exec` reads a program's headers, `namei` reads directories,
+and a core dump writes out the u-area. Then `u_segflg` is 1. The values
+0 and 2, user data and user text, mean the same, since the I-space
+routines are aliases of the D-space ones (#f("systm.h")). The error number that a system call returns is kept
+in `u_error`. The four user and group ids follow, effective and real.
+The pointer `u_procp` (#l("struct proc *u_procp;\t\t/* pointer to proc structure */")) links back to the process's `proc` entry, and `u_ap`
+points to the arguments of the current system call, which `trap` has
+copied into `u_arg` (#f("trap.c")).
 
-`u_r` (#l("union {\t\t\t\t/* syscall return values */")) holds the one or two values that a system call returns. In
-v7 the structure inside the union had no member name: the old C
-compiler kept all structure member names in a single table, and
-`u.u_r.r_val1` was accepted although the union had no member called
-`r_val1`. C99 requires a name. The structure is now the member
-`u_pair` (#l("} u_pair;")), and the two macros (#l("#define\tr_val1\tu_pair.r_val1"), #l("#define\tr_val2\tu_pair.r_val2")) let the many statements
-which write `u.u_r.r_val1` remain as v7 wrote them. `r_time` fills both
-words of the pair, as it did on the PDP-11; the union is therefore
-aligned on eight bytes.
+The structure `u_r` (#l("struct {\t\t\t/* syscall return values */")) holds the one or two values that a
+system call returns, in `r0` and `r1`.
 
 #lines-to("caddr_t\tu_base;\t\t\t/* base address for IO */")
 
-The parameters of an I/O transfer, which `readi`, `writei`, and the
-drivers consume: `u_base`, `u_count`, and `u_offset`. After them come
+The parameters of an I/O transfer, `u_base`, `u_count`, and
+`u_offset`, are kept here so that every layer of the transfer can reach
+them without their being passed as arguments: the system call, `readi`
+and `writei` (#f("rdwri.c")), `iomove`, and the drivers. After them come
 the current and root directories, and the working storage of `namei`
 (#f("nami.c")): the current component of the path name, a pointer into
-the name, a copy of the directory entry, and the parent directory.
+the name, a copy of the directory entry, and the parent directory. They
+are kept here, not on `namei`'s stack, because the callers of `namei` go
+on using them: `wdir` (#f("iget.c")) writes the new directory entry from
+them.
 
-#lines-to("unsigned u_ptsize, u_pdsize, u_pssize;\t/* prototype sizes */")
+#lines-to("unsigned u_ptstart, u_pdstart;")
 
-In v7, `u_uisa` and `u_uisd` held the prototypes of the sixteen PDP-11
-user segmentation registers, which `estabur` computed and from which
-`sureg` loaded the hardware (#f("ureg.c")). The ARM's mapping needs a
-smaller prototype: the sizes, in pages, of the text, the data, and the
-stack to be mapped (#l("unsigned u_ptsize, u_pdsize, u_pssize;\t/* prototype sizes */")), and the access rights of the text, `RO` or
-`RW` (#l("int\tu_pxrw;\t\t\t/* prototype of text access */")). `u_ofile` (#l("struct file *u_ofile[NOFILE];\t/* pointers to file structures of open files */")) is the
-table of open files, indexed by file descriptor. `u_arg` (#l("int\tu_arg[5];\t\t/* arguments to current system call */")) receives
-the arguments of a system call from the saved registers r0 to r3;
-no call takes more than four. `u_tsize`, `u_dsize`, and `u_ssize` (#l("unsigned u_tsize;\t\t/* text size (pages) */")--#l("unsigned u_ssize;\t\t/* stack size (pages) */"))
-are the sizes, in pages, of the three parts of the user image.
+When a process's image is laid out, `estabur` (#f("ureg.c")) records
+its shape here without building any tables. It records the first pages
+of the text and the data (#l("unsigned u_ptstart, u_pdstart;")), the sizes, in pages, of the
+text, the data, and the stack to be mapped (#l("unsigned u_ptsize, u_pdsize, u_pssize;")), and the access rights of
+the text (#l("int\tu_pxrw;")), `RO` except while `xalloc` (#f("text.c"))
+reads the text in or `ptrace` (#f("sig.c")) writes into it for a
+debugger. This record is the _prototype_. The routine `sureg` builds the
+page tables from it later, wherever the image then lies in RAM. The
+table of open files, indexed by file descriptor, is `u_ofile`
+(#l("struct file *u_ofile[NOFILE];")). The array `u_arg`
+(#l("int\tu_arg[")) receives the arguments of a system call from the
+saved registers r0 to r3. The sizes, in pages, of the three parts of
+the user image are `u_tsize`, `u_dsize`, and `u_ssize`
+(#l("unsigned u_tsize;")--#l("unsigned u_ssize;")).
 
 #lines-to("label_t\tu_qsav;\t\t\t/* label variable for quits and interrupts */")
 
-`u_qsav` (#l("label_t\tu_qsav;\t\t\t/* label variable for quits and interrupts */")) is the label to which `sleep` returns when a signal
-interrupts a system call; `trap` sets it on every call. `u_ssav`
-serves `expand` and the swapping code, which may need to resume a
-process at the point where its image was copied. `u_signal` (#l("int\tu_signal[NSIG];\t\t/* disposition of signals */")) holds, for each
-signal, zero for the default action, one to ignore it, or the address
-of a catching routine; an `int` holds an address on the ARM, as it did
-on the PDP-11.
-The four times are counted in clock ticks.
+The label `u_qsav` (#l("label_t\tu_qsav;")) lets a system call be
+abandoned. The routine `trap` (#f("trap.c")) saves it as each call
+begins. When a signal interrupts a sleep, `sleep` (#f("slp.c")) resumes
+there instead of returning, and `trap` ends the call with `EINTR`. A
+third label, `u_ssav`, serves `expand` (#f("slp.c")) and the swapping
+code, which may need to resume a process at the point where its image
+was copied. The array `u_signal` (#l("int\tu_signal[NSIG];")) holds, for
+each signal, zero for the default action, one to ignore it, or the
+address of a catching routine, which fits since an `int` holds an
+address on the ARM. The four times are counted in clock ticks.
 
-`u_ar0` (#l("int\t*u_ar0;\t\t\t/* address of users saved R0 */")) points to the user's registers as saved on the kernel
+#lines-to("int\t*u_ar0;")
+
+The pointer `u_ar0` (#l("int\t*u_ar0;\t\t\t/* address of users saved R0 */")) points to the user's registers as saved on the kernel
 stack on entry to the system. The frame in the port holds r0 to r14,
 the program counter, and the status register, and #f("reg.h") gives the
-index of each in the frame. `u_prof` holds the parameters of the
-`profil` system call. Its structure has been given the tag `uprof` so
-that `addupc` (#f("clock.c")), which v7 wrote in assembler, can be declared
-to take a pointer to it and read the fields by name. `u_ttyp` and `u_ttyd` (#l("struct tty *u_ttyp;\t\t/* controlling tty pointer */"), #l("dev_t\tu_ttyd;\t\t\t/* controlling tty dev */")) name the
-controlling terminal.
+index of each in the frame. The other places where registers are saved
+are listed in the Introduction (see _Saved State_, page
+#pageref(<sec-saved>)).
+
+#lines-to("struct uprof {")
+
+The structure `u_prof` holds the parameters of the `profil` system call.
+
+#lines-to("struct tty *u_ttyp;")
+
+The controlling terminal is named by `u_ttyp` (#l("struct tty *u_ttyp;\t\t/* controlling tty pointer */")), whose `t_dev` gives its
+device (#f("tty.h")).
 
 #lines-to("struct {\t\t\t/* header of executable file */")
 
-`u_exdata` (#l("struct {\t\t\t/* header of executable file */")) is the header of the program being executed, read by
+The structure `u_exdata` (#l("struct {\t\t\t/* header of executable file */")) is the header of the program being executed, read by
 `getxfile` (#f("sys1.c")). In v7 it was the eight-word `a.out` header.
 The executables here are in ELF, the Executable and Linkable Format,
-and the structure has been rearranged to
-hold the pieces of an ELF file which the kernel needs. Its first 52
-bytes overlay the ELF file header. The fields that the kernel reads have
-names; the rest are fill:
+and the first 52 bytes of the structure are the ELF file header, with
+the ELF names. The kernel reads the four identifying bytes of
+`e_ident` (#l("unsigned char e_ident[16];")), `\x7fELF`, the entry point `e_entry`
+(#l("unsigned e_entry;")), and the offset, entry size, and number of the program
+headers, `e_phoff`, `e_phentsize`, and `e_phnum` (#l("unsigned e_phoff;"),
+#l("unsigned short e_ehsize, e_phentsize, e_phnum;")).
 
-- `ux_mag` (#l("int\tux_mag;\t\t/* magic number */")) receives the four identifying bytes, `\x7fELF`, which
-  read as a little-endian word are 0x464c457f.
-- `ux_entloc` (#l("unsigned ux_entloc;\t/* entry location */")), the entry point, and `ux_phoff` (#l("unsigned ux_phoff;")), the file
-  offset of the program header table, fall at the offsets of the ELF
-  fields `e_entry` and `e_phoff`.
-- `ux_phnum` (#l("short\tux_phnum, ux_z[3];")) is the number of program headers.
-
-`ux_ph` (#l("struct {", after: "short\tux_phnum, ux_z[3];")--#l("} ux_ph[2];\t\t/* text and data segments */")) then receives two program headers, or rather their
-first six fields: type, file offset, virtual address, physical address,
-size in the file, and size in memory. `getxfile` fills it with the two
-loadable segments of the program: the text, read-only and executable,
-and the data, which the linker places in separate pages
-(#f("Makefile")). This is the ELF form of v7's 0410 executable, whose
-text was shared and read-only. The remaining two fields of a program
-header are not needed.
-
-v7's `ux_tsize` and `ux_dsize`, the sizes of the text and the
-initialised data, which the kernel still names, are now macros (91,
-92) for the sizes in the file of the two segments. `ux_bsize`,
-`ux_ssize`, `ux_unused`, and `ux_relflg` have gone. The data's size in
-memory includes the uninitialised data, as v7's `ux_bsize` added it;
-since the image is cleared before the segment is read in, that part
-reads as zero without further work.
+The array `ph` (#l("struct {", after: "unsigned short e_shentsize, e_shnum, e_shstrndx;")--#l("} ph[2];\t\t/* text and data segments */")) then receives two program headers, or rather their
+first six fields, the type, file offset, virtual address, physical
+address, size in the file, and size in memory. The routine `getxfile`
+fills it with the two loadable segments of the program, the text,
+read-only and executable, and the data. The remaining two fields of a
+program header are not needed. `PT_LOAD` (#l("#define\tPT_LOAD\t1")) is the type of a
+loadable segment.
 
 #lines-to("char\tu_comm[DIRSIZ];")
 
-`u_comm` (#l("char\tu_comm[DIRSIZ];")) is the last component of the name of the program, for
-accounting and `ps`; `u_start` and `u_acflag` are also for accounting.
-`u_cmask` (#l("short\tu_cmask;\t\t/* mask for file creation */")) is the `umask`.
+The field `u_comm` (#l("char\tu_comm[DIRSIZ];")) holds the program's
+file name, without its directory, for accounting and `ps`. The time the
+process started is `u_start`. The flags in `u_acflag` (#f("acct.h"))
+record whether it forked without calling `exec` (`AFORK`) and whether
+it used the super-user's privileges (`ASU`). Both go into its
+accounting record when it exits (#f("acct.c")). The file creation mask
+`u_cmask` (#l("short\tu_cmask;")) holds the permission bits to be
+removed from the mode of every file the process creates. It is set by
+the `umask` system call and inherited by children, so a shell can keep,
+say, other users' write permission off every new file.
 
-`u_stack` (#l("int\tu_stack[1];")) marks the end of the structure. The kernel stack begins
-at the top of the data area, 0xffe02000, where #f("low.s") sets the
-supervisor mode stack pointer, and grows down towards it. Nothing but
-the size of the area guarantees that it does not reach the structure.
+The kernel stack begins at the top of the u-area, `UBASE` plus `USIZE`
+pages, which `machine_init` returns and #f("low.s") loads into the
+stack pointer, and grows down towards the structure. Nothing but the
+size of the u-area keeps it from reaching the structure.
 
 #lines-to("extern struct user u;", lead: true)
 
-In v7, `u` was an external variable (#l("extern struct user u;")). Its address was fixed not
-by storage but by the assembler line `_u = 140000` in `mch.s`, which
-made `_u` an absolute symbol. The port does the same with one line of
-the linker script, `u = 0xFFE00000`, which `mkconf` writes
-(#f("qemu/unix.ld")): `u` is the `struct user` at `UBASE`, and every
-reference to it is to that fixed address, as in v7. A program which
-includes #f("user.h") for the structure may still name a variable of
-its own `u`, as `ps` does.
+The structure `u` is declared external (#l("extern struct user u;")).
+Its address, `UBASE` (#f("param.h")), comes from one line of the linker
+script which `mkconf` writes (#f("qemu/unix.ld"), #f("mp135/unix.ld")),
+so every reference to `u` is to that fixed address. Why `UBASE` lies
+where it does is told in the Introduction (see _The Address Space_,
+page #pageref(<sec-addr>)).
 
 #lines-to("/* u_error codes */")
 
-The error numbers which a system call may return in `u_error`. The
-user sees them in `errno`. They are unchanged from v7.
+The error numbers which a system call may return in `u_error`. On an
+error, `trap` (#f("trap.c")) sets the carry bit of the saved status and
+puts the number in `r0`. The library's system call stub, `cerror`
+(#f("libc/syscall.s")), tests the carry after `svc`, stores `r0` in
+`errno`, and returns -1.
 
 #lines-to(none)
 #source("/usr/sys/sys/ureg.c")
 
-#f("ureg.c") contains the procedures through which the rest of the
-system controls a process's user address space. `estabur` validates
-the sizes of the text, data, and stack of a new or changed image and
-records them as a _prototype_ in the `user` structure. `sureg` loads the
-hardware from the prototype, adding the physical address of the image;
-it is called whenever the image may have moved: by `estabur`, by
-`newproc` and `expand` (#f("slp.c")), by `xexpand` (#f("text.c")), and
-when a process is resumed in `swtch`.
+The routines of #f("ureg.c") control a process's user address space.
+Their names come from v7, where they set the PDP-11's user segmentation
+registers. The name `estabur` means "establish user registers", and
+`sureg` means "set user registers". Here they build and load page
+tables. Whenever an image is created or changes size, by `exec`
+(`getxfile`, #f("sys1.c")), by `brk` (`sbreak`), by the growth of the
+stack (`grow`, #f("sig.c")), or by `expand` (#f("slp.c")), its new shape
+is passed to `estabur`. The routine checks that the segments lie in the
+address space apart from each other and that the image fits in
+`maxmem`, records it as the process's
+prototype (see #f("user.h"), page #pageref(label("user.h"))), discards
+the old page tables, and calls `sureg`. The routine `sureg` points the
+MMU at the process's tables, first building them from the prototype if
+the process has none. It is called whenever the image may have moved:
+by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
+(#f("text.c")), and when `swtch` (#f("slp.c")) resumes a process.
 
-The division of labour is v7's, and so is the shape of the address
-space. On the PDP-11 the prototype was a set of sixteen segmentation
-registers, `u.u_uisa` and `u.u_uisd`, eight segments of up to 8~KB
-each, and `estabur` had to fit the text, the data, and the stack into
-them, round each up to whole segments, and mark the stack as growing
-downward. On the ARM every 4~KB page has its own entry, so the
-prototype is simply the three sizes and the text's access rights
-(#f("user.h")): the text occupies the bottom of the address space, the
-data follows it, and the stack ends at `USRSIZE`.
-
-The hardware, however, is no longer a set of registers. It is a tree of
-tables in RAM (#f("low.s")): a first-level table of four entries,
-each covering a gigabyte; for each gigabyte in use, a second-level
-table of 512~entries, each covering 2~MB; and for each 2~MB in use, a
-third-level table of 512~page entries. The first-level tables live in
-`l1tab` (#l("unsigned long long *l1tab;"), #l("unsigned l1pa;")), one for each slot of the process table, set aside by
-`startup` (#f("machdep.c")). The others are built in pages from the
-pool, and are kept from one switch to the next, as the PDP-11 kept the
-prototype; a switch only points `TTBR0` at the process's table.
+The tables form a tree in RAM (see _Translation Tables_, page
+#pageref(<sec-tables>)). Each process has its own tree for the lower
+three gigabytes, and the kernel has one tree for the top gigabyte,
+shared by all processes. A process's tree begins with a first-level
+table of four entries, each covering a gigabyte. Below it, for each
+gigabyte in use, is a second-level table of 512~entries, each covering
+2~MB, and for each 2~MB in use, a third-level table of 512~page entries.
+The first-level tables live in `l1tab` (#l("unsigned long long *l1tab;"),
+#l("unsigned l1pa;")), one for each slot of the process table, set aside
+by `startup` (#f("machdep.c")). The tables below them are pages from
+the pool `ptmap`, and the process's `proc` entry records which
+(`p_ptab` and `p_nptab`, #f("proc.h")). They are kept while the process
+stays where it is in RAM, so a switch only points `TTBR0` at the
+process's first-level table.
 
 #lines-to("/*")
 
-`ptbuild` makes the tables of the current process `p`. The text is
-found at the RAM address of the shared text segment, if there is one,
-and the data and stack in the process's own image (#l("taddr = daddr = p->p_addr;")--#l("taddr = p->p_textp->x_caddr;")), as in v7's
-`sureg`.
+A `urange` (#l("struct urange {")) describes a segment to be mapped by its first page,
+its number of pages, the physical address of its first page, and its
+access bits.
 
-The text and the data occupy `n` pages from address 0 upwards; they
-need one second-level table for each gigabyte they reach (#l("n2 = (n+PTPGB-1) / PTPGB;")) and one
-third-level table for each 2~MB (#l("n3lo = (n+511) / 512;")). The stack, which ends at
-`USRSIZE`, needs one third-level table for each 2~MB (#l("n3hi = (u.u_pssize+511) / 512;")) and, if it is
-not empty, one second-level table, for the third gigabyte. `estabur`
-ensures that text and data stay within the first two gigabytes and the
-stack within the third. A process with nothing mapped, such as process
-0, needs no tables at all (#l("if(n == 0)")).
+#lines-to("/*", lead: true, after: "};")
+
+The routine `ptbuild` makes the tables of the current process `p`. It
+lists up to four ranges (#l("nr = 0;")--#l("rp->ap = RO;")). The text lies at the RAM address of
+the shared text segment, if there is one, and carries the access rights
+of the prototype. The data and the stack lie in the process's own
+image, from `USIZE` pages into it, and are read and write. The fourth is
+the one read-only page of the signal trampoline (`sigpage`,
+#f("machdep.c")). The ranges are then sorted by address (#l("for(i = 1; i < (int)nr; i++)")--#l("r[j-1] = t;")).
+
+A first pass counts the tables needed (#l("n = 0;", after: "r[j-1] = t;")). Each gigabyte a range touches
+needs a second-level table, and each 2~MB block a third-level one.
+Since the ranges are sorted and apart, a new gigabyte or block shows as
+a change from the last one seen, and the pass steps a block at a time
+(#l("for(pg = rp->va; pg < rp->va+rp->n; pg = (pg|(NPTE-1)) + 1)")). The text, the data, and the trampoline of a
+small program share one block, so it needs four tables in all,
+two for the low gigabyte and two for the stack's.
 
 The pages are taken from the pool as one run (#l("if((a = malloc(ptmap, n)) == 0) {")). If the pool is
 exhausted, the process is killed, as `xalloc` (#f("text.c")) kills one
-for which no `text` entry remains; its first-level table stays empty,
+for which no `text` entry remains. Its first-level table stays empty,
 so that any reference to its address space faults. With `NPTAB`
 (#f("param.h")) pages, this happens only when many large processes are in
 RAM at once.
 
-The run is cleared, and laid out in order: the second-level tables of
-the low gigabytes, their third-level tables, the second-level table of
-the stack's gigabyte, and its third-level tables. An entry which points
-to a table holds its physical address and the type `PTE_TAB`
-(#f("seg.h")). Consecutive tables of a level are consecutive in memory,
-so the 512-entry tables may be treated as one longer array: the low
-third-level tables are entered in the second-level tables from their
-first entry (#l("for(i = 0; i < n3lo; i++, a += PGSIZE)"), #l("t[i] = a | PTE_TAB;")), and the text and data pages in the third-level
-tables from their first (#l("b = ptob((unsigned)taddr);")--#l("*t++ = b | PGUSER | RW;", after: "for(i = 0; i < u.u_pdsize; i++, b += PGSIZE)")). The text pages carry the access
-rights of the prototype; the data pages, from `USIZE` pages into the
-image, are read and write.
-
-The stack's tables are entered at the top of their second-level table
-(#l("for(i = 0; i < n3hi; i++)"), #l("t[512-n3hi+i] = (a += PGSIZE) | PTE_TAB;")), and its pages at the top of its third-level tables, mapped
-upward from the page after the data (#l("t += 512 + 512*n3hi - u.u_pssize;")--#l("*t++ = b | PGUSER | RW;", after: "for(i = 0; i < u.u_pssize; i++, b += PGSIZE)")), so that the last page of
-the image is the last page below `USRSIZE`. The attributes other than
-the access rights are `PGUSER` (#f("seg.h")), among them "not
-global", which lets `ttbset` (#f("mch.s")) discard the user's
-translations alone.
+The run is cleared, and a second pass, in the same order, takes the
+tables from it as they are first needed. It enters each second-level
+table in the first-level table and each third-level table in its
+second-level table (#l("l1[gb] = ptob(a) | PTE_TAB;"), #l("l2[blk & (NPTE-1)] = ptob(a) | PTE_TAB;")), and each page in its third-level
+table with the range's access bits (#l("l3[pg & (NPTE-1)] = (rp->pa + ptob(pg - rp->va)) |")). An entry which points to a
+table holds its physical address and the type `PTE_TAB` (#f("seg.h")).
+The attributes other than the access rights are `PGUSER` (#f("seg.h")),
+among them "not global", which lets `ttbset` (#f("mch.s")) discard the
+user's translations alone.
 
 #lines-to("/*", lead: true, after: "}")
 
-`ptfree` returns a process's tables to the pool and empties its
+The routine `ptfree` returns a process's tables to the pool and empties its
 first-level table. It is called whenever the tables no longer describe
 the image: by `estabur` when the prototype changes, by `expand`
 (#f("slp.c")) when the image moves, by `xswap` (#f("text.c")) when it
@@ -2194,7 +2278,7 @@ table always begins with an empty address space.
 
 #lines-to("/*", lead: true, after: "}")
 
-`sureg` builds the tables of the current process if it has none, and
+The routine `sureg` builds the tables of the current process if it has none, and
 loads them with `ttbset` (#f("mch.s")), which also discards the
 previous process's translations. At a process switch, the usual case,
 the tables already exist and only `TTBR0` changes; after the process
@@ -2205,21 +2289,23 @@ another.
 
 #lines-to("/*", lead: true, after: "}")
 
-`estabur` makes v7's two checks. Separate instruction and data spaces
-(`sep`), which the PDP-11/40 lacked and v7 refused there, cannot be had
-on the ARM either (#l("if(sep)"), #l("goto err;", after: "if(sep)")). The text, data, and stack must fit the
-address space as the tables are arranged, as v7 required them to fit
-its eight segments (#l("if(nt+nd > 2*PTPGB || ns > PTPGB)")): text and data in the first two gigabytes, the
-stack in the third, so that they never overlap. `PTPGB`
-(#f("seg.h")) is the number of pages in a gigabyte. And the image,
-with its per process data area, must not exceed `maxmem` (#l("if((int)(nt+nd+ns+USIZE) > maxmem)"), #l("goto err;", after: "if((int)(nt+nd+ns+USIZE) > maxmem)")),
-which `startup` (#f("machdep.c")) has limited to `MAXMEM`. The sum is
-cast to `int` for that comparison, because `maxmem` is an `int`: C99
-would otherwise compare the two as unsigned, as v7 did, and the
-compiler would warn of it. The test at line #l("if(nt+nd > 2*PTPGB || ns > PTPGB)") has already bounded the sum, so
-the cast cannot make it negative.
+The routine `apart` (#l("apart(unsigned a, unsigned n, unsigned b, unsigned m)")) says whether two ranges of pages have none in
+common. An empty range has none in common with anything.
 
-The prototype is then recorded (#l("u.u_ptsize = nt;")--#l("u.u_pxrw = xrw;")), the old tables are released,
+#lines-to("/*", lead: true, after: "}")
+
+The routine `estabur` checks a new shape before it records it. Each
+segment must lie below `USRSIZE` (#l("if(nt > top || ts > top-nt || nd > top || ds > top-nd || ns > top)")), tested so that no sum can wrap.
+The text, the data, the stack, which ends at `USRSIZE`, and the
+trampoline's page at `SIGTRAMP` (#f("seg.h")) must all be apart
+(#l("if(!apart(ts, nt, ds, nd) || !apart(ts, nt, ss, ns) ||")--#l("!apart(ds, nd, tr, 1) || !apart(ss, ns, tr, 1))")). And the image, with its per process data area, must not exceed
+`maxmem` (#l("if(nt+nd+ns+USIZE > maxmem)")). In v7 the checks were others. It refused separate
+instruction and data spaces on a PDP-11 without them, and required the
+segments to fit its eight segmentation registers, the text and data from
+address 0 and the stack at the top. Here each segment lies where its
+program asks (`getxfile`, #f("sys1.c")).
+
+The prototype is then recorded (#l("u.u_ptstart = ts;")--#l("u.u_pxrw = xrw;")), the old tables are released,
 and new ones built and loaded. Callers ask for a mapping before the
 image itself has changed: `grow` and `sbreak` check the new sizes
 before they call `expand`, and `xalloc` (#f("text.c")) asks for the text
@@ -2233,182 +2319,315 @@ the tables again.
 
 #f("slp.c") is the heart of process management. It holds the procedures
 by which a process gives up the processor (`sleep`, `swtch`), by which
-another makes it runnable again (`wakeup`, `setrun`), the calculation of
-user priorities (`setpri`), the scheduler proper (`sched`, `swapin`),
-and the two procedures which create or move a process image in RAM
-(`newproc`, `expand`). Apart from the C99 dressing and a few additions
-for the ARM, described below, the file is v7's, and it is the clearest
-place to see that the port changed the machine under the system rather
-than the system itself.
+another makes it runnable again (`wakeup`, `setrun`), the calculation
+of the priority of a process running in user mode (`setpri`), which
+rises with its recent use of the processor and its `nice` value, as
+distinct from the fixed priority a process is given when it sleeps in
+the kernel, the scheduler proper (`sched`, `swapin`), and the two
+procedures which create or move a process image in RAM (`newproc`,
+`expand`).
+How they work together is described in the Introduction (see
+_Scheduling and Swapping_, page #pageref(<sec-sched>)). The commentary
+follows the file: `sleep` and `wakeup`, then `setrun` and `setpri`,
+then `sched` and `swapin`, then `swtch`, and last `newproc` and
+`expand`.
 
-Everything here turns on the pair `save` and `resume` (#f("mch.s")),
-which switch between processes. `save(lab)` stores in the `label_t` `lab` the registers
-which a called procedure must preserve, together with the stack pointer
-and the return address, and returns zero. `resume(a, lab)` makes the
-process image at page number `a` the current one, by mapping its
-per-process area at the fixed address of `u`, then reloads the registers
-from `lab` and returns one, as though from the corresponding `save`. The
-pair is thus the kernel's `setjmp` and `longjmp`, with an exchange of
-address spaces thrown in. In the PDP-11 version `save` kept r2 to r5 and
-the stack pointer, and `resume` reloaded the kernel segmentation register
-`KDSA6`; on the ARM `save` keeps r4 to r11, the stack pointer, and the
-link register, and `resume` rewrites the entries of the third-level page
-table `kl3u` which map `u` and then discards their translations.
+#lines-to("#define SQSIZE", lead: true)
 
-Since `lab` always lies within `u`, and `resume` reads it only after the
-new process has been mapped, it is the incoming process's copy of the
-label which is used (#f("mch.s")); the comment at line #l("* The rsav (ssav) contents are interpreted in the new address space") says as much.
-
-The declaration of `swapin` (#l("int\tswapin(struct proc *p);")) is new. `sched` (#l("if (swapin(p))")) calls it before
-its definition, as `printf` calls `printn` (#f("prf.c")); no other file uses it, so the declaration is here and not in #f("systm.h").
-
-A process sleeps on a _channel_: an address which by convention stands
-for the event awaited, such as that of the buffer or inode concerned.
-Processes which sleep are kept on `SQSIZE` short lists, chained through
-`p_link`. `HASH` (#l("#define HASH(x)\t(( (int) x >> 5) & (SQSIZE-1))")) picks the list from the address of the
-channel. The cast to `int` may now give a negative number for a kernel
-address with its top bit set, but the mask removes the sign.
+Sleeping processes are kept in `slpque`
+(#l("struct proc *slpque[SQSIZE];")), an array of `SQSIZE` list heads
+(#l("#define SQSIZE")), each heading a list chained through `p_link`.
+`HASH` (#l("#define HASH(x)")) picks the list for a channel. It drops
+the low five bits of the address, which differ little between nearby
+objects, and keeps the next six, since `SQSIZE` is 64.
 
 #lines-to("/*")
 
-`sleep` records why (`chan`) and how urgently (`pri`) the current process
-waits, puts it on the appropriate sleep list, and calls `swtch`.
+_Sleep and Wakeup._ A process sleeps on a _channel_, an address that stands for the event
+awaited. No table defines the channels. By convention a channel is the
+address of the object concerned, such as a buffer being read, a locked
+inode, or `lbolt` for the clock's once-a-second tick. As the comment
+warns, a process may return from `sleep` while what it waited for is
+still not available. The routine `wakeup` wakes every process sleeping
+on the channel, and the first to run may take the buffer or inode the
+others wanted. So callers sleep in a loop, and test their condition
+again each time they wake.
 
-Interrupts are masked by `intr_disable` (#l("s = intr_disable();", after: "rp = u.u_procp;")) (#f("mch.s")), so that no interrupt handler can call `wakeup`
-while the proc entry and the list are half changed. The repeated test
-of `chan` (#l("if (chan==0)", after: "rp->p_wchan = chan;")) is v7's.
+#lines-to("void")
+
+A process calls `sleep` itself, in the kernel, when a system call must
+wait for something. It records the channel (`chan`) and the priority at
+which to run again (`pri`), puts itself on the list which `HASH` picks
+for the channel, and calls `swtch` to give the processor to another
+process until `wakeup` makes it runnable.
+
+#lines-to("s = intr_disable();", after: "sleep(caddr_t chan, int pri)")
+
+Interrupts are masked from #l("s = intr_disable();", after: "rp = u.u_procp;")
+to #l("intr_enable();", before: "if(runin != 0) {") (#f("mch.s")), so that no interrupt routine can
+call `wakeup` (#l("wakeup(register caddr_t chan)")), which makes the
+sleepers on a channel runnable, while the process's entry and the list
+are half changed.
 
 #lines-to("if(pri > PZERO) {")
 
-If `pri` is above `PZERO`, the sleep may be broken by a signal.
+If `pri` is numerically greater than `PZERO`, a less urgent wait, the
+sleep may be broken by a signal.
 A signal already pending (#l("if(issig()) {")) cancels the sleep before it has begun.
-Otherwise, if `sched` is waiting on `runin` for a sleeping process to
-swap out (#l("if(runin != 0) {")), it is roused, since this process is now such a candidate.
+Otherwise, if the swapper is waiting (#l("if(runin != 0) {")), it is
+woken. The swapper is `sched`, the loop in which process 0 runs
+(#l("sched(void)")). It waits on `runin` when a process on the swap
+area is ready to come in but no process in RAM can be swapped out to
+make room. This process, now asleep, may be such a candidate.
 After `swtch` returns, the signal test is repeated (#l("if(issig())", after: "wakeup((caddr_t)&runin);")): a signal is one
 of the events which may have ended the sleep, by way of `setrun`.
 
 #lines-to("/*", lead: true)
 
-A signal is handled by abandoning the system call altogether.
-`resume` to `u.u_qsav` with the process's own address is a non-local
-goto: control reappears in `trap` as a second return from the
-`save(u.u_qsav)` made there before the system call routine was entered,
-and `trap` reports `EINTR`.
+A signal is handled by abandoning the system call altogether. Just
+before `trap` called the system call routine, it called
+`save(u.u_qsav)` (#at("/usr/sys/sys/trap.c", "if (save(u.u_qsav)) {")), and that call returned 0. Resuming at
+`u_qsav` makes the same call of `save` return again, now with 1, so
+`trap` knows that the call was interrupted and returns `EINTR` (see
+_Saved State_, page #pageref(<sec-saved>)). This way the kernel can
+abandon a system call from any depth of nested routines at once,
+without every routine on the way having to check for a signal and pass
+an error back. What `trap` does is described with #f("trap.c"), page
+#pageref(label("trap.c")).
 
-Note that callers of `sleep` above `PZERO` are therefore never told that
-they were interrupted; any locks they hold must be such that the
-abandoned system call leaves nothing inconsistent.
+The jump back to `trap` skips whatever the routines on the way would
+have done after `sleep` returned. So a process which sleeps at such a
+priority must hold no lock that only that skipped code would release.
+The pipe code, for example, releases its inode before it sleeps
+(#f("pipe.c")).
+
+The kernel has these locks. Masking interrupts with `intr_disable` and
+`intr_restore` (#f("mch.s")) protects data which interrupt routines
+share, and is never held across a sleep. An inode is locked by its
+`ILOCK` bit, set by `iget` and `plock` and cleared by `prele` and
+`iput` (#f("iget.c"), #f("pipe.c")). A buffer is locked by `B_BUSY`,
+set by `getblk` and cleared by `brelse` (#f("bio.c")). A shared text is
+locked by `XLOCK` while it is swapped in or out (`xlock`, `xunlock`,
+#f("text.c")). A mounted file system's super-block has two locks,
+`s_flock` while its list of free blocks changes and `s_ilock` while its
+list of free inodes changes (#f("filsys.h"), #f("alloc.c")). And
+`updlock` (#f("alloc.c")) lets only one `sync` run at a time. Every one
+of these but the first is a flag, which works only on one processor
+(see _Multiprocessing_, page #pageref(<sec-mp>)).
 
 #lines-to("/*", lead: true, after: "}")
 
-`wakeup` walks the one list on which processes sleeping on `chan` may
-be, unlinks each such process, clears its channel, and hands it to
-`setrun`. Several unrelated channels may hash to the same list, hence
-the test of `p_wchan` (#l("if(p->p_wchan==chan && p->p_stat!=SZOMB) {")). Since `p_link` is reused by `setrun` to put
-the process on the run queue, the successor is taken (#l("sp = slpque[i] = p->p_link;"), #l("sp = q->p_link = p->p_link;")) before
-`setrun` is called.
+The routine `wakeup` is called by whatever makes an awaited event
+happen. An interrupt routine calls it when a transfer ends (`iodone`,
+#at("/usr/sys/dev/bio.c", "iodone(register struct buf *bp)")), the code which releases a lock calls it (`prele`,
+#at("/usr/sys/sys/pipe.c", "prele(register struct inode *ip)"), and `brelse`, #at("/usr/sys/dev/bio.c", "brelse(register struct buf *bp)")), `clock` calls it once a
+second for `lbolt` (#at("/usr/sys/sys/clock.c", "wakeup((caddr_t)&lbolt);")), and `exit` calls it for a waiting
+parent (#at("/usr/sys/sys/sys1.c", "wakeup((caddr_t)q);")). It walks the list which `HASH` picks for
+`chan`. The hash is not one-to-one. Several channels may share a list,
+so `wakeup` tests each process's channel
+(#l("if(p->p_wchan==chan && p->p_stat!=SZOMB) {")). Each process found
+is removed from the list, its channel is cleared, and it is handed to
+`setrun` (#l("setrun(register struct proc *p)")).
+
+#lines-to("if (q == NULL)")
+
+Removing a process from a list chained in one direction means making
+whatever pointed to it point to its successor instead. If the process
+is the first on the list, that is the head, `slpque[i]`
+(#l("sp = slpque[i] = p->p_link;")). Otherwise it is the `p_link` of the
+process before it, which the loop keeps in `q`
+(#l("sp = q->p_link = p->p_link;")). The successor is saved in `sp`
+first, because `setrun` will reuse `p_link`.
 
 #lines-to("/*", lead: true, after: "}")
 
-`setrq` adds a process to the run queue `runq`, a list chained through
-the same `p_link`: a process is either asleep or runnable, never both.
-The search for a duplicate is purely diagnostic, as the comment admits.
+_The Run Queue._ There is a single run queue, `runq`, of every runnable
+process, in no particular order. The routine `swtch` searches it for
+the most urgent process in RAM, so a process must be on it to be run.
+The routine `setrq` adds a process to it. It is called by `setrun`
+(#l("setrq(p);", after: "setrun(register struct proc *p)")), which `wakeup` calls for each process it wakes,
+by `qswtch` when the current process gives up the processor but stays
+runnable (#l("setrq(u.u_procp);")), and by `newproc` for a new child
+(#l("setrq(rpp);")). The queue is chained through `p_link`, the same
+field which chains the sleep lists, since a process is either asleep or
+runnable, never both.
 
-`setrq` is now `static`, since only #f("slp.c") calls it; this spares it
-a declaration in #f("systm.h"), which `-Wmissing-prototypes` would
-otherwise demand.
+Before adding the process, `setrq` searches the queue for it and prints
+"proc on q" if it is already there. In a correct kernel that cannot
+happen. If it did, adding it again would make the list loop back on
+itself, and `swtch` would never finish its search. The search guards
+against a bug elsewhere in the kernel. The comment invites the loop's
+removal. Berkeley removed it with the list itself, when 4BSD replaced
+the single list by 32 queues ordered by priority, so that `swtch` no
+longer had to search every runnable
+process.#footnote[4BSD (November 1980), `sys/sys/locore.s`, routines
+`Setrq` and `Remrq`: "whichqs tells which of the 32 queues qs have
+processes in them." 3BSD (1979) still has the single `runq` and the
+"proc on q" check in `slp.c`. Both trees are in The Unix Heritage
+Society's archive, #link("https://www.tuhs.org/cgi-bin/utree.pl?file=4BSD/usr/src/sys/sys/locore.s")[`tuhs.org`].]
 
 #lines-to("/*", lead: true, after: "}")
 
-`setrun` is called from interrupt routines, from `wakeup`, and from
-places such as `psignal` which wish to rouse a process whatever it is
-waiting for. In the last case the process is still on a sleep list, and
-`wakeup` of its channel (#l("if ((w = p->p_wchan)) {")) is the correct way to take it off. The
-doubled parentheses at 153 are those of #f("malloc.c").
+The routine `setrun` (#l("setrun(register struct proc *p)")) makes a process runnable. It is
+called by `wakeup`, by interrupt routines, and by routines such as
+`psignal` (#at("/usr/sys/sys/sig.c", "psignal(register struct proc *p")), which must rouse a process whatever it is
+waiting for. A process found still asleep is on one of the sleep lists,
+and `setrun` then calls `wakeup` on its channel to take it off
+(#l("if ((w = p->p_wchan)) {")), and that call of `wakeup` comes back to `setrun`.
+
+The channel is copied into `w` before it is tested, because `setrun`
+may run with interrupts unmasked. An interrupt between the test and the
+call could run `wakeup` for the same channel, which clears `p_wchan`,
+and `setrun` would then call `wakeup` with a null channel. The panic
+(#l("panic(\"Running a dead proc\");")) catches a call for a free or zombie entry of the
+process table, which happens only through a bug elsewhere in the
+kernel.
+
+The comment's "swapped in if necessary" refers to the last lines
+(#l("if(runout != 0 && (p->p_flag&SLOAD) == 0) {")). The routine `setrun` does not swap the process in itself. If
+the swapper is waiting for a runnable process which is out of RAM, and
+this process is one, `setrun` wakes it, and `sched` swaps the process
+in. The channel here is `&runout`. Any address can be a channel, and
+the swapper's flag doubles as the address it sleeps on.
 
 #lines-to("if(p->p_pri < curpri)")
 
-If the newly runnable process is more urgent than the current one,
-`runrun` asks for a call of `swtch` at the next opportunity, which is the
-return from a trap or interrupt to user mode. If `sched` is idle (#l("if(runout != 0 && (p->p_flag&SLOAD) == 0) {"))
-for want of a runnable swapped-out process, and this is one, `sched` is
-woken.
+The variable `curpri` (#f("main.c")) holds the priority of the running
+process. The routine `swtch` sets it when it chooses a process
+(#l("curpri = n;")), and `trap` sets it on each return to user mode
+(#at("/usr/sys/sys/trap.c", "curpri = setpri(u.u_procp);", after: "trap(int *r)")). If the process just made runnable is more urgent
+(#l("if(p->p_pri < curpri)")), `setrun` sets the flag `runrun`. A flag does nothing by
+itself. It is tested on the way back to user mode, either from a system
+call or fault, in `trap` (#at("/usr/sys/sys/trap.c", "if (runrun)", after: "trap(int *r)")), or from an interrupt, in
+`irq_entry` (#at("/usr/sys/conf/low.s", "ldr r0, =runrun")). Where it is set, the current process
+gives up the processor through `qswtch`. A process in the kernel is
+never preempted, so the switch waits until it is about to return to
+user mode.
 
 #lines-to("/*", lead: true)
 
-`setpri` computes the priority with which a user process will compete:
-`PUSER`, plus a share of recent processor use (`p_cpu`, which `clock`
-increments each tick and decays each second), plus the bias `p_nice`.
-The result is never above 127, so that it fits in the `char` `p_pri`.
+_Priorities._ The routine `setpri` computes the priority of a process
+running in user mode. It is called by `trap` on every return to user
+mode, and once a second by `clock` for every process
+(#at("/usr/sys/sys/clock.c", "setpri(pp);")). The priority is `PUSER` (#f("param.h")), plus a share of
+recent processor use (`p_cpu`, which `clock` increments each tick,
+#at("/usr/sys/sys/clock.c", "if(++pp->p_cpu == 0)"), and decays each second, #at("/usr/sys/sys/clock.c", "pp->p_cpu = a;")), plus the
+bias `p_nice` (#at("/usr/sys/h/proc.h", "char\tp_nice;")). It is capped so that it is never more
+than 127, and so fits in the `char` `p_pri` (#at("/usr/sys/h/proc.h", "char\tp_pri;")). A process which has used the
+processor much thus becomes less urgent, and `swtch` prefers the
+others.
 
-The `0377` mask (#l("p = (pp->p_cpu & 0377)/16;")) undid the sign extension of a PDP-11 `char`. On
-the ARM `char` is unsigned and the mask changes nothing, but it is
-harmless and is v7's.
-
-The reader may be puzzled that `runrun` is set (#l("if(p < curpri)")) when the process
-whose priority was just computed is better than `curpri`, whereas that
-process may not be the current one. `clock` calls `setpri` for every
-user process once a second, and it is precisely when one of these has
-become more deserving than the running process that a switch is wanted.
+The routine `setpri` also sets `runrun` when the priority it has
+computed is more urgent than `curpri` (#l("if(p < curpri)")). Since `clock` calls
+it once a second for every process, a process which has become more
+urgent than the running one causes a switch.
 
 #lines-to("/*", lead: true, after: "}")
 
-`sched` is the endless loop of process 0, entered from `main` after
-`newproc` has made process 1. It moves images between RAM and the
-swap area: it chooses the runnable swapped-out process which has been
-out longest (#l("for (rp = &proc[0]; rp < &proc[NPROC]; rp++)", after: "outage = -20000;")--#l("}", after: "outage = rp->p_time - (rp->p_nice-NZERO)*8;")), weighted by `p_nice`, and tries to bring it in.
-If there is none, it sleeps on `runout` (#l("sleep((caddr_t)&runout, PSWP);")), to be roused by `setrun`
-or by `xswap` (#f("text.c")).
+_Swapping._ Process 0 spends the rest of its life in `sched`, the
+swapper. The routine `main` calls it last (#at("/usr/sys/sys/main.c", "sched();")), once it has made
+process 1, because `sched` never returns. The swapper brings runnable
+processes in from the swap area, and swaps other processes out only
+when RAM is short. With 512~MB of RAM that never happens here in
+practice, and `sched` sleeps. The comment's "once per second" is
+`clock`, which wakes the swapper each second if it is waiting
+(#at("/usr/sys/sys/clock.c", "if(runin!=0) {")).
 
-If there is no room for the chosen process (#l("if (swapin(p))")), a victim is sought:
-first the largest process sleeping at a priority from which a signal
-could rouse it, or stopped by tracing (#l("if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||")); failing that, the process
-which has been longest in RAM. The victim is swapped out only if the
-first kind was found, or if the process to be brought in has waited 3
-seconds and the victim has had 2 (#l("if (maxsize>=0 || (outage>=3 && inage>=2)) {")); otherwise `sched` sleeps on
-`runin`, which `clock` wakes each second, `sleep` (#l("if(runin != 0) {")) when a
-candidate appears, and `mfree` (#f("malloc.c")) when RAM is freed.
+#lines-to("loop:")
 
-The parentheses added in (#l("if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||")) make explicit v7's reliance on `&&`
-binding more tightly than `||`, of which `gcc` warns otherwise; the
-meaning is unchanged. The same change appears throughout the system.
+Of the runnable processes on the swap area, `sched` picks the one which
+has been out longest. Each unit of `p_nice` counts as eight seconds
+less waiting, so a process which has been niced waits longer to come
+back in. The starting value, -20000 (#l("outage = -20000;")), is lower than any process
+can score, and so marks that none was found.
 
-If the swap area has no room for the victim, `xswap` returns zero
-(#l("if (xswap(p, 1, 0))")), where v7 panicked. The victim keeps its RAM, `SLOAD` is set
-again (#l("p->p_flag |= SLOAD;", after: "if (xswap(p, 1, 0))")), and `sched` sleeps on `runin` as though no victim had been
-found, to try again when `clock` or `sleep` wakes it. The process
-waiting to come in waits longer; nothing else is disturbed.
+#lines-to("/*", after: "outage = -20000;")
 
-On the PDP-11 this code was in constant use. Here RAM is ample, and
-in practice the first search always fails or `swapin` succeeds; the
-code is kept intact all the same, together with the swap area which
-`fork` insists upon.
+If there is none, `sched` sleeps on `runout` (#l("sleep((caddr_t)&runout, PSWP);")), to be woken by
+`setrun` or by `xswap` (#f("text.c")).
+
+#lines-to("/*", after: "if (outage == -20000) {")
+
+The routine `swapin` brings the process in if RAM has room for it.
+
+#lines-to("/*", after: "if (swapin(p))")
+
+If RAM has no room (#l("if (swapin(p))")), `sched` looks for a process to swap out
+in its place. It prefers the largest process which is sleeping at a
+priority that a signal could break, or which is stopped by tracing
+(#l("if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||")). Failing that, it takes the process which has been in RAM
+longest, counting `p_nice` once more.
+
+#lines-to("/*", after: "inage = rp->p_time+rp->p_nice-NZERO;")
+
+A process taken under the second rule
+is swapped out only if the process waiting to come in has been out for
+3 seconds and the process to go out has been in for 2
+(#l("if (maxsize>=0 || (outage>=3 && inage>=2)) {")). These waits keep a process which has just come in from
+being swapped out again at once.#footnote[The same two thresholds are
+already in the Fifth Edition's `sched` (1974), as
+`if(n < 3) goto sloop;` and `if(n < 2) goto sloop;`, and in the Sixth (1975). The
+Seventh (1979) rewrote the test as it stands here. Berkeley's 3BSD
+(1979), which added paging, replaced them by 5 and 5 in its
+`vmsched.c`, with the remark that these "are not really times but
+priorities". Sources at
+#link("https://www.tuhs.org/cgi-bin/utree.pl?file=V5/usr/sys/ken/slp.c")[`tuhs.org`].]
+Otherwise `sched` sleeps on `runin`. It is woken by `clock` each
+second, by `sleep` when a process goes to sleep and so may become a
+candidate (#l("if(runin != 0) {")), and by `mfree` (#f("malloc.c")) when RAM is
+freed.
+
+
 
 #lines-to("/*", lead: true, after: "sleep((caddr_t)&runin, PSWP);")
 
-`swapin` allocates RAM for the data area and, if the process has a
-shared text segment not yet in RAM, for the text as well; reads both
-in; and releases the swap space. It returns zero, having undone its
-allocations, if either `malloc` fails.
+The routine `swapin` is called by `sched` (#l("if (swapin(p))")) to bring the chosen
+process into RAM. It allocates RAM for the data area first, and then,
+if the process has a shared text which is not in RAM, for the text. If
+either allocation fails, it gives back what it has taken and returns
+zero. The comment's wish, to allocate the larger of the two first, is
+about the first fit rule of `malloc` (#f("malloc.c")): the larger
+request is the harder to satisfy, and taking it first leaves the
+smaller one more places to fit.#footnote[The Sixth Edition's `swapin`
+(1975) allocated text and data as one piece. The Seventh split them
+and added the comment. In 32V (1979), the VAX port, memory is
+allocated page by page (`memall`), and the order no longer matters.
+Sources at #link("https://www.tuhs.org/cgi-bin/utree.pl?file=V6/usr/sys/ken/slp.c")[`tuhs.org`].]
 
-A text read back from the swap area is new to the instruction cache, which
-may hold stale lines for the same memory; `arm_sync_icache`
-(#f("mch.s")) is called on it, as in `xexpand` (#f("text.c")). The
-include of #f("seg.h") (#l("#include \"../h/seg.h\"")), for `PGADDR`, is for that call. The
-doubled parentheses at 305 are those of #f("malloc.c").
+#lines-to("if ((xp = p->p_textp)) {")
+
+The text is read in only if no process using it is in RAM
+(#l("if (xp->x_ccount==0) {")). Instructions just read from the swap area are new to
+the instruction cache, which may hold stale lines for the same memory,
+so `arm_sync_icache` (#f("mch.s")) is called to make instruction fetch
+see them (#l("arm_sync_icache(PGADDR(x),")).
+
+#lines-to("swap(p->p_addr, a, p->p_size, B_READ);")
+
+Last the data is read in, its swap space is freed, and the process is
+marked as in RAM, with `p_time` reset, so that `sched` does not choose
+it to go out again at once.
 
 #lines-to("/*", lead: true, after: "}")
 
-`qswtch` gives up the processor without sleeping: the current process
-is put back on the run queue and `swtch` is called. `trap` uses it when
-`runrun` is set.
+_Preemption._ The routine `qswtch` gives up the processor without
+sleeping. It puts the current process back on the run queue and calls
+`swtch`, so that the process, which is still runnable, can be chosen
+again later. A process which merely must give way cannot call `sleep`,
+since it waits for nothing. Three routines call `qswtch`. The routine
+`trap` calls it on the way back to user mode when `runrun` is set
+(#at("/usr/sys/sys/trap.c", "qswtch();", after: "trap(int *r)")), which is how a process gives way to a more urgent
+one. And `expand` (#l("qswtch();")) and `xexpand` (#at("/usr/sys/sys/text.c", "qswtch();")) call
+it after writing the process to the swap area, so that it is brought
+back in.
 
 #lines-to("/*", lead: true, after: "}")
 
-`swtch` chooses the next process to run and runs it. It works in three
-stages and involves, in general, three
-processes: the one giving up the processor, process 0, which always
-acts as an intermediary, and the one taking it over.
+_Switching._ The routine `swtch` chooses the next process to run and
+runs it. In general three processes take part. The process giving up
+the processor resumes process 0, and process 0 chooses the next process
+and resumes it (see _Saved State_, page #pageref(<sec-saved>), for the labels
+involved).
 
 #lines-to("if (u.u_procp != &proc[0]) {")
 
@@ -2421,40 +2640,37 @@ re-establishes its user mappings before `swtch` returns to its caller.
 Before process 0 runs, and through it another process, the floating
 point registers are stored in the u-area unless that has already been
 done since this process entered the kernel (#f("user.h")). The kernel
-itself never touches them, so they still hold this process's values;
-the next process to return to user mode loads its own.
+itself never touches them, so they still hold this process's values.
+The next process to return to user mode loads its own.
 
 #lines-to("/*")
 
-The double `save` (#l("if (save(u.u_qsav)==0 && save(u.u_rsav))")) is explained by its comment. The point to grasp
-is that `u.u_qsav` in process 0 marks the entrance to the search loop:
-every switch passes through it by the `resume` of (#l("resume(proc[0].p_addr, u.u_qsav);")).
+Process 0's `u_qsav` marks the entrance to the search loop
+(#l("if (save(u.u_qsav)==0 && save(u.u_rsav))")), and every switch passes through it by the `resume`
+at #l("resume(proc[0].p_addr, u.u_qsav);").
 
 #lines-to("intr_disable();")
 
-With interrupts masked, the run queue is searched for the
-loaded runnable process of best (lowest) priority, and that process is
-removed from the queue. If there is none, `idle` waits for an interrupt
-and the search is repeated. On the PDP-11 `idle` executed `wait`; here
-it unmasks the IRQ and executes `wfi`.
+With interrupts masked, `swtch` searches the run queue for the loaded
+runnable process of best (lowest) priority and removes it from the
+queue. If there is none, `idle` (#f("mch.s")) waits for an interrupt,
+and the search starts again.
 
 #lines-to("/*", after: "curpri = n;")
 
-The incoming process is resumed at `u.u_rsav` unless it has
-`SSWAP` set (#l("n = p->p_flag&SSWAP;")), in which case it is resumed at `u.u_ssav`. The flag is set
-by `newproc` (#l("rpp->p_flag |= SSWAP;")), by `expand` (#l("p->p_flag |= SSWAP;")), and by `xexpand` (#f("text.c")),
-all of which made an image of a process (on the swap area or in fresh
-RAM) after doing `save(u.u_ssav)`. In such an image `u.u_rsav` is stale:
+`swtch` resumes the incoming process at `u.u_rsav`, or at `u.u_ssav`
+if it has `SSWAP` set (#l("n = p->p_flag&SSWAP;")). `newproc` (#l("rpp->p_flag |= SSWAP;")), `expand` (#l("p->p_flag |= SSWAP;")), and `xexpand` (#f("text.c"))
+set the flag. Each of them made an image of a process, on the swap
+area or in fresh RAM, after doing `save(u.u_ssav)`. In such an image `u.u_rsav` is stale:
 it was recorded by some earlier switch, or, in `expand`'s case, by the
 call of `swtch` from `qswtch` (#l("qswtch();")), after the image had already been
-written. Hence the explicit choice of label.
+written. Hence `swtch` chooses the label itself.
 
-Note that the ARM `resume` masks interrupts while the mapping and
-registers are changed and, like the PDP-11 version, which ended at
-priority zero, unmasks them again with `intr_enable` once the new stack is in
-place (#f("mch.s")).
+`resume` masks interrupts while it changes the mapping and the
+registers, and unmasks them with `intr_enable` once the new stack is
+in place (#f("mch.s")).
 
-v7 called `spl0` here, before `resume`, after `curpri` was set. The call
+The v7 code called `spl0` here, before `resume`, after `curpri` was set. The call
 is gone, so that interrupts stay masked from the search through to the
 point in `resume` where the new stack pointer is loaded. The reason is
 the compiler. The call of `resume` is the last statement of `swtch`, and
@@ -2470,34 +2686,35 @@ nothing can be pushed there.
 
 #lines-to("/*", lead: true, after: "}")
 
-`newproc` is the body of `fork`, and of the creation of process 1 by
+_Process Creation._ The routine `newproc` is the body of `fork`, and of the creation of process 1 by
 `main`. It returns 1 in the new process and 0 in the old.
 
 #lines-to("retry:")
 
-A process id is chosen which is in use neither as a process id
-nor as a process group, cycling below 30000. At the same time the first
-empty slot of `proc` is noted. `fork` (#f("sys1.c")) has already made
+`newproc` chooses a process id which is in use neither as a process id
+nor as a process group, cycling below 30000. At the same time it notes
+the first empty slot of `proc`. The system call `fork` (#f("sys1.c")) has already made
 sure that one exists.
 
 #lines-to("rip = u.u_procp;")
 
-The new entry is filled in, and the reference counts of
-everything the child will share with its parent, its open files, text,
-and current and root directories, are incremented.
+`newproc` fills in the new entry and increments the reference counts
+of the open files, the text, and the current and root directories,
+which the child shares with its parent.
 
 #lines-to("/*", after: "u.u_rdir->i_count++;")
 
 The child's image is a copy of the parent's, `u` included, made after
 the parent has done `save(u.u_ssav)` (#l("if (save(u.u_ssav)) {", after: "* here's where it will resume.")). Before the copy,
-`u.u_procp` is set to the child's entry (#l("u.u_procp = rpp;")), so that the copy differs
-from the original in that one respect; the parent restores it (#l("u.u_procp = rip;")), and
-loads its own page tables again (#l("sureg();", after: "u.u_procp = rip;")), for the reason given below.
+`newproc` sets `u.u_procp` to the child's entry (#l("u.u_procp = rpp;")), so that the copy differs
+from the original in that one respect. The parent then restores it (#l("u.u_procp = rip;")) and
+loads its own page tables again (#l("sureg();", after: "u.u_procp = rip;")), since the copy may have left the
+processor on tables in the child's slot.
 
-The floating point registers are stored in the parent's u-area just
-before (#l("if (u.u_fpsaved==0) {", after: "rpp->p_size = n;")--#l("}", after: "rpp->p_size = n;")), so that the copy holds them, with `u_fpsaved` set,
+`newproc` stores the floating point registers in the parent's u-area just
+before the copy (#l("if (u.u_fpsaved==0) {", after: "rpp->p_size = n;")--#l("}", after: "rpp->p_size = n;")), so that the copy holds them, with `u_fpsaved` set,
 and the child loads them on its first return to user mode
-(#f("trap.c")), whichever process has used the unit since. v7 did not
+(#f("trap.c")), whichever process has used the unit since. The v7 code did not
 store them here, and its child took whatever the registers held when it
 first ran, usually, but not always, its parent's values.
 
@@ -2519,67 +2736,51 @@ before `save` was reached, and are still there when it returns again.
 
 #lines-to("if(a2 == NULL) {")
 
-If there is no RAM for the copy (#l("if(a2 == NULL) {", after: "* copy.")), the parent's image is written
+If there is no RAM for the copy (#l("if(a2 == NULL) {", after: "* copy.")), `newproc` writes the parent's image
 to the swap area as the child's image, without freeing the RAM
-(`xswap` with second argument zero). `rpp->p_addr` is pointed at the
-parent's RAM for the purpose, and `SIDL` keeps the parent from being
+(`xswap` with second argument zero). For this it points `rpp->p_addr`
+at the parent's RAM, and `SIDL` keeps the parent from being
 chosen for swapping in the meanwhile. While `xswap` waits for the
 write, the parent sleeps and is resumed in `swtch` as the child, for
 `u.u_procp` names the child's entry: the `sureg` there builds page
 tables in the child's slot, mapping the parent's RAM, and loads them.
-`xswap` frees them once the image is written (#f("text.c")), and the
+`xswap` frees the tables once the image is written (#f("text.c")), and the
 `sureg` at (#l("sureg();", after: "u.u_procp = rip;")) points the processor back at the parent's own tables.
-The value of `xswap` is not tested here: it cannot be zero, because
-`fork` has just found swap space for an image of this size
-(#f("sys1.c")), and nothing has slept since. Otherwise (#l("rpp->p_addr = a2;")) the image is
-copied, a page at a time, by `copyseg` (#f("machdep.c")). On the PDP-11
-`copyseg` had to borrow a user segmentation register to reach physical
-memory; here the kernel maps all of RAM, and `PGADDR` turns a page
-number into an address.
+Otherwise (#l("rpp->p_addr = a2;")) `copyseg` (#f("machdep.c")) copies the image a page at
+a time. On the PDP-11 `copyseg` had to borrow a user segmentation
+register to reach physical memory. Here the kernel maps all of RAM,
+and `PGADDR` turns a page number into an address.
 
-The copy is of the whole image, as in v7: the per process area, the
-data, and the stack, which is no more than the program has asked for
-(`getxfile`, #f("sys1.c")). A small program's image is a few pages.
+The copy takes the whole image, the per process area, the data, and the
+stack, which is no more than the program has asked for (`getxfile`,
+#f("sys1.c")). A small program's image is a few pages.
 
 #lines-to("/*", lead: true, after: "return(0);")
 
-`expand` changes the size of the current process's image to `newsize`
+_Growth._ The routine `expand` changes the size of the current process's image to `newsize`
 pages. A shrinking image simply gives back its tail (#l("mfree(coremap, n-newsize, a1+newsize);")). A growing
 one is copied into a new area (#l("for(i=0; i<n; i++)")), after which `resume` (#l("resume(a2, u.u_ssav);"))
 switches to the copy, whose `save` (#l("if (save(u.u_ssav)) {", after: "mfree(coremap, n-newsize, a1+newsize);")) then returns 1. The comment's
 "taking care to reset registers" is a PDP-11 relic in effect: since `u`
 and the kernel stack always appear at the same virtual address, the
 copy needs no adjustment, and `resume` only has to remap `u` to the new
-area. The page tables of the old image are released first (#l("ptfree(p);")), and
+area. `expand` releases the page tables of the old image first (#l("ptfree(p);")), and
 `sureg` builds new ones for the copy (#f("ureg.c")). A shrinking image
 keeps its tables: the caller has already set the new sizes with
 `estabur`, whose tables no longer reach the tail given back.
 
-If there is no RAM (#l("if(a2 == NULL) {", after: "a2 = malloc(coremap, newsize);")), the image is written to the swap area at its
-old size `n` but with `p_size` already set to the new one, the old area of RAM
-is freed, and the process gives up the processor with `SSWAP` set. The
-floating point registers are stored in the u-area first (#l("if (u.u_fpsaved==0) {", after: "a2 = malloc(coremap, newsize);")--#l("}", after: "a2 = malloc(coremap, newsize);")),
+If there is no RAM (#l("if(a2 == NULL) {", after: "a2 = malloc(coremap, newsize);")), `xswap` writes the image to the swap area at its
+old size `n`, with `p_size` already set to the new one, and frees the
+old RAM, and the process gives up the processor with `SSWAP` set.
+`expand` first stores the floating point registers in the u-area (#l("if (u.u_fpsaved==0) {", after: "a2 = malloc(coremap, newsize);")--#l("}", after: "a2 = malloc(coremap, newsize);")),
 since the copy on the swap area is the one which will come back, and
-`swtch` would store them only after it had been written; v7 omitted
+`swtch` would store them only after it had been written. v7 omitted
 this. When
 `sched` brings it back, `swapin` allocates the larger size, and the
 process resumes at `u.u_ssav` (#l("if (save(u.u_ssav)) {", after: "mfree(coremap, n-newsize, a1+newsize);")) and returns from `expand` as if
-nothing had happened. Note that until `swtch` resumes another process it
-goes on running in RAM which is already free; nothing can reallocate
-it in that interval, since no interrupt routine allocates RAM.
-
-If there is no swap space either, `xswap` fails (#l("if (xswap(p, 1, n) == 0) {")), and v7 panicked.
-Now `p_size` is set back, the image is left as it was, and `expand`
-returns zero; it returns one in every other case (571, 575, 597, the
-last unreached, since `resume` does not return). The callers decide:
-`sbreak` (#f("sys1.c")) fails with `ENOMEM`, and `grow` (#f("sig.c"))
-fails, so that the fault which wanted more stack becomes `SIGSEG`;
-both are refusals of a request, as when an image would exceed
-`maxmem`. Only `exec` cannot refuse, because the process has already
-given up its old image: it is killed, with the message "out of swap
-space", as v7 kills a process for which the text table has no room
-(#f("text.c")). Of the ways to survive, these change least: the process
-which asked is the only one affected, and v7's own ways of failing are
-used.
+nothing had happened. Until `swtch` resumes another process, the
+process goes on running in RAM which is already free. Nothing can
+reallocate it in that interval, since no interrupt routine allocates
+RAM.
 
 #lines-to(none)

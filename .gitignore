@@ -4,6 +4,8 @@
 *.a
 *.out
 
+tmp
+
 # http://www.tuhs.org/Archive/Distributions/Research/Henry_Spencer_v7/v7.tar.gz
 # plus usr/lib/lib.b, lost from that tarball; identical in 32V, 3BSD, 2.9BSD:
 # https://www.tuhs.org/cgi-bin/utree.pl?file=32V/usr/lib/lib.b

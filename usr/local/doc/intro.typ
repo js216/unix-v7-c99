@@ -12,7 +12,8 @@
 #let btable(columns: auto, align: left, caption: none, pl: auto, ..cells) = figure(
   kind: table, supplement: [Table], placement: pl,
   caption: figure.caption(position: top, caption),
-  table(columns: columns, align: align, stroke: none,
+  table(columns: columns, stroke: none,
+    align: if type(align) == alignment and align.y == none { align + std.top } else { align },
     inset: (x: 4pt, y: 3pt), ..cells))
 #let top = table.hline(stroke: 1pt)
 #let mid = table.hline(stroke: 0.5pt)
@@ -88,7 +89,7 @@ these two, and a statement which names neither applies to both. Where the two di
 board has more devices than the kernel uses, such as its Ethernet and
 display, and the kernel leaves them as the boot ROM left them.
 
-=== The ARM Processor
+=== The ARM Processor <sec-arm>
 
 The Cortex-A7 implements the ARMv7-A architecture. It has sixteen
 32-bit registers, `r0` to `r15`. Three have a special use and a second
@@ -158,13 +159,13 @@ order. A store waits in a store buffer before it reaches the data
 cache, and loads may overtake it. The processor's own program always
 sees its own stores, but other observers may not: the MMU, which reads
 page tables from memory by itself, and devices which reach memory by
-DMA. Barrier instructions restore the order where it matters. `dmb`
-orders the accesses before it before those after it, and `dsb` waits
-until they have all completed. `isb` makes the processor fetch the
+DMA. Barrier instructions restore the order where it matters. The
+barrier `dmb` orders the accesses before it before those after it, and `dsb` waits
+until they have all completed. An `isb` makes the processor fetch the
 following instructions afresh, so that a change to a system register
 takes effect.
 
-=== The Address Space
+=== The Address Space <sec-addr>
 
 The user's address space is the lower three gigabytes, and the
 kernel's the top one, which user mode cannot touch. @tab-addr shows
@@ -189,11 +190,8 @@ what lies where on each machine.
   bot,
 ) <tab-addr>
 
-The split gives the user as much as it can, and the processor's table
-base registers divide the space at exactly 0xc0000000 (Translation
-Tables). The kernel needs room for
-all of RAM, 512~MB on either machine, the device registers, and the
-u-area, and one gigabyte holds them with room to spare.
+A gigabyte holds all of RAM, 512~MB on either machine, the
+device registers, and the u-area, with room to spare.
 
 The kernel's gigabyte maps all of RAM at its start, so the kernel can
 reach any page of memory at a fixed distance from its physical address
@@ -210,10 +208,11 @@ appears at the same address, `UBASE`, so the kernel refers to it simply
 as `u`. A process switch changes which process's u-area is mapped
 there.
 
-In the user's space, the text begins at 0x94, just past the ELF
-headers which share its first page, and the data at the next page, so
-that it can be writable while the text is not. Nothing lies at address
-0, so that no object's address equals a null pointer. The kernel reaches the current
+In the user's space, each segment lies at the address its program was
+linked for. The text begins at 0x8000, and the data on a later page, so
+that it can be writable while the text is not. Below the text nothing
+is mapped but the one page of the signal trampoline, at 0x1000, so a
+null pointer faults. The kernel reaches the current
 process's memory with the instructions `ldrt` and `strt`, which load
 and store with the user's permissions (#f("mch.s")).
 
@@ -225,19 +224,26 @@ and finds it with `vtop` (#at("/usr/sys/sys/machdep.c", "vtop(")). And `/dev/mem
 `/dev/kmem` (#f("mem.c")) take their offsets as physical and kernel
 addresses respectively.
 
-The u-area lies at the bottom of the last 2~MB block, not at its top
-(@fig-ubase).
-The kernel stack grows down from the end of the u-area, and at the top
-of the address space that end would be address 0.
+A process's image in RAM is its u-area, `USIZE` pages at `p_addr`,
+then its data, then its stack, packed together (@fig-image). The
+tables spread these pages over the address space, with a gap which is
+not mapped between the data and the stack. Each grows towards the
+other, and each growth enlarges the image in RAM (`expand`). The gap
+costs nothing, since tables exist only where something is mapped. The
+text is shared, and lies in RAM on its own. The u-area takes the first
+pages of its 2~MB block, since the kernel stack grows down from the
+end of the u-area, which at the top of the address space would be
+address 0.
 
-#diagram(grid(columns: (auto, auto, auto, auto, auto), column-gutter: 4pt,
-  align: horizon,
-  bx(w: 2.2cm)[`kl2`, entry 511], ar, bx(w: 2.2cm)[`kl3u`, entry 0], ar,
-    bx(w: 2.6cm)[the current process's u-area: `user`, then kernel stack],
-  [], [], bx(w: 2.2cm)[entries 1--511 invalid], [], [],
-), [How `UBASE` is mapped]) <fig-ubase>
+#diagram(grid(columns: (auto, 2.4cm, 2.4cm, 2.4cm), row-gutter: 3pt,
+  align: center + horizon,
+  lab[RAM, from `p_addr`], bx(w: 100%)[u-area], bx(w: 100%)[data], bx(w: 100%)[stack],
+  [], ad, ad, ad,
+  lab[address space], lab[`UBASE`, 0xffe00000], lab[after the text],
+    lab[up to 0xc0000000],
+), [A process image in RAM and in the address space], pl: std.top) <fig-image>
 
-=== Translation Tables
+=== Translation Tables <sec-tables>
 
 The MMU translates addresses through tables in memory. The port uses
 the long-descriptor format, with three levels: an entry of the first
@@ -277,22 +283,22 @@ lower half (@fig-tree). A process switch changes only `TTBR0`.
     bx(w: 1.8cm)[last entry: `kl3u`], ar, bx(w: 2.1cm)[the u-area page at `UBASE`],
 ), [The user's tables, above, and the kernel's, below]) <fig-tree>
 
-The kernel's tables are built at boot. `_start` (#at("/usr/sys/conf/low.s", "_start:")) maps the
+The kernel's tables are built at boot. First `_start` (#at("/usr/sys/conf/low.s", "_start:")) maps the
 kernel through `kl2`, a second-level table of 2~MB blocks, and adds a
 temporary identity mapping, `bootl1`, so that the code keeps running at
-its physical address while the MMU is turned on. `machine_init`
-(#f("machdep.c")) then maps all of RAM and the devices in `kl2`, maps
+its physical address while the MMU is turned on. Then `machine_init`
+(#f("machdep.c")) maps all of RAM and the devices in `kl2`, maps
 the u-area of process 0 through `kl3u`, a third-level table for the
 top 2~MB, and removes the identity mapping. The kernel's tables do not
 change after that, except for the entries of `kl3u`, which `resume`
 (#f("mch.s")) rewrites at each switch to show the new process's
 u-area.
 
-Each process's own tables are built from a prototype. `estabur`
-(#f("ureg.c")) records the sizes of the text, data, and stack, and
-`sureg` builds the tables from them when they are needed. The text pages are mapped
+Each process's own tables are built from a prototype. The sizes of the
+text, data, and stack are recorded by `estabur` (#f("ureg.c")), and
+the tables are built from them by `sureg` when they are needed. The text pages are mapped
 read-only and the data and stack pages writable, all with user access.
-`ttbset` (#at("/usr/sys/conf/mch.s", "ttbset:")) loads `TTBR0` with the process's first-level
+Finally `ttbset` (#at("/usr/sys/conf/mch.s", "ttbset:")) loads `TTBR0` with the process's first-level
 table.
 
 For example, a program which loads from address `0x00012345` makes the
@@ -327,39 +333,38 @@ the boot ROM loads it into SYSRAM. Either way the kernel starts at
 `_start` (#at("/usr/sys/conf/low.s", "_start:")), in SVC mode, at its physical address, with the
 MMU off. From there the system comes up in these steps (@fig-boot):
 
-+ `_start` masks interrupts, turns off the MMU and the caches, discards
++ First `_start` masks interrupts, turns off the MMU and the caches, discards
   whatever the TLB, the caches, and the branch predictor hold, and
   clears the kernel's `bss`. It builds the boot tables, turns the MMU
   on, and jumps to the kernel's virtual address. It sets up a small boot
   stack, installs the exception vectors, enables the floating point
   unit, and calls `machine_init` (#at("/usr/sys/sys/machdep.c", "machine_init(")).
-+ `machine_init` maps the device registers, switches the interrupt
++ Then `machine_init` maps the device registers, switches the interrupt
   controller off, and starts the console, so that `printf` and `panic`
   work from then on. On the MP135 machine it then powers the DDR memory
   and starts its controller. Only then does it map the rest of RAM,
   clear the part of the kernel which lies in DDR, map the u-area of
   process 0, and remove the identity mapping. It returns the top of
   that u-area.
-+ `_start` moves the stack pointer to the top of the u-area and calls
-  `main` (#at("/usr/sys/sys/main.c", "main(")). From then on the kernel stack is always the
++ Back in `_start`, the stack pointer is moved to the top of the
+  u-area, and `main` is called (#at("/usr/sys/sys/main.c", "main(")). From then on the kernel stack is always the
   current process's.
-+ `main` sets up memory. `startup` (#at("/usr/sys/sys/machdep.c", "startup(")) puts every free
-  page of RAM in the core map, sets aside pages for the processes'
-  tables, and frees the swap area. `main` makes the running code process
-  0, with the u-area just mapped.
-+ `clkstart` (#at("/usr/sys/sys/machdep.c", "clkstart(")) programs the timer and the interrupt
-  controller, and unmasks interrupts. `main` initialises the character
++ Next `startup` (#at("/usr/sys/sys/machdep.c", "startup(")) puts
+  every free page of RAM in the core map, sets aside pages for the
+  processes' tables, and enters the swap area in the swap map. The running code becomes process 0.
++ Next `clkstart` (#at("/usr/sys/sys/machdep.c", "clkstart(")) programs the timer, and `intrstart`
+  (#at("/usr/sys/sys/machdep.c", "intrstart(")) enables the interrupts and unmasks them. Then `main` initialises the character
   lists and the buffer cache, reads the super-block of the root file
   system, and makes the root directory the current one.
-+ `main` calls `newproc` (#at("/usr/sys/sys/slp.c", "newproc(")) to make process 1 as a copy of
++ Next `main` calls `newproc` (#at("/usr/sys/sys/slp.c", "newproc(")) to make process 1 as a copy of
   process 0. In process 0, `newproc` returns 0, and `main` calls
   `sched`, in which process 0 stays forever as the swapper (Scheduling
   and Swapping).
-+ In process 1, `newproc` returns 1. `main` gives the new process a page
++ In process 1, `newproc` returns 1. Then `main` gives the new process a page
   of user memory, copies into it `icode`, a few instructions of machine
   code (#f("machdep.c")), and returns. The return reaches `_start`
   again, which enters user mode at address 0, in process 1.
-+ `icode` makes one system call, `exec("/etc/init")`. From here the
++ The program `icode` makes one system call, `exec("/etc/init")`. From here the
   system is an ordinary process running an ordinary program.
 
 #diagram(grid(columns: 9, column-gutter: 3pt, row-gutter: 5pt,
@@ -381,11 +386,11 @@ What the MMU maps changes three times on the way (@tab-boot).
   bot,
 ) <tab-boot>
 
-Each stage relies on the one before. `machine_init` runs with only the
-kernel image mapped, so it may not touch any other memory until it has
-mapped it.
+Each stage relies on the one before. While `machine_init` runs, only the
+kernel image is mapped, so it may not touch any other memory until it
+has mapped it.
 
-`init` (#f("cmd/init.c")) first starts a shell on the console, with no
+The first program, `init` (#f("cmd/init.c")), starts a shell on the console, with no
 other users, so that the administrator can check the file systems
 before anyone else uses them. When that shell exits, `init` runs the
 start-up script `/etc/rc`, which starts `update` and `cron`, and then
@@ -394,7 +399,7 @@ a user to log in. If `init` ever dies, the system cannot continue, since
 every process descends from it. Its process number is always 1, and it
 is the parent of every login shell, through `getty` and `login`.
 
-=== Interrupt Handling
+=== Interrupt Handling <sec-intr>
 
 Each device's interrupt line goes to the Generic Interrupt Controller
 (GIC). The GIC passes the most urgent pending interrupt to the processor
@@ -403,23 +408,23 @@ steps:
 
 + The processor stops the program it was running, enters IRQ mode, and
   jumps to the IRQ entry of the vector table (#f("low.s")).
-+ `irq_entry` pushes the interrupted program's `pc` and `cpsr` onto the
++ Then `irq_entry` pushes the interrupted program's `pc` and `cpsr` onto the
   SVC stack, which is the current process's kernel stack, and changes to
   SVC mode with interrupts masked. It then saves the remaining registers
   on the same stack, and so builds a frame of all the interrupted
   program's registers (#f("reg.h"), @tab-frame).
-+ `irq_entry` calls `irq` (#at("/usr/sys/sys/machdep.c", "irq(")) with the address of the
++ Next `irq_entry` calls `irq` (#at("/usr/sys/sys/machdep.c", "irq(")) with the address of the
   frame.
-+ `irq` reads from the GIC the number of the interrupt, looks the number
-  up in `intrtab`, which the configuration generates (#f("qemu/c.c")),
++ Then `irq` reads the interrupt's number from the GIC, looks it up in
+  `intrtab`, which the configuration generates (#f("qemu/c.c")),
   and calls the routine found there with the interrupted program counter
   and status.
-+ `irq` tells the GIC that the interrupt is done, so that the GIC will
++ Then `irq` tells the GIC that the interrupt is done, so that the GIC will
   deliver another.
 + If the interrupt came from user mode and a process of better priority
   is now ready to run (`runrun`), `irq_entry` calls `user_trap_handler`
   (#f("trap.c")), which switches processes, as at the end of every trap.
-+ `irq_entry` unloads the frame, and the interrupted program continues
++ Finally `irq_entry` unloads the frame, and the interrupted program continues
   where it stopped.
 
 #btable(columns: 6, align: center, caption: [The frame on the kernel stack, at `u.u_ar0` (#f("reg.h"))],
@@ -429,7 +434,7 @@ steps:
 ) <tab-frame>
 
 For example, when a key is pressed at the QEMU machine's console, the
-UART interrupts. `irq` finds the UART's number in `intrtab` and calls
+UART interrupts. Then `irq` finds the UART's number in `intrtab` and calls
 `klintr` (#at("/usr/sys/dev/pl011.c", "klintr(")), which reads the character and passes it to the
 terminal code (Terminal I/O). That code wakes the process waiting for
 the line, which will run when the scheduler chooses it.
@@ -446,10 +451,7 @@ another may be taken before the first frame is unloaded. Its frame
 then goes below the first on the same stack, and is unloaded first.
 
 If the kernel was interrupted, the new frame simply lies below whatever
-the kernel had on its stack. If the GIC reports interrupt 1023, no
-interrupt was pending after all.
-That number matches no entry in `intrtab`, so `irq` calls nothing and
-only tells the GIC that it is done.
+the kernel had on its stack. 
 
 A driver that must act after a delay, such as the terminal code
 waiting out a carriage return, calls `timeout` (#at("/usr/sys/sys/clock.c", "timeout(")) with a
@@ -458,8 +460,8 @@ the table `callout`, sorted by time, each entry holding the ticks
 after the one before it. So `clock` need only count down the first
 entry, and calls each routine whose count reaches zero.
 
-The interrupts are enabled in one place. `clkstart` (#at("/usr/sys/sys/machdep.c", "clkstart("))
-gives each interrupt listed in `intrtab` a priority and enables it in
+The interrupts are enabled in one place, by `intrstart`
+(#at("/usr/sys/sys/machdep.c", "intrstart(")), which gives each interrupt listed in `intrtab` a priority and enables it in
 the GIC, then enables the GIC itself. Until then the GIC is off, and no
 interrupt can arrive, however early a driver unmasks interrupts. The kernel masks interrupts where an
 interrupt routine could disturb what it is doing, with `intr_disable`
@@ -469,7 +471,7 @@ interrupt routine runs on whatever process's kernel stack is current,
 so it must never sleep. It may only wake processes, by `wakeup`
 (#f("slp.c")), and leave the rest of the work to them.
 
-=== System Calls
+=== System Calls <sec-syscalls>
 
 A program makes a system call through a routine of the C library, such
 as `read` (#at("/usr/src/libc/sys/read.s", "read:")). The call goes through these steps
@@ -478,28 +480,28 @@ as `read` (#at("/usr/src/libc/sys/read.s", "read:")). The call goes through thes
 + The library routine puts the number of the call in register `ip` and
   jumps to `cerror` (#at("/usr/src/libc/syscall.s", "cerror:")). The call's arguments are
   already in `r0` to `r3`, where C put them.
-+ `cerror` moves the number to `r7` and executes `svc #0`. The `svc`
++ Then `cerror` moves the number to `r7` and executes `svc #0`. The `svc`
   instruction raises an exception, and the processor enters SVC mode at
   the system call entry of the vector table.
-+ `svc_entry` (#at("/usr/sys/conf/low.s", "svc_entry:")) saves the user's registers as a frame on the
++ The entry code, `svc_entry` (#at("/usr/sys/conf/low.s", "svc_entry:")), saves the user's registers as a frame on the
   process's kernel stack, unmasks interrupts, and calls `trap`
   (#f("trap.c")) with the address of the frame.
-+ `trap` takes the call's number from the saved `r7` and finds the call
++ Then `trap` takes the call's number from the saved `r7` and finds the call
   in the table `sysent` (#at("/usr/sys/sys/sysent.c", "struct sysent sysent")), which gives the number of
   arguments and the routine that implements the call. It copies the
   arguments into `u.u_arg` and calls the routine.
 + The routine leaves its result in `u.u_r`, or an error number in
   `u.u_error`.
-+ `trap` writes the result into the saved `r0` and `r1`. If the call
++ On return, `trap` writes the result into the saved `r0` and `r1`. If the call
   failed, it writes the error number into the saved `r0` instead, and
   sets the carry flag in the saved status.
-+ `trap` delivers any pending signal (Signals), recomputes the process's
++ Next `trap` delivers any pending signal (Signals), recomputes the process's
   priority, and gives up the processor if a better process is ready
   (Scheduling and Swapping), as every return to user mode does.
-+ `svc_entry` masks interrupts and unloads the frame, so that the user's
++ Back in `svc_entry`, interrupts are masked and the frame unloaded, so that the user's
   registers receive the results, and returns to the instruction after
   the `svc`.
-+ `cerror` tests the carry flag. If it is clear, it returns the result.
++ Finally `cerror` tests the carry flag. If it is clear, it returns the result.
   If it is set, it stores the error number in `errno` and returns -1.
 
 #diagram(grid(columns: 7, column-gutter: 3pt, row-gutter: 5pt,
@@ -508,9 +510,6 @@ as `read` (#at("/usr/src/libc/sys/read.s", "read:")). The call goes through thes
   [], [], [], [], [], ad, [],
   lab[kernel], bx[routine], al, bx[`sysent`], al, bx[`svc_entry`, `trap`], [],
 ), [The path of a system call into the kernel]) <fig-syscall>
-
-`trap` keeps the frame's address in `u.u_ar0`, through which a system
-call can reach the user's registers.
 
 For example, `read(fd, buf, n)` arrives with the file descriptor in
 `r0`, the buffer's address in `r1`, and the count in `r2`, and with 3,
@@ -529,10 +528,14 @@ failure. Some calls return two values, in `r0` and `r1`: `pipe` returns
 both of its file descriptors, and `fork` returns a process number in
 `r0` and, in `r1`, whether the process is the child.
 
-`exec` is the one call which does not return to the instruction after
-its `svc`. When it succeeds, it has replaced the saved program counter
+The one call which does not return to the instruction after its `svc`
+is `exec`. When it succeeds, it has replaced the saved program counter
 and stack pointer in the frame with the new program's, so the return
 from `trap` enters the new program at its first instruction.
+
+The frame's address is kept by `trap` in `u.u_ar0`, through which a
+system call can reach the user's registers. The routines take no
+arguments of their own, and find them in `u.u_arg`.
 
 A system call may sleep, waiting for a key to be pressed, say. If a signal arrives meanwhile, the sleep is abandoned: `sleep`
 (#f("slp.c")) returns, through `resume`, to the point which `trap`
@@ -544,23 +547,22 @@ own u-area, so it may sleep without disturbing any other process. That
 is what lets the kernel be written as ordinary C code which simply
 waits when it must.
 
-=== Scheduling and Swapping
+=== Scheduling and Swapping <sec-sched>
 
 A process waits by calling `sleep` (#at("/usr/sys/sys/slp.c", "sleep(caddr_t")) with an address, the
-event it waits for, and a priority. `sleep` marks the process asleep
+event it waits for, and a priority. Then `sleep` marks the process asleep
 and calls `swtch` to run another. The process that later causes the
-event, or an interrupt routine, calls `wakeup` with the same address.
-`wakeup` makes every process sleeping on it runnable, and each must
+event, or an interrupt routine, calls `wakeup` with the same address,
+which makes every process sleeping on it runnable, and each must
 check, when it runs again, that what it waited for is still there.
 
-`swtch` decides which process runs (@fig-states). It searches the runnable processes
+The routine `swtch` decides which process runs (@fig-states). It searches the runnable processes
 in memory for the one of best priority, and switches to it. If there is
 none, it calls `idle` (#at("/usr/sys/conf/mch.s", "idle:")), which halts the processor until an
 interrupt, and searches again. A process's priority depends on its
 recent use of the processor, which `clock` (#at("/usr/sys/sys/clock.c", "clock(")) counts and
-decays once a second, and on its `nice` value (`setpri`). A process
-that has waited on an event gets the better priority given in the call
-of `sleep`.
+decays once a second, and on its `nice` value (`setpri`). A process that has waited on an
+event gets the better priority given in the call of `sleep`. 
 
 #diagram(grid(columns: 5, column-gutter: 4pt, row-gutter: 4pt,
   align: center + horizon,
@@ -570,9 +572,10 @@ of `sleep`.
   bx(w: 1.7cm)[swapped out], [], bx(w: 1.7cm)[zombie], [], [],
 ), [The states of a process, and the routines which move it between them]) <fig-states>
 
-The switch itself is done by `save` and `resume` (#at("/usr/sys/conf/mch.s", "resume:")). `save`
+The switch itself is done by `save` and `resume` (#at("/usr/sys/conf/mch.s", "resume:")). The first, `save`,
 records the registers a function must preserve, the stack pointer, and
-the return address, in the current u-area. `resume` maps another
+the return address, in the current u-area. The second, `resume`, maps
+another
 process's u-area at `UBASE`, and reloads the registers that process
 saved there when it last ran. The new process then continues in
 `swtch`, returning from it into whatever had called `swtch`. Since the
@@ -621,41 +624,42 @@ image to the swap area and frees its memory.
 
 === Process Creation
 
-`fork` (#at("/usr/sys/sys/sys1.c", "fork(")) makes a new process as a copy of the caller,
-through `newproc` (#at("/usr/sys/sys/slp.c", "newproc(")). `newproc` takes a free entry in the
+A new process is made by `fork` (#at("/usr/sys/sys/sys1.c", "fork(")) as a copy of the caller,
+through `newproc` (#at("/usr/sys/sys/slp.c", "newproc(")), which takes a free entry in the
 process table and fills it from the parent's. The child shares the
 parent's open files and current directory, whose reference counts go
 up, and its text, which is never copied. Then the parent's image, its
 u-area, data, and stack, is copied: into free memory if there is room,
 or else to the swap area, from which the swapper will bring the child
-in. `newproc` returns 0 in the parent. The child first runs when
+in. In the parent, `newproc` returns 0. The child first runs when
 `swtch` resumes it, at the point where the copy was taken, and there
-`newproc` returns 1. `fork` and its library routine (#f("sys/fork.s")) turn
+`newproc` returns 1. The system call `fork` and its library routine (#f("sys/fork.s")) turn
 the two returns into the child's process number in the parent and 0 in
 the child.
 
 The data and stack must be copied, since both processes continue and
 write to them. The text, which neither may write, is the one part they
 can share. Copying a large image takes time, and the shell usually
-does it only to call `exec` in the child at once.
+does it only to call `exec` in the child at once. 
 
 A process's image in memory is one contiguous piece (@tab-image): the u-area, then
 the data, then the stack. The text is a separate piece, shared by every
 process running the same program (`xalloc`, #f("text.c")). Each piece
 is taken from the core map, a list of free pieces of memory
 (#f("malloc.c")). The process's tables translate the user's addresses
-to these pieces (Translation Tables).
+to these pieces (Translation Tables). 
 
 #btable(columns: (auto, 1fr, 1fr), caption: [A process's image in RAM, and where each part is seen],
   table.header(top, [*part*], [*in RAM*], [*seen at*], mid),
   [u-area], [the start of the image], [`UBASE`, by the kernel only],
   [data], [after the u-area], [the page after the text],
   [stack], [after the data], [just below 0xc0000000],
-  [text], [a separate piece, shared], [0x94],
+    [text], [a separate piece, shared], [0x8000],
+  [trampoline], [one page, shared by all], [0x1000],
   bot,
 ) <tab-image>
 
-`exec` (#at("/usr/sys/sys/sys1.c", "exec(")) replaces the program a process runs. It reads
+The program a process runs is replaced by `exec` (#at("/usr/sys/sys/sys1.c", "exec(")). It reads
 the program's ELF headers and checks them. It copies the arguments and
 the environment to a temporary area in the swap space, since the old
 image, which holds them, is about to go. It then releases the old text,
@@ -673,7 +677,7 @@ by a debugger, it must call `arm_sync_icache` (#at("/usr/sys/conf/mch.s", "arm_s
 writes the new instructions out of the data cache and discards the
 instruction cache, so that the processor fetches the new instructions.
 
-A process changes its size in two ways. `brk` asks for more or less
+A process changes its size in two ways. A call of `brk` asks for more or less
 data, and the stack grows when a program touches an address just below
 it. The data abort handler (#f("trap.c")) sees such a fault and calls
 `grow` (#at("/usr/sys/sys/sig.c", "grow(")), and the faulting instruction is executed again. Both
@@ -696,7 +700,7 @@ bit, which keeps its text on the swap area for the next run. A program
 file cannot be written while its text is in use, nor run while it is
 open for writing: the attempt fails with `ETXTBSY`.
 
-=== Signals
+=== Signals <sec-signals>
 
 A signal is an event sent to a process: a key such as interrupt or
 quit at its terminal, a fault in its program, an alarm, or a `kill`
@@ -731,28 +735,28 @@ signal ends its wait.
 
 A process acts on its signals only on the way back to user mode. Every
 trap, system call, and interrupt from user mode ends with a call of
-`issig` (#at("/usr/sys/sys/sig.c", "issig(")), and if a signal is pending, with `psig`.
+`issig` (#at("/usr/sys/sys/sig.c", "issig(")), and if a signal is pending, with `psig`. So a signal takes effect at the next return to user mode.
 
 For each signal a process has asked either to take the default action,
 to ignore it, or to catch it with a handler (`ssig`).
 
 To catch a signal, the kernel makes the process call its handler:
 
-+ `sendsig` (#at("/usr/sys/sys/machdep.c", "sendsig(")) copies the user's saved registers and
++ First `sendsig` (#at("/usr/sys/sys/machdep.c", "sendsig(")) copies the user's saved registers and
   floating point state onto the user's stack, below the current stack
   pointer (@fig-sigstack).
-+ `sendsig` changes the saved registers in the frame. The stack pointer
++ Then `sendsig` changes the saved registers in the frame. The stack pointer
   is set to below the copy, the program counter to the handler, `r0` to
   the signal number, and the link register to
-  the signal trampoline at user address 8 (#f("seg.h")).
+  the signal trampoline at user address 0x1000 (`SIGTRAMP`, #f("seg.h")).
 + The frame is unloaded, and the process continues, not where it was
   interrupted, but at the first instruction of its handler.
 + The handler, an ordinary C function, returns through its link register
-  to address 8.
-+ There `xalloc` (#at("/usr/sys/sys/text.c", "xalloc(")) has put two instructions into every
-  program's text, `mov r7, #63` and `svc #0`, the system call
-  `sigreturn` (`install_sigtramp`, #f("machdep.c")).
-+ `sigreturn` reads the copy back from the user's stack into the frame.
+  to address 0x1000.
++ There `startup` (#at("/usr/sys/sys/machdep.c", "startup(")) has put two instructions, `mov r7, #63`
+  and `svc #0`, the system call `sigreturn`, into one page which every
+  process maps.
++ The system call `sigreturn` reads the copy back from the user's stack into the frame.
   When the frame is unloaded, the program continues where the signal
   interrupted it, with all its registers as they were.
 
@@ -767,21 +771,85 @@ To catch a signal, the kernel makes the process call its handler:
 @tab-signals lists the signals, and what each does by default
 (#f("param.h")).
 
-
 A caught signal reverts to its default when it is delivered, except
-for the illegal instruction and trace signals, so a program that wants
-to catch the next one must set its handler again.
+for the illegal instruction and trace signals.
 
-=== Disk I/O
+=== Saved State <sec-saved>
+
+The registers of a process are saved in six places, each for its own
+purpose (@tab-saved). Most of the trap, switch, and signal code is
+about putting registers into one of them and taking them out again.
+
+#btable(columns: (1.25fr, 1fr, 1fr, 1fr), align: left, caption: [Where registers are saved], pl: bottom,
+  table.header(top, [*what*], [*saved by*], [*kept in*], [*restored by*], mid),
+  [user registers at entry], [every trap and interrupt (#f("low.s"))], [frame on the kernel stack], [the common return (#f("low.s"))],
+  [kernel registers at a switch], [`save` in `swtch`], [`u_rsav`], [`resume` in `swtch`],
+  [the start of a system call], [`save` in `trap`], [`u_qsav`], [`resume` in `sleep`, on a signal],
+  [the point of a copy], [`save` in `newproc`, `expand`, `xswap`], [`u_ssav`], [`resume` in `swtch`, under `SSWAP`],
+  [floating point registers], [`swtch`, `newproc`, `expand`, `psig`], [`u_fps`], [the return to user mode],
+  [user registers for a handler], [`sendsig`], [frame on the user stack], [`sigreturn`],
+  bot,
+) <tab-saved>
+
+Every entry to the kernel from user mode, by a system call, an
+interrupt, or a fault, saves all of the user's registers on the kernel
+stack in the u-area (@tab-frame, page #pageref(<tab-frame>)). The kernel finds them through
+`u_ar0` (#f("user.h")), and a system call returns its results by
+changing them. When the kernel itself is interrupted, a frame of the
+same form is saved below whatever the kernel had on its stack, and
+holds the kernel's registers instead.
+
+A label holds only the registers which a called function must
+preserve, `r4` to `r11`, `sp`, and `lr` (`label_t`, #f("param.h")). The
+routine `save` stores them and returns 0. Later `resume` reloads them,
+and the original call of `save` returns a second time, with 1. The
+stack pointer is among them, and the kernel stack lies in the u-area,
+so `resume` also maps the u-area of the process whose label it loads.
+Three labels serve three purposes. The label `u_rsav` records where a
+process stopped in `swtch`, and is where it continues when chosen
+again. The label `u_qsav` records where `trap` began a system call.
+When a signal ends a wait, `sleep` resumes there, and the call returns
+`EINTR`. Process 0 uses its own `u_qsav` as the entry to the search
+loop of `swtch`. The label `u_ssav` records the point at which a
+process's image was copied, to a new place in RAM or to the swap area,
+and the flag `SSWAP` makes `swtch` resume the process there instead of
+at `u_rsav`.
+
+A process switch shows the labels at work. The running process calls
+`swtch` (#at("/usr/sys/sys/slp.c", "swtch(void)")), whose `save` into `u_rsav` returns 0, and `swtch`
+then resumes process 0 at its `u_qsav`. Process 0 chooses the next
+process and resumes it at its `u_rsav`. There that process's own
+earlier `save` returns 1, and its `swtch` returns to the caller, which
+carries on as if the call had just been made.
+
+The floating point registers are not saved on every entry. They stay
+in the hardware while the process is in the kernel, and are stored in
+`u_fps` (#f("user.h")) only when another process may take the unit or
+the u-area may be copied. The flag `u_fpsaved` then makes the return to
+user mode load them again.
+
+To run a signal handler, `sendsig` copies the frame of user registers
+and the floating point registers to the user's stack, and points the
+frame at the handler (see _Signals_, page #pageref(<sec-signals>)). When the handler
+returns, `sigreturn` copies them back. This is the only saved state
+which lies in user memory, where the program can change it, so
+`sigreturn` checks what it takes back.
+
+A process may have state in several of these places at once. A process
+asleep in a read from a terminal has the frame of its user registers,
+`u_qsav` from the start of the read, and `u_rsav` from the point in
+`swtch` where it gave up the processor.
+
+=== Disk I/O <sec-disk>
 
 Programs read and write files in bytes, but the disk moves blocks of
 512~bytes. Between the two lies the buffer cache (#f("bio.c")), a pool
-of buffers in memory, each holding one disk block. `readi` and `writei`
+of buffers in memory, each holding one disk block. The routines `readi` and `writei`
 (#f("rdwri.c")) translate a position in a file into a block of the
 disk, by `bmap` (#at("/usr/sys/sys/subr.c", "bmap(")), and move bytes between the user and a
 buffer.
 
-`bread` asks for a block (@fig-disk). If a buffer already holds it, no disk
+A block is asked for with `bread` (@fig-disk). If a buffer already holds it, no disk
 transfer is needed. Otherwise `getblk` takes the buffer least recently
 used, and `bread` asks the disk driver to fill it. The driver's
 strategy routine (`rkstrategy`) puts the request on the driver's queue
@@ -800,9 +868,10 @@ returns from `bread` with the block.
 A buffer in use is marked busy, and taken off the list of free
 buffers, a doubly linked list through the buffers' `av_forw` and
 `av_back` (#at("/usr/sys/h/buf.h", "struct\tbuf *av_back")), so that no other process can reuse it. A process that wants a
-busy buffer marks it wanted and sleeps on it. `brelse` puts the buffer
+busy buffer marks it wanted and sleeps on it. The routine `brelse` puts the buffer
 back on the free list, at the end, so the free list is in order of last
-use, and wakes any process that wanted it. `readi` also starts reading
+use, and wakes any process that wanted it. For a file read in order,
+`readi` also starts reading
 the next block of a file ahead, with `breada`, so that a program
 reading a file in order usually finds its next block already there.
 
@@ -813,14 +882,13 @@ second block, so the second read finds it in the cache, or already on
 its way. A second `cat` of the same file soon after finds all three
 blocks in the cache, and never waits for the disk.
 
-There are `NBUF` buffers (#f("param.h")), 29 in this configuration. A
-failed transfer marks the buffer in error, and the system call which
+A failed transfer marks the buffer in error, and the system call which
 asked for the block fails with `EIO` (`geterror`, #f("bio.c")). A write
 may also be started without waiting for it, by `bawrite`, when the
 kernel knows that the block is complete, as `exec` does when it saves
 a program's arguments on the swap area.
 
-Writes usually go only to the buffer. `bdwrite` marks the buffer dirty
+Writes usually go only to the buffer. The routine `bdwrite` marks the buffer dirty
 and leaves it in the cache, since the next write often goes to the same
 block. A dirty buffer is written to the disk when it is about to be
 reused for another block, and whenever `sync` writes out all of them,
@@ -831,7 +899,10 @@ the virtio block driver on the QEMU machine (#f("virtio_blk.c")), and
 the SD card driver on the MP135 machine (#f("sd.c")). Both are called
 `rk` in the configuration, the name of the disk they replace. The swap
 area lies on the same disk, after the root file system, and swapping
-goes through the same driver, with a buffer of its own.
+goes through the same driver, with a buffer of its own. The kernel
+finds a disk's driver by its major device number in the block device
+switch, `bdevsw` (#f("qemu/c.c")), a table which holds each driver's
+open, close, and strategy routines and its queue.
 
 Raw I/O bypasses the cache. A program which reads the disk's raw
 device transfers directly between the disk and its own memory
@@ -860,7 +931,7 @@ holds characters on their way to the terminal (#f("tty.h")).
   align: horizon,
   bx[receive interrupt], ar, bx[raw queue], ar, bx[canonical queue], ar, bx[`ttread`],
   bx[transmit interrupt], al, bx[output queue], al, bx[`ttyoutput`], al, bx[`ttwrite`],
-), [The three queues of a terminal]) <fig-tty>
+), [The three queues of a terminal], pl: bottom) <fig-tty>
 
 When a character arrives, the driver's receive interrupt passes it to
 `ttyhold` (#at("/usr/sys/dev/tty.c", "ttyhold(")), which hands it to the line discipline,
@@ -872,13 +943,11 @@ resume output. It echoes the character, if echo is on, and puts it in
 the raw queue. When a newline arrives, it wakes the processes reading
 from the terminal.
 
-`ttread` (#at("/usr/sys/dev/tty.c", "ttread(")) gives a reading process its input.
-
- In the
+A reading process gets its input from `ttread` (#at("/usr/sys/dev/tty.c", "ttread(")). In the
 normal mode it waits for a complete line, applies erase and kill as it
 moves the line to the canonical queue (`canon`), and returns at most
 one line. In raw mode it returns characters as they come, without
-interpretation. `stty` and `gtty` set the mode and the special
+interpretation. The system calls `stty` and `gtty` set the mode and the special
 characters (#f("sgtty.h")).
 
 The special characters are set by `stty`, and start as @tab-tty
@@ -895,13 +964,21 @@ shows (#f("tty.h")).
   bot,
 ) <tab-tty>
 
-`ttwrite` puts a writing process's output in the output queue, through
-`ttyoutput`, which expands tabs and turns a newline into a carriage
+A writing process's output goes to the output queue through `ttwrite`
+and `ttyoutput`, which expands tabs and turns a newline into a carriage
 return and a line feed where the terminal needs it. The driver's start
 routine sends characters from the queue. Each transmitter interrupt
 sends the next. When the queue holds more than a high water mark, the
 writer sleeps until it drains below a low one, so a fast program
 cannot fill all of memory with output.
+
+Each terminal is described by a `tty` structure (#f("tty.h")), which
+the driver owns and the line discipline uses. It holds the queues, the
+mode set by `stty` (`t_flags`), the erase and kill characters, the
+terminal's process group (`t_pgrp`), and the column which the output
+has reached, which tab expansion needs (`t_col`). It also holds the
+driver's start routine (`t_oproc`), through which `tty.c` asks the
+driver for more output without knowing which device it is.
 
 Each machine has one console driver: the PL011 UART on the QEMU machine
 (#f("pl011.c")), and the USB serial device on the MP135 machine
@@ -918,3 +995,62 @@ A terminal belongs to a process group. The first terminal a process
 opens, when it has none, becomes its controlling terminal. Its
 signals go to every process which shares it, which is how an interrupt
 typed at the keyboard stops the whole of a pipeline.
+
+=== Multiprocessing <sec-mp>
+
+Both machines have one processor, and the kernel relies on it. At any
+moment at most one process runs in the kernel, and it keeps the
+processor until it sleeps or returns to user mode. A process in the
+kernel is never preempted. Only an interrupt can run in between, and
+the kernel guards against interrupts by masking them. These two facts
+are the kernel's whole means of mutual exclusion. A second processor
+would break both, in the places which @tab-mp lists.
+
+#btable(columns: (auto, 1fr, 1fr), align: left, caption: [What the kernel assumes of one processor], pl: bottom,
+  table.header(top, [*assumption*], [*where*], [*with two processors*], mid),
+  [masking excludes], [character lists, buffers, callouts, run queue], [a spin lock for each],
+  [no preemption], [free entries of the tables], [a lock around each search],
+  [flag locks], [`ILOCK`, `B_BUSY`], [an indivisible test and set],
+  [one current process], [`u` at `UBASE`, `kl3u`], [a u-area mapping for each processor],
+  [one scheduler], [`runrun`, `curpri`, the run queue], [scheduling under a lock],
+  [local maintenance], [TLB and caches], [operations broadcast to all],
+  bot,
+) <tab-mp>
+
+Code which changes a list that an interrupt routine also changes masks
+interrupts around the change, with `intr_disable` and `intr_restore`
+(#at("/usr/sys/conf/mch.s", "intr_restore:")). The character lists (#at("/usr/sys/sys/prim.c", "getc(register struct clist *p)")), the buffer lists
+(#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")), the callout table (#at("/usr/sys/sys/clock.c", "timeout(void (*fun)")), and the run queue
+(#at("/usr/sys/sys/slp.c", "setrq(struct proc *p)")) are all guarded this way. Masking holds off the
+interrupts of the processor that masks them, and nothing else. A
+second processor could change the same list at the same moment.
+
+Code which needs no protection from interrupts needs none at all,
+because no other process runs until this one sleeps. When `falloc`
+(#at("/usr/sys/sys/fio.c", "falloc(void)")) finds a free entry in the file table, the entry stays
+free until `falloc` takes it. The same holds when `iget` (#at("/usr/sys/sys/iget.c", "iget(dev_t dev, ino_t ino)")) takes
+a free inode and `malloc` (#f("malloc.c")) a piece of the core map. On
+two processors, two processes could find the same free entry and both
+take it.
+
+Where a lock must last across a sleep, the kernel uses a flag. An inode
+is locked by its `ILOCK` bit, and a buffer by `B_BUSY`. The routine
+`plock` (#at("/usr/sys/sys/pipe.c", "plock(register struct inode *ip)")) shows the pattern. It sleeps while the flag is set,
+and then sets it. The test and the set are two steps, and the lock
+holds only because no other process runs between them. On a
+multiprocessor they must be one indivisible operation, such as the
+ARM's `ldrex` and `strex` provide.
+
+The current process is a single thing. Its u-area always lies at
+`UBASE`, and the kernel reaches it as `u` (see _The Address Space_,
+page #pageref(<sec-addr>)). Two processors would run two processes at once,
+each with its own u-area at `UBASE`, and so each with its own `kl3u`.
+The scheduler's state is single too. The flags `runrun` and `curpri`
+and the run queue (#f("slp.c")) describe one processor, and `swtch`
+chooses a process on the assumption that no other processor is
+choosing.
+
+The routines which discard translations and maintain the caches
+(#f("mch.s")) act on the processor which runs them. A second processor
+would keep its own stale translations and cache lines unless the
+operations were broadcast to it.

@@ -138,3 +138,5 @@
   fragment(a, b)
 }
 #let listing(path) = { source(path); lines(1, text-of(path).len()) }
+
+#let pageref(l) = context link(l, str(counter(page).at(l).first()))
