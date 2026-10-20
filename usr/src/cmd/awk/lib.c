@@ -16,7 +16,7 @@ int	donefld;	/* 1 = implies rec broken into fields */
 int	donerec;	/* 1 = record is valid (no flds have changed) */
 int	mustfld;	/* 1 = NF seen, so always break*/
 
-#define	FINIT	{0, NULL, 0.0, FLD|STR, 0}
+#define	FINIT	{0, "", 0.0, FLD|STR, 0}
 cell fldtab[MAXFLD] = {	/*room for fields */
 	{ "$record", record, 0.0, STR|FLD, 0},
 	FINIT, FINIT, FINIT, FINIT, FINIT, FINIT, FINIT,
@@ -148,7 +148,7 @@ fldbld(void)
 		if (!(fldtab[j].tval&FLD))
 			xfree(fldtab[j].sval);
 		fldtab[j].tval = STR | FLD;
-		fldtab[j].sval = NULL;
+		fldtab[j].sval = "";
 	}
 	maxfld = i;
 	donefld = 1;
