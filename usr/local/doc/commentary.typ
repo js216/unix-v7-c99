@@ -486,7 +486,7 @@ goes in the high byte of the status and the signal in the low, as
 The system call `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit; files, current and root
 directories, text, page tables (#f("ureg.c")), and finally core are
-released. Note that after `mfree` (#l("mfree(coremap, p->p_size, p->p_addr);")) the process goes on running on the stack within the
+released. After `mfree` (#l("mfree(coremap, p->p_size, p->p_addr);")) the process goes on running on the stack within the
 per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
@@ -916,9 +916,9 @@ The `&0377` (#l("if (p == &u.u_ar0[regloc[i]&0377])")) is new. In v7 the values 
 and the PDP-11's signed `char` gave the right index. On the ARM they are
 all positive and `char` is unsigned; the mask converts the `char` to an
 `int` before it is used as an index, of which the compiler would
-otherwise warn, and changes nothing. Note that, as on the PDP-11, only
-the registers `r0` to `r5`, the stack pointer, and the `pc` can be
-written: `regloc` names no other.
+otherwise warn, and changes nothing. Only the registers `r0` to `r5`,
+the stack pointer, and the `pc` can be written, since `regloc` names no
+other.
 
 #lines-to("if (p == &u.u_ar0[PSR]) {")
 
@@ -1096,7 +1096,7 @@ restarts, since `sched` measures how long a process has been out. If
 `sched` is waiting on `runout` for something to bring in, this process
 is now such a thing.
 
-Note that `swap` (#f("bio.c")) sleeps until the transfer is complete, so
+The routine `swap` (#f("bio.c")) sleeps until the transfer is complete, so
 that `xswap` returns only when the image is safely on the disk.
 
 The page tables are released (#l("ptfree(p);")) after the write, not before it. They
@@ -1741,8 +1741,7 @@ wakeup before the sleep began, and the sleeper would never be woken.
 If the block is not in the cache, the buffer at the head of the
 available list is taken; if it holds a delayed write, the write is
 started and the search begun again. The buffer is moved from the list of
-its old device to that of the new, and given its new identity. Note that
-`B_DONE` is not set, which tells `bread` that the block must be read.
+its old device to that of the new, and given its new identity. `B_DONE` is not set, which tells `bread` that the block must be read.
 
 #lines-to("/*", lead: true)
 
@@ -1984,7 +1983,7 @@ set-user-id, set-group-id, and sticky bits, and below those the nine
 permission bits, of which only the owner's three are named. The routine `access`
 (#f("fio.c")) shifts its argument to reach the group and other bits.
 
-Note that `IFCHR&IFBLK` is 020000, a bit common to the character and
+`IFCHR&IFBLK` is 020000, a bit common to the character and
 block types and absent from the directory and regular types; `rdwr`
 and `smount` use it as a short test for "special file". The pipe code
 borrows `IREAD` and `IWRITE` as flags, since a pipe's mode is never
@@ -2163,7 +2162,7 @@ that it is alone, gives up (#f("pipe.c")).
 A special file has a close routine, which is called only on the last
 close of the device: the loop (#l("for(fp=file; fp < &file[NFILE]; fp++)")) looks for any other `file` still open
 on the same inode. The count `f_count` was cleared first (#l("fp->f_count = 0;")), so that the loop
-does not find the `file` being closed. Note that the test is by inode,
+does not find the `file` being closed. The test is by inode,
 not by device number: two special files with the same major and minor
 numbers are closed independently. The inode has already been released
 by `iput` (#l("iput(ip);", after: "wakeup((caddr_t)ip+2);")); only its address is compared.
@@ -2367,7 +2366,7 @@ The top-level indirect block is found in the inode, or allocated.
 Each pass of the loop reads one indirect block and picks out the next
 address with `sh` and `NMASK`. A block allocated at a lower level is
 recorded in the indirect block above it, which is then itself written
-with `bdwrite`. Note that an I/O error yields zero rather than −1.
+with `bdwrite`. An I/O error yields zero rather than −1.
 
 The addresses in an indirect block are `daddr_t`s exactly as they lie in
 memory, so their byte order is the ARM's: least significant byte first.
@@ -2661,7 +2660,7 @@ then read back from the disk inode itself, found with `itod` and `itoo`.
 The system call `dup` returns a second descriptor for an open `file`. In v7 it is overloaded to
 provide `dup2` as well: if the descriptor carries the bit 0100, the
 second argument names the new descriptor, which is first closed if it
-is open. The C library's `dup2` sets the bit. Note that `dup` of a
+is open. The C library's `dup2` sets the bit. A `dup` of a
 descriptor onto itself does nothing (#l("if (i!=uap->fdes) {")).
 
 #lines-to("/*", lead: true, after: "}")
@@ -3133,9 +3132,7 @@ it is a null directive and does nothing.
 The include of #f("systm.h") (#l("#include \"../h/systm.h\"")) is new; it declares `fumem`, `sumem`,
 `devaddr`, `iomove`, `passc`, and `cpass`, and the prototypes of the
 two routines here. The header #f("buf.h") (#l("#include \"../h/buf.h\"")) is included for `B_READ` and
-`B_WRITE`. In v7 #f("seg.h") was also included, for the segmentation registers
-it borrowed (below); nothing in that header is used here now, and the
-include is gone.
+`B_WRITE`.
 
 #lines-to("void")
 
@@ -3508,7 +3505,7 @@ not disable its receiver interrupt, so characters typed while it is
 closed still go to `ttyinput` and accumulate in the raw queue.
 
 Part of `klread` is new. When the raw queue holds `TTYHOG` characters
-and a complete line, `klrint` (below) puts what follows on `t_holdq`
+and a complete line, `klrint` (#l("klrint(dev_t dev)")) puts what follows on `t_holdq`
 (#f("tty.h")) instead, by way of `ttyhold` (#f("tty.c")), and when
 that too is full it stops taking characters and masks the receive interrupts;
 the characters then wait in the UART's FIFO and, beyond it, in QEMU,
@@ -4114,7 +4111,7 @@ declarations of `nulldev` and `nodev`; those are in #f("systm.h"), and
 their place is taken by the include of #f("seg.h"), which defines
 `struct memregion` and the block attributes used at the end of
 `c.c`, and by those of #f("map.h"), #f("mount.h"), and #f("callo.h"),
-for the tables which `strg3` (below) defines.
+for the tables which `strg3` (#l("char\tstrg3[] =")) defines.
 
 #lines-to("char\t*stre1[] =", lead: true)
 
@@ -5225,7 +5222,7 @@ still holds the return address in the stub's caller. The routine `cerror` saves 
 caller's `r7` on the stack (#l("push\t{r7}")), moves the number into it (#l("mov\tr7, ip")), traps (#l("svc\t#0")),
 and restores it (#l("pop\t{r7}")).
 
-Note that `ip` is also the register which the linker may use in a
+The register `ip` is also the one which the linker may use in a
 veneer, a few instructions it inserts when a branch cannot reach its
 target. An ARM branch reaches 32 MB either way, and a program here is
 less than 1 MB, so no veneer is ever placed between a stub and `cerror`.
@@ -5343,7 +5340,7 @@ unchanged: when a signal other than `SIGINS` or `SIGTRC` is caught,
 `sendsig`, so a handler which wishes to catch the next one must call
 `signal` again.
 
-Note that the convention that an odd action means "ignore" survives
+The convention that an odd action means "ignore" survives
 only because no handler can have an odd address. On the PDP-11
 instructions were at even addresses. On the ARM an odd function address
 denotes Thumb code; every program here is compiled with `-marm`, so
@@ -5962,7 +5959,7 @@ into `line`. The final field is cut at the newline (#l("while(*p && *p != '\\n')
 numbers are converted with `atoi`. The fields `pw_quota` and `pw_comment` are not
 in the file at all and are set to 0 and the empty string.
 
-Note that every call reuses the same `line` and the same `passwd`, so
+Every call reuses the same `line` and the same `passwd`, so
 the result of one call is destroyed by the next. A caller which needs
 two entries at once must copy the first. And, since `fgets` (#l("p = fgets(line, BUFSIZ, pwf);")) reads at
 most `BUFSIZ` − 1 characters, a longer line would be split and its tail
@@ -6256,7 +6253,7 @@ construct are supplied by its keywords, so a body of several statements
 needs no braces, and an `ELIF` chain needs no nesting.
 `SWITCH x IN ... ENDSW` frames a `switch`; the cases inside are written in plain C.
 
-Note that `FI` and `OD` supply a semicolon. A statement before them may
+`FI` and `OD` supply a semicolon. A statement before them may
 omit its own, and the shell's sources often do (`IF x THEN y=0 FI`).
 
 `LOCAL` is `static`, and `PROC` (for `extern`) is no longer used: the
@@ -6397,7 +6394,7 @@ that it is a valid pointer before `main` has set up storage.
 
 The routine `getstak` allocates an item of known size, such as a tree node. The
 size is rounded up to `BYTESPERWORD`, so that the next item, and every
-node, begins on a four byte boundary. Note that nothing checks that the
+node, begins on a four byte boundary. Nothing checks that the
 item fits below `brkend`. That is the business of `locstak`, below,
 and of a signal.
 
@@ -6506,8 +6503,8 @@ next turns into a block.
 
 The items already on the stack thus keep their addresses; only the
 current item moves, which is why #f("sh/stak.h") warns about pointers
-into it. Note that `addblok` does not itself extend the data segment:
-the stores into the new space fault, here as on the PDP-11, and `fault`
+into it. The routine `addblok` does not itself extend the data segment.
+The stores into the new space fault, and `fault`
 extends it (#f("sh/stak.c")). The cast of `round`'s result (#l("rndstak=(STKPTR)round(staktop,BYTESPERWORD);")) is new, as in
 #f("sh/stak.c").
 
@@ -7063,7 +7060,7 @@ global chain `gchain`, which is saved and restored around it because
 expanding a word may itself execute a command, by command substitution
 (#f("sh/macro.c")), and so re-enter `execute`.
 
-Note that the parser wraps a simple command in a fork node only for
+The parser wraps a simple command in a fork node only for
 `&` or a pipeline. Otherwise the decision to fork is made here, after
 expansion, for only now can the shell tell whether the name is one of
 its own commands (`syslook`). The assignments which precede a built-in
@@ -7772,7 +7769,7 @@ Without arguments, `export` and `readonly` use `printflg`.
 The routine `getenv` makes a variable of each entry of `environ`, which `crt0`
 (#f("csu/crt0.s")) set from the arguments of `main`. It has nothing to
 do with the C library's `getenv`, which looks up a single name, and
-`setenv` likewise has nothing to do with any library function. Note that an entry which does not have the form
+`setenv` likewise has nothing to do with any library function. An entry which does not have the form
 `name=value` with an identifier for its name is fatal: `setname`
 reports it, and since the flags are not yet set, `exitsh` ends the
 shell (#f("sh/error.c")).
@@ -8338,7 +8335,7 @@ none in this system does. The storage for `_iob` and for the buffers of
 the standard input and output is in `data.c`, which initialises the first
 three entries.
 
-Note that `_flag` and `_file` are `char`. On the PDP-11 `char` was
+The fields `_flag` and `_file` are `char`. On the PDP-11 `char` was
 signed and on the ARM it is unsigned. `_file` never exceeds 0177, and
 the flags fit in eight bits; `_IORW` (0200) makes `_flag` negative on
 the PDP-11, but the flags are only ever tested and changed by masks, on
@@ -8825,7 +8822,7 @@ will not have its output appended. Mode `r` opens an existing file. The
 `open` modes 0, 1, and 2 are read, write, and both (`open1`,
 #f("sys2.c")).
 
-Note that `errno` is examined (#l("if (errno == ENOENT)")) only after a failure, and that if
+The variable `errno` is examined (#l("if (errno == ENOENT)")) only after a failure. If
 the `open` fails for another reason, or the `create` fails too,
 `lseek` is applied to -1, fails harmlessly, and the failure is reported
 below (#l("if (f < 0)")).
@@ -9002,7 +8999,7 @@ significant decimal digits, so nothing of value is lost.
 `%c` stores the character unless it is the null character, as in v7. `%s`
 takes the string, or `"(null)"` for a null pointer, which v7 also
 printed, and uses at most the precision's worth of it. Neither is ever
-padded with zeros. Note that for `%s` the result is not copied into
+padded with zeros. For `%s` the result is not copied into
 `buf`; `s` and `p` bracket the string itself.
 
 #lines-to("default:")
@@ -9172,7 +9169,7 @@ declaration of `atof` has gone to #f("stdio.h").
 characters (`%c`, by default one). A string first skips white space;
 then it stops at white space, a class stops at a character marked `STP`,
 and `%c` stops only when the count is exhausted. Only a `%c` is stored
-without a null character. Note that `ptr` may be null for a suppressed
+without a null character. The pointer `ptr` may be null for a suppressed
 assignment, in which case the characters are read and discarded.
 
 The first `getc` is masked with `0377` (#l("while (_sctab[(ch = getc(iop))&0377] & ignstp)")) for the enlarged table.
@@ -9279,7 +9276,7 @@ the low byte. If the shell cannot be executed the child exits with
 The parent ignores interrupt and quit while it waits, so that a
 character typed at the terminal to stop the command stops only the
 command; the previous actions are restored afterwards. Any other child
-which ends during the wait is collected and lost. Note that the signals
+which ends during the wait is collected and lost. The signals
 are ignored only after the `fork`, so the child has the caller's
 actions, which the shell then adjusts for itself.
 
@@ -9623,7 +9620,7 @@ The year is found by subtracting the lengths of whole years, at most
 called `dysize` with the whole year, 1970 and on; only v7's rule, a
 leap year every fourth year, gave the same answer for both, and it
 fails first in 2100. Now `d1` counts whole years from 1970 (#l("if (day>=0) for(d1=1970; day >= dysize(d1); d1++)")--#l("day += dysize(d1-1);")),
-and `dysize` (below) follows the Gregorian calendar. The field `tm_year` is the
+and `dysize` (#l("dysize(int y)")) follows the Gregorian calendar. The field `tm_year` is the
 year less 1900, as before (#l("xtime.tm_year = (d1 + cyc%25*400 + 10000) % 10000 - 1900;")), but the year is first reduced modulo
 10,000, which is 25 cycles, so that it lies between 0 and 9999 and
 fits the four digits of `asctime`; the furthest years of a 64-bit time
@@ -11308,8 +11305,7 @@ first file, so when `l` is one more than the length just replaced,
 the predecessor must be the candidate which was there before the
 replacement, saved in `tc` (#l("tc = c[l];"), #l("oldc = tc;")), not the new one, whose `x` is
 `i` itself. Likewise a `y` no greater than the `y` of that saved
-predecessor (#l("if(y <= clist[oldc].y)")) cannot extend it, and is passed over. Note that
-`continue` in a `do`-`while` goes to the test (#l("} while((y=b[++j]) > 0);")), which advances to
+predecessor (#l("if(y <= clist[oldc].y)")) cannot extend it, and is passed over. `continue` in a `do`-`while` goes to the test (#l("} while((y=b[++j]) > 0);")), which advances to
 the next member of the class.
 
 #lines-to("int", after: "}")
@@ -11905,7 +11901,7 @@ followed by "."; for a name with no slash, it is "." itself. A call of `access`
 asks with the real user and group ids whether the parent may be written
 (`saccess`, #f("sys2.c")). In a set-user-id program this was the whole
 of the permission check, since the effective id was root's and every
-later call would succeed. Note that `strncpy` (#l("strncpy(pname, d, slash);")) leaves `pname`
+later call would succeed. The call of `strncpy` (#l("strncpy(pname, d, slash);")) leaves `pname`
 unterminated, and the `strcpy` which follows supplies the terminator.
 
 The v7 program gave `pname` and `dname` 128 bytes each and never checked a name
@@ -14901,7 +14897,7 @@ the files now make `dd` exit with 1 (#l("exit(1);", after: "fprintf(stderr,\"bad
 `term` passes on a status (#l("term(int sig)")--#l("}", after: "exit(sig);")), 1 after an error of reading or
 writing and the signal's number after an interrupt. The routine `skip` now stops at
 the end of the input (#l("if(read(ibf, ibuf, ibs) <= 0)")--#l("break;")), where v7 went on reading nothing for
-the rest of the count. Note that `skip` reads its way past the records,
+the rest of the count. The option `skip` reads its way past the records,
 so that skipping far into a large input takes as long as copying it.
 
 #lines-to("int", lead: true, after: "obc = 0;")
@@ -16057,8 +16053,7 @@ The file #f("group") is v7's, unchanged. Each line names a group, gives its
 password (none here), its group id, and the users who may join it with
 `newgrp`. The commands `ls -lg` and `find -group` read it themselves to translate
 between names and numbers; `chgrp` and `newgrp` use `getgrnam` and its
-companions from the C library. Note that
-the users of #f("passwd") have group ids 1 to 4, so that `root` and
+companions from the C library. The users of #f("passwd") have group ids 1 to 4, so that `root` and
 `daemon` belong to `other`; there is no group 0, though most files of
 the image have group id 0 (#f("rootfs.proto")), and `ls -lg` therefore
 shows those files' group as a number. The memory and disk special
