@@ -807,8 +807,7 @@ bit `n-1` of `p_sig`.
 
 #lines-to("/*", lead: true, after: "}")
 
-The routine `core` writes a core image to the file `core` in the current directory: first the whole
-per-process area, `USIZE` pages, which contains the saved registers,
+The routine `core` writes a core image to the file `core` in the current directory, first the whole per-process area, `USIZE` pages, which contains the saved registers,
 then the user's memory. Before it looks the name up, it gives up unless
 the effective user and group ids equal the real ones (#l("if(u.u_uid != u.u_ruid || u.u_gid != u.u_rgid)")), so that a
 set-user-id or set-group-id program leaves neither an image nor a file.
@@ -4345,8 +4344,8 @@ and string 2 the product, with no serial number; and one
 configuration.
 
 The configuration descriptor (#l("static unsigned char cfgdesc[67] = {")--#l("};", after: "7, 5, 0x81, 2, 0x00, 0x02, 0")) comes with everything below it,
-67 bytes in all, in one block. Its first line is the configuration:
-two interfaces, number 1, self-powered (`0xc0`), drawing at most 2 mA.
+67 bytes in all, in one block. Its first line is configuration number 1, with two interfaces,
+self-powered (`0xc0`), drawing at most 2 mA.
 Interface 0 is the communications interface, class 2 subclass 2,
 "abstract control model", with one endpoint. The four lines after it
 are class-specific descriptors (type `0x24`): the CDC header, version
@@ -4361,9 +4360,8 @@ endpoint 1 in (`0x81`), both bulk, with packets of 512 bytes. The
 array is not `const`, because at full speed `dosetup` changes these
 two sizes to 64.
 
-The array `lang` (#l("static const unsigned char lang[4] = { 4, 3, 0x09, 0x04 };")) is string descriptor 0, the list of languages: one,
-`0x0409`, American English. The array `linecoding` (#l("static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0,")) holds what the host last
-set as the line's speed and format: 115200 baud (`0x0001c200`, least
+The array `lang` (#l("static const unsigned char lang[4] = { 4, 3, 0x09, 0x04 };")) is string descriptor 0, the list of languages, which holds one,
+`0x0409`, American English. The array `linecoding` (#l("static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0,")) holds what the host last set as the line's speed and format, 115200 baud (`0x0001c200`, least
 significant byte first), one stop bit, no parity, 8 data bits. Nothing
 on a USB link depends on it, but a terminal program sets it and reads
 it back, and the device must remember it.
@@ -4441,8 +4439,7 @@ alternate setting 0. Anything else is refused.
 
 #lines-to("static void", lead: true)
 
-The routine `busreset` follows a reset of the bus by the host: every endpoint but 0
-is stopped, every endpoint's interrupts cleared, the address cleared,
+The routine `busreset` follows a reset of the bus by the host. Every endpoint but 0 is stopped, every endpoint's interrupts cleared, the address cleared,
 the device unconfigured, and all transmit FIFOs flushed (`TXFFLSH`, bit
 5, with the number `0x10`, "all", in bits 6--10). Endpoint 0 is then
 made ready for the first request.
@@ -5089,8 +5086,8 @@ address restored from the stack.
 
 The routine `monitor` is v7's, for 32-bit words. Called with a range of text
 addresses, a buffer, its size in halfwords, and a number of call
-counters, it lays out the buffer as `mon.out` will hold it: the header
-`hdr`, the counters `cnt`, and the histogram (#l("((struct hdr *)buf)->lowpc = lowpc;")--#l("bufsiz -= (buf - sbuf);")), the layout which
+counters, it lays out the buffer as `mon.out` will hold it, with the header `hdr`,
+the counters `cnt`, and the histogram (#l("((struct hdr *)buf)->lowpc = lowpc;")--#l("bufsiz -= (buf - sbuf);")), the layout which
 `prof` reads (#f("cmd/prof.c")). It then asks the kernel through
 `profil` to count the program counter into the histogram at each clock
 tick. The scale is a fraction of 0x10000 by which the offset of the
@@ -5819,8 +5816,7 @@ The terminal is given to the user (#l("chown(ttyn, pwd->pw_uid, pwd->pw_gid);"))
 id are changed, in that order, since after `setuid` the process would no
 longer be allowed `setgid`. From here on the process is the user's.
 
-The environment is replaced by `envinit` (#l("environ = envinit;")): `HOME`, completed from
-the password entry (#l("strncat(homedir, pwd->pw_dir, sizeof(homedir)-6);")), and `PATH`. The string `minusnam` becomes `-` followed by
+The environment is replaced by `envinit` (#l("environ = envinit;")), which holds `HOME`, completed from the password entry (#l("strncat(homedir, pwd->pw_dir, sizeof(homedir)-6);")), and `PATH`. The string `minusnam` becomes `-` followed by
 the last component of the shell's name, so that `/bin/sh` is called
 `-sh` and reads the user's `.profile` (#f("sh/main.c")). The file mode
 creation mask is set to 02, so that new files are not writable by
@@ -6183,9 +6179,8 @@ The `...TYPE` macros give the size of each node for `getstak`.
 #source("/usr/src/cmd/sh/mac.h")
 
 Bourne wrote the shell, and later the debugger `adb`, in a C disguised
-as Algol 68, and #f("sh/mac.h") is the disguise. Each keyword expands
-to the punctuation of the C statement it replaces: `IF c THEN s FI`
-becomes `if( c ){ s ;}`, `WHILE c DO s OD` becomes `while( c ){ s ;}`,
+as Algol 68, and #f("sh/mac.h") is the disguise. Each keyword expands to the punctuation of the C statement it replaces.
+Thus `IF c THEN s FI` becomes `if( c ){ s ;}`, `WHILE c DO s OD` becomes `while( c ){ s ;}`,
 and `REP s PER c DONE` is a `do`-`while` loop. `LOOP ... POOL` is a loop
 without a test, left by `break` or `return`. The brackets of each
 construct are supplied by its keywords, so a body of several statements
@@ -13433,8 +13428,7 @@ overflowed.
 The command `graph` draws a graph of pairs of numbers read from its input, with
 axes, grid, labels, and a title, scaled to fit or as the options say,
 on linear or logarithmic axes. It writes the device-independent plot
-format of v7, which filters such as `tek` turned into drawing on a
-terminal: a letter for each operation, `m` to move, `n` to continue a
+format of v7, which filters such as `tek` turned into drawing on a terminal. It writes a letter for each operation, `m` to move, `n` to continue a
 line, `t` for a label, followed by 16-bit coordinates, low byte first.
 In v7 the routines that wrote it, `space`, `move`, `line`, and the
 rest, came from the plotting library, `-lplot`. That library is not
@@ -13581,8 +13575,7 @@ whatever child `wait` returned first.
 The command `test` evaluates an expression made of its arguments and exits with 0
 if it is true, 1 if false, and 255 for a malformed one. It is how the
 shell's `if` and `while` test files and strings. Called as `[`, it
-requires a closing `]`. The expression is parsed by recursive descent
-as it is evaluated: `exp` for `-o`, `e1` for `-a`, `e2` for `!`, and
+requires a closing `]`. The expression is parsed by recursive descent as it is evaluated, with `exp` for `-o`, `e1` for `-a`, `e2` for `!`, and
 `e3` for parentheses and the primaries, which test files (`-r`, `-w`,
 `-f`, `-d`, `-s`), terminals (`-t`), strings (`-z`, `-n`, `=`, `!=`),
 and integers (`-eq` and the like, with `-l` giving a string's length).
@@ -13774,7 +13767,7 @@ function now returns a value at its end (#l("return(0);", after: "exit(0);")).
 
 #lines-to("print(struct blk *hptr)")
 
-The routine `print` prints a number in the output base: `tenot` for base ten,
+The routine `print` prints a number in the output base, using `tenot` for base ten,
 `hexot` and `bigot` for others, breaking lines at `ll` characters.
 
 #lines-to("add(struct blk *a1, struct blk *a2)")
@@ -14937,8 +14930,8 @@ variables used by `make`'s built-in rules, so redefining them is enough
 for every object in the tree to be compiled in place by those rules.
 
 `LINK` links a user program from the objects and archives among its
-prerequisites, in the order given there: `crt0.o` first, then the
-program, then `libm.a` and `libc.a`. `-s` strips the symbol table, as
+prerequisites, in the order given there, `crt0.o` first, then the program, then
+`libm.a` and `libc.a`. `-s` strips the symbol table, as
 v7's `cc -s` did. The compiler's helper routines, the 64-bit division
 and the conversions of `long long` to floating point, come from the C
 library (#f("libc/aeabi.s")), not from the compiler's own library.
@@ -14990,8 +14983,7 @@ disk is there for the next.
 
 #lines-to("ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \\", lead: true)
 
-The tree is built in place, and the programs are made where they will
-lie in the target's file system: `bin/cat`, `etc/init`,
+The tree is built in place, and the programs are made where they will lie in the target's file system, such as `bin/cat`, `etc/init`,
 `usr/games/fortune`. The prototype file names them relative to the top
 of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
 `ROOTFS_STATIC` lists the files of the image which are not compiled. They are the shell scripts `1`, `true`, `false`, and `nohup`, the files of
@@ -15786,8 +15778,7 @@ for a process whose user or group was changed by `exec`.
 #lines-to("dev\td--755 0 0")
 
 The special files. Each gives a type (`b` or `c`), and the major and
-minor device numbers (#f("qemu/c.c")): the console is
-character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
+minor device numbers (#f("qemu/c.c")). The console is character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
 and 2 of device 8 (#f("mem.c")), and `tty` is device 17. The commands `ps`,
 `pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
 and `ps` reads process images through `mem` (#f("mem.c")), and `cron` runs
