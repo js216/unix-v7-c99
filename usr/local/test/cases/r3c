@@ -8,7 +8,7 @@ uniq -c $U/sortin; uniq -c $U/long | wc
 file $U/asm $U/bcf $U/ctxt $U/long $U/roff $U/sortin $U/u2 $U/words $U/edscr
 find /etc -user root -print | wc -l; find $U -size -2 -print; find /bin -name 'c?' -perm 755 -print
 find $U -type f -links 1 -name 'w*' -exec echo found {} \; ; find /etc -group 0 -mtime -100000 -print | wc -l; find / -inum 2 -print
-find $U ! -type d -ctime -100000 -atime -100000 -print | wc -l
+find $U ! -type d -ctime -100000 -atime -100000 -name words -print | wc -l
 ps ax | grep -c 'ps ax$'; ps | sed 1q; ps alx | sed 1q
 pstat -t >o; sed 2q o; pstat -p >o; sed -n 2p o; pstat -i >o; sed -n 2p o
 pstat -f >o; sed -n 2p o; pstat -x >o; sed -n 2p o
