@@ -19,7 +19,7 @@ T = $(if $V,,@printf '  %-7s %s\n' $1 $@;)
 Q = $(if $V,,@)
 COMPILE.c = $(call T,CC)$(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE.s = $(call T,AS)$(AS) $(ASFLAGS)
-LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc
+LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^)
 
 all: boot/unix boot/rootfs.img boot/rootfs-mp135.img
 

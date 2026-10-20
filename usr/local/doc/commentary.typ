@@ -5345,10 +5345,7 @@ Note that the convention that an odd action means "ignore" survives
 only because no handler can have an odd address. On the PDP-11
 instructions were at even addresses. On the ARM an odd function address
 denotes Thumb code; every program here is compiled with `-marm`, so
-every function which could be a handler lies on a word boundary. Only
-the routines linked from the compiler's library `libgcc` are Thumb
-code, and `sendsig` and `sigreturn` (#f("machdep.c")) take care of a
-signal which interrupts one of them.
+every function which could be a handler lies on a word boundary.
 
 #lines-to(none)
 #source("/usr/src/libc/sys/fork.s")
@@ -10307,6 +10304,59 @@ library (#f("libc/lib.mk")), so the library must have them. They are
 written as plain loops.
 
 #lines-to(none)
+#source("/usr/src/libc/aeabi.s")
+
+The compiler turns 64-bit division, and the conversion of a `long long`
+to `double` or `float`, into calls of these four routines, whose names
+and conventions the ARM's run-time ABI fixes. They take their arguments
+and return their results in the core registers, even under the hard
+floating-point convention. The compiler's own library, `libgcc`, has
+them too, but its build for these flags is Thumb code, which every
+signal handler would then have to allow for (`sendsig`,
+#f("machdep.c")). With these, every instruction of a user program is
+ARM code from this tree.
+
+When both high words are zero, `__aeabi_uldivmod` divides with the
+processor's own `udiv` (#l("udiv\tip, r0, r2")) and finds the remainder
+with `mls`. Otherwise it divides a bit at a time, in 64 steps of shift
+and trial subtraction (#l("2:")--#l("bne\t2b")). The dividend shifts out
+of the top of `r1:r0` into the remainder in `r5:r4`, and each quotient
+bit shifts in at the bottom of `r1:r0`. The remainder cannot overflow
+when it shifts: before the step which brings in bit _k_ of the dividend,
+it is less than the bits above _k_, so it never reaches 2#super[63].
+
+#lines-to("@ Signed:", lead: true)
+
+The signed `__aeabi_ldivmod` divides the magnitudes. The quotient is
+negative when the signs differ, and the remainder takes the sign of the
+dividend, as C requires of `/` and `%`. Each sign is kept as a mask
+of all ones or all zeros (#l("asr\tr4, r1, #31"), #l("asr\tip, r3, #31")).
+An exclusive or with the mask followed by a subtraction of it negates a
+64-bit number when the mask is all ones and leaves it alone when the
+mask is zero.
+
+#lines-to("@ r1:r0 -> double", lead: true)
+
+The routine `__aeabi_l2d` converts the low word as unsigned and the high word as
+signed, and adds the high one times 2#super[32]
+(#l("vmla.f64\td1, d2, d0", after: "__aeabi_l2d:")). The product is
+exact, so the sum is rounded only once, and the result is the nearest
+`double`.
+
+#lines-to("@ r1:r0 -> float", lead: true)
+
+A `float` has 24 bits of precision. A conversion through a `double`
+would round twice when the magnitude needs more than 53 bits: first to
+53 bits, which can land exactly halfway between two `float`s, and then
+to 24, which rounds such a tie to even although the true value lay
+above it. So `__aeabi_l2f` works on the magnitude and, when it is
+2#super[53] or more (#l("cmp\tr1, #0x200000")), folds the low 11 bits
+into bit 11 (#l("lsls\tr2, r0, #21")--#l("orrne\tr0, r0, #0x800")).
+The value then fits a `double` exactly, and bit 11 still tells the
+final rounding whether anything lay below. The sign goes back on at
+the end.
+
+#lines-to(none)
 #source("/usr/src/libc/gen/swab.c")
 
 The routine `swab` swaps the bytes of each pair, for moving 16-bit data between
@@ -14966,7 +15016,7 @@ fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
 `-Wl,-z,max-page-size=4096,-Ttext=0x94` are options for the linker,
 which the compiler ignores when it only compiles; they apply to the
-link of every user program (#l("LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^) -lgcc")), never to the kernel, which is linked by
+link of every user program (#l("LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^)")), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
 segments: the text, with the read-only constants, readable and
 executable, and the data, readable and writable. This is the ELF
@@ -14974,15 +15024,14 @@ counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
 read-only and shares it among all the processes running the program. The option `max-page-size`
 places the data at the start of a new 4096-byte page, so that the two
 can be mapped with different permissions. `-Ttext=0x94` links the text
-at address `0x94`, just past the ELF file header (52 bytes) and three
-program headers (32 bytes each), 148 bytes in all, which the linker
+at address `0x94`, just past the ELF file header (52 bytes) and room
+for three program headers (32 bytes each), 148 bytes in all, which the linker
 places at the start of the text segment; the text is word-aligned, as
 0x94 is. The signal trampoline at 8 (`sendsig`, #f("machdep.c")) lies within the
 headers, written over them by `xalloc` (#f("text.c")) while the text is
-still writable. Most programs have three: the 64-bit division of
-`libgcc`, which `_doprnt` needs (#f("stdio/doprnt.c")), brings a section
-of unwinding information, `.ARM.exidx`, to which the linker gives a
-program header of its own beside the two loadable segments. The linker
+still writable. A program has two headers, one for each loadable
+segment; a section of unwinding information, `.ARM.exidx`, would
+have a third. The linker
 places the headers at the start of the text segment, which begins at
 offset 0 of the file as at address 0, and the kernel skips them when it
 loads the text (`xalloc`, #f("text.c")). Were there no room for them
@@ -15007,12 +15056,9 @@ for every object in the tree to be compiled in place by those rules.
 `LINK` links a user program from the objects and archives among its
 prerequisites, in the order given there: `crt0.o` first, then the
 program, then `libm.a` and `libc.a`. `-s` strips the symbol table, as
-v7's `cc -s` did. `-lgcc` brings in the compiler's helper routines,
-such as the 64-bit division and the conversions between `double` and
-`long long`, which take more than one instruction; the compiler picks
-the library's variant for hard floating point from the same flags. That
-variant is compiled to Thumb code, so a user program does sometimes run
-in Thumb state (see `sendsig`, #f("machdep.c")).
+v7's `cc -s` did. The compiler's helper routines, the 64-bit division
+and the conversions of `long long` to floating point, come from the C
+library (#f("libc/aeabi.s")), not from the compiler's own library.
 
 #lines-to("all: boot/unix boot/rootfs.img boot/rootfs-mp135.img", lead: true)
 
@@ -16086,7 +16132,7 @@ programs are compiled with `usr/sys` on the search path as well as
 such as `h/user.h`, to find a register in a stopped process's saved
 frame. They are linked as the commands are, except `proft`, which is
 compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
-not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^) -lgcc")).
+not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^)")).
 
 Four small file systems are made by `mkfs` for the tests of the
 file-system commands: `fs.img`, from the prototype `fs.proto`, with a
