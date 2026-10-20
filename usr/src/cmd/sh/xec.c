@@ -42,7 +42,7 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			BEGIN
 			COMPTR		c=(COMPTR)t;
 			STRING		a1;
-			INT		argn, internal;
+			INT		argn, internal=0;
 			ARGPTR		schain=gchain;
 			IOPTR		io=c->comio;
 			gchain=0;
@@ -50,8 +50,8 @@ execute(TREPTR argt, INT execflg, INT *pf1, INT *pf2)
 			com=scan(argn);
 			a1=com[1]; gchain=schain;
 
-			IF ((internal=syslook(com[0],commands)) ORF
-			    argn==0)
+			IF argn==0 ORF
+			    (internal=syslook(com[0],commands))
 			THEN	setlist(c->comset, 0);
 			FI
 
