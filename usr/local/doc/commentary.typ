@@ -16226,20 +16226,6 @@ nothing in the file (#l("t[2] = 4096;")--#l("try(\"notext\", len);")). These are
 child dies of `SIGSEG` and leaves a core image, status 139.
 
 #lines-to(none)
-#source("/usr/local/test/utils/bigx.c")
-
-The utility `bigx` passes `exec` 700 arguments of ten characters, 7700 bytes, more
-than `NCARGS` allows, and prints the failure, `E2BIG` (#l("v[0] = \"argt\";")--#l("execv(\"/usr/local/test/utils/argt\", v), errno);")). Then
-500 of them, which fit, and `argt` reports them (#l("v[501] = 0;"), #l("execv(\"/usr/local/test/utils/argt\", v);")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/bigv.c")
-
-The utility `bigv` passes `exec` thousands of empty arguments (#l("n = atoi(argv[1]);")--#l("execv(argv[2], av);")). The limit
-counts the bytes of the strings, each empty one costing its null, so
-5000 of them fit. The pointers to them are not counted against it.
-
-#lines-to(none)
 #source("/usr/local/test/utils/bigm.c")
 
 The utility `bigm` makes a process large in each of the three ways the kernel lets
@@ -16266,20 +16252,6 @@ address in the gap between data and stack, and one in the kernel's
 space (#l("fd = open(\"/etc/passwd\", 0);")--#l("printf(\"write gap: %d errno %d\\n\", r, errno);")), then valid buffers on the stack and in the data
 (#l("r = read(fd, local, 16);")--#l("printf(\"read data: %d\\n\", r);")). With an argument it stores into the gap itself, and dies of
 a memory fault, leaving a core image (#l("if (argc > 1)"), #l("*(int *)0x80000 = 1;")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/txtt.c")
-
-Text is read-only. The utility `txtt` asks `read` to fill a string in the text,
-which fails with `EFAULT` and leaves the string as it was (#l("fd = open(\"/etc/passwd\", 0);")--#l("printf(\"read into text: %d errno %d, text %s\\n\", r, errno, t);")), then
-stores into it directly, which raises `SIGSEGV` (#l("signal(SIGSEGV, catch);")--#l("printf(\"store into text succeeded\\n\");")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/szt.c")
-
-The utility `szt` forks and both processes pause, so that the `r5b` case can check
-the size `ps -l` reports for a process whose text is shared, then wake
-them with an alarm signal.
 
 #lines-to(none)
 #source("/usr/local/test/utils/clock.c")
@@ -16350,20 +16322,6 @@ through `/dev/kmem` at `UBASE` and through `/dev/mem` at the physical
 address of its u-area, which must agree (#l("pa = ptob((unsigned long)pr.p_addr);")--#l("uk.u_procp == um.u_procp);")). `/dev/mem` has no
 memory at the virtual address `UBASE`, and `/dev/kmem` none below the
 kernel (#l("lseek(m, (long)UBASE, 0);")--#l("printf(\"kmem below the kernel %d\\n\", read(k, (char *)&uk, 4));")) (#f("mem.c")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/swb.c")
-
-The utility `swb` prints the first and last blocks of the swap area, from the
-kernel's `swplo` and `nswap`, so that the cases testing `/dev/swap` and
-`dd` near the end of a device know where the area lies on the disk.
-
-#lines-to(none)
-#source("/usr/local/test/utils/devt.c")
-
-A device's registers are mapped only into the kernel's address space.
-The utility `devt` reads the QEMU machine's UART flag register from user mode
-(#l("volatile int *p = (volatile int *)0x09000018;")--#l("printf(\"got %x\\n\", *p);")), and must die of a memory fault, on either machine.
 
 #lines-to(none)
 #source("/usr/local/test/utils/r5r.c")
