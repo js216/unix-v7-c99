@@ -234,7 +234,7 @@ included before them. It reserves no storage, though it declares some
 which the remainder of the system is built. As elsewhere in UNIX,
 defined constants are written in upper case only.
 
-The file falls into six parts: the tunable parameters, the priorities,
+The file falls into six parts, the tunable parameters, the priorities,
 the signals, the "fundamental constants", some conversion macros and
 types, and finally a few machine-dependent definitions.
 
@@ -369,8 +369,7 @@ block 2.
 
 #lines-to("typedef\tstruct { int r[1]; } *\tphysadr;")
 
-The type `label_t` (#l("typedef\tint\t\tlabel_t[10];\t/* regs 4-11, sp, lr */")) has ten words, for the registers which `save`
-(#f("mch.s")) stores: r4 to r11, the stack pointer, and the link
+The type `label_t` (#l("typedef\tint\t\tlabel_t[10];\t/* regs 4-11, sp, lr */")) has ten words, for the registers which `save` (#f("mch.s")) stores, r4 to r11, the stack pointer, and the link
 register.
 
 A `time_t` (#l("typedef\tlong long\ttime_t;")) is a `long long`, a signed count of 64~bits, where v7's
@@ -472,8 +471,7 @@ results go back to the user through `u.u_r`. It is now a pointer to a
 
 In v7, #f("seg.h") held the addresses of the PDP-11 memory management
 registers (the KT-11 unit) and the bits of a segment descriptor. The
-PDP-11 divided each address space into eight segments of up to 8~KB. Each was described by a pair of
-registers: an address register, giving the
+PDP-11 divided each address space into eight segments of up to 8~KB. Each was described by a pair of registers, an address register, giving the
 base in 64-byte units, and a descriptor register, giving the length and the
 access rights. None of that hardware exists here, and v7's definitions
 for it are gone. What remains of v7's file is its first comment,
@@ -580,14 +578,12 @@ device. It also supplied, for every device, a two-instruction stub which entered
 vectors, and only one of them serves all devices. The interrupt
 controller (GIC) is asked which device interrupted, and `irq`
 (#f("machdep.c")) looks the answer up in `intrtab`, which `mkconf` now
-writes into #f("qemu/c.c"). So #f("low.s") is the same for every configuration. It holds what in v7 was split between `l.s` and the
-start of `mch.s`: the reset code (v7's `start`), the vectors, and the
+writes into #f("qemu/c.c"). So #f("low.s") is the same for every configuration. It holds what in v7 was split between `l.s` and the start of `mch.s`, the reset code (v7's `start`), the vectors, and the
 assembler `trap` and `call` routines which build the register frame for
 C.
 
 A few ARM facts are needed throughout. The processor is always in one
-of several modes, named by the low five bits of the program status
-register `cpsr`: user (`0x10`), IRQ (`0x12`), supervisor or SVC
+of several modes, named by the low five bits of the program status register `cpsr`, user (`0x10`), IRQ (`0x12`), supervisor or SVC
 (`0x13`), abort (`0x17`), undefined (`0x1b`), and system (`0x1f`). The
 kernel runs in SVC mode, which plays the part of the PDP-11's kernel
 mode. Each exception enters its own mode, and each mode except system
@@ -598,7 +594,8 @@ saved program status register `spsr`, into which the hardware copies
 interrupts, and `cpsid` sets and `cpsie` clears them. The registers `r0` to
 `r12` are shared by all modes (apart from `r8` to `r12` in the unused FIQ
 mode). Coprocessor 15 (`p15`), reached by `mrc` (read) and `mcr` (write),
-holds the system control registers: the MMU, the caches, and the like.
+holds the system control registers for the MMU, the caches, and the
+like.
 
 _Calling Convention._ Assembly language and C meet under the ARM
 Procedure Call Standard (AAPCS). The first four arguments of a function
@@ -611,8 +608,7 @@ The processor arrives at `_start` (#l("_start:")) from the boot loader in SVC mo
 Interrupts and fast interrupts are masked at once (#l("cpsid if", after: "_start:")), the analogue of
 v7's `spl 7` state at the start.
 
-The system control register `SCTLR` is then read, and five bits are
-cleared: the instruction cache (bit 12), the data cache (2), branch
+The system control register `SCTLR` is then read, and five bits are cleared, those of the instruction cache (bit 12), the data cache (2), branch
 prediction (11), "high vectors" (13), which would place the vectors at
 `0xffff0000`, and the MMU itself (0). The instruction `isb` makes sure that the following instructions are fetched under the
 new setting.
@@ -803,7 +799,7 @@ architecture forbids writeback with this form, hence the separate `sub`.
 
 #lines-to("mov r0, sp")
 
-The frame is thus seventeen words: `r0`--`r12` at 0 to 48, the user `sp`
+The frame is thus seventeen words, `r0`--`r12` at 0 to 48, the user `sp`
 at 52, the user `lr` at 56, the return PC at 60, and the saved status at
 64. This is why `SP`, `PC`, and `PSR` in #f("reg.h") are 13, 15, and 16:
 `u.u_ar0[SP]` is the user stack pointer, `u.u_ar0[PC]` the PC.
@@ -864,8 +860,7 @@ a process with a better priority is ready to run (#f("slp.c"),
 #f("clock.c")), the current process must give up the processor before
 it returns. The code then jumps to the call of `user_trap_handler`
 which the traps below use (#l("1:", after: "mrc p15, 0, r2, c6, c0, 0")), with signal 0 and address 0
-(#l("mov r0, #0", after: "ldr r0, =runrun"), #l("mov r2, #0", after: "ldr r0, =runrun")). Signal 0 posts nothing, so the handler does only what it does at
-the end of every trap: it takes any pending signal (`issig`, `psig`),
+(#l("mov r0, #0", after: "ldr r0, =runrun"), #l("mov r2, #0", after: "ldr r0, =runrun")). Signal 0 posts nothing, so the handler does only what it does at the end of every trap. It takes any pending signal (`issig`, `psig`),
 recomputes the priority (`setpri`), and gives up the processor
 (`qswtch`). Otherwise the frame is unloaded at once (#l("2:", after: "bl user_trap_handler")). Without this
 test a process which never made a system call would never be
@@ -1140,8 +1135,7 @@ that the processor finds what the controller wrote and not stale lines.
 #lines-to("arm_sync_icache:", lead: true)
 
 The routine `arm_sync_icache` makes instructions just written to memory
-visible to instruction fetch. The kernel must call it whenever it writes
-instructions that will be executed: a text read in from a file or back
+visible to instruction fetch. The kernel must call it whenever it writes instructions that will be executed, such as a text read in from a file or back
 from the swap area, the signal trampoline, `icode`, and a word that a
 debugger stores into a text. A program's data and stack are never
 executed, so they need no such care.
@@ -1249,8 +1243,7 @@ and control register `FPSCR`, which holds the rounding mode and the
 cumulative exception flags, and the 32 double registers `d0` to `d31`,
 which the processor's vector instructions (Advanced SIMD) also use.
 The instructions `vmrs` and `vmsr` move `FPSCR`, and `vstmia` and `vldmia` move sixteen
-registers each, the most one instruction allows. The layout is that of
-`u_fps` (#f("user.h")): `FPSCR` in the first word, and the registers
+registers each, the most one instruction allows. The layout is that of `u_fps` (#f("user.h")), with `FPSCR` in the first word, and the registers
 from byte 8, where the alignment of a `double` puts them. Both machines
 have the unit (#f("low.s")), and `FPEXC` needs no saving, since the
 unit stays enabled. The Cortex-A7's unit takes no trap on an arithmetic
@@ -1301,7 +1294,7 @@ registers did not lie in order: `r1` was two words below `r0`, `r2` to
 #f("low.s") in a single order: `r0` to `r12` at indices 0 to 12, the
 user's `sp` at 13, its `lr` at 14, the return address at 15, and the
 saved status register (`spsr`) at 16. The registers are named by the
-ARM's names (#l("#define\tSP\t(13)")--#l("#define\tPSR\t(16)")): `SP` for the stack pointer, `PC` for the program
+ARM's names (#l("#define\tSP\t(13)")--#l("#define\tPSR\t(16)")), `SP` for the stack pointer, `PC` for the program
 counter, and `PSR` for the saved status, where v7 had the PDP-11's
 `R6`, `R7`, and `RPS`. The PDP-11's trace bit, v7's `TBIT`, is gone:
 the ARM has no such bit in its status register, and nothing sets it
@@ -1315,7 +1308,7 @@ the register which holds the system call number.
 
 #source("/usr/sys/sys/trap.c")
 
-What remains of v7's trap handling is in #f("trap.c"): `regloc`, a much
+What remains of v7's trap handling is in #f("trap.c"). It holds `regloc`, a much
 reduced `trap` which handles only system calls, `user_trap_handler`,
 which handles every other exception, and the two dummy calls `nosys`
 and `nullsys`. The headers #f("dir.h") and #f("user.h") are included for `u`, and
@@ -2042,8 +2035,8 @@ stores and `resume` reloads, much like a `setjmp` buffer. Reloading it
 makes the original call of `save` return a second time (see _Process
 Switching_, page #pageref(<mch-switch>)). The label `u_rsav` (#l("label_t\tu_rsav;\t\t\t/* save info when exchanging stacks */")) holds the registers saved by `save` (#f("mch.s")) when the
 process gives up the processor in `swtch` (#f("slp.c")), and restored by
-`resume` (#f("mch.s")). The type `label_t` has ten words: r4 to r11, the
-stack pointer, and the link register. Since `save` is called as an
+`resume` (#f("mch.s")). The type `label_t` has ten words, for r4 to r11, the stack pointer, and
+the link register. Since `save` is called as an
 ordinary function, its caller has already set aside anything it needs
 from the other registers, so `save` keeps only those which the ARM
 procedure call standard requires a called function to preserve (see
@@ -2059,8 +2052,7 @@ reloaded before the return to user mode.
 
 The flag `u_segflg` (#l("char\tu_segflg;\t\t/* IO flag: 0:user D; 1:system; 2:user I */")) tells `iomove` (#f("rdwri.c")) and its relatives where
 `u_base` points. Usually it points into the user's memory. But the
-kernel sometimes reads or writes a file for itself, into its own
-memory: `exec` reads a program's headers, `namei` reads directories,
+kernel sometimes reads or writes a file for itself, into its own memory. Thus `exec` reads a program's headers, `namei` reads directories,
 and a core dump writes out the u-area. Then `u_segflg` is 1. The values
 0 and 2, user data and user text, mean the same, since the I-space
 routines are aliases of the D-space ones (#f("systm.h")). The error number that a system call returns is kept
@@ -2078,8 +2070,7 @@ The parameters of an I/O transfer, `u_base`, `u_count`, and
 `u_offset`, are kept here so that every layer of the transfer can reach
 them without their being passed as arguments: the system call, `readi`
 and `writei` (#f("rdwri.c")), `iomove`, and the drivers. After them come
-the current and root directories, and the working storage of `namei`
-(#f("nami.c")): the current component of the path name, a pointer into
+the current and root directories, and the working storage of `namei` (#f("nami.c")), the current component of the path name, a pointer into
 the name, a copy of the directory entry, and the parent directory. They
 are kept here, not on `namei`'s stack, because the callers of `namei` go
 on using them: `wdir` (#f("iget.c")) writes the new directory entry from
@@ -2204,8 +2195,7 @@ address space apart from each other and that the image fits in
 prototype (see #f("user.h"), page #pageref(label("user.h"))), discards
 the old page tables, and calls `sureg`. The routine `sureg` points the
 MMU at the process's tables, first building them from the prototype if
-the process has none. It is called whenever the image may have moved:
-by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
+the process has none. It is called whenever the image may have moved, by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
 (#f("text.c")), and when `swtch` (#f("slp.c")) resumes a process.
 
 The tables form a tree in RAM (see _Translation Tables_, page
@@ -2267,8 +2257,8 @@ user's translations alone.
 #lines-to("/*", lead: true, after: "}")
 
 The routine `ptfree` returns a process's tables to the pool and empties its
-first-level table. It is called whenever the tables no longer describe
-the image: by `estabur` when the prototype changes, by `expand`
+first-level table. It is called whenever the tables no longer describe the image, by
+`estabur` when the prototype changes, by `expand`
 (#f("slp.c")) when the image moves, by `xswap` (#f("text.c")) when it
 leaves RAM, and by `exit` (#f("sys1.c")). The first-level table is
 emptied even when there were no tables, so that a slot of the process
@@ -2325,8 +2315,7 @@ the kernel, the scheduler proper (`sched`, `swapin`), and the two
 procedures which create or move a process image in RAM (`newproc`,
 `expand`).
 How they work together is described in the Introduction (see
-_Scheduling and Swapping_, page #pageref(<sec-sched>)). The commentary
-follows the file: `sleep` and `wakeup`, then `setrun` and `setpri`,
+_Scheduling and Swapping_, page #pageref(<sec-sched>)). The commentary follows the file, `sleep` and `wakeup`, then `setrun` and `setpri`,
 then `sched` and `swapin`, then `swtch`, and last `newproc` and
 `expand`.
 

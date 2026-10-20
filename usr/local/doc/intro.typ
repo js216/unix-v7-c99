@@ -67,8 +67,7 @@ controller (#f("ddr.c")) before it can use it.
 
 The two machines have the same processor, interrupt controller, and
 timer (@tab-machines), so the code for traps, interrupts, the MMU, and the clock is the
-same for both. They differ in four ways: where memory lies, the
-console, the disk, and the DDR memory of the MP135 machine, which the
+same for both. They differ in where memory lies, the console, the disk, and the DDR memory of the MP135 machine, which the
 kernel must start itself. Each difference is confined to a driver or
 to the configuration.
 
@@ -80,8 +79,7 @@ memory map (#f("qemu/c.c")).
 The two machines serve different purposes. The QEMU machine is where
 the system is built and tested: it starts in a second, and the test
 suite runs on it, as it does on the board. The MP135 machine shows that the system runs on real
-hardware, which brings what an emulator hides: a boot ROM with its own
-rules, memory that must be started before it can be used, and caches
+hardware, which brings what an emulator hides, a boot ROM with its own rules, memory that must be started before it can be used, and caches
 which devices do not see.
 
 Throughout the book, "the QEMU machine" and "the MP135 machine" mean
@@ -92,8 +90,7 @@ display, and the kernel leaves them as the boot ROM left them.
 === The ARM Processor <sec-arm>
 
 The Cortex-A7 implements the ARMv7-A architecture. It has sixteen
-32-bit registers, `r0` to `r15`. Three have a special use and a second
-name: `r13` is the stack pointer `sp`, `r14` the link register `lr`,
+32-bit registers, `r0` to `r15`. Three have a special use and a second name. The register `r13` is the stack pointer `sp`, `r14` the link register `lr`,
 which receives the return address of a call, and `r15` the program
 counter `pc`. The current program status register `cpsr` holds the
 condition flags, the two interrupt masks `I` and `F`, and the processor
@@ -101,8 +98,7 @@ mode.
 
 The mode decides what a program may do. User programs run in user mode,
 which cannot reach the kernel's memory or the system registers. The
-kernel runs in supervisor (SVC) mode. Each kind of exception has a mode
-of its own: IRQ for interrupts, abort for memory faults, and undefined
+kernel runs in supervisor (SVC) mode. Each kind of exception has a mode of its own, IRQ for interrupts, abort for memory faults, and undefined
 for an instruction the processor does not know. When an exception
 occurs, the processor saves the `pc` and `cpsr` of the interrupted
 program, enters the exception's mode, and jumps to that exception's
@@ -157,8 +153,7 @@ preserve `r4` to `r11` and `sp`.
 The processor does not perform memory accesses one at a time in program
 order. A store waits in a store buffer before it reaches the data
 cache, and loads may overtake it. The processor's own program always
-sees its own stores, but other observers may not: the MMU, which reads
-page tables from memory by itself, and devices which reach memory by
+sees its own stores, but other observers may not, such as the MMU, which reads page tables from memory by itself, and devices which reach memory by
 DMA. Barrier instructions restore the order where it matters. The
 barrier `dmb` orders the accesses before it before those after it, and `dsb` waits
 until they have all completed. An `isb` makes the processor fetch the
@@ -246,8 +241,7 @@ address 0.
 === Translation Tables <sec-tables>
 
 The MMU translates addresses through tables in memory. The port uses
-the long-descriptor format, with three levels: an entry of the first
-level covers 1~GB, one of the second 2~MB, and one of the third a page
+the long-descriptor format, with three levels. An entry of the first level covers 1~GB, one of the second 2~MB, and one of the third a page
 of 4096~bytes. An entry either maps its whole range as one block, or
 points to a table of the next level. @fig-bits shows which bits of a
 user address select the entry at each level.
@@ -524,7 +518,7 @@ call with `EINVAL`.
 The carry flag lets one register carry either a result or an error. A
 result may be any value, even a negative one such as the offset which
 `lseek` returns, so no value of `r0` could be set aside to mean
-failure. Some calls return two values, in `r0` and `r1`: `pipe` returns
+failure. Some calls return two values, in `r0` and `r1`. The call `pipe` returns
 both of its file descriptors, and `fork` returns a process number in
 `r0` and, in `r1`, whether the process is the child.
 
@@ -702,7 +696,7 @@ open for writing: the attempt fails with `ETXTBSY`.
 
 === Signals <sec-signals>
 
-A signal is an event sent to a process: a key such as interrupt or
+A signal is an event sent to a process, such as a key like interrupt or
 quit at its terminal, a fault in its program, an alarm, or a `kill`
 from another process. The kernel posts it with `psignal`
 (#f("sig.c")), which sets a bit in the process's table entry and, if
