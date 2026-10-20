@@ -415,12 +415,6 @@ zero. The image is no larger than the program: `sbreak` and the growth
 of the stack (`grow`, #f("sig.c")) enlarge it when the program asks for
 more, and `fork` copies only what there is (#f("slp.c")).
 
-When there is room neither in core nor in the swap area, `expand` fails
-(#f("slp.c")). The old image is already gone, so the process is killed
-with a message (#l("if(expand(i) == 0) {")--#l("}", after: "psignal(u.u_procp, SIGKIL);")), as `xalloc` (#f("text.c")) kills it when it
-cannot place the text; `u_error` stops `exec` from copying the
-arguments into an image which was never made.
-
 #lines-to("/*", lead: true, after: "xalloc(ip);")
 
 By now `xalloc` (#f("text.c")) has attached the text, shared with any other
@@ -505,16 +499,15 @@ child's pid and status. A stopped, traced child is reported once, with
 the signal which stopped it and the low byte 0177. If there are children
 but none is ready, the parent sleeps on its own `proc` entry, which
 `exit` (#l("wakeup((caddr_t)q);")) and `stop` wake, and looks again. If there are none,
-`ECHILD`. Clearing `p_nptab` (#l("p->p_nptab = 0;")) is new; #f("proc.h") explains why.
+`ECHILD`.
 
 #lines-to("/*", lead: true, after: "}")
 
 First, `fork` checks that the swap area could hold the caller's image (#l("if ((a = malloc(swapmap, ptod(u.u_procp->p_size))) == 0) {")),
 finds a free `proc` entry, and counts the caller's processes. In v7 the kernel
-checked for room for an image of the maximum size, `MAXMEM`
-(#f("param.h")), as insurance against running out of swap space later.
-Running out is no longer fatal (#f("slp.c")), and the insurance did
-harm: the space must be contiguous, and a small process left on the
+checked for room for an image of the maximum size, `MAXMEM`, as
+insurance against running out of swap space later, which is fatal
+(#f("text.c")). The insurance did harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
 pages, after which no process at all could fork. The check made
 here is the one `newproc` relies on: the child's image, if it must go
@@ -556,10 +549,6 @@ the program finds zeros there, as it would in new memory. The shell
 relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
-
-If `expand` fails for want of swap space (#l("if(expand(n) == 0) {")), the data size and the
-mapping are set back and `sbreak` fails with `ENOMEM`, as when the
-image would exceed `maxmem`; v7 panicked.
 
 #lines-to(none)
 #source("/usr/sys/sys/sys4.c")
@@ -861,11 +850,6 @@ stack, which lies at the end of the image, is copied up by the number
 of pages added, from the top down so that it does not overwrite
 itself, and the pages freed at its bottom are cleared.
 
-If `expand` fails, for want of both core and swap space (#f("slp.c")),
-the mapping is set back to the old sizes (#l("estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);", after: "if(expand(p->p_size+si) == 0) {")) and `grow` fails as it
-does when the stack would meet the data: the fault becomes `SIGSEG`.
-This test is new; v7 panicked inside `expand`.
-
 #lines-to("/*", lead: true, after: "}")
 
 The parent's side of tracing is `ptrace`. A request of 0 (#l("if (uap->req <= 0) {")) is made
@@ -1050,8 +1034,7 @@ does.
 The fields `x_caddr`, `x_daddr`, and `x_size` have been widened from `short` to
 `int`, for the reasons already given for `p_addr` and `p_size` in
 #f("proc.h"): neither a page number, nor a block of the swap area
-(#f("qemuconf")), nor the size of the largest text, `MAXMEM` pages,
-fits in a `short`.
+(#f("qemuconf")), nor the size of the largest text fits in a `short`.
 
 The counts `x_count` and `x_ccount` are v7's `char`s. Every process which runs a
 program holds a reference to its text, so a count can reach `NPROC`,
@@ -1088,11 +1071,6 @@ image in core; it differs from `p_size` only when `expand` (#f("slp.c"))
 swaps out a process whose size has already been increased, in which case
 the space allocated on the swap device is for the new size (#l("a = malloc(swapmap, ptod(p->p_size));")) while
 only the old size is written (#l("swap(a, p->p_addr, os, B_WRITE);")).
-
-If the swap device has no room, `xswap` now does nothing and returns
-zero (#l("if(a == NULL)"), #l("return(0);")), and the comment (#l("* Zero return: out of swap space, nothing done")) says so; v7 panicked. Each caller
-decides what that means for it (#f("slp.c")). The value is one when
-the image has been written (#l("return(1);")).
 
 #lines-to("p->p_flag |= SLOCK;")
 
@@ -1157,28 +1135,18 @@ read into `u.u_exdata`, `exec` calls `xalloc`. A program without a text would re
 The table is searched both for an entry already holding the
 text of inode `ip`, and for the first free entry. If the text is found,
 the process becomes another user: if no other user is in core, `xexpand` brings the core
-copy in from the swap device (#l("xexpand(xp);", after: "xp->x_count++;")). The routine `xexpand`
-fails only when there is neither core for the text nor swap space into
-which the process could move to wait for it (below); `x_ccount` is then
-still zero (#l("if (xp->x_ccount == 0) {", after: "xp->x_count++;")), and the process withdraws its claim and is killed at
-`noswap`.
+copy in from the swap device (#l("xexpand(xp);", after: "xp->x_count++;")).
 
 #lines-to("if((xp=xp1) == NULL) {")
 
 If the table is full, the process is killed.
 
-#lines-to("ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);")
+#lines-to("xp->x_flag = XLOAD|XLOCK;")
 
-Otherwise swap space for the text is found first (#l("if((xp->x_daddr = malloc(swapmap, (int)ptod(ts))) == NULL)")), before the
-free entry is claimed, so that a failure leaves nothing to undo; v7
-claimed the entry first and panicked if there was no space. The entry
-is then claimed, with `XLOAD` set to show that its contents come from
-the file rather than from the swap device, and core is allocated. The
-size `ts` (#l("ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);")) is reckoned from address zero, as in `getxfile`. If
-`xexpand` fails, the claim is undone (#l("if (xp->x_ccount == 0) {", after: "xp->x_size = ts;")--#l("}", after: "mfree(swapmap, ptod(ts), xp->x_daddr);")): the swap space and the
-entry are freed, and the inode loses `ITEXT` and the count the entry
-held. No other process can have found the entry meanwhile, since
-`xexpand` fails without sleeping.
+Otherwise `xalloc` claims the free entry, setting `XLOAD` to show that
+its contents come from the file rather than from the swap device. It
+reckons the size `ts` (#l("ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);")) from address zero, as `getxfile` does,
+and allocates swap space and core for the text.
 
 #lines-to("for(i = 0; i < ts; i++)")
 
@@ -1195,20 +1163,12 @@ program headers at the start of the text segment, as it does when they
 fit below the text's first address (#f("Makefile")), they are skipped
 (#l("if(u.u_offset == 0) {")--#l("}", after: "u.u_count -= i;")): they are not part of the program, and the bottom of the
 address space then reads as zero. The signal trampoline is planted in
-the text while it is still writable (162, `install_sigtramp`,
+the text while it is still writable (#l("install_sigtramp();"),
 #f("machdep.c")); every process sharing the text uses the same one.
 The text is then made visible to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));"),
 `arm_sync_icache`, #f("mch.s")), a step the PDP-11, which had no
 caches, did not need. `XWRIT` (#l("xp->x_flag = XWRIT;")) then ensures that the swap copy is
 written when the core copy is first given up.
-
-#lines-to("noswap:", lead: true)
-
-The routine `noswap` is new. The process has already given up its old image
-(`getxfile`, #f("sys1.c")), so it cannot simply be refused; it is
-killed with a message, as v7 kills it when the text table is full. It
-is left without a text, and `u_error` is set so that `exec` goes no
-further with the new image before the signal takes effect.
 
 #lines-to("/*", lead: true)
 
@@ -1218,14 +1178,11 @@ to be read from the file instead; a copy read from swap is made visible
 to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr),", after: "swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);")) as `xalloc` does.
 
 If not, the process makes room for itself by swapping itself out
-(#l("if (xswap(u.u_procp, 1, 0) == 0)")), and leaves the matter to `sched`, which brings in data area and
+(#l("xswap(u.u_procp, 1, 0);")), and leaves the matter to `sched`, which brings in data area and
 text together (`swapin`, #f("slp.c")). The pattern is that of `expand`:
 `save(u.u_ssav)` (#l("if (save(u.u_ssav)) {")) is the point to which the process returns, by way
 of `SSWAP` and `swtch`, once it is back in core; it then reloads its
 user mapping with `sureg` and returns. The call of `qswtch` (#l("qswtch();")) does not return.
-If there is no swap space either, `xswap` fails, and `xexpand` returns
-at once (#l("return;", after: "if (xswap(u.u_procp, 1, 0) == 0)")) with the text still locked and `x_ccount` still zero, by
-which `xalloc` knows.
 
 #lines-to("/*", lead: true, after: "/* no return */")
 
@@ -2114,16 +2071,17 @@ The system call `seek` sets the offset in the `file` absolutely, relative to its
 present value, or relative to the size of the file, according to
 `sbase`. A pipe has no meaningful offset. On the PDP-11 an `off_t`
 occupied two argument words and the result was returned in r0 and r1
-together, by way of `r_off` (#f("user.h")), which overlays both
-`r_val1` and `r_val2`. Here an `off_t` is one word: the offset is one
-argument and the result is returned in r0 alone. The C library's
+together, by way of a member `r_off` which overlaid both `r_val1` and
+`r_val2`. Here an `off_t` is one word. The offset is one argument and
+the result is returned in r0 alone, so `u_r` is a plain structure
+(#f("user.h")). The C library's
 `lseek` is built to match. The sums (#l("uap->off = (unsigned long)uap->off + fp->f_un.f_offset;"), #l("uap->off = (unsigned long)uap->off +", after: "else if(uap->sbase == 2)")) are now formed as
 `unsigned long`: an offset near 2 GB plus the present one would
 overflow a signed `long`, which C leaves undefined, while the unsigned
 sum wraps, and converted back it gives the negative offset that
 `readi` (#f("rdwri.c")) refuses.
 
-#lines-to("/*", lead: true, after: "u.u_r.r_off = uap->off;")
+#lines-to("/*", lead: true, after: "u.u_r.r_val1 = uap->off;")
 
 The system call `link` makes a second name for an existing file. Only the super-user
 may link a directory (#l("if((ip->i_mode&IFMT)==IFDIR && !suser())")), since a directory with two parents would
@@ -3133,12 +3091,12 @@ happens to be, so that a routine such as `getpass` can talk
 to the user even when its standard input and output have been
 redirected.
 
-The controlling terminal is recorded in `u.u_ttyp` and `u.u_ttyd` by
+The controlling terminal is recorded in `u.u_ttyp` by
 `ttyopen` (#f("tty.c")) when a process with no process group opens a
 terminal, and is inherited across `fork`. Each routine here ignores its
 own device number, casting it to `void` to say so (#l("(void)dev;", after: "syopen(int dev, int flag)")), and calls the
 corresponding routine of the real
-driver with `u.u_ttyd` in its place, so that the real driver sees its
+driver with the terminal's own number, `t_dev` (#f("tty.h")), in its place, so that the real driver sees its
 own minor device. A process without a controlling terminal is refused
 with `ENXIO` (#l("u.u_error = ENXIO;")).
 
@@ -3964,7 +3922,7 @@ swap area; `swplo` and `nswap` give the first block and the length of
 the swap area. The `rktmconf` of v7 put the swap area at block 4000 of the
 RK05; here it starts at block 32768, just after the root file system
 of 16 MB (#f("rootfs.proto")). In v7 it had 872 blocks, 436 KB, which held
-several of its largest images, `MAXMEM`. Here it holds 1048576 blocks,
+several of its largest images. Here it holds 1048576 blocks,
 512 MB, as much as the memory, so that whatever the memory holds can be
 swapped out, with room besides for the copies of shared texts and for
 the argument lists of `exec`. In v7 a magnetic tape, `tm`, was also configured, of which this system has
@@ -6183,12 +6141,6 @@ The include of `signal.h` (#l("#include\t<signal.h>")) is new. It supplies the p
 ignored, where v7 compared the result of `signal` with 1. The handler `fault` is
 declared with the signal number it receives, so that it has the type
 which `signal` expects of a handler.
-
-`MAXTRAP` (#l("#define MAXTRAP\tNSIG")), one more than the highest signal which `trap` accepts
-and the size of the tables of #f("sh/fault.c"), was v7's literal 17, its
-sixteen signals and the exit trap 0. It is now `NSIG`, from
-`signal.h`, so that the shell traps every signal the kernel can send,
-1 to 31.
 
 #lines-to("/* name tree and words */", lead: true)
 
@@ -8517,7 +8469,7 @@ loader to merge the copies; here it is defined once, in
 
 #source("/usr/include/signal.h")
 
-The count `NSIG` follows the kernel's 32 signals (#f("param.h")). The routine `signal` is
+The routine `signal` is
 declared with its prototype: it takes a signal number and a function
 taking the signal number, and returns the previous such function. The v7 declaration
 `int (*signal())()` gave handlers no parameters and an `int` result.
@@ -11557,7 +11509,13 @@ read as characters, as the rest of the loop does.
 #lines-to("char *", lead: true)
 
 The routine `gettty` names the terminal by searching the table of `getdev` for the
-device number `u_ttyd`, dropping the prefix "tty".
+device number of the controlling terminal, dropping the prefix "tty".
+The `user` structure holds only a pointer to the terminal's `tty`
+(#f("tty.h")), so `gettty` reads the device number from
+the kernel's memory at that address
+(#l("lseek(mem, (long)&u.u_ttyp->t_dev, 0);")). It puts the offset of
+`mem` back afterwards, since the caller is part way through reading the
+process table from the same descriptor.
 
 #lines-to("char *", lead: true, after: "}")
 
@@ -12208,7 +12166,7 @@ command in parentheses, `FINT` for one which must ignore interrupts,
 and `FPRS` for one whose process id is printed. A tree node is a few
 `int`s: its type, the input and output file names (`DLEF`, `DRIT`), the
 flags, and for a command its words from `DCOM`. `NSIG` is redefined to
-the sixteen signals `mesg` names, since #f("signal.h") now gives 32.
+the sixteen signals `mesg` names, one fewer than #f("signal.h") gives.
 
 #lines-to("int", after: "void\texecute(int *t, int *pf1, int *pf2);")
 
@@ -16330,8 +16288,8 @@ The call `phys`, v7's way of mapping physical memory into a process, is a
 PDP-11 facility which the port refuses with `EINVAL` (#l("errno = 0;", after: "int i, bad, r;")--#l("printf(\"phys: %d errno %d\\n\", r, errno);"),
 `nosys`, #f("sysent.c")). The routine `malloc` must return blocks aligned to 8 bytes, as
 the ARM's `double`s require, whatever sizes are asked for and freed
-(#l("bad = 0;")--#l("printf(\"malloc: %d of 64 blocks misaligned\\n\", bad);")). Signal 31, the highest, is delivered, and 32 is refused
-(#l("signal(31, catch);")--#l("printf(\"signal 32: %d errno %d\\n\", r, errno);")), since `NSIG` is 32 (#f("param.h")).
+(#l("bad = 0;")--#l("printf(\"malloc: %d of 64 blocks misaligned\\n\", bad);")). Signal 16, the highest, is delivered, and 17 is refused
+(#l("signal(16, catch);")--#l("printf(\"signal 17: %d errno %d\\n\", r, errno);")), since `NSIG` is 17 (#f("param.h")).
 
 #lines-to(none)
 #source("/usr/local/test/utils/elft.c")
@@ -16368,8 +16326,8 @@ The utility `bigm` makes a process large in each of the three ways the kernel le
 it grow. A 3 MB array on the stack grows the stack by faults, page by
 page (#l("static int")--#l("}", after: "return s;")); 8 MB of uninitialised data come with the image, and their
 end lies above 8 MB (#l("for (i = 0; i < sizeof(big); i += 4096)", after: "printf(\"stack pages %d\\n\", stk());")--#l("(unsigned)&big[sizeof(big)-1] >= 8*1024*1024);")); `sbrk` adds 16 MB to the data (#l("p = sbrk(16*1024*1024);")--#l("printf(\"sbrk pages %d\\n\", s);")).
-Every page is written and read back. A further `sbrk` of 128 MB must
-fail, since it would take the process past `MAXMEM` (#l("printf(\"beyond MAXMEM %d\\n\", sbrk(128*1024*1024) == (char *)-1);")).
+Every page is written and read back. A further `sbrk` of 1 GB must
+fail, since it asks for more than the memory (#l("printf(\"beyond memory %d\\n\", sbrk(1024*1024*1024) == (char *)-1);")).
 
 #lines-to(none)
 #source("/usr/local/test/utils/stkt.c")
