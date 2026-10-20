@@ -13346,9 +13346,8 @@ before `line` (#l("if(lp > line)")--#l("--lp;", after: "if(lp > line)")).
 
 #source("/usr/src/cmd/checkeq.c")
 
-The command `checkeq` checks text for `eqn`: unbalanced `.EQ` and `.EN` lines,
-delimiters set with `delim` and left unclosed, and equations spread
-over several lines, which are reported with their line numbers. It is
+The command `checkeq` checks text for `eqn`. It reports unbalanced `.EQ` and `.EN` lines,
+delimiters set with `delim` and left unclosed, and equations spread over several lines, each with its line number. It is
 v7's, with prototypes.
 
 #lines-to(none)
@@ -13364,7 +13363,7 @@ current statement in `string`.
 The arrays of levels now have 20 entries, and `string` 1000 bytes
 (#l("int\tslevel[20];")--#l("char\tstring[1000];")), where v7 had 10 and 200, and each is now checked: nesting
 deeper, or a statement longer, now stops `cb` with a message
-(`toodeep`, 81, 253, 276), where v7 wrote past the arrays. And a closing
+(`toodeep`), where v7 wrote past the arrays. And a closing
 brace without an opening one no longer makes the level negative (#l("if(clevel > 0)clevel--;")).
 End of input now writes what is pending and stops (#l("if(lastchar == EOF){")--#l("}", after: "exit(0);")), where the
 loops which skip to a semicolon or parenthesis went on reading `EOF`
@@ -13644,7 +13643,7 @@ marker for "no upper bound" as unsigned (#l("size = (*str & 0377) == 255 ? 20000
 
 #source("/usr/src/cmd/bc.y")
 
-The command `bc` is a calculator with a language like C's: variables, arrays, and
+The command `bc` is a calculator with a language like C's. It has variables, arrays, and
 functions named by single letters, `if`, `while`, and `for`, and
 numbers of any size and scale. It does no arithmetic itself. It is a
 compiler from that language to the language of `dc` (#f("dc/dc.c")):
@@ -13881,7 +13880,7 @@ without a check.
 
 #source("/usr/src/cmd/awk/main.c")
 
-The routine `main` reads the options: `-f` names a file of program, `-F` the field
+The routine `main` reads the options. The option `-f` names a file of program, `-F` the field
 separator, and otherwise the first argument is the program. The rest
 are the files to read. It then parses the program and, if there were
 no errors, runs it. The v7 routine `logit` appended each use of `awk` to a file of its
@@ -14074,9 +14073,9 @@ where v7 counted on without a check.
 #source("/usr/src/cmd/awk/proc.c")
 
 The program `proc.c` is not part of `awk`. It is compiled and run on the build
-machine, and writes `proctab.c`: the table `proctab`, which gives for
-each token the function that `execute` calls, and `printname`, the
-operator's text for debugging. Tokens with no function get `nullproc`.
+machine, and writes `proctab.c`. There the table `proctab` gives for each token
+the function that `execute` calls, and `printname` the operator's text
+for debugging. Tokens with no function get `nullproc`.
 The table now has the prototype of its functions (#l("printf(\"obj (*proctab[%d])(node **a, int n) = {\\n\", SIZE);")), which
 #f("awk/awk.def") declares, so the generator no longer writes
 declarations of them. It writes its initialisers with `=` (#l("printf(\"obj (*proctab[%d])(node **a, int n) = {\\n\", SIZE);"), #l("printf(\"char *printname[%d] = {\\n\", SIZE);")),
@@ -14145,8 +14144,7 @@ instead of overflowing.
 
 #source("/usr/src/cmd/who.c")
 
-The command `who` lists the users logged in, from `/etc/utmp`, which `init` and
-`login` keep: one entry per terminal, with the user's name, the
+The command `who` lists the users logged in, from `/etc/utmp`, which `init` and `login` keep, one entry per terminal, with the user's name, the
 terminal, and the time of login. With two arguments, as in `who am i`,
 it prints the entry of the terminal on its standard input. The name
 and terminal fields of a `utmp` are eight bytes with no null when full,
@@ -14347,7 +14345,7 @@ number and passed the test.
 #source("/usr/src/cmd/ac.c")
 
 The command `ac` adds up connect time from `/usr/adm/wtmp`, the log of logins and
-logouts which `init` and `login` append to: in total, per user with
+logouts which `init` and `login` append to. It adds in total, per user with
 `-p`, or per day with `-d`, optionally for named users only. A record
 names a terminal and a user, or no user for a logout. The time between
 a login on a terminal and the next record for the terminal is charged
@@ -14366,8 +14364,7 @@ last entry (#l("for (up=ubuf; up < &ubuf[USIZE-1]; up++) {")), where v7's search
 #source("/usr/src/cmd/sa.c")
 
 The command `sa` summarises the process accounting file `/usr/adm/acct`, to which
-the kernel appends a record for every process that exits while
-accounting is on (#f("acct.c")): its command name, user, and times.
+the kernel appends a record for every process that exits while accounting is on (#f("acct.c")), with its command name, user, and times.
 The program totals the records by command in the hash table `tab`, and by
 user in `user`. It lumps commands run once, or with odd characters in
 their names, into `***other`, and with `-s` saves the totals in
@@ -14396,7 +14393,7 @@ requires (#l("int", after: "tsys += x;")--#l("struct tab *p1 = (struct tab *)q1,
 
 #source("/usr/src/cmd/pstat.c")
 
-The command `pstat` prints the kernel's tables: the in-core inodes (`-i`), texts
+The command `pstat` prints the kernel's tables of in-core inodes (`-i`), texts
 (`-x`), processes (`-p`), terminals (`-t`), open files (`-f`), and a
 process's `user` structure given its address (`-u`). It looks up the
 tables' addresses in the symbol table of `/unix` with `nlist`, and
@@ -14478,8 +14475,7 @@ tenths, without leading zeros, dividing by the bases in `quant`.
 
 The command `prof` prints an execution profile. A program to be profiled is
 compiled with `-pg` and linked with #f("csu/mcrt0.s") in place of
-`crt0.o`. When it exits it leaves `mon.out`, written by `monitor`
-(#f("gen/mon.c")): a header giving the range of addresses watched, the
+`crt0.o`. When it exits it leaves `mon.out`, written by `monitor` (#f("gen/mon.c")). It holds a header giving the range of addresses watched, the
 call counts, and a histogram of where the program counter was found at
 each clock tick. From that file and the program's symbol table `prof`
 estimates the time spent in each function and the number of calls.
@@ -14765,8 +14761,7 @@ whatever was left in a register after the usage message.
 
 #source("/usr/src/cmd/dd.c")
 
-The command `dd` copies a file with the block sizes and conversions asked for:
-input and output block sizes, records to skip on input and to seek
+The command `dd` copies a file with the block sizes and conversions asked for. It takes input and output block sizes, records to skip on input and to seek
 past on output, a count of records, and conversions between ASCII and
 the EBCDIC of IBM's machines, of case, and of byte order, with `noerror`
 and `sync` for reading damaged tapes. The tables `etoa`, `atoe`, and
@@ -14851,8 +14846,7 @@ library and the mathematical library; `cmake` compiled the commands
 one at a time, each by its own line of shell, and the larger commands
 (`sh`, `awk`, `dc`, and the rest) had makefiles of their own. None of
 these is used. The port is built on another machine, by one `make`,
-from this file and the fragments it includes: #f("sys.mk") for the
-kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"),
+from this file and the fragments it includes, #f("sys.mk") for the kernel, #f("libc/lib.mk"), #f("libm/lib.mk"), #f("cmd/cmd.mk"),
 #f("games/games.mk"), and `test.mk` for the regression tests. A single `make` sees the whole graph of
 dependencies, so that a changed header recompiles exactly the files
 which include it, a new `libc.a` relinks exactly the programs which use
@@ -14862,9 +14856,8 @@ system. Everything which runs there is compiled here.
 
 The tools. `CROSS_COMPILE` is the prefix, in the manner of Linux's makefiles, of
 the cross compiler for the target, a bare-metal ARM toolchain. `HOSTCC` compiles
-the three programs which run during the build rather than on the
-target: `mkconf` (#f("mkconf.c")), `mkfs` (#f("cmd/mkfs.c")), and the
-`proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
+the three programs which run during the build rather than on the target, `mkconf` (#f("mkconf.c")), `mkfs`
+(#f("cmd/mkfs.c")), and the `proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
 compiler, `cc`, and the programs it makes run there directly, so the
 build needs no more than a cross compiler for the target and the
 host's ordinary tools. The scanner generator `flex` takes the place of v7's `lex`.
@@ -14874,9 +14867,9 @@ host's ordinary tools. The scanner generator `flex` takes the place of v7's `lex
 `W` is the set of warnings, shared by the target and the host programs.
 Every file is compiled as strict C99 (`-std=c99 -Wpedantic`), and
 `-Werror` makes every warning an error, so the build is free of
-warnings or does not finish. The last three options insist on full
-prototypes: no old-style definitions, no empty parameter lists, and no
-external function without a prior declaration.
+warnings or does not finish. The last three options insist on full prototypes. They forbid old-style
+definitions, empty parameter lists, and an external function without a
+prior declaration.
 
 The flags for the target (`CFLAGS`). `-ffreestanding` tells the compiler
 that there is no hosted C library behind the program. Among other
@@ -14913,9 +14906,9 @@ fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 `-Wl,-z,max-page-size=4096` is an option for the linker,
 which the compiler ignores when it only compiles. It applies to the
 link of every user program (#l("LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^)")), never to the kernel, which is linked by
-its own line in #f("sys.mk"). The linker makes a program two loadable
-segments: the text, with the read-only constants, readable and
-executable, and the data, readable and writable. This is the ELF
+its own line in #f("sys.mk"). The linker makes a program two loadable segments, the text, with the
+read-only constants, readable and executable, and the data, readable and
+writable. This is the ELF
 counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
 read-only and shares it among all the processes running the program,
 each segment at its own address. The linker's default places the text
@@ -14964,8 +14957,7 @@ made. Every object and generated file depends on the `Makefile`
 itself (#l("$(OBJ) $(GEN): Makefile")), and every object on its own fragment as well, so that a
 change of flags or of a rule remakes everything it could affect.
 
-The fragments (#l("include usr/sys/sys.mk")--#l("include usr/local/test/test.mk")) build the parts of the system: the kernels
-(#f("sys.mk")), the two libraries, the commands, the games, and the
+The fragments (#l("include usr/sys/sys.mk")--#l("include usr/local/test/test.mk")) build the parts of the system, the kernels (#f("sys.mk")), the two libraries, the commands, the games, and the
 regression tests, whose fragment `test.mk` compiles the test programs
 and makes the small file system on which the tests run the file system
 checkers. The tests themselves run on the target, from
@@ -15002,8 +14994,7 @@ The tree is built in place, and the programs are made where they will
 lie in the target's file system: `bin/cat`, `etc/init`,
 `usr/games/fortune`. The prototype file names them relative to the top
 of the tree (#f("rootfs.proto")), and `mkfs` is run from there.
-`ROOTFS_STATIC` lists the files of the image which are not compiled:
-the shell scripts `1`, `true`, `false`, and `nohup`, the files of
+`ROOTFS_STATIC` lists the files of the image which are not compiled. They are the shell scripts `1`, `true`, `false`, and `nohup`, the files of
 #f("rc"), #f("ttys"), #f("passwd"), and #f("group"), and data such as
 the dictionary, the fortunes, `bc`'s library, and `cron`'s table. All
 but the files of `etc` and the table `usr/lib/crontab` are copied from
@@ -15093,8 +15084,7 @@ search path, since they name their headers relative to themselves, as
 `"../h/param.h"`.
 
 `LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
-machine only are kept out of `LIB2`: the UART and the disk of the QEMU
-machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
+machine only are kept out of `LIB2`, the UART and the disk of the QEMU machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
 machine (#f("otg.c"), #f("sd.c"), #f("ddr.c"), #f("pmic.c")). The two sets
 take the same v7 names, such as `klopen` and `rkstrategy`, and so could
 not share one archive. Each kernel is instead linked with its own
@@ -15169,9 +15159,9 @@ and `mcrt0.o` (#f("csu/mcrt0.s")), which takes its place in a program
 to be profiled. Neither is a member of the library. It replaces v7's `compall`,
 a list of `cc -c -O` commands, one per source file, and `mklib`, a
 single `ar` command naming every object. Here the members are simply
-all the C and assembler files of the library's four directories: the
-top, which holds `syscall.s` (#f("libc/syscall.s")) and `memcpy.c`;
-`gen`; `stdio`; and `sys`, the system call stubs, one per call as in
+all the C and assembler files of the library's four directories. They
+are the top, which holds `syscall.s` (#f("libc/syscall.s")) and
+`memcpy.c`, `gen`, `stdio`, and `sys`, the system call stubs, one per call as in
 v7 (#f("sys/read.s")). The file `memcpy.c` has no v7 original. It defines
 `memcpy` and `memset`, which GCC may call, even in freestanding code,
 to copy or clear a structure. As in #f("sys.mk"), the archive is
@@ -15445,8 +15435,7 @@ the address, giving the descriptors with the bulk endpoints' packet
 size set to what the bus speed allows, configuring the endpoints, and
 answering the class's requests for the line coding and the control
 lines; on the request which sets the control lines it reports carrier
-(`carrier`), for a host which waits for it. The routine `usbpoll` services the
-controller: a reset of the bus, the end of enumeration, packets in the
+(`carrier`), for a host which waits for it. The routine `usbpoll` services a reset of the bus, the end of enumeration, packets in the
 receive FIFO, and transfers completed on endpoint 0. A data packet from
 the host is taken into `rxbuf` at once, so that a control packet
 behind it is not held up, and the endpoint takes no more until
@@ -15461,8 +15450,7 @@ command arrived behind it, as 512 bytes of stale card data.
 
 #lines-to("/*", after: "say(buf+i);")
 
-The routine `sdinit` brings the card up as `rkinit` does (#f("sd.c")): the pins,
-the clock at 400 kHz, identification, the size from the CSD, selection,
+The routine `sdinit` brings the card up as `rkinit` does (#f("sd.c")). It sets up the pins, the clock at 400 kHz, identification, the size from the CSD, selection,
 four data lines, and high speed if the card offers it. Unlike the
 kernel's driver, `sdwrite` moves data by the CPU, not by DMA, through
 the controller's FIFO, eight words at a time with `ldm` and `stm` while
@@ -15529,14 +15517,13 @@ from the port's own headers, copied with every `long` type made an
 the super-block (#f("filsys.h")), the inodes (#f("ino.h")),
 the free-list blocks (#f("fblk.h")), the directory entries
 (#f("dir.h")), and the indirect blocks all come out with the ARM's
-sizes, alignment, and byte order, without a line of conversion. The
-changes from v7 are therefore few: those needed to compile it as a
+sizes, alignment, and byte order, without a line of conversion. The changes from v7 are therefore few, those needed to compile it as a
 program of the host, those of strict C99, the packing of block
 addresses, a bigger limit on the size of a file, and the loss of the
 bootstrap block.
 
 `NIPB`, `NINDIR`, and `NDIRECT` are the numbers of inodes, block
-addresses, and directory entries in a block: 4, 128, and 32. `MAXFILEBLK`
+addresses, and directory entries in a block, 4, 128, and 32. `MAXFILEBLK`
 (#l("#define\tMAXFILEBLK\t(LADDR+NINDIR+(NINDIR*NINDIR))")) is new: the largest number of blocks a file may have when ten are
 addressed directly, 128 through the indirect block, and 128 times 128
 through the double indirect block. The macro `itoo` gives the position of an inode in
