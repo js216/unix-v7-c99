@@ -290,9 +290,6 @@ d--755 0 0
           sig	---644 0 0 usr/local/test/cases/sig
           sig.exp	---644 0 0 usr/local/test/cases/sig.exp
           sig.sed	---644 0 0 usr/local/test/cases/sig.sed
-          smoke	---644 0 0 usr/local/test/cases/smoke
-          smoke.exp	---644 0 0 usr/local/test/cases/smoke.exp
-          smoke.sed	---644 0 0 usr/local/test/cases/smoke.sed
           stress	---644 0 0 usr/local/test/cases/stress
           stress.exp	---644 0 0 usr/local/test/cases/stress.exp
           stress.sed	---644 0 0 usr/local/test/cases/stress.sed

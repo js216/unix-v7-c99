@@ -11,4 +11,5 @@ dd if=/etc/passwd ibs=1b obs=7 count=2 skip=1 | wc -c; dd if=/etc/passwd bs=2x3 
 echo 'main(){if(a){b;}else{c;}/* x */ s="{";while(x)y++;}' >c.c; cb <c.c; echo 'int f(x) { switch(x){case 1: return 2; default: break;} }' | cb
 file /bin/ls /etc/passwd $T/1 /bin /dev/tty /etc/ttys x c.c
 echo '.globl _x' >s.s; echo 'mov r0,r1' >>s.s; echo 'The cat is on the mat and it is a fine day for the people of the town who are' >e; file s.s e
+/usr/games/fortune | sed 1q | wc -l
 cd /; rm -rf $T
