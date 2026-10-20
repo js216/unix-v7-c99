@@ -15074,8 +15074,7 @@ would otherwise stop for want of a rule to make it.
 #source("/usr/sys/sys.mk")
 
 The fragment #f("sys.mk") builds the kernels. It replaces v7's `conf/makefile` and
-the two `mklib` scripts, and follows their plan: the files of `sys` are
-archived as `LIB1`, those of `dev` as `LIB2`, and a kernel is linked
+the two `mklib` scripts, and follows their plan. The files of `sys` are archived as `LIB1`, those of `dev` as `LIB2`, and a kernel is linked
 from the machine-language files and the configuration followed by the
 two archives, so that only the procedures which something calls are
 taken from them. As in v7, the objects are made by the compiler with
@@ -15365,8 +15364,7 @@ The program #f("mkstm32.c") puts the boot ROM's header on the MP135 machine's
 kernel (#f("sys.mk")). Like `mkconf`, it runs on the build machine,
 never on the target.
 
-The header is that of the chip's documentation, version 2 (#l("memcpy(hdr, \"STM2\", 4);")--#l("put4(hdr+132, 512 - 128);")):
-the magic `STM2`; 64 bytes of signature, left zero, since the chip is
+The header is that of the chip's documentation, version 2 (#l("memcpy(hdr, \"STM2\", 4);")--#l("put4(hdr+132, 512 - 128);")). It holds the magic `STM2`; 64 bytes of signature, left zero, since the chip is
 not set to demand one; the checksum (#l("put4(hdr+68, sum);")), the sum of the image's bytes
 (#l("sum = 0;")--#l("sum += img[i];")), which the ROM recomputes; the version (#l("hdr[74] = 2;")); the image's
 length (#l("put4(hdr+76, n);")); the entry point and the load address (#l("put4(hdr+80, SYSRAM);"), #l("put4(hdr+88, SYSRAM);")), both the
@@ -15411,8 +15409,7 @@ The program `sdwrite` writes an image, such as the root file system, onto the SD
 card of the MP135 machine, and reads the card back to check it. The
 boot ROM's USB loader loads it into SYSRAM from the build machine
 (#f("dfu.py")), and it then presents itself on USB as a serial
-port, of the class CDC-ACM, which takes four commands as lines of text:
-`i` reports the card's size in blocks, `w` _lba_ _n_ takes _n_ bytes and
+port, of the class CDC-ACM, which takes four commands as lines of text. The command `i` reports the card's size in blocks, `w` _lba_ _n_ takes _n_ bytes and
 writes them from block _lba_, `r` _lba_ _n_ sends _n_ bytes read from
 there, and `x` resets the chip. The comment at the head shows the use
 from a shell on the build machine. It starts the chip's independent
@@ -15616,8 +15613,8 @@ cast to the `long` which `%ld` expects. So is `bno` in the messages of
 
 The routine `cfile` makes one file, from the next entry of the prototype, and, if
 the file is a directory, all the files within it, by calling itself.
-The entry begins with the mode, as in `d--755`: the type, a `u` for
-set-user-id, a `g` for set-group-id, and three octal digits. Then the
+The entry begins with the mode, as in `d--755`, made of the type, a `u`
+for set-user-id, a `g` for set-group-id, and three octal digits. Then the
 owner and the group. The file is assembled in the kernel's in-core
 inode structure (#f("inode.h")), which `mkfs` uses as a convenient
 container.
@@ -15752,8 +15749,8 @@ to a block, and `mkfs` gives the i-list blocks 2 to 257. The system's files and 
 take some 5 MB of it. The rest is room for the users. The size is bounded by
 nothing but the configuration: three-byte block addresses
 (#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
-block 32768 (#f("qemuconf")). Then comes the root directory, described like
-every other file: its mode, as `d--755`, its owner, and its group.
+block 32768 (#f("qemuconf")). Then comes the root directory, described like every other file by its mode, as `d--755`, its owner,
+and its group.
 
 #lines-to("bin\td--755 0 0")
 
@@ -15768,9 +15765,9 @@ name, is a second copy of it. `1` is one of v7's shell scripts, like
 Every file is owned by root but two in `/usr/adm` and the three home
 directories below. A `u` in the second
 place of a mode sets the set-user-id bit. It is given to the programs
-which were set-user-id root in v7's distribution, because they must act
-as the super-user whoever runs them: `login`, `mkdir`, `mv`, `newgrp`,
-`passwd`, `rmdir`, and `su` here, and `atrun` in `/usr/lib`. A `g` in
+which were set-user-id root in v7's distribution, because they must act as the super-user whoever runs them. They are
+`login`, `mkdir`, `mv`, `newgrp`, `passwd`, `rmdir`, and `su` here, and
+`atrun` in `/usr/lib`. A `g` in
 the third place sets the set-group-id bit. The commands `df`, `iostat`, `ps`, and
 `pstat` here, and `dmesg` in `/etc`, belong to group `sys` (2,
 #f("group")) and are set-group-id, so that they may read the memory and
@@ -15812,8 +15809,7 @@ lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 `/etc` holds the programs which v7 installed there, and its data:
 #f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
 `ddate`, an empty file in which `dump` records the dates of dumps. Two
-programs are the MP135 machine's own, and work through the device
-registers of `/dev/mem` (#f("mem.c")): `wdog` starts the chip's
+programs are the MP135 machine's own, and work through the device registers of `/dev/mem` (#f("mem.c")). The program `wdog` starts the chip's
 independent watchdog and feeds it every 10 seconds, so that the board
 resets itself some 33 seconds after the system stops, and `reset` syncs the
 disks and resets the board at once, through the reset controller. Both
@@ -15836,8 +15832,7 @@ programs and data of `/usr/lib`, among them `bc`'s library `lib.b` and
 the table of `units`; and the spool directory of `at`, with the file in
 which `atrun` keeps the time of its last run and the directory `past`
 into which it moves each job while it runs. There is no `/usr/bin`.
-`/usr/local/test` holds the regression tests, which are run on the
-system itself: `run.sh`, the test scripts in `cases`, each with its
+`/usr/local/test` holds the regression tests, which are run on the system itself. They are `run.sh`, the test scripts in `cases`, each with its
 expected output, and in `utils` the programs and data files which the
 tests use, and `fs.img`, a small file system on which they run the file
 system checkers, and `deep.img`, a chain of 40 directories, gives `dump`
@@ -15900,8 +15895,7 @@ by editing the file and sending `init` an interrupt, `kill -2 1`.
 #lines-to(none)
 #source("/etc/passwd")
 
-The file #f("passwd") is v7's, but for two passwords. Each line describes one user, in
-fields separated by colons: the login name, the encrypted password, the
+The file #f("passwd") is v7's, but for two passwords. Each line describes one user, in fields separated by colons. They are the login name, the encrypted password, the
 user and group ids, a comment, the home directory, and the program to
 run in place of the shell, `/bin/sh` if the field is empty. The command `login`
 (#f("cmd/login.c")) finds a user by `getpwnam`, which reads the file
@@ -15962,8 +15956,7 @@ fails.
 == The Test Harness <ch-harness>
 
 The system is tested on itself. The root file system carries a suite of
-regression tests in `/usr/local/test`: each test, or _case_, is a shell
-script in `cases`, with the output it must produce in a file of the same
+regression tests in `/usr/local/test`. Each test, or _case_, is a shell script in `cases`, with the output it must produce in a file of the same
 name ending in `.exp`, and, where some of the output legitimately varies
 from run to run (process ids, clock ticks, times of day, kernel
 addresses), a `sed` script ending in `.sed` which replaces the varying
@@ -16014,8 +16007,7 @@ frame. They are linked as the commands are, except `proft`, which is
 compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
 not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^)")).
 
-Three small file systems are made by `mkfs` for the tests of the
-file-system commands: `fs.img`, from the prototype `fs.proto`, with a
+Three small file systems are made by `mkfs` for the tests of the file-system commands. They are `fs.img`, from the prototype `fs.proto`, with a
 few files of known content (#l("$(TS)/obj/fs.img: $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \\")--#l("$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null")); `deep.img`, a chain of 40
 directories (#l("$(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "for (i = 0; i <= 40; i++) print \"$$\" }' | \\")); and
 `big.img`, holding a copy of the dictionary, which gives `icheck` a file
@@ -16035,8 +16027,7 @@ and once past it, when the shell reports the list too long.
 #source("/usr/local/test/utils/ob.c")
 
 The utility `ob` writes bytes given in octal, each optionally repeated, `n*v`, on
-its standard output. The cases use it to forge damaged files: a
-`mon.out` with an impossible count for `prof`, a file system with a
+its standard output. The cases use it to forge damaged files, a `mon.out` with an impossible count for `prof`, a file system with a
 corrupted superblock for the checkers, and an accounting record for
 `sa`.
 
@@ -16139,8 +16130,7 @@ back.
 #lines-to(none)
 #source("/usr/local/test/utils/tt.c")
 
-The utility `tt` checks the library's corners and prints `PASS` or `FAIL` for each:
-`sscanf` with characters above 127, an unterminated `%[`, a number of
+The utility `tt` checks the library's corners and prints `PASS` or `FAIL` for each. It tries `sscanf` with characters above 127, an unterminated `%[`, a number of
 150 digits, and every conversion (#l("n = sscanf(\"\\351abc def\", \"%s %s\", buf, b2);")--#l("ck(\"o x F\", n == 3 && x == 15 && y == 255 && d == 150.0);")); `malloc` refusing sizes it
 cannot meet and reusing freed space (#l("ck(\"malloc huge\",")--#l("ck(\"malloc reuse\", q != 0);")); `atof` at the extremes of
 the exponent (#l("ck(\"atof huge\", atof(\"1e99999999999\") > 1e308);")--#l("atof(\"1.5e3\") == 1500 && atof(\"-2.25\") == -2.25);")); `modf` and `frexp`, including a denormal number
@@ -16151,8 +16141,7 @@ directory is 300 characters long (#l("strcpy(path, \"PATH=\");")--#l("execvp(\"t
 #lines-to(none)
 #source("/usr/local/test/utils/k12.c")
 
-The utility `k12` checks three things from the mathematics library and its
-neighbours: that `mktemp` puts the process id into the name, that `pow`
+The utility `k12` checks three things from the mathematics library and its neighbours. It checks that `mktemp` puts the process id into the name, that `pow`
 raises a negative number to an integral power and reports `EDOM` for a
 fractional one, and that a NaN, made from infinity minus infinity,
 compares unequal to itself and passes through `sin` and `exp`.
