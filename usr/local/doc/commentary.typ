@@ -10562,8 +10562,7 @@ expression to five `\(...\)` groups.
 
 #lines-to("char\tQ[]\t= \"\";")
 
-The state of the editor. The pointers `zero`, `dot`, and `dol` point into the array
-of line pointers: `zero` at its start, an element which stands for the
+The state of the editor. The pointers `zero`, `dot`, and `dol` point into the array of line pointers, `zero` at its start, an element which stands for the
 nonexistent line 0, `dol` at the last line, and `dot` at the current
 one. Line `n` is `zero[n]`. The pointers `addr1` and `addr2` are the addresses given
 to the current command. The count `nlall` (#l("unsigned nlall = 128;")) is the number of elements
@@ -10641,7 +10640,7 @@ number of lines.
 
 #lines-to("int *")
 
-The routine `address` parses one address: a number, `.`, `$`, a mark, or a pattern
+The routine `address` parses one address, a number, `.`, `$`, a mark, or a pattern
 between `/` or `?`, followed by any number of `+` and `-` offsets. A
 pattern is compiled and the lines searched forwards or backwards from
 `dot`, wrapping round at the ends, until a match is found or the search
@@ -10767,9 +10766,8 @@ be passed to it.
 
 #lines-to("void", after: "error(T);")
 
-The routine `init` empties the buffer: a fresh temporary file, created with mode
-0600 and opened for reading and writing, `tline` at 2, no marks, and
-empty buffers.
+The routine `init` empties the buffer. It makes a fresh temporary file, created with mode
+0600 and opened for reading and writing, sets `tline` to 2, and clears the marks and the buffers.
 
 #lines-to("void", after: "}")
 
@@ -10819,10 +10817,10 @@ is copied, and no extra memory is needed. The local declaration of
 
 The routine `compile` translates a regular expression, read through `getchr` up to
 the delimiter `aeof`, into `expbuf`. An empty expression reuses the
-previous one. Each item becomes a code followed by its operand, if any:
-`CCHR` with the character; `CDOT` alone; `CCL` or `NCCL` with a class;
-`CBRA` and `CKET` with the number of a group; and `CBACK` with the
-number of the group referred to. `$` is `CDOL` only at the end, and `^`
+previous one. Each item becomes a code followed by its operand, if any. The code
+`CCHR` takes the character, `CDOT` nothing, `CCL` or `NCCL` a class,
+`CBRA` and `CKET` the number of a group, and `CBACK` the number of the
+group referred to. `$` is `CDOL` only at the end, and `^`
 sets `circfl` only at the start.
 
 The pointer `lastep` is the address of the last item compiled, so that a `*` can
@@ -10894,9 +10892,8 @@ The encryption of `-x` and `x`. The key is read with echo turned off
 (`getkey`), and passed with two characters of salt to
 `/usr/lib/makekey`, which turns it into 13 characters by way of the
 password-encryption routine of #f("gen/crypt.c"). The routine `crinit` derives from
-them three permutations of the 256 byte values, the tables of a rotor
-machine: a scrambler `t1`, its inverse `t2`, and a self-inverse
-reflector `t3`. The routine `crblock` passes each byte through the scrambler, the
+them three permutations of the 256 byte values, the tables of a rotor machine, a scrambler `t1`, its inverse `t2`, and
+a self-inverse reflector `t3`. The routine `crblock` passes each byte through the scrambler, the
 reflector, and back through the inverse, with the rotor positions
 `n1` and `n2` stepping on with each byte of the file like the wheels
 of a counter, so that
@@ -11334,8 +11331,7 @@ which a directory entry of the full `DIRSIZ` characters lacks (see
 
 #lines-to("int", after: "char\t*coref;")
 
-The options are letters in the first argument, in any combination: `a`
-for all users' processes, `x` for those without a terminal, `l` for
+The options are letters in the first argument, in any combination, `a` for all users' processes, `x` for those without a terminal, `l` for
 the long listing, `t` followed by a terminal name, `v` for the
 children's times, `k` to read a core image of memory from
 `/usr/sys/core` instead of the live system, and a number for a single
@@ -12111,9 +12107,7 @@ ignored. The call is now `puts(p2)` (#l("puts(p2);")).
 #source("/usr/src/cmd/osh.c")
 
 The program `osh` is the shell of the Sixth Edition, which v7 kept beside the
-Bourne shell of Part Two for old scripts. It is a few hundred lines
-against the Bourne shell's thousands: no variables but the positional
-parameters `$0` to `$9` and `$$`, no control flow but `goto` (a separate
+Bourne shell of Part Two for old scripts. It is a few hundred lines against the Bourne shell's thousands. It has no variables but the positional parameters `$0` to `$9` and `$$`, no control flow but `goto` (a separate
 command), and wild cards left to a separate program, `/etc/glob`, which
 v7 did not include. Its source is old C: v7 still compiled `=+` and
 `=|` for `+=` and `|=`, and the parse tree kept pointers in `int`s. The
@@ -12121,11 +12115,9 @@ port writes the assignment operators in the modern order, and makes
 every conversion between pointer and `int` an explicit cast, which is
 exact on the ARM, whose `int` and pointers have 32 bits.
 
-The flags describe a command in the tree: `FAND` for one run in the
-background, `FPIN` and `FPOU` for the ends of a pipe, `FPAR` for a
+The flags describe a command in the tree, `FAND` for one run in the background, `FPIN` and `FPOU` for the ends of a pipe, `FPAR` for a
 command in parentheses, `FINT` for one which must ignore interrupts,
-and `FPRS` for one whose process id is printed. A tree node is a few
-`int`s: its type, the input and output file names (`DLEF`, `DRIT`), the
+and `FPRS` for one whose process id is printed. A tree node is a few `int`s holding its type, the input and output file names (`DLEF`, `DRIT`), the
 flags, and for a command its words from `DCOM`. `NSIG` is redefined to
 the sixteen signals `mesg` names, one fewer than #f("signal.h") gives.
 
@@ -12159,16 +12151,15 @@ argument or one character at a time. The redefinitions of `getc` and
 
 #lines-to("/*", lead: true)
 
-The parser works on the array of words, by recursive descent: `syn1`
-splits at `;`, `&`, and newline, `syn2` at `|` or `^`, and `syn3` takes
+The parser works on the array of words, by recursive descent. The routine `syn1` splits at `;`, `&`, and newline, `syn2` at `|` or `^`, and `syn3` takes
 a simple command or a parenthesised list with its redirections. Each
 returns a tree node allocated from `trebuf` by `tree`, which escapes
 through `jmpbuf` when the buffer is full.
 
 #lines-to("static void", lead: true)
 
-The routine `execute` runs a tree. A few commands are built in: `chdir`, `shift`,
-`login`, `newgrp`, `wait`, and `:`. Others fork, redirect, and execute:
+The routine `execute` runs a tree. The commands `chdir`, `shift`, `login`, `newgrp`, `wait`, and `:` are
+built in. Others fork, redirect, and execute:
 a word with `[`, `?`, or `*` hands the command to `/etc/glob`, which v7
 did not ship either, so such a command fails here as there. The command
 is tried as given, in `/bin`, and in `/usr/bin`, the name being built
@@ -12231,7 +12222,7 @@ The game `quiz` asks questions from a file of facts and checks the answers. The
 index, `/usr/games/quiz.k/index`, names a file for each subject and the
 kinds of fact it holds, such as `state:capital`. Asked for two of them,
 `quiz` reads the file and asks one kind of fact and expects the other.
-A fact is a pattern: `[...]` encloses something optional, `{...}`
+A fact is a pattern, in which `[...]` encloses something optional, `{...}`
 groups, and `|` separates alternatives, so that an answer may be given
 in more than one way.
 
@@ -12462,8 +12453,8 @@ eight bits, a single failure in v7 left `rm` exiting with 0.
 
 #source("/usr/src/cmd/rmdir.c")
 
-The command `rmdir` removes empty directories. A directory is three links: its
-name in the parent, its own `.`, and its `..` to the parent. The command
+The command `rmdir` removes empty directories. A directory has three links, its name in the parent, its own `.`, and
+its `..` to the parent. The command
 checks that the directory is not the current one and holds nothing but
 those two entries, then unlinks `..`, `.`, and the name, in that order.
 Only the super-user may unlink a directory, so `rmdir` is set-user-id
@@ -12504,7 +12495,7 @@ otherwise clash with the library's `ctime`, which the headers declare.
 
 #lines-to("/* compile time functions:  priority is  exp()<e1()<e2()<e3()  */", lead: true)
 
-The expression is parsed by recursive descent: `exp` for `-o`, `e1`
+The expression is parsed by recursive descent, with `exp` for `-o`, `e1`
 for concatenation, which means "and", `e2` for `!`, and `e3` for
 parentheses and the predicates. The routine `nxtarg` hands out the arguments, and
 returns an empty string, three times at most, once they run out. `-perm`
@@ -12612,7 +12603,7 @@ ASCII octal numbers, so that an archive is the same whatever the byte
 order of the machine which made it. A block is read or written in
 records of `nblock` blocks, 20 at most.
 
-The routine `main` reads the key: `c` creates, `r` appends, `u` appends only files
+The routine `main` reads the key. The letter `c` creates, `r` appends, `u` appends only files
 newer than their copies in the archive, `x` extracts, and `t` lists, and
 `v` reports each file, `w` asks about each, `m` leaves the extracted
 files with the present time, and `l` reports links it could not find.
@@ -12721,8 +12712,8 @@ such (#l("if(in <= 0){")--#l("printf(in? \"cannot read\\n\": \"empty\\n\");")).
 
 The command `cmp` compares two files byte by byte. It reports the first difference
 by byte and line, or with `-l` every differing byte with both values in
-octal, or with `-s` nothing but its exit status: 0 for equal files, 1
-for different ones, and 2 for trouble. Optional offsets, decimal or,
+octal, or with `-s` nothing but its exit status, 0 for equal files, 1 for
+different ones, and 2 for trouble. Optional offsets, decimal or,
 with a leading zero, octal, skip the start of either file.
 
 The routine `otoi` now accumulates in an `unsigned long` (#l("unsigned long v;")), so that an offset
@@ -12781,7 +12772,7 @@ again, which the PDP-11's loader merged but C99 does not allow.
 
 #source("/usr/src/cmd/tp/tp1.c")
 
-The routine `main` reads the key: a unit number, `f` for a named file, `m` for
+The routine `main` reads the key, a unit number, `f` for a named file, `m` for
 magnetic tape instead of DECtape, and one command, which `setcom`
 installs in `command`: `r` replaces or adds (the default), `u` does so
 only for files newer than their copies, `d` deletes, `x` extracts, and
@@ -12950,8 +12941,8 @@ dropping the rest of a longer line, where v7 wrote past it.
 
 #source("/usr/src/cmd/comm.c")
 
-The command `comm` reads two sorted files and prints three columns: the lines only
-in the first, those only in the second, and those in both. The flags
+The command `comm` reads two sorted files and prints three columns, of the lines only in the first, those only in
+the second, and those in both. The flags
 `-1`, `-2`, and `-3` suppress columns. The columns are made by leading
 tabs, `ldr`, and suppressing a column shortens the leaders of the
 columns to its right by writing nulls into them. They are now arrays
@@ -13085,8 +13076,7 @@ with `main`. As with `tp`, the variables are now defined once, in
 
 #source("/usr/src/cmd/sed/sed0.c")
 
-The routine `main` reads the options: `-n` suppresses the automatic printing of
-each line, `-e` gives a line of script, and `-f` a file of script. With
+The routine `main` reads the options. The option `-n` suppresses the automatic printing of each line, `-e` gives a line of script, and `-f` a file of script. With
 neither, the first argument is the script. It then resolves the
 labels and runs the script over each file named, or the input.
 
