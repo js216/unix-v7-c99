@@ -369,9 +369,9 @@ exit(int rv)
 	ptfree(p);
 	mfree(coremap, p->p_size, p->p_addr);
 	p->p_stat = SZOMB;
-	((struct xproc *)p)->xp_xstat = rv;
-	((struct xproc *)p)->xp_utime = u.u_cutime + u.u_utime;
-	((struct xproc *)p)->xp_stime = u.u_cstime + u.u_stime;
+	p->p_xstat = rv;
+	p->p_utime = u.u_cutime + u.u_utime;
+	p->p_stime = u.u_cstime + u.u_stime;
 	for(q = &proc[0]; q < &proc[NPROC]; q++)
 		if(q->p_ppid == p->p_pid) {
 			wakeup((caddr_t)&proc[1]);
@@ -409,16 +409,15 @@ loop:
 		f++;
 		if(p->p_stat == SZOMB) {
 			u.u_r.r_val1 = p->p_pid;
-			u.u_r.r_val2 = ((struct xproc *)p)->xp_xstat;
-			u.u_cutime += ((struct xproc *)p)->xp_utime;
-			u.u_cstime += ((struct xproc *)p)->xp_stime;
+			u.u_r.r_val2 = p->p_xstat;
+			u.u_cutime += p->p_utime;
+			u.u_cstime += p->p_stime;
 			p->p_pid = 0;
 			p->p_ppid = 0;
 			p->p_pgrp = 0;
 			p->p_sig = 0;
 			p->p_flag = 0;
 			p->p_wchan = 0;
-			p->p_nptab = 0;
 			p->p_stat = NULL;
 			return;
 		}

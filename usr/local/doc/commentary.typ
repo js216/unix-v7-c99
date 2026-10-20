@@ -488,9 +488,11 @@ per-process area it has just freed; as in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
 another process.
 
-The process becomes a zombie. Its `proc` entry is reused as an `xproc`
-(#f("proc.h")) to hold the exit status and the times, which are all
-that the parent will need. Children are handed to `init` (process 1),
+The process becomes a zombie. Its `proc` entry keeps the exit status
+and the times in `p_xstat`, `p_utime`, and `p_stime` (#f("proc.h")),
+which are all that the parent will need. V7 overlaid a separate
+`xproc` structure on the entry instead, which worked only while
+`xproc` was no larger than `proc`. Children are handed to `init` (process 1),
 which is woken in case it is waiting; stopped children are set running
 so that they can die. Finally the parent is woken, and `swtch` is
 called, never to return.

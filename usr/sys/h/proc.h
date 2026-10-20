@@ -26,6 +26,9 @@ struct	proc {
 	struct text *p_textp;	/* pointer to text structure */
 	struct proc *p_link;	/* linked list of running processes */
 	unsigned	p_clktim;	/* time to alarm clock signal */
+	short	p_xstat;	/* exit status for wait */
+	time_t	p_utime;	/* user time, this proc */
+	time_t	p_stime;	/* system time, this proc */
 };
 
 extern struct proc proc[];	/* the proc table itself */
@@ -46,26 +49,3 @@ extern struct proc proc[];	/* the proc table itself */
 #define	STRC	020		/* process is being traced */
 #define	SWTED	040		/* another tracing flag */
 #define	SULOCK	0100		/* user settable lock in core */
-
-/*
- * parallel proc structure
- * to replace part with times
- * to be passed to parent process
- * in ZOMBIE state.
- */
-struct	xproc {
-	char	xp_stat;
-	char	xp_flag;
-	char	xp_pri;		/* priority, negative is high */
-	char	xp_time;	/* resident time for scheduling */
-	char	xp_cpu;		/* cpu usage for scheduling */
-	char	xp_nice;	/* nice for cpu usage */
-	int	xp_sig;		/* signals pending to this process */
-	short	xp_uid;		/* user id, used to direct tty signals */
-	short	xp_pgrp;	/* name of process group leader */
-	short	xp_pid;		/* unique process id */
-	short	xp_ppid;	/* process id of parent */
-	short	xp_xstat;	/* Exit status for wait */
-	time_t	xp_utime;	/* user time, this proc */
-	time_t	xp_stime;	/* system time, this proc */
-};
