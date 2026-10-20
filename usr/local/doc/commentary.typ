@@ -697,7 +697,7 @@ next reference to the file, by any process, slept for good; the
 The structure filled in by `ftime` (#f("sys4.c")): the time in seconds,
 the milliseconds within the second, the local time zone in minutes west
 of Greenwich, and a flag saying whether daylight saving time is
-observed. The file is v7's, unchanged.
+observed.
 
 Its size has changed none the less. On the PDP-11 the four members
 occupied 4, 2, 2, and 2 bytes, 10 in all. On the ARM a `time_t` is eight
@@ -852,7 +852,7 @@ On the PDP-11 the stack lay at the top of the 64 KB address space, so
 the top of the address space is `USRSIZE` (#f("param.h")), and the two
 expressions become `USRSIZE-ptob(u.u_ssize)` and `USRSIZE-sp`
 (#l("if(sp >= USRSIZE-ptob(u.u_ssize))")--#l("si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;")); the divisor 64, the PDP-11's click in bytes, becomes
-`ptob(1)`. The rest is v7's. The new stack size is the depth of `sp` in
+`ptob(1)`. The new stack size is the depth of `sp` in
 pages, rounded down, plus `SINCR` pages of room; `estabur` refuses it
 if the stack would meet the data. The routine `expand` enlarges the image, and the
 stack, which lies at the end of the image, is copied up by the number
@@ -954,7 +954,7 @@ does not return, from warning that control falls into the next case.
 
 The record which the kernel appends to the accounting file when a
 process exits (`acct`, #f("acct.c")), and which the command `sa`
-summarises. The file is v7's, unchanged.
+summarises.
 
 The type `comp_t` (#l("typedef\tunsigned short comp_t;\t/* \"floating pt\": 3 bits base 8 exp, 13 bits fraction */")) packs a time into 16 bits, as a three-bit exponent of 8
 and a thirteen-bit mantissa, which reaches some 17,000 million; `compress` produces it. The user and
@@ -1951,7 +1951,7 @@ wrote `ip->i_un.i_addr` as though their members were members of the
 union itself. The PDP-11 compiler allowed this, because a member name
 was little more than an offset and type, valid in any structure. C99
 requires a member to be named, so the structures are now `u_reg` and
-`u_dev`, and the macros (#l("#define\ti_addr\tu_reg.i_addr")--#l("#define\ti_rdev\tu_dev.i_rdev")) let every use keep v7's spelling: 
+`u_dev`, and the macros (#l("#define\ti_addr\tu_reg.i_addr")--#l("#define\ti_rdev\tu_dev.i_rdev")) let every use keep v7's spelling:
 `ip->i_un.i_addr[0]` becomes `ip->i_un.u_reg.i_addr[0]`. The
 corresponding macro for `i_group` was dropped because nothing refers to
 it.
@@ -2638,8 +2638,7 @@ systems, all follow the ARM's order.
 #lines-to(none)
 #source("/usr/sys/sys/sys3.c")
 
-The file #f("sys3.c") holds `stat`, `fstat`, `dup`, `mount`, and `umount`. Apart
-from the C99 dressing it is v7's. The declaration of `stat1` (#l("void\tstat1(struct inode *ip, struct stat *ub, off_t pipeadj);")) is
+The file #f("sys3.c") holds `stat`, `fstat`, `dup`, `mount`, and `umount`. The declaration of `stat1` (#l("void\tstat1(struct inode *ip, struct stat *ub, off_t pipeadj);")) is
 new: it is called before its definition and from no other file.
 
 #lines-to("/*", lead: true)
@@ -2876,8 +2875,7 @@ the ARM lays out the structure.
 The file #f("alloc.c") allocates and frees the two resources of a file system,
 disk blocks and inodes, using the lists kept in the super-block
 (#f("filsys.h")). It also holds `getfs`, which finds the super-block of
-a mounted device, and `update`, the body of `sync`. Apart from the C99
-dressing the file is v7's. The declaration of `badblock` (#l("int\tbadblock(struct filsys *fp, daddr_t bn, dev_t dev);")) is new:
+a mounted device, and `update`, the body of `sync`. The declaration of `badblock` (#l("int\tbadblock(struct filsys *fp, daddr_t bn, dev_t dev);")) is new:
 it is called before its definition, and only here. `FBLKP` lets a buffer
 be viewed as a `struct fblk` (#f("fblk.h")).
 
@@ -3006,8 +3004,7 @@ one `file` for reading and by another for writing. Data written to the
 pipe is appended to the file; the reader reads from its own offset; and
 when the reader catches up, the file is emptied. Since the file stays
 small and is soon read, its blocks normally live only in the buffer
-cache, but nothing prevents them from being written to the disk. The
-file is v7's apart from the C99 dressing.
+cache, but nothing prevents them from being written to the disk.
 
 `PIPSIZ` bounds the size of the file. Ten direct blocks hold 5120 bytes,
 which is the limit of the comment; a larger pipe would need an indirect
@@ -4789,8 +4786,7 @@ written back now would overwrite the new data. The lines were clean at
 the start (#l("dcflush(bp->b_un.b_addr+rkoff, rkn);")), and the buffers of the buffer cache share no line with
 a neighbour (#f("main.c")); a raw transfer may share its first and last
 lines with the rest of the process's memory, but the process sleeps
-until the transfer is done, and nothing else writes there. The rest is
-v7's.
+until the transfer is done, and nothing else writes there.
 
 #lines-to("void", after: "}")
 
@@ -5490,7 +5486,7 @@ makes it kill everything and return to single-user mode; an interrupt,
 `kill -2 1`, makes it read `/etc/ttys` again, so that terminals can be
 enabled and disabled without a reboot.
 
-The file is v7's with C99 declarations. The file includes `stdio.h` (#l("#include <stdio.h>")),
+The file includes `stdio.h` (#l("#include <stdio.h>")),
 although `init` uses no standard I/O, because the port's `stdio.h`
 (#f("stdio.h")) carries the prototypes of the library's system call
 stubs, `fork`, `execl`, `alarm`, and the rest, and C99 does not allow a
@@ -5974,8 +5970,7 @@ The routine `getpwuid` finds a user's entry in the password file by id, reading
 it through `getpwent` from the start and closing it again, so that each
 call is independent; `getpwnam`, which finds it by name, is the same
 loop with `strcmp`. The entry returned is
-`getpwent`'s static one, overwritten by the next call. Apart from
-prototypes both are v7's.
+`getpwent`'s static one, overwritten by the next call.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/getgrent.c")
@@ -5984,8 +5979,7 @@ The routine `getgrent` reads `/etc/group` an entry at a time, as `getpwent` read
 the password file: the line is cut at its colons by `grskip`, which
 replaces each separator with a null, and the members, separated by
 commas, become a null-terminated array of pointers into the line.
-The routine `setgrent` rewinds the file and `endgrent` closes it. Apart from
-prototypes it is v7's.
+The routine `setgrent` rewinds the file and `endgrent` closes it.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/getgrgid.c")
@@ -6259,7 +6253,7 @@ omit its own, and the shell's sources often do (`IF x THEN y=0 FI`).
 port declares the shell's local functions `LOCAL` before their
 definitions (#f("sh/cmd.c")), where v7 declared them `PROC`.
 
-The file is v7's, unchanged.
+
 
 #lines-to("#define SKIP\t;", lead: true)
 
@@ -6284,7 +6278,7 @@ command, and the command may be empty. `MARK` is or-ed into a character
 pushed back into `peekc`, so that a pushed-back null, which is the
 shell's end of file, still reads as non-zero.
 
-The file is v7's, unchanged.
+
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/ctype.h")
@@ -6344,7 +6338,7 @@ for all the positional arguments.
 #source("/usr/src/cmd/sh/brkincr.h")
 
 The initial and largest amounts, in bytes, by which `locstak`
-(#f("sh/stak.c")) extends the shell's data segment. The file is v7's.
+(#f("sh/stak.c")) extends the shell's data segment.
 
 #lines-to(none)
 #source("/usr/src/cmd/sh/stak.h")
@@ -8700,21 +8694,21 @@ The file `data.c` defines the table of streams, `_iob`, with its first three
 entries set up: the standard input with the static buffer `_sibuf`,
 the standard output, given `_sobuf` when it is first written if it is
 not a terminal (#f("stdio/flsbuf.c")), and the standard error,
-unbuffered. `_lastbuf` marks the end of the table. The file is v7's.
+unbuffered. `_lastbuf` marks the end of the table.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/findiop.c")
 
 `_findiop` finds a free entry in `_iob` for `fopen` and `fdopen`, one
 which is neither reading nor writing, or returns null when all
-`_NFILE` are in use. It is v7's, with a prototype.
+`_NFILE` are in use.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/rdwr.c")
 
 The routines `fread` and `fwrite` move `count` items of `size` bytes, a byte at a
 time through `getc` and `putc`, and return the number of whole items
-moved. They are v7's, with prototypes.
+moved.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/getchar.c")
@@ -8745,7 +8739,7 @@ As a function, `putc` is `fputc`.
 The routine `gets` reads a line from the standard input into the caller's array,
 replacing the newline with a null. Nothing tells it how big the array
 is, so a long line overruns it; `fgets` (#f("stdio/fgets.c")), which
-takes the size, is the safe form. The function is v7's.
+takes the size, is the safe form.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/puts.c")
@@ -8779,7 +8773,7 @@ The routine `putw` writes the four bytes of an `int` (#l("putc(i, iop);")--#l("p
 `_strout` writes a field for `_doprnt` (#f("stdio/doprnt.c")): `count`
 characters of `string`, padded with `fillch` to the left when `adjust`
 is negative and to the right when positive; with zeros, a leading minus
-sign is written before the padding. It is v7's, with a prototype.
+sign is written before the padding.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/clrerr.c")
@@ -8791,8 +8785,7 @@ The routine `clearerr` clears a stream's error and end-of-file flags.
 
 The routine `rewind` returns a stream to the start of its file, flushing any
 output and discarding any input buffered, and clearing the flags; a
-stream open for both reading and writing may then do either. It is
-v7's, with a prototype.
+stream open for both reading and writing may then do either.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/fopen.c")
@@ -8862,8 +8855,7 @@ declares it.
 
 The routine `freopen` closes a stream and opens a file on the same entry of
 `_iob`, through `_endopen` (#f("stdio/endopen.c")); it is how a program
-attaches its standard input or output to a named file. It is v7's,
-with a prototype.
+attaches its standard input or output to a named file.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/setbuf.c")
@@ -9517,7 +9509,7 @@ The debugging routine `allock` follows.
 The routine `calloc` allocates space for `num` items of `size` bytes with `malloc`
 and clears it, an `int` at a time; `cfree` frees it. The size arguments
 of `cfree` are now named and unused (#l("(void)num;")--#l("(void)size;")), where v7 left them out of
-the parameter list. Otherwise it is v7's.
+the parameter list.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/ctime.c")
@@ -10163,8 +10155,7 @@ v7's declarations of `strcpy` and `strcat`.
 #source("/usr/src/libc/gen/isatty.c")
 
 The routine `isatty` says whether a descriptor is a terminal, by asking for its
-modes with `gtty`, which fails for anything else. It is v7's, with a
-prototype.
+modes with `gtty`, which fails for anything else.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/stty.c")
@@ -10227,7 +10218,7 @@ read of the strings has moved the file offset.
 #source("/usr/src/libc/gen/tell.c")
 
 The routine `tell` returns the current offset of a descriptor, by an `lseek` that
-moves nowhere. It is v7's, with a prototype.
+moves nowhere.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/strcmp.c")
@@ -10281,21 +10272,19 @@ that the order does not depend on the signedness of `char`.
 The routine `strncpy` copies at most `n` characters and pads the rest of the `n`
 with nulls; when the source is `n` long or longer the result has no
 null at all, which is the form of the fixed fields of directory
-entries and of `utmp`. It is v7's, with a prototype.
+entries and of `utmp`.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/strncat.c")
 
-The routine `strncat` appends at most `n` characters and always a null. It is v7's,
-with a prototype.
+The routine `strncat` appends at most `n` characters and always a null.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/index.c")
 
 The routine `index` returns a pointer to the first occurrence of a character in a
 string, or null; the null that ends the string counts, so that
-`index(s, 0)` finds the end. Its partner `rindex` returns the last occurrence. Both
-are v7's, with prototypes.
+`index(s, 0)` finds the end. Its partner `rindex` returns the last occurrence.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/rindex.c")
@@ -10411,8 +10400,7 @@ real one; C99 requires a single definition, so the declarations are
 
 The message for each error number, in the order of `errno.h`
 (#f("errno.h")), and their count, `sys_nerr`, for #f("gen/perror.c") and for
-programs which print the message themselves. The file is v7's,
-unchanged.
+programs which print the message themselves.
 
 #lines-to(none)
 
@@ -10547,8 +10535,7 @@ zero, and moves a negative number with a fraction down by one. The routine `ceil
 
 #source("/usr/src/libm/fabs.c")
 
-The routine `fabs` returns the absolute value of a double. It is v7's, with a
-prototype.
+The routine `fabs` returns the absolute value of a double.
 
 #lines-to(none)
 #source("/usr/src/libm/asin.c")
@@ -10576,22 +10563,20 @@ defined `errno` again; it now uses the library's one definition
 The routine `sinh` uses a rational approximation for small arguments, where the
 difference of exponentials would lose accuracy, and `exp` beyond; for
 arguments above 21 the smaller exponential no longer matters and the
-larger is halved alone. The routine `cosh` uses `exp` throughout. Apart from
-prototypes the file is v7's.
+larger is halved alone. The routine `cosh` uses `exp` throughout.
 
 #lines-to(none)
 #source("/usr/src/libm/tanh.c")
 
 The routine `tanh` is `sinh` over `cosh`, except above 21, where it is $plus.minus 1$
-to the precision of a double and the quotients would overflow. It is
-v7's, with a prototype.
+to the precision of a double and the quotients would overflow.
 
 #lines-to(none)
 #source("/usr/src/libm/hypot.c")
 
 The routine `hypot` computes $sqrt(a^2 + b^2)$ without overflowing for large
 arguments, by dividing by the larger first. It is called by `cabs`, the absolute value
-of a complex number. Apart from prototypes the file is v7's.
+of a complex number.
 
 #lines-to(none)
 #source("/usr/src/libm/j0.c")
@@ -10618,7 +10603,7 @@ for an order below the argument, `jn` recur forwards from the functions
 of orders 0 and 1. Forward recurrence is unstable for `jn` when the
 order exceeds the argument, so it then evaluates a continued fraction
 for the ratio of consecutive orders and recurs backwards, scaling the
-result by `j0` (#l("recurs:")--#l("return(t*j0(x)/b);")). Apart from prototypes the file is v7's.
+result by `j0` (#l("recurs:")--#l("return(t*j0(x)/b);")).
 
 #lines-to(none)
 #source("/usr/src/cmd/ed.c")
@@ -12008,8 +11993,7 @@ joke message.
 
 The command `echo` writes its arguments separated by blanks and ended by a newline,
 which a first argument `-n` suppresses. The shell has no built-in
-`echo`, so every `echo` in a script runs this program. The file is v7's
-with a prototype for `main`.
+`echo`, so every `echo` in a script runs this program.
 
 #lines-to(none)
 
@@ -13128,8 +13112,7 @@ The command `wc` counts the lines, words, and characters of its files, or of its
 input, and their totals. A word is a maximal run of printing
 characters other than space; a control character other than newline,
 space, or tab neither starts nor ends one. An option such as `-lw`
-chooses the counts printed, and their order. Apart from its prototypes
-the program is v7's.
+chooses the counts printed, and their order.
 
 #lines-to(none)
 
@@ -13313,7 +13296,7 @@ reported (#l("if(t==NULL)")--#l("error(\"too many items\",empty);", after: "if(t
 
 The command `rev` copies its files, or its input, reversing the characters of each
 line. A line longer than `N`, 256 characters, is reversed in pieces of
-that length. The program is v7's, with a prototype.
+that length.
 
 #lines-to(none)
 
@@ -13345,8 +13328,7 @@ from the 64-bit time (#l("long long tvec;"), #l("time(&tvec);")--#l("srand((int)
 
 The command `sum` prints a 16-bit checksum of each file and its size in blocks of
 `BUFSIZ`, 512 bytes. Before each byte is added the sum is rotated
-right by one bit, so that the order of the bytes matters. The program
-is v7's, with a prototype.
+right by one bit, so that the order of the bytes matters.
 
 #lines-to(none)
 
@@ -13697,8 +13679,7 @@ as it is evaluated: `exp` for `-o`, `e1` for `-a`, `e2` for `!`, and
 `e3` for parentheses and the primaries, which test files (`-r`, `-w`,
 `-f`, `-d`, `-s`), terminals (`-t`), strings (`-z`, `-n`, `=`, `!=`),
 and integers (`-eq` and the like, with `-l` giving a string's length).
-`EQ` (#l("#define EQ(a,b)\t((tmp=a)==0?0:(strcmp(tmp,b)==0))")) treats a missing argument as unequal to anything. Apart from
-its prototypes the program is v7's.
+`EQ` (#l("#define EQ(a,b)\t((tmp=a)==0?0:(strcmp(tmp,b)==0))")) treats a missing argument as unequal to anything.
 
 #lines-to(none)
 
@@ -14208,7 +14189,7 @@ asking for that user's password, unless there is none or the caller is
 already the super-user. It is set-user-id root, so that it can call
 `setgid` and `setuid` (#f("sys4.c")) for the new ids, and then runs
 the user's shell. In the environment it changes the shell's prompt
-`PS1` to `# `, as a reminder. The program is v7's, with a prototype.
+`PS1` to `# `, as a reminder.
 
 #lines-to(none)
 
@@ -14343,8 +14324,7 @@ The command `newgrp` changes the user's group to one named in `/etc/group` of wh
 the user is a member, or any to `other`; a group with a password asks
 for it if the user has none. It is set-user-id root, so that it can call
 `setgid`; `done` gives the privilege up and replaces itself with a new
-shell, which runs in the new group. The program is v7's, with
-prototypes.
+shell, which runs in the new group.
 
 #lines-to(none)
 
@@ -14353,7 +14333,7 @@ prototypes.
 The command `chown` changes the owner of files, given by name or number, keeping
 their group. The `chown` system call is for the super-user only
 (#f("sys4.c")), so in practice only the super-user can use the command.
-The program is v7's, with prototypes.
+
 
 #lines-to(none)
 
@@ -14361,7 +14341,7 @@ The program is v7's, with prototypes.
 
 The command `chgrp` changes the group of files, keeping their owner, through the
 same system call as `chown`, and so likewise only for the super-user.
-The program is v7's, with prototypes.
+
 
 #lines-to(none)
 
@@ -14389,7 +14369,7 @@ as signed (#l("printf(\"%d: %s\\n\", pid, sys_errlist[errno]);")), as `int`s are
 
 The command `nice` runs a command with its priority lowered, by 10 or by the
 amount given; only the super-user may give a negative amount, which
-raises the priority. The program is v7's, with a prototype.
+raises the priority.
 
 #lines-to(none)
 
@@ -14430,7 +14410,7 @@ first (#l("struct sgttyb tb = {0};"), #l("struct sgttyb t = {0};", after: "dasi4
 
 The command `tty` prints the name of the terminal on its standard input, found by
 `ttyname`, or with `-s` only sets the exit status to say whether there
-is one. The program is v7's, with a prototype.
+is one.
 
 #lines-to(none)
 
@@ -14570,7 +14550,7 @@ in `long long` (#l("long long tm;")), and the table of buffers has `NBUF` entrie
 
 The command `accton` turns process accounting on, into the file named, or off with
 no argument, through the `acct` system call, which only the super-user
-may make (#f("acct.c")). The program is v7's, with a prototype.
+may make (#f("acct.c")).
 
 #lines-to(none)
 
@@ -14581,8 +14561,7 @@ and system time of its processes, which `times` reports for the
 children waited for. Times are in ticks of a sixtieth of a second; the
 real time, measured with `time` in seconds, is multiplied up to match.
 The routine `printt` prints a number of ticks as hours, minutes, seconds, and
-tenths, without leading zeros, dividing by the bases in `quant`. The
-program is v7's, with prototypes.
+tenths, without leading zeros, dividing by the bases in `quant`.
 
 #lines-to(none)
 
@@ -14731,7 +14710,7 @@ argument is given, through the `mount` system call (#f("sys3.c")), and
 records it in `/etc/mtab` by the last component of the special file's
 name; with no arguments it lists the table. The table is only a record
 kept for people: the kernel keeps its own, and `/etc/mtab` can disagree
-with it after a crash. The program is v7's, with a prototype.
+with it after a crash.
 
 #lines-to(none)
 
@@ -14864,7 +14843,7 @@ The command `sync` makes the system call of that name, which starts the writing 
 modified buffer, inode, and superblock to the disks (#f("sys4.c"),
 #f("alloc.c")). It
 is typed before the machine is stopped; `update`, run from `rc`, does
-the same every 30 seconds. The program is v7's, with a prototype.
+the same every 30 seconds.
 
 #lines-to(none)
 #source("/usr/src/cmd/mknod.c")
@@ -16013,7 +15992,7 @@ since the standard error cannot be written.
 #lines-to(none)
 #source("/etc/ttys")
 
-The file #f("ttys") is v7's, unchanged. The program `init` (#f("cmd/init.c")) reads it to
+The program `init` (#f("cmd/init.c")) reads it to
 learn which terminals to serve: on each line the first character is
 `1` if a `getty` is to be run on the terminal and `0` if not, the
 second chooses the table with which `getty` (#f("cmd/getty.c")) begins,
@@ -16048,7 +16027,7 @@ program of `uucp`, `/usr/lib/uucico`, is not in the image.
 #lines-to(none)
 #source("/etc/group")
 
-The file #f("group") is v7's, unchanged. Each line names a group, gives its
+Each line names a group, gives its
 password (none here), its group id, and the users who may join it with
 `newgrp`. The commands `ls -lg` and `find -group` read it themselves to translate
 between names and numbers; `chgrp` and `newgrp` use `getgrnam` and its
