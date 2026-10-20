@@ -70,19 +70,20 @@ struct	user
 	char	u_sep;			/* flag for I and D separation */
 	struct tty *u_ttyp;		/* controlling tty pointer */
 	struct {			/* header of executable file */
-		int	ux_mag;		/* magic number */
-		int	ux_x[5];
-		unsigned ux_entloc;	/* entry location */
-		unsigned ux_phoff;
-		int	ux_y[3];
-		short	ux_phnum, ux_z[3];
+		unsigned char e_ident[16];	/* magic number */
+		unsigned short e_type, e_machine;
+		unsigned e_version;
+		unsigned e_entry;	/* entry location */
+		unsigned e_phoff;	/* program headers */
+		unsigned e_shoff, e_flags;
+		unsigned short e_ehsize, e_phentsize, e_phnum;
+		unsigned short e_shentsize, e_shnum, e_shstrndx;
 		struct {
-			unsigned p_type, p_off, p_addr, p_paddr;
-			unsigned p_size, p_msize;
-		} ux_ph[2];		/* text and data segments */
+			unsigned p_type, p_offset, p_vaddr, p_paddr;
+			unsigned p_filesz, p_memsz;
+		} ph[2];		/* text and data segments */
 	} u_exdata;
-#define	ux_tsize	ux_ph[0].p_size	/* text size */
-#define	ux_dsize	ux_ph[1].p_size	/* data size */
+#define	PT_LOAD	1			/* loadable segment */
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;

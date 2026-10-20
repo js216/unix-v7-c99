@@ -143,6 +143,22 @@ bad:
 }
 
 /*
+ * Read count bytes at offset off of the file ip into the kernel;
+ * nonzero if they could not all be read
+ */
+static int
+exread(struct inode *ip, caddr_t base, unsigned count, unsigned off)
+{
+	u.u_base = base;
+	u.u_count = count;
+	u.u_offset = off;
+	u.u_segflg = 1;
+	readi(ip);
+	u.u_segflg = 0;
+	return(u.u_error || u.u_count);
+}
+
+/*
  * Read in and set up memory for executed file.
  * Zero return is normal;
  * non-zero means only the text is being replaced
@@ -155,56 +171,53 @@ getxfile(register struct inode *ip, int nargc)
 	register unsigned ts, ss;
 	register int i, n, overlay;
 	long lsize;
+	unsigned off, type;
 
 	/*
-	 * read in first few bytes
-	 * of file for segment
-	 * sizes:
-	 * ux_mag = 0x464c457f, ELF;
-	 *  the program headers follow,
-	 *  and the first two loadable
-	 *  segments are the text
-	 *  and the data
+	 * read in the ELF header;
+	 * the program headers follow,
+	 * and the two loadable
+	 * segments are the text
+	 * and the data
 	 */
 
-	u.u_base = (caddr_t)&u.u_exdata;
-	u.u_count = sizeof(u.u_exdata);
-	u.u_offset = 0;
-	u.u_segflg = 1;
-	readi(ip);
-	u.u_segflg = 0;
-	if(u.u_error)
-		goto bad;
-	if (u.u_count!=0) {
-		u.u_error = ENOEXEC;
+	if(exread(ip, (caddr_t)&u.u_exdata, sizeof(u.u_exdata), 0)) {
+		if(u.u_error == 0)
+			u.u_error = ENOEXEC;
 		goto bad;
 	}
 	sep = 0;
 	overlay = 0;
 	n = 0;
-	for(i = 0;
-	    u.u_exdata.ux_mag == 0x464c457f &&
-	    i < u.u_exdata.ux_phnum && n < 2; i++) {
-		u.u_base = (caddr_t)&u.u_exdata.ux_ph[n];
-		u.u_count = 24;
-		u.u_offset = u.u_exdata.ux_phoff + 32*i;
-		u.u_segflg = 1;
-		readi(ip);
-		u.u_segflg = 0;
-		if(u.u_count != 0 || u.u_error)
+	if(u.u_exdata.e_ident[0] == 0177 && u.u_exdata.e_ident[1] == 'E' &&
+	    u.u_exdata.e_ident[2] == 'L' && u.u_exdata.e_ident[3] == 'F' &&
+	    u.u_exdata.e_phentsize >= sizeof(u.u_exdata.ph[0]))
+	for(i = 0; i < u.u_exdata.e_phnum; i++) {
+		off = u.u_exdata.e_phoff + u.u_exdata.e_phentsize*i;
+		if(exread(ip, (caddr_t)&type, sizeof(type), off)) {
+			n = 0;
 			break;
-		if(u.u_exdata.ux_ph[n].p_type == 1)
-			n++;
+		}
+		if(type != PT_LOAD)
+			continue;
+		if(n == 2 || exread(ip, (caddr_t)&u.u_exdata.ph[n],
+		    sizeof(u.u_exdata.ph[0]), off)) {
+			n = 0;
+			break;
+		}
+		n++;
 	}
-	if(u.u_exdata.ux_mag != 0x464c457f || n != 2 ||
-	    u.u_exdata.ux_tsize == 0 ||
-	    u.u_exdata.ux_dsize > u.u_exdata.ux_ph[1].p_msize ||
-	    (u.u_exdata.ux_ph[0].p_off == 0 && u.u_exdata.ux_phoff +
-	    32*u.u_exdata.ux_phnum > u.u_exdata.ux_tsize)) {
+	if(n != 2 ||
+	    u.u_exdata.ph[0].p_filesz == 0 ||
+	    u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz ||
+	    (u.u_exdata.ph[0].p_offset == 0 && u.u_exdata.e_phoff +
+	    u.u_exdata.e_phentsize*u.u_exdata.e_phnum >
+	    u.u_exdata.ph[0].p_filesz)) {
 		u.u_error = ENOEXEC;
 		goto bad;
 	}
-	if(u.u_exdata.ux_tsize!=0 && (ip->i_flag&ITEXT)==0 && ip->i_count!=1) {
+	if(u.u_exdata.ph[0].p_filesz!=0 && (ip->i_flag&ITEXT)==0 &&
+	    ip->i_count!=1) {
 		u.u_error = ETXTBSY;
 		goto bad;
 	}
@@ -214,11 +227,11 @@ getxfile(register struct inode *ip, int nargc)
 	 * try them out for possible
 	 * overflow of max sizes
 	 */
-	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
-	lsize = (long)u.u_exdata.ux_ph[1].p_addr +
-	    u.u_exdata.ux_ph[1].p_msize;
-	if ((unsigned)lsize < u.u_exdata.ux_ph[1].p_msize ||
-	    u.u_exdata.ux_ph[1].p_addr < ptob(ts)) {
+	ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);
+	lsize = (long)u.u_exdata.ph[1].p_vaddr +
+	    u.u_exdata.ph[1].p_memsz;
+	if ((unsigned)lsize < u.u_exdata.ph[1].p_memsz ||
+	    u.u_exdata.ph[1].p_vaddr < ptob(ts)) {
 		u.u_error = ENOMEM;
 		goto bad;
 	}
@@ -234,7 +247,7 @@ getxfile(register struct inode *ip, int nargc)
 		sep = u.u_sep;
 		xfree();
 		xalloc(ip);
-		u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
+		u.u_ar0[PC] = u.u_exdata.e_entry & ~01;
 	} else {
 		if(estabur(ts, ds, ss, sep, RO))
 			goto bad;
@@ -258,9 +271,9 @@ getxfile(register struct inode *ip, int nargc)
 		 */
 	
 		estabur(ts, ds, (unsigned)0, 0, RO);
-		u.u_base = (caddr_t)u.u_exdata.ux_ph[1].p_addr;
-		u.u_offset = u.u_exdata.ux_ph[1].p_off;
-		u.u_count = u.u_exdata.ux_dsize;
+		u.u_base = (caddr_t)u.u_exdata.ph[1].p_vaddr;
+		u.u_offset = u.u_exdata.ph[1].p_offset;
+		u.u_count = u.u_exdata.ph[1].p_filesz;
 		readi(ip);
 		/*
 		 * set SUID/SGID protections, if no tracing
@@ -301,7 +314,7 @@ setregs(void)
 		if(i != SP)
 			u.u_ar0[i] = 0;
 	u.u_r.r_val2 = 0;
-	u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;
+	u.u_ar0[PC] = u.u_exdata.e_entry & ~01;
 	for(rp = (int *)&u.u_fps; rp < (int *)&u.u_fps.u_fpregs[32];)
 		*rp++ = 0;
 	u.u_fpsaved = 1;

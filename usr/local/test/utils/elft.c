@@ -38,7 +38,8 @@ int
 main(int argc, char **argv)
 {
 	int fd, len;
-	unsigned *t, *d, save;
+	int i;
+	unsigned *t, *d, *p, save;
 
 	(void)argc;
 	fd = open(argv[1], 0);
@@ -55,6 +56,18 @@ main(int argc, char **argv)
 	t[4] = *(unsigned *)&buf[28] + 32 * *(short *)&buf[44] - 4;
 	try("bigph", len);
 	t[4] = save;
+	buf[1] = 'X';
+	try("badmag", len);
+	buf[1] = 'E';
+	*(short *)&buf[42] = 16;
+	try("phent", len);
+	*(short *)&buf[42] = 32;
+	p = (unsigned *)&buf[*(unsigned *)&buf[28] + 32 * *(short *)&buf[44]];
+	for (i = 0; i < 8; i++)
+		p[i] = d[i];
+	*(short *)&buf[44] += 1;
+	try("threeld", len);
+	*(short *)&buf[44] -= 1;
 	t[2] = 4096;
 	t[4] = 0;
 	try("notext", len);

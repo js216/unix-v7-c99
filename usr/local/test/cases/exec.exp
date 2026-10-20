@@ -12,6 +12,12 @@ bigdata: errno 8
 bigdata: status 0
 bigph: errno 8
 bigph: status 0
+badmag: errno 8
+badmag: status 0
+phent: errno 8
+phent: status 0
+threeld: errno 8
+threeld: status 0
 notext: errno 8
 notext: status 0
 nested

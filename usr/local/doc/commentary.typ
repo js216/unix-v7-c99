@@ -333,52 +333,64 @@ buffer and the swap area are released in every case, success included.
 
 #lines-to("/*", lead: true)
 
+The routine `exread` reads `count` bytes of the executable at offset
+`off` into the kernel, for `getxfile`. It returns nonzero if there was
+an error or the file ended first.
+
+#lines-to("/*", lead: true, after: "return(u.u_error || u.u_count);")
+
 The routine `getxfile` reads the header of the executable and builds the new image.
 Here the port departs furthest from v7. In v7 the kernel accepted only its own
 `a.out` formats, distinguished by the magic numbers which its comment
 listed; this kernel accepts only ELF files, which is what the cross
-compiler produces, and the comment (#l("* ux_mag = 0x464c457f, ELF;")--#l("*  and the data")) now describes them. The
+compiler produces, and the comment (#l("* read in the ELF header;")--#l("* and the data")) now describes them. The
 ELF loader is a deliberate exception to the port's practice of keeping
 v7's formats.
 
-#lines-to("u.u_base = (caddr_t)&u.u_exdata;")
+#lines-to("if(exread(ip, (caddr_t)&u.u_exdata, sizeof(u.u_exdata), 0)) {")
 
-The start of the file is read into `u.u_exdata`, whose fields have
-been rearranged to match the 52-byte ELF header (#f("user.h")). The
-read fills the whole structure, 100 bytes, so a shorter file is
-refused (#l("if (u.u_count!=0) {")); the two program header slots `ux_ph` at its end receive
-whatever follows the header, and are overwritten below.
+The start of the file is read into `u.u_exdata`, whose fields are
+those of the 52-byte ELF header (#f("user.h")). The read fills the
+whole structure, 100 bytes, so a shorter file is refused. The two
+program header slots `ph` at its end receive whatever follows the
+header, and are overwritten below.
 
 #lines-to("n = 0;")
 
-The search which follows is new. If the magic number is that of ELF
-(`\x7fELF` read as a little-endian word), the program header table is
-read, one entry of 32 bytes at a time, at offset `ux_phoff`. The first
-24 bytes of each entry are read into `ux_ph[n]`, and `n` advances only
-over entries of type 1 (`PT_LOAD`), the loadable segments, so that the
-first two such end up in `ux_ph[0]` and `ux_ph[1]`. The programs are
-linked so that the first is the text and the second the data
-(#f("Makefile")). A file which is not ELF, or which has not two
-loadable segments, gives `ENOEXEC`; a program linked into one writable
-segment, the counterpart of v7's 0407 format, is not accepted, since
-its code would lie in memory which every process writes privately.
+The search which follows is new. If the file begins with the ELF magic
+number, the four bytes `\177ELF` of `e_ident`
+(#l("if(u.u_exdata.e_ident[0] == 0177 && u.u_exdata.e_ident[1] == 'E' &&")), the program header table is read at offset
+`e_phoff`, one entry of `e_phentsize` bytes at a time
+(#l("off = u.u_exdata.e_phoff + u.u_exdata.e_phentsize*i;")). The type
+of each entry is read first. An entry of type `PT_LOAD`, a loadable
+segment, is then read into `ph[n]`, its first 24 bytes, which hold
+every field the kernel uses. The programs are linked so that the first
+loadable segment is the text and the second the data (#f("Makefile")).
+A file which is not ELF, or which has not exactly two loadable
+segments, gives `ENOEXEC`. A third is refused (#l("if(n == 2 || exread(ip, (caddr_t)&u.u_exdata.ph[n],")) rather than
+ignored, since the program would run without it. A program linked into
+one writable segment, the counterpart of v7's 0407 format, is not
+accepted either, since its code would lie in memory which every process
+writes privately.
 
 A malformed header is refused here too, before anything of the old
-image is given up. A program header which cannot be read whole ends the
-search (#l("if(u.u_count != 0 || u.u_error)"), #l("break;", after: "if(u.u_count != 0 || u.u_error)")); what `ux_ph[n]` held would be left over from the
-program that ran before. A text segment with nothing in the file
-(#l("u.u_exdata.ux_tsize == 0 ||")) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
+image is given up. Entries smaller than the 24 bytes read
+(#l("u.u_exdata.e_phentsize >= sizeof(u.u_exdata.ph[0]))")) would
+overlap. A program header which cannot be read whole refuses the file
+(#l("n = 0;", after: "if(exread(ip, (caddr_t)&type, sizeof(type), off)) {")), since `ph` could still hold what the program that ran before
+left there. A text segment with nothing in the file
+(#l("u.u_exdata.ph[0].p_filesz == 0 ||")) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
 reckoned from its address, could still be nonzero, so that the page
 tables (#f("ureg.c")) would map the start of the process's own image,
 its per process area, as the text. A data segment with more bytes in
-the file than in memory (#l("u.u_exdata.ux_dsize > u.u_exdata.ux_ph[1].p_msize ||")) would be read past the end of the space
+the file than in memory (#l("u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz ||")) would be read past the end of the space
 reserved for it. A text segment which begins at offset 0 holds the ELF
-header and the program header table, which `xalloc` skips; if the text
-were shorter than the two (#l("(u.u_exdata.ux_ph[0].p_off == 0 && u.u_exdata.ux_phoff +"), #l("32*u.u_exdata.ux_phnum > u.u_exdata.ux_tsize)) {")), the count left to read would wrap
+header and the program header table, which `xalloc` skips. If the text
+were shorter than the two (#l("(u.u_exdata.ph[0].p_offset == 0 && u.u_exdata.e_phoff +")--#l("u.u_exdata.ph[0].p_filesz)) {")), the count left to read would wrap
 around to an enormous number, and the text would be read beyond its
 pages after the old image had gone.
 
-#lines-to("if(u.u_exdata.ux_tsize!=0 && (ip->i_flag&ITEXT)==0 && ip->i_count!=1) {")
+#lines-to("if(u.u_exdata.ph[0].p_filesz!=0 && (ip->i_flag&ITEXT)==0 &&")
 
 The test from v7 follows unchanged: a program with a text may not be executed
 while some process has the file open, unless that is because it is
@@ -389,16 +401,16 @@ that a running text cannot be opened for writing, is in `access`
 
 #lines-to("/*")
 
-The text occupies the bottom of the address space: `ts` (#l("ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);")) is the
+The text occupies the bottom of the address space: `ts` (#l("ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);")) is the
 number of pages from address zero to the end of the text segment,
 which includes the bottom page, below the text's own first address.
 The data begins at the first page above the text, and `ds` (#l("ds = btop(lsize) - ts;")) is
 the number of pages from there to the end of the data segment in
-memory (its address plus `p_msize`), which takes in the uninitialised
+memory (its address plus `p_memsz`), which takes in the uninitialised
 data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
 overflow is changed to fit: a sum of unsigned numbers which wraps round
 is smaller than either addend. A data segment which begins below the
-end of the text is refused with the same error (#l("u.u_exdata.ux_ph[1].p_addr < ptob(ts)) {")). The stack is
+end of the text is refused with the same error (#l("u.u_exdata.ph[1].p_vaddr < ptob(ts)) {")). The stack is
 given `SSIZE` pages plus room for the strings and the pointer vector,
 `nargc` bytes.
 
@@ -420,8 +432,8 @@ more, and `fork` copies only what there is (#f("slp.c")).
 By now `xalloc` (#f("text.c")) has attached the text, shared with any other
 process running the same file, or read it in. The data segment is now
 read from the file into user space at its own address, from its file
-offset, for `ux_dsize` bytes, the size of the segment in the file
-(#l("estabur(ts, ds, (unsigned)0, 0, RO);")--#l("readi(ip);", after: "u.u_count = u.u_exdata.ux_dsize;")). In v7 the data was mapped at address zero for the purpose, and
+offset, for `p_filesz` bytes, the size of the segment in the file
+(#l("estabur(ts, ds, (unsigned)0, 0, RO);")--#l("readi(ip);", after: "u.u_count = u.u_exdata.ph[1].p_filesz;")). In v7 the data was mapped at address zero for the purpose, and
 read from just after the text in the file; here the final mapping of
 text and data serves.
 
@@ -451,7 +463,7 @@ nothing from the old. When the call returns, `trap` (#f("trap.c"))
 puts `u.u_r.r_val1` and `u.u_r.r_val2` in `r0` and `r1`. The first is
 zero, but the second is the caller's `r1`, the old program's argument
 pointer, so it is cleared too (#l("u.u_r.r_val2 = 0;")). The `pc` is set to the entry point
-with bit 0 cleared (#l("u.u_ar0[PC] = u.u_exdata.ux_entloc & ~01;", after: "u.u_r.r_val2 = 0;")); on the PDP-11 this ensured an even address. On the
+with bit 0 cleared (#l("u.u_ar0[PC] = u.u_exdata.e_entry & ~01;", after: "u.u_r.r_val2 = 0;")); on the PDP-11 this ensured an even address. On the
 ARM bit 0 of an entry point would select Thumb state, in which no
 program here begins.
 
@@ -1127,7 +1139,7 @@ only the in-core count is decremented (#l("xccdec(xp);")).
 
 After the new program's header has been
 read into `u.u_exdata`, `exec` calls `xalloc`. A program without a text would return at once
-(#l("if(u.u_exdata.ux_tsize == 0)"), #l("return;", after: "if(u.u_exdata.ux_tsize == 0)")), but `getxfile` refuses such a program before calling
+(#l("if(u.u_exdata.ph[0].p_filesz == 0)"), #l("return;", after: "if(u.u_exdata.ph[0].p_filesz == 0)")), but `getxfile` refuses such a program before calling
 `xalloc` (#f("sys1.c")), so the test is never true.
 
 #lines-to("for (xp = &text[0]; xp < &text[NTEXT]; xp++) {")
@@ -1145,7 +1157,7 @@ If the table is full, the process is killed.
 
 Otherwise `xalloc` claims the free entry, setting `XLOAD` to show that
 its contents come from the file rather than from the swap device. It
-reckons the size `ts` (#l("ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);")) from address zero, as `getxfile` does,
+reckons the size `ts` (#l("ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);")) from address zero, as `getxfile` does,
 and allocates swap space and core for the text.
 
 #lines-to("for(i = 0; i < ts; i++)")
