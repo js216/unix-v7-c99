@@ -3162,15 +3162,19 @@ kernel address, so that a kernel variable is found at the address which
 images from `/dev/mem`, where v7's read both from `/dev/mem`, whose
 offsets on the PDP-11 were the same for the kernel's data.
 
-`/dev/mem` also reaches the registers of the devices which the kernel
-maps, at their physical addresses, which `devaddr` (#f("machdep.c"))
-turns into kernel ones. On the PDP-11 these were simply the top 8 KB of
+Both files also reach the registers of the devices which the kernel
+maps, `/dev/mem` at their physical addresses and `/dev/kmem` at the
+kernel's, and `devaddr` (#f("machdep.c")) turns either into a kernel
+address. On the PDP-11 these were simply the top 8 KB of
 the physical address space, read like memory. A device register must be
 read and written whole, in one access of its own width, and a read may
 itself change the device, so the bytewise loop will not do. An offset in
-a device's block is therefore served a word at a time (#l("if(minor(dev) == 0 && devaddr(u.u_offset)) {", after: "mmread(int dev)")--#l("}", before: "do {")): each
-32-bit word is read once through a `volatile` pointer and passed to the
-user by `iomove` (#f("rdwri.c")). The request must be word-aligned and
+a device's block is therefore served a word at a time (#l("if(devaddr(dev, u.u_offset)) {", after: "mmread(int dev)")--#l("}", before: "do {")): `fkword` (#f("mch.s")) reads
+each 32-bit word once, and `iomove` (#f("rdwri.c")) passes it to the
+user. A 2 MB block of device space may have holes where no device
+answers, and a read there aborts. Through `nofault` (#f("mch.s"))
+`fkword` turns the abort into a failure, which the driver reports, where
+a plain load would have panicked the kernel. The request must be word-aligned and
 a whole number of words, and must stay within mapped device space; what
 cannot be served so is refused with `ENXIO`. This is how the programs
 which reset the board and serve its watchdog from user space reach the
@@ -3184,7 +3188,7 @@ hence the `-1` (#l("if (sumem(dev, u.u_offset-1, c) < 0)")). The writes are chec
 shares `memaddr` with `fumem`, so that a byte is stored at the address
 from which a read at the same offset would fetch it, and an offset which
 names no memory is refused rather than stored through. Device registers
-are written a word at a time (#l("if(minor(dev) == 0 && devaddr(u.u_offset)) {", after: "u.u_count = 0;")--#l("}", before: "for(;;) {")), as they are read.
+are written a word at a time (#l("if(devaddr(dev, u.u_offset)) {", after: "u.u_count = 0;")--#l("}", before: "for(;;) {")), as they are read.
 
 #lines-to(none)
 #source("/usr/sys/sys/prim.c")
@@ -15378,8 +15382,7 @@ memory management unit off, when the processor faults on a store to an
 unaligned word, hence the `ALIGN(4)`. `*(COMMON)` would collect
 tentative definitions left as common symbols; GCC makes them only when
 asked with `-fcommon`, which the port does not use, so it collects
-nothing. `__bss_end` also tells `memaddr` (#f("machdep.c")) where the
-kernel's memory ends, for `/dev/mem` and `/dev/kmem` (#f("mem.c")).
+nothing.
 
 #lines-to(".ddrbss (NOLOAD) : ALIGN(4096) {")
 

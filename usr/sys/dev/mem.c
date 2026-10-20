@@ -25,11 +25,12 @@ mmread(int dev)
 
 	if(minor(dev) == 2)
 		return;
-	if(minor(dev) == 0 && devaddr(u.u_offset)) {
+	if(devaddr(dev, u.u_offset)) {
 		while(u.u_error==0 && u.u_count >= 4 &&
 		    (u.u_offset&3) == 0 &&
-		    (a = devaddr(u.u_offset)) != NULL) {
-			w = *(volatile int *)a;
+		    (a = devaddr(dev, u.u_offset)) != NULL) {
+			if(fkword((int *)a, &w) < 0)
+				break;
 			iomove((caddr_t)&w, 4, B_READ);
 		}
 		if(u.u_count)
@@ -53,12 +54,13 @@ mmwrite(int dev)
 		u.u_count = 0;
 		return;
 	}
-	if(minor(dev) == 0 && devaddr(u.u_offset)) {
+	if(devaddr(dev, u.u_offset)) {
 		while(u.u_error==0 && u.u_count >= 4 &&
 		    (u.u_offset&3) == 0 &&
-		    (a = devaddr(u.u_offset)) != NULL) {
+		    (a = devaddr(dev, u.u_offset)) != NULL) {
 			iomove((caddr_t)&w, 4, B_WRITE);
-			*(volatile int *)a = w;
+			if(skword((int *)a, w) < 0)
+				u.u_error = ENXIO;
 		}
 		if(u.u_count)
 			u.u_error = ENXIO;

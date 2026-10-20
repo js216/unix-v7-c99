@@ -21,7 +21,7 @@
 #define	IAR	0x0c
 #define	EOIR	0x10
 
-extern char _start[], __bss_end[], __ddrbss_start[], __ddrbss_end[];
+extern char _start[], __ddrbss_start[], __ddrbss_end[];
 unsigned long long clkcval;
 unsigned	clkreload, clkrem, clkfrac;
 int	clkirq = 27;
@@ -246,41 +246,40 @@ sigreturn(void)
 	u.u_r.r_val2 = f[R1];
 }
 
+/*
+ * The kernel's address for offset off of /dev/mem, a physical
+ * address, or of /dev/kmem, a kernel address, in a region of
+ * board_map whose attributes are attr
+ */
 static char *
-memaddr(int dev, off_t off)
+mapaddr(int dev, off_t off, unsigned long long attr)
 {
-	register unsigned a, b, e;
-	register int i;
+	register struct memregion *m;
+	register unsigned base;
 
-	if(minor(dev) == 1 && (unsigned)off - UBASE < ptob(USIZE))
-		return((char *)off);
-	for(i = 0; i < 2; i++) {
-		b = (unsigned)(i ? __ddrbss_start : _start);
-		e = i ? (unsigned)PGADDR(btop(coretop)) :
-		    (unsigned)__bss_end;
-		a = off;
-		if(minor(dev) == 0)
-			a += b - vtop((caddr_t)b);
-		if(a - b < e - b)
-			return((char *)a);
+	for(m = board_map; m->end != 0; m++) {
+		base = minor(dev) == 0 ? m->start : m->va;
+		if(m->attr == attr && (unsigned)off - base < m->end - m->start)
+			return((char *)(m->va + ((unsigned)off - base)));
 	}
 	return(NULL);
 }
 
+static char *
+memaddr(int dev, off_t off)
+{
+	if(minor(dev) == 1 && (unsigned)off - UBASE < ptob(USIZE))
+		return((char *)off);
+	return(mapaddr(dev, off, BLK_KERN));
+}
+
 /*
- * A device register at physical address off, for /dev/mem
+ * A device register, read and written a word at a time
  */
 char *
-devaddr(off_t off)
+devaddr(int dev, off_t off)
 {
-	register struct memregion *m;
-
-	for(m = board_map; m->end != 0; m++)
-		if(m->attr == BLK_DEV &&
-		    (unsigned)off - m->start < m->end - m->start)
-			return((char *)(m->va +
-			    (unsigned)off - m->start));
-	return(NULL);
+	return(mapaddr(dev, off, BLK_DEV));
 }
 
 int
@@ -290,7 +289,7 @@ fumem(int dev, off_t off)
 
 	if((a = memaddr(dev, off)) == NULL)
 		return(-1);
-	return(*a & 0377);
+	return(fkbyte(a));
 }
 
 int
@@ -300,8 +299,7 @@ sumem(int dev, off_t off, int c)
 
 	if((a = memaddr(dev, off)) == NULL)
 		return(-1);
-	*a = c;
-	return(0);
+	return(skbyte(a, c));
 }
 
 void

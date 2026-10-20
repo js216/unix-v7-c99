@@ -251,6 +251,10 @@ int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep,
 	    int xrw);
 void	expand(int newsize);
 int	fsig(struct proc *p);
+int	fkbyte(char *a);
+int	fkword(int *a, int *w);
+int	skbyte(char *a, int c);
+int	skword(int *a, int w);
 int	fubyte(caddr_t a);
 int	fumem(int dev, off_t off);
 int	fuword(caddr_t a);
@@ -282,7 +286,7 @@ int	ufalloc(void);
 void	xswap(struct proc *p, int ff, int os);
 caddr_t	machine_init(void);
 caddr_t	ttwrite(struct tty *tp);
-char	*devaddr(off_t off);
+char	*devaddr(int dev, off_t off);
 unsigned long long cntvct_get(void);
 unsigned	vtop(caddr_t va);
 #define	fuibyte	fubyte

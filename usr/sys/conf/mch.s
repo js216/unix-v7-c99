@@ -7,7 +7,7 @@
 .globl cntfrq_get, cntvct_get, cntv_cval_set, cntv_ctl_set
 .globl save, resume
 .globl dcinval, dcflush, arm_sync_icache, tlbflush, ttbset
-.globl fubyte, subyte, fuword, suword, copyin, copyout, nofault
+.globl fkbyte, skbyte, fkword, skword, fubyte, subyte, fuword, suword, copyin, copyout, nofault
 .globl idle, waitloc
 .globl savfp, restfp
 .globl dfar, dfsr
@@ -159,6 +159,41 @@ ttbset:
 	dsb ish
 	isb
 	bx lr
+
+fkbyte:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	ldrb r1, [r0]
+	mov r0, r1
+	b uok
+
+skbyte:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	strb r1, [r0]
+	dsb sy
+	mov r0, #0
+	b uok
+
+fkword:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	ldr r2, [r0]
+	str r2, [r1]
+	mov r0, #0
+	b uok
+
+skword:
+	ldr r3, =nofault
+	adr r2, uerr
+	str r2, [r3]
+	str r1, [r0]
+	dsb sy
+	mov r0, #0
+	b uok
 
 fubyte:
 	ldr r3, =nofault
