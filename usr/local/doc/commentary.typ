@@ -16187,13 +16187,12 @@ signal, which is how the interrupt tests reach `ed`, `sort`, and `yes`.
 
 The utility `waitf` waits until each file named exists and is not
 empty, which is how a case waits for `pidf` to have written its file.
-The sleep of v7 counts whole seconds, so a loop of `sleep 1` costs a
-second even when the file appears at once. `waitf` instead polls
-without pause for its first 12 clock ticks of processor time
-(#l("else if (times(&tb), tb.tms_utime + tb.tms_stime >= 12)")), which finds
-a quick process within milliseconds, and then sleeps a second at a time,
-so that it does not hold the processor from a busy one. It gives up
-after 30 seconds.
+It looks before it first sleeps, so a file already written costs
+nothing, where the shell's loop of `test` and `sleep 1` forked twice
+for each look. Between looks it sleeps a second (#l("sleep(1);")). A
+busy loop would gain nothing: the clock reschedules only once a second
+(#f("clock.c")), so the process being waited for could not run before
+then anyway. It gives up after 30 seconds.
 
 #lines-to(none)
 #source("/usr/local/test/utils/nap.c")
