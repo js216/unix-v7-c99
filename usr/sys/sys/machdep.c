@@ -123,31 +123,6 @@ irq(int *r)
 	GICC(EOIR) = n;
 }
 
-/*
- * Let a process handle a signal by simulating an interrupt
- */
-void
-sendsig(caddr_t p, int signo)
-{
-	register unsigned n, m;
-
-	m = (PSR+1)*sizeof(int);
-	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
-	grow(n);
-	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
-	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),
-	    sizeof(u.u_fps)) < 0) {
-		u.u_signal[SIGSEG] = 0;
-		psignal(u.u_procp, SIGSEG);
-		return;
-	}
-	u.u_ar0[SP] = n;
-	u.u_ar0[14] = UENTRY_SIGTRAMP;
-	u.u_ar0[PC] = (int)p;
-	u.u_ar0[R0] = signo;
-	u.u_ar0[PSR] &= ~TBITS;
-}
-
 static void
 kmap(unsigned long long attr)
 {
@@ -223,29 +198,6 @@ clearseg(int a)
 		d[i] = 0;
 }
 
-void
-sigreturn(void)
-{
-	int f[PSR+1];
-	register int i;
-	register caddr_t a;
-
-	a = (caddr_t)u.u_ar0[SP];
-	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
-	    copyin(a+sizeof(f), (caddr_t)&u.u_fps,
-	    sizeof(u.u_fps)) < 0) {
-		u.u_signal[SIGSEG] = 0;
-		psignal(u.u_procp, SIGSEG);
-		return;
-	}
-	u.u_fpsaved = 1;
-	for(i = 0; i < PSR; i++)
-		u.u_ar0[i] = f[i];
-	u.u_ar0[PSR] = (f[PSR] & UBITS) | USRMODE;
-	u.u_r.r_val1 = f[R0];
-	u.u_r.r_val2 = f[R1];
-}
-
 /*
  * The kernel's address for offset off of /dev/mem, a physical
  * address, or of /dev/kmem, a kernel address, in a region of
@@ -308,6 +260,54 @@ install_sigtramp(void)
 	/* mov r7, #63; svc #0 */
 	suword((caddr_t)UENTRY_SIGTRAMP, (int)0xe3a0703fU);
 	suword((caddr_t)UENTRY_SIGTRAMP+4, (int)0xef000000U);
+}
+
+/*
+ * Let a process handle a signal by simulating an interrupt
+ */
+void
+sendsig(caddr_t p, int signo)
+{
+	register unsigned n, m;
+
+	m = (PSR+1)*sizeof(int);
+	n = (u.u_ar0[SP] - m - sizeof(u.u_fps)) & ~7;
+	grow(n);
+	if(copyout((caddr_t)u.u_ar0, (caddr_t)n, m) < 0 ||
+	    copyout((caddr_t)&u.u_fps, (caddr_t)(n+m),
+	    sizeof(u.u_fps)) < 0) {
+		u.u_signal[SIGSEG] = 0;
+		psignal(u.u_procp, SIGSEG);
+		return;
+	}
+	u.u_ar0[SP] = n;
+	u.u_ar0[14] = UENTRY_SIGTRAMP;
+	u.u_ar0[PC] = (int)p;
+	u.u_ar0[R0] = signo;
+	u.u_ar0[PSR] &= ~TBITS;
+}
+
+void
+sigreturn(void)
+{
+	int f[PSR+1];
+	register int i;
+	register caddr_t a;
+
+	a = (caddr_t)u.u_ar0[SP];
+	if(copyin(a, (caddr_t)f, sizeof(f)) < 0 ||
+	    copyin(a+sizeof(f), (caddr_t)&u.u_fps,
+	    sizeof(u.u_fps)) < 0) {
+		u.u_signal[SIGSEG] = 0;
+		psignal(u.u_procp, SIGSEG);
+		return;
+	}
+	u.u_fpsaved = 1;
+	for(i = 0; i < PSR; i++)
+		u.u_ar0[i] = f[i];
+	u.u_ar0[PSR] = (f[PSR] & UBITS) | USRMODE;
+	u.u_r.r_val1 = f[R0];
+	u.u_r.r_val2 = f[R1];
 }
 
 void
