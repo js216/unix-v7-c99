@@ -16014,10 +16014,10 @@ waits for `ed` to answer.
 #source("/usr/local/test/utils/endblk.c")
 
 The utility `endblk` writes a marked block at block `n` of a disk, the
-last block in the `ddend` case, reads it back, and tries to read the
-block after it, which the driver must refuse
-(#l("printf(\"past %d\\n\", read(fd, b, 512));")). It seeks there directly, where `dd`
-would step through every block before it.
+last block of the swap area in the `ddend` case, and reads it back. It
+seeks there directly, where `dd` would step through every block before
+it. Nothing is read past that block: the QEMU machine's disk ends there,
+but the MP135 machine's card goes on.
 
 #lines-to(none)
 #source("/usr/local/test/utils/rep.c")

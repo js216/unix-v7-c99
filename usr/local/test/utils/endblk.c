@@ -1,8 +1,7 @@
 #include <stdio.h>
 
 /*
- * endblk dev n: write a marked block at block n of dev, read it back,
- * and try to read the block after it, which lies past the end.
+ * endblk dev n: write a marked block at block n of dev and read it back.
  */
 int
 main(int argc, char **argv)
@@ -26,6 +25,5 @@ main(int argc, char **argv)
 	for (i = 12; i < 512 && b[i] == 0; i++)
 		;
 	printf("zeros %d\n", i == 512);
-	printf("past %d\n", read(fd, b, 512));
 	return 0;
 }

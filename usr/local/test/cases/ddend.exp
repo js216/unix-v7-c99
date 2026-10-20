@@ -1,6 +1,5 @@
 write 512
 read 512 end of disk
 zeros 1
-past -1
 dd: argument 9999999999 out of range
 st1
