@@ -248,12 +248,7 @@ getxfile(register struct inode *ip, int nargc)
 		u.u_prof.pr_scale = 0;
 		xfree();
 		i = USIZE+ds+ss;
-		if(expand(i) == 0) {
-			u.u_error = ENOMEM;
-			printf("out of swap space\n");
-			psignal(u.u_procp, SIGKIL);
-			goto bad;
-		}
+		expand(i);
 		while(--i >= USIZE)
 			clearseg(u.u_procp->p_addr+i);
 		xalloc(ip);
@@ -541,12 +536,7 @@ sbreak(void)
 	return;
 
 bigger:
-	if(expand(n) == 0) {
-		u.u_dsize -= d;
-		estabur(u.u_tsize, u.u_dsize, u.u_ssize, u.u_sep, RO);
-		u.u_error = ENOMEM;
-		return;
-	}
+	expand(n);
 	a = u.u_procp->p_addr + n;
 	n = u.u_ssize;
 	while(n--) {

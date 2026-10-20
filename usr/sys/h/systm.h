@@ -249,7 +249,7 @@ int	dfar(void);
 int	dfsr(void);
 int	estabur(unsigned nt, unsigned nd, unsigned ns, int sep,
 	    int xrw);
-int	expand(int newsize);
+void	expand(int newsize);
 int	fsig(struct proc *p);
 int	fubyte(caddr_t a);
 int	fumem(int dev, off_t off);
@@ -279,7 +279,7 @@ int	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev);
 int	ttread(struct tty *tp);
 int	uchar(void);
 int	ufalloc(void);
-int	xswap(struct proc *p, int ff, int os);
+void	xswap(struct proc *p, int ff, int os);
 caddr_t	machine_init(void);
 caddr_t	ttwrite(struct tty *tp);
 char	*devaddr(off_t off);

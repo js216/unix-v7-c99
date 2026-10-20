@@ -21,7 +21,7 @@ void	xexpand(struct text *xp), xccdec(struct text *xp),
  *
  * Zero return: out of swap space, nothing done
  */
-int
+void
 xswap(register struct proc *p, int ff, int os)
 {
 	register int a;
@@ -30,7 +30,7 @@ xswap(register struct proc *p, int ff, int os)
 		os = p->p_size;
 	a = malloc(swapmap, ptod(p->p_size));
 	if(a == NULL)
-		return(0);
+		panic("out of swap space");
 	p->p_flag |= SLOCK;
 	xccdec(p->p_textp);
 	swap(a, p->p_addr, os, B_WRITE);
@@ -44,7 +44,6 @@ xswap(register struct proc *p, int ff, int os)
 		runout = 0;
 		wakeup((caddr_t)&runout);
 	}
-	return(1);
 }
 
 /*
@@ -194,8 +193,7 @@ xexpand(register struct text *xp)
 		sureg();
 		return;
 	}
-	if (xswap(u.u_procp, 1, 0) == 0)
-		return;
+	xswap(u.u_procp, 1, 0);
 	xunlock(xp);
 	u.u_procp->p_flag |= SSWAP;
 	qswtch();
