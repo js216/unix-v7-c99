@@ -639,14 +639,14 @@ and is not open.
 
 Both `chdir` and `chroot` use `chdirec`, which replaces the inode pointed
 to by `ipp`. The new directory is unlocked but keeps the reference
-which `namei` took (`prele`, 236). The old one is locked and released.
+which `namei` took (`prele`, #f("pipe.c")). The old one is locked and released.
 Only the super-user may change the root.
 
 #lines-to("void", lead: true, after: "iput(ip);")
 
 Both `chmod` and `chown` operate through `owner`, which returns the locked
 inode only if the caller owns it or is the super-user. Only the
-super-user may set the sticky bit (`ISVTX`, 262), which asks that a
+super-user may set the sticky bit (`ISVTX`, #f("inode.h")), which asks that a
 program's text be kept on the swap area after its last user has gone. When it is removed,
 `xrele` drops any text which was being kept for the file. Only the
 super-user may give a file away (#l("if (!suser() || (ip = owner()) == NULL)")).
@@ -4503,9 +4503,7 @@ receive FIFO the first `0x100` (1 KB); endpoint 0's transmit FIFO
 `0x40` from `0x100`; endpoint 1's `0x100` from `0x140`, enough for two
 512-byte packets; endpoint 2's `0x20` from `0x240`. Each register
 holds the depth in its high half and the start in its low. All FIFOs
-are flushed, every endpoint is stopped and its interrupts cleared, and
-the interrupts are chosen: finished transfers and control requests on
-the endpoints, endpoints 0 and 1 in both directions (`DAINTMSK`: bits
+are flushed, every endpoint is stopped and its interrupts cleared, and the interrupts are chosen. They are finished transfers and control requests on the endpoints, endpoints 0 and 1 in both directions (`DAINTMSK`: bits
 0--1 for in, 16--17 for out), and in `GINTMSK` the receive FIFO, the
 bus reset, the end of enumeration, and the summaries of in and out
 endpoint interrupts (bits 18, 19).
@@ -4717,8 +4715,7 @@ the incoming data later. Both the buffer cache and the process images,
 which swapping and raw I/O transfer directly, lie in DDR, which is
 cached (#f("mp135conf")).
 
-The device is then programmed in the order the controller requires:
-the old flags are cleared, the data path is stopped and given the
+The device is then programmed in the order the controller requires. The old flags are cleared, the data path is stopped and given the
 length and the block size and direction, the IDMA is given the
 buffer's physical address, which `vtop` (#f("machdep.c")) finds from
 the kernel's, and enabled, the interrupts are unmasked, and the
@@ -4944,8 +4941,7 @@ that flag and the stop flag (`0x30` to the clear register, `0x1c`) and
 fails.
 
 The routine `pmic` reads (`val` negative) or writes one register of the PMIC, whose
-address on the bus is `0x33`. Control register 2 (`0x04`) starts a
-transfer: the address, shifted left one place as the register wants
+address on the bus is `0x33`. Control register 2 (`0x04`) starts a transfer. It holds the address, shifted left one place as the register wants
 it; the number of bytes, one for a read, which first sends just the
 register number, and two for a write, number and value (bits 16--23);
 the start bit (13); and for a write the "autoend" bit (25), with which
@@ -5009,9 +5005,9 @@ prefix, so the names lose their underscores, and the entry point is
 called `_start` because that is the symbol which the GNU linker takes for
 the entry by default.
 
-On entry the stack pointer addresses the block that `exece` built: the
-argument count, the argument pointers and a zero, the environment
-pointers and a zero, and the strings. The code loads `argc` (#l("ldr\tr0, [sp]")) into `r0`,
+On entry the stack pointer addresses the block that `exece` built, of the argument count, the
+argument pointers and a zero, the environment pointers and a zero, and
+the strings. The code loads `argc` (#l("ldr\tr0, [sp]")) into `r0`,
 `argv` (#l("add\tr1, sp, #4")), the address of the word above it, into `r1`, and the
 environment pointer (#l("add\tr2, r1, r0, lsl #2"), #l("add\tr2, r2, #4")), `argc` + 1 words above `argv`, into `r2`.
 This is the ARM procedure call standard: the first four arguments of a
@@ -5066,8 +5062,7 @@ The file `mcrt0.o` takes the place of `crt0.o` in a program to be profiled, one
 compiled with `-pg` and linked with this file first. It starts as
 #f("csu/crt0.s") does (#l("ldr\tr0, [sp]")--#l("str\tr2, [r3]")), and keeps `argc`, `argv`, and the
 environment in registers which survive calls (#l("mov\tr4, r0", after: "str\tr2, [r3]")--#l("mov\tr6, r2")). It then
-obtains, with `sbrk`, a buffer for `monitor` (#f("gen/mon.c")): six
-halfwords of header, four for each of `CBUFS` call counts, and a
+obtains, with `sbrk`, a buffer for `monitor` (#f("gen/mon.c")), of six halfwords of header, four for each of `CBUFS` call counts, and a
 histogram of one halfword for every eight bytes of the program's text,
 from `eprol`, the end of this file, to `etext`, which the linker defines
 (#l("ldr\tr0, =etext")--#l("bl\tsbrk")). That is v7's density: one counter for every two
@@ -5249,9 +5244,8 @@ treat an undefined name as external.
 #lines-to(none)
 #source("/usr/src/libc/sys/signal.s")
 
-A call `signal(n, func)` sets the action to be taken on signal `n`: 0 for the
-default, 1 to ignore the signal, or the address of a function to be
-called. It returns the previous action. In the port it is an ordinary
+A call `signal(n, func)` sets the action to be taken on signal `n`, which is 0 for the default, 1
+to ignore the signal, or the address of a function to be called. It returns the previous action. In the port it is an ordinary
 stub, call 48, identical in form to `read` (#f("sys/read.s")). The
 kernel's `ssig` (#f("sys4.c")) checks the signal number, rejecting 0,
 anything not below `NSIG`, and `SIGKIL`, and exchanges `func` with
@@ -5453,9 +5447,9 @@ their being implicitly `int`. Elsewhere `register i` has become
 `register int i`, since C99 has no implicit `int`.
 
 `ALL` and `EVER` (#l("#define\tALL\tp = &itab[0]; p < &itab[TABSIZ]; p++"), #l("#define\tEVER\t;;")) supply the control part of a `for` statement,
-so that loops may be written `for(ALL)` and `for(EVER)`. The table `itab` holds one entry per
-active terminal: the line name, the `getty` table character, and the
-process id of the process serving it, 0 if none.
+so that loops may be written `for(ALL)` and `for(EVER)`. The table `itab` holds one entry per active terminal, with the line name, the `getty`
+table character, and the process id of the process serving it, 0 if
+none.
 
 #lines-to("int", after: "int\trline(void), get(void);")
 
@@ -5613,9 +5607,8 @@ nothing needs to be undone.
 On every enabled terminal, `init` (#f("cmd/init.c")) runs `getty`.
 It arrives with the terminal open as descriptors 0, 1,
 and 2, and one argument, the character which `/etc/ttys` (#f("ttys"))
-gave for the line. Its task is to make the terminal usable: to choose a
-speed and a set of modes, print the `login:` prompt, read the user's
-name, and execute `login` (#f("cmd/login.c")) with it. On a dial-up line
+gave for the line. It makes the terminal usable. It chooses a speed and a set of modes,
+prints the `login:` prompt, reads the user's name, and executes `login` (#f("cmd/login.c")) with it. On a dial-up line
 the speed of the caller's terminal was not known in advance, and
 `getty` found it by trial: if what arrived could not be a name, it
 switched to the next speed of a cycle and prompted again.
@@ -5630,7 +5623,7 @@ defines a `puts` of its own (#l("puts(char *as)")) which differs from the librar
 it declares the system calls it uses itself. The header
 `sgtty.h` declares `stty`.
 
-The structure `tchars` (#l("struct tchars tchars = { '\\177', '\\034', '\\021', '\\023', '\\004', '\\377' };")) sets the special characters: interrupt (DEL), quit
+The structure `tchars` (#l("struct tchars tchars = { '\\177', '\\034', '\\021', '\\023', '\\004', '\\377' };")) sets the special characters, interrupt (DEL), quit
 (FS, control-backslash), start and stop output (DC1 and DC3, control-Q
 and control-S), end of file (EOT, control-D), and the additional
 delimiter, 0377, meaning none. On the PDP-11 `'\377'` in a `char` was -1,
@@ -5640,7 +5633,7 @@ character unless the terminal is in raw mode.
 
 #lines-to("struct\ttab {")
 
-Each entry of `itab` describes one attempt: its own name, the name of
+Each entry of `itab` describes one attempt by its own name, the name of
 the entry to try next, the modes for reading the name and the modes to
 set once the name has been read, the input and output speeds, and the
 prompt. The initial modes always include `RAW`, so that every
@@ -5897,8 +5890,7 @@ which return no value, are now `void` where v7 left them implicitly
 
 #lines-to("static char *", lead: true)
 
-An entry is a line of seven fields separated by colons: the name, the
-encrypted password, the user and group ids, a comment field (by
+An entry is a line of seven fields separated by colons. They are the name, the encrypted password, the user and group ids, a comment field (by
 convention the user's full name, `pw_gecos`), the home directory, and
 the shell. A field may be empty. An empty password means that none is
 asked for, and an empty shell means `/bin/sh`.
@@ -6003,9 +5995,9 @@ directive.
 The first definitions are the codes with which the shell exits after an
 error (`SIGFLG` is or-ed into the status of a command killed by a
 signal), and the node types of the command tree. A node's type is in
-its low four bits (`COMMSK`). The bits above qualify a fork node: print
-the process id (`FPRS`), ignore interrupts (`FINT`), do not wait
-(`FAMP`), and connect or close a pipe (`FPIN`, `FPOU`, `FPCL`).
+its low four bits (`COMMSK`). The bits above qualify a fork node. They say to print the process id
+(`FPRS`), to ignore interrupts (`FINT`), not to wait (`FAMP`), and to
+connect or close a pipe (`FPIN`, `FPOU`, `FPCL`).
 
 #lines-to("/* execute table */")
 
@@ -6159,7 +6151,7 @@ an error.
 A heap block (`struct blk`) is a single word: a pointer to the next
 block, the user's data following it (#f("sh/blok.c")).
 
-Each `struct fileblk` is an input file: its descriptor, line number,
+Each `struct fileblk` is an input file, with its descriptor, line number,
 end-of-file flag, the size of a read, pointers to the next character
 and to the end of the characters buffered, a list of further strings to be read in turn (`feval`), and
 a link to the input it interrupted (`fstak`). The shell's `BUFSIZ` is 64,
@@ -6240,8 +6232,7 @@ shell's end of file, still reads as non-zero.
 
 The shell classifies characters by two tables of its own,
 `_ctype1` and `_ctype2` (#f("sh/ctype.c")), rather than by the library's
-`ctype.h`. Each entry is a set of bits. The first table serves the
-lexical analysis of #f("sh/word.c"): blanks (`T_SPC`), the characters
+`ctype.h`. Each entry is a set of bits. The first table serves the lexical analysis of #f("sh/word.c"). It marks blanks (`T_SPC`), the characters
 which end a word (`T_MET`, `T_DIP`, `T_EOR`, `T_EOF`), quotes, and the
 characters which a backslash may escape. The second serves the
 parameters of #f("sh/macro.c"): digits, the letters and underscore that
@@ -6271,9 +6262,9 @@ also `unsigned char` now, as in #f("sh/ctype.c").
 #source("/usr/src/cmd/sh/ctype.c")
 
 The two tables of character classes, laid out one row for each eight
-ASCII codes. Two things have changed (#l("unsigned char\t_ctype1[] = {"), #l("unsigned char\t_ctype2[] = {")): the `=` before each
-initialiser, which v7's compiler did not yet require but C99 does, and
-the type, now `unsigned char`. Some classes, such as `_LQU`, include the
+ASCII codes. Two things have changed (#l("unsigned char\t_ctype1[] = {"), #l("unsigned char\t_ctype2[] = {")). C99 requires the `=` before each
+initialiser, which v7's compiler did not yet, and the type is now
+`unsigned char`. Some classes, such as `_LQU`, include the
 bit `0200` (#f("sh/ctype.h")), which a signed `char` cannot hold
 without a change of value. As `unsigned char` the tables are the same
 whichever kind of `char` the compiler has.
@@ -6303,9 +6294,8 @@ data segment above `end`. At the bottom is a heap (#f("sh/blok.c")),
 from which `alloc` hands out blocks of any size which live until they
 are freed: the variables' nodes and values, and the lists of
 positional parameters. Immediately above the heap lies the
-"stack" (#f("sh/stak.c")), which holds everything that lives no longer
-than one command: the words as they are read, the parse tree, and the
-expanded arguments. Allocation from the stack costs an addition, and
+"stack" (#f("sh/stak.c")), which holds the words as they are read, the parse tree, and the
+expanded arguments, everything that lives no longer than one command. Allocation from the stack costs an addition, and
 nothing on it is ever freed singly. At the top of its command loop the
 shell simply resets the stack to its base (`tdystak`, #f("sh/main.c")).
 
@@ -6587,7 +6577,7 @@ a buffer for `gtty`, and the port casts its address to the type that
 
 Errors return to `errshell`, through `exitsh` (#f("sh/error.c")), but
 only in an interactive shell. Any other exits. That is why the profile
-is read with `ttyflg` set in `flags` (from `prof`, 124): an error in
+is read with `ttyflg` set in `flags` (from `prof`, #l("ELSE\tflags |= prof; flags &= ~prompt;")): an error in
 the profile comes back here, and `exfile` returns, abandoning the
 profile but not the shell.
 
@@ -6695,10 +6685,10 @@ two. The doubled parentheses at #l("IF (iop=ioparg)") are those of #f("malloc.c"
 #lines-to(none)
 #source("/usr/src/cmd/sh/word.c")
 
-The lexical analyser. The routine `word` reads the next word or symbol and leaves
-its code in `wdval` (#f("sh/sym.h")): 0 for an ordinary word, whose
-text is in `wdarg`; a reserved word's code if one is acceptable here;
-or the character, or doubled character, which ends a word.
+The lexical analyser. The routine `word` reads the next word or symbol and leaves its code in `wdval` (#f("sh/sym.h")). The code is 0 for an
+ordinary word, whose text is in `wdarg`, a reserved word's code if one
+is acceptable here, or else the character, or doubled character, which
+ends a word.
 
 The declaration of `readb` (#l("LOCAL INT\treadb(void);")) is new. The v7 code called it before its
 definition and let it be declared implicitly, which C99 does not
@@ -6777,9 +6767,7 @@ shell or, if it is interactive, abandons the command. The return type
 #lines-to(none)
 #source("/usr/src/cmd/sh/cmd.c")
 
-The parser. It is written by recursive descent, one procedure to each
-rule of the grammar given in the comments: `cmd` for a sequence of
-commands, `list` for commands joined by `&&` and `||`, `term` for a
+The parser. It is written by recursive descent, one procedure to each rule of the grammar given in the comments. They are `cmd` for a sequence of commands, `list` for commands joined by `&&` and `||`, `term` for a
 pipeline, and `item` for a single command, simple or compound. Each
 calls `word` (#f("sh/word.c")) for the next symbol, which it finds in
 `wdval`, and returns a tree of the nodes of #f("sh/mode.h"), allocated
@@ -11022,7 +11010,7 @@ and the ends of a range.
 Parentheses `\(` and `\)` compile to `CBRA` and `CKET` with the number
 of the subexpression, and `\1` to `\9` to `CBACK`. Unlike `ed`, `grep`
 checks at compile time that at least that many subexpressions have
-been closed (`closed`, 248). Any other escaped character stands for
+been closed (#l("if((c -= '1') >= closed)")). Any other escaped character stands for
 itself.
 
 The `goto defchar` (#l("goto defchar;", after: "*ep++ = CBACK;")) is new. The v7 code fell through from the escape case
