@@ -96,7 +96,7 @@ it too. In v7 it was an assembly routine in `mch.s`.
 `SCHMAG` (#l("#define\tSCHMAG\t8/10")) is a fraction written as a bare macro: since `x*SCHMAG`
 expands to `x*8/10`, the multiplication is done first and the result is
 the integer 0.8`x`. It sets how fast the record of recent processor use
-decays (#l("a = (pp->p_cpu & 0377)*SCHMAG + pp->p_nice - NZERO;")).
+decays (#l("a = pp->p_cpu*SCHMAG + pp->p_nice - NZERO;")).
 
 #lines-to("/*")
 
@@ -210,8 +210,9 @@ The call of `intr_enable` (#l("intr_enable();")), v7's `spl1`, unmasks the IRQ. 
 while the loop over `proc` was done. Here it does not: the interrupt
 controller delivers no further interrupt until `irq` writes the end of
 interrupt, after `clock` returns; only then can one nest
-(#f("machdep.c")). The `& 0377` (#l("a = (pp->p_cpu & 0377)*SCHMAG + pp->p_nice - NZERO;")) undid sign extension
-of a PDP-11 `char` and is harmless on the ARM, where `char` is unsigned.
+(#f("machdep.c")). The decay (#l("a = pp->p_cpu*SCHMAG + pp->p_nice - NZERO;")) needs no
+mask, since `p_cpu` is an `unsigned char` (#f("proc.h")). v7 masked it
+with 0377 to undo the sign extension of a PDP-11 `char`.
 
 #lines-to("/*", lead: true)
 
@@ -264,7 +265,7 @@ it defines the shape of a process image: the format of the executable
 file, the layout of the arguments on the stack, and the convention by
 which `fork` tells parent from child.
 
-The helpers `getxfile` and `setregs` are declared (#l("int\tgetxfile(struct inode *ip, int nargc);"), #l("void\tsetregs(void);")) because they are used
+The helpers `getxfile` and `setregs` are declared (#l("void\tgetxfile(struct inode *ip, int nargc);"), #l("void\tsetregs(void);")) because they are used
 before they are defined (#f("prf.c")).
 
 #lines-to("/*")
@@ -293,7 +294,7 @@ A fault in reading either list gives `EFAULT`, and too much gives
 room for the arguments, `exec` fails with `ENOMEM` (#l("if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")--#l("}", after: "if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")), where v7
 panicked; nothing has been changed yet.
 
-The new stack's size is passed to `getxfile` (#l("if (getxfile(ip, nc+(na+3)*NBPW) || u.u_error)")): the strings,
+The new stack's size is passed to `getxfile` (#l("getxfile(ip, nc+(na+3)*NBPW);")): the strings,
 rounded up to a word, and the `na+3` words of the pointer vector built
 below them, the argument count, a pointer to each string, and two
 zeros. In v7 only the strings were passed. When the vector did not fit in the
@@ -379,16 +380,9 @@ image is given up. Entries smaller than the 24 bytes read
 overlap. A program header which cannot be read whole refuses the file
 (#l("n = 0;", after: "if(exread(ip, (caddr_t)&type, sizeof(type), off)) {")), since `ph` could still hold what the program that ran before
 left there. A text segment with nothing in the file
-(#l("u.u_exdata.ph[0].p_filesz == 0 ||")) would leave `xalloc` (#f("text.c")) nothing to read, while `ts`,
-reckoned from its address, could still be nonzero, so that the page
-tables (#f("ureg.c")) would map the start of the process's own image,
-its per process area, as the text. A data segment with more bytes in
-the file than in memory (#l("u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz ||")) would be read past the end of the space
-reserved for it. A text segment which begins at offset 0 holds the ELF
-header and the program header table, which `xalloc` skips. If the text
-were shorter than the two (#l("(u.u_exdata.ph[0].p_offset == 0 && u.u_exdata.e_phoff +")--#l("u.u_exdata.ph[0].p_filesz)) {")), the count left to read would wrap
-around to an enormous number, and the text would be read beyond its
-pages after the old image had gone.
+(#l("u.u_exdata.ph[0].p_filesz == 0 ||")) would leave `xalloc` (#f("text.c")) nothing to read. A data segment with more bytes in
+the file than in memory (#l("u.u_exdata.ph[1].p_filesz > u.u_exdata.ph[1].p_memsz) {")) would be read past the end of the space
+reserved for it.
 
 #lines-to("if(u.u_exdata.ph[0].p_filesz!=0 && (ip->i_flag&ITEXT)==0 &&")
 
@@ -401,23 +395,25 @@ that a running text cannot be opened for writing, is in `access`
 
 #lines-to("/*")
 
-The text occupies the bottom of the address space: `ts` (#l("ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);")) is the
-number of pages from address zero to the end of the text segment,
-which includes the bottom page, below the text's own first address.
-The data begins at the first page above the text, and `ds` (#l("ds = btop(lsize) - ts;")) is
-the number of pages from there to the end of the data segment in
-memory (its address plus `p_memsz`), which takes in the uninitialised
-data as v7's sum of `ux_dsize` and `ux_bsize` did. The check for
-overflow is changed to fit: a sum of unsigned numbers which wraps round
-is smaller than either addend. A data segment which begins below the
-end of the text is refused with the same error (#l("u.u_exdata.ph[1].p_vaddr < ptob(ts)) {")). The stack is
-given `SSIZE` pages plus room for the strings and the pointer vector,
-`nargc` bytes.
+Each segment is placed at its own address. The text begins at the page
+holding its first address, `t0`
+(#l("t0 = u.u_exdata.ph[0].p_vaddr >> PGSHIFT;")), and `ts` counts
+the pages from there to the end of its bytes in the file. The data
+begins at its own page, `d0`, and `ds` reaches to the end of the segment
+in memory, its address plus `p_memsz`, which takes in the uninitialised
+data as v7's sum of `ux_dsize` and `ux_bsize` did. A segment whose end
+wraps around, which makes the unsigned sum smaller than the size, or
+lies beyond the user's space is refused with `ENOMEM`
+(#l("if(end < u.u_exdata.ph[0].p_filesz || end > USRSIZE)")). The
+stack is given `SSIZE` pages plus room for the strings and the pointer
+vector, `nargc` bytes. Then `estabur` (#f("ureg.c")) refuses segments
+which overlap each other, the stack, or the signal trampoline.
 
-The overlay branch (#l("if (overlay) {")--#l("} else {")) is dead, since `overlay` is never set; it
-is kept as v7 wrote it, but for the parentheses at #l("if ((u.u_sep==0 && ts != u.u_tsize) || nargc) {"), as in #f("slp.c").
+In v7 the text began at address zero and the data followed it. The
+programs here are linked at 0x8000 (#f("Makefile")), so nothing is
+mapped below that, and a null pointer faults.
 
-#lines-to("/*", after: "goto bad;")
+#lines-to("/*", after: "return;")
 
 With the profiling turned off (#l("u.u_prof.pr_scale = 0;")) the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` pages, its per process area and the sizes
@@ -433,7 +429,7 @@ By now `xalloc` (#f("text.c")) has attached the text, shared with any other
 process running the same file, or read it in. The data segment is now
 read from the file into user space at its own address, from its file
 offset, for `p_filesz` bytes, the size of the segment in the file
-(#l("estabur(ts, ds, (unsigned)0, 0, RO);")--#l("readi(ip);", after: "u.u_count = u.u_exdata.ph[1].p_filesz;")). In v7 the data was mapped at address zero for the purpose, and
+(#l("estabur(t0, ts, d0, ds, (unsigned)0, RO);")--#l("readi(ip);", after: "u.u_count = u.u_exdata.ph[1].p_filesz;")). In v7 the data was mapped at address zero for the purpose, and
 read from just after the text in the file; here the final mapping of
 text and data serves.
 
@@ -447,7 +443,8 @@ instead, so that the tracing parent can examine the new image.
 
 The sizes are recorded and the user mapping set by
 `estabur`. The instructions of the new program were made visible to
-instruction fetch by `xalloc` (#f("text.c")), which read them in.
+instruction fetch by `xalloc` (#f("text.c")), which read them in. A segment out of range ends at `nomem`
+(#l("nomem:")) with `ENOMEM`.
 
 #lines-to("/*", lead: true)
 
@@ -544,13 +541,12 @@ process which has not yet called `exec`.
 
 #lines-to("/*", lead: true, after: "u.u_ar0[PC] += NBPW;")
 
-The routine `sbreak`, which is v7's, sets the size of the data area. The new break
-is converted to pages, and, since the data begins at the first
-segment after the text, the text's segments are subtracted; a segment
-is one page here, so v7's conversions `ctos` and `stoc` are gone and
-the size is subtracted as it stands. The mapping routine `estabur` must accept the
-new size: it refuses a data area that would run into the stack
-(#f("ureg.c")).
+The routine `sbreak` sets the size of the data area. The new break is
+converted to pages, and the data's first page, `u_pdstart`, is
+subtracted (#l("n = (int)btop((unsigned)((struct a *)u.u_ap)->nsiz) -")). In v7 the data began at the first segment after the
+text, and the text's segments were subtracted. The mapping routine
+`estabur` must accept the new size: it refuses a data area that would
+run into the stack or the signal trampoline (#f("ureg.c")).
 
 The image is then changed with `expand`. Since the stack lies above the
 data in core, it is copied down (shrinking) or up (growing), a page at
@@ -828,15 +824,16 @@ those which read `/dev/kmem` (#f("rootfs.proto")). The file must then be
 an ordinary one which the user may write. The comment above admits that
 the protection is not thorough.
 
-#lines-to("s = u.u_procp->p_size - USIZE;")
+#lines-to("u.u_base = (caddr_t)ptob(u.u_pdstart);")
 
-For the second write `estabur` maps the whole image as
-data, so that `writei` may copy it from user space. That is the data
-and the stack, as on the PDP-11: the image holds only what the program
-has asked for, so a core file is the 8 KB of the per process area
-followed by the program's data and its stack, a few pages for a small
-program. The process is about to exit, so the mapping need not be put
-back.
+The user's memory follows in two writes, the data from its first page
+and then the stack below `USRSIZE`, both through the mapping the
+process already has, so that `writei` copies them from user space. v7
+instead mapped the whole image as data from address zero with `estabur`,
+which here would overlap the signal trampoline (#f("seg.h")). The image
+holds only what the program has asked for, so a core file is the 4 KB
+of the per process area followed by the program's data and its stack, a
+few pages for a small program.
 
 In v7 `schar` was declared here; it is now declared in #f("systm.h"),
 and the line is deleted.
@@ -1157,8 +1154,8 @@ If the table is full, the process is killed.
 
 Otherwise `xalloc` claims the free entry, setting `XLOAD` to show that
 its contents come from the file rather than from the swap device. It
-reckons the size `ts` (#l("ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz);")) from address zero, as `getxfile` does,
-and allocates swap space and core for the text.
+reckons the size `ts` (#l("ts = btop(u.u_exdata.ph[0].p_vaddr + u.u_exdata.ph[0].p_filesz) -")) from the page of the text's first
+address, as `getxfile` does, and allocates swap space and core for the text.
 
 #lines-to("for(i = 0; i < ts; i++)")
 
@@ -1167,17 +1164,10 @@ the core from the first byte, but here the bottom of the first page
 lies below the text's first address, and the last page may extend
 beyond its end.
 
-The user mapping is then set up with the text segment only (#l("estabur(ts, (unsigned)0, (unsigned)0, 0, RW);")),
-writable for the moment, and the text is read from the file into it;
-`u_segflg` 2 directs `readi` to instruction space, which on the ARM is
-the same as data space. When the linker has put the ELF file header and
-program headers at the start of the text segment, as it does when they
-fit below the text's first address (#f("Makefile")), they are skipped
-(#l("if(u.u_offset == 0) {")--#l("}", after: "u.u_count -= i;")): they are not part of the program, and the bottom of the
-address space then reads as zero. The signal trampoline is planted in
-the text while it is still writable (#l("install_sigtramp();"),
-#f("machdep.c")); every process sharing the text uses the same one.
-The text is then made visible to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));"),
+The user mapping is then set up with the text segment only (#l("estabur(u.u_exdata.ph[0].p_vaddr >> PGSHIFT, ts, 0, 0, 0, RW);")),
+writable for the moment, and the text is read from the file into it at
+its own address. `u_segflg` 2 directs `readi` to instruction space,
+which on the ARM is the same as data space. The text is then made visible to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));"),
 `arm_sync_icache`, #f("mch.s")), a step the PDP-11, which had no
 caches, did not need. `XWRIT` (#l("xp->x_flag = XWRIT;")) then ensures that the swap copy is
 written when the core copy is first given up.
@@ -1837,39 +1827,39 @@ device must not be negative (#l("base+u.u_count > USRSIZE || u.u_offset < 0)")).
 offset through to character devices, for the sake of `/dev/kmem`
 (#f("rdwri.c")); for a disk it would become a negative block number,
 which the drivers' checks of `b_blkno`, signed comparisons, do not
-catch. The check that a
-transfer does not overlap the text segment (#l("ts = u.u_tsize;")--#l("goto bad;", after: "if (nb < ts)")) is v7's: the
-text is shared, and a device must not write into it. In v7 the text size was rounded up to a
-whole number of 8 KB segments, 128 clicks, since the data began at the
-next segment; here the data begins at the next page, so the size in
-pages is used as it stands (#l("ts = u.u_tsize;")). The page of the start of
-the transfer is `nb` (#l("nb = base>>12;")).
+catch.
 
-Next v7 checked that the transfer lay wholly in the data segment or
-wholly in the stack (#l("/*", after: "if (nb < ts)")--#l("goto bad;", after: "&& nb < (int)(btop(USRSIZE)-u.u_ssize))")), the two parts of the user's address
-space which are mapped, and which lie in different places in core. The
-check is v7's, with the page size changed and the top of the address
-space, which v7 wrote as 1024 clicks, now `btop(USRSIZE)`. The v7 code also
-masked the addresses with `01777` to keep them within the 64 KB address
-space; the test at #l("if (base&01 || u.u_count&01 || base>=base+u.u_count ||") has already done that here. In v7 the test was of the click
-of the byte after the transfer, so that a transfer which ended exactly
-at the end of the data was refused. With pages of 4096 bytes in place
-of clicks of 64, such a buffer is 64 times as likely, and the test is
-now of the page of the transfer's last byte (#l("if (((base+u.u_count-1)>>12) >= ts+u.u_dsize")).
+v7 then refused a transfer which overlapped the text, which is shared
+and must not be written by a device, and checked that the transfer lay
+wholly in the data segment or wholly in the stack, the two parts of the
+user's address space which are mapped and which lie in different places
+in core. With the text and the data each at its own address, the second
+check alone covers the first, and the port makes only that
+(#l("if (nb >= (int)u.u_pdstart &&")--#l("goto bad;", after: "else if (nb >= (int)(btop(USRSIZE)-u.u_ssize))")). The page of the start of the transfer is
+`nb` (#l("nb = base>>12;")), and the test is of the page of its last
+byte. In v7 it was of the click of the byte after the transfer, so that
+a transfer which ended exactly at the end of the data was refused; with
+pages of 4096 bytes in place of clicks of 64, such a buffer is 64 times
+as likely. v7 also masked the addresses with `01777` to keep them
+within the 64 KB address space, which the test at #l("if (base&01 || u.u_count&01 || base>=base+u.u_count ||") has
+already done here.
+
+The same test finds `ts`, the transfer's first page within the image.
+The data begins `USIZE` pages into the image (#f("proc.h")), and the
+stack follows it. An address in the data lies `nb-u_pdstart` pages
+into the data, and one in the stack lies as many pages into the stack
+as it lies above the stack's lowest address.
 
 #lines-to("/*", after: "bp->b_dev = dev;")
 
 In v7 the physical address of the user's buffer was found by reading the user
 segmentation registers (`UISA` or `UDSA`), simulating the translation
-which the hardware would have made. The port computes it from the
-layout of the image instead (#l("if (nb < (int)(ts+u.u_dsize))")--#l("(btop(USRSIZE)-u.u_ssize);")): the data begins `USIZE` pages
-into the image (#f("proc.h")), at `p_addr`, and the stack follows it.
-An address in the data lies `nb-ts` pages into it; one in the stack
-lies as many pages into the stack as it lies above the stack's lowest
-address. `PGADDR` converts the page number to an address, as in
-`swap`, and the low twelve bits of the user's address give the offset
-within the page (#l("bp->b_un.b_addr = PGADDR(ts) + (base&07777);")). Each part is contiguous in core, so the whole
-transfer is too.
+which the hardware would have made. The port adds `ts` to `p_addr`
+instead (#l("bp->b_un.b_addr = PGADDR(u.u_procp->p_addr + ts) + (base&07777);")), and only after any sleep for the buffer, during
+which the image may have moved. `PGADDR` converts the page number to an
+address, as in `swap`, and the low twelve bits of the user's address
+give the offset within the page. Each part is contiguous in core, so
+the whole transfer is too.
 
 `SLOCK` (#l("u.u_procp->p_flag |= SLOCK;")) keeps the process in core while the device transfers
 into its memory: the address given to the device would be wrong if the
@@ -5115,9 +5105,9 @@ routine which sets it (#f("libc/syscall.s")).
 The v7 file ended by reserving two bytes at the start of `.data`. In a
 program with separate instruction and data spaces, data location 0
 would otherwise have held a variable, whose address would then compare
-equal to a null pointer. The port's programs are linked at `0x94`, with
-the signal trampoline at 8 (`sendsig`, #f("machdep.c")), so no object of the program can
-lie at address 0, and the padding is gone.
+equal to a null pointer. The port's programs are linked at `0x8000`
+(#f("Makefile")), so no object of the program can lie at address 0, and
+the padding is gone.
 
 #lines-to(none)
 #source("/usr/src/libc/csu/mcrt0.s")
@@ -6993,11 +6983,9 @@ and `word` (#f("sh/word.c")) searches it with `syslook` (#f("sh/name.c")).
 The table `sysmsg` gives, for each signal number, the message printed when a
 command dies of it (#f("sh/service.c")). The entries for interrupt and
 broken pipe are null, since a user who interrupts a command, or a
-command whose reader has gone, needs no message. The v7 table ended at
-"Signal 16", the last of its sixteen signals; `await` indexes it with
-any signal number a child dies of, so the port, whose kernel has 31
-signals (#f("param.h")), continues it to "Signal 31" (#l("\"Signal 17\",")--#l("\"Signal 31\",")) in the
-same style. The table `commands` holds the
+command whose reader has gone, needs no message. The table ends at
+"Signal 16" (#l("\"Signal 16\",")), the last of the sixteen signals
+(#f("param.h")). The table `commands` holds the
 built-in commands, with their codes from #f("sh/defs.h");
 the entry for `[`, `SYSTST`, is commented out, as in v7.
 
@@ -7086,8 +7074,16 @@ The option `-x` (`execpr`) prints the expanded command.
 The port names the node through `c`, a `COMPTR`, where v7 used the
 generic `t` for every field. In particular v7 read the I/O list of a
 command node as `t->treio`; it is now `c->comio`, the same word, since
-both structures put it after the type (#f("sh/mode.h")). The doubled
-parentheses at #l("IF ((internal=syslook(com[0],commands)) ORF") are those of #f("malloc.c").
+both structures put it after the type (#f("sh/mode.h")).
+
+A command of assignments alone, such as ``x=`date` ``, has no words,
+and `com[0]` is then a null pointer. v7 passed it to `syslook`
+regardless, which read location 0, harmless on the PDP-11. Here
+nothing is mapped at address 0 (#f("sys1.c")), so the port tests
+`argn` first (#l("IF argn==0 ORF")), and `syslook` is called only for
+a command with a name. `internal` is set to 0 at its declaration
+(#l("INT\t\targn, internal=0;")), since the compiler cannot see that it
+is used only when `argn` is nonzero.
 
 #lines-to("SWITCH internal IN")
 
@@ -11406,14 +11402,12 @@ by anyone instead.
 
 The v7 program included `<core.h>`, which described the PDP-11 core image, for the
 three macros `TXTRNDSIZ`, `stacktop`, and `stackbas`. The port has no
-such header, and the macros are defined here (#l("#define TXTRNDSIZ 4096L")--#l("#define stackbas(siz) (USRSIZE-siz)")), with the top of
+such header, and the macros are defined here (#l("#define stacktop(siz) (USRSIZE)"), #l("#define stackbas(siz) (USRSIZE-siz)")), with the top of
 the stack at `USRSIZE`, the end of the 3 GB user address space
 (#f("param.h")), where the PDP-11's was at `0x10000`, the end of its
 64 KB address space. The macros are expanded only where they are used,
 after `<sys/param.h>` (#l("#include <sys/param.h>")) has defined `USRSIZE`.
-`TXTRNDSIZ`, the unit to which the text is rounded before the data
-begins, is a page, where the PDP-11's was an 8 KB segment. The
-argument `siz` of `stacktop` was unused in v7 too.
+The argument `siz` of `stacktop` was unused in v7 too.
 
 The headers `proc.h` and `user.h` come from the kernel's own directory (#l("#include \"../../sys/h/proc.h\""),
 #l("#include \"../../sys/h/user.h\"")), since the port installs neither in `/usr/include/sys`. The v7 program also
@@ -11491,10 +11485,9 @@ table holds (#l("while (ndev < 256 &&")), where v7 had no limit.
 
 The `#include` of `<sys/stat.h>` inside the procedure (#l("#include <sys/stat.h>")) is v7's.
 
-#lines-to("static long", lead: true)
+#lines-to("struct map {", lead: true)
 
-The routine `round` is now `static`. It is used only after its definition, and a
-static procedure needs no separate prototype. The map `datmap` describes how
+The map `datmap` describes how
 user addresses map onto the image, as a debugger's map would: addresses
 from `b1` to `e1` lie at file offset `f1` plus the distance from `b1`,
 and those from `b2` to `e2` at `f2` plus the distance from `b2`. Its
@@ -11519,8 +11512,9 @@ too (#f("machdep.c")): the `USIZE` pages of the `user` area, then the
 data, then the stack, packed together; the stack segment, at the top of
 the address space, follows the data in the image. The bound `f2` (#l("datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1)+addr;")) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
-area. The data map begins after the text (`b1`), which is a whole
-number of pages; the text itself is not in the image, and is not
+area. The data map begins at the data's first page
+(#l("datmap.b1 = ptob(u.u_pdstart);")), which `exec` records in
+`u_pdstart` (#f("user.h")). The text is not in the image, and is not
 mapped.
 
 #lines-to("tp = gettty();")
@@ -14052,6 +14046,12 @@ overrun. Now `recbld` stops at the end of `fldtab` and of `record`
 (#l("for (i = 1; i <= *NF && i < MAXFLD; i++) {")--#l("if (r >= record+RECSIZE)")), and `fieldadr` refuses a negative field number (#l("if (n < 0 || n >= MAXFLD)")),
 where v7 indexed before the array.
 
+A field beyond `NF` is an empty string (#l("#define\tFINIT\t{0, \"\", 0.0, FLD|STR, 0}"),
+#l("fldtab[j].sval = \"\";")). v7 left a null pointer there, which read as an
+empty string only because location 0 of a PDP-11 program could be
+read; here nothing is mapped at 0 (#f("sys1.c")), and `$2` of a
+one-field record would fault.
+
 The routine `error` takes a variable list of arguments (#l("void", after: "errorflag = 2;")--#l("va_end(a);")), passed on to
 the library's `_doprnt`; v7 declared seven arguments, used or not, and
 relied on the PDP-11's passing them all on the stack. The routine `isnumber`
@@ -15026,30 +15026,24 @@ code and constants, is 41,711 bytes with `-Os` against 48,850 with
 `-O`, which matters on the MP135 machine, where the whole kernel must
 fit in the 128 KB of SYSRAM (#f("mp135/unix.ld")).
 
-`-Wl,-z,max-page-size=4096,-Ttext=0x94` are options for the linker,
-which the compiler ignores when it only compiles; they apply to the
+`-Wl,-z,max-page-size=4096` is an option for the linker,
+which the compiler ignores when it only compiles; it applies to the
 link of every user program (#l("LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^)")), never to the kernel, which is linked by
 its own line in #f("sys.mk"). The linker makes a program two loadable
 segments: the text, with the read-only constants, readable and
 executable, and the data, readable and writable. This is the ELF
 counterpart of v7's 0410 file: `exec` (#f("sys1.c")) maps the first
-read-only and shares it among all the processes running the program. The option `max-page-size`
-places the data at the start of a new 4096-byte page, so that the two
-can be mapped with different permissions. `-Ttext=0x94` links the text
-at address `0x94`, just past the ELF file header (52 bytes) and room
-for three program headers (32 bytes each), 148 bytes in all, which the linker
-places at the start of the text segment; the text is word-aligned, as
-0x94 is. The signal trampoline at 8 (`sendsig`, #f("machdep.c")) lies within the
-headers, written over them by `xalloc` (#f("text.c")) while the text is
-still writable. A program has two headers, one for each loadable
-segment; a section of unwinding information, `.ARM.exidx`, would
-have a third. The linker
-places the headers at the start of the text segment, which begins at
-offset 0 of the file as at address 0, and the kernel skips them when it
-loads the text (`xalloc`, #f("text.c")). Were there no room for them
-below the text, the text would still have to start at the same offset
-in its page of the file as in memory, and the file would carry a page
-of padding before it. `-MMD -MP` make the
+read-only and shares it among all the processes running the program,
+each segment at its own address. The linker's default places the text
+at `0x8000`, so that nothing is mapped at address 0 and a null pointer
+faults. The option sets the page size the linker assumes to 4096
+bytes, the ARM's. Without it the linker assumes 64 KB pages: it then
+starts the text segment at address 0, so that page 0 is mapped and
+holds the ELF headers, and it pads every file by up to 32 KB to keep
+each segment's offset in the file congruent to its address. With it,
+the headers take one page of the file, which is not loaded, and the
+data begins on a page of its own above the text, so that the two can
+be mapped with different permissions. `-MMD -MP` make the
 compiler write, beside each object, a file of its header dependencies
 (#l("-include $(patsubst %.c,%.d,$(wildcard $(OBJ:.o=.c)))")).
 
@@ -15975,9 +15969,8 @@ into which it moves each job while it runs. There is no `/usr/bin`.
 system itself: `run.sh`, the test scripts in `cases`, each with its
 expected output, and in `utils` the programs and data files which the
 tests use, and `fs.img`, a small file system on which they run the file
-system checkers; `deep.img` and `many.img`, a chain of 40 directories
-and 3001 directories side by side, give `dump` and `dumpdir` trees
-deeper and wider than their tables, and `big.img` holds one file large
+system checkers; `deep.img`, a chain of 40 directories, gives `dump`
+and `dumpdir` a tree deeper than their tables, and `big.img` holds one file large
 enough to need a double indirect block.
 
 The home directories which #f("passwd") gives the users `dmr`, `sys`, and
@@ -16143,7 +16136,7 @@ no arithmetic of its own.
 
 The build's fragment for the suite is `test.mk` (#f("Makefile")). Every
 C file in `utils` becomes a program in `obj` (#l("TEST_BIN := $(patsubst $(TS)/utils/%.c,$(TS)/obj/%, \\")), and every other file
-there, with `run.sh` and the cases, is data for the file system (#l("TEST_IMG = $(TS)/obj/fs.img $(TS)/obj/deep.img $(TS)/obj/many.img \\")). The
+there, with `run.sh` and the cases, is data for the file system (#l("TEST_IMG = $(TS)/obj/fs.img $(TS)/obj/deep.img $(TS)/obj/big.img")). The
 programs are compiled with `usr/sys` on the search path as well as
 `usr/include` (#l("$(TEST_OBJ): CPPFLAGS = -Iusr/include -Iusr/sys")), so that a test can include the kernel's own headers,
 such as `h/user.h`, to find a register in a stopped process's saved
@@ -16151,10 +16144,10 @@ frame. They are linked as the commands are, except `proft`, which is
 compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
 not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^)")).
 
-Four small file systems are made by `mkfs` for the tests of the
+Three small file systems are made by `mkfs` for the tests of the
 file-system commands: `fs.img`, from the prototype `fs.proto`, with a
 few files of known content (#l("$(TS)/obj/fs.img: $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \\")--#l("$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null")); `deep.img`, a chain of 40
-directories (#l("$(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "for (i = 0; i <= 40; i++) print \"$$\" }' | \\")); `many.img`, 3001 directories in one (#l("$(TS)/obj/many.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "print \"$$\" }' | \\")); and
+directories (#l("$(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "for (i = 0; i <= 40; i++) print \"$$\" }' | \\")); and
 `big.img`, holding a copy of the dictionary, which gives `icheck` a file
 with a double indirect block (#l("$(TS)/obj/big.img: etc/mkfs usr/dict/words $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "'words ---644 0 0 usr/dict/words' '$$' | \\")). `V7_MKFS_TIME` fixes the time `mkfs` stamps on
 every inode, so that the images, and the cases' outputs, are the same at
@@ -16184,6 +16177,36 @@ The utility `pidf` writes its process id into a file, then executes the command
 named after it. The process keeps its id across `exec`, so a case can
 start a command in the middle of a pipeline and still send it a
 signal, which is how the interrupt tests reach `ed`, `sort`, and `yes`.
+
+#lines-to(none)
+#source("/usr/local/test/utils/waitf.c")
+
+The utility `waitf` waits until each file named exists and is not
+empty, which is how a case waits for `pidf` to have written its file.
+The sleep of v7 counts whole seconds, so a loop of `sleep 1` costs a
+second even when the file appears at once. `waitf` instead polls
+without pause for its first 12 clock ticks of processor time
+(#l("else if (times(&tb), tb.tms_utime + tb.tms_stime >= 12)")), which finds
+a quick process within milliseconds, and then sleeps a second at a time,
+so that it does not hold the processor from a busy one. It gives up
+after 30 seconds.
+
+#lines-to(none)
+#source("/usr/local/test/utils/nap.c")
+
+The utility `nap` returns once it has been charged with three clock ticks,
+about 50 ms when it runs alone, longer while others run. A case polls
+with it where the condition is not a file, as `intr` does while it
+waits for `ed` to answer.
+
+#lines-to(none)
+#source("/usr/local/test/utils/endblk.c")
+
+The utility `endblk` writes a marked block at block `n` of a disk, the
+last block in the `ddend` case, reads it back, and tries to read the
+block after it, which the driver must refuse
+(#l("printf(\"past %d\\n\", read(fd, b, 512));")). It seeks there directly, where `dd`
+would step through every block before it.
 
 #lines-to(none)
 #source("/usr/local/test/utils/fmode.c")
@@ -16341,11 +16364,10 @@ The routine `tsig4` (#l("\"tsig4:\\n\"")--#l("\"\tpop {r4, r7, pc}\\n\"")) is `t
 condition changes after the `svc`; only the `addeq` must take effect.
 The rest of the program checks the library's `sscanf` with numbers too
 large for their type, and `printf`'s zero precisions (#l("sscanf(\"99999999999999999999\", \"%lld\", &ll);")--#l("\"abc\", 1, \"abc\", 1.25);")). With
-arguments it reports whether any executable's first loadable segment
-is padded, that is, starts at a nonzero offset in its file rather than
-taking in the ELF header (#l("static int")--#l("}", after: "return r;")). The link options start every program
-at `0x94`, just past its headers (#f("Makefile")), so that no file
-carries a page of padding.
+arguments it reports how many executables map page 0, that is, have a
+first loadable segment beginning below 4096 (#l("static int")--#l("}", after: "return r;")). The programs are
+linked at 0x8000 (#f("Makefile")), so that in every one a null pointer
+faults.
 
 #lines-to(none)
 #source("/usr/local/test/utils/r5t.c")
@@ -16361,15 +16383,18 @@ the ARM's `double`s require, whatever sizes are asked for and freed
 #source("/usr/local/test/utils/elft.c")
 
 The utility `elft` reads an executable, `/bin/echo` in the `exec` case, and writes
-four damaged copies of it, each of which `exec` must refuse with
+six damaged copies of it, each of which `exec` must refuse with
 `ENOEXEC` while the process goes on (#l("static void")--#l("}", after: "unlink(name);")). The routine `phdr` finds the program
 headers of the two loadable segments (#l("static unsigned *")--#l("}", after: "return (unsigned *)&buf[off];")). The copies are the ELF
 header alone, with no segments (#l("try(\"short\", 52);")); a data segment whose size in the
-file exceeds its size in memory (#l("save = d[4];")--#l("d[4] = save;")); a text segment that starts at
-the beginning of the file but is too short to hold the program header
-table, which it must then contain (#l("save = t[4];")--#l("t[4] = save;")); and a text segment with
+file exceeds its size in memory (#l("save = d[4];")--#l("d[4] = save;")); a wrong magic number
+(#l("buf[1] = 'X';")--#l("buf[1] = 'E';")); program header entries smaller than the fields the
+kernel reads (#l("*(short *)&buf[42] = 16;")--#l("*(short *)&buf[42] = 32;")); a third loadable segment, a copy of
+the data's header added to the table (#l("p = (unsigned *)&buf[*(unsigned *)&buf[28] + 32 * *(short *)&buf[44]];")--#l("*(short *)&buf[44] -= 1;")); and a text segment with
 nothing in the file (#l("t[2] = 4096;")--#l("try(\"notext\", len);")). These are `getxfile`'s checks
-(#f("sys1.c")).
+(#f("sys1.c")). Last, a child stores through a null pointer
+(#l("*(volatile int *)0 = 1;")). Nothing is mapped at address 0, so the
+child dies of `SIGSEG` and leaves a core image, status 139.
 
 #lines-to(none)
 #source("/usr/local/test/utils/bigx.c")
@@ -16438,9 +16463,10 @@ beyond, use it to note the time first and to put it back after.
 #lines-to(none)
 #source("/usr/local/test/utils/prt.c")
 
-The utility `prt` profiles itself with `profil` (#f("sys4.c")) for three seconds
-of computing, with a histogram of 4096 counters and a scale of a half,
-and prints the number of ticks counted (#l("profil((short *)buf, sizeof buf, 0, 0x8000);")--#l("printf(\"ticks %d\\n\", n);")); the case's `.sed`
+The utility `prt` profiles itself with `profil` (#f("sys4.c")) until it has used a
+tenth of a second of processor time, with a histogram of 4096 counters
+and a scale of a half from the page of `main`, where its text begins,
+and prints the number of ticks counted (#l("profil((short *)buf, sizeof buf, (int)main & ~0xfff, 0x8000);")--#l("printf(\"ticks %d\\n\", n);")); the case's `.sed`
 replaces the number, which varies, but the line shows that the clock
 reached `addupc` (#f("clock.c")).
 
@@ -16449,7 +16475,7 @@ reached `addupc` (#f("clock.c")).
 
 The utility `prs` profiles itself while it spends its time in system calls, then
 reports the ticks counted and its user and system times from `times`
-(#l("profil((short *)buf, sizeof buf, 0, 0x8000);")--#l("(long)tb.tms_stime);")). A tick taken in the kernel is charged as system time and does
+(#l("profil((short *)buf, sizeof buf, (int)main & ~0xfff, 0x8000);")--#l("(long)tb.tms_stime);")). A tick taken in the kernel is charged as system time and does
 not reach the histogram, since `clock` profiles only a program counter
 interrupted in user mode.
 
