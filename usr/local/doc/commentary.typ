@@ -16125,10 +16125,15 @@ file in `cases` whose name has no dot, that is, every case but none of
 the `.exp` and `.sed` files (#l("case $# in")--#l("esac", after: "0)\tset `ls | grep -v '\\.'`")). Each case runs under `sh`, with its
 standard output and standard error together, through its `.sed` if it
 has one, into `cmp`, which compares it with the expected output
-(#l("if test -f $n.sed")--#l("else\td=`sh $n 2>&1 | (cmp - $n.exp 2>&1; cat >/dev/null)`")). Once `cmp` has found a difference it exits; the `cat` behind
+(#l("if test -f $n.sed")--#l("(cmp - $n.exp 2>&1; cat >/dev/null)`", after: "else\td=`sh $n 2>&1 | tee /tmp/run.out |")). Once `cmp` has found a difference it exits; the `cat` behind
 it then reads the rest of the output, so that a failing case still runs
 to its end and cannot overlap the next. A case passes when `cmp` prints
-nothing (#l("case \"$d\" in")--#l("pass=`expr $pass + 1`;;")). The exit status is not used, since the status `sh`
+nothing (#l("case \"$d\" in")--#l("pass=`expr $pass + 1`;;")). A copy of the output is kept by `tee` in
+`/tmp/run.out`, and for a failing case the first 20 lines of its
+difference from the expected output are shown
+(#l("diff $n.exp /tmp/run.out | sed 20q")), so that a failure which
+does not recur can still be diagnosed. With `tee` in the pipeline the
+case still writes into a pipe, as it would without it. The exit status is not used, since the status `sh`
 gives a pipeline is that of the first of its processes it reaps, which
 depends on timing. The counts are kept with `expr`, as v7's shell has
 no arithmetic of its own.
