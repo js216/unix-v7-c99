@@ -121,11 +121,11 @@ __asm__(
 "_start:\n"
 	"cpsid if\n"
 	"ldr sp, =0x30000000\n"
-	"mrc p15, 0, r0, c1, c0, 0\n"
-	"orr r0, r0, #(1 << 12)\n"
+	"mrc p15, 0, r0, c1, c0, 0\n"	/* SCTLR */
+	"orr r0, r0, #(1 << 12)\n"	/* I: icache on */
 	"mov r1, #0\n"
-	"mcr p15, 0, r1, c7, c5, 0\n"
-	"mcr p15, 0, r0, c1, c0, 0\n"
+	"mcr p15, 0, r1, c7, c5, 0\n"	/* ICIALLU */
+	"mcr p15, 0, r0, c1, c0, 0\n"	/* SCTLR */
 	"isb\n"
 	"ldr r0, =__bss_start__\n"
 	"ldr r1, =__bss_end__\n"
@@ -142,7 +142,7 @@ now(void)
 {
 	unsigned lo, hi;
 
-	__asm__ volatile("mrrc p15, 0, %0, %1, c14" : "=r"(lo),
+	__asm__ volatile("mrrc p15, 0, %0, %1, c14" : "=r"(lo),	/* CNTPCT */
 	    "=r"(hi));
 	return(lo);
 }

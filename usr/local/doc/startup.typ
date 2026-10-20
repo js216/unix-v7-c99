@@ -1168,7 +1168,7 @@ change to the kernel's own mapping.
 
 The call `ttbset(a)` makes the first-level table at physical address `a` the
 user's. `TTBR0` is 64~bits wide in the long format, and is loaded from
-two registers (#l("mcrr p15, 0, r0, r1, c2	@ TTBR0")). The upper one, zero, holds the address space
+two registers (#l("mcrr p15, 0, r0, r1, c2")). The upper one, zero, holds the address space
 identifier, so every process runs with identifier 0. Each TLB entry is
 either global, belonging to every address space, or tagged with the
 identifier of one. The kernel's pages are global and the user's are

@@ -36,21 +36,21 @@ intr_restore:
 	bx lr
 
 cntfrq_get:
-	mrc p15, 0, r0, c14, c0, 0
+	mrc p15, 0, r0, c14, c0, 0	@ CNTFRQ
 	bx lr
 
 cntvct_get:
 	isb
-	mrrc p15, 1, r0, r1, c14
+	mrrc p15, 1, r0, r1, c14	@ CNTVCT
 	bx lr
 
 cntv_cval_set:
-	mcrr p15, 3, r0, r1, c14
+	mcrr p15, 3, r0, r1, c14	@ CNTV_CVAL
 	isb
 	bx lr
 
 cntv_ctl_set:
-	mcr p15, 0, r0, c14, c3, 1
+	mcr p15, 0, r0, c14, c3, 1	@ CNTV_CTL
 	isb
 	bx lr
 
@@ -75,7 +75,7 @@ resume:
 	dsb ish
 	ldr r3, =u
 	mov r0, #USIZE
-1:	mcr p15, 0, r3, c8, c7, 3
+1:	mcr p15, 0, r3, c8, c7, 3	@ TLBIMVAA
 	add r3, r3, #PGSIZE
 	subs r0, r0, #1
 	bne 1b
@@ -105,7 +105,7 @@ dcflush:
 	bxeq lr
 	mov r12, lr
 	bl dline
-1:	mcr p15, 0, r0, c7, c14, 1 @ DCCIMVAC: clean and invalidate line
+1:	mcr p15, 0, r0, c7, c14, 1	@ DCCIMVAC: clean and invalidate line
 	add r0, r0, r2
 	cmp r0, r1
 	blo 1b
@@ -152,7 +152,7 @@ tlbflush:
 ttbset:
 	mov r1, #0
 	dsb ish
-	mcrr p15, 0, r0, r1, c2	@ TTBR0
+	mcrr p15, 0, r0, r1, c2		@ TTBR0
 	isb
 	mcr p15, 0, r1, c8, c7, 2	@ TLBIASID
 	mcr p15, 0, r1, c7, c5, 6	@ BPIALL

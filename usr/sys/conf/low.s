@@ -10,11 +10,11 @@
 _start:
 	cpsid if
 	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
-	bic r0, r0, #(1 << 12)	@ I: icache off
-	bic r0, r0, #(1 << 2)	@ C: dcache off
-	bic r0, r0, #(1 << 11)	@ Z: branch prediction off
-	bic r0, r0, #(1 << 13)	@ V: low vectors
-	bic r0, r0, #1		@ M: MMU off
+	bic r0, r0, #(1 << 12)		@ I: icache off
+	bic r0, r0, #(1 << 2)		@ C: dcache off
+	bic r0, r0, #(1 << 11)		@ Z: branch prediction off
+	bic r0, r0, #(1 << 13)		@ V: low vectors
+	bic r0, r0, #1			@ M: MMU off
 	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 	isb
 	mov r0, #0
@@ -59,13 +59,13 @@ _start:
 	lsl ip, r1, #30
 	orr ip, ip, r3
 	str ip, [r6, r1, lsl #3]
-	mrc p15, 0, r1, c1, c0, 1
-	orr r1, r1, #(1 << 6)
-	mcr p15, 0, r1, c1, c0, 1
+	mrc p15, 0, r1, c1, c0, 1	@ ACTLR
+	orr r1, r1, #(1 << 6)		@ SMP: coherent caches
+	mcr p15, 0, r1, c1, c0, 1	@ ACTLR
 	isb
-	mcr p15, 2, r2, c0, c0, 0
+	mcr p15, 2, r2, c0, c0, 0	@ CSSELR: L1 data cache
 	isb
-	mrc p15, 1, r0, c0, c0, 0
+	mrc p15, 1, r0, c0, c0, 0	@ CCSIDR: its geometry
 	and r1, r0, #7
 	add r1, r1, #4
 	movw r3, #0x3ff
@@ -77,33 +77,33 @@ _start:
 2:	lsl r9, r8, ip
 	lsl r10, r7, r1
 	orr r9, r9, r10
-	mcr p15, 0, r9, c7, c6, 2
+	mcr p15, 0, r9, c7, c6, 2	@ DCISW: invalidate by set/way
 	subs r8, r8, #1
 	bge 2b
 	subs r7, r7, #1
 	bge 1b
 	dsb
 	ldr r0, =0x4ff
-	mcr p15, 0, r0, c10, c2, 0
+	mcr p15, 0, r0, c10, c2, 0	@ MAIR0
 	ldr r0, =0xb5023500
-	mcr p15, 0, r0, c2, c0, 2
-	mcrr p15, 0, r6, r2, c2
-	mcrr p15, 1, r5, r2, c2
+	mcr p15, 0, r0, c2, c0, 2	@ TTBCR
+	mcrr p15, 0, r6, r2, c2		@ TTBR0
+	mcrr p15, 1, r5, r2, c2		@ TTBR1
 	isb
 	mrc p15, 0, r0, c1, c0, 0	@ read SCTLR
-	orr r0, r0, #1		@ M: MMU on
-	orr r0, r0, #(1 << 2)	@ C: dcache on
-	orr r0, r0, #(1 << 12)	@ I: icache on
+	orr r0, r0, #1			@ M: MMU on
+	orr r0, r0, #(1 << 2)		@ C: dcache on
+	orr r0, r0, #(1 << 12)		@ I: icache on
 	mcr p15, 0, r0, c1, c0, 0	@ write SCTLR
 	isb
 	ldr pc, =1f
 1:
 	ldr sp, =stack_top
 	ldr r0, =vectors
-	mcr p15, 0, r0, c12, c0, 0
-	mrc p15, 0, r0, c1, c0, 2
-	orr r0, r0, #(0xf << 20)
-	mcr p15, 0, r0, c1, c0, 2
+	mcr p15, 0, r0, c12, c0, 0	@ VBAR
+	mrc p15, 0, r0, c1, c0, 2	@ CPACR
+	orr r0, r0, #(0xf << 20)	@ cp10, cp11: VFP
+	mcr p15, 0, r0, c1, c0, 2	@ CPACR
 	isb
 	mov r0, #(1 << 30)
 	vmsr fpexc, r0
@@ -122,9 +122,9 @@ vectors:
 	b svc_entry
 	b pabort_entry
 	b dabort_entry
-	b badtrap	@ reserved
+	b badtrap			@ reserved
 	b irq_entry
-	b badtrap	@ FIQ
+	b badtrap			@ FIQ
 
 svc_entry:
 	srsdb sp!, #0x13
@@ -192,7 +192,7 @@ dabort_entry:
 	strne r0, [sp, #PC*4]
 	bne 2f
 	mov r0, #SIGSEG
-	mrc p15, 0, r2, c6, c0, 0
+	mrc p15, 0, r2, c6, c0, 0	@ DFAR
 1:
 	mov r1, sp
 	cpsie i
