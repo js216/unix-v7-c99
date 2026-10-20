@@ -18,7 +18,8 @@ void	chdirec(struct inode **ipp);
 void
 gtime(void)
 {
-	u.u_r.r_time = time;
+	u.u_r.r_val1 = (int)time;
+	u.u_r.r_val2 = (int)(time>>32);
 }
 
 /*
@@ -378,9 +379,9 @@ void
 alarm(void)
 {
 	register struct proc *p;
-	register int c;
+	register unsigned c;
 	register struct a {
-		int	deltat;
+		unsigned	deltat;
 	} *uap;
 
 	uap = (struct a *)u.u_ap;

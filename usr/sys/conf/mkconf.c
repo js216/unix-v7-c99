@@ -1,3 +1,4 @@
+#include "../h/param.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -578,7 +579,7 @@ main(void)
 	if (tabn)
 		printf("\tTAB (rwx) : ORIGIN = 0x%lx, LENGTH = 0x%lx\n",
 		    tabv, tabn);
-	printf("}\nu = 0xFFE00000;\nENTRY(start)\n");
+	printf("}\nu = 0x%X;\nENTRY(start)\n", UBASE);
 	printf("start = _start - 0x%lx;\nSECTIONS\n{\n", ramv-ramb);
 	printf("\t.text : AT(ADDR(.text) - 0x%lx) "
 	    "{ *(.text*) } > RAM\n", ramv-ramb);

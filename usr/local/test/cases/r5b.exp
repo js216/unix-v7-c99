@@ -46,4 +46,4 @@ kmem below the kernel -1
 stack pages 768
 bss pages 2048, end above 8 MB 1
 sbrk pages 4096
-beyond MAXMEM 1
+beyond memory 1

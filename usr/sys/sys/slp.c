@@ -12,7 +12,7 @@
 int	swapin(struct proc *p);
 
 #define SQSIZE 0100	/* Must be power of 2 */
-#define HASH(x)	(( (int) x >> 5) & (SQSIZE-1))
+#define HASH(x)	(((unsigned)(x) >> 5) & (SQSIZE-1))
 struct proc *slpque[SQSIZE];
 
 /*
@@ -38,8 +38,6 @@ sleep(caddr_t chan, int pri)
 		panic("zero wchan");
 	rp->p_stat = SSLEEP;
 	rp->p_wchan = chan;
-	if (chan==0)
-		panic("Sleeping on wchan 0");
 	rp->p_pri = pri;
 	h = HASH(chan);
 	rp->p_link = slpque[h];
@@ -72,7 +70,7 @@ sleep(caddr_t chan, int pri)
 	 * there has been a signal,
 	 * execute non-local goto to
 	 * the qsav location.
-	 * (see trap1/trap.c)
+	 * (see trap.c)
 	 */
 psig:
 	resume(u.u_procp->p_addr, u.u_qsav);
@@ -175,7 +173,7 @@ setpri(register struct proc *pp)
 {
 	register int p;
 
-	p = (pp->p_cpu & 0377)/16;
+	p = pp->p_cpu/16;
 	p += PUSER + pp->p_nice - NZERO;
 	if(p > 127)
 		p = 127;

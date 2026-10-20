@@ -310,6 +310,7 @@ dousr(void)
 		char	fxu[ptob(USIZE)];
 	} xu;
 	register struct user *up;
+	dev_t ttyd;
 	register int i;
 
 	lseek(fm, ptob(ubase), 0);
@@ -336,7 +337,7 @@ dousr(void)
 	for (i=10; i<NOFILE; i++)
 		printf("%8.1o", (unsigned)up->u_ofile[i]);
 	printf("\nargs");
-	for (i=0; i<5; i++)
+	for (i=0; i<4; i++)
 		printf(" %.1o", up->u_arg[i]);
 	printf("\nsizes %.1o %.1o %.1o\n", up->u_tsize, up->u_dsize, up->u_ssize);
 	printf("sep %d\n", up->u_sep);
@@ -355,7 +356,11 @@ dousr(void)
 */
 	printf("\nintflg %d\n", up->u_intflg);
 	printf("ttyp %.1o\n", (unsigned)up->u_ttyp);
-	printf("ttydev %d,%d\n", major(up->u_ttyd), minor(up->u_ttyd));
+	if (up->u_ttyp) {
+		lseek(fc, (long)&up->u_ttyp->t_dev, 0);
+		read(fc, (char *)&ttyd, sizeof(ttyd));
+		printf("ttydev %d,%d\n", major(ttyd), minor(ttyd));
+	}
 	printf("comm %.14s\n", up->u_comm);
 }
 

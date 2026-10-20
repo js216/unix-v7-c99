@@ -112,7 +112,7 @@ out:
 			if(pp->p_clktim)
 				if(--pp->p_clktim == 0)
 					psignal(pp, SIGCLK);
-			a = (pp->p_cpu & 0377)*SCHMAG + pp->p_nice - NZERO;
+			a = pp->p_cpu*SCHMAG + pp->p_nice - NZERO;
 			if(a < 0)
 				a = 0;
 			if(a > 255)

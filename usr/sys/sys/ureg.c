@@ -119,7 +119,7 @@ estabur(unsigned nt, unsigned nd, unsigned ns, int sep, int xrw)
 		goto err;
 	if(nt+nd > 2*PTPGB || ns > PTPGB)
 		goto err;
-	if((int)(nt+nd+ns+USIZE) > maxmem)
+	if(nt+nd+ns+USIZE > maxmem)
 		goto err;
 	u.u_ptsize = nt;
 	u.u_pdsize = nd;

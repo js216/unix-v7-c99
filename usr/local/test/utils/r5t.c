@@ -38,11 +38,11 @@ main(void)
 			free(p[i/2]);
 	}
 	printf("malloc: %d of 64 blocks misaligned\n", bad);
-	signal(31, catch);
-	kill(getpid(), 31);
-	printf("signal 31: caught %d\n", caught);
+	signal(16, catch);
+	kill(getpid(), 16);
+	printf("signal 16: caught %d\n", caught);
 	errno = 0;
-	r = (int)signal(32, catch);
-	printf("signal 32: %d errno %d\n", r, errno);
+	r = (int)signal(17, catch);
+	printf("signal 17: %d errno %d\n", r, errno);
 	return 0;
 }

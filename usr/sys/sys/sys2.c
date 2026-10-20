@@ -207,7 +207,7 @@ seek(void)
 		uap->off = (unsigned long)uap->off +
 		    fp->f_inode->i_size;
 	fp->f_un.f_offset = uap->off;
-	u.u_r.r_off = uap->off;
+	u.u_r.r_val1 = uap->off;
 }
 
 /*

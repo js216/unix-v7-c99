@@ -23,7 +23,7 @@ char	runin;
 char	runout;
 char	runrun;
 char	curpri;
-int	maxmem;
+unsigned	maxmem;
 int	updlock = 1;
 daddr_t	rablock;
 char	msgbuf[MSGBUFS];

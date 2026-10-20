@@ -3,6 +3,7 @@
 #include "../h/acct.h"
 #include "../h/dir.h"
 #include "../h/user.h"
+#include "../h/tty.h"
 #include "../h/inode.h"
 #include "../h/proc.h"
 #include "../h/seg.h"
@@ -70,7 +71,7 @@ acct(void)
 	acctbuf.ac_gid = u.u_rgid;
 	acctbuf.ac_mem = 0;
 	acctbuf.ac_io = 0;
-	acctbuf.ac_tty = u.u_ttyd;
+	acctbuf.ac_tty = u.u_ttyp ? u.u_ttyp->t_dev : NODEV;
 	acctbuf.ac_flag = u.u_acflag;
 	siz = ip->i_size;
 	u.u_offset = siz;

@@ -31,16 +31,10 @@ struct	user
 	short	u_rgid;			/* real group id */
 	struct proc *u_procp;		/* pointer to proc structure */
 	int	*u_ap;			/* pointer to arglist */
-	union {				/* syscall return values */
-		struct	{
-			int	r_val1;
-			int	r_val2;
-		} u_pair;
-		off_t	r_off;
-		time_t	r_time;
+	struct {			/* syscall return values */
+		int	r_val1;
+		int	r_val2;
 	} u_r;
-#define	r_val1	u_pair.r_val1
-#define	r_val2	u_pair.r_val2
 	caddr_t	u_base;			/* base address for IO */
 	unsigned int u_count;		/* bytes remaining for IO */
 	off_t	u_offset;		/* offset in file for IO */
@@ -54,7 +48,7 @@ struct	user
 	int	u_pxrw;			/* prototype of text access */
 	struct file *u_ofile[NOFILE];	/* pointers to file structures of open files */
 	char	u_pofile[NOFILE];	/* per-process flags of open files */
-	int	u_arg[5];		/* arguments to current system call */
+	int	u_arg[4];		/* arguments to current system call */
 	unsigned u_tsize;		/* text size (pages) */
 	unsigned u_dsize;		/* data size (pages) */
 	unsigned u_ssize;		/* stack size (pages) */
@@ -75,7 +69,6 @@ struct	user
 	char	u_intflg;		/* catch intr from sys */
 	char	u_sep;			/* flag for I and D separation */
 	struct tty *u_ttyp;		/* controlling tty pointer */
-	dev_t	u_ttyd;			/* controlling tty dev */
 	struct {			/* header of executable file */
 		int	ux_mag;		/* magic number */
 		int	ux_x[5];
@@ -93,9 +86,7 @@ struct	user
 	char	u_comm[DIRSIZ];
 	time_t	u_start;
 	char	u_acflag;
-	short	u_fpflag;		/* unused now, will be later */
 	short	u_cmask;		/* mask for file creation */
-	int	u_stack[1];
 					/* kernel stack per user
 					 * extends from u + USIZE*4096
 					 * backward not to reach here

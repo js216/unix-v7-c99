@@ -6,7 +6,6 @@
 #define	NINODE	200		/* number of in core inodes */
 #define	NFILE	175		/* number of in core file structures */
 #define	NMOUNT	8		/* number of mountable file systems */
-#define	MAXMEM	32768		/* max core per process */
 #define	MAXUPRC	25		/* max processes per user */
 #define	SSIZE	1		/* initial stack size (*4096 bytes) */
 #define	SINCR	1		/* increment of stack (*4096 bytes) */
@@ -47,9 +46,9 @@
  * dont change
  */
 
-#define	NSIG	32
+#define	NSIG	17
 /*
- * No more than 31 signals (1-31) because they are
+ * No more than 16 signals (1-16) because they are
  * stored in bits in a word.
  */
 #define	SIGHUP	1	/* hangup */

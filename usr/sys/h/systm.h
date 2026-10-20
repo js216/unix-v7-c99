@@ -30,7 +30,7 @@ extern	char	runin;			/* scheduling flag */
 extern	char	runout;			/* scheduling flag */
 extern	char	runrun;			/* scheduling flag */
 extern	char	curpri;			/* more scheduling */
-extern	int	maxmem;			/* max memory per process */
+extern	unsigned	maxmem;			/* max memory per process */
 extern	daddr_t	swplo;			/* block number of swap space */
 extern	int	nswap;			/* size of swap space */
 extern	int	updlock;		/* lock for sync */

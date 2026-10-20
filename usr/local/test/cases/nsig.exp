@@ -1,13 +1,9 @@
-caught 25
-caught 31
-31: echo caught 31
-nsig: 32: bad trap
+caught 16
+16: echo caught 16
+nsig: 17: bad trap
 nsig: PID Signal 16
 st144
-nsig: PID Signal 17
-st145
-nsig: PID Signal 31
-st159
+st0
 st141
 
 st130

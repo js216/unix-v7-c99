@@ -68,7 +68,6 @@ ttyopen(dev_t dev, register struct tty *tp)
 	tp->t_dev = dev;
 	if(pp->p_pgrp == 0) {
 		u.u_ttyp = tp;
-		u.u_ttyd = dev;
 		if (tp->t_pgrp==0)
 			tp->t_pgrp = pp->p_pid;
 		pp->p_pgrp = tp->t_pgrp;

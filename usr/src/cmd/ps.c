@@ -10,6 +10,7 @@
 #define stackbas(siz) (USRSIZE-siz)
 #include <sys/param.h>
 #include "../../sys/h/proc.h"
+#include "../../sys/h/tty.h"
 #include <sys/dir.h>
 #include "../../sys/h/user.h"
 
@@ -349,11 +350,17 @@ gettty(void)
 {
 	register int i;
 	register char *p;
+	dev_t ttyd;
+	long o;
 
 	if (u.u_ttyp==0)
 		return("?");
+	o = lseek(mem, 0L, 1);
+	lseek(mem, (long)&u.u_ttyp->t_dev, 0);
+	read(mem, (char *)&ttyd, sizeof(ttyd));
+	lseek(mem, o, 0);
 	for (i=0; i<ndev; i++) {
-		if (devl[i].dev == u.u_ttyd) {
+		if (devl[i].dev == ttyd) {
 			p = devl[i].dname;
 			if (p[0]=='t' && p[1]=='t' && p[2]=='y')
 				p += 3;

@@ -69,8 +69,6 @@ startup(void)
 	maxmem = btop(coretop) - i;
 	mfree(coremap, maxmem, i);
 	printf("mem = %d\n", ptob(maxmem));
-	if(MAXMEM < maxmem)
-		maxmem = MAXMEM;
 	mfree(swapmap, nswap, 1);
 	swplo--;
 }

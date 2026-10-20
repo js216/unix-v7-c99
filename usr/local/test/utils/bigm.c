@@ -40,6 +40,6 @@ main(void)
 	for (i = 0; i < 16*1024*1024; i += 4096)
 		s += p[i] == (char)(i >> 12);
 	printf("sbrk pages %d\n", s);
-	printf("beyond MAXMEM %d\n", sbrk(128*1024*1024) == (char *)-1);
+	printf("beyond memory %d\n", sbrk(1024*1024*1024) == (char *)-1);
 	return 0;
 }

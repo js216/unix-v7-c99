@@ -11,7 +11,7 @@ struct	proc {
 	char	p_flag;
 	char	p_pri;		/* priority, negative is high */
 	char	p_time;		/* resident time for scheduling */
-	char	p_cpu;		/* cpu usage for scheduling */
+	unsigned char	p_cpu;		/* cpu usage for scheduling */
 	char	p_nice;		/* nice for cpu usage */
 	int	p_sig;		/* signals pending to this process */
 	short	p_uid;		/* user id, used to direct tty signals */
@@ -25,7 +25,7 @@ struct	proc {
 	caddr_t p_wchan;	/* event process is awaiting */
 	struct text *p_textp;	/* pointer to text structure */
 	struct proc *p_link;	/* linked list of running processes */
-	int	p_clktim;	/* time to alarm clock signal */
+	unsigned	p_clktim;	/* time to alarm clock signal */
 };
 
 extern struct proc proc[];	/* the proc table itself */
