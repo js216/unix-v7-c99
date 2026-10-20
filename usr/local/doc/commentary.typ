@@ -6065,8 +6065,7 @@ The variable `standin` (#l("extern FILE\t\tstandin;")) is the current input file
 name two fields.
 
 The flags record the options set with `set` or on the command line,
-together with some internal state: `ttyflg` (#l("#define\t\tttyflg\t040")) marks an interactive
-shell, `forked` a shell process which is a child of the shell proper,
+together with some internal state. The flag `ttyflg` (#l("#define\t\tttyflg\t040")) marks an interactive shell, `forked` a shell process which is a child of the shell proper,
 `waiting` a shell idle at its prompt, and `prompt` that a prompt is to
 be printed.
 
@@ -6955,8 +6954,7 @@ The routine `execute` walks a command tree made by `cmd` (#f("sh/cmd.c")) and do
 what it says. It is recursive: each kind of node calls `execute` on its
 parts, and the value returned is the exit status of the last command
 run, which the conditional nodes test. Most of the shell's work with the
-kernel happens here or in the routines of #f("sh/service.c") that it
-calls: `fork` (#f("sys1.c")) to make a process for a command, `pipe`
+kernel happens here or in the routines of #f("sh/service.c") that it calls. It uses `fork` (#f("sys1.c")) to make a process for a command, `pipe`
 (#f("pipe.c")) to connect two, `exece` (#f("sys1.c")) to run a program,
 and `wait` (#f("sys1.c")) to collect its status.
 
@@ -7175,7 +7173,7 @@ pointer, as `c` above.
 
 #lines-to("case TLST:")
 
-The lists: `;`, `&&`, and `||`. Only the right side of each inherits
+The lists are joined by `;`, `&&`, and `||`. Only the right side of each inherits
 `execflg`, since the left must return to the shell.
 
 #lines-to("case TFOR:")
@@ -7223,10 +7221,9 @@ with newlines taken as `;`, and only then executed. A file read with
 #lines-to(none)
 #source("/usr/src/cmd/sh/service.c")
 
-The routines with which `execute` (#f("sh/xec.c")) does its detailed
-work: redirection, the search of `$PATH` and the `exec` of a program,
-the waiting for children, and the conversion of a command's words into
-an argument vector.
+With these routines `execute` (#f("sh/xec.c")) does its detailed work.
+They redirect, search `$PATH` and execute a program, wait for
+children, and convert a command's words into an argument vector.
 
 The three `LOCAL` declarations (#l("LOCAL VOID\tgsort(STRING from[], STRING to[]);")--#l("LOCAL INT\tsplit(STRING s);")) are new in this form. The v7 code
 declared `gsort` `PROC`, that is `extern`, and `execs` in
@@ -7391,8 +7388,7 @@ trap. Signal 0 stands for the exit of the shell (`done`,
 #f("sh/error.c")).
 
 The handler does next to nothing at the moment of the signal. It only
-sets flags, which the shell examines at safe points: `sigchk`
-(#f("sh/error.c")) before and after each command, `chktrap` after a
+sets flags, which the shell examines at safe points. The routine `sigchk` (#f("sh/error.c")) looks before and after each command, `chktrap` after a
 built-in or a child, and the input routines while a command is read.
 
 #lines-to("VOID\tfault(REG INT sig)")
@@ -7426,8 +7422,7 @@ command.
 
 #lines-to("VOID", after: "}")
 
-The routine `stdsigs` sets up the signals for the main shell: quit is ignored,
-interrupt is caught, and so are `SIGSEGV`, for the growth of the data
+The routine `stdsigs` sets up the signals for the main shell. Quit is ignored, interrupt is caught, and so are `SIGSEGV`, for the growth of the data
 segment, and the alarm.
 
 The routine `ignsig` ignores a signal and returns 1 if it was already ignored. A
@@ -7476,7 +7471,7 @@ passed two arguments which the definition never declared.
 #lines-to(none)
 #source("/usr/src/cmd/sh/error.c")
 
-How the shell stops: after an error, after a signal, or at the end.
+The shell stops after an error, after a signal, or at the end.
 
 The routine `exitset` copies the exit status into the variable `$?`. Called
 before and after every command, `sigchk` abandons the command if a signal
@@ -7521,8 +7516,7 @@ those newer than `base` (`tdystak`, #f("sh/stak.c")). The routine `done` passes
 #source("/usr/src/cmd/sh/name.h")
 
 The header #f("sh/name.h") describes a shell variable. Each is a `namnod`, and the
-nodes form a binary tree ordered by name (`lookup`, #f("sh/name.c")):
-`namlft` and `namrgt` are the two subtrees, `namid` the name, `namval`
+nodes form a binary tree ordered by name (`lookup`, #f("sh/name.c")). The fields `namlft` and `namrgt` are the two subtrees, `namid` the name, `namval`
 the present value, and `namenv` the value which the variable had in the
 environment, or will be given in the environment of the next program
 (`exname`). A variable which has never been set has a null `namval`,
@@ -7541,9 +7535,8 @@ bit `INT` of the ARM it is an ordinary bit, and nothing compares
 The shell's variables. They live in a binary tree of `namnod`s
 (#f("sh/name.h")), searched and extended by `lookup`. Names and values
 are copies on the heap (#f("sh/blok.c")), made by `make`. The file also
-holds the two conversions between the variables and the environment:
-`getenv`, which turns the environment the shell was given into
-variables, and `setenv`, which builds the environment of a program
+holds the two conversions between the variables and the environment. The routine `getenv` turns
+the environment the shell was given into variables, and `setenv` builds the environment of a program
 about to be executed.
 
 The declarations of `chkid` and `namwalk` (#l("LOCAL BOOL\tchkid(STRING nam);"), #l("LOCAL VOID\tnamwalk(NAMPTR np);")) are needed because
@@ -7552,7 +7545,7 @@ both are called before they are defined, and v7 declared `chkid` with
 that is `static`, as their definitions are.
 
 The tree starts with the seven variables which the shell itself
-consults, already linked as a balanced tree with `MAIL` at its root:
+consults, already linked as a balanced tree with `MAIL` at its root and
 `FILEMATCH`, `HOME`, and `IFS` to the left, `PATH`, `PS1`, and `PS2` to
 the right, in alphabetical order. Their names are strings of
 #f("sh/msg.c"). The v7 code initialised only the first three fields and wrote
@@ -8100,8 +8093,7 @@ the cast at #l("THEN	FOR argp=(STRING *)argblk->dolarg;") is new.
 
 #lines-to("LOCAL STRING *\tcopyargs(STRING from[], INT n)", lead: true)
 
-The vector of parameters is a `dolnod` (#f("sh/mode.h")): a link
-`dolnxt`, a use count `doluse`, and then the strings themselves,
+The vector of parameters is a `dolnod` (#f("sh/mode.h")), with a link `dolnxt`, a use count `doluse`, and then the strings themselves,
 starting at `dolarg`, which is declared as an array of one `char`,
 a placeholder for the start of a variable-length array of `STRING`s.
 Since it follows two words, it is suitably aligned for pointers on both
@@ -8302,9 +8294,7 @@ called. C99 forbids a call to an undeclared function, and the port is
 compiled with `-Wstrict-prototypes` and `-Wmissing-prototypes`, so every
 function must be declared with a prototype before it is used or
 defined. The v7 system had no `unistd.h`, `stdlib.h`, or `string.h` in which such
-declarations belong, and nearly every program includes #f("stdio.h"), so
-the prototypes of the whole library are collected here: the stdio
-functions, the system call stubs (`read`, `fork`, `kill`, and so on),
+declarations belong, and nearly every program includes #f("stdio.h"), so the prototypes of the whole library are collected here. They cover the stdio functions, the system call stubs (`read`, `fork`, `kill`, and so on),
 the string routines, `malloc` and its relatives, the time conversions,
 and the rest. The declarations of `stat`, `times`, `ftime`, `gtty`, and
 `stty` are instead kept beside their structures in their own headers,
@@ -8418,8 +8408,7 @@ have no names.
 
 #source("/usr/include/setjmp.h")
 
-A `jmp_buf` holds what `setjmp` (#f("gen/setjmp.s")) saves: the registers
-`r4` to `r11`, the stack pointer, and the return address, ten words,
+A `jmp_buf` holds what `setjmp` (#f("gen/setjmp.s")) saves, the registers `r4` to `r11`, the stack pointer, and the return address, ten words,
 and the floating point registers `d8` to `d15`, which the ARM's calling
 convention also asks a function to preserve, sixteen words more. The three words of v7
 held the PDP-11's frame pointer, stack pointer, and return
@@ -8524,8 +8513,8 @@ changes the format along with the inode (#f("ino.h")).
 #lines-to(none)
 #source("/usr/include/tp_defs.h")
 
-The defaults of `tp` (#f("tp/tp0.c")), defined in this header so that
-each installation could change them: the magnetic tape and DECtape
+This header defines the defaults of `tp` (#f("tp/tp0.c")), so that each
+installation could change them. They are the magnetic tape and DECtape
 devices, the default flag, and the two boot programs which `tp` wrote
 at the start of a tape. The header is v7's. The system has no tape
 drive, so the device names matter only to a tape file named on the
@@ -8573,9 +8562,10 @@ it.
 #lines-to(none)
 #source("/usr/src/libc/stdio/flsbuf.c")
 
-The output half of the package: `_flsbuf`, which `putc`
-(#f("stdio.h")) calls when the buffer is full; `fflush`, which writes out
-what has been collected; `_cleanup`, which `exit` calls; and `fclose`.
+This is the output half of the package. The routine `putc`
+(#f("stdio.h")) calls `_flsbuf` when the buffer is full, `fflush`
+writes out what has been collected, `exit` calls `_cleanup`, and
+`fclose` closes a stream.
 
 `_flsbuf` is entered with the character `c` that would not fit. A
 read-write stream becomes a writing stream and forgets any end of file.
@@ -8629,11 +8619,10 @@ without the conversion, and keeps v7's `&=`.
 #lines-to(none)
 #source("/usr/src/libc/stdio/data.c")
 
-The file `data.c` defines the table of streams, `_iob`, with its first three
-entries set up: the standard input with the static buffer `_sibuf`,
-the standard output, given `_sobuf` when it is first written if it is
-not a terminal (#f("stdio/flsbuf.c")), and the standard error,
-unbuffered. `_lastbuf` marks the end of the table.
+The file `data.c` defines the table of streams, `_iob`, with its first three entries set up. The standard input has the static buffer `_sibuf`. The standard output
+is given `_sobuf` when it is first written if it is not a terminal
+(#f("stdio/flsbuf.c")), and the standard error is unbuffered. The
+entry `_lastbuf` marks the end of the table.
 
 #lines-to(none)
 #source("/usr/src/libc/stdio/findiop.c")
@@ -8729,8 +8718,7 @@ stream open for both reading and writing may then do either.
 #lines-to(none)
 #source("/usr/src/libc/stdio/fopen.c")
 
-The routine `fopen` opens the named file as a stream. It is split in two: `_findiop`
-(`findiop.c`) finds a free entry of `_iob` (#f("stdio.h")), one with
+The routine `fopen` opens the named file as a stream. It is split in two. The routine `_findiop` (`findiop.c`) finds a free entry of `_iob` (#f("stdio.h")), one with
 none of `_IOREAD`, `_IOWRT`, and `_IORW` set, and `_endopen`
 (#f("stdio/endopen.c")) opens the file and fills the entry in.
 The routine `freopen` shares `_endopen`, giving it the stream it has just closed
@@ -8758,8 +8746,8 @@ the `open` fails for another reason, or the `create` fails too,
 `lseek` is applied to -1, fails harmlessly, and the failure is reported
 below (#l("if (f < 0)")).
 
-The stream is then set up: an empty buffer, the file descriptor, and
-the direction. A buffer is not allocated here. The first `getc` or
+The stream is then set up with an empty buffer, the file descriptor,
+and the direction. A buffer is not allocated here. The first `getc` or
 `putc` does that (#f("stdio/filbuf.c"), #f("stdio/flsbuf.c")).
 
 The static declaration of `create` (#l("static int create(char *file, int rw);")) is new. The routine `create` is defined
