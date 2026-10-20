@@ -11611,7 +11611,7 @@ The `slp` before it (#l("slp();")) makes sure the minute has really come, and th
 #lines-to("char *", lead: true)
 
 The routine `init` compiles each field into a code and its operands. The codes are
-100 to 104, and every number is less than 100 (`number`, 255), so a code
+100 to 104, and every number is less than 100 (`number`, #l("if (n>=100)")), so a code
 cannot be mistaken for a value. `EXACT` is followed by the value, `ANY`
 by nothing, `LIST` by the values and a closing `LIST`, `RANGE` by the
 two bounds. The routine `cmp` returns the position of the next field. The code
