@@ -863,7 +863,7 @@ returns from `bread` with the block.
 
 #diagram(grid(columns: 9, column-gutter: 3pt, align: horizon,
   bx[`bread`], ar, bx[cache], ar, bx[`rkstrategy`], ar, bx[disk], ar, bx[`rkintr`, `iodone`],
-), [A block read which misses the cache; on a hit, `bread` returns at once], pl: bottom) <fig-disk>
+), [A block read which misses the cache. On a hit, `bread` returns at once], pl: bottom) <fig-disk>
 
 A buffer in use is marked busy, and taken off the list of free
 buffers, a doubly linked list through the buffers' `av_forw` and
