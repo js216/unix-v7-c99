@@ -19,7 +19,7 @@ void	xexpand(struct text *xp), xccdec(struct text *xp),
  * Os is the old size of the data area of the process,
  * and is supplied during core expansion swaps.
  *
- * Zero return: out of swap space, nothing done
+ * panic: out of swap space
  */
 void
 xswap(register struct proc *p, int ff, int os)
@@ -110,10 +110,6 @@ xalloc(register struct inode *ip)
 			else
 				xp->x_ccount++;
 			xunlock(xp);
-			if (xp->x_ccount == 0) {
-				xp->x_count--;
-				goto noswap;
-			}
 			return;
 		}
 	}
@@ -122,25 +118,18 @@ xalloc(register struct inode *ip)
 		psignal(u.u_procp, SIGKIL);
 		return;
 	}
-	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
-	if((xp->x_daddr = malloc(swapmap, (int)ptod(ts))) == NULL)
-		goto noswap;
 	xp->x_flag = XLOAD|XLOCK;
 	xp->x_count = 1;
 	xp->x_ccount = 0;
 	xp->x_iptr = ip;
 	ip->i_flag |= ITEXT;
 	ip->i_count++;
+	ts = btop(u.u_exdata.ux_ph[0].p_addr + u.u_exdata.ux_tsize);
 	xp->x_size = ts;
+	if((xp->x_daddr = malloc(swapmap, (int)ptod(ts))) == NULL)
+		panic("out of swap space");
 	u.u_procp->p_textp = xp;
 	xexpand(xp);
-	if (xp->x_ccount == 0) {
-		mfree(swapmap, ptod(ts), xp->x_daddr);
-		xp->x_iptr = NULL;
-		ip->i_flag &= ~ITEXT;
-		ip->i_count--;
-		goto noswap;
-	}
 	for(i = 0; i < ts; i++)
 		clearseg(xp->x_caddr+i);
 	estabur(ts, (unsigned)0, (unsigned)0, 0, RW);
@@ -161,13 +150,6 @@ xalloc(register struct inode *ip)
 	install_sigtramp();
 	arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));
 	xp->x_flag = XWRIT;
-	return;
-
-noswap:
-	u.u_procp->p_textp = NULL;
-	u.u_error = ENOMEM;
-	printf("out of swap space\n");
-	psignal(u.u_procp, SIGKIL);
 }
 
 /*
