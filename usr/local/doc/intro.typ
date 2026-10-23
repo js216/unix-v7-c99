@@ -32,13 +32,13 @@ version 2 at 0x08000000, the ARM generic timer, an ARM PL011 UART at
 found among the virtio "MMIO" slots at 0x0a000000. QEMU loads the
 kernel into RAM itself and starts it at its entry point.
 
-*The MP135 machine* is STMicroelectronics' STM32MP135F-DK, a small
-board built around the company's STM32MP135F system-on-chip. The chip
+*The MP135 machine* is Seeed Studio's Odyssey-STM32MP135D, a small
+board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
 contains one ARM Cortex-A7 processor and 128~KB
 of on-chip RAM (SYSRAM) at 0x2ffe0000. The board adds 512~MB of DDR3L
 memory, at 0xc0000000, and an SD card slot. The console is one of the
-chip's serial ports, UART4 at 0x40010000 on this board. Since other
-boards wire another port, the kernel is built for one (#f("board.h")). The disk is the SD card, on the SDMMC1 controller at
+chip's serial ports, USART2 at 0x4c001000, whose pins the board brings
+out on its 40-pin header. The disk is the SD card, on the SDMMC1 controller at
 0x58005000, and the interrupt controller is again a GIC version 2, at
 0xa0021000. The kernel also uses the chip's reset and clock controller
 (RCC), its power controller (PWR), its general purpose pins (GPIO), its
@@ -84,8 +84,8 @@ which devices do not see.
 
 Throughout the book, "the QEMU machine" and "the MP135 machine" mean
 these two, and a statement which names neither applies to both. Where the two differ, the text names the machine. The
-board has more devices than the kernel uses, such as its Ethernet and
-display, and the kernel leaves them as the boot ROM left them.
+board has more devices than the kernel uses, such as its Ethernet, and
+the kernel leaves them as the boot ROM left them.
 
 === The ARM Processor <sec-arm>
 
@@ -179,8 +179,7 @@ what lies where on each machine.
   [0xf0400000], [virtio 0x0a000000], [IWDG2 0x5a002000, DDR controller 0x5a003000],
   [0xf0600000], [], [GIC 0xa0021000],
   [0xf0800000], [], [TZC 0x5c006000],
-  [0xf0a00000], [], [UART4 0x40010000],
-  [0xf0c00000], [], [USART2 0x4c001000, I2C4 0x4c005000],
+  [0xf0a00000], [], [USART2 0x4c001000, I2C4 0x4c005000],
   [0xffe00000], table.cell(colspan: 2)[`u`, the current process's u-area],
   bot,
 ) <tab-addr>

@@ -3962,11 +3962,9 @@ drivers use, at successive kernel addresses from `0xf0000000`. They are the rese
 (#l("map f0000000 50000000 50200000 BLK_DEV")); the SD card controller (#l("map f0200000 58000000 58200000 BLK_DEV")); the DDR controller with its PHY
 (#l("map f0400000 5a000000 5a200000 BLK_DEV")); the interrupt controller (#l("map f0600000 a0000000 a0200000 BLK_DEV")), which on this chip lies apart from
 them, and whose two parts the `gic` line (#l("gic f0621000 f0622000")) names within that block;
-the TrustZone controller of the DDR (#l("map f0800000 5c000000 5c200000 BLK_DEV")); UART4 (#l("map f0a00000 40000000 40200000 BLK_DEV"),
-#f("usart.c")); and the block of I2C4 and USART2 (#l("map f0c00000 4c000000 4c200000 BLK_DEV"), #f("pmic.c")). Each driver
+the TrustZone controller of the DDR (#l("map f0800000 5c000000 5c200000 BLK_DEV")); and the block of I2C4 and of USART2, the console (#l("map f0a00000 4c000000 4c200000 BLK_DEV"), #f("pmic.c"), #f("usart.c")). Each driver
 names its registers by these kernel addresses. The block of the DDR
-controller also holds the watchdog IWDG2 (#f("iwdg.c")). One of the two
-serial ports is the console, as #f("board.h") chooses.
+controller also holds the watchdog IWDG2 (#f("iwdg.c")).
 
 The line `ddr` asks for `ddrinit` (#f("ddr.c")) to be called
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
@@ -4244,9 +4242,9 @@ its end, physical address `0xe0000000` (#l("unsigned int\tcorebase, coreoff, cor
 is the Cortex-A7's own, at physical `0xa0021000` and `0xa0022000`, which
 the kernel reaches at `0xf0621000` and `0xf0622000` (#l("unsigned int\tgicdbase = 0xf0621000, giccbase = 0xf0622000;")).
 
-The table `board_map` maps nine regions. The kernel's 2 MB block, which
+The table `board_map` maps eight regions. The kernel's 2 MB block, which
 contains SYSRAM, is at 0xc0000000, cached, and DDR is just above it,
-cached likewise. Seven blocks of peripherals follow from 0xf0000000
+cached likewise. Six blocks of peripherals follow from 0xf0000000
 (@ch-intro).
 
 #lines-to("extern int\tclkirq, klirq, rkirq;", lead: true)
@@ -4256,21 +4254,6 @@ The table `intrtab` is the same as the QEMU machine's, though the numbers behind
 in `clock_ddr_init`, which here calls `ddrinit` (#f("ddr.c")), and in
 `wdinit`, which calls `iwdgstart` (#f("iwdg.c")), since the
 configuration names `ddr` and `iwdg`.
-
-#lines-to(none)
-#source("/usr/sys/h/board.h")
-
-The two boards on which the MP135 machine runs wire a few of the chip's
-pins differently, and this file names them for the drivers which use
-them. Each pin is given as its port (0 for A, 1 for B, and so on) and
-its number, and each of the console's pins also by the alternate
-function which connects it to the USART. A macro which expands to the list fills the
-arguments of a routine such as `pinuart` (#f("usart.c")) directly. The
-file as shown describes a board whose console is USART2 on pins PF13 and
-PD15 of its 40-pin header and whose PMIC data line is PB7. The comment
-gives the values for the STM32MP135F-DK. The choice is made when the
-kernel is built, since a wrong guess at boot could drive a pin which is
-wired to something else.
 
 #lines-to(none)
 #source("/usr/sys/dev/usart.c")
@@ -4284,7 +4267,7 @@ the switch entry `klopen, klclose, klread, klwrite, klioctl` in
 `klread` and `klrint`, and the bounded wait in `putchar`, the commentary
 on #f("pl011.c") applies.
 
-The device is one of the chip's USARTs ("universal synchronous
+The device is USART2, one of the chip's USARTs ("universal synchronous
 asynchronous receiver transmitter"), used here as a plain serial line at
 115200 baud. Its registers differ from both the KL11's and the PL011's.
 There is one control register `CR1`, holding the enables of the unit,
@@ -4295,21 +4278,11 @@ transmitted (`TDR`) data.
 
 #lines-to("/* base address */")
 
-The file #f("board.h") says which USART is the console (#l("#if CONSOLE == 2")), USART2 or
-UART4, and the two branches give for each its kernel address, the
-register and bit which enable its clock, the field of the register
-which chooses its kernel clock, and its interrupt number. USART2 is at
-physical `0x4c001000`, in the same 2 MB block as I2C4, and UART4 at
-`0x40010000`, in a block of its own (#f("mp135conf")). Both kernel
-clock fields are three bits wide, at bit 3 of `RCC_UART12CKSELR` for
-USART2 and at bit 0 of `RCC_UART4CKSELR` for UART4. The interrupt numbers 71 and
-85 are shared peripheral interrupts 39 and 53 of the interrupt
-controller.
-
-#lines-to("#define\tKLBASE")
-
-`RCC` is the chip's reset and clock controller, by its kernel address,
-and `GPIO` a register of a port of general purpose pins. The bits of
+`KLADDR` is the kernel address of USART2, physical `0x4c001000`, in the
+2 MB block which it shares with I2C4 (#f("mp135conf")). `RCC` is the chip's reset and clock controller, by its kernel address,
+and `GPIO` a register of a port of general purpose pins.
+`APB6ENSETR` and `UART12CKSELR` are the registers of `RCC` which
+enable USART2's clock and choose its source. The bits of
 `CR1` are those for the enables. `RXNE` and `TXE` are the status bits
 in `ISR`, which with the FIFOs enabled mean "receive FIFO not empty"
 and "transmit FIFO not full". The unused definitions of `kl.c` stay, as
@@ -4318,9 +4291,10 @@ they do in #f("pl011.c").
 #lines-to("struct\ttty kl11[NKL11+NDL11];")
 
 The variable `klirq` holds the console's interrupt number for `intrtab`
-(#f("mp135/c.c")).
+(#f("mp135/c.c")), 71, which is shared peripheral interrupt 39 of the
+interrupt controller.
 
-#lines-to("/*", after: "int\tklirq = IRQ;")
+#lines-to("/*", after: "int\tklirq = 71;")
 
 The routine `pinuart` gives one pin to the USART. It enables the clock of
 the pin's port, sets the pin's mode to 2, alternate function, and
@@ -4328,10 +4302,11 @@ selects its alternate function in the low or high alternate function
 register (`0x20`, `0x24`), four bits per pin. The routine `klinit` is called by `cninit` (#f("mp135/c.c")) early
 in `machine_init` (#f("machdep.c")). The kernel otherwise takes the
 clocks as the boot ROM left them, but the USART is given a clock of its
-own choosing so that its speed does not depend on that state. Its
-pins are taken from #f("board.h") (#l("pinuart(CONS_TX);"), #l("pinuart(CONS_RX);")), its clock is enabled on its bus, and
-HSI, the internal 64 MHz oscillator, which runs from reset, becomes its
-kernel clock (value 2 in the field). `BRR` divides that clock to 115200 baud, since 64000000/115200 is
+own choosing so that its speed does not depend on that state. It is
+given its pins (#l("pinuart(5, 13, 7);"), #l("pinuart(3, 15, 1);")), PF13 to transmit and PD15 to receive, which the
+board brings out on its 40-pin header. Its clock is enabled on its
+bus, and HSI, the internal 64 MHz oscillator, which runs from reset,
+becomes its kernel clock (value 2 in bits 3--5 of `UART12CKSELR`). `BRR` divides that clock to 115200 baud, since 64000000/115200 is
 555.6. Lastly the unit, the transmitter, and the receiver are
 enabled, and with them the FIFOs (`FIFOEN`), which hold several
 characters in each direction where the KL11 held one. A character then
@@ -4343,7 +4318,7 @@ which gives eight data bits and no parity.
 
 The registers which enable clocks are of a "set" kind: a one sets the
 corresponding bit, and a zero leaves it alone. Each write is followed
-by a read of the same register (#l("(void)AHB4ENSETR;"), #l("(void)R(CLKENR);")), which does not complete until
+by a read of the same register (#l("(void)AHB4ENSETR;"), #l("(void)APB6ENSETR;")), which does not complete until
 the write has, so that the clock is running before the device it feeds
 is touched.
 
@@ -4671,8 +4646,9 @@ pins (`rkinit`, #f("sd.c")) and of the bus to the power controller
 them, but the DDR needs a clock of a particular frequency which the ROM
 does not provide.
 
-The register values are those of the maker's reference firmware for the
-STM32MP135F-DK, for DDR3 at 533 MHz (DDR3-1066). Unlike the other drivers, this one names
+The register values are those of the maker's reference firmware for its
+own board, the STM32MP135F-DK, for DDR3 at 533 MHz (DDR3-1066). They
+suit the memory chip of this board as well, a Kingston D2516EC4BXGGB. Unlike the other drivers, this one names
 its registers by their offsets and gives no names to the bits. The
 values below are explained in the text.
 
@@ -4818,7 +4794,7 @@ first.
 `RCC` and `GPIO` (#l("#define\tRCC(o)\tR(0xF0000000+(o))"), #l("#define\tGPIO(p, o)\tR(0xF0002000+(p)*0x1000+(o))")) are the reset and clock controller and the
 general purpose I/O ports, by their kernel addresses, as in #f("sd.c"), and
 `I2C` is the controller of the chip's fourth I2C bus, I2C4, at offset
-`0x5000` in the block which #f("mp135conf") maps at `0xf0c00000`.
+`0x5000` in the block which #f("mp135conf") maps at `0xf0a00000`.
 
 #lines-to("static int")
 
@@ -4860,12 +4836,8 @@ timing register (`0x10`) divides the 64 MHz by 2, giving steps of
 of somewhat over 100 kHz, with the hold and setup delays the
 controller's documentation gives for that clock.
 
-The data line SDA is pin PB9 on the STM32MP135F-DK, and PB7 on other
-boards built on the chip. The file #f("board.h") names it as
-`I2C4_SDA` (#l("pinmode(I2C4_SDA, 2);")), and the controller is then
-enabled. The pin is fixed when the kernel is built, not found by
-trying both at boot: the other pin may be wired to something else, such as
-a serial port, which a probe would disturb.
+The data line SDA is pin PB7 (#l("pinmode(1, 7, 2);")), and the controller is then
+enabled.
 
 The PMIC is then told to set `BUCK2` to 1.35 V and turn it on (register
 `0x21`: voltage code 30 in bits 2--7, enable bit 0) and to turn on
