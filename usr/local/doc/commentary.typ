@@ -1358,7 +1358,7 @@ memory (8), the raw disk (9), and the controlling terminal `tty` (17)
 are configured. Of these only the disk is named in #f("qemuconf"):
 `mkconf` always includes the console, memory, and `tty`. The console's
 routines are named `kl`, after the PDP-11's KL11 interface, and are
-those of #f("pl011.c") (on the MP135 machine, of #f("otg.c")).
+those of #f("pl011.c") (on the MP135 machine, of #f("usart.c")).
 
 The raw disk entry uses `rkread` and `rkwrite`, which call `physio`
 (#f("bio.c")) with the disk's strategy routine. The `nodev` of v7 in the
@@ -1432,11 +1432,13 @@ The table `intrtab` (#l("struct\tintr\tintrtab[] =")) pairs each configured inte
 the disk, with its handler (`struct intr`, #f("conf.h")). The numbers are reached through pointers, since the disk driver
 learns its own only when it finds the device.
 
-The three procedures at the end are the glue by which the
+The four procedures at the end are the glue by which the
 machine-dependent code calls the configured drivers without naming them. The routine `cninit` sets up the console early in `machine_init`, `bdinit`
 finds the disk before `main` enables the interrupts, and `clock_ddr_init`, which on
 the MP135 machine starts the memory controller (#f("ddr.c")), does
-nothing here, since the QEMU machine's memory needs no initialisation. The routine `putchar`, the
+nothing here, since the QEMU machine's memory needs no initialisation.
+Nor does `wdinit`, which on the MP135 machine starts the watchdog
+(#f("iwdg.c")): QEMU's machine has none. The routine `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
 
@@ -3309,7 +3311,7 @@ The special characters which v7 made settable through
 file, and an extra input delimiter, held in `struct tc`. The user's view of the same
 six bytes is `struct tchars` in `sgtty.h`. The drivers named in the
 comment are v7's. In this system the only one is the console, whose
-drivers (#f("pl011.c"), #f("otg.c")) still use `kl11` as the
+drivers (#f("pl011.c"), #f("usart.c")) still use `kl11` as the
 name of the `tty` array.
 
 #lines-to("struct tty")
@@ -3399,8 +3401,8 @@ single-line serial interfaces, and it has been kept as close to
 order, its procedure names (`klopen`, `klread`, `klstart`, and so on),
 and its `tty` array `kl11`, so that the character switch in
 #f("qemu/c.c") names the console's routines exactly as v7's did. The
-MP135 machine's console driver, #f("otg.c"), defines the same names,
-though little of `kl.c`'s code is left in it. Each machine's kernel
+MP135 machine's console driver, #f("usart.c"), defines the same names
+and keeps as much of `kl.c`. Each machine's kernel
 links only its own.
 
 The hardware is an ARM PrimeCell PL011 UART. Where the KL11 had four
@@ -3923,7 +3925,7 @@ The configuration of the MP135 machine, in the format of
 #f("qemuconf"). The devices, root, and swap are the same: one disk,
 configured as `rk` although it is an SD card driven by #f("sd.c"),
 holding the root file system and, after it, the swap area. The console
-is the chip's USB port, driven by #f("otg.c").
+is one of the chip's serial ports, driven by #f("usart.c").
 
 #lines-to("ram c01e0000 2ffe0000 20000")
 
@@ -3960,13 +3962,16 @@ drivers use, at successive kernel addresses from `0xf0000000`. They are the rese
 (#l("map f0000000 50000000 50200000 BLK_DEV")); the SD card controller (#l("map f0200000 58000000 58200000 BLK_DEV")); the DDR controller with its PHY
 (#l("map f0400000 5a000000 5a200000 BLK_DEV")); the interrupt controller (#l("map f0600000 a0000000 a0200000 BLK_DEV")), which on this chip lies apart from
 them, and whose two parts the `gic` line (#l("gic f0621000 f0622000")) names within that block;
-the TrustZone controller of the DDR (#l("map f0800000 5c000000 5c200000 BLK_DEV")); the USB controller (#l("map f0a00000 49000000 49200000 BLK_DEV"),
-#f("otg.c")); and the block of I2C4 (#l("map f0c00000 4c000000 4c200000 BLK_DEV"), #f("pmic.c")). Each driver
-names its registers by these kernel addresses.
+the TrustZone controller of the DDR (#l("map f0800000 5c000000 5c200000 BLK_DEV")); UART4 (#l("map f0a00000 40000000 40200000 BLK_DEV"),
+#f("usart.c")); and the block of I2C4 and USART2 (#l("map f0c00000 4c000000 4c200000 BLK_DEV"), #f("pmic.c")). Each driver
+names its registers by these kernel addresses. The block of the DDR
+controller also holds the watchdog IWDG2 (#f("iwdg.c")). One of the two
+serial ports is the console, as #f("board.h") chooses.
 
-The last line, `ddr`, asks for `ddrinit` (#f("ddr.c")) to be called
+The line `ddr` asks for `ddrinit` (#f("ddr.c")) to be called
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
-tables in it are touched.
+tables in it are touched. The last line, `iwdg`, asks for the watchdog
+to be started (`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
 
 #lines-to(none)
 #source("/usr/sys/conf/mkconf.c")
@@ -4162,10 +4167,11 @@ the configuration, so that it may name `BLK_KERN` and `BLK_DEV`; and
 `intrtab`, which pairs the
 console's and the disk's interrupt numbers with their handlers.
 
-Last come three small procedures by which the machine-dependent code
+Last come four small procedures by which the machine-dependent code
 starts the configured drivers without naming them, `cninit`, `bdinit`,
-and `clock_ddr_init`, which calls `ddrinit` only if the configuration
-said `ddr`. The names they call, like those in `intrtab`, are fixed:
+`clock_ddr_init`, which calls `ddrinit` only if the configuration
+said `ddr`, and `wdinit`, which calls `iwdgstart` only if it said
+`iwdg`. The names they call, like those in `intrtab`, are fixed:
 every machine's drivers use v7's `kl` and `rk` names, and only one
 machine's drivers are linked into a kernel.
 
@@ -4195,10 +4201,12 @@ failed conversion. C99's `sscanf`, which is the host's here, stops at
 the first failure and returns 0, so the port scans the line a second
 time without the count.
 
-The keywords which describe the machine are recognised first (#l("if (equal(keyw, \"map\") && nmap < NMAP) {")--#l("}", after: "ddr++;")).
+The keywords which describe the machine are recognised first (#l("if (equal(keyw, \"map\")) {")--#l("}", after: "iwdg++;")).
 Their numbers are read in hexadecimal. A new procedure, `badline`, reports a malformed line with v7's message which returns 1, so that
-reading continues. A ninth `map` line falls through to "cannot
-find".
+reading continues. A tenth `map` line stops `mkconf` with an exit
+status of 1 (#l("fprintf(stderr, \"Too many maps\\n\");")--#l("exit(1);")), and with it the build. A
+kernel built without the mapping would fault at the first touch of the
+device, before its console could say why.
 
 #lines-to("for(q=table; q->name; q++)")
 
@@ -4225,8 +4233,8 @@ The configuration of the MP135 machine, written by `mkconf`
 name the same devices, root, and swap, and give the tables the same
 sizes, the first 85 lines are identical to those of #f("qemu/c.c"), to
 whose commentary the reader is referred.
-The routines behind the names are different: `kl` is now the USB
-console driver #f("otg.c"), and `rk` the SD card driver #f("sd.c").
+The routines behind the names are different: `kl` is now the serial
+console driver #f("usart.c"), and `rk` the SD card driver #f("sd.c").
 
 #lines-to("unsigned int\tcorebase, coreoff, coretop = 0xe0000000;")
 
@@ -4244,301 +4252,201 @@ cached likewise. Seven blocks of peripherals follow from 0xf0000000
 #lines-to("extern int\tclkirq, klirq, rkirq;", lead: true)
 
 The table `intrtab` is the same as the QEMU machine's, though the numbers behind `klirq` and
-`rkirq` differ (128 and 82, #f("otg.c"), #f("sd.c")). The one
-difference in the glue is `clock_ddr_init`, which here calls `ddrinit`
-(#f("ddr.c")), since the configuration ends with `ddr`.
+`rkirq` differ (71 and 82, #f("usart.c"), #f("sd.c")). The glue differs
+in `clock_ddr_init`, which here calls `ddrinit` (#f("ddr.c")), and in
+`wdinit`, which calls `iwdgstart` (#f("iwdg.c")), since the
+configuration names `ddr` and `iwdg`.
 
 #lines-to(none)
-#source("/usr/sys/dev/otg.c")
+#source("/usr/sys/h/board.h")
 
-The console driver of the MP135 machine. The machine's console is its
-USB port: the computer at the other end of the cable sees a serial
-port, of the kind the USB "communications device class" calls an ACM
-("abstract control model") device, and a terminal program on it is the
-console terminal. Like #f("pl011.c") on the QEMU machine, the driver
-keeps `kl.c`'s names and its `tty` array `kl11`, so that the switch
-entry `klopen, klclose, klread, klwrite, klioctl` in #f("mp135/c.c") is
-v7's. But under those names is a small USB device, and little of
-`kl.c`'s code is left.
+The two boards on which the MP135 machine runs wire a few of the chip's
+pins differently, and this file names them for the drivers which use
+them. Each pin is given as its port (0 for A, 1 for B, and so on) and
+its number, and each of the console's pins also by the alternate
+function which connects it to the USART. A macro which expands to the list fills the
+arguments of a routine such as `pinuart` (#f("usart.c")) directly. The
+file as shown describes a board whose console is USART2 on pins PF13 and
+PD15 of its 40-pin header and whose PMIC data line is PB7. The comment
+gives the values for the STM32MP135F-DK. The choice is made when the
+kernel is built, since a wrong guess at boot could drive a pin which is
+wired to something else.
 
-The controller is the chip's USB OTG ("on the go") controller, a
-Synopsys design which can be either end of a USB link. Here it is
-always the device. It moves data through FIFOs: one receive FIFO for
-everything the host sends, and a transmit FIFO for each endpoint which
-sends to the host. USB is organised in endpoints, numbered channels in
-one direction or the other. Endpoint 0 carries the control requests by
-which the host identifies and configures the device. Endpoint 1 carries
-the console's characters, out from the host and in to it, in "bulk" transfers. Endpoint 2 carries short "interrupt" messages to the host,
-here only the state of the line. As the comment says, the transceiver
-and the clocks are left as the boot ROM set them when it loaded the
-kernel over the same port.
+#lines-to(none)
+#source("/usr/sys/dev/usart.c")
 
-#lines-to("#define\tOTGADDR\t0xF0A00000")
+The console driver of the MP135 machine. Like #f("pl011.c") on the QEMU
+machine, it is v7's `kl.c` with a different device under it, and it
+keeps `kl.c`'s comment, order, names, and `tty` array `kl11`, so that
+the switch entry `klopen, klclose, klread, klwrite, klioctl` in
+#f("mp135/c.c") is v7's. Where the two drivers make the same change to
+`kl.c`, as in the default modes in `klopen`, the hold of input in
+`klread` and `klrint`, and the bounded wait in `putchar`, the commentary
+on #f("pl011.c") applies.
 
-`OTGADDR` is the kernel address of the controller, physical
-`0x49000000`, as #f("mp135conf") maps it, and `R` names a register by
-its offset. `FIFO(n)` (#l("#define\tFIFO(n)\tR(0x1000+(n)*0x1000)")) is the window through which endpoint `n`'s
-transmit FIFO is written, and the receive FIFO read, one 32-bit word at
-a time. The names of the registers (#l("#define\tGOTGCTL\tR(0x000)")--#l("#define\tPCGCCTL\tR(0xe00)")) are those of the chip's
-manual: the global ones (`G...`) configure the controller and report
-its interrupts; the device ones (`D...`) control the device as a whole
-and each endpoint, with an `IN` set for endpoints which send to the
-host and an `OUT` set for those which receive from it, 32 bytes apart;
-`PCGCCTL` gates the controller's clocks.
+The device is one of the chip's USARTs ("universal synchronous
+asynchronous receiver transmitter"), used here as a plain serial line at
+115200 baud. Its registers differ from both the KL11's and the PL011's.
+There is one control register `CR1`, holding the enables of the unit,
+transmitter, and receiver and of the interrupts; a baud rate register
+`BRR`; an interrupt and status register `ISR`; a register `ICR` for
+clearing error flags; and separate registers for received (`RDR`) and
+transmitted (`TDR`) data.
 
-The bits (#l("#define\tEPENA\t(1U<<31)")--#l("#define\tSDIS\t02")) are those of the same registers. In an endpoint's
-control register, `EPENA` enables a transfer, `SNAK` and `CNAK` set and
-clear its "NAK" state, in which it refuses the host, `SD0PID` resets
-its data toggle to `DATA0`, as a newly configured endpoint must,
-`STALL` refuses a request, and `USBAEP` marks the endpoint active. In
-an endpoint's interrupt register, `XFRC` reports a finished transfer
-and `STUP` a received control request. In `GINTSTS`, `RXFLVL` says
-that the receive FIFO holds something, `USBRST` that the host has reset
-the bus, and `ENUMDNE` that the speed of the link is settled. `SDIS` in
-`DCTL` disconnects the device from the bus. `NOUT` (#l("#define\tNOUT\t511")) is the size of
-the output buffer: 511 bytes, one less than a high-speed bulk packet,
-so that a transfer of a full buffer is never an exact number of
-packets and needs no empty packet to end it.
+#lines-to("/* base address */")
 
-#lines-to("struct\ttty kl11[1];")
+The file #f("board.h") says which USART is the console (#l("#if CONSOLE == 2")), USART2 or
+UART4, and the two branches give for each its kernel address, the
+register and bit which enable its clock, the field of the register
+which chooses its kernel clock, and its interrupt number. USART2 is at
+physical `0x4c001000`, in the same 2 MB block as I2C4, and UART4 at
+`0x40010000`, in a block of its own (#f("mp135conf")). Both kernel
+clock fields are three bits wide, at bit 3 of `RCC_UART12CKSELR` for
+USART2 and at bit 0 of `RCC_UART4CKSELR` for UART4. The interrupt numbers 71 and
+85 are shared peripheral interrupts 39 and 53 of the interrupt
+controller.
 
-The variable `klirq` holds the controller's interrupt in the numbering of the interrupt
-controller (#f("machdep.c")). The list of free character
-blocks (#f("tty.c")), which `klrint` consults, is `cfreelist`.
+#lines-to("#define\tKLBASE")
 
-The buffers (#l("static unsigned char setup[8], ep0buf[64], rxbuf[512], out[NOUT];")) hold a control request (`setup`, always 8 bytes), the
-data stage of one from the host (`ep0buf`, at most 64 bytes, the
-largest packet on endpoint 0), one received bulk packet (`rxbuf`), and
-the output waiting to be sent (`out`). The counts `rxlen` and `rxpos` say how much
-of `rxbuf` is filled and how much taken, and `outlen` how much of `out` is
-filled. The variable `bulkmps` holds the largest bulk packet, 512 bytes at high speed
-and 64 at full speed. The variable `config` holds the configuration the host has
-chosen, zero until it chooses one. The flag `inbusy` says that a transfer to the
-host is in progress, and `dtr` that the host has raised DTR, which a
-terminal program does when it opens the port.
+`RCC` is the chip's reset and clock controller, by its kernel address,
+and `GPIO` a register of a port of general purpose pins. The bits of
+`CR1` are those for the enables. `RXNE` and `TXE` are the status bits
+in `ISR`, which with the FIFOs enabled mean "receive FIFO not empty"
+and "transmit FIFO not full". The unused definitions of `kl.c` stay, as
+they do in #f("pl011.c").
 
-#lines-to("static const unsigned char devdesc[18] = {")
+#lines-to("struct\ttty kl11[NKL11+NDL11];")
 
-The descriptors are the data with which a USB device describes itself,
-in the layout the USB and CDC specifications fix. Each begins with its
-own length and type. The device descriptor (#l("static const unsigned char devdesc[18] = {")--#l("};", after: "0x00, 0x01, 1, 2, 0, 1")) says: 18 bytes,
-type 1; USB version 2.00; device class 2, communications; no subclass
-or protocol at this level; 64-byte packets on endpoint 0; vendor
-`0x1209` and product `0x0001`, the pair which the pid.codes registry
-reserves for testing; device release 1.00; string 1 names the maker
-and string 2 the product, with no serial number; and one
-configuration.
+The variable `klirq` holds the console's interrupt number for `intrtab`
+(#f("mp135/c.c")).
 
-The configuration descriptor (#l("static unsigned char cfgdesc[67] = {")--#l("};", after: "7, 5, 0x81, 2, 0x00, 0x02, 0")) comes with everything below it,
-67 bytes in all, in one block. Its first line is configuration number 1, with two interfaces,
-self-powered (`0xc0`), drawing at most 2 mA.
-Interface 0 is the communications interface, class 2 subclass 2,
-"abstract control model", with one endpoint. The four lines after it
-are class-specific descriptors (type `0x24`): the CDC header, version
-1.10; call management, which the device does not do, with data on
-interface 1; the ACM capabilities, 2, meaning that the device takes
-the line coding and line state requests; and the union, which ties
-interface 0 and interface 1 together as one function. The endpoint
-descriptor which follows is endpoint 2 in (`0x82`), interrupt type,
-16-byte packets, polled every 8 frames. Interface 1 is the data
-interface, class 10, with two endpoints: endpoint 1 out (`0x01`) and
-endpoint 1 in (`0x81`), both bulk, with packets of 512 bytes. The
-array is not `const`, because at full speed `dosetup` changes these
-two sizes to 64.
+#lines-to("/*", after: "int\tklirq = IRQ;")
 
-The array `lang` (#l("static const unsigned char lang[4] = { 4, 3, 0x09, 0x04 };")) is string descriptor 0, the list of languages, which holds one,
-`0x0409`, American English. The array `linecoding` (#l("static unsigned char linecoding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0,")) holds what the host last set as the line's speed and format, 115200 baud (`0x0001c200`, least
-significant byte first), one stop bit, no parity, 8 data bits. Nothing
-on a USB link depends on it, but a terminal program sets it and reads
-it back, and the device must remember it.
+The routine `pinuart` gives one pin to the USART. It enables the clock of
+the pin's port, sets the pin's mode to 2, alternate function, and
+selects its alternate function in the low or high alternate function
+register (`0x20`, `0x24`), four bits per pin. The routine `klinit` is called by `cninit` (#f("mp135/c.c")) early
+in `machine_init` (#f("machdep.c")). The kernel otherwise takes the
+clocks as the boot ROM left them, but the USART is given a clock of its
+own choosing so that its speed does not depend on that state. Its
+pins are taken from #f("board.h") (#l("pinuart(CONS_TX);"), #l("pinuart(CONS_RX);")), its clock is enabled on its bus, and
+HSI, the internal 64 MHz oscillator, which runs from reset, becomes its
+kernel clock (value 2 in the field). `BRR` divides that clock to 115200 baud, since 64000000/115200 is
+555.6. Lastly the unit, the transmitter, and the receiver are
+enabled, and with them the FIFOs (`FIFOEN`), which hold several
+characters in each direction where the KL11 held one. A character then
+waits in the FIFO, not lost, while the processor has interrupts masked
+for longer than one character time, 87 microseconds at this speed.
+`FIFOEN` may only be changed while the unit is disabled, and so is
+written with the enable. Every other bit of `CR1` is written as zero,
+which gives eight data bits and no parity.
 
-#lines-to("static void")
+The registers which enable clocks are of a "set" kind: a one sets the
+corresponding bit, and a zero leaves it alone. Each write is followed
+by a read of the same register (#l("(void)AHB4ENSETR;"), #l("(void)R(CLKENR);")), which does not complete until
+the write has, so that the clock is running before the device it feeds
+is touched.
 
-The routine `fifowrite` writes `n` bytes into the transmit FIFO of endpoint `ep`,
-four to a word, least significant first, with the last word padded.
-Its converse `fiforead` takes `n` bytes from the receive FIFO, keeping at most `max`
-of them. With `max` zero it discards a packet which has nowhere to go.
+#lines-to("void", after: "CR1 = FIFOEN|UE|TE|RE;")
 
-#lines-to("static void", after: "p[i+3] = w >> 24;")
+The routines `klopen`, `klclose`, `klread`, and `klwrite` are those of #f("pl011.c"),
+except that the receiver interrupt is enabled by setting `RXNEIE` in
+`CR1` (#l("CR1 |= RXNEIE;", after: "ttychars(tp);")), and `klread` ends a hold of the input by setting it again. The
+transmitter interrupt is not enabled here, for the reason given under
+`klxint`.
 
-The routine `ep0out` makes endpoint 0 ready to receive: 64 bytes in one packet,
-and room for 3 back-to-back control requests (bits 29--30), as the
-controller expects, before the endpoint is enabled.
+#lines-to("static void", after: "klwrite(dev_t dev)")
 
-The answer to a control request may be longer than a packet, so
-`ep0next` sends it 64 bytes at a time, from `ep0p` and `ep0n`, at each
-completion. The routine `ep0in` starts an answer, cut to the length the request
-allows (`setup[6]` and `setup[7]`), and sets `ep0zlp` if the answer is
-shorter than that length: the host then learns the end from a short
-packet, and an answer of an exact number of full packets must be
-followed by an empty one. A call with no data, `ep0in(0, 0)`, sends
-the empty packet which acknowledges a request without data. After each answer `ep0out` readies the endpoint for the host's
-acknowledgement or the next request. A call of `ep0stall` refuses a request in both directions.
+The routine `klxint` turns off the transmitter interrupt (#l("CR1 &= ~TXEIE;", after: "klxint(dev_t dev)")) before calling
+`ttstart`, which will turn it on again if it sends a character. The
+PL011, like the KL11, raises its transmit interrupt once, when a
+character has gone. The USART's `TXE` is a condition, not an event: it
+is set whenever the transmit FIFO has room, and while both it and
+`TXEIE` are set the interrupt remains asserted. With nothing more to
+send, an enabled interrupt would be taken again the moment it was
+returned from.
 
-To receive one bulk packet, `rxarm` makes endpoint 1 ready.
+The routine `klrint` takes characters from `RDR` for as long as `RXNE` says the
+receive FIFO holds one (#l("while(ISR&RXNE) {")), and hands each to `ttyhold`, unless
+`t_holdq` is full, when it clears `RXNEIE` and leaves the characters
+where they are, as #f("pl011.c") explains. The interrupt is a
+condition too, asserted while any character waits, so the loop takes
+the first character and any which arrive behind it, and the PL011's
+receive timeout has no counterpart here. Writing 017 to `ICR` (#l("ICR = 017;")) then clears the error
+flags for parity, framing, noise, and overrun. An overrun in
+particular, with `RXNEIE` set, would otherwise hold the interrupt
+asserted for good.
 
-#lines-to("/*")
+A paste longer than `t_holdq` can take fares less well than under QEMU.
+Once `t_holdq` is full the characters gather in the receive FIFO, but
+nothing tells the sender to stop. The driver connects only the receive
+and transmit pins, so there are no flow control lines, and the console
+does not use `TANDEM`. When the FIFO is full, the next character to
+arrive sets the overrun flag and is lost, as is every one after it
+until `klread` takes input again.
 
-The routine `carrier` sends the line state on endpoint 2: a 10-byte "serial state"
-notification (`0xa1`, `0x20`) for interface 0, whose 2-byte value 3
-says that carrier (DCD) and DSR are present. A host which opens the
-port and waits for carrier, as a terminal program may, can then go on.
-A notification the host has not yet collected is not overwritten: while
-the endpoint is still enabled, `carrier` sends nothing.
+#lines-to("void", after: "ICR = 017;")
 
-#lines-to("static void", after: "}")
+The routine `klioctl` is that of #f("pl011.c"), with v7's misspelling `ttioccom`
+corrected.
 
-The routine `dosetup` answers a control request. Its first byte gives the type, of
-which `0x60` selects the class requests (`0x20`) and `0x80` marks a
-request whose data goes to the host; its second the request; its third
-and fourth a value. The class requests are those of the ACM model. They are `0x20`, set line coding, whose 7 bytes follow from the host and are
-stored by `usbpoll`; `0x21`, get line coding; `0x22`, set the control
-line state, whose bit 0 is DTR, after which the line state is sent if
-the device is configured; and `0x23`, send break, which is accepted and
-ignored. Anything else is refused.
+#lines-to("void", after: "u.u_error = ENOTTY;")
 
-#lines-to("switch (req) {")
+The routine `klstart` sends the next character if the transmit FIFO has room, or
+arranges a delay. One character at each interrupt suffices, since the
+interrupt is asserted again as long as the FIFO has room. `TXEIE` is set (#l("CR1 |= TXEIE;", after: "tp->t_state |= TIMEOUT;"))
+whenever something was taken from the queue, so that the interrupt
+follows when the character has gone. For a delay nothing has been
+written, `TXE` stays set, and the interrupt comes at once. The routine `klxint` then calls
+`ttstart`, which finds the `TIMEOUT` state set and returns, and the
+interrupt stays disabled until `ttrstrt` restarts output.
 
-The standard requests are those every device must answer. Get status
-(0) reports the device as self-powered, and everything else as plain.
-Clear feature (1), set feature (3), and set interface (11) are accepted
-and ignored. Set address (5) puts the address the host has assigned in
-`DCFG` (bits 4--10). The controller takes it into use only after the
-acknowledgement has gone, as the protocol requires. Get descriptor (6)
-returns the descriptor named by the value's high byte: the device
-descriptor (1); the configuration (2), with the bulk packet size first
-set from `bulkmps` in each bulk endpoint descriptor (type 5, attribute
-2); or a string (3): string 0, the languages, or strings 1 and 2, both
-"unix", made as the specification asks, a length, the type 3, and the
-characters in 16 bits each. Get configuration (8) returns `config`.
+#lines-to("void", after: "CR1 |= TXEIE;")
 
-#lines-to("case 9:")
+The routine `klintr` is the entry in `intrtab`, called by `irq` (#f("machdep.c")). It
+calls one or both of the handlers. The test of `TXEIE` (#l("if (ISR&TXE && CR1&TXEIE)")) is needed
+because `TXE` is set nearly always, and an interrupt from the receiver
+must not be taken for one from the transmitter.
 
-Set configuration (9) records the configuration, and if it is not zero
-activates the endpoints (#l("DIEPCTL(1) = USBAEP | 2U<<18 | 1U<<22 | SD0PID |")--#l("16;")): endpoint 1 in and out as bulk
-endpoints (type 2, bits 18--19) of `bulkmps` bytes, the in endpoint
-using transmit FIFO 1 (bits 22--25). Endpoint 2 in as an interrupt
-endpoint (type 3) of 16 bytes on FIFO 2. Output and input are reset,
-and endpoint 1 is made ready to receive. Get interface (10) returns
-alternate setting 0. Anything else is refused.
+#lines-to("/*", after: "klxint(0);")
 
-#lines-to("static void", lead: true)
+The routine `putchar` uses `ISR`, `TDR`, and `CR1` in place of the KL11's
+registers. Where `kl.c` cleared the transmitter status register, and
+with it the interrupt enable, this clears `TXEIE` alone, since the
+receiver's enable lives in the same register and must be kept. At the
+end `TXEIE` alone is set again (#l("if(s&TXEIE || kl11[0].t_outq.c_cc)")), and only if it was set at the start or
+characters wait in the output queue. Restoring the whole register, as
+`kl.c` did, would lose an echo. The receive interrupt stays enabled
+meanwhile, and an echo may pass through `klstart`, which sets `TXEIE`,
+between the reading of `CR1` and the end. A restored copy would clear
+that bit again, and leave the queue unsent until something else called
+`ttstart`. If output was in progress, `TXEIE` comes back set and the
+transmit FIFO has room, and the interrupt which follows restarts it.
 
-The routine `busreset` follows a reset of the bus by the host. Every endpoint but 0 is stopped, every endpoint's interrupts cleared, the address cleared,
-the device unconfigured, and all transmit FIFOs flushed (`TXFFLSH`, bit
-5, with the number `0x10`, "all", in bits 6--10). Endpoint 0 is then
-made ready for the first request.
+#lines-to(none)
+#source("/usr/sys/dev/iwdg.c")
 
-The routine `txflush` sends what `out` holds, if the device is configured and no
-transfer is under way, as one transfer of as many packets as it needs.
+The chip's independent watchdog IWDG2 counts down from a reload value
+on a clock of its own, and resets the chip when it reaches zero, unless
+it has been fed, which reloads the count. The MP135 machine has no other
+means of resetting itself, and without one a kernel which stopped on
+the board would stay stopped until someone pressed its reset button.
 
-The routine `klflush` waits for the transfer in progress, polling the controller,
-for at most one clock tick, and then starts the next. It serves
-`putchar`, which may run with interrupts off.
+The routine `iwdgstart` is called by `wdinit` (#f("mp135/c.c")) at the start of
+`machine_init` (#f("machdep.c")), as soon as the device registers are
+mapped and before the console is set up. It enables the watchdog's
+clock on its bus and reads the register back. The key register
+`KR` then takes commands. The value `0xCCCC` starts the watchdog, `0x5555` unlocks the
+prescaler `PR` and the reload register `RLR`, and `0xAAAA` feeds it,
+loading the new values. A prescaler of 6 divides the watchdog's
+32 kHz clock by 256, and a reload of 4095 then gives about 33 seconds.
 
-#lines-to("/*")
-
-The routine `usbpoll` does the controller's work, from the interrupt or from
-`putchar`, and returns whether a transfer to the host has finished. On
-a bus reset it calls `busreset`. When the speed is settled, it sets
-`bulkmps` from the enumerated speed in `DSTS` (bits 1--2, zero for high
-speed), gives endpoint 0 packets of 64 bytes (`MPSIZ` zero), and clears
-the global IN NAK (`DCTL` bit 8).
-
-The receive FIFO is then emptied: each entry begins with a status word
-from `GRXSTSP`, which gives the endpoint (bits 0--3), the byte count
-(4--14), and the kind of packet (17--20): 6 for a control request,
-copied to `setup`, and 2 for data, which goes to `ep0buf` on endpoint 0
-and to `rxbuf` on endpoint 1. Any other entry, and its data, is
-discarded.
-
-#lines-to("st = DOEPINT(0);")
-
-The routine `dosetup` answers a control request on endpoint 0, after its
-interrupt flags are cleared, `060` being two flags that come with it.
-A finished data stage from the host is the line coding of a set line
-coding request, copied to `linecoding` and acknowledged. Any other
-completion just readies the endpoint again. A finished packet to the
-host on endpoint 0 sends the next part of the answer, if any. A
-finished transfer on endpoint 1 in frees the output side. A finished
-packet on endpoint 1 out readies the endpoint for the next one, unless
-`rxbuf` still holds characters, in which case `klrint` does so once it
-has taken them.
-
-#lines-to("void")
-
-The routine `cninit` (#f("mp135/c.c")) calls `klinit` at the start of
-`machine_init` (#f("machdep.c")). It first disconnects the device
-(`SDIS`), so that the host forgets the boot ROM's device, and waits a
-fifth of a second. Waits for the controller to be idle (`GRSTCTL` bit
-31), resets its core (bit 0), and turns its interrupt off (`GAHBCFG`).
-`GUSBCFG` forces device mode (bit 30, with the host mode bit 29
-cleared) and sets the turnaround time to 9 (bits 10--13), the value
-for the controller's 32-bit bus. A forced mode takes effect after at
-least 25 ms, and 50 are allowed. VBUS sensing is turned off (`GCCFG`
-bit 21), and the "B session valid" signal overridden to true
-(`GOTGCTL` bits 6, 7), so that the controller does not depend on the VBUS pin. The clocks are ungated, and `DCFG`
-zero asks for high speed.
-
-The controller's 4 KB of FIFO memory is divided in 32-bit words: the
-receive FIFO the first `0x100` (1 KB); endpoint 0's transmit FIFO
-`0x40` from `0x100`; endpoint 1's `0x100` from `0x140`, enough for two
-512-byte packets; endpoint 2's `0x20` from `0x240`. Each register
-holds the depth in its high half and the start in its low. All FIFOs
-are flushed, every endpoint is stopped and its interrupts cleared, and the interrupts are chosen. They are finished transfers and control requests on the endpoints, endpoints 0 and 1 in both directions (`DAINTMSK`: bits
-0--1 for in, 16--17 for out), and in `GINTMSK` the receive FIFO, the
-bus reset, the end of enumeration, and the summaries of in and out
-endpoint interrupts (bits 18, 19).
-
-The device then connects, and `klinit` polls the controller for up to
-10 seconds, until the host has configured it and a terminal program
-has raised DTR, and then a fifth of a second more, so that the host's
-remaining requests are answered. Only then is the controller's
-interrupt enabled (`GAHBCFG` bit 0). The boot messages which follow
-thus have somewhere to go. If no terminal is there within the 10
-seconds, the system boots without one, and `putchar` drops its output
-until the host configures the device.
-
-#lines-to("void", after: "}")
-
-The routine `klopen` opens the one console. The line has carrier at once
-(`CARR_ON`), and the modes are those of #f("pl011.c"). The routines `klclose`,
-`klwrite`, and `klioctl` are `kl.c`'s, the last with v7's misspelling
-`ttioccom` corrected. The routine `klread` first takes any characters waiting in
-`rxbuf`, since a hold of the input may have left them there, and then
-reads.
-
-#lines-to("static void")
-
-The routine `klrint` passes the characters of the last received packet to
-`ttyhold`. It stops while `t_holdq` is full, or the free list of
-character blocks is down to its last block, leaving the rest in
-`rxbuf`. Only when `rxbuf` is empty is endpoint 1 readied for the next
-packet. Until then the controller refuses the host's packets with NAK,
-and the host waits: unlike a serial line, USB loses no input when the
-receiver falls behind.
-
-The routine `klstart` collects the output queue into `out` and sends it, unless a
-transfer is under way, when the completion will call it again.
-
-#lines-to("void", after: "txflush();")
-
-The entry in `intrtab` is `klintr`, called by `irq` (#f("machdep.c")).
-When a transfer to the host finishes, it sends whatever `putchar` has
-left in `out`, or else lets `ttstart` refill it, and wakes a writer
-waiting for the queue to drain, as `kl.c`'s transmitter interrupt did.
-In either case it passes on any input.
-
-#lines-to("/*")
-
-The routine `putchar` keeps v7's copy of the last `MSGBUFS` characters in `msgbuf`.
-It then adds the character to `out`, with a carriage return before a
-newline, and sends the buffer when it is full or a line is ended,
-waiting for the transfer before, in `klflush`. Since the transfer is
-waited for with interrupts off, and for one clock tick at most, a host
-which has stopped reading delays each line of kernel output by a tick
-and no more. Until the host has configured the device there is no one
-to send to, and the character is kept only in `msgbuf`.
+Once started, the watchdog runs until the chip resets, and nothing in
+the kernel feeds it. That is done by the program `wdog` (#f("cmd/wdog.c")), which `init`
+starts (#f("cmd/init.c")), so that the board stays up only while processes
+run. A kernel which panics, stops with interrupts masked, or never
+reaches user space resets the board, which then waits in its boot ROM
+for a new image.
 
 #lines-to(none)
 #source("/usr/sys/dev/sd.c")
@@ -4935,17 +4843,16 @@ clears it, and returns the value.
 
 #lines-to("static void", lead: true)
 
-The routine `pinmode` gives a pin of a port its mode (2 alternate function, 3
-analog, which disconnects it) in the mode register, makes it open-drain
+The routine `pinmode` enables the clock of the pin's port and reads the
+register back, so that the clock runs before the port is touched. It
+then gives the pin its mode (2, alternate function) in the mode register, makes it open-drain
 in the output type register (`0x04`), as I2C requires, and selects
 alternate function 6, I2C4, in the low or high alternate function
 register (`0x20`, `0x24`), four bits per pin.
 
 #lines-to("/*")
 
-The routine `ddrpower` enables the clocks of GPIO ports B and E (`0x12`, bits 1 and
-4) and reads the register back, so that the clocks are running before
-the ports are touched; puts PE15, the clock line SCL, on I2C4; chooses
+The routine `ddrpower` puts PE15, the clock line SCL, on I2C4; chooses
 HSI, the internal 64 MHz oscillator, as I2C4's kernel clock (`0x604`,
 value 2 in bits 3--5); and enables I2C4's clock (`0x748`, bit 5). The
 timing register (`0x10`) divides the 64 MHz by 2, giving steps of
@@ -4953,16 +4860,17 @@ timing register (`0x10`) divides the 64 MHz by 2, giving steps of
 of somewhat over 100 kHz, with the hold and setup delays the
 controller's documentation gives for that clock.
 
-The data line SDA is pin PB9 on the STM32MP135F-DK. Other boards built
-on the chip wire it to PB7, so the routine tries each pin in turn,
-enabling the controller and reading register 6, the PMIC's version
-register: the first pin on which the PMIC answers is used, and the
-other is left analog. If neither answers, the system cannot go on, and
-panics.
+The data line SDA is pin PB9 on the STM32MP135F-DK, and PB7 on other
+boards built on the chip. The file #f("board.h") names it as
+`I2C4_SDA` (#l("pinmode(I2C4_SDA, 2);")), and the controller is then
+enabled. The pin is fixed when the kernel is built, not found by
+trying both at boot: the other pin may be wired to something else, such as
+a serial port, which a probe would disturb.
 
 The PMIC is then told to set `BUCK2` to 1.35 V and turn it on (register
 `0x21`: voltage code 30 in bits 2--7, enable bit 0) and to turn on
-`VREF_DDR` (register `0x24`, bit 0). A hundredth of a second is allowed
+`VREF_DDR` (register `0x24`, bit 0). If it does not answer, the system
+cannot go on, and panics. A hundredth of a second is allowed
 for the voltages to settle before `ddrinit` starts the memory.
 
 #lines-to(none)
@@ -5422,7 +5330,7 @@ although `init` uses no standard I/O, because the port's `stdio.h`
 (#f("stdio.h")) carries the prototypes of the library's system call
 stubs, `fork`, `execl`, `alarm`, and the rest, and C99 does not allow a
 function to be called without a declaration. For the same reason the
-functions of the file are declared before use (#l("void\tshutdown(void), single(void), runcom(void), merge(int sig),")--#l("int\trline(void), get(void);")), and v7 relied on
+functions of the file are declared before use (#l("void\tshutdown(void), watchdog(void), single(void), runcom(void), merge(int sig),")--#l("int\trline(void), get(void);")), and v7 relied on
 their being implicitly `int`. Elsewhere `register i` has become
 `register int i`, since C99 has no implicit `int`.
 
@@ -5433,8 +5341,8 @@ none.
 
 #lines-to("int", after: "int\trline(void), get(void);")
 
-The outer loop is `main`: kill everything, run a single-user shell, run
-`/etc/rc`, read `/etc/ttys` and start the `getty`s, then wait for
+The outer loop is `main`: kill everything, restart the feeder of the
+watchdog, run a single-user shell, run `/etc/rc`, read `/etc/ttys` and start the `getty`s, then wait for
 children until `wait` fails. The call fails only when `init` has no
 children at all. Since a dead `getty` is at once replaced, that happens
 only when no terminal is served: none is enabled in `/etc/ttys`, or
@@ -5459,6 +5367,17 @@ Then `init` waits for all its children. Should some child fail to die
 see signals), the alarm set at #l("alarm(60);") fires after a minute, `reset` jumps
 back to the `setjmp`, and the shutdown begins again. Finally the file
 descriptors are closed, so that the next stage starts clean.
+
+#lines-to("/*", after: "close(i);")
+
+The routine `watchdog` starts `/etc/wdog` (#f("cmd/wdog.c")), which feeds the
+MP135 machine's watchdog (#f("iwdg.c")). The shutdown has just killed
+it with every other process, and the board would reset 33 seconds
+later. It is started here, not in `/etc/rc`, because single-user mode
+runs no `rc`, and the board must stay up there too. The child runs
+`wdog` with the name `wdog` (`wdog+5` skips `/etc/`), and exits if the
+program is missing. On the QEMU machine `wdog` finds no watchdog and exits
+at once.
 
 #lines-to("void", lead: true, after: "}")
 
@@ -5547,7 +5466,7 @@ user. Opening it (#l("open(tty, 2);")) makes the child the leader of the termina
 process group, as in `single`. In v7 the open of a dial-up
 line slept until the modem reported a call, so that this is where an
 idle line's process waited. The console drivers (#f("pl011.c"),
-#f("otg.c")) have no modem control, and the open returns at
+#f("usart.c")) have no modem control, and the open returns at
 once.
 
 The child runs `getty` with the name `-` and one argument, the table
@@ -5640,10 +5559,10 @@ the entry `14console` in `/etc/ttys`: enabled, with table `'4'`, the
 "Console Decwriter", whose modes ask for carriage return mapping and
 tab expansion on output. The speeds of any table are irrelevant here.
 The file `tty.c` records them, but the console drivers never use them: the QEMU
-machine's UART has no speed to set, and the MP135 machine's USB link
-none either. Its driver only remembers the speed a terminal program
-sets (#f("otg.c")), just as the KL11 console of the PDP-11 had a speed
-set by jumpers rather than by the system.
+machine's UART has no speed to set, and the MP135 machine's driver
+fixes its speed at 115200 baud (#f("usart.c")), just as the KL11
+console of the PDP-11 had a speed set by jumpers rather than by the
+system.
 
 #lines-to("#define\tNITAB\tsizeof itab/sizeof itab[0]", lead: true)
 
@@ -11458,7 +11377,7 @@ Everything the kernel prints with `printf` (#f("prf.c")) passes through
 the console driver's `putchar`, which keeps a copy of each character in
 the circular buffer `msgbuf`, 128 bytes (`MSGBUFS`) long, with
 `msgbufp` pointing at the next place to be written (#f("pl011.c"),
-#f("otg.c")). The
+#f("usart.c")). The
 buffer is defined in #f("main.c") and the pointer in #f("machdep.c").
 The program `dmesg` copies the two out of the running kernel and prints the
 buffer, oldest character first, so that messages which went to the
@@ -15037,7 +14956,7 @@ search path, since they name their headers relative to themselves, as
 
 `LIB1_OBJ` is every C file of `sys`. The drivers which belong to one
 machine only are kept out of `LIB2`, the UART and the disk of the QEMU machine (#f("pl011.c"), #f("virtio_blk.c")), and those of the MP135
-machine (#f("otg.c"), #f("sd.c"), #f("ddr.c"), #f("pmic.c")). The two sets
+machine (#f("usart.c"), #f("iwdg.c"), #f("sd.c"), #f("ddr.c"), #f("pmic.c")). The two sets
 take the same v7 names, such as `klopen` and `rkstrategy`, and so could
 not share one archive. Each kernel is instead linked with its own
 machine's drivers (#l("$S/conf/qemu/unix: $(QEMU_DRV)"), #l("$S/conf/mp135/unix: $(MP135_DRV)")). `SYS_OBJ` names every kernel object, so that
@@ -15367,7 +15286,8 @@ from a shell on the build machine. It starts the chip's independent
 watchdog and feeds it at each command, so that the chip resets itself,
 and the ROM is ready to load again, 33 seconds after the last one.
 
-The registers are those of `otg.c` (#f("otg.c")) and `sd.c`
+The registers are those of the chip's USB OTG controller, a Synopsys
+design which can be either end of a USB link, and of `sd.c`
 (#f("sd.c")), at their physical addresses, since there is no memory
 management here. `_start` (#l("__asm__(")--#l(");")) turns on the instruction cache,
 sets a stack at the top of SYSRAM, clears the uninitialised data, and
@@ -15377,13 +15297,14 @@ calls `main`, and `now` reads the processor's counter, which runs at
 #lines-to("/*", after: "}")
 
 The USB side is a minimal CDC-ACM device, polled rather than driven by
-interrupts. Its descriptors (#l("static const unsigned char devdesc[18] = {")--#l("static unsigned char coding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0, 8 };")) are much those `otg.c` gives
-for the console; `dosetup` answers the host's control requests, setting
-the address, giving the descriptors with the bulk endpoints' packet
-size set to what the bus speed allows, configuring the endpoints, and
-answering the class's requests for the line coding and the control
-lines; on the request which sets the control lines it reports carrier
-(`carrier`), for a host which waits for it. The routine `usbpoll` services a reset of the bus, the end of enumeration, packets in the
+interrupts. Its descriptors (#l("static const unsigned char devdesc[18] = {")--#l("static unsigned char coding[7] = { 0x00, 0xc2, 0x01, 0x00, 0, 0, 8 };")) are the data with which a
+USB device describes itself to the host, in the layout the USB and CDC
+specifications fix. The routine `dosetup` answers the host's control
+requests. It sets the address, gives the descriptors with the bulk
+endpoints' packet size set to what the bus speed allows, configures
+the endpoints, and answers the class's requests for the line coding
+and the control lines. On the request which sets the control lines it
+reports carrier (`carrier`), for a host which waits for it. The routine `usbpoll` services a reset of the bus, the end of enumeration, packets in the
 receive FIFO, and transfers completed on endpoint 0. A data packet from
 the host is taken into `rxbuf` at once, so that a control packet
 behind it is not held up, and the endpoint takes no more until
@@ -15759,12 +15680,12 @@ lines of `/etc/ttys` which name them are all disabled (#f("ttys")).
 `/etc` holds the programs which v7 installed there, and its data:
 #f("passwd"), #f("group"), #f("ttys"), the command file #f("rc"), and
 `ddate`, an empty file in which `dump` records the dates of dumps. Two
-programs are the MP135 machine's own, and work through the device registers of `/dev/mem` (#f("mem.c")). The program `wdog` starts the chip's
-independent watchdog and feeds it every 10 seconds, so that the board
+programs are the MP135 machine's own, and work through the device registers of `/dev/mem` (#f("mem.c")). The program `wdog` feeds the chip's
+independent watchdog every 10 seconds, so that the board
 resets itself some 33 seconds after the system stops, and `reset` syncs the
-disks and resets the board at once, through the reset controller. Both
-are run by hand. On the QEMU machine the registers are not there, and
-the programs fail.
+disks and resets the board at once, through the reset controller. The
+first is started by `init` (#f("cmd/init.c")), the second by hand. On the
+QEMU machine the registers are not there, and the programs exit or fail.
 The files `mtab` and `utmp` are not made here: `mount` writes the first when it
 mounts something, and #f("rc") empties the second, creating it on the
 first boot.
@@ -15877,19 +15798,22 @@ files, and the programs which read them, have group `sys`.
 #lines-to(none)
 #source("/usr/src/cmd/wdog.c")
 
-The program `wdog` keeps the MP135 machine alive. It starts the chip's independent
-watchdog, IWDG2, and feeds it every 10 seconds from a signal handler.
-Should the system stop, the watchdog resets the chip some 33 seconds
-later. The registers are written through `/dev/mem` (#f("mem.c")), a
-word at a time, as device registers require. The routine `put` writes one: first
-the watchdog's clock is turned on (#l("put(APB4ENSETR, 1<<15);")), then the watchdog is started
-(`0xcccc`), its registers unlocked (`0x5555`), the prescaler set to
-divide its 32 kHz clock by 256 and the reload count to 4095 (#l("put(IWDG+4, 6);")--#l("put(IWDG+8, 0xfff);")),
-which together give the 33 seconds, and `0xaaaa` reloads the count. The
-program detaches itself with `fork` and closes its descriptors, and is
-run by hand, as `/etc/wdog`, by the super-user, who alone may write
-`/dev/mem`. Nothing stops the watchdog once started but a reset, so
-killing `wdog` makes the chip reset itself 33 seconds later.
+The program `wdog` keeps the MP135 machine alive. The kernel starts the
+chip's independent watchdog, IWDG2, at boot (#f("iwdg.c")), and `wdog`
+feeds it every 10 seconds from a signal handler. Should the system
+stop, the watchdog resets the chip some 33 seconds after the last feed.
+The registers are reached through `/dev/mem` (#f("mem.c")), a word at a
+time, as device registers require. The routine `get` reads one and `put` writes one.
+
+The program detaches itself with `fork` and closes its standard files,
+and only then opens `/dev/mem`. The order matters, since `init`
+(#f("cmd/init.c")) starts it with no files open, and the open would
+otherwise return descriptor 0 and the close would take it away. The
+reload register must read back the kernel's `0xfff` (#l("if((mem = open(\"/dev/mem\", 2)) < 0 || get(IWDG+8) != 0xfff)")). On the
+QEMU machine the address lies in memory, where a write would succeed
+as well, so only the value read back tells that a watchdog is present. Without one, `wdog` exits. Each feed writes `0xaaaa` to the key register.
+Nothing stops the watchdog once started but a reset, so killing `wdog`
+makes the chip reset itself 33 seconds later.
 
 #lines-to(none)
 #source("/usr/src/cmd/reset.c")

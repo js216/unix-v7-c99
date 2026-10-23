@@ -139,12 +139,10 @@ for the last words of a dying system. It serves `panic`, `prdev`, and
 `putchar` for each character.
 
 The QEMU machine's `putchar` is in #f("pl011.c"), the MP135 machine's
-in #f("otg.c"). Both keep a copy of everything printed
-in `msgbuf` and follow a newline with a carriage return. The first waits, with a time limit, for the transmitter to have room,
-and writes the character with the transmitter interrupt masked. The
-second gathers the characters, with interrupts off, and sends them to
-the host at each newline or when its buffer is full. It waits at most a
-tick for the previous transfer.
+in #f("usart.c"). Both keep a copy of everything printed
+in `msgbuf` and follow a newline with a carriage return. Each waits, at
+most a tick, for the transmitter to have room, and writes the character
+with the transmitter interrupt masked.
 
 #lines-to("/*")
 
@@ -1009,7 +1007,7 @@ the `I` bit.
 _Generic Timer._ With these routines `clkstart` (#f("machdep.c")) and
 `clock` (#f("clock.c")) produce an interrupt every `1/HZ`
 second, a sixtieth (`HZ`, #f("param.h")), and the console's `putchar`
-(#f("pl011.c"), #f("otg.c")) times its wait with `cntvct_get`.
+(#f("pl011.c"), #f("usart.c")) times its wait with `cntvct_get`.
 The first, `cntfrq_get`, reads `CNTFRQ`, the counter frequency.
 
 #lines-to("cntvct_get:", lead: true)
@@ -1777,11 +1775,12 @@ address found in no region is an error.
 
 The routine `machine_init` is called from `_start` (#f("low.s")), running at its
 kernel address on a small stack in the bss, with only the kernel image
-mapped. It first maps the device registers, switches the GIC off,
+mapped. It first maps the device registers and, on the MP135 machine, starts
+the watchdog (`wdinit`, #f("iwdg.c")). From then on a kernel which
+stops resets the board within 33 seconds, even one which stops before
+its console works. It then switches the GIC off,
 whatever state QEMU or the boot ROM left it in, and initialises the
-console (#l("kmap(BLK_DEV);")--#l("cninit();")), so that `printf` and `panic` work from here on. On the
-MP135 machine that means taking over the USB controller and waiting up
-to ten seconds for the host to open the port (#f("otg.c")).
+console (#l("kmap(BLK_DEV);")--#l("cninit();")), so that `printf` and `panic` work from here on.
 
 On the MP135 machine it then has the PMIC power the DDR memory
 (#f("pmic.c")) and starts the DDR controller (#f("ddr.c")), and

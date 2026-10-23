@@ -36,14 +36,14 @@ kernel into RAM itself and starts it at its entry point.
 board built around the company's STM32MP135F system-on-chip. The chip
 contains one ARM Cortex-A7 processor and 128~KB
 of on-chip RAM (SYSRAM) at 0x2ffe0000. The board adds 512~MB of DDR3L
-memory, at 0xc0000000, and an SD card slot. The console is the chip's
-USB OTG controller at 0x49000000, which appears to the host as a serial
-device. The disk is the SD card, on the SDMMC1 controller at
+memory, at 0xc0000000, and an SD card slot. The console is one of the
+chip's serial ports, UART4 at 0x40010000 on this board. Since other
+boards wire another port, the kernel is built for one (#f("board.h")). The disk is the SD card, on the SDMMC1 controller at
 0x58005000, and the interrupt controller is again a GIC version 2, at
 0xa0021000. The kernel also uses the chip's reset and clock controller
 (RCC), its power controller (PWR), its general purpose pins (GPIO), its
 DDR controller, its TrustZone address space controller (TZC), which
-guards the DDR memory, and, over the chip's I2C4 bus, the board's
+guards the DDR memory, its independent watchdog (IWDG2), and, over the chip's I2C4 bus, the board's
 STPMIC1 power management chip.
 
 #btable(columns: (auto, 1fr, 1fr), caption: [The two machines],
@@ -51,10 +51,10 @@ STPMIC1 power management chip.
   [processor], table.cell(colspan: 2)[Cortex-A7, with the generic timer, on both],
   [interrupts], table.cell(colspan: 2)[GIC version 2, on both],
   [memory], [512~MB of RAM], [128~KB of SYSRAM, 512~MB of DDR],
-  [console], [PL011 UART], [USB OTG, a serial device to the host],
+  [console], [PL011 UART], [USART],
   [disk], [virtio block device], [SD card on SDMMC1],
   [boot], [QEMU loads the kernel], [the ROM receives it by USB DFU],
-  [also], [--], [PMIC, DDR controller, TZC, RCC],
+  [also], [--], [PMIC, DDR controller, TZC, RCC, watchdog],
   bot,
 ) <tab-machines>
 
@@ -176,11 +176,11 @@ what lies where on each machine.
   [0xc0200000], [(RAM, continued)], [DDR 0xc0000000--0xdfffffff: tables, then free RAM],
   [0xf0000000], [GIC 0x08000000], [RCC, PWR, GPIO 0x50000000],
   [0xf0200000], [UART 0x09000000], [SDMMC1 0x58005000],
-  [0xf0400000], [virtio 0x0a000000], [DDR controller 0x5a003000],
+  [0xf0400000], [virtio 0x0a000000], [IWDG2 0x5a002000, DDR controller 0x5a003000],
   [0xf0600000], [], [GIC 0xa0021000],
   [0xf0800000], [], [TZC 0x5c006000],
-  [0xf0a00000], [], [USB OTG 0x49000000],
-  [0xf0c00000], [], [I2C4 0x4c005000],
+  [0xf0a00000], [], [UART4 0x40010000],
+  [0xf0c00000], [], [USART2 0x4c001000, I2C4 0x4c005000],
   [0xffe00000], table.cell(colspan: 2)[`u`, the current process's u-area],
   bot,
 ) <tab-addr>
@@ -974,13 +974,11 @@ has reached, which tab expansion needs (`t_col`). It also holds the
 driver's start routine (`t_oproc`), through which `tty.c` asks the
 driver for more output without knowing which device it is.
 
-Each machine has one console driver: the PL011 UART on the QEMU machine
-(#f("pl011.c")), and the USB serial device on the MP135 machine
-(#f("otg.c")). The UART sends and receives one character at a time,
-with an interrupt for each. The USB device moves packets: the driver
-gathers output characters into a packet and sends it to the host, and
-hands each character of an arriving packet to the line discipline. Both
-present the same interface to `tty.c`. The kernel's own messages,
+Each machine has one console driver, for the PL011 UART on the QEMU
+machine (#f("pl011.c")), and for a USART on the MP135 machine
+(#f("usart.c")). Each device sends and receives characters through a
+small FIFO, and interrupts when there is room to send or something to
+read. Both drivers present the same interface to `tty.c`. The kernel's own messages,
 `printf` and `panic`, bypass the queues and write to the console
 directly, by `putchar`, so that they work even when interrupts are
 off.
