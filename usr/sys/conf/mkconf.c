@@ -1,5 +1,6 @@
 #include "../h/param.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void	puke(char **s);
@@ -731,7 +732,11 @@ input(void)
 	}
 	if (n<2)
 		goto badl;
-	if (equal(keyw, "map") && nmap < NMAP) {
+	if (equal(keyw, "map")) {
+		if (nmap >= NMAP) {
+			fprintf(stderr, "Too many maps\n");
+			exit(1);
+		}
 		if (sscanf(line, "%*s%lx%lx%lx%s", &mapv[nmap],
 		    &mapb[nmap], &mape[nmap], mapa[nmap]) != 4)
 			goto badl;
