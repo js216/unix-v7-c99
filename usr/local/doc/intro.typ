@@ -83,9 +83,7 @@ hardware, which brings what an emulator hides, a boot ROM with its own rules, me
 which devices do not see.
 
 Throughout the book, "the QEMU machine" and "the MP135 machine" mean
-these two, and a statement which names neither applies to both. Where the two differ, the text names the machine. The
-board has more devices than the kernel uses, such as its Ethernet, and
-the kernel leaves them as the boot ROM left them.
+these two, and a statement which names neither applies to both. Where the two differ, the text names the machine.
 
 === The ARM Processor <sec-arm>
 
