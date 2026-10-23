@@ -3,6 +3,7 @@
  */
 #include "../h/param.h"
 #include "../h/systm.h"
+#include "../h/board.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
 #define	RCC(o)	R(0xF0000000+(o))
@@ -52,6 +53,8 @@ pmic(unsigned int reg, int val)
 static void
 pinmode(int port, int pin, int mode)
 {
+	RCC(0x770) = 1<<port;
+	(void)RCC(0x770);
 	GPIO(port, 0x00) = (GPIO(port, 0x00) & ~(3<<2*pin)) |
 	    mode<<2*pin;
 	GPIO(port, 0x04) |= 1<<pin;
@@ -62,33 +65,20 @@ pinmode(int port, int pin, int mode)
 
 /*
  * Power the DDR: BUCK2 at 1.35 V and VREF_DDR of the STPMIC1,
- * on I2C4. SCL is PE15; SDA is PB9 on the DK board, PB7 on
- * the Odyssey, whichever answers.
+ * on I2C4. SCL is PE15; SDA is I2C4_SDA.
  */
 void
 ddrpower(void)
 {
-	static int sda[] = { 9, 7 };
 	unsigned long long t;
-	int i;
 
-	RCC(0x770) = 0x12;
-	(void)RCC(0x770);
 	pinmode(4, 15, 2);
 	RCC(0x604) = (RCC(0x604) & ~0x38) | 0x10;
 	RCC(0x748) = 0x20;
 	(void)RCC(0x748);
 	I2C(0x10) = 0x10805E89;
-	for (i = 0; ; i++) {
-		if (i == 2)
-			panic("pmic");
-		pinmode(1, sda[i], 2);
-		I2C(0x00) = 1;
-		if (pmic(0x06, -1) >= 0)
-			break;
-		I2C(0x00) = 0;
-		pinmode(1, sda[i], 3);
-	}
+	pinmode(I2C4_SDA, 2);
+	I2C(0x00) = 1;
 	if (pmic(0x21, 30<<2 | 1) < 0 || pmic(0x24, 1) < 0)
 		panic("pmic");
 	t = cntvct_get() + cntfrq_get()/100;
