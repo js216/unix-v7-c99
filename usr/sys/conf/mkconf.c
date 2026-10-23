@@ -554,6 +554,7 @@ int	nswap = 872;
 int	pack;
 int	nldisp = 1;
 int	ddr;
+int	iwdg;
 unsigned long	ramv, ramb, ramn, tabv, tabb, tabn, coret, gicd, gicc;
 #define	NMAP	9
 unsigned long	mapv[NMAP], mapb[NMAP], mape[NMAP];
@@ -700,6 +701,7 @@ main(void)
 	printf("void\tbdinit(void) { rkinit(); }\n");
 	printf("void\tclock_ddr_init(void) { %s}\n",
 	    ddr ? "ddrinit(); " : "");
+	printf("void\twdinit(void) { %s}\n", iwdg ? "iwdgstart(); " : "");
 }
 
 void
@@ -757,6 +759,10 @@ input(void)
 		    badline(line));
 	if (equal(keyw, "ddr")) {
 		ddr++;
+		return(1);
+	}
+	if (equal(keyw, "iwdg")) {
+		iwdg++;
 		return(1);
 	}
 	for(q=table; q->name; q++)

@@ -12,6 +12,7 @@ char	shell[]	= "/bin/sh";
 char	getty[]	 = "/etc/getty";
 char	minus[]	= "-";
 char	runc[]	= "/etc/rc";
+char	wdog[]	= "/etc/wdog";
 char	ifile[]	= "/etc/ttys";
 char	utmp[]	= "/etc/utmp";
 char	wtmpf[]	= "/usr/adm/wtmp";
@@ -35,7 +36,7 @@ struct	tab
 int	fi;
 char	tty[20];
 jmp_buf	sjbuf;
-void	shutdown(void), single(void), runcom(void), merge(int sig),
+void	shutdown(void), watchdog(void), single(void), runcom(void), merge(int sig),
     multiple(void);
 void	term(struct tab *p), maktty(char *lin), dfork(struct tab *p),
     rmut(struct tab *p), reset(int sig);
@@ -49,6 +50,7 @@ main(void)
 	signal(SIGHUP, reset);
 	for(EVER) {
 		shutdown();
+		watchdog();
 		single();
 		runcom();
 		merge(0);
@@ -75,6 +77,19 @@ shutdown(void)
 	signal(SIGALRM, SIG_DFL);
 	for(i=0; i<10; i++)
 		close(i);
+}
+
+/*
+ * Start the watchdog's feeder again, after shutdown has killed
+ * every process.
+ */
+void
+watchdog(void)
+{
+	if(fork() == 0) {
+		execl(wdog, wdog+5, (char *)0);
+		exit(0);
+	}
 }
 
 void

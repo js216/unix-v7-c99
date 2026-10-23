@@ -172,6 +172,7 @@ machine_init(void)
 	register char *p;
 
 	kmap(BLK_DEV);
+	wdinit();
 	GICD(DCTLR) = 0;
 	GICC(CCTLR) = 0;
 	cninit();
