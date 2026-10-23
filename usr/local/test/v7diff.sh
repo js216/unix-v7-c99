@@ -24186,7 +24186,7 @@ usr/local
 +equal(char *a, char *b)
 
 % usr/sys/conf/mp135conf usr/sys/conf/rktmconf
-@@ -4,3 +4,17 @@
+@@ -4,3 +4,16 @@
 -swplo 4000
 -nswap 872
 -tm
@@ -24203,8 +24203,7 @@ usr/local
 +map f0400000 5a000000 5a200000 BLK_DEV
 +map f0600000 a0000000 a0200000 BLK_DEV
 +map f0800000 5c000000 5c200000 BLK_DEV
-+map f0a00000 40000000 40200000 BLK_DEV
-+map f0c00000 4c000000 4c200000 BLK_DEV
++map f0a00000 4c000000 4c200000 BLK_DEV
 +ddr
 +iwdg
 
@@ -25250,29 +25249,13 @@ usr/local
 +rkwrite(dev_t dev)
 
 % usr/sys/dev/usart.c usr/sys/dev/kl.c
-@@ -9,0 +10 @@
-+#include "../h/board.h"
-@@ -12 +13,15 @@
+@@ -12 +12 @@
 -#define	KLADDR	((struct device *)0177560)	/* console */
-+#if CONSOLE == 2
-+#define	KLADDR	0xF0C01000	/* USART2 */
-+#define	CLKENR	(RCC+0x748)	/* RCC_MP_APB6ENSETR */
-+#define	CLKEN	02
-+#define	CKSELR	(RCC+0x614)	/* RCC_UART12CKSELR */
-+#define	CKSEL	3		/* shift of the USART2 field */
-+#define	IRQ	71
-+#else
-+#define	KLADDR	0xF0A10000	/* UART4 */
-+#define	CLKENR	(RCC+0x700)	/* RCC_MP_APB1ENSETR */
-+#define	CLKEN	0x10000
-+#define	CKSELR	(RCC+0x61c)	/* RCC_UART4CKSELR */
-+#define	CKSEL	0
-+#define	IRQ	85
-+#endif
-@@ -14,0 +30,2 @@
++#define	KLADDR	0xF0A01000	/* USART2 */
+@@ -14,0 +15,2 @@
 +#define	RCC	0xF0000000
 +#define	GPIO(p, o)	(*(volatile int *)(0xF0002000+(p)*0x1000+(o)))
-@@ -18,0 +36,16 @@
+@@ -18,0 +21,18 @@
 +#define	CR1	(*(volatile int *)(KLADDR+0x00))
 +#define	BRR	(*(volatile int *)(KLADDR+0x0c))
 +#define	ISR	(*(volatile int *)(KLADDR+0x1c))
@@ -25281,6 +25264,8 @@ usr/local
 +#define	TDR	(*(volatile int *)(KLADDR+0x28))
 +#define	R(a)	(*(volatile int *)(a))
 +#define	AHB4ENSETR	R(RCC+0x770)
++#define	APB6ENSETR	R(RCC+0x748)
++#define	UART12CKSELR	R(RCC+0x614)
 +#define	UE	01
 +#define	RE	04
 +#define	TE	010
@@ -25289,14 +25274,14 @@ usr/local
 +#define	RXNE	040
 +#define	TXE	0200
 +#define	FIFOEN	04000000000
-@@ -28,3 +61,3 @@
+@@ -28,3 +48,3 @@
 -int	klstart();
 -int	ttrstrt();
 -char	partab[];
 +void	klstart(struct tty *tp);
 +static void	klrint(dev_t dev);
-+int	klirq = IRQ;
-@@ -39,2 +72,28 @@
++int	klirq = 71;
+@@ -39,2 +59,28 @@
 -klopen(dev, flag)
 -dev_t dev;
 +/*
@@ -25316,25 +25301,25 @@ usr/local
 +void
 +klinit(void)
 +{
-+	pinuart(CONS_TX);
-+	pinuart(CONS_RX);
-+	R(CLKENR) = CLKEN;
-+	(void)R(CLKENR);
-+	R(CKSELR) = (R(CKSELR) & ~(7<<CKSEL)) | 2<<CKSEL;
++	pinuart(5, 13, 7);	/* PF13, TX */
++	pinuart(3, 15, 1);	/* PD15, RX */
++	APB6ENSETR = 02;
++	(void)APB6ENSETR;
++	UART12CKSELR = (UART12CKSELR & ~070) | 020;
 +	BRR = 556;
 +	CR1 = FIFOEN|UE|TE|RE;
 +}
 +
 +void
 +klopen(dev_t dev, int flag)
-@@ -42 +100,0 @@
+@@ -42 +87,0 @@
 -	register struct device *addr;
-@@ -44 +102 @@
+@@ -44 +89 @@
 -	register d;
 +	register int d;
-@@ -45,0 +104 @@
+@@ -45,0 +91 @@
 +	(void)flag;
-@@ -52,12 +110,0 @@
+@@ -52,12 +97,0 @@
 -	/*
 -	 * set up minor 0 to address KLADDR
 -	 * set up minor 1 thru NKL11-1 to address from KLBASE
@@ -25347,27 +25332,27 @@ usr/local
 -	else
 -		addr = DLBASE + (d-NKL11);
 -	tp->t_addr = (caddr_t)addr;
-@@ -67 +114 @@
+@@ -67 +101 @@
 -		tp->t_flags = EVENP|LCASE|ECHO|XTABS|CRMOD|CR2;
 +		tp->t_flags = EVENP|ECHO|XTABS|CRMOD;
-@@ -70,2 +117 @@
+@@ -70,2 +104 @@
 -	addr->rcsr |= IENABLE|DSRDY|RDRENB;
 -	addr->tcsr |= IENABLE;
 +	CR1 |= RXNEIE;
-@@ -75,3 +121,2 @@
+@@ -75,3 +108,2 @@
 -klclose(dev, flag)
 -dev_t dev;
 -int flag;
 +void
 +klclose(dev_t dev, int flag)
-@@ -80,0 +126 @@
+@@ -80,0 +113 @@
 +	(void)flag;
-@@ -85,2 +131,2 @@
+@@ -85,2 +118,2 @@
 -klread(dev)
 -dev_t dev;
 +void
 +klread(dev_t dev)
-@@ -87,0 +134,7 @@
+@@ -87,0 +121,7 @@
 +	register int s;
 +
 +	s = intr_disable();
@@ -25375,32 +25360,32 @@ usr/local
 +	CR1 |= RXNEIE;
 +	klrint(dev);
 +	intr_restore(s);
-@@ -91,2 +144,2 @@
+@@ -91,2 +131,2 @@
 -klwrite(dev)
 -dev_t dev;
 +void
 +klwrite(dev_t dev)
-@@ -97,2 +150,2 @@
+@@ -97,2 +137,2 @@
 -klxint(dev)
 -dev_t dev;
 +static void
 +klxint(dev_t dev)
-@@ -102,0 +156 @@
+@@ -102,0 +143 @@
 +	CR1 &= ~TXEIE;
-@@ -105,4 +159 @@
+@@ -105,4 +146 @@
 -		if (tp->t_chan)
 -			mcstart(tp->t_chan, (caddr_t)&tp->t_outq);
 -		else
 -			wakeup((caddr_t)&tp->t_outq);
 +		wakeup((caddr_t)&tp->t_outq);
-@@ -111,2 +162,2 @@
+@@ -111,2 +149,2 @@
 -klrint(dev)
 -dev_t dev;
 +static void
 +klrint(dev_t dev)
-@@ -115 +165,0 @@
+@@ -115 +152,0 @@
 -	register struct device *addr;
-@@ -119,4 +169,9 @@
+@@ -119,4 +156,9 @@
 -	addr = (struct device *)tp->t_addr;
 -	c = addr->rbuf;
 -	addr->rcsr |= RDRENB;
@@ -25414,38 +25399,38 @@ usr/local
 +		ttyhold(c, tp);
 +	}
 +	ICR = 017;
-@@ -125,3 +180,2 @@
+@@ -125,3 +167,2 @@
 -klioctl(dev, cmd, addr, flag)
 -caddr_t addr;
 -dev_t dev;
 +void
 +klioctl(dev_t dev, int cmd, caddr_t addr, int flag)
-@@ -129 +183,2 @@
+@@ -129 +170,2 @@
 -	if (ttioccom(cmd, &kl11[minor(dev)], addr, dev)==0)
 +	(void)flag;
 +	if (ttioccomm(cmd, &kl11[minor(dev)], addr, dev)==0)
-@@ -133,2 +188,2 @@
+@@ -133,2 +175,2 @@
 -klstart(tp)
 -register struct tty *tp;
 +void
 +klstart(register struct tty *tp)
-@@ -136,2 +191 @@
+@@ -136,2 +178 @@
 -	register c;
 -	register struct device *addr;
 +	register int c;
-@@ -139,2 +193 @@
+@@ -139,2 +180 @@
 -	addr = (struct device *)tp->t_addr;
 -	if((addr->tcsr&DONE) == 0)
 +	if((ISR&TXE) == 0)
-@@ -144 +197 @@
+@@ -144 +184 @@
 -			addr->tbuf = c;
 +			TDR = c;
-@@ -146 +199 @@
+@@ -146 +186 @@
 -			addr->tbuf = c | (partab[c]&0200);
 +			TDR = c;
-@@ -150,0 +204 @@
+@@ -150,0 +191 @@
 +		CR1 |= TXEIE;
-@@ -154 +208,10 @@
+@@ -154 +195,10 @@
 -char	*msgbufp = msgbuf;	/* Next saved printf character */
 +void
 +klintr(caddr_t pc, int ps)
@@ -25457,16 +25442,16 @@ usr/local
 +		klxint(0);
 +}
 +
-@@ -166,2 +229,2 @@
+@@ -166,2 +216,2 @@
 -putchar(c)
 -register c;
 +void
 +putchar(register int c)
-@@ -169 +232,2 @@
+@@ -169 +219,2 @@
 -	register s, timo;
 +	register int s;
 +	unsigned long long timo;
-@@ -176,6 +240 @@
+@@ -176,6 +227 @@
 -	/*
 -	 *  If last char was a break or null, don't print
 -	*/
@@ -25474,22 +25459,22 @@ usr/local
 -		return;
 -	timo = 30000;
 +	timo = cntvct_get() + cntfrq_get()/HZ;
-@@ -186,2 +245,2 @@
+@@ -186,2 +232,2 @@
 -	while((KLADDR->tcsr&0200) == 0)
 -		if(--timo == 0)
 +	while((ISR&TXE) == 0)
 +		if(cntvct_get() >= timo)
-@@ -191,3 +250,3 @@
+@@ -191,3 +237,3 @@
 -	s = KLADDR->tcsr;
 -	KLADDR->tcsr = 0;
 -	KLADDR->tbuf = c;
 +	s = CR1;
 +	CR1 &= ~TXEIE;
 +	TDR = c;
-@@ -196,2 +254,0 @@
+@@ -196,2 +241,0 @@
 -		putchar(0177);
 -		putchar(0177);
-@@ -200 +257,2 @@
+@@ -200 +244,2 @@
 -	KLADDR->tcsr = s;
 +	if(s&TXEIE || kl11[0].t_outq.c_cc)
 +		CR1 |= TXEIE;
@@ -25962,19 +25947,6 @@ usr/local
 +rkwrite(dev_t dev)
 
 % usr/sys/h/acct.h
-
-% usr/sys/h/board.h /dev/null
-@@ -0,0 +1,10 @@
-+/*
-+ * Wiring which differs between MP135 boards. Pins are port, pin,
-+ * and alternate function, port A being 0. The DK board has its
-+ * console on UART4 (CONSOLE 4), at PD6 and PD8 with function 8,
-+ * and the PMIC's data line on PB9.
-+ */
-+#define	CONSOLE		2		/* USART2 */
-+#define	CONS_TX		5, 13, 7	/* PF13 */
-+#define	CONS_RX		3, 15, 1	/* PD15 */
-+#define	I2C4_SDA	1, 7		/* PB7 */
 
 % usr/sys/h/buf.h
 @@ -38 +37,0 @@
@@ -30449,18 +30421,17 @@ usr/local
 +}
 
 % usr/sys/dev/pmic.c /dev/null
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,86 @@
 +/*
 + * STPMIC1 power management chip, on I2C4
 + */
 +#include "../h/param.h"
 +#include "../h/systm.h"
-+#include "../h/board.h"
 +
 +#define	R(a)	(*(volatile unsigned int *)(a))
 +#define	RCC(o)	R(0xF0000000+(o))
 +#define	GPIO(p, o)	R(0xF0002000+(p)*0x1000+(o))
-+#define	I2C(o)	R(0xF0C05000+(o))
++#define	I2C(o)	R(0xF0A05000+(o))
 +
 +static int
 +i2cwait(unsigned int bit)
@@ -30517,7 +30488,7 @@ usr/local
 +
 +/*
 + * Power the DDR: BUCK2 at 1.35 V and VREF_DDR of the STPMIC1,
-+ * on I2C4. SCL is PE15; SDA is I2C4_SDA.
++ * on I2C4. SCL is PE15 and SDA PB7.
 + */
 +void
 +ddrpower(void)
@@ -30529,7 +30500,7 @@ usr/local
 +	RCC(0x748) = 0x20;
 +	(void)RCC(0x748);
 +	I2C(0x10) = 0x10805E89;
-+	pinmode(I2C4_SDA, 2);
++	pinmode(1, 7, 2);
 +	I2C(0x00) = 1;
 +	if (pmic(0x21, 30<<2 | 1) < 0 || pmic(0x24, 1) < 0)
 +		panic("pmic");

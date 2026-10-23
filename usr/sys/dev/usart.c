@@ -7,24 +7,9 @@
 #include "../h/user.h"
 #include "../h/tty.h"
 #include "../h/systm.h"
-#include "../h/board.h"
 
 /* base address */
-#if CONSOLE == 2
-#define	KLADDR	0xF0C01000	/* USART2 */
-#define	CLKENR	(RCC+0x748)	/* RCC_MP_APB6ENSETR */
-#define	CLKEN	02
-#define	CKSELR	(RCC+0x614)	/* RCC_UART12CKSELR */
-#define	CKSEL	3		/* shift of the USART2 field */
-#define	IRQ	71
-#else
-#define	KLADDR	0xF0A10000	/* UART4 */
-#define	CLKENR	(RCC+0x700)	/* RCC_MP_APB1ENSETR */
-#define	CLKEN	0x10000
-#define	CKSELR	(RCC+0x61c)	/* RCC_UART4CKSELR */
-#define	CKSEL	0
-#define	IRQ	85
-#endif
+#define	KLADDR	0xF0A01000	/* USART2 */
 #define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
 #define	DLBASE	((struct device *)0175610)	/* dl-e */
 #define	RCC	0xF0000000
@@ -41,6 +26,8 @@
 #define	TDR	(*(volatile int *)(KLADDR+0x28))
 #define	R(a)	(*(volatile int *)(a))
 #define	AHB4ENSETR	R(RCC+0x770)
+#define	APB6ENSETR	R(RCC+0x748)
+#define	UART12CKSELR	R(RCC+0x614)
 #define	UE	01
 #define	RE	04
 #define	TE	010
@@ -60,7 +47,7 @@
 struct	tty kl11[NKL11+NDL11];
 void	klstart(struct tty *tp);
 static void	klrint(dev_t dev);
-int	klirq = IRQ;
+int	klirq = 71;
 
 struct device {
 	int	rcsr;
@@ -86,11 +73,11 @@ pinuart(int port, int pin, int af)
 void
 klinit(void)
 {
-	pinuart(CONS_TX);
-	pinuart(CONS_RX);
-	R(CLKENR) = CLKEN;
-	(void)R(CLKENR);
-	R(CKSELR) = (R(CKSELR) & ~(7<<CKSEL)) | 2<<CKSEL;
+	pinuart(5, 13, 7);	/* PF13, TX */
+	pinuart(3, 15, 1);	/* PD15, RX */
+	APB6ENSETR = 02;
+	(void)APB6ENSETR;
+	UART12CKSELR = (UART12CKSELR & ~070) | 020;
 	BRR = 556;
 	CR1 = FIFOEN|UE|TE|RE;
 }

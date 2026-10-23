@@ -3,12 +3,11 @@
  */
 #include "../h/param.h"
 #include "../h/systm.h"
-#include "../h/board.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
 #define	RCC(o)	R(0xF0000000+(o))
 #define	GPIO(p, o)	R(0xF0002000+(p)*0x1000+(o))
-#define	I2C(o)	R(0xF0C05000+(o))
+#define	I2C(o)	R(0xF0A05000+(o))
 
 static int
 i2cwait(unsigned int bit)
@@ -65,7 +64,7 @@ pinmode(int port, int pin, int mode)
 
 /*
  * Power the DDR: BUCK2 at 1.35 V and VREF_DDR of the STPMIC1,
- * on I2C4. SCL is PE15; SDA is I2C4_SDA.
+ * on I2C4. SCL is PE15 and SDA PB7.
  */
 void
 ddrpower(void)
@@ -77,7 +76,7 @@ ddrpower(void)
 	RCC(0x748) = 0x20;
 	(void)RCC(0x748);
 	I2C(0x10) = 0x10805E89;
-	pinmode(I2C4_SDA, 2);
+	pinmode(1, 7, 2);
 	I2C(0x00) = 1;
 	if (pmic(0x21, 30<<2 | 1) < 0 || pmic(0x24, 1) < 0)
 		panic("pmic");
