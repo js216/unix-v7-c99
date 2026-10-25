@@ -4,8 +4,8 @@
  * after an exec, or through a grandchild.  The parent reads the
  * pipes in random amounts, kills a child or closes its pipe at a
  * random record, and checks every byte against the stream the child
- * must have written, that no record is torn, and the status wait
- * returns.  Prints the seed and round on the first difference and
+ * must have written, that no record is torn unless its writer was
+ * killed, and the status wait returns.  Prints the seed and round on the first difference and
  * exits 1; prints "fzproc ok" otherwise.
  *	fzproc -w seed nrec	write the stream on the standard output
  */
@@ -128,7 +128,7 @@ reader(int k)
 				len = record(kp->seed, kp->got, want);
 		}
 	}
-	if(have != 0)
+	if(have != 0 && kp->fate >= 0)
 		fail("torn record", k);
 	close(kp->fd);
 	kp->fd = -1;

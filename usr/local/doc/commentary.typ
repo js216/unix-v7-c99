@@ -15728,12 +15728,10 @@ programs and data of `/usr/lib`, among them `bc`'s library `lib.b` and
 the table of `units`; and the spool directory of `at`, with the file in
 which `atrun` keeps the time of its last run and the directory `past`
 into which it moves each job while it runs. There is no `/usr/bin`.
-`/usr/local/test` holds the regression tests, which are run on the system itself. They are `run.sh`, the test scripts in `cases`, each with its
-expected output, and in `utils` the programs and data files which the
-tests use, and `fs.img`, a small file system on which they run the file
-system checkers, and `deep.img`, a chain of 40 directories, gives `dump`
-and `dumpdir` a tree deeper than their tables, and `big.img` holds one file large
-enough to need a double indirect block.
+`/usr/local/test` holds the tests, which are run on the system itself
+(@ch-harness). They are `run.sh` and the core's scripts in `cases`, each with
+its expected output, `fuzz.sh`, and in `utils` the programs which
+both use and the script `fzsh`.
 
 The home directories which #f("passwd") gives the users `dmr`, `sys`, and
 `uucp` are here, the last in `/usr/lib`, owned by each user
@@ -15888,8 +15886,13 @@ lights each LED in turn, with `sleep` between.
 
 == The Test Harness <ch-harness>
 
-The system is tested on itself. The root file system carries a suite of
-regression tests in `/usr/local/test`. Each test, or _case_, is a shell script in `cases`, with the output it must produce in a file of the same
+The system is tested on itself, in two modes. The _core_ is a suite
+of regression tests in `/usr/local/test` which together finish in a
+few seconds on either machine, and the build machine always runs it
+under a strict limit of 10 seconds, so that running out of time counts
+as a failure. The _fuzzers_ run for ever, making random combinations of
+operations and checking every result, until they are stopped
+(@ch-fuzz). Each core test, or _case_, is a shell script in `cases`, with the output it must produce in a file of the same
 name ending in `.exp`, and, where some of the output legitimately varies
 from run to run (process ids, clock ticks, times of day, kernel
 addresses), a `sed` script ending in `.sed` which replaces the varying
@@ -15932,38 +15935,11 @@ no arithmetic of its own.
 
 The build's fragment for the suite is `test.mk` (#f("Makefile")). Every
 C file in `utils` becomes a program in `obj` (#l("TEST_BIN := $(patsubst $(TS)/utils/%.c,$(TS)/obj/%, \\")), and every other file
-there, with `run.sh` and the cases, is data for the file system (#l("TEST_IMG = $(TS)/obj/fs.img $(TS)/obj/deep.img $(TS)/obj/big.img")). The
+there, with `run.sh`, `fuzz.sh`, and the cases, is data for the file system (#l("TEST_DATA := $(wildcard $(TS)/run.sh $(TS)/fuzz.sh $(TS)/cases/* \\")). The
 programs are compiled with `usr/sys` on the search path as well as
 `usr/include` (#l("$(TEST_OBJ): CPPFLAGS = -Iusr/include -Iusr/sys")), so that a test can include the kernel's own headers,
 such as `h/user.h`, to find a register in a stopped process's saved
-frame. They are linked as the commands are, except `proft`, which is
-compiled with `-pg` and linked with `mcrt0.o` (#f("csu/mcrt0.s")), and
-not stripped, since `prof` needs its symbols (#l("PROF_BIN = $(TS)/obj/proft")--#l("$(call T,LD)$(CC) $(CFLAGS) -o $@ $(filter %.o %.a,$^)")).
-
-The program `mkfs` makes three small file systems for the tests of the
-file-system commands. They are `fs.img`, from the prototype `fs.proto`, with a
-few files of known content (#l("$(TS)/obj/fs.img: $(TS)/utils/fs.proto etc/mkfs etc/passwd etc/group \\")--#l("$(call T,MKFS)V7_MKFS_TIME=284774400 etc/mkfs $@ $< >/dev/null")); `deep.img`, a chain of 40
-directories (#l("$(TS)/obj/deep.img: etc/mkfs $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "for (i = 0; i <= 40; i++) print \"$$\" }' | \\")); and
-`big.img`, holding a copy of the dictionary, which gives `icheck` a file
-with a double indirect block (#l("$(TS)/obj/big.img: etc/mkfs usr/dict/words $(TS)/test.mk | $(TS)/obj")--#l("V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin >/dev/null", after: "'words ---644 0 0 usr/dict/words' '$$' | \\")). `V7_MKFS_TIME` fixes the time `mkfs` stamps on
-every inode, so that the images, and the cases' outputs, are the same at
-every build.
-
-#lines-to(none)
-#source("/usr/local/test/utils/argt.c")
-
-The utility `argt` prints how many arguments it received, their total length, and
-the last. The `exec` case runs it with the names in `/bin` repeated
-until the list reaches the limit `NCARGS` of 5120 bytes (#f("param.h")),
-and once past it, when the shell reports the list too long.
-
-#lines-to(none)
-#source("/usr/local/test/utils/ob.c")
-
-The utility `ob` writes bytes given in octal, each optionally repeated, `n*v`, on
-its standard output. The cases use it to forge damaged files, a `mon.out` with an impossible count for `prof`, a file system with a
-corrupted superblock for the checkers, and an accounting record for
-`sa`.
+frame. They are linked as the commands are.
 
 #lines-to(none)
 #source("/usr/local/test/utils/pidf.c")
@@ -15986,14 +15962,6 @@ busy loop would gain nothing: the clock reschedules only once a second
 then anyway. It gives up after 30 seconds.
 
 #lines-to(none)
-#source("/usr/local/test/utils/nap.c")
-
-The utility `nap` returns once it has been charged with three clock ticks,
-about 50 ms when it runs alone, longer while others run. A case polls
-with it where the condition is not a file, as `intr` does while it
-waits for `ed` to answer.
-
-#lines-to(none)
 #source("/usr/local/test/utils/endblk.c")
 
 The utility `endblk` writes a marked block at block `n` of a disk, the
@@ -16001,38 +15969,6 @@ last block of the swap area in the `ddend` case, and reads it back. It
 seeks there directly, where `dd` would step through every block before
 it. Nothing is read past that block: the QEMU machine's disk ends there,
 but the MP135 machine's card goes on.
-
-#lines-to(none)
-#source("/usr/local/test/utils/rep.c")
-
-The utility `rep` writes a string a given number of times, then an
-optional tail and a newline, unless `-n` is given. The cases make most
-of their long lines with it, for the buffer limits they test, and `awk`,
-which made them before, took a tenth of a second to start each time.
-
-#lines-to(none)
-#source("/usr/local/test/utils/settime.c")
-
-The utility `settime` sets a file's access and modification times to a
-given number of seconds ago with `utime`. A case uses it to order files
-by time without sleeping between making them, since times count whole
-seconds. It also gives `find -newer` a reference which is certainly
-older than the case's files. The image's own files will not do, since
-`mkfs` stamps them all with one time and the clock starts there at
-boot, so a case run in the first seconds makes files in the same
-second.
-
-#lines-to(none)
-#source("/usr/local/test/utils/fmode.c")
-
-The utility `fmode` prints a file's permission bits in octal, so that a case can
-save the mode of the console before changing it, and restore it after.
-
-#lines-to(none)
-#source("/usr/local/test/utils/spd.c")
-
-The utility `spd` sets the speed of the terminal on its standard output by `gtty`
-and `stty`, so that `stty`'s report of a speed can be checked.
 
 #lines-to(none)
 #source("/usr/local/test/utils/ut.c")
@@ -16050,16 +15986,6 @@ The utility `cpt` reads the header which `find -cpio` writes and prints the file
 name and time. The modification time is kept in four 16-bit halves,
 most significant first (#l("unsigned short\th_mtime[4];"), #l("u = 0;")--#l("t = u;")), the port's widening of the two
 halves of v7's format, so that a time after 2106 survives.
-
-#lines-to(none)
-#source("/usr/local/test/utils/dit.c")
-
-The utility `dit` reads, and with a third argument rewrites, the times of one inode
-in a file-system image, found as the kernel finds it, by `itod` and
-`itoo` (#f("param.h")). A test image cannot be mounted, there being no
-way to treat a file as a disk, so `time64` plants a time after 2038 in
-one with `dit`, dumps the image, and restores it to see the time come
-back.
 
 #lines-to(none)
 #source("/usr/local/test/utils/tt.c")
@@ -16090,59 +16016,6 @@ a fault leaves in the registers, which addresses a system call may
 touch. Several were written to pin down a bug, and stay to keep it
 fixed.
 
-#source("/usr/local/test/utils/forkt.c")
-
-The system call `fork` returns in two processes from one system call. The kernel
-resumes the child at the instruction after `svc`, and the parent one
-instruction later (#f("sys1.c")), each with the other's process id in
-`r0`. The routine `sfork` (#l("__asm__(")--#l("\"\t.ltorg\\n\");")) makes the call directly: the child takes the
-branch after `svc` to `1:` and records what it received in `rawchild`.
-The parent skips the branch and records `rawpar`. The routine `main` checks that
-the child received its parent's id and the parent a new, larger one
-(#l("me = getpid();")--#l("(st>>8) == 3 ? \"yes\" : \"no\", rawpar > me ? \"yes\" : \"no\");")), then repeats the check through the library's `fork`, which
-leaves the parent's id in `par_uid` (#f("sys/fork.s")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/regs.c")
-
-A process starts life after `exec` with its registers cleared, so that
-nothing of the old program leaks into the new. The utility `regs` checks this. Its
-child asks to be traced and executes the program again from `xexec`
-(#l("\"xexec:\\n\"")--#l("\"\tsvc #0\\n\"", after: "\"\tmov r7, #1\\n\"")), which first loads every register with a recognisable pattern.
-The `exec` stops the traced child, and the parent reads the saved
-registers of its frame through `ptrace`, finding the frame by the
-pointer `u_ar0` in the child's `user` structure (#l("off = (int)&((struct user *)0)->u_ar0;")--#l("off = ar0 - UBASE;")), and prints any
-that is not zero. The stack pointer, which `exec` sets, is passed over
-(#l("for (i = 0; i < PC; i++) {")--#l("}", after: "printf(\"r%d = %x\\n\", i, r);")). A request `ptrace` does not know fails with `EIO` (#l("errno = 0;")--#l("printf(\"ptrace 9: %d errno %d\\n\", r, errno);")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/ptt.c")
-
-The utility `ptt` exercises `ptrace`'s reading and writing. The child stops itself
-with a signal. The parent reads a word of its data (#l("printf(\"glob %d\\n\", ptrace(2, pid, &glob, 0));")), writes $-1$
-there and reads it back with `errno` set beforehand, which the stub
-must clear (#l("ptrace(5, pid, &glob, -1);")--#l("printf(\"neg %d errno %d\\n\", r, errno);"), #f("sys/ptrace.s")), and reads `r0` and `pc` from
-the saved frame (#l("r = ptrace(3, pid, (int *)(off + R0*4), 0);"), #l("printf(\"r0 %d pcok %d\\n\", r,")). It may write `r0` (#l("printf(\"w %d\\n\", ptrace(6, pid, (int *)(off + R0*4), 40));")) but not `r9` (#l("printf(\"wr9 %d\\n\", ptrace(6, pid, (int *)(off + 9*4), 1));")):
-only `r0`--`r5`, the stack pointer, the program counter, the processor
-status, and the floating point registers are writable
-(#f("sig.c")). A status written with every bit set comes back with the
-mode forced to user and the privileged bits cleared (#l("ptrace(6, pid, (int *)(off + PSR*4), -1);")--#l("printf(\"rps %x\\n\", ptrace(3, pid, (int *)(off + PSR*4), 0));", after: "printf(\"wps %d\\n\", ptrace(6, pid, (int *)(off + PSR*4), 0x1df));")). The child
-then resumes with the 40 written into its `r0` and a `glob` of 2, and
-exits with their sum, 42.
-
-#lines-to(none)
-#source("/usr/local/test/utils/ptw.c")
-
-A traced process's text can be written, for a debugger's breakpoints,
-although text is otherwise read-only and shared. The utility `ptw` runs a copy of
-itself under trace, so that its text is shared with no one else, and
-stops it in `main`. It reads the first word of `f`, `mov r0, #1`, and
-replaces the function with `mov r0, #2; bx lr` (#l("printf(\"before %x\\n\", ptrace(1, pid, fa, 0));")--#l("printf(\"after %x\\n\", ptrace(1, pid, fa, 0));")). The child has
-already called `f` once, so it exits with 10 × 1 + 2, which shows both
-that the write took effect and that the instruction cache was made to
-see it (#f("sig.c")).
-
-#lines-to(none)
 #source("/usr/local/test/utils/r12.c")
 
 The utility `r12` checks that a fault preserves every register of the interrupted
@@ -16153,21 +16026,6 @@ unmapped address are each executed with a known value in `r12`
 record the signal, and for the load step the saved `pc` past the
 faulting instruction (#l("\"skip:\\n\"")--#l("\"\tbx lr\\n\"", after: "\"\tstr r1, [sp, #60]\\n\"")), at its place in the signal frame. The
 value printed afterwards must be the one loaded.
-
-#lines-to(none)
-#source("/usr/local/test/utils/r5h.c")
-
-User programs may be compiled to the ARM's 16-bit Thumb instructions,
-and the kernel must then resume them correctly. The routine `tsig` (#l("\"tsig:\\n\"")--#l("\"\tpop {r4, r7, pc}\\n\"")) makes
-the `kill` system call from inside an `IT` block, Thumb's way of making
-instructions conditional: when the kernel returns, the block's state
-must carry on, so that the `movne` after `svceq` is skipped and the
-result is 0. The routine `tudf` (#l("\"tudf:\\n\"")--#l("\"\tbx lr\\n\"")) executes Thumb's undefined instructions of
-both widths, each of which must raise `SIGILL` and be stepped over.
-A 64-bit division, done by a library routine, runs while alarms
-interrupt it (#l("signal(SIGALRM, tick);")--#l("printf(\"ldiv: hits %d\\n\", hits);")). With arguments, `r5h` gives `utime` an invalid
-address and checks, by a `stat` from a child, that the failure did not
-leave the file's inode locked (#l("if (argc > 2) {")--#l("return 0;", after: "wait(&st) < 0 ? \"inode locked\" : \"stat done\");")).
 
 #lines-to(none)
 #source("/usr/local/test/utils/r5i.c")
@@ -16182,79 +16040,6 @@ linked at 0x8000 (#f("Makefile")), so that in every one a null pointer
 faults.
 
 #lines-to(none)
-#source("/usr/local/test/utils/r5t.c")
-
-The call `phys`, v7's way of mapping physical memory into a process, is a
-PDP-11 facility which the port refuses with `EINVAL` (#l("errno = 0;", after: "int i, bad, r;")--#l("printf(\"phys: %d errno %d\\n\", r, errno);"),
-`nosys`, #f("sysent.c")). The routine `malloc` must return blocks aligned to 8 bytes, as
-the ARM's `double`s require, whatever sizes are asked for and freed
-(#l("bad = 0;")--#l("printf(\"malloc: %d of 64 blocks misaligned\\n\", bad);")). Signal 16, the highest, is delivered, and 17 is refused
-(#l("signal(16, catch);")--#l("printf(\"signal 17: %d errno %d\\n\", r, errno);")), since `NSIG` is 17 (#f("param.h")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/elft.c")
-
-The utility `elft` reads an executable, `/bin/echo` in the `exec` case, and writes
-six damaged copies of it, each of which `exec` must refuse with
-`ENOEXEC` while the process goes on (#l("static void")--#l("}", after: "unlink(name);")). The routine `phdr` finds the program
-headers of the two loadable segments (#l("static unsigned *")--#l("}", after: "return (unsigned *)&buf[off];")). The copies are the ELF
-header alone, with no segments (#l("try(\"short\", 52);")); a data segment whose size in the
-file exceeds its size in memory (#l("save = d[4];")--#l("d[4] = save;")); a wrong magic number
-(#l("buf[1] = 'X';")--#l("buf[1] = 'E';")); program header entries smaller than the fields the
-kernel reads (#l("*(short *)&buf[42] = 16;")--#l("*(short *)&buf[42] = 32;")); a third loadable segment, a copy of
-the data's header added to the table (#l("p = (unsigned *)&buf[*(unsigned *)&buf[28] + 32 * *(short *)&buf[44]];")--#l("*(short *)&buf[44] -= 1;")); and a text segment with
-nothing in the file (#l("t[2] = 4096;")--#l("try(\"notext\", len);")). These are `getxfile`'s checks
-(#f("sys1.c")). Last, a child stores through a null pointer
-(#l("*(volatile int *)0 = 1;")). Nothing is mapped at address 0, so the
-child dies of `SIGSEG` and leaves a core image, status 139.
-
-#lines-to(none)
-#source("/usr/local/test/utils/bigm.c")
-
-The utility `bigm` makes a process large in each of the three ways the kernel lets
-it grow. A 3 MB array on the stack grows the stack by faults, page by
-page (#l("static int")--#l("}", after: "return s;")); 8 MB of uninitialised data come with the image, and their
-end lies above 8 MB (#l("for (i = 0; i < sizeof(big); i += 4096)", after: "printf(\"stack pages %d\\n\", stk());")--#l("(unsigned)&big[sizeof(big)-1] >= 8*1024*1024);")); `sbrk` adds 16 MB to the data (#l("p = sbrk(16*1024*1024);")--#l("printf(\"sbrk pages %d\\n\", s);")).
-Every page is written and read back. A further `sbrk` of 1 GB must
-fail, since it asks for more than the memory (#l("printf(\"beyond memory %d\\n\", sbrk(1024*1024*1024) == (char *)-1);")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/stkt.c")
-
-The utility `stkt` recurses 400 levels deep with 1000 bytes of stack at each, and
-sends itself a signal at every level (#l("int", after: "signal(sig, catch);")--#l("}", after: "return f(n - 1) + buf[n % 1000];")), so that signals are
-delivered while the stack is being extended, onto the new pages. The
-sum of the buffers and the count of 401 signals must come out right.
-
-#lines-to(none)
-#source("/usr/local/test/utils/memt.c")
-
-A system call given an address the process does not own fails with
-`EFAULT` rather than touching it. The utility `memt` passes `read` and `write` an
-address in the gap between data and stack, and one in the kernel's
-space (#l("fd = open(\"/etc/passwd\", 0);")--#l("printf(\"write gap: %d errno %d\\n\", r, errno);")), then valid buffers on the stack and in the data
-(#l("r = read(fd, local, 16);")--#l("printf(\"read data: %d\\n\", r);")). With an argument it stores into the gap itself, and dies of
-a memory fault, leaving a core image (#l("if (argc > 1)"), #l("*(int *)0x80000 = 1;")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/clock.c")
-
-The utility `clock` prints the time in seconds or, given a time, sets it with
-`stime`. Given two, it sets the clock forward by their difference
-(#l("sscanf(argv[1], \"%lld\", &t);")--#l("return stime(&t) < 0;")). Cases that move the date far into the future, to 2038 and
-beyond, use it to note the time first and to put it back after.
-
-#lines-to(none)
-#source("/usr/local/test/utils/prt.c")
-
-The utility `prt` profiles itself with `profil` (#f("sys4.c")) until it has used a
-tenth of a second of processor time, with a histogram of 4096 counters
-and a scale of a half from the page of `main`, where its text begins,
-and prints the number of ticks counted (#l("profil((short *)buf, sizeof buf, (int)main & ~0xfff, 0x8000);")--#l("printf(\"ticks %d\\n\", n);")). The case's `.sed`
-replaces the number, which varies, but the line shows that the clock
-reached `addupc` (#f("clock.c")).
-
-#lines-to(none)
 #source("/usr/local/test/utils/prs.c")
 
 The utility `prs` profiles itself while it spends its time in system calls, then
@@ -16264,29 +16049,6 @@ not reach the histogram, since `clock` profiles only a program counter
 interrupted in user mode.
 
 #lines-to(none)
-#source("/usr/local/test/utils/proft.c")
-
-The profiled program of the `prof` case is `proft`. It calls `tick` a
-thousand times through a pointer, which the compiler cannot inline
-away (#l("for (i = 0; i < 1000; i++)", after: "main(void)"), #l("(*fp)();")), and spends a second of its own user time in `work` (#l("void", after: "tick(void)")--#l("}", after: "while (times(&tb), tb.tms_utime < HZ);")), so that
-`prof` must report a thousand calls of `tick`, one of `work`, and most
-of the time in `work`. The bound is user time, not the time of day,
-so that a host which starves QEMU still leaves `work` a second of
-clock ticks to be sampled in.
-
-#lines-to(none)
-#source("/usr/local/test/utils/physt.c")
-
-The utility `physt` reads a block of the root disk through the raw device, into a
-buffer in the data and one on the stack, and compares both with the
-block read through the buffered device (#l("fd = open(\"/dev/rrk0\", 0);")--#l("i == 512 ? \"same\" : \"differ\");")). Raw transfers go
-straight between the disk and the user's memory (`physio`,
-#f("bio.c")), so the address must lie wholly within the process: a
-buffer in the gap fails, as does one that crosses the end of the data,
-while one ending exactly there succeeds (#l("errno = 0;", after: "i == 512 ? \"same\" : \"differ\");")--#l("printf(\"at end of data: %d errno %d\\n\", r2, errno);")). A negative offset
-fails too (#l("errno = 0;", after: "printf(\"at end of data: %d errno %d\\n\", r2, errno);")--#l("printf(\"negative offset: %d errno %d\\n\", r1, errno);")).
-
-#lines-to(none)
 #source("/usr/local/test/utils/kcmp.c")
 
 The utility `kcmp` compares the text of the running kernel, read through
@@ -16294,27 +16056,6 @@ The utility `kcmp` compares the text of the running kernel, read through
 in `/unix`, a block at a time (#l("u = open(\"/unix\", 0);")--#l("}", after: "if (i >= 0)")). The commands `ps`, `pstat`, and `iostat` find
 the kernel's tables by the symbols of `/unix`, so the file must be the
 kernel that is running. The `kimage` case checks that it is.
-
-#lines-to(none)
-#source("/usr/local/test/utils/kmt.c")
-
-The utility `kmt` reads the kernel's memory as the status commands do. The process
-table must lie above the user's address space (#l("printf(\"proc above USRSIZE %d\\n\", nl[0].n_value >= USRSIZE);")). The process finds
-its own entry in it (#l("pid = getpid();")--#l("printf(\"found self %d\\n\", i < NPROC);")), and reads its `user` structure twice,
-through `/dev/kmem` at `UBASE` and through `/dev/mem` at the physical
-address of its u-area, which must agree (#l("pa = ptob((unsigned long)pr.p_addr);")--#l("uk.u_procp == um.u_procp);")). `/dev/mem` has no
-memory at the virtual address `UBASE`, and `/dev/kmem` none below the
-kernel (#l("lseek(m, (long)UBASE, 0);")--#l("printf(\"kmem below the kernel %d\\n\", read(k, (char *)&uk, 4));")) (#f("mem.c")).
-
-#lines-to(none)
-#source("/usr/local/test/utils/r5r.c")
-
-The utility `r5r` has two uses. Its `pw` mode fills a buffer of `BUFSIZ` + 1 bytes for
-`getpw`, with a guard area behind it that must stay zero (#l("if (argc == 3 && strcmp(argv[1], \"pw\") == 0) {")--#l("return 0;")),
-since `getpw` once copied a long line past the end of its caller's
-buffer. Its `ch` mode runs a program
-inside a `chroot`, so that `write` and `wall` can be tested against a
-private `/etc/utmp` and private terminals (#l("if (argc >= 4 && strcmp(argv[1], \"ch\") == 0) {")--#l("}", after: "printf(\"cannot exec %s\\n\", argv[3]);")).
 
 #lines-to(none)
 #source("/usr/local/test/utils/fpt.c")
@@ -16337,5 +16078,180 @@ of a computation, once by the process's own `kill` and many times from
 another process, and the computation must not notice. The routines `core` and
 `rcore` (#l("static void", after: "__builtin_arm_get_fpscr() & 0x07ffffffU);")--#l("}", after: "n ? \"found\" : \"missing\");")) check that a core image holds the floating point
 state.
+
+#lines-to(none)
+
+== The Fuzzers <ch-fuzz>
+
+The core's cases check what their authors thought of. The fuzzers look
+for what nobody thought of. Each draws a long run of operations at
+random, carries them out on the system, and checks every result
+against what it must be. They run until stopped, a round at a time,
+each round with new seeds. A fuzzer which finds a difference prints
+the seed which repeats it, since the same seed always draws the same
+operations. The choices are random but not uniform. They are weighted
+towards the places where the kernel changes its course, such as the
+end of a block or of the direct blocks of a file, a full pipe, or a
+signal which arrives in the middle of a transfer, since that is where
+bugs live.
+
+#source("/usr/local/test/fuzz.sh")
+
+The script `fuzz.sh` runs the rounds. Each round makes a fresh
+directory `/tmp/fz`, with one directory for each of three copies of
+`fzfs`, which run at once with different seeds, beside one `fzproc` and
+the command checks of `fzsh`. The three file system fuzzers share the
+disk, the buffer cache, and the free lists of blocks and inodes, and so
+check one another's use of them as well as their own. When all have
+finished, `wait` returns, and the root file system is checked with
+`icheck` and `dcheck` (#f("cmd/icheck.c"), #f("cmd/dcheck.c")), whose
+summary lines are removed, so that anything left is a failure. They
+are given the block device `/dev/root`, which goes through the buffer
+cache. The raw device refuses their reads, since their buffers need not lie on a word boundary (#f("sd.c")). The output of `dcheck`
+goes to a file, not into a pipe, because a pipe is an inode without
+links on the root device, which `dcheck` would report. A seed given
+as the argument starts the run, and each round takes the next five.
+
+The script's comments are lines of the command `:`, which does nothing.
+The shell of v7 has no `#` comment, and a line such as
+`# the round's summary` would be run as a command, with its apostrophe
+opening a quotation.
+
+#lines-to(none)
+#source("/usr/local/test/utils/fzfs.c")
+
+The program `fzfs` makes random file system calls on six names in two
+directories, and keeps a model of the files, the bytes of each, its
+length, its links, and its inode number. Every call is checked against
+the model as it returns, and the model against the file when the file
+is read. A name with no file is created first. Otherwise an operation
+is drawn, mostly a write or a read, sometimes a `creat`, which
+truncates the file, an `unlink`, a `link` to another name, a reading
+of the whole file, or a `stat`. A file may reach 200,000 bytes, well
+into the blocks which a double indirect block maps.
+
+#lines-to("static unsigned")
+
+_Choosing._ The routine `rnd` is a xorshift generator, small and
+quick, whose output depends only on the seed. The routine `pickoff`
+chooses where a read or write begins. A quarter of the choices are
+the end of the file, which appends, a quarter are one of the
+boundaries in `edge`, a quarter lie inside the file, and a quarter
+anywhere up to the largest size, which leaves a hole. Each is then
+moved by one byte either way, or not, so that the first and last byte
+of a block are tried as often as the block itself. The lengths of
+`picklen` are those just around a block and a page, and sometimes any
+length up to the buffer.
+
+#lines-to("static int", after: "picklen(void)")
+
+_Checking._ The routine `doverify` reads the whole file in pieces and
+compares it with the model. The routine `doread` reads one piece from
+a chosen offset. Beyond the end of the file the read must return
+nothing, and otherwise exactly the bytes which remain, or as many as
+were asked for. The library has no `memcmp`, and `same` takes its
+place.
+
+#lines-to("static void", after: "doread(int n)")
+
+_Changing._ The routine `dowrite` writes random bytes at a chosen offset and
+copies them into the model, filling any hole with zeros, as the kernel
+must. The routine `docreat` truncates a file, which all its names see,
+or creates one and records its inode number. A `link` onto a name which
+exists must fail, and one onto a free name must succeed and share the
+file. The routine `dostat` compares the length, the link count, and the
+inode number with the model, and a name which the model says is gone
+must not be found.
+
+#lines-to("int", after: "dostat(int n)")
+
+The routine `main` takes the seed and the number of operations, removes
+whatever names an earlier run left, and draws the operations. At the
+end every file is checked whole and removed through `dounlink`, which
+keeps the link counts of the model right for the names still to come.
+
+#lines-to(none)
+#source("/usr/local/test/utils/fzproc.c")
+
+The program `fzproc` builds, in each of its rounds, a family of up to
+five children, each with a pipe of its own to the parent. Each child
+writes a stream of records, chosen by a seed of its own, in one of
+three ways. It may write the stream itself, or execute `fzproc -w` to
+write it, so that the pipe crosses an `exec`, or fork a grandchild
+which writes it while the child waits. The parent reads the pipes in a
+random order and in random amounts. For half the children it chooses
+a fate as well, a `SIGKILL`, a `SIGTERM`, or closing the read end of
+the pipe, which strikes when a chosen number of records has arrived.
+
+#lines-to("static unsigned")
+
+The routine `record` makes record _r_ of the stream with seed _s_, from
+1 to 400 random bytes, so that the parent can make the same bytes to
+compare with. The routine `writer` writes each record with one `write`,
+and `code` gives the exit status which a child with that seed must
+return.
+
+#lines-to("/*", after: "code(long s)")
+
+The routine `reader` reads a child's pipe to its end. Each byte must be
+the next byte of the stream, and no more records may arrive than the
+stream has. When the record of the child's fate comes, the pipe is
+closed or the signal sent. A record cut short at the end is allowed
+only after a signal. A writer which finds the pipe full sleeps at
+priority `PPIPE`, above `PZERO`, so a signal can end it in the middle
+of a record (#f("pipe.c")).
+
+#lines-to("static void", after: "reader(int k)")
+
+The routine `child` moves the pipe to the standard output and writes
+the stream in one of the three ways. A grandchild which dies of a
+signal makes its parent die of the same one, so that the status the
+parent of the family sees is the same whichever way the stream was
+written.
+
+#lines-to("static void", after: "child(int k, int p)")
+
+The routine `check` judges the status which `wait` returned. A child
+left alone must exit with its code, having written its whole stream.
+One which was sent a signal must have died of it, unless it had
+finished first. One whose pipe was closed must have died of `SIGPIPE`,
+unless it had finished.
+
+#lines-to("int", after: "check(int k)")
+
+The routine `main` makes the children of each round, each closing the
+read ends of the pipes of the children before it, so that every pipe
+has only its own child as a writer. It reads the pipes in an order
+which it shuffles, and then collects one status for each child. A
+`wait` which returns a process that is not one of them, or which finds
+a child left over, is a failure.
+
+#lines-to(none)
+#source("/usr/local/test/utils/fzgen.c")
+
+The program `fzgen` writes random data for `fzsh`. It makes lines of
+up to eight words from a small vocabulary, integers, or a single
+number in a range. The same seed always gives the same output. The
+vocabulary is small, so that lines repeat and `sort -u`, `uniq`, and
+`grep` have matches to find, and it has a word of 20 letters, so that
+lines vary in length.
+
+#lines-to(none)
+#source("/usr/local/test/utils/fzsh")
+
+The script `fzsh` makes two files of random lines and one of random
+integers, chooses a block size, a line count, and two factors, each
+from a seed of its own, and then computes the same thing in two ways
+with the commands. The results must agree. A word count from a pipe
+and from a file must be the same. Sorted output must pass `sort -c`,
+and `sort -u` must equal `sort` followed by `uniq`. Changing letters to
+capitals and back must give the file again, and so must `sed -n p`,
+`awk '{print}'`, `dd` with any block size, and the pieces of `split`
+put together again. An editing script from `diff -e`, given to `ed`,
+must turn the first file into the second. `tar` must give back what it
+was given. A count of lines must be the same from `uniq -c`, `grep -c`, and
+`awk`. A sum or product must be the same from `awk` or `expr` and
+from `bc`. These are metamorphic checks, which need no expected output,
+and so work on data never seen before.
 
 #lines-to(none)
