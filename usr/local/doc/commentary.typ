@@ -4420,8 +4420,9 @@ Once started, the watchdog runs until the chip resets, and nothing in
 the kernel feeds it. That is done by the program `wdog` (#f("cmd/wdog.c")), which `init`
 starts (#f("cmd/init.c")), so that the board stays up only while processes
 run. A kernel which panics, stops with interrupts masked, or never
-reaches user space resets the board, which then waits in its boot ROM
-for a new image.
+reaches user space resets the board, which boots again from its SD
+card. A kernel which keeps failing hands the board to the boot ROM's
+USB loader instead (#f("sd.c")).
 
 #lines-to(none)
 #source("/usr/sys/dev/sd.c")
@@ -4471,8 +4472,16 @@ that the interrupt clear register clears. Then come the status bits for response
 FIFO empty, `CMDERR`, a
 command's CRC failure or timeout; `BUSYD0`, the card holding its first
 data line low while it writes, and `BUSYD0END`, the end of that.
-`WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
+`TXFIFOHE` is the status bit for a transmit FIFO at least half empty.
+`WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines, and `HWFC` (#l("#define\tHWFC\t(1<<17)")) hardware flow control,
+which stops the card's clock while the FIFO is full on a read or empty
+on a write. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
 command moves, 16 MB: the data length register has 25 bits.
+`RKBASE` is the card's block at which the disk begins. Below it lie
+the two copies of the kernel which the boot ROM loads, at blocks 128
+and 640 (`boot/sd-mp135.img`, #f("Makefile")), each with room for
+256 KB, more than the ROM can load. `BOOT1` and `BOOT2` name them, and
+`BOOTING` is the mark described under `rkinit`.
 
 #lines-to("/*", lead: true)
 
@@ -4480,7 +4489,7 @@ The interrupt number `rkirq` is 82, shared peripheral interrupt 50, to which the
 SDMMC1. The variable `rkoff` is the offset within
 the current request of the part being transferred, and `rkn` that
 part's length, and `rkstop` and `rksta` carry `rkintr` through the end of a
-transfer. The variable `nrkblk` holds the number of blocks on the card, `rca` the
+transfer. The variable `nrkblk` holds the number of blocks on the disk, `rca` the
 card's address on its bus, and `rkbyte` says that the card counts in
 bytes rather than blocks.
 
@@ -4498,6 +4507,22 @@ expected: command 41's response, and the long responses, carry none
 the controller can check.
 
 #lines-to("/*", after: "panic(\"sd card crc\");")
+
+The routine `rkpio` moves one block between the card and `buf` through
+the FIFO, without the IDMA or interrupts, for the mark which `rkinit`
+reads and writes. Command 17 reads one block and command 24 writes
+one. The loop counts the 128 words rather than watching the FIFO,
+because the FIFO's status bits are valid only while the data path is
+active. Once the transfer has ended, `RXFIFOE` reads zero, as though
+words remained, and a loop which waited for an empty FIFO would never
+end. On a write, eight words go in whenever the FIFO is at least half
+empty. The processor cannot keep pace with the card at 32 MHz, and
+it is `HWFC` that keeps the 16-word FIFO from overrunning or running
+dry meanwhile. After the end of the data, command 13 asks the card for
+its status until it reports itself ready for data again (bit 8),
+since a card stays busy for a while after a write.
+
+#lines-to("/*", after: "while ((SD(RESP1) & 0x100) == 0);")
 
 The routine `bdinit` (#f("mp135/c.c")) calls `rkinit` from `main`, before
 `intrstart`. It enables the clocks of GPIO ports C and D (`014`, bits 2
@@ -4530,11 +4555,13 @@ is (`C_SIZE`+1) × 512 KB, `C_SIZE` being bits 48--69. In blocks, 1024
 times as many. In version 1 the size in bytes is (`C_SIZE`+1) shifted
 left by `C_SIZE_MULT`+2 and by `READ_BL_LEN`, with `C_SIZE` bits
 62--73, `C_SIZE_MULT` bits 47--49, and `READ_BL_LEN` bits 80--83. The
-shift less 9 gives blocks. The routine `rkstrategy` refuses any block beyond the
-card's end.
+shift less 9 gives blocks. The disk is the card less its first
+`RKBASE` blocks (#l("nrkblk -= RKBASE;")), and `rkstrategy` refuses any block beyond its
+end.
 
 Command 7 selects the card, application command 6 sets its bus to four
-lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz. The data timeout is set to its largest value, so
+lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz, with hardware flow control for
+`rkpio`. The data timeout is set to its largest value, so
 that a slow card is waited for. A card may take far longer to finish a
 write than a read.
 
@@ -4546,7 +4573,21 @@ the data path is set for one 64-byte block (`0140`, block size
 2#super[6]) from the card. If all 16 words came and function group 1
 now reports function 1 (the low four bits of the status's 17th byte,
 first in word 4), the card has switched. Eight clocks later the divider
-becomes 1, and the card runs at 32 MHz.
+becomes 1, and the card runs at 32 MHz. The array `sw` has room for a
+whole block, since it serves the mark as well.
+
+Block 0 of the disk, v7's boot block, which nothing here reads, holds
+a mark. The kernel stores `BOOTING`, the characters "BOOT", in its
+first word at every boot (#l("sw[0] = BOOTING;")), and `wdog` (#f("cmd/wdog.c")) clears it once the
+system is up. A system which stops before then is reset by the
+watchdog (#f("iwdg.c")), and the boot ROM loads the same kernel from
+the card, which may stop again, for ever, and only someone at the
+board could break the cycle. A kernel which finds the mark still set
+therefore takes the last boot for a failure (#l("if (sw[0] == BOOTING) {")). It clears the mark,
+fills the first block of each copy of the kernel, which holds the
+header the ROM checks, with zeros, and resets the chip. The ROM then
+finds no kernel on the card and waits for one over USB. The program
+`reset` (#f("cmd/reset.c")) sets the mark on purpose to the same end.
 
 #lines-to("void", after: "}")
 
@@ -4566,8 +4607,9 @@ The routine `rkstart` gives the rest of the request at the head of the queue, fr
 `rkoff`, up to `MAXIO` bytes, to one command. In v7 it converted the block
 number into the drive, cylinder, and sector of the RK05 and loaded four
 registers. Here the minor device is ignored, since there is one card,
-and the block number is the argument of the command, multiplied by 512
-for a card which counts in bytes. A write is preceded by application
+and the block number, moved past the first `RKBASE` blocks of the card,
+is the argument of the command, multiplied by 512 for a card which
+counts in bytes. A write is preceded by application
 command 23, which tells the card how many blocks follow, so that it can
 erase them before they arrive.
 
@@ -14789,10 +14831,10 @@ v7's `cc -s` did. The compiler's helper routines, the 64-bit division
 and the conversions of `long long` to floating point, come from the C
 library (#f("libc/aeabi.s")), not from the compiler's own library.
 
-#lines-to("all: boot/unix boot/rootfs.img boot/rootfs-mp135.img", lead: true)
+#lines-to("all: boot/unix boot/rootfs.img boot/sd-mp135.img", lead: true)
 
-The default goal is `all`: the QEMU machine's kernel and the root file system
-images of both machines, and, after the fragments are read (#l("all: $(KERNELS)")), the
+The default goal is `all`: the QEMU machine's kernel and root file
+system image, the MP135 machine's card image, and, after the fragments are read (#l("all: $(KERNELS)")), the
 kernels of both machines, whose names `KERNELS` only #f("sys.mk")
 supplies.
 
@@ -14868,6 +14910,17 @@ on it. Like v7's, `cron` never reads a crontab dated zero, and would
 go on using the empty list it had not read. And the kernel takes its
 first idea of the date from the super-block of the root file system
 (`iinit`, #f("main.c")).
+
+#lines-to("boot/sd-mp135.img: boot/unix-mp135.stm32 boot/rootfs-mp135.img", lead: true)
+
+The MP135 machine's boot ROM loads the kernel from the SD card, and
+`boot/sd-mp135.img` is what the card holds. The root image begins at
+block 1024 (`RKBASE`, #f("sd.c")), and the kernel's image, with the
+ROM's header (#f("mkstm32.c")), lies at blocks 128 and 640. A card
+without a partition table is searched there for a first and a second
+copy, and the ROM boots the second if the first is damaged. The other
+blocks below 1024 are zero. The file is removed first, since `dd`
+writes into an existing file in place and would leave its old blocks.
 
 #lines-to("TOINT = s/^\\(typedef[[:space:]]*\\)long\\([[:space:]]*[a-z]*_t;\\)/\\1int\\2/", lead: true)
 
@@ -15247,7 +15300,7 @@ the ROM's image, as for the kernel (#l("boot/sdwrite.bin: $(STAND)/sdwrite")--#l
 #lines-to(none)
 #source("/usr/src/cmd/standalone/sdwrite.c")
 
-The program `sdwrite` writes an image, such as the root file system, onto the SD
+The program `sdwrite` writes an image, such as `boot/sd-mp135.img` (#f("Makefile")), onto the SD
 card of the MP135 machine, and reads the card back to check it. The
 boot ROM's USB loader loads it into SYSRAM from the build machine
 (#f("dfu.py")), and it then presents itself on USB as a serial
@@ -15255,8 +15308,8 @@ port, of the class CDC-ACM, which takes four commands as lines of text. The comm
 writes them from block _lba_, `r` _lba_ _n_ sends _n_ bytes read from
 there, and `x` resets the chip. The comment at the head shows the use
 from a shell on the build machine. It starts the chip's independent
-watchdog and feeds it at each command, so that the chip resets itself,
-and the ROM is ready to load again, 33 seconds after the last one.
+watchdog and feeds it at each command, so that the chip resets itself
+33 seconds after the last one.
 
 The registers are those of the chip's USB OTG controller, a Synopsys
 design which can be either end of a USB link, and of `sd.c`
@@ -15783,17 +15836,51 @@ and only then opens `/dev/mem`. The order matters, since `init`
 otherwise return descriptor 0 and the close would take it away. The
 reload register must read back the kernel's `0xfff` (#l("if((mem = open(\"/dev/mem\", 2)) < 0 || get(IWDG+8) != 0xfff)")). On the
 QEMU machine the address lies in memory, where a write would succeed
-as well, so only the value read back tells that a watchdog is present. Without one, `wdog` exits. Each feed writes `0xaaaa` to the key register.
+as well, so only the value read back tells that a watchdog is present. Without one, `wdog` exits. Otherwise the system has come up, and
+`wdog` clears the kernel's mark in block 0 of the disk by writing a
+block of zeros, `blk`, to the raw disk (#l("if((d = open(\"/dev/rrk0\", 1)) >= 0) {")), so that the next boot
+is taken for a good one (#f("sd.c")). Each feed writes `0xaaaa` to the key register.
 Nothing stops the watchdog once started but a reset, so killing `wdog`
 makes the chip reset itself 33 seconds later.
 
 #lines-to(none)
 #source("/usr/src/cmd/reset.c")
 
-The program `reset` writes the disks' buffers out with `sync` and resets the chip
-at once, by setting the system reset bit of the reset controller,
-`RCC_MP_GRSTCSETR`, through `/dev/mem`. It returns only if the write
-fails.
+The program `reset` returns the MP135 machine to its boot ROM's USB
+loader. It writes the disks' buffers out with `sync`, sets the
+kernel's mark in block 0 of the disk (#l("blk[0] = 0x544f4f42;")), and resets the chip at once,
+by setting the system reset bit of the reset controller,
+`RCC_MP_GRSTCSETR`, through `/dev/mem`. The kernel booted next finds
+the mark, takes the boot for a failed one, and spoils its own copies on
+the card (#f("sd.c")), so the ROM finds none and waits for a new image
+over USB. The program returns only if a write fails.
+
+#lines-to(none)
+#source("/usr/src/cmd/blink.c")
+
+The program `blink` lights the Odyssey's three user LEDs in turn, red,
+yellow, and blue, each for a second, until it is interrupted. Each LED
+is wired from a pin of the chip through a resistor to ground, and
+lights when the pin drives high. The pins are PH2, PC3, and PH5, given
+by `port` and `pin`. The program reaches the GPIO ports' registers
+through `/dev/mem`, a word at a time, with `get` and `put`, as `wdog`
+does, and so must run as `root`.
+
+#lines-to("static void", after: "write(mem, (char *)&v, 4);")
+
+The routine `init_led` makes a pin an output by setting its two bits
+in the port's mode register `MODER` to 01. The routine `set_led` turns
+an LED on or off through `BSRR`, the port's set and reset register.
+Writing a one to bit _n_ drives pin _n_ high, and a one to bit 16+_n_
+drives it low, and the other pins are left alone, so no read of the
+port is needed.
+
+#lines-to("int", after: "put(mem, port[n]+BSRR, on ? 1<<pin[n] : 1<<16<<pin[n]);")
+
+The routine `main` opens `/dev/mem` and enables the clocks of GPIO
+ports C and H, bits 2 and 7 of `RCC_MP_AHB4ENSETR`, a register of the
+"set" kind (#f("usart.c")). It makes the three pins outputs and then
+lights each LED in turn, with `sleep` between.
 
 #lines-to(none)
 

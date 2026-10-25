@@ -23,12 +23,12 @@
 
 == Introduction <ch-intro>
 
-This book describes Unix v7 ported to run on these two machines:
+This book describes Unix v7 ported to run on two machines.
 
 *The QEMU machine* is the `virt` machine of the QEMU emulator, configured with a single ARM Cortex-A7 processor and 512~MB of
 RAM at address 0x40000000, an ARM Generic Interrupt Controller (GIC)
 version 2 at 0x08000000, the ARM generic timer, an ARM PL011 UART at
-0x09000000 as the console, and, as the disk, a virtio block device,
+0x09000000 as the console, and, as the "disk", a virtio block device,
 found among the virtio "MMIO" slots at 0x0a000000. QEMU loads the
 kernel into RAM itself and starts it at its entry point.
 
@@ -44,74 +44,54 @@ out on its 40-pin header. The disk is the SD card, on the SDMMC1 controller at
 (RCC), its power controller (PWR), its general purpose pins (GPIO), its
 DDR controller, its TrustZone address space controller (TZC), which
 guards the DDR memory, its independent watchdog (IWDG2), and, over the chip's I2C4 bus, the board's
-STPMIC1 power management chip.
-
-#btable(columns: (auto, 1fr, 1fr), caption: [The two machines],
-  table.header(top, [], [*QEMU machine*], [*MP135 machine*], mid),
-  [processor], table.cell(colspan: 2)[Cortex-A7, with the generic timer, on both],
-  [interrupts], table.cell(colspan: 2)[GIC version 2, on both],
-  [memory], [512~MB of RAM], [128~KB of SYSRAM, 512~MB of DDR],
-  [console], [PL011 UART], [USART],
-  [disk], [virtio block device], [SD card on SDMMC1],
-  [boot], [QEMU loads the kernel], [the ROM receives it by USB DFU],
-  [also], [--], [PMIC, DDR controller, TZC, RCC, watchdog],
-  bot,
-) <tab-machines>
-
-The MP135 kernel is linked to run in SYSRAM. The build puts in front of
-it the 512-byte header which the boot ROM requires (`mkstm32.c`, giving
-`boot/unix-mp135.stm32`). The ROM, booted from USB, receives that image
-through its DFU protocol (`dfu.py`) and starts it. Once running, the
-kernel must power the DDR memory (#f("pmic.c")) and start its
-controller (#f("ddr.c")) before it can use it.
-
-The two machines have the same processor, interrupt controller, and
-timer (@tab-machines), so the code for traps, interrupts, the MMU, and the clock is the
-same for both. They differ in where memory lies, the console, the disk, and the DDR memory of the MP135 machine, which the
-kernel must start itself. Each difference is confined to a driver or
-to the configuration.
+STPMIC1 power management chip. The chip's boot ROM loads the kernel
+from the SD card into SYSRAM and starts it.
 
 One kernel source serves both machines. What differs is collected in
 each machine's configuration (#f("qemuconf"), #f("mp135conf")), which
 `mkconf` (#f("mkconf.c")) turns into a C file of device tables and
 memory map (#f("qemu/c.c")).
 
-The two machines serve different purposes. The QEMU machine is where
-the system is built and tested: it starts in a second, and the test
-suite runs on it, as it does on the board. The MP135 machine shows that the system runs on real
-hardware, which brings what an emulator hides, a boot ROM with its own rules, memory that must be started before it can be used, and caches
-which devices do not see.
-
-Throughout the book, "the QEMU machine" and "the MP135 machine" mean
-these two, and a statement which names neither applies to both. Where the two differ, the text names the machine.
-
 === The ARM Processor <sec-arm>
 
 The Cortex-A7 implements the ARMv7-A architecture. It has sixteen
 32-bit registers, `r0` to `r15`. Three have a special use and a second name. The register `r13` is the stack pointer `sp`, `r14` the link register `lr`,
-which receives the return address of a call, and `r15` the program
+which receives the return address of a function call, and `r15` the program
 counter `pc`. The current program status register `cpsr` holds the
-condition flags, the two interrupt masks `I` and `F`, and the processor
-mode.
+condition flags (`N`, `Z`, `C`, and `V`, for negative, zero, carry,
+and overflow, which comparisons set and conditional instructions
+test), two interrupt masks, `I` for ordinary interrupts (IRQ) and `F`
+for fast ones (FIQ), and, in its low five bits, the processor mode.
 
-The mode decides what a program may do. User programs run in user mode,
-which cannot reach the kernel's memory or the system registers. The
-kernel runs in supervisor (SVC) mode. Each kind of exception has a mode of its own, IRQ for interrupts, abort for memory faults, and undefined
+The mode decides what a program may do. User programs run in user mode
+(USR, mode bits `10000`), which can reach neither the kernel's memory
+nor the system control registers, which configure the processor
+itself. The kernel runs in supervisor mode (SVC, `10011`). Each kind
+of exception has a mode of its own, IRQ (`10010`) for interrupts,
+abort (ABT, `10111`) for memory faults, and undefined (UND, `11011`)
 for an instruction the processor does not know. When an exception
-occurs, the processor saves the `pc` and `cpsr` of the interrupted
-program, enters the exception's mode, and jumps to that exception's
-entry in the vector table.
+occurs, the processor puts the return address in the new mode's `lr`
+and the interrupted `cpsr` in the new mode's saved status register
+`spsr`. It then sets the mode bits of `cpsr` to the exception's mode,
+masks IRQ by setting `I`, and jumps to that exception's entry in the
+vector table (@tab-vectors). The table is the block `vectors` in
+#f("low.s"), whose address `_start` gives the processor in the vector
+base register `VBAR` (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c12, c0, 0")).
 
 Each of these modes has its own copy of `sp` and `lr`, called banked
-registers (@tab-regs), and its own saved status register `spsr`, which receives the
-interrupted `cpsr`. The other registers, `r0` to `r12`, are shared by
-all modes, except the fast interrupt mode, which the system does not
-use. So an exception changes the stack pointer and link register
-at once, without touching the interrupted program's, and the entry code
-must save `r0` to `r12` itself before it uses them. A special form of
-the store-multiple instruction stores the user mode's `sp` and `lr`
-from any other mode, and the kernel uses it to save a complete picture
-of the user's registers.
+registers (@tab-regs), and its own `spsr`. The other registers, `r0`
+to `r12`, are shared by all modes, except the fast interrupt mode (FIQ,
+`10001`, not used in this Unix port). Exception entry does not change
+the interrupted program's `sp` and `lr`. It changes only which banked
+copy is visible. While those are kept apart, the shared registers are
+not, and the exception entry code must save `r0` to `r12` itself before it uses
+them, to maintain the illusion that the user program is the only one
+running. A special form of the store-multiple instruction,
+`stmia sp, {r0-r14}^`, stores the user mode's registers, its `sp` and `lr` among
+them, from any other mode. Each entry in #f("low.s") uses it
+(#at("/usr/sys/conf/low.s", "stmia sp, {r0-r14}^", after: "svc_entry:")) to save a complete picture of the user's registers on the
+kernel stack, in the layout of #f("reg.h"), below the `pc` and `spsr` which `srsdb`
+has stored there.
 
 #btable(columns: (auto, 1fr, 1fr, 1fr, 1fr, 1fr), align: center + horizon, caption: [The registers which each mode sees],
   table.header(top, [], [*User*], [*SVC*], [*IRQ*], [*Abort*], [*Undef.*], mid),
@@ -123,9 +103,6 @@ of the user's registers.
   [`spsr`], [--], [`spsr_svc`], [`spsr_irq`], [`spsr_abt`], [`spsr_und`],
   bot,
 ) <tab-regs>
-
-The vector table (#f("low.s")) holds one instruction for each kind of
-exception, at a fixed offset from its start (@tab-vectors).
 
 #btable(columns: (auto, auto, auto, 1fr), align: (center, left, left, left), caption: [The exception vectors],
   table.header(top, [*offset*], [*exception*], [*mode*], [*the kernel's handler*], mid),
@@ -140,20 +117,34 @@ exception, at a fixed offset from its start (@tab-vectors).
   bot,
 ) <tab-vectors>
 
-The system control registers lie in coprocessor 15, reached by `mrc` and `mcr`.
+The system control registers are numbered as though they belonged to
+a coprocessor, number 15, and are reached only by the coprocessor
+instructions `mrc`, which reads one into a general register, and
+`mcr`, which writes one. There is no separate processor behind them.
+The port uses `SCTLR`, which turns the MMU and the caches on and off;
+`TTBR0`, `TTBR1`, `TTBCR`, and `MAIR0`, which describe the page tables
+and the kinds of memory; `VBAR`; `DFAR` and `DFSR`, which give the
+address and cause of a data abort; `CPACR`, which lets programs use
+the floating-point unit; and the registers of the generic timer
+(`CNTFRQ`, `CNTVCT`, `CNTV_CVAL`, `CNTV_CTL`). The cache and TLB
+maintenance operations are written to coprocessor 15 in the same way.
 
-C and assembly language call each other by the ARM Procedure Call
-Standard (AAPCS). The first four arguments travel in `r0` to `r3`, and
-the result returns in `r0`. A
-called function may change `r0` to `r3`, `r12`, and `lr`, but must
-preserve `r4` to `r11` and `sp`.
+A function call follows a fixed convention for the registers, whoever
+wrote the function. The first four arguments travel in `r0` to `r3`,
+and the result returns in `r0`. A called function may change `r0` to
+`r3`, `r12`, `lr`, and the condition flags of `cpsr`, but must
+preserve `r4` to `r11` and `sp`, and it returns by putting `lr` back
+in `pc`. The `spsr` is no part of the convention, since a function
+never touches it.
 
-The processor does not perform memory accesses one at a time in program
-order. A store waits in a store buffer before it reaches the data
-cache, and loads may overtake it. The processor's own program always
-sees its own stores, but other observers may not, such as the MMU, which reads page tables from memory by itself, and devices which reach memory by
-DMA. Barrier instructions restore the order where it matters. The
-barrier `dmb` orders the accesses before it before those after it, and `dsb` waits
+The processor does not necessarily perform memory accesses one at a
+time in program order. A store waits in a store buffer before it
+reaches the data cache, and loads may overtake it. The processor always
+sees its own stores. The processor, however, is not the only entity to
+access the memory. Other devices, such as the MMU, which read page
+tables from memory by themselves, may not see them yet. Barrier
+instructions restore the order where it matters. The barrier `dmb`
+orders the accesses before it before those after it, and `dsb` waits
 until they have all completed. An `isb` makes the processor fetch the
 following instructions afresh, so that a change to a system register
 takes effect.
