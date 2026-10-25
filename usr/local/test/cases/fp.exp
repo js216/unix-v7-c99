@@ -27,8 +27,3 @@ parent ok 0
 sync 1 fpscr 00c00000 ok
 async done ok fpscr 00c00000
 core fpscr 00c00002 2469 found
-0.333333333333
-3.142857142857
-1.414213562373
-2.718281828459
-awk and bc agree

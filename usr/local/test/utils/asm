@@ -1,3 +1,0 @@
-/ comment
-.globl foo
-foo: mov r0,r1

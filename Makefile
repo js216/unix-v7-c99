@@ -64,8 +64,7 @@ ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \
 	usr/lib/crontab \
 	usr/lib/lib.b
 
-ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_IMG) \
-	$(TEST_DATA)
+ROOT = $(CMD) $(GAMES) $(ROOTFS_STATIC) $(TEST_BIN) $(TEST_DATA)
 
 DIRS = bin usr/lib usr/dict usr/games usr/games/lib
 
@@ -104,8 +103,7 @@ $(filter-out etc/% usr/lib/crontab,$(ROOTFS_STATIC)): %: \
 	$(call T,CP)cp -f $< $@
 
 clean:
-	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN) \
-	    $(TEST_IMG)
+	rm -f $(OBJ) $(OBJ:.o=.d) $(GEN) $(CMD) $(GAMES) $(TEST_BIN)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
 	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img \
 	    boot/qemu.img boot/sd-mp135.img

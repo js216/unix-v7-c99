@@ -1,7 +1,0 @@
-T=/tmp/intr U=/usr/local/test/utils
-mkdir $T; cd $T
-echo 'ONE two three' >a; echo 'four five' >>a
-($U/waitf o; kill -2 `cat p`; until grep -s '?' o; do $U/nap; done; echo q) | $U/pidf p ed a >o; cat o
-($U/waitf p1 p2; kill -2 `cat p2`) | sh -c 'cat /usr/dict/words; exec /usr/local/test/utils/pidf p1 cat' | $U/pidf p2 sort; echo sortst$?
-yes | sed 2q; rm p p1 p2 o; ls $T
-cd /; rm -rf $T

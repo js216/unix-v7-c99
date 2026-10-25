@@ -1,0 +1,48 @@
+: sh fzsh seed: metamorphic checks of the commands on random data.
+: Each check computes one thing in two ways, which must agree.  It runs
+: in the current directory, and prints FAIL lines, or fzsh ok.
+U=/usr/local/test/utils
+s=$1
+f=0
+$U/fzgen $s lines `$U/fzgen $s num 1 300` >a
+$U/fzgen `expr $s + 1` lines `$U/fzgen \`expr $s + 4\` num 1 300` >b
+$U/fzgen `expr $s + 2` ints `$U/fzgen \`expr $s + 8\` num 1 80` >n
+bs=`$U/fzgen \`expr $s + 5\` num 1 5000`
+k=`$U/fzgen \`expr $s + 6\` num 1 120`
+x=`$U/fzgen \`expr $s + 7\` num 0 46340`
+y=`$U/fzgen \`expr $s + 3\` num 0 46340`
+
+cat a | wc >o1; wc <a >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: wc; f=1; }
+sort a >sa; sort -c sa || { echo FAIL fzsh seed $s: sort -c; f=1; }
+sort -u a >o1; uniq sa >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: sort -u; f=1; }
+tr a-z A-Z <a | tr A-Z a-z >o1
+cmp -s o1 a || { echo FAIL fzsh seed $s: tr; f=1; }
+sed -n p a >o1
+cmp -s o1 a || { echo FAIL fzsh seed $s: sed p; f=1; }
+awk '{print}' a >o1
+cmp -s o1 a || { echo FAIL fzsh seed $s: awk print; f=1; }
+grep -v '^$' a >o1; sed '/^$/d' a >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: grep -v; f=1; }
+sed 's/e/E/g' a >o1; tr e E <a >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: sed s; f=1; }
+dd if=a bs=$bs 2>/dev/null | cmp -s - a || { echo FAIL fzsh seed $s: dd bs=$bs; f=1; }
+cp a c; (diff -e a b; echo w; echo q) | ed - c
+cmp -s c b || { echo FAIL fzsh seed $s: diff -e; f=1; }
+cat a b >ab; l=`expr \`wc -l <a\` + \`wc -l <b\``
+test $l -eq `wc -l <ab` || { echo FAIL fzsh seed $s: cat count; f=1; }
+split -$k ab p; cat p* | cmp -s - ab || { echo FAIL fzsh seed $s: split -$k; f=1; }
+mkdir t; tar cf ab.tar a b; (cd t; tar xf ../ab.tar 2>/dev/null)
+cmp -s t/a a && cmp -s t/b b || { echo FAIL fzsh seed $s: tar; f=1; }
+cp a c; mv c d; ln d e; rm d
+cmp -s e a || { echo FAIL fzsh seed $s: cp mv ln; f=1; }
+uniq -c sa | awk '{s += $1} END {print s}' >o1; wc -l <a | awk '{print $1}' >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: uniq -c; f=1; }
+grep -c apple a >o1; awk '/apple/ {n++} END {print n+0}' a >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: grep -c; f=1; }
+awk '{s += $1} END {print s+0}' n >o1; (tr '\012' + <n; echo 0) | bc >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: awk and bc sum; f=1; }
+expr $x \* $y >o1; echo "$x*$y" | bc >o2
+cmp -s o1 o2 || { echo FAIL fzsh seed $s: expr and bc $x*$y; f=1; }
+test $f = 0 && echo fzsh ok

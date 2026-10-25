@@ -1,46 +1,55 @@
-Regression tests, run on the system itself.
+Tests, run on the system itself, in two modes.
 
-The root file system holds the suite in /usr/local/test. Boot it and type
+The core is a set of regression tests which together finish in well
+under 10 seconds, on either machine, and is always run under a strict
+10 second limit; running out of time is a failure. Boot the system
+and type
 
-	/usr/local/test/run.sh		all tests
-	/usr/local/test/run.sh sh awk	only the named tests
+	/usr/local/test/run.sh		all core tests
+	/usr/local/test/run.sh k12 kern	only the named tests
 
 run.sh prints PASS or FAIL for each test, and finally a line
 "run.sh: N passed, M failed".
 
-A test is cases/NAME, a shell script; cases/NAME.exp, its expected
-output, standard output and standard error together; and optionally
-cases/NAME.sed, which normalises output that legitimately varies, such
-as times, clock ticks, process ids, and kernel addresses. run.sh runs
-the script with sh, from the cases directory, passes its output through
-the .sed, and compares the result with the .exp. Once cmp has found a
-difference, the rest of the output is read and thrown away, so that a
-failing test has finished before the next one starts. A test passes
-when cmp prints nothing; the exit status is not used, since sh gives a pipeline
-the first nonzero status it reaps, which depends on timing. To see why a test
-fails, run it by hand:
+The fuzzers run for ever, trying random combinations of operations and
+checking each result, until they are stopped. Type
+
+	sh /usr/local/test/fuzz.sh [seed]
+
+Each round prints a line "fuzz round N seeds S-T done", and any
+failure a line beginning FAIL, with the seed which repeats it. A
+round runs three copies of fzfs, which makes random file system calls
+on a few names and checks each against a model of the files; fzproc,
+which builds random families of processes joined by pipes, kills them
+or closes their pipes at random points, and checks the data and the
+statuses wait returns; and fzsh, which computes the same thing in two
+ways with the commands on random data from fzgen. The root file system
+is then checked with icheck and dcheck. To repeat a failure, run the
+fuzzer named, with the seed printed, in a directory of its own.
+
+A core test is cases/NAME, a shell script; cases/NAME.exp, its
+expected output, standard output and standard error together; and
+optionally cases/NAME.sed, which normalises output that legitimately
+varies, such as times, clock ticks, process ids, and kernel addresses.
+run.sh runs the script with sh, from the cases directory, passes its
+output through the .sed, and compares the result with the .exp. Once
+cmp has found a difference, the rest of the output is read and thrown
+away, so that a failing test has finished before the next one starts.
+A test passes when cmp prints nothing; the exit status is not used,
+since sh gives a pipeline the first nonzero status it reaps, which
+depends on timing. To see why a test fails, run it by hand:
 
 	cd /usr/local/test/cases; sh NAME
 
-utils holds the programs the tests use, compiled from utils/*.c by the
-Makefile (test.mk), the data files, and fs.img, a small file system made
-from utils/fs.proto, on which the tests run the file system checkers.
-deep.img, a chain of 40 directories, and many.img, 3001 directories,
-are file systems which test.mk makes for the tests of dump and dumpdir;
-big.img, holding a copy of /usr/dict/words, gives icheck a file with a
-double indirect block. ob writes the bytes named by its arguments in octal,
-N*V standing for N copies of V, so that a test can build a binary file.
+utils holds the programs the tests and fuzzers use, compiled from
+utils/*.c by the Makefile (test.mk), and fzsh, a shell script.
 
 Each test works in a directory of its own, /tmp/NAME, which it removes
-at the end. A test which changes anything else (the date, accounting,
-the crontab, the at spool, a file in /etc or /usr/adm) puts it back
-before it ends, and kills every process it started, so that no test
-depends on which tests ran before it. Its output must not depend on
-timing, and no test waits a fixed time for another process. A test
-which interrupts a command starts it through utils/pidf, which writes
-its own process id to a file and then executes the command; the
-process which sends the signal (kill -2) waits until the file exists.
-A signal which arrives before the exec kills pidf as it would kill the
-command; where the command catches the signal, the sender waits as well
-for a sign that the command is running, such as its first output. A test which waits for some other event, such as cron having
-run a job, polls for its result with sleep 1 in a loop.
+at the end, and the fuzzers in /tmp/fz. A test which changes anything
+else puts it back before it ends, and kills every process it started,
+so that no test depends on which tests ran before it. Its output must
+not depend on timing, and no test waits a fixed time for another
+process. A test which interrupts a command starts it through
+utils/pidf, which writes its own process id to a file and then
+executes the command; the process which sends the signal waits until
+the file exists.
