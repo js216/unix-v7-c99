@@ -22,7 +22,7 @@ apple	banana	cherry	date
 /usr/local/test/utils/u2:	ascii text
 /usr/local/test/utils/words:	ascii text
 /usr/local/test/utils/edscr:	ascii text
-     18
+     19
 /usr/local/test/utils/asm
 /usr/local/test/utils/bcf
 /usr/local/test/utils/ctxt
@@ -38,7 +38,7 @@ apple	banana	cherry	date
 /bin/cp
 found /usr/local/test/utils/waitf
 found /usr/local/test/utils/words
-     17
+     18
 /
       1
 1

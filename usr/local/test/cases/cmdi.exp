@@ -117,9 +117,9 @@ the quick brown fox
 -rw-r--r-- 1 root      143 Jan  9 HH:MM /etc/passwd
 total 6
 drwxrwxrwx 2 root       96 Jan  9 HH:MM .
-  126 /etc/passwd
+  127 /etc/passwd
    1 /etc/passwd
-drwxr-xr-x 2 root      304 Jan  9 HH:MM /etc
+drwxr-xr-x 2 root      320 Jan  9 HH:MM /etc
 crw-r--r-- 1 root    0,  0 Jan  9 HH:MM /dev/console
 0000000 064164 020145 072561 061551 020153 071142 073557 020156
 0000020 067546 005170 072552 070155 020163 073157 071145 072040
