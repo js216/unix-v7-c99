@@ -21,7 +21,7 @@ COMPILE.c = $(call T,CC)$(CC) $(CFLAGS) $(CPPFLAGS) -c
 COMPILE.s = $(call T,AS)$(AS) $(ASFLAGS)
 LINK = $(call T,LD)$(CC) $(CFLAGS) -s -o $@ $(filter %.o %.a,$^)
 
-all: boot/unix boot/rootfs.img boot/rootfs-mp135.img
+all: boot/unix boot/rootfs.img boot/sd-mp135.img
 
 include usr/sys/sys.mk
 include usr/src/libc/lib.mk
@@ -78,6 +78,12 @@ boot/rootfs.img boot/rootfs-mp135.img: etc/mkfs boot/rootfs.proto \
 	    boot/rootfs.proto | \
 	    V7_MKFS_TIME=284774400 etc/mkfs $@ /dev/stdin
 
+boot/sd-mp135.img: boot/unix-mp135.stm32 boot/rootfs-mp135.img
+	$(call T,DD)rm -f $@; \
+	    dd if=boot/rootfs-mp135.img of=$@ bs=512 seek=1024 status=none
+	$Qdd if=$< of=$@ bs=512 seek=128 conv=notrunc status=none
+	$Qdd if=$< of=$@ bs=512 seek=640 conv=notrunc status=none
+
 TOINT = s/^\(typedef[[:space:]]*\)long\([[:space:]]*[a-z]*_t;\)/\1int\2/
 etc/mkfs: usr/src/cmd/mkfs.c usr/include/sys/*.h Makefile
 	$(call T,HOSTCC)tmpinc="$(CURDIR)/boot/mkfs-include.$$$$"; \
@@ -102,7 +108,7 @@ clean:
 	    $(TEST_IMG)
 	rm -f $(LIBC) $(LIBM) $(LIB1) $(LIB2) $(KERNELS)
 	rm -f etc/mkfs boot/unix boot/rootfs.img boot/rootfs-mp135.img \
-	    boot/qemu.img
+	    boot/qemu.img boot/sd-mp135.img
 
 .PHONY: all clean qemu
 .DELETE_ON_ERROR:

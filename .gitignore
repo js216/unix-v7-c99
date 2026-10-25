@@ -22,6 +22,7 @@ boot/unix.stm32
 boot/unix.tsv
 boot/rootfs.img
 boot/rootfs-mp135.img
+boot/sd-mp135.img
 boot/qemu.img
 boot/unix-mp135.bin
 boot/unix-mp135.stm32
@@ -40,6 +41,7 @@ etc/init
 etc/update
 etc/wdog
 etc/reset
+etc/blink
 etc/utmp
 etc/mkfs
 etc/mknod
