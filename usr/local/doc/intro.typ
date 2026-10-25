@@ -23,7 +23,7 @@
 
 == Introduction <ch-intro>
 
-This book describes Unix v7 ported to run on two machines.
+This book describes Unix v7 ported to run on these two machines:
 
 *The QEMU machine* is the `virt` machine of the QEMU emulator, configured with a single ARM Cortex-A7 processor and 512~MB of
 RAM at address 0x40000000, an ARM Generic Interrupt Controller (GIC)

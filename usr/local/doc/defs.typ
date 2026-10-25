@@ -85,10 +85,10 @@
 // A range of lines, from the line of a to that of b.
 #let lr(a, b) = [#l(a)--#l(b)]
 
-// A reference to a line of any file: "file n", the number linked.
+// A reference to a line of any file: "file, line n", the number linked.
 #let at(path, needle, after: none, before: none) = {
   let n = find(path, needle, after: after, before: before)
-  [#link(label(lab-of(path)), raw(lab-of(path)))~#numlink(path, n, str(n))]
+  [#link(label(lab-of(path)), raw(lab-of(path))), line~#numlink(path, n, str(n))]
 }
 
 // A fragment of the current file, from where the last one ended to the
