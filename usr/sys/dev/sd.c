@@ -49,14 +49,9 @@
 #define	CMDERR	05
 #define	BUSYD0	(1<<20)
 #define	BUSYD0END	(1<<21)
-#define	TXFIFOHE	(1<<14)
 #define	WIDE	(1<<14)
-#define	HWFC	(1<<17)
 #define	MAXIO	0x1000000
 #define	RKBASE	1024	/* first block of the disk on the card */
-#define	BOOT1	128	/* the ROM's two copies of the kernel */
-#define	BOOT2	640
-#define	BOOTING	0x544F4F42	/* "BOOT" */
 
 /*
  * Monitoring device bit
@@ -106,53 +101,17 @@ rkcmd(int com, unsigned arg, int resp)
 }
 
 /*
- * Move one block of the card through the FIFO,
- * by CMD17 or CMD24, without interrupts.
- */
-static void
-rkpio(int com, daddr_t bn, unsigned *buf)
-{
-	register int i, n, sta;
-
-	SD(DCTRL) = 0;
-	SD(DLEN) = BSIZE;
-	SD(DCTRL) = com == 17 ? BLK512|DTDIR : BLK512;
-	rkcmd(com|0100, bn << (rkbyte ? BSHIFT : 0), 1);
-	for (n = 0; n < BSIZE/4; ) {
-		sta = SD(STA);
-		if (sta & ERR)
-			panic("sd card");
-		if (com == 17 && (sta & RXFIFOE) == 0)
-			buf[n++] = SD(FIFO);
-		else if (com == 24 && sta & TXFIFOHE)
-			for (i = 0; i < 8; i++)
-				SD(FIFO) = buf[n++];
-	}
-	while (((sta = SD(STA)) & (ERR|DATAEND)) == 0)
-		;
-	if (sta & ERR)
-		panic("sd card");
-	do
-		rkcmd(13, rca, 1);
-	while ((SD(RESP1) & 0x100) == 0);
-}
-
-/*
  * Bring the card up as the boot ROM would have:
  * pins, a 400 kHz clock, identification, the size
  * from the CSD, selection, then 4 bits at 32 MHz.
  * The disk begins at block RKBASE of the card,
  * after the copies of the kernel the ROM boots.
- * Its block 0 holds BOOTING until /etc/wdog
- * clears it; found set, the last boot failed,
- * so spoil both copies and reset to the ROM's
- * USB loader rather than fail for ever.
  */
 void
 rkinit(void)
 {
 	register int i, n;
-	unsigned c, sw[BSIZE/4];
+	unsigned c, sw[16];
 
 	RCC(0x770) = 014;
 	for (i = 8; i <= 12; i++) {
@@ -198,7 +157,7 @@ rkinit(void)
 	rkcmd(7, rca, 1);
 	rkcmd(55, rca, 1);
 	rkcmd(6, 2, 1);
-	SD(CLKCR) = 2 | WIDE | HWFC;
+	SD(CLKCR) = 2 | WIDE;
 	SD(DTIMER) = -1;
 	SD(DCTRL) = 0;
 	SD(DLEN) = 64;
@@ -213,22 +172,9 @@ rkinit(void)
 	}
 	if (n == 16 && (sw[4]&017) == 1) {
 		rkdelay(10);
-		SD(CLKCR) = 1 | WIDE | HWFC;
+		SD(CLKCR) = 1 | WIDE;
 	}
 	nrkblk -= RKBASE;
-	rkpio(17, RKBASE, sw);
-	if (sw[0] == BOOTING) {
-		for (i = 0; i < BSIZE/4; i++)
-			sw[i] = 0;
-		rkpio(24, RKBASE, sw);
-		rkpio(24, BOOT1, sw);
-		rkpio(24, BOOT2, sw);
-		RCC(0x114) = 1;
-		for (;;)
-			;
-	}
-	sw[0] = BOOTING;
-	rkpio(24, RKBASE, sw);
 }
 
 void

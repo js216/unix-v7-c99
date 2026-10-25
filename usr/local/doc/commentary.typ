@@ -4421,8 +4421,7 @@ the kernel feeds it. That is done by the program `wdog` (#f("cmd/wdog.c")), whic
 starts (#f("cmd/init.c")), so that the board stays up only while processes
 run. A kernel which panics, stops with interrupts masked, or never
 reaches user space resets the board, which boots again from its SD
-card. A kernel which keeps failing hands the board to the boot ROM's
-USB loader instead (#f("sd.c")).
+card.
 
 #lines-to(none)
 #source("/usr/sys/dev/sd.c")
@@ -4472,16 +4471,12 @@ that the interrupt clear register clears. Then come the status bits for response
 FIFO empty, `CMDERR`, a
 command's CRC failure or timeout; `BUSYD0`, the card holding its first
 data line low while it writes, and `BUSYD0END`, the end of that.
-`TXFIFOHE` is the status bit for a transmit FIFO at least half empty.
-`WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines, and `HWFC` (#l("#define\tHWFC\t(1<<17)")) hardware flow control,
-which stops the card's clock while the FIFO is full on a read or empty
-on a write. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
+`WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
 command moves, 16 MB: the data length register has 25 bits.
 `RKBASE` is the card's block at which the disk begins. Below it lie
 the two copies of the kernel which the boot ROM loads, at blocks 128
 and 640 (`boot/sd-mp135.img`, #f("Makefile")), each with room for
-256 KB, more than the ROM can load. `BOOT1` and `BOOT2` name them, and
-`BOOTING` is the mark described under `rkinit`.
+256 KB, more than the ROM can load.
 
 #lines-to("/*", lead: true)
 
@@ -4507,22 +4502,6 @@ expected: command 41's response, and the long responses, carry none
 the controller can check.
 
 #lines-to("/*", after: "panic(\"sd card crc\");")
-
-The routine `rkpio` moves one block between the card and `buf` through
-the FIFO, without the IDMA or interrupts, for the mark which `rkinit`
-reads and writes. Command 17 reads one block and command 24 writes
-one. The loop counts the 128 words rather than watching the FIFO,
-because the FIFO's status bits are valid only while the data path is
-active. Once the transfer has ended, `RXFIFOE` reads zero, as though
-words remained, and a loop which waited for an empty FIFO would never
-end. On a write, eight words go in whenever the FIFO is at least half
-empty. The processor cannot keep pace with the card at 32 MHz, and
-it is `HWFC` that keeps the 16-word FIFO from overrunning or running
-dry meanwhile. After the end of the data, command 13 asks the card for
-its status until it reports itself ready for data again (bit 8),
-since a card stays busy for a while after a write.
-
-#lines-to("/*", after: "while ((SD(RESP1) & 0x100) == 0);")
 
 The routine `bdinit` (#f("mp135/c.c")) calls `rkinit` from `main`, before
 `intrstart`. It enables the clocks of GPIO ports C and D (`014`, bits 2
@@ -4560,8 +4539,7 @@ shift less 9 gives blocks. The disk is the card less its first
 end.
 
 Command 7 selects the card, application command 6 sets its bus to four
-lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz, with hardware flow control for
-`rkpio`. The data timeout is set to its largest value, so
+lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz. The data timeout is set to its largest value, so
 that a slow card is waited for. A card may take far longer to finish a
 write than a read.
 
@@ -4573,21 +4551,7 @@ the data path is set for one 64-byte block (`0140`, block size
 2#super[6]) from the card. If all 16 words came and function group 1
 now reports function 1 (the low four bits of the status's 17th byte,
 first in word 4), the card has switched. Eight clocks later the divider
-becomes 1, and the card runs at 32 MHz. The array `sw` has room for a
-whole block, since it serves the mark as well.
-
-Block 0 of the disk, v7's boot block, which nothing here reads, holds
-a mark. The kernel stores `BOOTING`, the characters "BOOT", in its
-first word at every boot (#l("sw[0] = BOOTING;")), and `wdog` (#f("cmd/wdog.c")) clears it once the
-system is up. A system which stops before then is reset by the
-watchdog (#f("iwdg.c")), and the boot ROM loads the same kernel from
-the card, which may stop again, for ever, and only someone at the
-board could break the cycle. A kernel which finds the mark still set
-therefore takes the last boot for a failure (#l("if (sw[0] == BOOTING) {")). It clears the mark,
-fills the first block of each copy of the kernel, which holds the
-header the ROM checks, with zeros, and resets the chip. The ROM then
-finds no kernel on the card and waits for one over USB. The program
-`reset` (#f("cmd/reset.c")) sets the mark on purpose to the same end.
+becomes 1, and the card runs at 32 MHz.
 
 #lines-to("void", after: "}")
 
@@ -15834,24 +15798,17 @@ and only then opens `/dev/mem`. The order matters, since `init`
 otherwise return descriptor 0 and the close would take it away. The
 reload register must read back the kernel's `0xfff` (#l("if((mem = open(\"/dev/mem\", 2)) < 0 || get(IWDG+8) != 0xfff)")). On the
 QEMU machine the address lies in memory, where a write would succeed
-as well, so only the value read back tells that a watchdog is present. Without one, `wdog` exits. Otherwise the system has come up, and
-`wdog` clears the kernel's mark in block 0 of the disk by writing a
-block of zeros, `blk`, to the raw disk (#l("if((d = open(\"/dev/rrk0\", 1)) >= 0) {")), so that the next boot
-is taken for a good one (#f("sd.c")). Each feed writes `0xaaaa` to the key register.
+as well, so only the value read back tells that a watchdog is present. Without one, `wdog` exits. Each feed writes `0xaaaa` to the key register.
 Nothing stops the watchdog once started but a reset, so killing `wdog`
 makes the chip reset itself 33 seconds later.
 
 #lines-to(none)
 #source("/usr/src/cmd/reset.c")
 
-The program `reset` returns the MP135 machine to its boot ROM's USB
-loader. It writes the disks' buffers out with `sync`, sets the
-kernel's mark in block 0 of the disk (#l("blk[0] = 0x544f4f42;")), and resets the chip at once,
-by setting the system reset bit of the reset controller,
-`RCC_MP_GRSTCSETR`, through `/dev/mem`. The kernel booted next finds
-the mark, takes the boot for a failed one, and spoils its own copies on
-the card (#f("sd.c")), so the ROM finds none and waits for a new image
-over USB. The program returns only if a write fails.
+The program `reset` writes the disks' buffers out with `sync` and resets the chip
+at once, by setting the system reset bit of the reset controller,
+`RCC_MP_GRSTCSETR`, through `/dev/mem`. It returns only if the write
+fails.
 
 #lines-to(none)
 #source("/usr/src/cmd/blink.c")
