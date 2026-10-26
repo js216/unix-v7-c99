@@ -787,8 +787,11 @@ and to hand its address to C.
 First `srsdb sp!, #0x13` (#l("srsdb sp!, #0x13", after: "svc_entry:")), "store return state", pushes `lr` and `spsr`
 onto the stack of the mode named (SVC), and updates that stack pointer.
 Room is then made for fifteen words, and `stmia sp, {r0-r14}^`
-stores `r0` to `r14`. The `^` makes the instruction store the *user*
-mode's banked `sp` and `lr`, not SVC's, without a change of mode. The
+stores `r0` to `r14`. Without the `^`, a store-multiple instruction
+such as `stmia sp, {r0-r12}` stores the registers of the current mode,
+so in SVC mode it would store `sp_svc` and `lr_svc` for `r13` and
+`r14`. With the `^`, and `pc` not in the list, it stores the *user*
+mode's banked `sp` and `lr` instead, without a change of mode. The
 architecture forbids writeback with this form, hence the separate `sub`.
 
 #lines-to("mov r0, sp")

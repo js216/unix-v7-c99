@@ -125,11 +125,7 @@ them, to maintain the illusion that the user program is the only one
 running. Each exception handler in #f("low.s") first stores its own mode's `lr`, the
 return address, and `spsr`, the interrupted status, on the kernel
 stack, with the instruction `srsdb` ("store return state, decrement
-before"). The special#footnote[A store-multiple instruction without
-the `^`, such as `stmia sp, {r0-r12}`, stores the registers of the
-current mode, so in SVC mode it would store `sp_svc` and `lr_svc` for
-`r13` and `r14`. With the `^`, and `pc` not in the list, it stores the
-user mode's registers instead.] store instruction
+before"). The special store instruction
 `stmia sp, {r0-r14}^`
 (#at("/usr/sys/conf/low.s", "stmia sp, {r0-r14}^", after: "svc_entry:")) is used to save the user's registers on the
 kernel stack, below what `srsdb` has stored there (in the layout of
