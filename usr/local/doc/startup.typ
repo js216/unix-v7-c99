@@ -494,16 +494,7 @@ one read-only page which `startup` (#f("machdep.c")) fills at boot and
 the programs' text at 0x8000 (#f("Makefile")), and `sigpage`
 (#l("extern int sigpage;")) is its physical page.
 
-`PGADDR` (#l("#define\tPGADDR(c)\t((char *)(((unsigned)(c)<<12)+coreoff))")) converts a page number into a kernel address. On the
-PDP-11, v7's unit number was a physical address divided by 64, and the
-kernel reached it by loading a segmentation register. Here a page
-number is a physical address divided by 4096, and all of
-RAM is mapped into the kernel's address space at a fixed distance,
-`coreoff`, from its physical address, so the conversion is
-a shift and an addition. The shift is done on an `unsigned` value, since
-the MP135 machine's RAM lies above 0x80000000, where an `int` would
-overflow. Every place where v7 reached RAM by unit number
-(`copyseg`, `clearseg`, `swap`, `physio`) goes through this macro.
+`PGADDR` (#l("#define\tPGADDR(c)\t((char *)(((unsigned)(c)<<12)+coreoff))")) converts a page number into a kernel address.
 
 #lines-to("#define\tBLK_KERN\t0x701ULL")
 
@@ -1277,29 +1268,19 @@ afterwards.
 #source("/usr/sys/h/reg.h")
 
 When a process enters the kernel, by a system call, an interrupt, or an
-exception, its registers are saved on the kernel stack, and `u.u_ar0` is
+exception, its registers are saved on its kernel stack, which lies in
+its u-area (#f("user.h")), and `u.u_ar0` is
 set to point at the saved `r0`. The header #f("reg.h") gives the position of every
 other saved register as an index from that point, so that the kernel
 may write `u.u_ar0[SP]` for the user's stack pointer without knowing how
 the frame was built.
 
-In v7 the frame was assembled partly by the PDP-11 hardware (`pc` and
-`ps`) and partly by the `call` and `trap` routines of `l.s`, and the
-registers did not lie in order: `r1` was two words below `r0`, `r2` to
-`r5` further below again, and `pc` and `ps` above. Hence v7's indices were
--2, -9, -8, -7, -6, -3, 1, and 2. On the ARM the frame is built by
-#f("low.s") in a single order: `r0` to `r12` at indices 0 to 12, the
-user's `sp` at 13, its `lr` at 14, the return address at 15, and the
-saved status register (`spsr`) at 16. The registers are named by the
-ARM's names (#l("#define\tSP\t(13)")--#l("#define\tPSR\t(16)")), `SP` for the stack pointer, `PC` for the program
-counter, and `PSR` for the saved status, where v7 had the PDP-11's
-`R6`, `R7`, and `RPS`. The PDP-11's trace bit, v7's `TBIT`, is gone:
-the ARM has no such bit in its status register, and nothing sets it
-(#f("sig.c")).
-
-The ARM registers `r6` to `r12` and `lr` have no names here. Code which
-needs one writes the index, as `trap` (#f("trap.c")) does with `r[7]`,
-the register which holds the system call number.
+The frame is built by #f("low.s") in the order of the registers:
+`r0` to `r12` at indices 0 to 12 (#l("#define\tR0\t(0)")--#l("#define\tR12\t(12)")), the user's `sp` and `lr` at 13 and
+14 (#l("#define\tSP\t(13)"), #l("#define\tLR\t(14)")), the return address at 15 (#l("#define\tPC\t(15)")), and the saved status
+register `spsr` at 16 (#l("#define\tPSR\t(16)")). Every register has a name, so that code such as
+`trap` (#f("trap.c")) writes `r[R7]` for the register which holds the
+system call number, not a bare index.
 
 #lines-to(none)
 
@@ -1330,9 +1311,9 @@ differences which follow.
 The carry bit is cleared (#l("r[PSR] &= ~EBIT;")), as v7 cleared it on entry. It is set
 again below if the call fails.
 
-The call number (#l("callp = &sysent[r[7] & 077];")) is not fetched from the low six bits of the
+The call number (#l("callp = &sysent[r[R7] & 077];")) is not fetched from the low six bits of the
 `sys` instruction in user memory, but taken from the register `r7`,
-where the library stub has put it (`r[7]` is the ARM `r7`, and the PDP-11's `R7`, its `pc`, is `PC`
+where the library stub has put it (`R7` is the ARM `r7`, and the PDP-11's `R7`, its `pc`, is `PC`
 here). This is the convention of ARM Linux. A number
 greater than 63 is reduced modulo 64.
 
@@ -1710,7 +1691,12 @@ deadline is kept in `clkcval` (#l("unsigned long long clkcval;")), from which `c
 
 #lines-to("/*", after: "cntv_ctl_set(1);")
 
-The routine `intrstart` sets up interrupt handling. First it enables every
+The routine `intrstart` sets up interrupt handling. First it disables every
+interrupt the distributor has, writing ones to all of its clear-enable
+registers `ICENABLER`, of which `TYPER` gives the number less one
+(#l("for(i = 0; i <= (int)(GICD(TYPER)&037); i++)")--#l("GICD(ICENABLER+4*i) = ~0U;")). The boot ROM may have left some of them enabled, such
+as USB's after a boot over USB, and the kernel has no handler for
+them. Then it enables every
 configured interrupt whose number is known, the timer's among them
 (#l("for(ip = intrtab; ip->i_irq; ip++)", after: "intrstart(void)")--#l("gicen(*ip->i_irq);")). Then it enables the distributor, lets interrupts of every
 priority through the processor interface (`PMR`, the priority mask),
@@ -1862,7 +1848,7 @@ default so that it is not caught in turn.
 #lines-to("u.u_ar0[SP] = n;")
 
 The stack pointer is then lowered past the frame. The link register,
-`u_ar0[14]`, for which #f("reg.h") has no name, is set to the
+`u_ar0[LR]`, is set to the
 trampoline at `SIGTRAMP` (#f("seg.h")). The program counter (`PC`) is
 set to the handler, and `r0` to the signal number, the handler's
 argument. The Thumb state is cleared in the saved status

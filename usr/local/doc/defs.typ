@@ -91,6 +91,22 @@
   [#link(label(lab-of(path)), raw(lab-of(path))), line~#numlink(path, n, str(n))]
 }
 
+// Several lines of one file: "file, lines a, b, and c", the numbers linked.
+#let ats(path, ..needles) = {
+  let ns = needles.pos().map(x => find(path, x))
+  let ls = ns.map(n => numlink(path, n, str(n)))
+  let body = if ls.len() == 2 { [#ls.at(0) and #ls.at(1)] } else {
+    [#ls.slice(0, -1).join(", "), and #ls.last()] }
+  [#link(label(lab-of(path)), raw(lab-of(path))), lines~#body]
+}
+
+// A range of lines of any file: "file, lines n-m", the numbers linked.
+#let atr(path, a, b, after: none) = {
+  let n = find(path, a, after: after)
+  let m = find(path, b, after: after)
+  [#link(label(lab-of(path)), raw(lab-of(path))), lines~#numlink(path, n, str(n))--#numlink(path, m, str(m))]
+}
+
 // A fragment of the current file, from where the last one ended to the
 // line before the one beginning with until, or to the end of the file.
 // Blank lines just before until end this fragment.
