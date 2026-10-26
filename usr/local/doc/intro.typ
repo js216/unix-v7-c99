@@ -326,10 +326,12 @@ faults any access from user mode which an entry does not allow
   bot,
 ) <tab-addr>
 
-The kernel's gigabyte maps the 512~MB of RAM at its start, so the kernel can
+The kernel's gigabyte maps the 512~MB of RAM near its start, at 0xc0000000 on the QEMU
+machine and at 0xc0200000 on the MP135 machine, after the block of
+SYSRAM, so the kernel can
 reach any page of memory at a fixed distance from its physical address
-(`PGADDR`, #f("seg.h")). The kernel's own text, data, and `bss` lie in
-that mapping where it was linked, from 0xc0000000 on both machines. On
+(`PGADDR`, #f("seg.h")). The kernel's own text, data, and `bss` lie
+where it was linked, from 0xc0000000 on both machines. On
 the QEMU machine they occupy the start of RAM. On the MP135 machine
 they lie in SYSRAM, except the larger tables of the `bss`, which lie
 in DDR, from 0xc0200000 (#f("mp135/unix.ld")). The kernel's stack is the kernel
