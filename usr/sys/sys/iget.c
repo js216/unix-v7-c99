@@ -292,6 +292,11 @@ maknode(int mode)
 	ip->i_uid = u.u_uid;
 	ip->i_gid = u.u_gid;
 	wdir(ip);
+	if(u.u_error) {
+		ip->i_nlink = 0;
+		iput(ip);
+		return(NULL);
+	}
 	return(ip);
 }
 
