@@ -15717,7 +15717,10 @@ The utility `prs` profiles itself while it spends its time in system calls, then
 reports the ticks counted and its user and system times from `times`
 (#l("profil((short *)buf, sizeof buf, (int)main & ~0xfff, 0x8000);")--#l("(long)tb.tms_stime);")). A tick taken in the kernel is charged as system time and does
 not reach the histogram, since `clock` profiles only a program counter
-interrupted in user mode.
+interrupted in user mode. The loop runs until at least one tick has
+fallen in each mode, and a tenth of a second in all. A fixed tenth
+alone could end with every tick in the kernel and an empty histogram,
+more often when the host machine is busy.
 
 #lines-to(none)
 #source("/usr/local/test/utils/kcmp.c")
