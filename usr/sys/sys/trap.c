@@ -27,7 +27,7 @@ trap(int *r)
 	u.u_ar0 = r;
 	u.u_error = 0;
 	r[PSR] &= ~EBIT;
-	callp = &sysent[r[7] & 077];
+	callp = &sysent[r[R7] & 077];
 	for(i = 0; i < callp->sy_narg; i++)
 		u.u_arg[i] = r[i];
 	u.u_dirp = (caddr_t)u.u_arg[0];

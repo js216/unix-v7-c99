@@ -14,7 +14,9 @@
 #define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
 #define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
 #define	DCTLR	0x000
+#define	TYPER	0x004
 #define	ISENABLER	0x100
+#define	ICENABLER	0x180
 #define	IPRIORITYR	0x400
 #define	CCTLR	0x00
 #define	PMR	0x04
@@ -114,7 +116,10 @@ void
 intrstart(void)
 {
 	register struct intr *ip;
+	register int i;
 
+	for(i = 0; i <= (int)(GICD(TYPER)&037); i++)
+		GICD(ICENABLER+4*i) = ~0U;
 	for(ip = intrtab; ip->i_irq; ip++)
 		if(*ip->i_irq)
 			gicen(*ip->i_irq);
@@ -288,7 +293,7 @@ sendsig(caddr_t p, int signo)
 		return;
 	}
 	u.u_ar0[SP] = n;
-	u.u_ar0[14] = SIGTRAMP;
+	u.u_ar0[LR] = SIGTRAMP;
 	u.u_ar0[PC] = (int)p;
 	u.u_ar0[R0] = signo;
 	u.u_ar0[PSR] &= ~TBITS;
