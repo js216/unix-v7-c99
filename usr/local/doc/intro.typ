@@ -34,9 +34,10 @@ kernel into RAM itself and starts it at its entry point.
 
 *The MP135 machine* is Seeed Studio's Odyssey-STM32MP135D, a small
 board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
-contains one ARM Cortex-A7 processor and 128~KB of system RAM (SYSRAM)
-at 0x2ffe0000, besides a few smaller blocks of on-chip RAM which the
-port does not use. The board adds 512~MB of DDR3L
+contains one ARM Cortex-A7 processor and 168~KB of on-chip RAM. Of
+this, 128~KB is the system RAM (SYSRAM) at 0x2ffe0000, which holds the
+kernel. The rest, 32~KB of SRAM in three banks and 8~KB of backup
+SRAM, the port does not use. The board adds 512~MB of DDR3L
 memory, at 0xc0000000, and an SD card slot. The console is one of the
 chip's serial ports, USART2 at 0x4c001000, whose pins the board brings
 out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
