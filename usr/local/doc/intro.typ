@@ -73,19 +73,22 @@ processor mode in its low five bits.
 #diagram({
   let small(t) = text(size: 7pt, t)
   let num(t) = text(size: 5.5pt, str(t))
-  let fld(lo, hi, body) = stack(dir: ttb, spacing: 2pt,
+  let fld(lo, hi, body, used: false) = stack(dir: ttb, spacing: 2pt,
     if lo == hi { align(center, num(hi)) } else {
       pad(x: 1.5pt, grid(columns: (1fr, 1fr), align(left, num(hi)), align(right, num(lo)))) },
-    rect(width: 100%, inset: (x: 0pt, y: 4pt), stroke: 0.6pt, align(center, small(body))))
+    rect(width: 100%, inset: (x: 0pt, y: 4pt), stroke: 0.6pt,
+      fill: if used { none } else { luma(220) }, align(center, small(body))))
   grid(columns: (1fr,) * 5 + (2fr, 1fr, 4fr, 4fr, 6fr) + (1fr,) * 5 + (5fr,),
-    fld(31, 31)[`N`], fld(30, 30)[`Z`], fld(29, 29)[`C`], fld(28, 28)[`V`],
+    fld(31, 31, used: true)[`N`], fld(30, 30, used: true)[`Z`],
+    fld(29, 29, used: true)[`C`], fld(28, 28, used: true)[`V`],
     fld(27, 27)[`Q`], fld(25, 26)[`IT`], fld(24, 24)[`J`], fld(20, 23)[--],
     fld(16, 19)[`GE`], fld(10, 15)[`IT`], fld(9, 9)[`E`], fld(8, 8)[`A`],
-    fld(7, 7)[`I`], fld(6, 6)[`F`], fld(5, 5)[`T`], fld(0, 4)[`M`],
+    fld(7, 7, used: true)[`I`], fld(6, 6, used: true)[`F`], fld(5, 5)[`T`],
+    fld(0, 4, used: true)[`M`],
   )
 }, [The current program status register `cpsr`: the condition flags, the
 interrupt masks `I` and `F`, and the mode `M`. The port does not use the
-other fields: `Q`, the sticky saturation flag, `IT`, the state of a
+other fields, shaded: `Q`, the sticky saturation flag, `IT`, the state of a
 Thumb if-then block, `J` and `T`, which select the Jazelle and Thumb
 instruction sets, `GE`, the flags of the SIMD instructions, `E`, the
 order of bytes in data, and `A`, the mask of asynchronous aborts. Bits
@@ -106,8 +109,7 @@ occurs, the processor puts the return address in the new mode's `lr`
 and the interrupted `cpsr` in the new mode's saved status register
 `spsr`. It then sets the mode bits of `cpsr` to the exception's mode,
 masks IRQ by setting `I`, and jumps to that exception's entry in the
-vector table (@tab-vectors). The table is the block `vectors` (#at("/usr/sys/conf/low.s", "vectors:")), whose address `_start` gives the processor in the vector
-base register `VBAR` (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c12, c0, 0")).
+vector table (@tab-vectors). The vector base register `VBAR` (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c12, c0, 0")) is used to tell the processor where the vector block is located.
 
 _Banked Registers._ Each of these modes has its own copy of `sp` and `lr`, called banked
 registers (@tab-regs), and its own `spsr`. The other registers, `r0`
@@ -121,12 +123,12 @@ them, to maintain the illusion that the user program is the only one
 running. Each exception handler in #f("low.s") first stores its own mode's `lr`, the
 return address, and `spsr`, the interrupted status, on the kernel
 stack, with the instruction `srsdb` ("store return state, decrement
-before"). The special store instruction
-`stmia sp, {r0-r14}^`#footnote[A store-multiple instruction without
+before"). The special#footnote[A store-multiple instruction without
 the `^`, such as `stmia sp, {r0-r12}`, stores the registers of the
 current mode, so in SVC mode it would store `sp_svc` and `lr_svc` for
 `r13` and `r14`. With the `^`, and `pc` not in the list, it stores the
-user mode's registers instead.]
+user mode's registers instead.] store instruction
+`stmia sp, {r0-r14}^`
 (#at("/usr/sys/conf/low.s", "stmia sp, {r0-r14}^", after: "svc_entry:")) is used to save the user's registers on the
 kernel stack, below what `srsdb` has stored there (in the layout of
 #f("reg.h")).

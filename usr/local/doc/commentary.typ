@@ -1376,10 +1376,10 @@ discipline, so the mistake was harmless. The port puts `ttstart` where
 its name says. In `l_close`, `nulltty` replaces `nulldev`, and
 `nolioctl` replaces `nodev` in `l_ioctl`.
 
-#lines-to("int\trootdev\t= makedev(0, 0);")
+#lines-to("int\trootdev\t= makedev(0, 2);")
 
-Root, swap, and pipe devices are all minor device 0 of major device 0,
-the one disk. The file system occupies its first 32768 blocks, 16~MB
+Root, swap, and pipe devices are all minor device 2 of major device 0,
+the disk's file system (#f("sd.c"), #f("virtio_blk.c")). The file system occupies its first 32768 blocks, 16~MB
 (#f("rootfs.proto")), and the swap area is the 1048576 blocks after it,
 from `swplo`. This is the arrangement of v7's own RK05 configuration,
 where `swplo` was 4000 and the swap area ended at block 4872, the end
@@ -1612,8 +1612,12 @@ data.
 
 #lines-to("void")
 
-The strategy routine `rkstrategy` tests the request more than v7's did. A block number beyond the
-end of the disk is rejected at once (#l("if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK) {")--#l("}", after: "if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK) {")), as v7 rejected one beyond
+The strategy routine `rkstrategy` tests the request more than v7's did.
+The minor devices are those of the MP135 machine's card (#f("sd.c")):
+0 and 2, the whole card and its file system, are both the whole disk
+here, and 1, the boot area, is empty, since QEMU loads the kernel
+itself. A request which does not lie wholly on its minor device is
+rejected at once (#l("if (m >= 3 || m == 1 ||")--#l("}", after: "if (m >= 3 || m == 1 ||")), as v7 rejected one beyond
 the end of the pack. Such requests arise: `breada` (#f("bio.c")) reads
 ahead the block after the last, and without the check the device would
 fail the request and `rkintr` would report and retry it ten times. A count which
@@ -3170,7 +3174,11 @@ The driver for the memory special files, major device 8, is #f("mem.c").
 Through it a program such as `ps` reads the kernel's tables, and a
 privileged user may inspect or patch the running system. Minor device
 2, `/dev/null`, discards what is written to it and returns end of file
-at once.
+at once. Minor device 3, `/dev/zero`, is new. It too discards what is
+written, and a read returns as many zero bytes as were asked for, from
+the array `zeros` (#l("static char	zeros[512];")), so that `dd` can clear a block, as when the
+boot area's copies of the kernel are spoiled (#f("sd.c")). v7 had no
+such file.
 
 The lone `#` (#l("#", before: "*\tMemory special file")) dates from the time when the C compiler passed a file
 through the preprocessor only if its first character was `#`. In C99
@@ -4166,7 +4174,7 @@ command's CRC failure or timeout; `BUSYD0`, the card holding its first
 data line low while it writes, and `BUSYD0END`, the end of that.
 `WIDE` (#l("#define\tWIDE\t(1<<14)")) selects four data lines. `MAXIO` (#l("#define\tMAXIO\t0x1000000")) is the most one
 command moves, 16 MB: the data length register has 25 bits.
-`RKBASE` is the card's block at which the disk begins. Below it lie
+`RKBASE` is the card's block at which the file system begins. Below it lie
 the two copies of the kernel which the boot ROM loads, at blocks 128
 and 640 (`boot/sd-mp135.img`, #f("Makefile")), each with room for
 256 KB, more than the ROM can load.
@@ -4177,9 +4185,17 @@ The interrupt number `rkirq` is 82, shared peripheral interrupt 50, to which the
 SDMMC1. The variable `rkoff` is the offset within
 the current request of the part being transferred, and `rkn` that
 part's length, and `rkstop` and `rksta` carry `rkintr` through the end of a
-transfer. The variable `nrkblk` holds the number of blocks on the disk, `rca` the
+transfer. The variable `nrkblk` holds the number of blocks on the card, `rca` the
 card's address on its bus, and `rkbyte` says that the card counts in
 bytes rather than blocks.
+
+The table `rksizes` (#l("} rksizes[3];")) gives the first block and the length of each
+minor device, as the tables of v7's `rp` and `hp` drivers divided a
+pack. Minor device 0 is the whole card, 1 the boot area below
+`RKBASE`, with the copies of the kernel, and 2 the file system and the
+swap area after them. The boot area lets Unix write a new kernel for
+the ROM, or spoil the copies so that the ROM waits for one over USB.
+The whole card lets the card be copied or restored at once.
 
 #lines-to("static void")
 
@@ -4227,9 +4243,9 @@ is (`C_SIZE`+1) × 512 KB, `C_SIZE` being bits 48--69. In blocks, 1024
 times as many. In version 1 the size in bytes is (`C_SIZE`+1) shifted
 left by `C_SIZE_MULT`+2 and by `READ_BL_LEN`, with `C_SIZE` bits
 62--73, `C_SIZE_MULT` bits 47--49, and `READ_BL_LEN` bits 80--83. The
-shift less 9 gives blocks. The disk is the card less its first
-`RKBASE` blocks (#l("nrkblk -= RKBASE;")), and `rkstrategy` refuses any block beyond its
-end.
+shift less 9 gives blocks. From the size come the bounds of the three
+minor devices (#l("rksizes[0].len = nrkblk;")--#l("rksizes[2].len = nrkblk - RKBASE;")), and `rkstrategy` refuses any request which does
+not lie wholly on its device.
 
 Command 7 selects the card, application command 6 sets its bus to four
 lines (argument 2), and the controller follows with four lines and a divider of 2, 16 MHz. The data timeout is set to its largest value, so
@@ -4263,9 +4279,8 @@ count. The call of `mapalloc` in v7 is gone, as in #f("virtio_blk.c").
 The routine `rkstart` gives the rest of the request at the head of the queue, from
 `rkoff`, up to `MAXIO` bytes, to one command. In v7 it converted the block
 number into the drive, cylinder, and sector of the RK05 and loaded four
-registers. Here the minor device is ignored, since there is one card,
-and the block number, moved past the first `RKBASE` blocks of the card,
-is the argument of the command, multiplied by 512 for a card which
+registers. Here the block number, moved to the start of its minor
+device on the card, is the argument of the command, multiplied by 512 for a card which
 counts in bytes. A write is preceded by application
 command 23, which tells the card how many blocks follow, so that it can
 erase them before they arrive.
@@ -15344,17 +15359,19 @@ for a process whose user or group was changed by `exec`.
 #lines-to("dev\td--755 0 0")
 
 The special files. Each gives a type (`b` or `c`), and the major and
-minor device numbers (#f("c.c")). The console is character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
-and 2 of device 8 (#f("mem.c")), and `tty` is device 17. The commands `ps`,
+minor device numbers (#f("c.c")). The console is character device 0, `mem`, `kmem`, `null`, and `zero` are minor devices 0, 1,
+2, and 3 of device 8 (#f("mem.c")), and `tty` is device 17. The commands `ps`,
 `pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
 and `ps` reads process images through `mem` (#f("mem.c")), and `cron` runs
 `dmesg` as `daemon` (#f("cmd/cron.c")). The files `root` and `swap` are the same
 block device, the one disk, since the swap area lies on it beyond the
 file system, and `ps` reads `/dev/swap` for the images of processes which
-are swapped out, and `df` reads the free list of `/dev/root`. The file `rrk0` is
-the raw disk, character device 9 (#f("virtio_blk.c")), the same disk
-read without the buffer cache, and v7's makefile made a raw node beside
-every block one. All five belong to group `sys` and have mode 640, so
+are swapped out, and `df` reads the free list of `/dev/root`. Both are
+minor device 2 of the disk, its file system. The files `rrk0`, `rrk1`,
+and `rrk2` are the raw disk, character device 9, read without the
+buffer cache: the whole card, its boot area, and its file system
+(#f("sd.c")). v7's makefile made a raw node beside every block one.
+All seven belong to group `sys` and have mode 640, so
 that besides root only the set-group-id programs above may read them,
 and no one but root may write them. In v7, `/dev/makefile` made them
 readable by anyone, mode 644, which let any user read every file on
