@@ -15715,14 +15715,16 @@ faults.
 #lines-to(none)
 #source("/usr/local/test/utils/prs.c")
 
-The utility `prs` profiles itself while it spends its time in system calls, then
+The utility `prs` profiles itself while it alternates system calls with a
+counting loop of its own, then
 reports the ticks counted and its user and system times from `times`
 (#l("profil((short *)buf, sizeof buf, (int)main & ~0xfff, 0x8000);")--#l("(long)tb.tms_stime);")). A tick taken in the kernel is charged as system time and does
 not reach the histogram, since `clock` profiles only a program counter
 interrupted in user mode. The loop runs until at least one tick has
-fallen in each mode, and a tenth of a second in all. A fixed tenth
-alone could end with every tick in the kernel and an empty histogram,
-more often when the host machine is busy.
+fallen in each mode, and a tenth of a second in all. The counting loop
+gives user mode a fair share of the ticks. Without it nearly every
+tick fell in `stat`, and a run could end with an empty histogram, or,
+waiting for a tick in user mode, take seconds.
 
 #lines-to(none)
 #source("/usr/local/test/utils/kcmp.c")
