@@ -5,9 +5,9 @@
 #include "../h/systm.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
-#define	RCC(o)	R(0xF0000000+(o))
-#define	GPIO(p, o)	R(0xF0002000+(p)*0x1000+(o))
-#define	I2C(o)	R(0xF0A05000+(o))
+#define	RCC(o)	R(0xF0008000+(o))
+#define	GPIO(p, o)	R(0xF000A000+(p)*0x1000+(o))
+#define	I2C(o)	R(0xF0018000+(o))
 
 static int
 i2cwait(unsigned int bit)

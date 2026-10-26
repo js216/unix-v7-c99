@@ -11,8 +11,8 @@
 #include "../h/buf.h"
 #include "../h/conf.h"
 
-#define	GICD(o)	(*(volatile unsigned *)(gicdbase+(o)))
-#define	GICC(o)	(*(volatile unsigned *)(giccbase+(o)))
+#define	GICD(o)	(*(volatile unsigned *)(0xF0000000+(o)))
+#define	GICC(o)	(*(volatile unsigned *)(0xF0001000+(o)))
 #define	DCTLR	0x000
 #define	TYPER	0x004
 #define	ISENABLER	0x100
@@ -22,6 +22,8 @@
 #define	PMR	0x04
 #define	IAR	0x0c
 #define	EOIR	0x10
+#define	PTX(va)	((va)>>PGSHIFT & (NPTE-1))	/* its entry of kl3d */
+#define	BLX(va)	((va)>>BLKSHIFT & (NPTE-1))	/* its entry of kl2 */
 
 extern char _start[], __bss_end[];
 unsigned long long clkcval;
@@ -100,7 +102,7 @@ startup(void)
 static void
 gicen(int n)
 {
-	*(volatile unsigned char *)(gicdbase+IPRIORITYR+n) = 0x80;
+	*(volatile unsigned char *)(0xF0000000+IPRIORITYR+n) = 0x80;
 	GICD(ISENABLER+(n>>5)*4) = 1U << (n&31);
 }
 
@@ -151,21 +153,30 @@ irq(int *r)
 }
 
 /*
- * Map the regions of board_map whose attributes are attr in blocks.
- * A region which does not begin on a block, the MP135's SYSRAM, keeps
- * the pages in which _start mapped the kernel.
+ * Map the regions of board_map whose attributes are attr: memory in
+ * blocks, and the devices by pages, through kl3d, from DEVBASE.  A
+ * region of memory which does not begin on a block, the MP135's
+ * SYSRAM, keeps the pages in which _start mapped the kernel.
  */
 static void
 kmap(unsigned long long attr)
 {
 	register struct memregion *m;
-	register unsigned a;
+	register unsigned a, v;
 
-	for(m = board_map; m->end != 0; m++)
-		if(m->attr == attr && (m->start & ((1U<<BLKSHIFT)-1)) == 0)
+	for(m = board_map; m->end != 0; m++) {
+		v = m->va - m->start;
+		if(m->attr != attr)
+			continue;
+		if(attr == BLK_DEV)
+			for(a = m->start; a < m->end; a += PGSIZE)
+				kl3d[PTX(v+a)] = a | attr | PTE_TAB;
+		else if((m->start & ((1U<<BLKSHIFT)-1)) == 0)
 			for(a = m->start; a < m->end; a += 1U<<BLKSHIFT)
-				kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =
-				    a | m->attr;
+				kl2[BLX(v+a)] = a | attr;
+	}
+	if(attr == BLK_DEV)
+		kl2[BLX(DEVBASE)] = vtop((caddr_t)kl3d) | PTE_TAB;
 	tlbflush();
 }
 

@@ -15,7 +15,8 @@
 #define	L1SHIFT	30	/* 1 GB first-level entries */
 #define	NPTE	512	/* entries per translation table */
 #define	PGSIZE	4096
+#define	DEVBASE	0xf0000000	/* kernel address of the device pages */
 struct memregion { unsigned va, start, end; unsigned long long attr; };
 extern struct memregion board_map[];
-extern unsigned long long kl2[], kl3u[], bootl1[];
+extern unsigned long long kl2[], kl3u[], kl3d[], bootl1[];
 extern int sigpage;

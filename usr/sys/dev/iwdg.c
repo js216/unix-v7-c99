@@ -9,8 +9,8 @@
 #include "../h/systm.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
-#define	APB4ENSETR	R(0xF0000728)
-#define	IWDG(o)	R(0xF0402000+(o))
+#define	APB4ENSETR	R(0xF0008728)
+#define	IWDG(o)	R(0xF0013000+(o))
 #define	KR	IWDG(0x00)
 #define	PR	IWDG(0x04)
 #define	RLR	IWDG(0x08)

@@ -141,4 +141,4 @@ typedef	long		off_t;
 #define	UBITS	0xfe0ffe20	/* flags, GE, IT, E, and T: a user may set these */
 #define	TBITS	0x0600fe20	/* the Thumb state: T, IT, and E */
 
-extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;
+extern unsigned corebase, coretop, coreoff;

@@ -9,11 +9,11 @@
 #include "../h/systm.h"
 
 /* base address */
-#define	KLADDR	0xF0A01000	/* USART2 */
+#define	KLADDR	0xF0003000	/* USART2 */
 #define	KLBASE	((struct device *)0176500)	/* kl and dl11-a */
 #define	DLBASE	((struct device *)0175610)	/* dl-e */
-#define	RCC	0xF0000000
-#define	GPIO(p, o)	(*(volatile int *)(0xF0002000+(p)*0x1000+(o)))
+#define	RCC	0xF0008000
+#define	GPIO(p, o)	(*(volatile int *)(0xF000A000+(p)*0x1000+(o)))
 #define	NKL11	1
 #define	NDL11	0
 #define DSRDY	02

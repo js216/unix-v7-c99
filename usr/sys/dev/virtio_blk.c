@@ -65,10 +65,10 @@ int	rkirq;
 void
 rkinit(void)
 {
-	for(vbase=0xF0400000; vbase<0xF0404000; vbase+=0x200)
+	for(vbase=0xF0004000; vbase<0xF0008000; vbase+=0x200)
 		if(RKADDR(0) == 0x74726976 && RKADDR(8) == 2)
 			break;
-	if(vbase == 0xF0404000)
+	if(vbase == 0xF0008000)
 		panic("virtio");
 	RKADDR(0x70) = 1;
 	RKADDR(0x70) = 3;
@@ -78,7 +78,7 @@ rkinit(void)
 	vq = (struct vring *)(((int)vqbuf+4095) & ~4095);
 	RKADDR(0x40) = vtop((caddr_t)vq) >> 12;
 	RKADDR(0x70) = 7;
-	rkirq = 48 + (vbase-0xF0400000)/0x200;
+	rkirq = 48 + (vbase-0xF0004000)/0x200;
 }
 
 /*

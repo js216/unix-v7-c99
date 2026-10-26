@@ -9,9 +9,9 @@
 #include	"../h/dir.h"
 #include "../h/user.h"
 
-#define	SD(off)	(*(volatile int *)(0xF0205000+(off)))
-#define	RCC(off)	(*(volatile int *)(0xF0000000+(off)))
-#define	GPIO(p, off)	(*(volatile int *)(0xF0002000+(p)*0x1000+(off)))
+#define	SD(off)	(*(volatile int *)(0xF0004000+(off)))
+#define	RCC(off)	(*(volatile int *)(0xF0008000+(off)))
+#define	GPIO(p, off)	(*(volatile int *)(0xF000A000+(p)*0x1000+(off)))
 #define	NRK	4
 
 #define	RESET	0

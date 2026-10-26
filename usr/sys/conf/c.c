@@ -87,7 +87,6 @@ struct	callo	callout[NCALL];
 struct	cblock	cfree[NCLIST];
 
 unsigned int	corebase = COREBASE, coreoff, coretop = CORETOP;
-unsigned int	gicdbase = GICDBASE, giccbase = GICCBASE;
 
 struct	memregion	board_map[] =
 {

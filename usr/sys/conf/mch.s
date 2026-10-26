@@ -12,7 +12,7 @@
 .globl savfp, restfp
 .globl dfar, dfsr
 .globl nsenter
-.globl kl3u
+.globl kl3u, kl3d
 
 dmbsy:
 	dmb sy
@@ -394,4 +394,6 @@ nofault:
 
 .balign 4096
 kl3u:
+	.space 4096
+kl3d:
 	.space 4096

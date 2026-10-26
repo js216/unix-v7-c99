@@ -15,16 +15,16 @@
 #include "../h/systm.h"
 
 #define	R(a)	(*(volatile unsigned int *)(a))
-#define	SECCFGR_RCC	R(0xF0000000)
-#define	APB5ENSETR	R(0xF0000740)
-#define	AHB4ENSETR	R(0xF0000770)
-#define	GPIO(n, o)	R(0xF0002000+0x1000*(n)+(o))
+#define	SECCFGR_RCC	R(0xF0008000)
+#define	APB5ENSETR	R(0xF0008740)
+#define	AHB4ENSETR	R(0xF0008770)
+#define	GPIO(n, o)	R(0xF000A000+0x1000*(n)+(o))
 #define	SECCFGR	0x30
-#define	ETZPC(o)	R(0xF0807000+(o))
+#define	ETZPC(o)	R(0xF0017000+(o))
 #define	TZMA1_SIZE	0x04
 #define	DECPROT0	0x10
-#define	GICD(o)	R(0xF0621000+(o))
-#define	GICC(o)	R(0xF0622000+(o))
+#define	GICD(o)	R(0xF0000000+(o))
+#define	GICC(o)	R(0xF0001000+(o))
 
 void
 etzpcinit(void)
