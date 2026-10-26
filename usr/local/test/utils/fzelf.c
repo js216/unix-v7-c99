@@ -2,7 +2,7 @@
  * fzelf seed tries: exec mutated programs.  Each try copies a valid
  * program, changes a few of its bytes, mostly in the ELF header and
  * the program headers, where the kernel decides how to load it,
- * sometimes truncates it, and executes it as the user dmr with its
+ * sometimes truncates it, and executes it as uid 9, its own, with its
  * standard files on /dev/null, in /tmp/fz/elf.  The exec may fail,
  * the program may run or die, but the kernel must not panic, no
  * file of the system may change, and the try must end.  Prints the
@@ -18,7 +18,7 @@
 
 #define	BASE	"/usr/local/test/utils/fzgen"
 #define	MAXF	65536
-#define	FUZZUID	7
+#define	FUZZUID	9
 #define	FUZZGID	3
 
 char	orig[MAXF], img[MAXF];
@@ -113,6 +113,29 @@ child(void)
 	exit(99);
 }
 
+/*
+ * Kill every process of uid, the strays of a batch: a child sent by a
+ * random signal handler into this program's own code may fork.  The
+ * kernel lets a process of uid signal only processes of uid.
+ */
+static void
+reap(int uid)
+{
+	int pid, me, w, status;
+
+	if((pid = fork()) == 0) {
+		if(setuid(uid) < 0)
+			exit(1);
+		me = getpid();
+		for(w = 2; w < 30000; w++)
+			if(w != me)
+				kill(w, SIGKILL);
+		exit(0);
+	}
+	while((w = wait(&status)) != pid && w >= 0)
+		;
+}
+
 static void
 timeout(int sig)
 {
@@ -161,6 +184,7 @@ main(int argc, char **argv)
 			if(w < 0)
 				kill(pid, SIGKILL);
 		alarm(0);
+		reap(FUZZUID);
 		if(stat("/unix", &st) < 0 || st.st_mtime != sunix.st_mtime ||
 		    st.st_size != sunix.st_size || stat("/bin/sh", &st) < 0 ||
 		    st.st_mtime != ssh.st_mtime)

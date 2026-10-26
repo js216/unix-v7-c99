@@ -41,7 +41,7 @@ do
 	test -s /tmp/fz.x && { echo FAIL icheck after seed $s; cat /tmp/fz.x; }
 	dcheck /dev/root >/tmp/fz.ic 2>&1
 	sed -e 1d -e '/^ *entries *link cnt$/d' /tmp/fz.ic >/tmp/fz.x
-	test -s /tmp/fz.x && { echo FAIL dcheck after seed $s; cat /tmp/fz.x; }
+	test -s /tmp/fz.x && { echo FAIL dcheck after seed $s; cat /tmp/fz.x; ps alx; }
 	rm -f /tmp/fz.ic /tmp/fz.x
 	r=`expr $r + 1`
 	echo fuzz round $r seeds $s-`expr $s + 8` done

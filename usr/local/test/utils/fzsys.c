@@ -1,6 +1,6 @@
 /*
  * fzsys seed batches: random system calls with hostile arguments.
- * Each batch runs in a child as the user dmr (uid 7, group 3), with
+ * Each batch runs in a child as uid 8, which no one else uses, with
  * its standard files on /dev/null, in /tmp/fz/sys.  The child makes
  * random calls by number, through svc, with arguments drawn from
  * classes that reach the edges of the kernel's checks: small and
@@ -22,7 +22,7 @@
 
 #define	NCALL	300
 #define	BUFSZ	8192
-#define	FUZZUID	7
+#define	FUZZUID	8
 #define	FUZZGID	3
 #define	PROOF	"/fzroot"
 
@@ -139,6 +139,29 @@ child(void)
 	exit(0);
 }
 
+/*
+ * Kill every process of uid, the strays of a batch: a child sent by a
+ * random signal handler into this program's own code may fork.  The
+ * kernel lets a process of uid signal only processes of uid.
+ */
+static void
+reap(int uid)
+{
+	int pid, me, w, status;
+
+	if((pid = fork()) == 0) {
+		if(setuid(uid) < 0)
+			exit(1);
+		me = getpid();
+		for(w = 2; w < 30000; w++)
+			if(w != me)
+				kill(w, SIGKILL);
+		exit(0);
+	}
+	while((w = wait(&status)) != pid && w >= 0)
+		;
+}
+
 static int
 same(struct stat *a, struct stat *b)
 {
@@ -177,7 +200,7 @@ main(int argc, char **argv)
 	while((w = wait(&status)) != pid && w >= 0)
 		;
 	if(w < 0 || status != 0)
-		fail("cannot become dmr");
+		fail("cannot become uid 8");
 	for(batch = 0; batch < nbatch; batch++) {
 		rs = seed*2654435761UL + batch*40503UL + 11;
 		if((pid = fork()) < 0)
@@ -192,6 +215,7 @@ main(int argc, char **argv)
 				alarm(0);
 			}
 		alarm(0);
+		reap(FUZZUID);
 		if(stat(PROOF, &st) == 0) {
 			unlink(PROOF);
 			fail("the child became root");
