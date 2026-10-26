@@ -221,8 +221,7 @@ MMU off. From there the system comes up in these steps:
 #[#set enum(numbering: "1.a.")
 + First `_start` masks interrupts, turns off the MMU and the caches,
   discards the contents of the TLB, the caches, and the branch
-  predictor, and clears the kernel's `bss`. It builds the boot tables
-  (Translation Tables, page #pageref(<sec-tables>)), which map the
+  predictor, and clears the kernel's `bss`. It builds the boot tables, which map the
   kernel at its _kernel address_, the virtual address at which it is
   linked to run (The Address Space, page #pageref(<sec-addr>)), and
   also at its physical address, by an _identity mapping_, so that the
