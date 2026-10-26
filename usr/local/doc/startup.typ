@@ -53,8 +53,8 @@ be large enough never to overflow. A map can hold no more free areas
 than there are allocated areas between them, plus one, and it needs one
 entry more for the sentinel. `CMAPSIZ`,
 `SMAPSIZ`, and `PMAPSIZ` (#f("param.h")) are computed from this bound, and the
-configuration of each machine gives the maps those sizes
-(#f("qemu/c.c")).
+configuration gives the maps those sizes
+(#f("c.c")).
 
 #lines-to("int")
 
@@ -250,8 +250,8 @@ counts at boot.
 The disk holds the root file system, and after it the swap area. The
 administrator decides how big each one is. The second line of
 `boot/rootfs.proto` gives the size of the root file system in blocks
-and its number of inodes, and `mkfs` reads it. Each machine's configuration
-(#f("qemuconf"), #f("mp135conf")) gives the block where swap starts,
+and its number of inodes, and `mkfs` reads it. The configuration
+(#f("c.c")) gives the block where swap starts,
 `swplo`, and the number of swap blocks, `nswap`. Swap must start after
 the root file system and end before the end of the disk. The system is
 currently configured with a root file system of 16~MB with 1024 inodes,
@@ -388,7 +388,7 @@ mode, from the mode bits of its status register, which `irq`
 #lines-to("extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;")
 
 The declarations of variables. The values which differ between the
-two machines are defined by the configuration (#f("qemu/c.c")): the
+two machines are defined by the configuration (#f("c.c"), #f("qemu/mach.h")): the
 end of RAM (`coretop`) and the addresses of the interrupt controller. Where RAM
 begins (`corebase`) and how far its kernel addresses lie from its
 physical ones (`coreoff`) are computed by `machine_init` (#f("machdep.c")).
@@ -500,8 +500,8 @@ the programs' text at 0x8000 (#f("Makefile")), and `sigpage`
 
 The remainder are constants of the ARM's long-descriptor tables
 (#f("low.s")), used by `machine_init` (#f("machdep.c")), by `sureg`
-(#f("ureg.c")), and by the table of regions which `mkconf` writes into
-#f("qemu/c.c"). Each entry is 64~bits, of which the attributes occupy
+(#f("ureg.c")), and by the table of regions in each machine's
+#f("qemu/mach.h"). Each entry is 64~bits, of which the attributes occupy
 the low twelve and the top twelve.
 
 `BLK_KERN` (#l("#define\tBLK_KERN\t0x701ULL")) describes a 2~MB block of RAM, mapped for the kernel. Read from the right, its fields are:
@@ -550,8 +550,8 @@ both machines. `PGSHIFT` and `PGSIZE` (#l("#define\tPGSHIFT\t12"), #l("#define\t
 `L1SHIFT` (#l("#define\tBLKSHIFT"), #l("#define\tL1SHIFT")) give the reach of an entry of a
 second-level and of a first-level table, 2~MB and 1~GB, and `NPTE`
 (#l("#define\tNPTE")) the number of entries in a table. The type `struct memregion` (#l("struct memregion { unsigned va, start, end; unsigned long long attr; };")) is that of
-the table `board_map`, which `mkconf` writes into #f("qemu/c.c") from the
-`map` lines of the machine's configuration file. Each entry is a range of
+the table `board_map`, which #f("c.c") defines from the rows in the
+machine's #f("qemu/mach.h"). Each entry is a range of
 physical addresses, the kernel address at which it is to be mapped, and
 the block descriptor bits to use.
 
@@ -562,11 +562,10 @@ the block descriptor bits to use.
 PDP-11, `l.s` filled the bottom of physical memory with the interrupt vectors, a new PC and PS for each trap and each
 device. It also supplied, for every device, a two-instruction stub which entered the common routine
 `call` with the address of the C handler. It was generated anew by
-`mkconf` for each configuration. None of that survives. The ARM has eight exception
+v7's `mkconf` for each configuration. None of that survives. The ARM has eight exception
 vectors, and only one of them serves all devices. The interrupt
 controller (GIC) is asked which device interrupted, and `irq`
-(#f("machdep.c")) looks the answer up in `intrtab`, which `mkconf` now
-writes into #f("qemu/c.c"). So #f("low.s") is the same for every configuration. It holds what in v7 was split between `l.s` and the start of `mch.s`, the reset code (v7's `start`), the vectors, and the
+(#f("machdep.c")) looks the answer up in `intrtab` (#f("c.c")). So #f("low.s") is the same for both machines. It holds what in v7 was split between `l.s` and the start of `mch.s`, the reset code (v7's `start`), the vectors, and the
 assembler `trap` and `call` routines which build the register frame for
 C.
 
@@ -645,15 +644,23 @@ format of the earlier ARMs cannot do at a three-gigabyte boundary. That
 is why it is used. The kernel's table `kl2` (#l("kl2:")) is a second-level
 table of 512~entries, which together map the gigabyte from 0xc0000000.
 
-Here `kl2` receives the blocks which hold the kernel itself, from
-`_start` to the end of `bss`. The register `r0` runs over the numbers
-of the 2~MB blocks, `r1` is the last, and each entry is the block's
-physical address, the kernel address plus `r4`, or'ed with `BLK_KERN`
-(#at("/usr/sys/h/seg.h", "#define\tBLK_KERN")). The low nine bits of the
-block number, the index in the table, are taken by `ubfx`. The upper
-word of each entry stays zero. The difference in `r4` is a multiple of
-2~MB on both machines (#f("qemuconf")), as it must be for a block to map
-the kernel exactly.
+Here `kl2` receives one entry, for the 2~MB from `_start`, which points
+to the third-level table `kl3k` (#l("kl3k:")), and `kl3k` receives the pages which
+hold the kernel itself, from `_start` to the end of `bss`. The register
+`r0` runs over their kernel addresses, `r1` is the end, and `ip` holds
+each entry: the page's physical address, the kernel address plus `r4`,
+or'ed with `BLK_KERN` (#at("/usr/sys/h/seg.h", "#define\tBLK_KERN")) and with `PTE_TAB`, which marks an entry of
+the third level as a page. The index in the table, the nine bits above
+the offset in the page, is taken by `ubfx`. The upper word of each
+entry stays zero, since `bss` has just been cleared.
+
+Pages are used rather than blocks of 2~MB because on the MP135 machine
+the kernel lies in SYSRAM, at 0x2ffe0000, which is not at the same
+place in its block as the kernel address 0xc0000000 is in its own, so
+no block could map it. The QEMU machine's kernel could be mapped by a
+block, but the same code serves both. The kernel must lie within the
+2~MB which one table covers, which the linker scripts check
+(#f("qemu/unix.ld")).
 
 #lines-to("ldr r6, =bootl1")
 
@@ -943,8 +950,11 @@ under 700~bytes, and a fault taken during boot under 1.4~KB.
 Interrupts stay masked until long after the switch, so none lands on
 this stack. The kernel's
 second-level table `kl2` stays in use after boot. It must be aligned on
-4~KB. The first-level table `bootl1` holds the boot identity
-mapping. It needs 32-byte alignment and follows `kl2`.
+4~KB, and so must the third-level table `kl3k` which follows it. On the
+QEMU machine `machine_init` replaces the entry which points to `kl3k`
+with a block of RAM, and the table falls out of use. On the MP135
+machine it maps the kernel for good. The first-level table `bootl1` holds the boot identity
+mapping. It needs 32-byte alignment and follows `kl3k`.
 
 #lines-to(none)
 #source("/usr/sys/conf/mch.s")
@@ -1493,7 +1503,7 @@ never swapped. The field `u_procp` links `u` and `proc[0]`.
 
 _Interrupts._ The timer is programmed to interrupt `HZ` times a second by `clkstart`
 (#l("clkstart();")). Then `bdinit` (#l("bdinit();")), which the
-configuration (#f("qemu/c.c")) defines to call the disk driver's
+configuration (#f("c.c")) defines to call the disk driver's
 `rkinit`, starts the disk. It comes before `intrstart`, because the QEMU
 machine's `virtio` driver learns its interrupt number only when it
 probes the device (#f("virtio_blk.c")). The configured interrupts are
@@ -1558,8 +1568,8 @@ block. Each buffer has a header, a `struct buf` (#f("buf.h")), which
 records the device and the block it holds, and `binit` (#l("binit(void)")) pairs
 each header with its buffer. The buffers themselves
 (#l("extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")) are defined, with
-the kernel's other tables, in the file which `mkconf` generates
-(#at("/usr/sys/conf/qemu/c.c", "int\tbuffers[")), and `NBUF`
+the kernel's other tables, in the configuration
+(#at("/usr/sys/conf/c.c", "int\tbuffers[")), and `NBUF`
 (#at("/usr/sys/h/param.h", "#define\tNBUF")) gives their number. Each
 buffer occupies whole cache lines of its own, as the SD card driver
 requires (#f("sd.c")). So a row of the array is rounded up to whole
@@ -1571,7 +1581,7 @@ The routine `binit` links every buffer into the free list through
 `brelse`. On the way it moves every buffer up by the same amount, less
 than 64~bytes, to bring them all onto a line boundary
 (#l("bp->b_un.b_addr = (caddr_t)buffers[i] +")). The configuration
-provides one row more than `NBUF` (#f("mkconf.c")) to make room for
+provides one row more than `NBUF` (#f("c.c")) to make room for
 the shift.
 
 #lines-to("for (bdp = bdevsw; bdp->d_open; bdp++) {")
@@ -1579,7 +1589,7 @@ the shift.
 Each block device's queue (`d_tab`) is then made an empty circular
 list, and the block devices are counted in `nblkdev`. The scan of
 `bdevsw` ends at the first entry without an open routine, the null
-entry with which #f("qemu/c.c") closes the table.
+entry with which #f("c.c") closes the table.
 
 #lines-to(none)
 #source("/usr/sys/sys/machdep.c")
@@ -1619,7 +1629,7 @@ offsets serve as addresses, and both fit the 8-bit immediate field of
 
 _Memory._ The routine `machine_init` (#l("machine_init(void)")) has set `corebase`
 to the physical address of the first page after the kernel and its
-tables, and the configuration (#f("qemu/c.c")) gives `coretop`. Both
+tables, and the configuration (#f("c.c")) gives `coretop`. Both
 are physical addresses, because the core map counts physical pages.
 The macro `btop` divides each address by the page size to give the
 page number.
@@ -1669,7 +1679,7 @@ generic timer. Its interrupt, 27 (`clkirq`, #l("int\tclkirq = 27;")), is the
 virtual timer's private interrupt. Each core has its own private
 interrupts, numbered 16 to 31, which no other core sees.
 
-The table `intrtab` (#f("conf.h"), #f("qemu/c.c")) pairs each configured
+The table `intrtab` (#f("conf.h"), #f("c.c")) pairs each configured
 interrupt with the routine to call.
 
 The routine `gicen` (#l("gicen(int n)")) gives interrupt `n` a middling priority (0x80) in the
@@ -1701,9 +1711,8 @@ configured interrupt whose number is known, the timer's among them
 (#l("for(ip = intrtab; ip->i_irq; ip++)", after: "intrstart(void)")--#l("gicen(*ip->i_irq);")). Then it enables the distributor, lets interrupts of every
 priority through the processor interface (`PMR`, the priority mask),
 and enables the interface (#l("GICD(DCTLR) = 1;")--#l("GICC(CCTLR) = 1;")). Only then does it unmask
-interrupts (#l("intr_enable();", after: "intrstart(void)")). An earlier call of `intr_enable`, as from a driver, unmasks
-them too, but none can arrive, since `machine_init` has switched the
-GIC off.
+interrupts (#l("intr_enable();", after: "intrstart(void)")). No driver unmasks them before this, so
+the controller's state until then does not matter.
 
 #lines-to("void", lead: true, after: "intr_enable();")
 
@@ -1728,11 +1737,11 @@ Writing the same number to the end-of-interrupt register (`EOIR`,
 #l("GICC(EOIR) = n;")) tells the GIC that the interrupt has been
 handled, so that it may deliver the next one.
 
-#lines-to("static void", lead: true, after: "GICC(EOIR) = n;")
+#lines-to("/*", lead: true, after: "GICC(EOIR) = n;")
 
 _Kernel Map._ The table `board_map` (#f("seg.h")) comes from the
-configuration (#f("qemu/c.c"), #f("mp135/c.c")). It holds the regions
-which the machine's configuration file asks to be mapped, each with its
+configuration (#f("c.c"), #f("qemu/mach.h"), #f("mp135/mach.h")). It holds the regions
+to be mapped, each with its
 kernel address, its physical bounds, and the attribute bits of its block
 descriptors. The linker script defines the `__` symbols
 (#l("extern char _start[], __ddrbss_start[], __ddrbss_end[];")). The section `.ddrbss` holds further
@@ -1746,8 +1755,12 @@ The routine `kmap` (#l("kmap(unsigned long long attr)")) enters the regions of `
 attributes are `attr` into the kernel's table `kl2`, 2~MB at a time.
 The entry for a kernel address is its 2~MB block within the top
 gigabyte, bits 21 to 29 of the address (#l("kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =")). The attributes are
-defined in #f("seg.h"). Afterwards `kmap` calls `tlbflush` (#f("mch.s")),
-because a region may be entered twice, as the kernel's own is.
+defined in #f("seg.h"). A region which does not begin on a block, the
+MP135 machine's SYSRAM, is left alone (#l("if(m->attr == attr && (m->start & ((1U<<BLKSHIFT)-1)) == 0)")), since no block can map it,
+and the pages in which `_start` mapped the kernel go on doing so
+(#f("low.s")). Afterwards `kmap` calls `tlbflush` (#f("mch.s")),
+because an entry may change. On the QEMU machine the entry for the
+kernel changes from the table of `_start` to a block of RAM.
 
 The routine `vtop` (#l("vtop(caddr_t va)")) is the inverse of the kernel's mapping. It finds the
 region of RAM which holds a kernel address, and returns the physical
@@ -1764,9 +1777,10 @@ kernel address on a small stack in the bss, with only the kernel image
 mapped. It first maps the device registers and, on the MP135 machine, starts
 the watchdog (`wdinit`, #f("iwdg.c")). From then on a kernel which
 stops resets the board within 33 seconds, even one which stops before
-its console works. It then switches the GIC off,
-whatever state QEMU or the boot ROM left it in, and initialises the
+its console works. It then initialises the
 console (#l("kmap(BLK_DEV);")--#l("cninit();")), so that `printf` and `panic` work from here on.
+It leaves the GIC as QEMU or the boot ROM left it, since the interrupts
+stay masked in `cpsr` until `intrstart` has set the controller up.
 
 On the MP135 machine it then has the PMIC power the DDR memory
 (#f("pmic.c")) and starts the DDR controller (#f("ddr.c")), and
@@ -2150,7 +2164,7 @@ size of the u-area keeps it from reaching the structure.
 
 The structure `u` is declared external (#l("extern struct user u;")).
 Its address, `UBASE` (#f("param.h")), comes from one line of the linker
-script which `mkconf` writes (#f("qemu/unix.ld"), #f("mp135/unix.ld")),
+script (#f("qemu/unix.ld"), #f("mp135/unix.ld")),
 so every reference to `u` is to that fixed address. Why `UBASE` lies
 where it does is told in the Introduction (see _The Address Space_,
 page #pageref(<sec-addr>)).

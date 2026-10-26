@@ -26,11 +26,11 @@
 }
 #let file = state("file", "")
 #let text-of(path) = read(path).trim("\n", at: end).split("\n")
-#let source(path) = { file.update(path); [#heading(level: 3, path)#label(if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") or path.starts-with("/usr/include/sys/") or path.starts-with("/usr/local/test/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() })] }
+#let lab-of(path) = if path.ends-with("/mach.h") or path.ends-with(".ld") or path.starts-with("/usr/src/") or path.starts-with("/usr/include/sys/") or path.starts-with("/usr/local/test/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() }
+#let source(path) = { file.update(path); [#heading(level: 3, path)#label(lab-of(path))] }
 #let f(name) = link(label(name), raw(name))
 
 // Line references found by the text of the line, not by number.
-#let lab-of(path) = if path.ends-with("/c.c") or path.ends-with(".ld") or path.starts-with("/usr/src/") or path.starts-with("/usr/include/sys/") or path.starts-with("/usr/local/test/") { path.split("/").slice(-2).join("/") } else { path.split("/").last() }
 
 // The trimmed lines of a file, read once.
 #let trimmed(path) = text-of(path).map(l => l.trim())

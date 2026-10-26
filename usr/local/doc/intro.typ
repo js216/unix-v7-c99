@@ -34,8 +34,9 @@ kernel into RAM itself and starts it at its entry point.
 
 *The MP135 machine* is Seeed Studio's Odyssey-STM32MP135D, a small
 board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
-contains one ARM Cortex-A7 processor and 128~KB
-of on-chip RAM (SYSRAM) at 0x2ffe0000. The board adds 512~MB of DDR3L
+contains one ARM Cortex-A7 processor and 128~KB of system RAM (SYSRAM)
+at 0x2ffe0000, besides a few smaller blocks of on-chip RAM which the
+port does not use. The board adds 512~MB of DDR3L
 memory, at 0xc0000000, and an SD card slot. The console is one of the
 chip's serial ports, USART2 at 0x4c001000, whose pins the board brings
 out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
@@ -47,29 +48,54 @@ guards the DDR memory, its independent watchdog (IWDG2), and, over the chip's I2
 STPMIC1 power management chip. The chip's boot ROM loads the kernel
 from the SD card into SYSRAM and starts it.
 
-One kernel source serves both machines. What differs is collected in
-each machine's configuration (#f("qemuconf"), #f("mp135conf")), which
-`mkconf` (#f("mkconf.c")) turns into a C file of device tables and
-memory map (#f("qemu/c.c")).
+One kernel source serves both machines. The dozen lines which differ
+are collected in each machine's header (#f("qemu/mach.h"),
+#f("mp135/mach.h")), which the configuration of device tables and
+memory map (#f("c.c")) includes.
 
 === The ARM Processor <sec-arm>
 
 The Cortex-A7 implements the ARMv7-A architecture. It has sixteen
-32-bit registers, `r0` to `r15`. Three have a special use and a second name. The register `r13` is the stack pointer `sp`, `r14` the link register `lr`,
-which receives the return address of a function call, and `r15` the program
-counter `pc`. The current program status register `cpsr` holds the
-condition flags (`N`, `Z`, `C`, and `V`, for negative, zero, carry,
-and overflow, which comparisons set and conditional instructions
-test), two interrupt masks, `I` for ordinary interrupts (IRQ) and `F`
-for fast ones (FIQ), and, in its low five bits, the processor mode.
+32-bit registers, `r0` to `r15`. Three have a special use and a second name:
 
-The mode decides what a program may do. User programs run in user mode
+- `r13` is the stack pointer `sp`,
+- `r14` is the link register `lr`, which receives the return address
+  of a function call, and
+- `r15` is the program counter `pc`.
+
+The current program status register `cpsr` (@fig-cpsr) holds the
+condition flags `N`, `Z`, `C`, and `V`, for negative, zero, carry, and
+overflow. Arithmetic instructions and comparisons set them, and
+conditional instructions test them. It also holds two interrupt masks,
+`I` for ordinary interrupts (IRQ) and `F` for fast ones (FIQ), and the
+processor mode in its low five bits.
+
+#diagram({
+  let small(t) = text(size: 7.5pt, t)
+  let fld(lo, hi, body) = stack(dir: ttb, spacing: 2pt,
+    pad(x: 2pt, if lo == hi { align(center, text(size: 6.5pt)[#hi]) } else {
+      grid(columns: (1fr, 1fr),
+        align(left, text(size: 6.5pt)[#hi]), align(right, text(size: 6.5pt)[#lo])) }),
+    rect(width: 100%, inset: 4pt, stroke: 0.6pt, align(center, small(body))))
+  grid(columns: (2fr, 2fr, 2fr, 2fr, 11fr, 2fr, 2fr, 2fr, 5fr),
+    fld(31, 31)[`N`], fld(30, 30)[`Z`], fld(29, 29)[`C`], fld(28, 28)[`V`],
+    fld(8, 27)[other state], fld(7, 7)[`I`], fld(6, 6)[`F`],
+    fld(5, 5)[`T`], fld(0, 4)[mode],
+  )
+}, [The current program status register `cpsr`. The bit `T` selects the
+Thumb instruction set, which the port does not use.]) <fig-cpsr>
+
+_Processor Modes._ The mode decides what a program may do. User programs run in user mode
 (USR, mode bits `10000`), which can reach neither the kernel's memory
-nor the system control registers, which configure the processor
-itself. The kernel runs in supervisor mode (SVC, `10011`). Each kind
-of exception has a mode of its own, IRQ (`10010`) for interrupts,
-abort (ABT, `10111`) for memory faults, and undefined (UND, `11011`)
-for an instruction the processor does not know. When an exception
+nor the system control registers. The kernel runs in supervisor mode (SVC, `10011`). Each kind
+of exception has a mode of its own:
+
+- IRQ (`10010`) for interrupts,
+- abort (ABT, `10111`) for memory faults, and
+- undefined (UND, `11011`) for an instruction the processor does not
+  know.
+
+When an exception
 occurs, the processor puts the return address in the new mode's `lr`
 and the interrupted `cpsr` in the new mode's saved status register
 `spsr`. It then sets the mode bits of `cpsr` to the exception's mode,
@@ -77,26 +103,27 @@ masks IRQ by setting `I`, and jumps to that exception's entry in the
 vector table (@tab-vectors). The table is the block `vectors` (#at("/usr/sys/conf/low.s", "vectors:")), whose address `_start` gives the processor in the vector
 base register `VBAR` (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c12, c0, 0")).
 
-Each of these modes has its own copy of `sp` and `lr`, called banked
+_Banked Registers._ Each of these modes has its own copy of `sp` and `lr`, called banked
 registers (@tab-regs), and its own `spsr`. The other registers, `r0`
 to `r12`, are shared by all modes, except the fast interrupt mode (FIQ,
 `10001`, not used in this Unix port). Exception entry does not change
 the interrupted program's `sp` and `lr`. It changes only which banked
-copy is visible. While those are kept apart, the shared registers are
-not, and the exception entry code must save `r0` to `r12` itself before it uses
+copy is visible.
+
+_Exception Entry._ The exception handler must save `r0` to `r12` itself before it uses
 them, to maintain the illusion that the user program is the only one
-running. Each entry in #f("low.s") first stores its own mode's `lr`, the
+running. Each exception handler in #f("low.s") first stores its own mode's `lr`, the
 return address, and `spsr`, the interrupted status, on the kernel
 stack, with the instruction `srsdb` ("store return state, decrement
-before"). An ordinary store-multiple instruction, such as
-`stmia sp, {r0-r12}`, stores the registers of the current mode, so in
-SVC mode it would store `sp_svc` and `lr_svc` for `r13` and `r14`. With
-a `^` after the list, and `pc` not in it, the instruction stores the
-user mode's registers instead, whatever the current mode. Each entry
-uses this form, `stmia sp, {r0-r14}^`
-(#at("/usr/sys/conf/low.s", "stmia sp, {r0-r14}^", after: "svc_entry:")), to save the user's registers, its `sp` and `lr` among them, on the
-kernel stack, in the layout of #f("reg.h"), below what `srsdb` has
-stored there.
+before"). The special store instruction
+`stmia sp, {r0-r14}^`#footnote[A store-multiple instruction without
+the `^`, such as `stmia sp, {r0-r12}`, stores the registers of the
+current mode, so in SVC mode it would store `sp_svc` and `lr_svc` for
+`r13` and `r14`. With the `^`, and `pc` not in the list, it stores the
+user mode's registers instead.]
+(#at("/usr/sys/conf/low.s", "stmia sp, {r0-r14}^", after: "svc_entry:")) is used to save the user's registers on the
+kernel stack, below what `srsdb` has stored there (in the layout of
+#f("reg.h")).
 
 #btable(columns: (auto, 1fr, 1fr, 1fr, 1fr, 1fr), align: center + horizon, caption: [The registers which each mode sees],
   table.header(top, [], [*User*], [*SVC*], [*IRQ*], [*Abort*], [*Undef.*], mid),
@@ -122,15 +149,17 @@ stored there.
   bot,
 ) <tab-vectors>
 
-The ARM architecture lets a processor be extended by up to sixteen
-coprocessors, numbered 0 to 15, which the core drives with its own
+_Coprocessors._ The ARM architecture lets a processor be extended by up to sixteen
+"coprocessors", numbered 0 to 15, which the core drives with its own
 instructions. The floating-point unit is coprocessors 10 and 11. Number
 15, the system control coprocessor, is the processor's own control
 interface, built into the core, and holds the system control registers.
-They are reached only by the instructions `mrc`, which reads one into a
-general register, and `mcr`, which writes one, or `mrrc` and `mcrr`
-for a 64-bit register and a pair of general registers. Each register is
-named by four numbers in the instruction. The port uses `SCTLR`, of which it uses the bits
+A system control register is reached only by the instructions `mrc`,
+which reads it into a general register, and `mcr`, which writes it, or
+`mrrc` and `mcrr` for a 64-bit register and a pair of general
+registers.
+
+_Control Registers._ The port uses `SCTLR`, of which it uses the bits
 that turn the MMU and the caches on and off
 (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c1, c0, 0", after: "mcrr p15, 1, r5, r2, c2")); `TTBR0`, `TTBR1`,
 `TTBCR`, and `MAIR0`, which describe the translation tables and the
@@ -142,36 +171,35 @@ which give the address and cause of a data abort
 (#ats("/usr/sys/conf/mch.s", "mrc p15, 0, r0, c6, c0, 0", "mrc p15, 0, r0, c5, c0, 0")); `CPACR`, which lets
 programs use the floating-point unit (#at("/usr/sys/conf/low.s", "mcr p15, 0, r0, c1, c0, 2")); the registers of the
 generic timer, `CNTFRQ`, `CNTVCT`, `CNTV_CVAL`, and `CNTV_CTL`
-(#atr("/usr/sys/conf/mch.s", "mrc p15, 0, r0, c14, c0, 0", "mcr p15, 0, r0, c14, c3, 1")); and the cache and TLB
-maintenance operations, which are writes to registers of their own,
-`TLBIMVAA`, `TLBIALL`, and `TLBIASID` for the TLB
+(#atr("/usr/sys/conf/mch.s", "mrc p15, 0, r0, c14, c0, 0", "mcr p15, 0, r0, c14, c3, 1")).
+
+_Cache and TLB Maintenance._ The maintenance operations are writes to
+registers of their own: `TLBIMVAA`, `TLBIALL`, and `TLBIASID` for the TLB
 (#ats("/usr/sys/conf/mch.s", "1:\tmcr p15, 0, r3, c8, c7, 3", "mcr p15, 0, r0, c8, c7, 0", "mcr p15, 0, r1, c8, c7, 2")), `ICIALLU` and `BPIALL` for the instruction
 cache and the branch predictor (#at("/usr/sys/conf/mch.s", "mcr p15, 0, r0, c7, c5, 0")), and `DCISW`, `DCIMVAC`,
 `DCCIMVAC`, and `DCCMVAU` for the data cache
 (#at("/usr/sys/conf/low.s", "mcr p15, 0, r9, c7, c6, 2"), and #ats("/usr/sys/conf/mch.s", "1:\tmcr p15, 0, r0, c7, c6, 1",
 "1:\tmcr p15, 0, r0, c7, c14, 1", "1:\tmcr p15, 0, r0, c7, c11, 1")).
 
-A function call follows a fixed convention for the registers: the first
+_Calling Convention._ A function call follows a fixed convention for the registers: the first
 four arguments travel in `r0` to `r3`, and any further ones on the
-stack, and the result returns in `r0`. A called function may change
+stack; the result returns in `r0`. A called function may change
 `r0` to `r3`, `r12`, `lr`, and the condition flags of `cpsr`, but must
 preserve `r4` to `r11` and `sp`. It returns to the address in `lr`,
-either directly, with `bx lr`, or, if it saved `lr` on the stack
-because it calls other functions, by loading the saved value into `pc`
-as it restores the other registers. The `spsr` is no part of the
-convention. Compiled code never reads or writes it, and only the
-exception entries and exits of #f("low.s") do.
+either directly, with `bx lr`, or, if it calls other functions, by
+loading the `lr` it saved into `pc` as it restores the other registers
+from the call stack. (The `spsr` is not a part of the convention.
+Compiled code never reads or writes it, and only the exception entries
+and exits of #f("low.s") do.)
 
-The processor does not necessarily perform memory accesses one at a
+_Memory Order._ The processor does not necessarily perform memory accesses one at a
 time in program order. The Cortex-A7 issues its instructions in order,
 but its load-store unit, which carries out every access to memory, need
 not complete them in order. A store waits in a _store buffer_ before it
-reaches the data cache, and loads may overtake it. The processor always
-sees its own stores. The processor, however, is not the only entity to
-access the memory. Other devices, such as the MMU, which read page
-tables from memory by themselves, may not see them yet. Barrier
-instructions restore the order where it matters. The barrier `dmb`
-orders the accesses before it before those after it, and `dsb` waits
+reaches the data cache, and loads may overtake it. The processor,
+however, is not the only entity to access the memory. Other devices,
+such as the MMU, may not see the stores yet. In order to restore the
+order, the barrier `dmb` orders the accesses before it before those after it, and `dsb` waits
 until they have all completed. An `isb` makes the processor fetch the
 following instructions afresh, so that a change to a system register
 takes effect.
@@ -186,22 +214,24 @@ MMU off. From there the system comes up in these steps:
 #[#set enum(numbering: "1.a.")
 + First `_start` masks interrupts, turns off the MMU and the caches,
   discards the contents of the TLB, the caches, and the branch
-  predictor, and clears the kernel's `bss`. It builds the boot tables (Translation
-  Tables, page #pageref(<sec-tables>)), turns the MMU on, and jumps to
-  its _kernel address_, the address in the top gigabyte at which the
-  kernel is linked to run (The Address Space, page #pageref(<sec-addr>)), from 0xc0000000 on the QEMU
-  machine, and from 0xc01e0000 on the MP135 machine. It sets up a small
-  boot stack, installs the exception vectors, enables the floating point
-  unit, and calls `machine_init`.
-+ Then `machine_init` (#at("/usr/sys/sys/machdep.c", "machine_init(")) maps the device registers, switches the interrupt
-  controller off, and starts the console, so that `printf` and `panic`
-  work from then on. The interrupts are masked in `cpsr`, but a driver
-  may unmask them before `intrstart` has set up the interrupt
-  controller, and with the controller off none can arrive. On the MP135 machine it then powers the DDR memory
-  and starts its controller. Only then does it map the rest of RAM,
-  clear the part of the kernel which lies in DDR, map the u-area of
-  process 0, and remove the identity mapping. It returns the top of
-  that u-area.
+  predictor, and clears the kernel's `bss`. It builds the boot tables
+  (Translation Tables, page #pageref(<sec-tables>)), which map the
+  kernel at its _kernel address_, the virtual address at which it is
+  linked to run (The Address Space, page #pageref(<sec-addr>)), and
+  also at its physical address, by an _identity mapping_, so that the
+  code goes on running when the MMU is turned on. It turns the MMU on,
+  jumps to the kernel address, sets up a small boot stack, installs the
+  exception vectors, enables the floating point unit, and calls
+  `machine_init`.
++ Then `machine_init` (#at("/usr/sys/sys/machdep.c", "machine_init(")) maps the device registers and starts the console,
+  so that `printf` and `panic` work from then on. On the MP135 machine
+  it then powers the DDR memory and starts its controller. Only then
+  does it map the rest of RAM and clear the kernel's large tables.
+  The routine `_start` could not clear them with the rest of the `bss`, since on
+  the MP135 machine they lie in DDR, which works only from now on. Then
+  it maps the u-area of process 0,
+  removes the identity mapping, and returns the top of that u-area to
+  `_start`, as the stack for `main`.
 + Back in `_start`, the stack pointer is moved to the top of the
   u-area, and `main` is called (#at("/usr/sys/sys/main.c", "main(")). The `user` structure lies at
   the bottom of the u-area, and the kernel stack grows down from its
@@ -209,7 +239,7 @@ MMU off. From there the system comes up in these steps:
   the current process's u-area. Each process has a kernel stack of its
   own there, apart from the stack of its user program.
 + Next `main` calls `startup` (#at("/usr/sys/sys/machdep.c", "startup(")), which
-  sets aside pages for the processes' translation tables, 32 bytes of
+  sets aside physical pages for the processes' translation tables, 32 bytes of
   first-level table for each process in `l1tab`, then `NPTAB` pages in
   `ptmap` (#at("/usr/sys/sys/machdep.c", "mfree(ptmap, NPTAB, i);")), from which each process's tables of the second and third
   levels are allocated. It puts every other free page of RAM in the
@@ -220,9 +250,9 @@ MMU off. From there the system comes up in these steps:
   lists, the small blocks in which a terminal's input and output wait
   (Terminal I/O, page #pageref(<sec-tty>)), and the buffer cache (Disk
   I/O, page #pageref(<sec-disk>)), reads the super-block of the root
-  file system, and makes the root directory the current directory.
+  file system, and sets the root directory to be the current directory.
 + Next `main` calls `newproc` (#at("/usr/sys/sys/slp.c", "newproc(")) to make process 1 as a copy of
-  process 0, and `newproc` returns in each of them.
+  process 0, and `newproc` returns in _each_ of them.
   + In process 0, `newproc` returns 0, and `main` calls `sched`, in
     which process 0 stays forever as the swapper (Scheduling and
     Swapping, page #pageref(<sec-sched>)).
@@ -231,23 +261,10 @@ MMU off. From there the system comes up in these steps:
     instructions of machine code, #at("/usr/sys/sys/machdep.c", "int\ticode[] =")), and returns from
     `main`. The return reaches `_start` again, which enters user mode at
     address 0, where `main` copied `icode`, in process 1.
-  + The program `icode` makes one system call, `exec("/etc/init")`.
-    From here the system is an ordinary process running an ordinary
-    program.
++ The program `icode` makes one system call, `exec("/etc/init")`.
+  From here the system is an ordinary process running an ordinary
+  program.
 ]
-
-Each stage relies on the one before. While `machine_init` runs, only the
-kernel image is mapped, so it may not touch any other memory until it
-has mapped it. What the MMU maps changes three times on the way.
-
-- With `_start`'s MMU off, nothing is mapped, and every address is
-  physical.
-- With `_start`'s MMU on, the kernel image is mapped at its kernel
-  address, and the same memory at its physical address (`bootl1`).
-- After `machine_init`, all of RAM and the devices are mapped, and the
-  u-area of process 0 at `UBASE`. The identity mapping is gone.
-- After `newproc`, process 1's own tables are added, with one page of
-  user memory holding `icode`.
 
 The first program, `init` (#f("cmd/init.c")), starts a shell on the
 console, in single-user mode. When that shell exits, `init` runs the
@@ -262,6 +279,18 @@ no panic follows if it does. But then nothing collects the exit status
 of an orphan, which stays in the process table as a zombie, and no
 `getty` is started again, so once the last login shell exits, no one
 can log in.
+
+During the boot, what the MMU maps changes three times.
+
+- With `_start`'s MMU off, nothing is mapped, and every address is
+  physical.
+- With `_start`'s MMU on, the kernel image is mapped at its kernel
+  address, and the same memory at its physical address (the identity
+  mapping, `bootl1`).
+- After `machine_init`, all of RAM and the devices are mapped, and the
+  u-area of process 0 at `UBASE`. The identity mapping is gone.
+- After `newproc`, process 1's own tables are added, with one page of
+  user memory holding `icode`.
 
 === The Address Space <sec-addr>
 
@@ -279,7 +308,7 @@ faults any access from user mode which an entry does not allow
   [0x00008000], table.cell(colspan: 2)[text],
   [next page], table.cell(colspan: 2)[data and `bss`, growing upward],
   [0xbfffffff], table.cell(colspan: 2)[stack, growing downward],
-  [0xc0000000], [RAM 0x40000000--0x5fffffff: kernel, then free RAM], [SYSRAM block 0x2fe00000; kernel at 0xc01e0000],
+  [0xc0000000], [RAM 0x40000000--0x5fffffff: kernel, then free RAM], [SYSRAM 0x2ffe0000: kernel],
   [0xc0200000], [(RAM, continued)], [DDR 0xc0000000--0xdfffffff: tables, then free RAM],
   [0xf0000000], [GIC 0x08000000], [RCC, PWR, GPIO 0x50000000],
   [0xf0200000], [UART 0x09000000], [SDMMC1 0x58005000],
@@ -294,18 +323,24 @@ faults any access from user mode which an entry does not allow
 The kernel's gigabyte maps the 512~MB of RAM at its start, so the kernel can
 reach any page of memory at a fixed distance from its physical address
 (`PGADDR`, #f("seg.h")). The kernel's own text, data, and `bss` lie in
-that mapping where it was linked. On the QEMU machine they occupy the start of RAM,
-from 0xc0000000. On the MP135 machine they lie in SYSRAM, from
-0xc01e0000, except the larger tables of the `bss`, which lie in DDR,
-from 0xc0200000 (#f("mp135/unix.ld")). The kernel's stack is the kernel
+that mapping where it was linked, from 0xc0000000 on both machines. On
+the QEMU machine they occupy the start of RAM. On the MP135 machine
+they lie in SYSRAM, except the larger tables of the `bss`, which lie
+in DDR, from 0xc0200000 (#f("mp135/unix.ld")). The kernel's stack is the kernel
 stack in the u-area, described below. The device registers follow, one 2~MB block
 for each device. The devices are mapped only in the kernel's gigabyte, so
-a user program reaches a device only via `/dev/mem` or through its driver.
+a user program reaches a device only via #box(`/dev/mem`) or through its
+driver. The file #box(`/dev/mem`) is the physical memory, and #box(`/dev/kmem`)
+the kernel's gigabyte by kernel address (#f("mem.c")). A program such
+as `ps` or `pstat` reads the kernel's tables through #box(`/dev/kmem`), at the
+addresses which it finds in the symbol table of #box(`/unix`). These are
+kernel addresses, so without #box(`/dev/kmem`) the program would have to
+know how each machine maps them to physical memory.
 
 At the top of the kernel's gigabyte, at 0xffe00000, lies the u-area of the current process: its `user`
 structure (#f("user.h")) and its kernel stack. Every process's u-area
 appears at the same virtual address, `UBASE`, so the kernel refers to it simply
-as `u`, which the linker script places there (#at("/usr/sys/conf/mkconf.c", "printf(\"}\\nu = 0x%X;\\nENTRY(start)\\n\", UBASE);")). A process switch simply changes which process's u-area is mapped
+as `u`, which the linker script places there (#at("/usr/sys/conf/qemu/unix.ld", "u = 0xFFE00000;")). A process switch simply changes which process's u-area is mapped
 there.
 
 Below the text nothing is mapped except the one page of the signal
@@ -362,7 +397,8 @@ lower half (@fig-tree). A process switch changes only `TTBR0`.
 ), [The user's tables, above, and the kernel's, below]) <fig-tree>
 
 The kernel's tables are built at boot. First `_start` (#at("/usr/sys/conf/low.s", "_start:")) maps the
-kernel through `kl2`, a second-level table of 2~MB blocks, and adds a
+kernel by pages, through a third-level table under `kl2`, the
+second-level table of the top gigabyte, and adds a
 temporary identity mapping, `bootl1`, so that the code keeps running at
 its physical address, in RAM on the QEMU machine and in SYSRAM on the
 MP135 machine, while the MMU is turned on. Then `machine_init`
@@ -421,7 +457,7 @@ steps:
 + Next `irq_entry` calls `irq` (#at("/usr/sys/sys/machdep.c", "irq(")) with the address of the
   frame.
 + Then `irq` reads the interrupt's number from the GIC, looks it up in
-  `intrtab`, which the configuration generates (#f("qemu/c.c")),
+  `intrtab`, in the configuration (#f("c.c")),
   and calls the routine found there with the interrupted program counter
   and status.
 + Then `irq` tells the GIC that the interrupt is done, so that the GIC will
@@ -906,7 +942,7 @@ the SD card driver on the MP135 machine (#f("sd.c")). Both are called
 area lies on the same disk, after the root file system, and swapping
 goes through the same driver, with a buffer of its own. The kernel
 finds a disk's driver by its major device number in the block device
-switch, `bdevsw` (#f("qemu/c.c")), a table which holds each driver's
+switch, `bdevsw` (#f("c.c")), a table which holds each driver's
 open, close, and strategy routines and its queue.
 
 Raw I/O bypasses the cache. A program which reads the disk's raw

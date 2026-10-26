@@ -80,7 +80,7 @@ for this reason.
 The last line, in v7, defined the table itself, after the v7 manner,
 in every file which included the header. It is now only declared, `extern` and without a size: the size, `NCALL`, is part of the
 configuration (#f("param.h")), and the table is defined with it in
-#f("qemu/c.c").
+#f("c.c").
 
 #lines-to(none)
 #source("/usr/sys/sys/clock.c")
@@ -966,7 +966,7 @@ Since `sa` is compiled with the same header, it reads the records
 correctly. Accounting files from a PDP-11 could not be read.
 
 Only declarations of `acctbuf` and `acctp` are here. The definitions are in
-the configuration file which `mkconf` generates (#f("qemu/c.c")). The routine `fork` sets `AFORK` and `exec` clears it (#f("sys1.c")), and
+the configuration, #f("c.c"). The routine `fork` sets `AFORK` and `exec` clears it (#f("sys1.c")), and
 `suser` sets `ASU` whenever the super-user's privilege is used.
 
 #lines-to(none)
@@ -1036,7 +1036,7 @@ does.
 The fields `x_caddr`, `x_daddr`, and `x_size` have been widened from `short` to
 `int`, for the reasons already given for `p_addr` and `p_size` in
 #f("proc.h"): neither a page number, nor a block of the swap area
-(#f("qemuconf")), nor the size of the largest text fits in a `short`.
+(#f("c.c")), nor the size of the largest text fits in a `short`.
 
 The counts `x_count` and `x_ccount` are `char`s. Every process which runs a
 program holds a reference to its text, so a count can reach `NPROC`,
@@ -1214,7 +1214,7 @@ Each `buf` is a header which describes a block transfer by its device
 and block number, its core address, and its byte count, with the state
 of the operation in `b_flags`. The data itself
 lies elsewhere: for an entry of the array `buf`, which forms the buffer
-cache, in the rows of `buffers` (#f("qemu/c.c")), to which `binit`
+cache, in the rows of `buffers` (#f("c.c")), to which `binit`
 (#f("main.c")) points `b_addr`. For the headers used by `swap` and `physio`
 (#f("bio.c")), in the process image being transferred.
 
@@ -1260,8 +1260,7 @@ reaches the device drivers. A device number has two parts: the major
 number, which selects an entry of `bdevsw` or `cdevsw`, and so a
 driver. And the minor number, which the driver interprets as it pleases.
 Neither the file system nor #f("bio.c") knows any driver by name. The tables
-themselves are defined in the `c.c` which `mkconf` generates for each
-configuration (#f("qemu/c.c")). The comment's `conf.c` is an older
+themselves are defined in the configuration, #f("c.c"). The comment's `conf.c` is an older
 name for that file.
 
 A block device needs only `open`, `close`, and a strategy routine, which
@@ -1293,7 +1292,7 @@ them so, whether or not those headers have been included.
 #lines-to("struct intr", lead: true)
 
 The structure `struct intr` is new. It is the type of `intrtab` in the generated
-#f("qemu/c.c"), which pairs each interrupting device with its handler,
+#f("c.c"), which pairs each interrupting device with its handler,
 as the PDP-11's interrupt vectors in `l.s` did. The member `i_irq` points to the
 driver's variable holding its interrupt number, rather than holding the
 number itself, because a driver may learn its number only when it finds
@@ -1305,24 +1304,27 @@ handlers discard them. The routines `intrstart` and `irq` (#f("machdep.c")) enab
 and dispatch the interrupts, the clock's among them, from the table.
 
 #lines-to(none)
-#source("/usr/sys/conf/qemu/c.c")
+#source("/usr/sys/conf/c.c")
 
-This file is not written by hand. The program `mkconf` (#f("mkconf.c")) reads a
-short description of the machine, #f("qemuconf") for the QEMU machine,
-and writes `c.c`, which holds the device switches declared in
+The configuration of the kernel: the device switches declared in
 #f("conf.h"), the choice of root and swap devices, the principal tables
-of the system, and, new in this port, the facts which differ between
-the QEMU machine and the MP135 machine (#f("mp135/c.c")). Everything
-else in the kernel is the same for both machines. The machine is chosen
-by linking with one `c.c` or the other.
-
-In v7 the `c.c` was generated in the same way, with a companion `l.s` holding
-the PDP-11 interrupt vectors. The port has no `l.s`: its interrupt
-vectors are fixed (#f("low.s")), and the routing of interrupts to drivers
-is the table `intrtab` at the end of this file.
+of the system, and the facts about the machine. In v7 this file was not
+written by hand. The program `mkconf` read a short description of the
+installation and wrote `c.c`, with a companion `l.s` which held the
+PDP-11's interrupt vectors. Here both machines have the same devices,
+and such a program would write almost the same file for each. So the
+file is written once, and the dozen lines which differ between the
+QEMU machine and the MP135 machine are in a header of each machine's
+own, #f("qemu/mach.h") or #f("mp135/mach.h"), which this file includes
+(#l("#include \"mach.h\"")). The build compiles `c.c` once for each machine, with
+that machine's directory on the path of includes (#f("sys.mk")).
+Everything else in the kernel is the same for both machines. The port
+has no `l.s`: its interrupt vectors are fixed (#f("low.s")), and the
+routing of interrupts to drivers is the table `intrtab` at the end of
+this file.
 
 The includes are v7's, with #f("seg.h") added for `struct memregion`
-and the `BLK_` attributes used below, and #f("map.h"), #f("mount.h"),
+and the `BLK_` attributes of the memory map, and #f("map.h"), #f("mount.h"),
 and #f("callo.h") for the tables which this file now defines. The v7 copy declared every driver
 routine it named, as `int nodev();` and the like. Here all of them are
 declared with prototypes in #f("systm.h"), which is already included,
@@ -1330,13 +1332,13 @@ and the declarations are gone.
 
 #lines-to("extern struct\tbuf\trktab;")
 
-The block device switch. The program `mkconf` lists every block device it knows,
-in a fixed order, so that a device keeps its major number whatever the
-configuration: `rk` is always 0. A device which is configured gets its
-driver's entry. One which is not gets an entry which fails. Only `rk` is
-configured here, and the routines named `rk` are those of the virtio
-disk driver (#f("virtio_blk.c")), which took v7's names so that
-`mkconf`'s table could be used unchanged. On the MP135 machine the same
+The block device switch. The v7 `mkconf` listed every block device it knew,
+in a fixed order, so that a device kept its major number whatever the
+configuration: `rk` was always 0. The port keeps that order, with an
+entry which fails for each device it lacks, so that the special files
+on the disk have v7's numbers. Only `rk` is
+configured, and the routines named `rk` are those of the virtio
+disk driver (#f("virtio_blk.c")), which took v7's names. On the MP135 machine the same
 entry names the routines of the SD card driver, #f("sd.c"), which
 took v7's names too. Each machine's kernel links only its own driver.
 
@@ -1355,8 +1357,7 @@ in `rk.c`.
 
 The character device switch, in the same manner. The console (major 0),
 memory (8), the raw disk (9), and the controlling terminal `tty` (17)
-are configured. Of these only the disk is named in #f("qemuconf"):
-`mkconf` always includes the console, memory, and `tty`. The console's
+are configured. The console's
 routines are named `kl`, after the PDP-11's KL11 interface, and are
 those of #f("pl011.c") (on the MP135 machine, of #f("usart.c")).
 
@@ -1378,13 +1379,18 @@ its name says. In `l_close`, `nulltty` replaces `nulldev`, and
 #lines-to("int\trootdev\t= makedev(0, 0);")
 
 Root, swap, and pipe devices are all minor device 0 of major device 0,
-the one disk. The file system occupies its first 32768 blocks
+the one disk. The file system occupies its first 32768 blocks, 16~MB
 (#f("rootfs.proto")), and the swap area is the 1048576 blocks after it,
 from `swplo`. This is the arrangement of v7's own RK05 configuration,
 where `swplo` was 4000 and the swap area ended at block 4872, the end
 of the pack. Putting the swap area after the file system keeps it clear
 of the superblock, the block which describes a file system as a whole,
-in block 1.
+in block 1. In v7 the swap area had 872 blocks, 436~KB, which held
+several of its largest images. Here it holds 512~MB, as much as the
+memory, so that whatever the memory holds can be swapped out, with room
+besides for the copies of shared texts and for the argument lists of
+`exec`. The build reads the two numbers from this file to size the QEMU
+machine's disk (#f("Makefile")).
 
 #lines-to("struct\tbuf\tbuf[NBUF];")
 
@@ -1399,29 +1405,30 @@ table, `callo.h` the callouts, and `prim.c` the character blocks. The port defin
 so that every large table is in `c.o`, which the MP135 machine's linker
 script places in DDR, beyond the small SYSRAM in which its kernel runs
 (#f("mp135/unix.ld")). The sizes are the same on both machines, and
-`CMAPSIZ` and the other sizes of the maps are computed from them.
+`CMAPSIZ` and the other sizes of the maps are computed from them. The
+buffers have one row more than `NBUF`, of a whole number of 64-byte
+cache lines, for `binit` to align them (#f("main.c")).
 
-#lines-to("unsigned int\tcorebase, coreoff, coretop = 0x60000000;")
+#lines-to("unsigned int\tcorebase, coreoff, coretop = CORETOP;")
 
-The rest of the file is new: the facts about the machine, taken from
-lines of #f("qemuconf") which v7's format did not have.
+The rest of the file is new: the facts about the machine, which come
+from #f("qemu/mach.h") or #f("mp135/mach.h").
 
-The bounds `corebase` and `coretop` (#l("unsigned int\tcorebase, coreoff, coretop = 0x60000000;")) give, by physical address, the memory
+The bounds `corebase` and `coretop` (#l("unsigned int\tcorebase, coreoff, coretop = CORETOP;")) give, by physical address, the memory
 which `startup` (#f("machdep.c")) gives to `coremap` for process images:
 from the first page after the kernel, which `machine_init` stores into
-`corebase`, to the end of the QEMU machine's 512 MB. The offset `coreoff`, which
+`corebase`, to `CORETOP`, the end of the machine's memory. The offset `coreoff`, which
 `machine_init` also sets, is the distance from the physical address of
-core to its kernel address (#f("seg.h")). The addresses `gicdbase` and `giccbase` (#l("unsigned int\tgicdbase = 0xf0000000, giccbase = 0xf0010000;"))
+core to its kernel address (#f("seg.h")). The addresses `gicdbase` and `giccbase` (#l("unsigned int\tgicdbase = GICDBASE, giccbase = GICCBASE;"))
 locate, by kernel address, the distributor and the processor interface
 of the ARM generic interrupt controller. The attributes of a user page,
 `PGUSER`, are the same on both machines and are a constant
 (#f("seg.h")).
 
-The table `board_map` (#l("struct\tmemregion\tboard_map[] =")) lists the regions which the kernel maps in 2 MB blocks
-(`machine_init`, #f("machdep.c")), each with its kernel address, its physical bounds, and its attributes. They are all 512 MB of memory, at
-0xc0000000, as cacheable kernel memory, and three blocks of the QEMU
-machine's devices (the interrupt controller, the UART, and the virtio transports),
-from 0xf0000000, as device memory which may not be executed (@ch-intro).
+The table `board_map` (#l("struct\tmemregion\tboard_map[] =")) lists the regions which `machine_init` maps
+(#f("machdep.c")), each with its kernel address, its physical bounds,
+and its attributes. The machine's header supplies the rows, as
+`BOARD_MAP`, and this file ends the table with a row of zeros.
 Since a kernel address is not a physical one, a device performing DMA
 must be given the latter, which `vtop` (#f("machdep.c")) finds in this
 table (#f("virtio_blk.c")).
@@ -1433,22 +1440,39 @@ the disk, with its handler (`struct intr`, #f("conf.h")). The numbers are reache
 learns its own only when it finds the device.
 
 The four procedures at the end are the glue by which the
-machine-dependent code calls the configured drivers without naming them. The routine `cninit` sets up the console early in `machine_init`, `bdinit`
-finds the disk before `main` enables the interrupts, and `clock_ddr_init`, which on
-the MP135 machine starts the memory controller (#f("ddr.c")), does
-nothing here, since the QEMU machine's memory needs no initialisation.
-Nor does `wdinit`, which on the MP135 machine starts the watchdog
-(#f("iwdg.c")): QEMU's machine has none. The routine `putchar`, the
+machine-dependent code calls the configured drivers without naming them. The routine `cninit` sets up the console early in `machine_init`, and `bdinit`
+finds the disk before `main` enables the interrupts. The other two
+come from the header. On the MP135 machine `clock_ddr_init` starts the
+memory controller (#f("ddr.c")), and `wdinit` starts the watchdog
+(#f("iwdg.c")). On the QEMU machine both are empty, since its memory
+needs no initialisation and it has no watchdog. The routine `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
+
+#lines-to(none)
+#source("/usr/sys/conf/qemu/mach.h")
+
+The facts which #f("c.c") needs about the QEMU machine. All the
+addresses are those of @ch-intro. `CORETOP` (#l("#define\tCORETOP\t0x60000000")) is the
+physical end of the 512~MB of memory with which QEMU is started, and
+`GICDBASE` and `GICCBASE` the kernel addresses of the interrupt
+controller's distributor and processor interface.
+
+The memory map, `BOARD_MAP` (#l("#define\tBOARD_MAP \\")), has four rows. The first covers all 512~MB of memory, at
+0xc0000000, as cacheable kernel memory, kernel and core alike. The
+others map a block of 2~MB each for the interrupt controller, the UART,
+and the virtio transports, from 0xf0000000, as device memory which may
+not be executed. `BLK_KERN` and `BLK_DEV` are defined in #f("seg.h").
+The devices which QEMU puts between them are not mapped. The QEMU
+machine needs neither `DDRINIT` nor `WDINIT`, and both are empty.
 
 #lines-to(none)
 #source("/usr/sys/dev/virtio_blk.c")
 
 This is the disk driver of the QEMU machine. It replaces v7's
 `rk.c`, the driver for the RK05 cartridge disk, and takes over its
-names (`rkstrategy`, `rkintr`, `rktab`, and so on), its configuration
-entry in `mkconf` (#f("qemu/c.c")), and as much of its text as the new
+names (`rkstrategy`, `rkintr`, `rktab`, and so on), its entry in the
+switches (#f("c.c")), and as much of its text as the new
 device allows. The reader who compares the two files will find the same
 three procedures doing the same three jobs. The routine `rkstrategy` adds a request
 to the queue and starts the device if it is idle. The routine `rkstart` gives the
@@ -1461,7 +1485,7 @@ heading comment (#l("* RK disk driver")) is kept, since the driver is configured
 The device is a "virtio" block device, an interface designed for
 virtual machines rather than for hardware. QEMU provides up to 32 virtio
 transports, each a block of registers 0x200 bytes long, from physical
-address `0x0a000000`, which the kernel maps at 0xf0400000 (#f("qemu/c.c")).
+address `0x0a000000`, which the kernel maps at 0xf0400000 (#f("c.c")).
 The driver uses the original ("legacy") form of the
 interface. Requests are passed through a "virtqueue" in the machine's memory. It
 has a table of descriptors, each giving the address and length of a
@@ -1507,7 +1531,7 @@ request in the device at a time.
 
 #lines-to("void", after: "int\trkirq;")
 
-Before `main` enables the interrupts, `bdinit` (#f("qemu/c.c")) calls `rkinit`, which must find the device to learn its interrupt.
+Before `main` enables the interrupts, `bdinit` (#f("c.c")) calls `rkinit`, which must find the device to learn its interrupt.
 Each transport is examined for the magic number `virt` (as a
 little-endian word) and a device type of 2, a block device. An empty
 transport reports type 0.
@@ -2575,7 +2599,7 @@ v7 the line defined `mount` in every file which included the header,
 relying on the linker to merge the copies into one, and C99 makes that
 undefined and the compiler no longer accepts it by default. The table
 is now defined once, with the size `NMOUNT` which the configuration
-gives it (#f("param.h")), in #f("qemu/c.c").
+gives it (#f("param.h")), in #f("c.c").
 
 #lines-to(none)
 #source("/usr/sys/h/ino.h")
@@ -2974,8 +2998,8 @@ delayed-write buffer.
 #source("/usr/sys/sys/pipe.c")
 
 Pipes are implemented in #f("pipe.c"). A pipe is an ordinary inode, allocated on
-the device `pipedev` (the root device, on both machines, by the `c.c`
-which `mkconf` writes) but entered in no directory, and opened twice: by
+the device `pipedev` (the root device, on both machines, by
+#f("c.c")) but entered in no directory, and opened twice: by
 one `file` for reading and by another for writing. Data written to the pipe is appended to the file, and the reader reads
 from its own offset. When the reader catches up, the file is emptied. Since the file stays
 small and is soon read, its blocks normally live only in the buffer
@@ -3058,7 +3082,7 @@ sleep.
 #source("/usr/sys/dev/sys.c")
 
 The driver for `/dev/tty`, major device 17 in the
-character switch of #f("qemu/c.c"), is #f("sys.c"). It drives no hardware. A process
+character switch of #f("c.c"), is #f("sys.c"). It drives no hardware. A process
 which opens `/dev/tty` is given its controlling terminal, whatever that
 happens to be, so that a routine such as `getpass` can talk
 to the user even when its standard input and output have been
@@ -3187,7 +3211,7 @@ character of a block lies at offset 4, never at offset 0), and the block
 containing any character is found by clearing those four bits. No
 block needs to record how full it is.
 
-The pool `cfree` (#l("extern struct\tcblock\tcfree[];")) of `NCLIST` blocks is fixed in size. The configuration defines it and sets `NCLIST` (#f("qemu/c.c")), and only
+The pool `cfree` (#l("extern struct\tcblock\tcfree[];")) of `NCLIST` blocks is fixed in size. The configuration defines it and sets `NCLIST` (#f("c.c")), and only
 declared here. Calls of `ndflush` with an impossible
 count are counted in `cbad` (#l("int\tcbad;")), which nothing reads.
 
@@ -3254,7 +3278,7 @@ strictly as a pointer requires, so its start is rounded up to a
 16-byte boundary (#l("ccp = (ccp+CROUND) & ~CROUND;")) and as many whole blocks as fit are put on the
 free list. When `cfree` was not already aligned, one block is lost.
 
-The second loop counts the entries of `cdevsw` (#f("qemu/c.c")) up to
+The second loop counts the entries of `cdevsw` (#f("c.c")) up to
 the terminating entry with no open routine. Every unconfigured slot is
 filled with `nodev`, which is not zero, so `nchrdev` counts them too, and
 `openi` (#f("fio.c")) uses it to reject an impossible major number,
@@ -3302,7 +3326,7 @@ eight 16-bit ones. A `clist` itself has grown from six bytes to twelve.
 The block itself, `struct cblock` (#l("struct cblock {")--#l("};", after: "char\tc_info[CBSIZE];")), was private to #f("prim.c")
 in v7. It has moved here because the pool of blocks, `cfree`, is now
 defined by the configuration, at the size `NCLIST` which it gives
-(#f("qemu/c.c")), and its definition must see the structure.
+(#f("c.c")), and its definition must see the structure.
 
 #lines-to("/*", lead: true, after: "};")
 
@@ -3400,7 +3424,7 @@ single-line serial interfaces, and it has been kept as close to
 `kl.c` as the hardware allows: the file keeps `kl.c`'s comment, its
 order, its procedure names (`klopen`, `klread`, `klstart`, and so on),
 and its `tty` array `kl11`, so that the character switch in
-#f("qemu/c.c") names the console's routines exactly as v7's did. The
+#f("c.c") names the console's routines exactly as v7's did. The
 MP135 machine's console driver, #f("usart.c"), defines the same names
 and keeps as much of `kl.c`. Each machine's kernel
 links only its own.
@@ -3422,7 +3446,7 @@ ahead at speed, or a paste into the console, needs.
 `KLADDR` (#l("#define\tKLADDR\t0xF0200000")), the console's address, is no longer a pointer to a
 `struct device` but the kernel address at which the kernel maps the
 UART, `0xf0200000`. Its physical address is `0x09000000`
-(#f("qemuconf")). The register macros (#l("#define\tUARTDR\t(*(volatile int *)(KLADDR+0x00))")--#l("#define\tUARTICR\t(*(volatile int *)(KLADDR+0x44))")) are built on it.
+(#f("qemu/mach.h")). The register macros (#l("#define\tUARTDR\t(*(volatile int *)(KLADDR+0x00))")--#l("#define\tUARTICR\t(*(volatile int *)(KLADDR+0x44))")) are built on it.
 Each is `volatile`, since a read of `UARTDR` removes a character from
 the receiver and a write sends one, and `UARTLCRH` is the line control
 register. `RXFE` and `TXFF` (#l("#define\tRXFE\t020"), #l("#define\tTXFF\t040")) are the flags "receive FIFO empty"
@@ -3441,7 +3465,7 @@ The declarations of `ttrstrt` and `partab` have gone: the first is in
 #f("systm.h") with a prototype, and the second is no longer used here.
 Since `klread` now calls `klrint` before its definition, it is declared (#l("static void\tklrint(dev_t dev);")).
 The variable `klirq` (#l("int\tklirq = 33;")) holds the console's interrupt number at the
-interrupt controller, which `intrtab` (#f("qemu/c.c")) reaches through a pointer, and
+interrupt controller, which `intrtab` (#f("c.c")) reaches through a pointer, and
 33 is shared peripheral interrupt 1, to which QEMU wires the UART.
 In v7, `struct device` described the KL11's registers. It is now unused.
 
@@ -3551,7 +3575,7 @@ are sent, as `kl.c` did.
 
 #lines-to("void", lead: true, after: "}")
 
-Two procedures are new. The routine `cninit` (#f("qemu/c.c")) calls the
+Two procedures are new. The routine `cninit` (#f("c.c")) calls the
 first, `klinit`, early in `machine_init` (#f("machdep.c")). It sets
 `UARTLCRH` to `0160`, eight data bits (bits 5 and 6) with the FIFOs
 enabled (bit 4), and then `UARTCR` to `0x301`, which enables the UART
@@ -3609,7 +3633,7 @@ The file #f("tty.c") holds the code common to all terminals: what a driver such
 as #f("pl011.c") does not need to know about. Under it lie the device
 routines, which move single characters to and from the hardware. Above
 it, the `read`, `write`, and `ioctl` system calls. Between them it
-implements v7's one line discipline, discipline 0 of `linesw` (#f("qemu/c.c")). It does erase and kill processing, echoing, the interrupt,
+implements v7's one line discipline, discipline 0 of `linesw` (#f("c.c")). It does erase and kill processing, echoing, the interrupt,
 quit, stop, and start characters, the expansion of tabs, the mapping of
 newline to carriage return and line feed, the conventions for upper
 case terminals, and the delays which slow terminals need.
@@ -3874,79 +3898,33 @@ is always `NULL`, it returns `NULL`.
 
 == More Drivers <ch-drivers>
 
-#source("/usr/sys/conf/qemuconf")
+#source("/usr/sys/conf/mp135/mach.h")
 
-The file #f("qemuconf") describes the QEMU machine to `mkconf`
-(#f("mkconf.c")), which reads it on its standard input and writes
-#f("qemu/c.c") and #f("qemu/unix.ld"). The first five lines are in v7's
-own format, and could have come from v7's `rktmconf`. A line holding
-only a device name (`rk`) configures one such device. The names `root` and `swap` give the device and minor device of the root file system and of the swap area, and `swplo` and `nswap` give the first block and the length of
-the swap area. The `rktmconf` of v7 put the swap area at block 4000 of the
-RK05. Here it starts at block 32768, just after the root file system
-of 16 MB (#f("rootfs.proto")). In v7 it had 872 blocks, 436 KB, which held
-several of its largest images. Here it holds 1048576 blocks,
-512 MB, as much as the memory, so that whatever the memory holds can be
-swapped out, with room besides for the copies of shared texts and for
-the argument lists of `exec`. In v7 a magnetic tape, `tm`, was also configured, of which this system has
-none.
-
-The console, `mem`, and `tty` are not named, since `mkconf` configures
-them unasked.
-
-#lines-to("ram c0000000 40000000 4000000")
-
-The remaining lines are new, and describe the machine rather than its
-devices. The sizes of the kernel's tables are v7's constants, the same
-for both machines (#f("param.h")). All the numbers are hexadecimal, without the `0x`.
-
-The entry `ram` gives the kernel address at which the kernel is linked, the
-physical address at which it is loaded, and the length of the region:
-the first 64 MB of the QEMU machine's memory, at `0x40000000`, far more than the
-kernel needs, linked at 0xc0000000 (@ch-intro). The difference of the
-two addresses must be a multiple of 2 MB, the size of the blocks by
-which #f("low.s") maps the kernel. The entry `core` gives the physical end of the
-memory which holds process images: the end of the 512 MB with which
-QEMU is started. Core begins at the first page after the kernel, which
-`machine_init` (#f("machdep.c")) finds from the linker's symbols, so the
-start is not stated here. The entry `gic` gives the kernel addresses of the
-interrupt controller's distributor and processor interface.
-
-Each `map` line names a kernel address, a range of physical addresses
-which the kernel maps there in blocks of 2 MB, and the attributes of the
-block entries, copied into #f("qemu/c.c") as written. `BLK_KERN` and
-`BLK_DEV` are defined in #f("seg.h"). The first line covers all 512 MB
-of memory, kernel and core alike. The others map a block each for the interrupt controller, the UART, and
-the virtio transports. The devices which QEMU puts between them are not mapped.
-
-#lines-to(none)
-#source("/usr/sys/conf/mp135conf")
-
-The configuration of the MP135 machine, in the format of
-#f("qemuconf"). The devices, root, and swap are the same: one disk,
-configured as `rk` although it is an SD card driven by #f("sd.c"),
-holding the root file system and, after it, the swap area. The console
-is one of the chip's serial ports, driven by #f("usart.c").
-
-#lines-to("ram c01e0000 2ffe0000 20000")
+The facts which #f("c.c") needs about the MP135 machine, in the form of
+#f("qemu/mach.h"). The devices, root, and swap are those of the QEMU
+machine: one disk, configured as `rk` although it is an SD card driven
+by #f("sd.c"), holding the root file system and, after it, the swap
+area. The console is one of the chip's serial ports, driven by
+#f("usart.c"). The interrupt numbers behind `klirq` and `rkirq` differ
+(71 and 82, #f("usart.c"), #f("sd.c")).
 
 The memory of the MP135 machine is in two pieces which are not
-contiguous. The kernel runs in the 128 KB of on-chip SYSRAM at
-`0x2ffe0000` (@ch-intro). This is `ram`, linked at 0xc01e0000, so that the difference is a multiple of 2 MB. Process
-images, and anything else too large for SYSRAM, live in the 512 MB of
-external DDR memory at `0xc0000000`, which the kernel maps 2 MB higher,
-at 0xc0200000, just above the block of SYSRAM (@ch-intro).
+contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
+`0x2ffe0000` (@ch-intro), which the first row of the map
+(#l("{0xc0000000, 0x2ffe0000, 0x30000000, BLK_KERN},")) places at 0xc0000000, where the
+QEMU machine's kernel lies too. SYSRAM is smaller than a block of 2~MB
+and does not begin on one, so `machine_init` does not map it in a
+block. It keeps the pages in which `_start` mapped the kernel
+(#f("low.s"), #f("machdep.c")). Process images, and anything else too
+large for SYSRAM, live in the 512~MB of external DDR memory at
+`0xc0000000`, which the kernel maps at 0xc0200000, the next block
+(#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). The large tables of the kernel take the start of DDR
+(#f("mp135/unix.ld")), and core the rest of it, up to `CORETOP`
+(#l("#define\tCORETOP\t0xe0000000")).
 
-Only this configuration uses the keyword `tables`. It names a second
-region for the linker, by kernel address, physical address, and
-length, into which `mkconf` places the section `.ddrbss`. It holds the table `kl3u` reserved in
-#f("mch.s") and the tables of the configuration, which SYSRAM cannot spare. It takes the
-start of DDR, and core, which `machine_init` (#f("machdep.c")) begins at
-the first page after it, the rest of it, and `core` gives its physical end.
-
-The attributes of DDR (#l("map c0200000 c0000000 e0000000 BLK_KERN")) are the QEMU machine's: all of DDR is
-normal memory, cached write-back, like the kernel itself in SYSRAM
-(#l("map c0000000 2fe00000 30000000 BLK_KERN")), and so are user pages (`PGUSER`, #f("seg.h")). The 2 MB block of SYSRAM also covers
-the reserved addresses below it, which nothing reads. The one party
+The attributes of DDR are the QEMU machine's: all of DDR is
+normal memory, cached write-back, like the kernel itself in SYSRAM,
+and so are user pages (`PGUSER`, #f("seg.h")). The one party
 which does not see the
 processor's data cache is the SD card's DMA controller, which moves
 process images during swapping and raw I/O, and the buffers of the
@@ -3957,303 +3935,18 @@ the processor wrote and the processor does not afterwards find stale
 lines. The buffers of the buffer cache occupy whole cache lines of
 their own (#f("main.c")).
 
-The other maps are a 2 MB block each of the peripherals which the
+The other rows are a 2~MB block each of the peripherals which the
 drivers use, at successive kernel addresses from `0xf0000000`. They are the reset and clock controller with the power controller and the GPIO ports
-(#l("map f0000000 50000000 50200000 BLK_DEV")); the SD card controller (#l("map f0200000 58000000 58200000 BLK_DEV")); the DDR controller with its PHY
-(#l("map f0400000 5a000000 5a200000 BLK_DEV")); the interrupt controller (#l("map f0600000 a0000000 a0200000 BLK_DEV")), which on this chip lies apart from
-them, and whose two parts the `gic` line (#l("gic f0621000 f0622000")) names within that block;
-the TrustZone controller of the DDR (#l("map f0800000 5c000000 5c200000 BLK_DEV")); and the block of I2C4 and of USART2, the console (#l("map f0a00000 4c000000 4c200000 BLK_DEV"), #f("pmic.c"), #f("usart.c")). Each driver
-names its registers by these kernel addresses. The block of the DDR
-controller also holds the watchdog IWDG2 (#f("iwdg.c")).
+(#l("{0xf0000000, 0x50000000, 0x50200000, BLK_DEV},")); the SD card controller (#l("{0xf0200000, 0x58000000, 0x58200000, BLK_DEV},")); the DDR controller with its PHY
+and the watchdog IWDG2 (#l("{0xf0400000, 0x5a000000, 0x5a200000, BLK_DEV},")); the interrupt controller (#l("{0xf0600000, 0xa0000000, 0xa0200000, BLK_DEV},")), which on this chip lies apart from
+them, and whose two parts `GICDBASE` and `GICCBASE` (#l("#define\tGICDBASE\t0xf0621000")--#l("#define\tGICCBASE\t0xf0622000")) name within that block;
+the TrustZone controller of the DDR (#l("{0xf0800000, 0x5c000000, 0x5c200000, BLK_DEV},")); and the block of I2C4 and of USART2, the console (#l("{0xf0a00000, 0x4c000000, 0x4c200000, BLK_DEV},"), #f("pmic.c"), #f("usart.c")). Each driver
+names its registers by these kernel addresses.
 
-The line `ddr` asks for `ddrinit` (#f("ddr.c")) to be called
+Last, `DDRINIT` (#l("#define\tDDRINIT\tddrinit()")) makes `clock_ddr_init` call `ddrinit` (#f("ddr.c"))
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
-tables in it are touched. The last line, `iwdg`, asks for the watchdog
-to be started (`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
-
-#lines-to(none)
-#source("/usr/sys/conf/mkconf.c")
-
-The program `mkconf` configures a kernel. It reads a
-description of the installation (#f("qemuconf"), #f("mp135conf")) and
-writes the files which differ from one installation to another. In v7 `mkconf` wrote three files. The file `c.c` held the device
-switches and tables, `l.s` the PDP-11's interrupt vectors and the
-assembler stubs which led from each vector to its C handler, and
-`mch0.s` a few assembler definitions which chose the tape on which the
-system would dump core after a crash.
-This one writes `c.c`, as before (#f("qemu/c.c")), and a linker script,
-`unix.ld` (#f("qemu/unix.ld")).
-
-The port keeps v7's program and its device table, and changes it in
-four ways. The pass which wrote `l.s` is gone, since the ARM's vectors
-are fixed (#f("low.s")) and interrupts are routed by a table in `c.c`.
-So is the pass which wrote `mch0.s`, since there is no crash dump. A new
-first pass writes the linker script. The configuration has new
-keywords for the facts about the machine, and `c.c` gets a new tail which records the facts. Lastly, the
-strings which `mkconf` copies into `c.c` have been made acceptable to a
-C99 compiler.
-
-The program `mkconf` runs on the host, not on the target, and is compiled as strict
-C99 like the rest. The header `<string.h>` (#l("#include <string.h>")) declares `strcmp`, which v7 used
-undeclared. The prototypes (#l("void\tpuke(char **s);"), #l("int\tinput(void), equal(char *a, char *b), badline(char *line);")) are needed because the procedures are
-used before they are defined.
-
- `CHAR`, `BLOCK`, `ROOT`, `SWAP`, and
-`PIPE` are still used. `INTR`, `EVEN`, and `KL` controlled the layout of
-the vectors in `l.s`, and are now inert.
-
-#lines-to("char\t*btab[] =")
-
-The order of the names in `btab` and `ctab` is the order of the entries
-in `bdevsw` and `cdevsw`: the index of a name is its major device
-number. A device which is not configured still occupies its place, so
-that the numbers never change, and the special files on the disk remain
-valid whatever the configuration.
-
-#lines-to("struct tab")
-
-Each `struct tab` describes one kind of device by its name, the number
-of such devices configured (`count`), the address of its interrupt
-vector on the PDP-11 (`address`), its flags, and seven strings. The
-count is negative for those which are always present and may not be
-configured. The first three, `codea`,
-`codeb`, and `codec`, are PDP-11 assembler, the vector and the stubs for
-`l.s`, and are no longer used, while `coded` and `codee` are the device's
-entries in `bdevsw` and `cdevsw`, and `codef` and `codeg` any
-declarations which those entries need, written into `c.c` before the
-switch.
-
-Every entry of the table now has its own braces, which C99 compilers
-expect (`-Wmissing-braces`), and v7 initialised the array of structures as
-one flat list.
-
-The console's entry and that of `mem` are changed in their `cdevsw`
-strings and their declarations. Each slot of a switch now has a type of
-its own (#f("conf.h")), so v7's `nodev` in the `ioctl` slot becomes
-`noioctl` and its `nulldev` in the `d_stop` slot becomes `nulltty`. The
-declarations, such as `int klopen(), klclose(), ...`, are now empty
-strings: every driver routine is declared with a prototype in
-#f("systm.h"), which `c.c` includes, and v7's old-style declarations
-would conflict with them.
-
-#lines-to("{", lead: true, after: "\"nulldev, nulldev, mmread, mmwrite, noioctl, nulltty, 0, \",")
-
-The entries for devices which no configuration of this system names
-are unchanged but for their braces. Their declarations remain in v7's
-style, and their drivers do not exist. To configure one would produce a
-`c.c` which neither compiles cleanly nor links. The entries for the
-clock and for memory parity never contributed anything but vectors, and
-are now without effect.
-
-#lines-to("{", after: "\"int\ttcstrategy(), tcclose();\\nstruct\tbuf\ttctab;\",")
-
-The `rk` entry has the same changes as the console's. Its block
-declaration was `int rkstrategy();` and a definition of `rktab`, the
-head of the disk's queue, which the disk driver also defined, and v7's
-loader merged the two as a common symbol. Now `rkstrategy` is declared
-in #f("systm.h"), and `rktab` is declared `extern`, so that the driver's
-definition (#f("virtio_blk.c"), #f("sd.c")) is the only one. Both
-machines' disk drivers took v7's `rk` names, so this one entry serves
-for each.
-
-#lines-to("{", after: "},")
-
-The rest of v7's table is unchanged but for braces, except for `tty`,
-the controlling terminal, whose `d_stop` slot becomes `nulltty`. The terminating `0` of v7
-is now `{0}`.
-
-#lines-to("char\t*stre[] =", lead: true)
-
-The array `stre` heads `c.c` with its includes, which v7 followed with
-declarations of `nulldev` and `nodev`. Those are in #f("systm.h"), and the include of #f("seg.h"), which defines
-`struct memregion` and the block attributes used at the end of
-`c.c`, and by those of #f("map.h"), #f("mount.h"), and #f("callo.h"),
-for the tables which `strg3` (#l("char\tstrg3[] =")) defines.
-
-#lines-to("char\t*stre1[] =", lead: true)
-
-The remaining text of `c.c`. Where v7 wrote a bare `0` after the last entry
-of each switch, the port writes `{0}`, again for the braces. In `strg`,
-v7 printed `nswap` with `%l`, which is not a conversion of C99's
-`printf`: the compiler rejects it, and the host's library prints `%;`
-in place of the number. Since `nswap` is an `int`, the port uses `%d`.
-
-The v7 version had one more array here, `strg1a`, which defined `ldmpx`, a pointer
-to `mpxchan` used by the multiplexed files, unless the configuration
-said `mpx`. The multiplexor is not part of this system, and the array is
-gone. The declarations of the line discipline routines, before `strj`,
-are gone for the same reason as the drivers'. The discipline's row
-is changed as described under #f("qemu/c.c"): it has braces, typed
-null routines, and `ttstart` in the slot `l_start`, where v7 had put it
-in `l_rend`. The row for the packet driver `pk` (`strk`), which a
-`pack` line would add, gets braces and zeros for the three slots v7
-omitted. Its declarations (`stri`) are v7's.
-
-The new array `strg3` defines the tables which v7 defined elsewhere, at the sizes of its `param.h`, namely the buffers, the maps, the mount
-table, the callouts, and the character blocks (#f("qemu/c.c")). The buffers have
-one row more than `NBUF`, of a whole number of 64-byte cache lines,
-for `binit` to align them (#f("main.c")).
-
-#lines-to("int\tpack;", lead: true)
-
-The variables of v7 come first, followed by new ones (#l("int\tddr;")--#l("int\tnmap;")) which hold the description of the machine. They give whether DDR must be started (`ddr`); the kernel address,
-physical origin, and length of the kernel's memory (`ramv`, `ramb`,
-`ramn`) and of the region for its tables (`tabv`, `tabb`, `tabn`); the
-top of core (`coret`); the addresses of the interrupt
-controller; and up to `NMAP` regions to be mapped, each with its kernel
-address and its attributes kept as text. `NMAP` is 9, the number of
-`map` lines in #f("mp135conf"), the configuration with the most. The length of `mapa`'s strings is that of
-an input line, so that no token can overflow it. The v7 version declared `pack`
-twice (#l("int\tpack;", after: "\"\\t    0, 0, 0}, /* 1 */\","), #l("int\tpack;", after: "int\tnswap = 872;")), which C permits for a variable without an initialiser.
-
-#lines-to("int", after: "int\tnmap;")
-
-The configuration is read in one go, and then the outputs are written,
-each by redirecting the standard output with `freopen`.
-
-The first pass, which in v7 wrote `l.s`, now writes the linker script.
-The kernel's text, read-only data, initialised data, and uninitialised
-data (`.bss`) are placed one after another in `RAM`, at the kernel
-addresses which the `ram` line gives. Each is given, with `AT`, a load
-address, which the ELF file records as the physical address of its
-segment: the kernel address less the difference of the two, so that
-the image is loaded where the 2 MB blocks of #f("low.s") will find it.
-The symbols `__bss_start` and `__bss_end` tell `low.s` what to clear, and
-`__bss_start` is aligned to a word, since the clearing is done a word at
-a time before the MMU is on, when an unaligned store faults. The section
-`.ddrbss` holds the large tables. It is aligned to 4 KB, which a table
-requires, is not loaded (`NOLOAD`), and `machine_init` (#f("machdep.c")) clears it once memory is ready. It is placed in the `tables`
-region if the configuration has one, as on the MP135 machine, and otherwise in
-`RAM`. With a `tables` region it also takes the uninitialised data of
-`c.o`, the tables of the system, which `EXCLUDE_FILE` keeps out of
-`.bss` (#l("if (tabn)", after: "ramn);")--#l("\"{ *(.text*) } > RAM\\n\", ramv-ramb);")\, and #f("mp135/unix.ld")).
-
-The entry point is named: `start`, the physical address of `_start`.
-QEMU, which loads the ELF file itself, jumps to the entry point with
-the MMU off, so the kernel address would not do. On the MP135 machine
-the kernel's first byte, at the start of SYSRAM, is `_start` too. Between the regions and the sections the
-symbol `u` is set to `0xFFE00000`, the value of `UBASE` (#f("param.h")),
-as v7's `mch.s` set `_u`, and `mkconf` is a program of the build machine
-and does not include the kernel's headers, so the address is written
-out here, and the two must agree.
-
-#lines-to("/*", after: "tabn ? \"TAB\" : \"RAM\");")
-
-The second pass writes `c.c`. The assignments within the
-tests of the `for` loops (#l("for (i=0; (q=btab[i]); i++) {"), #l("for(i=0; (q=btab[i]); i++) {"), #l("for (i=0; (q=ctab[i]); i++) {"), #l("for(i=0; (q=ctab[i]); i++) {")) have the doubled
-parentheses of #f("malloc.c"). Each
-configured row is now enclosed in braces. A device which is not
-configured gets a row of routines which fail: v7 wrote `nodev` in every
-slot, but the slots now have types of their own, so a block device's
-strategy slot gets `nostrat`, and a character device's read and write
-slots `nordwr`, its `ioctl` slot `noioctl`, and its `d_stop` slot
-`nulltty` (#f("conf.h")).
-
-#lines-to("if (pack) {")
-
-The line disciplines, root, swap, and pipe devices, and the tables
-follow, and after them `strg3` adds the rest of the tables.
-
-#lines-to("printf(\"\\nunsigned int\\tcorebase, coreoff, coretop = 0x%lx;\\n\",")
-
-The tail of `c.c` is new. It defines the machine's top of core and the
-addresses of the interrupt controller, which #f("machdep.c")
-and #f("seg.h") use, and `corebase` and `coreoff` without a value, for
-`machine_init` (#f("machdep.c")) to set; `board_map`, the regions to map,
-each with its kernel address, whose attributes are copied as written in
-the configuration, so that it may name `BLK_KERN` and `BLK_DEV`; and
-`intrtab`, which pairs the
-console's and the disk's interrupt numbers with their handlers.
-
-Last come four small procedures by which the machine-dependent code
-starts the configured drivers without naming them, `cninit`, `bdinit`,
-`clock_ddr_init`, which calls `ddrinit` only if the configuration
-said `ddr`, and `wdinit`, which calls `iwdgstart` only if it said
-`iwdg`. The names they call, like those in `intrtab`, are fixed:
-every machine's drivers use v7's `kl` and `rk` names, and only one
-machine's drivers are linked into a kernel.
-
-In v7, `main` ended by writing `mch0.s`, which set `HTDUMP` or `TUDUMP`
-according to whether a TU16 tape was configured, so that the core dump
-routine in `mch.s` knew where to write. There is no dump routine in
-this system, and the pass is gone.
-
-#lines-to("void", lead: true)
-
-The routine `puke` writes a list of lines. In v7 it took a second argument, which each
-line could use as a `printf` argument. No line used it, and it is gone.
-
-#lines-to("int", lead: true)
-
-The routine `input` reads one line of the configuration. The arrays `keyw` and `dev`
-were 32 characters long in v7, while a line may be 99. Since `%s` copies
-a whole word, a long word overflowed them. They are now as long as the
-line.
-
-The v7 version first scanned the line for an optional count, a keyword, a device,
-and a number, and if no count was found, took the count as 1 and
-added one to the number of fields converted. The test `n>0` shows
-that v7's `sscanf` went on to the later conversions when the leading
-number was missing, and so it did: v7's `_doscan` has no exit on a
-failed conversion. C99's `sscanf`, which is the host's here, stops at
-the first failure and returns 0, so the port scans the line a second
-time without the count.
-
-The keywords which describe the machine are recognised first (#l("if (equal(keyw, \"map\")) {")--#l("}", after: "iwdg++;")).
-Their numbers are read in hexadecimal. A new procedure, `badline`, reports a malformed line with v7's message which returns 1, so that
-reading continues. A tenth `map` line stops `mkconf` with an exit
-status of 1 (#l("fprintf(stderr, \"Too many maps\\n\");")--#l("exit(1);")), and with it the build. A
-kernel built without the mapping would fault at the first touch of the
-device, before its console could say why.
-
-#lines-to("for(q=table; q->name; q++)")
-
-A device name adds to that device's
-count, subject to the checks that a fixed device is not configured and
-that a device whose vector has a fixed address is configured only
-once. The addresses in the table are the PDP-11's octal vector
-addresses written as decimal numbers. From 300 on lie the floating
-vectors, allotted in turn, so that several devices of a kind could be
-configured. The other keywords set the swap area, the root, swap,
-and pipe devices, and the options `pack` and `mpx`, and `mpx` is now
-accepted and ignored.
-
-#lines-to("int", lead: true)
-
-The routine `badline` is the end of v7's `input`, made a procedure so that the new
-keywords can use it in an expression. Unchanged from v7 is `equal`.
-
-#lines-to(none)
-#source("/usr/sys/conf/mp135/c.c")
-
-The configuration of the MP135 machine, written by `mkconf`
-(#f("mkconf.c")) from #f("mp135conf"). Since the two configurations
-name the same devices, root, and swap, and give the tables the same
-sizes, the first 85 lines are identical to those of #f("qemu/c.c"), to
-whose commentary the reader is referred.
-The routines behind the names are different: `kl` is now the serial
-console driver #f("usart.c"), and `rk` the SD card driver #f("sd.c").
-
-#lines-to("unsigned int\tcorebase, coreoff, coretop = 0xe0000000;")
-
-The tables defined above lie in DDR, which #f("mp135/unix.ld")
-arranges. Process images occupy DDR from the first page after them to
-its end, physical address `0xe0000000` (#l("unsigned int\tcorebase, coreoff, coretop = 0xe0000000;")). The interrupt controller
-is the Cortex-A7's own, at physical `0xa0021000` and `0xa0022000`, which
-the kernel reaches at `0xf0621000` and `0xf0622000` (#l("unsigned int\tgicdbase = 0xf0621000, giccbase = 0xf0622000;")).
-
-The table `board_map` maps eight regions. The kernel's 2 MB block, which
-contains SYSRAM, is at 0xc0000000, cached, and DDR is just above it,
-cached likewise. Six blocks of peripherals follow from 0xf0000000
-(@ch-intro).
-
-#lines-to("extern int\tclkirq, klirq, rkirq;", lead: true)
-
-The table `intrtab` is the same as the QEMU machine's, though the numbers behind `klirq` and
-`rkirq` differ (71 and 82, #f("usart.c"), #f("sd.c")). The glue differs
-in `clock_ddr_init`, which here calls `ddrinit` (#f("ddr.c")), and in
-`wdinit`, which calls `iwdgstart` (#f("iwdg.c")), since the
-configuration names `ddr` and `iwdg`.
+tables in it are touched, and `WDINIT` makes `wdinit` start the watchdog
+(`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
 
 #lines-to(none)
 #source("/usr/sys/dev/usart.c")
@@ -4262,7 +3955,7 @@ The console driver of the MP135 machine. Like #f("pl011.c") on the QEMU
 machine, it is v7's `kl.c` with a different device under it, and it
 keeps `kl.c`'s comment, order, names, and `tty` array `kl11`, so that
 the switch entry `klopen, klclose, klread, klwrite, klioctl` in
-#f("mp135/c.c") is v7's. Where the two drivers make the same change to
+#f("c.c") is v7's. Where the two drivers make the same change to
 `kl.c`, as in the default modes in `klopen`, the hold of input in
 `klread` and `klrint`, and the bounded wait in `putchar`, the commentary
 on #f("pl011.c") applies.
@@ -4279,7 +3972,7 @@ transmitted (`TDR`) data.
 #lines-to("/* base address */")
 
 `KLADDR` is the kernel address of USART2, physical `0x4c001000`, in the
-2 MB block which it shares with I2C4 (#f("mp135conf")). `RCC` is the chip's reset and clock controller, by its kernel address,
+2 MB block which it shares with I2C4 (#f("mp135/mach.h")). `RCC` is the chip's reset and clock controller, by its kernel address,
 and `GPIO` a register of a port of general purpose pins.
 `APB6ENSETR` and `UART12CKSELR` are the registers of `RCC` which
 enable USART2's clock and choose its source. The bits of
@@ -4291,7 +3984,7 @@ they do in #f("pl011.c").
 #lines-to("struct\ttty kl11[NKL11+NDL11];")
 
 The variable `klirq` holds the console's interrupt number for `intrtab`
-(#f("mp135/c.c")), 71, which is shared peripheral interrupt 39 of the
+(#f("c.c")), 71, which is shared peripheral interrupt 39 of the
 interrupt controller.
 
 #lines-to("/*", after: "int\tklirq = 71;")
@@ -4299,7 +3992,7 @@ interrupt controller.
 The routine `pinuart` gives one pin to the USART. It enables the clock of
 the pin's port, sets the pin's mode to 2, alternate function, and
 selects its alternate function in the low or high alternate function
-register (`0x20`, `0x24`), four bits per pin. The routine `klinit` is called by `cninit` (#f("mp135/c.c")) early
+register (`0x20`, `0x24`), four bits per pin. The routine `klinit` is called by `cninit` (#f("c.c")) early
 in `machine_init` (#f("machdep.c")). The kernel otherwise takes the
 clocks as the boot ROM left them, but the USART is given a clock of its
 own choosing so that its speed does not depend on that state. It is
@@ -4407,7 +4100,7 @@ it has been fed, which reloads the count. The MP135 machine has no other
 means of resetting itself, and without one a kernel which stopped on
 the board would stay stopped until someone pressed its reset button.
 
-The routine `iwdgstart` is called by `wdinit` (#f("mp135/c.c")) at the start of
+The routine `iwdgstart` is called by `wdinit` (#f("c.c")) at the start of
 `machine_init` (#f("machdep.c")), as soon as the device registers are
 mapped and before the console is set up. It enables the watchdog's
 clock on its bus and reads the register back. The key register
@@ -4447,7 +4140,7 @@ would.
 
 `SD` names a register of the controller by its offset, `RCC` one of the
 reset and clock controller, and `GPIO` one of a port of general purpose
-pins (port A is 0), all by their kernel addresses (#f("mp135conf")).
+pins (port A is 0), all by their kernel addresses (#f("mp135/mach.h")).
 `NRK` and the RK11's bits are kept although unused, as in
 #f("virtio_blk.c"); a few of the names are given new values. `WCOM` and
 `RCOM` (#l("#define\tWCOM\t25"), #l("#define\tRCOM\t18")) are the commands which write and read many blocks, 25
@@ -4503,7 +4196,7 @@ the controller can check.
 
 #lines-to("/*", after: "panic(\"sd card crc\");")
 
-The routine `bdinit` (#f("mp135/c.c")) calls `rkinit` from `main`, before
+The routine `bdinit` (#f("c.c")) calls `rkinit` from `main`, before
 `intrstart`. It enables the clocks of GPIO ports C and D (`014`, bits 2
 and 3), and puts PC8 to PC12, the four data lines and the clock, and
 PD2, the command line, on alternate function 12, SDMMC1, at medium
@@ -4584,7 +4277,7 @@ seeing the processor's data cache: before a write the data must be in
 memory, and before a read no modified line may be left to overwrite
 the incoming data later. Both the buffer cache and the process images,
 which swapping and raw I/O transfer directly, lie in DDR, which is
-cached (#f("mp135conf")).
+cached (#f("mp135/mach.h")).
 
 The device is then programmed in the order the controller requires. The old flags are cleared, the data path is stopped and given the
 length and the block size and direction, the IDMA is given the
@@ -4627,7 +4320,7 @@ until the transfer is done, and nothing else writes there.
 This file is not a driver in v7's sense: it has no switch entry and no
 special file, and its one procedure, `ddrinit`, is called once, early
 in `machine_init` (#f("machdep.c")), through `clock_ddr_init`
-(#f("mp135/c.c")), and never again. Its job is to make the DDR memory
+(#f("c.c")), and never again. Its job is to make the DDR memory
 of the MP135 machine usable. Nothing like it existed in v7, since a PDP-11's
 core was ready when the machine was switched on.
 
@@ -4636,12 +4329,12 @@ which the kernel runs. The 512 MB of DDR3L memory are dead until a memory contro
 have been clocked, configured, and trained to the particular chips.
 This is normally the work of a first-stage boot loader, and here the
 kernel is the first stage. The page tables, the core, and all the
-processes are in DDR (#f("mp135conf")), so the work must be done before
+processes are in DDR (#f("mp135/mach.h")), so the work must be done before
 anything else touches it, and `machine_init` calls `ddrinit` immediately
 after the device registers are mapped and the console is set up, before
 it maps the DDR, clears `.ddrbss`, and builds the table of the u-area.
 The registers are named by their kernel addresses, those of the blocks
-which #f("mp135conf") maps. The work cannot be left to a user program:
+which #f("mp135/mach.h") maps. The work cannot be left to a user program:
 the kernel, its page tables, and the first processes would then all
 have to fit in SYSRAM, and they do not.
 
@@ -4720,7 +4413,7 @@ lies in the block of the reset and clock controller and so at
 off (#l("if (R(0xF000100C) & 0x1000) {")--#l("}", after: "R(0xF000100C) &= ~0x1000;")).
 
 The TrustZone address space controller, `TZC`, at physical `0x5c006000`
-and mapped at `0xf0806000` (#f("mp135conf")), guards DDR. It filters
+and mapped at `0xf0806000` (#f("mp135/mach.h")), guards DDR. It filters
 every access by its address and by the security state of the bus
 master. Its clock, and that of the memory
 encryption unit beside it, are enabled (#l("RCC(0x780) = 2;")--#l("(void)RCC(0x740);")). Then, with its
@@ -4800,7 +4493,7 @@ first.
 `RCC` and `GPIO` (#l("#define\tRCC(o)\tR(0xF0000000+(o))"), #l("#define\tGPIO(p, o)\tR(0xF0002000+(p)*0x1000+(o))")) are the reset and clock controller and the
 general purpose I/O ports, by their kernel addresses, as in #f("sd.c"), and
 `I2C` is the controller of the chip's fourth I2C bus, I2C4, at offset
-`0x5000` in the block which #f("mp135conf") maps at `0xf0a00000`.
+`0x5000` in the block which #f("mp135/mach.h") maps at `0xf0a00000`.
 
 #lines-to("static int")
 
@@ -14708,7 +14401,7 @@ system. Everything which runs there is compiled here.
 
 The tools. `CROSS_COMPILE` is the prefix, in the manner of Linux's makefiles, of
 the cross compiler for the target, a bare-metal ARM toolchain. `HOSTCC` compiles
-the three programs which run during the build rather than on the target, `mkconf` (#f("mkconf.c")), `mkfs`
+the three programs which run during the build rather than on the target, `mkstm32` (#f("mkstm32.c")), `mkfs`
 (#f("cmd/mkfs.c")), and the `proc` of `awk` (#f("cmd/cmd.mk")). It is the build machine's own
 compiler, `cc`, and the programs it makes run there directly, so the
 build needs no more than a cross compiler for the target and the
@@ -14826,14 +14519,15 @@ loads the ELF file at its link address and starts it at its entry,
 `_start` (#f("low.s")). The disk is the root image, on a virtio block
 device (#f("virtio_blk.c")), and the console is the QEMU machine's UART
 on the standard input and output. `-m 512M` gives the machine the 512 MB of
-memory which #f("qemuconf") describes, and QEMU's default is 128 MB.
+memory which #f("qemu/mach.h") describes, and QEMU's default is 128 MB.
 
-#lines-to("boot/qemu.img: boot/rootfs.img $S/conf/qemuconf", lead: true)
+#lines-to("boot/qemu.img: boot/rootfs.img $S/conf/c.c", lead: true)
 
 The disk which `make qemu` gives the machine is not the root image
 itself but a copy of it, `boot/qemu.img`, so the image stays as `mkfs`
 made it. The copy is extended to the end of the swap area, whose first
-block and length `awk` reads from #f("qemuconf"), since QEMU will not
+block and length `awk` reads from the definitions of `swplo` and `nswap`
+in #f("c.c"), since QEMU will not
 read or write a block beyond the end of the file. The swap area is
 512 MB, but `cp --sparse=always` and `truncate` store nothing on the
 host for the blocks never written. The copy is made again only when the
@@ -14858,7 +14552,7 @@ Each machine has an image of its own, which differs from the other only
 in `/unix`: `boot/rootfs.img` for the QEMU machine, and
 `boot/rootfs-mp135.img` for the MP135 machine. Each holds only the
 root file system, and the MP135 machine's swap area is the part of its
-card beyond it (#f("mp135conf")). The first two lines name each
+card beyond it (#f("mp135/mach.h")). The first two lines name each
 image's kernel, which `filter` picks out again from
 the prerequisites (`$^`) in the recipe. The prototype names the kernel
 as `boot/unix`, the copy of the QEMU machine's kernel, and `sed` puts the machine's own
@@ -14953,9 +14647,11 @@ the `Makefile` can make them all depend on itself.
 
 In v7, `conf/makefile` had a target `allsystems`, which ran `mkconf` and
 `make` once for each of six configurations and renamed each `unix`
-in turn. Here `BOARDS` lists the two configurations, and each kernel is
-made in a directory of its own, `conf/qemu/unix` and `conf/mp135/unix`,
-so that both are built by one `make`.
+in turn, since v7's `conf` held one `c.c` at a time. Here `BOARDS`
+lists the two machines, and each kernel is made in a directory of its
+own, `conf/qemu/unix` and `conf/mp135/unix`, which also holds the
+machine's #f("qemu/mach.h") and linker script, so that both are built by
+one `make`.
 
 #lines-to("$(SYS_OBJ): $S/sys.mk")
 
@@ -14970,22 +14666,16 @@ keep a member which had been deleted from the sources. In v7, `mklib`
 named the members one by one, in a fixed order, and GNU `ar` writes an index
 of the symbols, and the order no longer matters.
 
-#lines-to("$S/conf/mkconf: $S/conf/mkconf.c", lead: true)
+#lines-to("$S/conf/%/c.o: $S/conf/c.c", lead: true)
 
-The configurator `mkconf` is a host program, built with the host compiler and the strict
-flags. It is run in the directory which is to receive its
-output, reading the configuration on its standard input, and v7's
-`conf` held one `c.c` at a time, which is why `allsystems` had to
-build its kernels one after the other. A pattern rule with two targets
-is made by one run of its recipe, which suits `mkconf`, since it writes
-`c.c` and `unix.ld` together.
+The program `mkstm32` (#f("mkstm32.c")) is a host program, built with
+the host compiler and the strict flags. It is described below.
 
-The file `c.c` lies one directory deeper than v7's, but `mkconf` still writes
-v7's `#include "../h/param.h"`. The search path `-I$S/conf` (#l("$S/conf/%/c.o: CPPFLAGS = -I$S/conf")) lets
-`"../h/..."` be found from `conf`.
-
-The program `mkstm32` is another host program, built the same way. It is described
-below.
+The configuration #f("c.c") is compiled once for each machine, into
+that machine's directory, with the directory on the search path
+(#l("$(COMPILE.c) -I$(@D) -o $@ $<")), so that its `#include "mach.h"` finds the machine's
+header. Its own includes, such as `"../h/param.h"`, are found
+relative to #f("c.c") itself, in `conf`, as in v7.
 
 #lines-to("$S/conf/qemu/unix: $(QEMU_DRV)")
 
@@ -15121,9 +14811,8 @@ among them.
 #lines-to(none)
 #source("/usr/sys/conf/qemu/unix.ld")
 
-The linker script #f("qemu/unix.ld") is the one for the QEMU machine's kernel. The program `mkconf` (#f("mkconf.c")) writes it from the `ram` line of
-#f("qemuconf"), in the pass which in v7 wrote `l.s`, and is used by the
-link in #f("sys.mk").
+The linker script #f("qemu/unix.ld") is the one for the QEMU machine's
+kernel, and is used by the link in #f("sys.mk").
 
 The v7 kernel needed no script. Its kernel was linked with `ld -i`: instruction
 and data in two separate spaces of 64 KB, each beginning at address
@@ -15138,7 +14827,7 @@ move.
 
 `MEMORY` declares the one region, `RAM`: the first 64 MB of the QEMU
 machine's memory, by its kernel address. The kernel takes only its start. Process
-images are kept in the `core` above it (#f("qemuconf")), which the
+images are kept in the core above it (#f("qemu/mach.h")), which the
 linker is not told about.
 
 The symbol `u` (#l("u = 0xFFE00000;")) is the per process data area, at `UBASE` (#f("param.h")): the
@@ -15180,22 +14869,30 @@ and the section simply follows `.bss` in `RAM`. It exists for the MP135
 machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
 written until `machine_init` has started it.
 
+#lines-to("ASSERT(__bss_end <= _start + 0x200000, \"the kernel must lie in one block\")", lead: true)
+
+`_start` maps the kernel by pages through one third-level table, which
+covers 2~MB (#f("low.s")). The assertion makes the link fail if text,
+data, and `.bss` grow past that, rather than leave the end of the
+kernel unmapped.
+
 #lines-to(none)
 #source("/usr/sys/conf/mp135/unix.ld")
 
-The MP135 machine's linker script, #f("mp135/unix.ld"), comes from `mkconf`, which reads #f("mp135conf"). It differs from #f("qemu/unix.ld") in its two
+The MP135 machine's linker script, #f("mp135/unix.ld"), differs from #f("qemu/unix.ld") in its two
 regions, in the difference between kernel and physical addresses, and
 in where it puts `.ddrbss` and what it puts there, and `u` and `start` are
 defined in the same way.
 
 `RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, in
-which the kernel runs, by its kernel address 0xc01e0000.
+which the kernel runs, by its kernel address 0xc0000000, that of the
+QEMU machine's kernel.
 The text, data, and `.bss` of the kernel must all fit there. The linker
 reports an overflow of the region, so a kernel which has outgrown SYSRAM
 fails to link rather than to boot. `TAB` is the DDR memory, at
 physical `0xc0000000` and kernel address 0xc0200000, which holds the
 table `kl3u` in `.ddrbss`, at its very start, and after it the tables
-of the configuration, and `core` follows them (#f("mp135conf")). The first
+of the configuration, and core follows them (#f("mp135/mach.h")). The first
 byte of the text, at the start of SYSRAM, is `_start`. From this ELF
 file the build makes the image which the boot ROM loads, with the
 ROM's header in front (#f("sys.mk")).
@@ -15208,9 +14905,9 @@ gives the section no contents in the file, so that nothing has to be
 loaded into DDR before it is running.
 
 The tables of the configuration, from `buf` to `cfree`
-(#f("mp135/c.c")), are the uninitialised data of `c.o`. At the sizes
-which #f("mp135conf") gives them they take some three quarters of a
-megabyte, six times SYSRAM, so `EXCLUDE_FILE` (#l(".bss : AT(ADDR(.bss) - 0x90200000) {")) keeps them out of
+(#f("c.c")), are the uninitialised data of `c.o`. At the sizes
+of #f("param.h") they take some three quarters of a
+megabyte, six times SYSRAM, so `EXCLUDE_FILE` (#l(".bss : AT(ADDR(.bss) - 0x90020000) {")) keeps them out of
 `.bss`, and the pattern `*/c.o` (#l("*/c.o(.bss* COMMON)")) puts them into `.ddrbss` after
 `kl3u`. Nothing in `c.o`'s uninitialised data is used before
 `machine_init` has started the DDR and cleared the section: `corebase`
@@ -15220,7 +14917,7 @@ and `coreoff` are set only after that.
 #source("/usr/sys/conf/mkstm32.c")
 
 The program #f("mkstm32.c") puts the boot ROM's header on the MP135 machine's
-kernel (#f("sys.mk")). Like `mkconf`, it runs on the build machine,
+kernel (#f("sys.mk")). Like `mkfs`, it runs on the build machine,
 never on the target.
 
 The header is that of the chip's documentation, version 2 (#l("memcpy(hdr, \"STM2\", 4);")--#l("put4(hdr+132, 512 - 128);")). It holds the magic `STM2`; 64 bytes of signature, left zero, since the chip is
@@ -15610,7 +15307,7 @@ to a block, and `mkfs` gives the i-list blocks 2 to 257. The system's files and 
 take some 5 MB of it. The rest is room for the users. The size is bounded by
 nothing but the configuration: three-byte block addresses
 (#f("ino.h")) reach 8 GB. The swap area follows on the same disk, from
-block 32768 (#f("qemuconf")). Then comes the root directory, described like every other file by its mode, as `d--755`, its owner,
+block 32768 (#f("c.c")). Then comes the root directory, described like every other file by its mode, as `d--755`, its owner,
 and its group.
 
 #lines-to("bin\td--755 0 0")
@@ -15647,7 +15344,7 @@ for a process whose user or group was changed by `exec`.
 #lines-to("dev\td--755 0 0")
 
 The special files. Each gives a type (`b` or `c`), and the major and
-minor device numbers (#f("qemu/c.c")). The console is character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
+minor device numbers (#f("c.c")). The console is character device 0, `mem`, `kmem`, and `null` are minor devices 0, 1,
 and 2 of device 8 (#f("mem.c")), and `tty` is device 17. The commands `ps`,
 `pstat`, `iostat`, and `dmesg` read the kernel's tables through `kmem`,
 and `ps` reads process images through `mem` (#f("mem.c")), and `cron` runs
