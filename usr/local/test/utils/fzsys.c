@@ -1,5 +1,6 @@
 /*
- * fzsys seed batches: random system calls with hostile arguments.
+ * fzsys seed batches [first [calls]]: random system calls with hostile
+ * arguments, in batches first (0) to batches-1, of calls (300) each.
  * Each batch runs in a child as uid 8, which no one else uses, with
  * its standard files on /dev/null, in /tmp/fz/sys.  The child makes
  * random calls by number, through svc, with arguments drawn from
@@ -7,12 +8,14 @@
  * huge numbers, file descriptors, pointers into its own memory, into
  * its read-only text, at the ends of its data, and into the kernel's
  * gigabyte, and names which are long, empty, or not ended.  fork and
- * exec are left to fzproc and fzelf.  The kernel must never panic,
- * the child must never gain root, and no file of the system may
- * change.  After each call the child tries to create /fzroot, which
- * only root can; its exit status proves nothing, since a random
- * signal handler may send it anywhere in its own code.  Prints the seed and batch on the first difference and
- * exits 1; prints "fzsys ok" otherwise.
+ * exec, also under the numbers 64 higher which the kernel's mask of 077
+ * maps onto them, are left to fzproc and fzelf.  The kernel must never
+ * panic, the child must never gain root, and no file of the system may
+ * change, though it may gain links, which any user may make.  After
+ * each call the child tries to create /fzroot, which only root can;
+ * its exit status proves nothing, since a random signal handler may
+ * send it anywhere in its own code.  Prints the seed and batch on the
+ * first difference and exits 1; prints "fzsys ok" otherwise.
  */
 
 #include <stdio.h>
@@ -58,7 +61,7 @@ char	*watch[] = { "/etc/passwd", "/etc/group", "/unix", "/bin/sh",
 struct	stat	before[NWATCH];
 unsigned long	rs;
 long	seed;
-int	batch;
+int	batch, ncall = NCALL;
 char	buf[BUFSZ];
 char	longname[600];
 
@@ -128,10 +131,11 @@ child(void)
 		buf[i] = rnd(256);
 	for(i = 0; i < (int)sizeof(longname)-1; i++)
 		longname[i] = 'a' + i%26;
-	for(i = 0; i < NCALL; i++) {
+	for(i = 0; i < ncall; i++) {
 		do
 			n = rnd(70);
-		while(n == 1 || n == 2 || n == 11 || n == 59);
+		while((n&077) == 1 || (n&077) == 2 || (n&077) == 11 ||
+		    (n&077) == 59);
 		rawsys(n, arg(), arg(), arg(), arg());
 		if(creat(PROOF, 0644) >= 0)
 			exit(8);
@@ -167,7 +171,7 @@ same(struct stat *a, struct stat *b)
 {
 	return(a->st_ino == b->st_ino && a->st_mode == b->st_mode &&
 	    a->st_uid == b->st_uid && a->st_size == b->st_size &&
-	    a->st_mtime == b->st_mtime && a->st_nlink == b->st_nlink);
+	    a->st_mtime == b->st_mtime);
 }
 
 static void
@@ -180,14 +184,17 @@ int
 main(int argc, char **argv)
 {
 	struct stat st;
-	int i, nbatch, pid, w, status;
+	int i, nbatch, first, pid, w, status;
 
-	if(argc != 3) {
-		printf("usage: fzsys seed batches\n");
+	if(argc < 3 || argc > 5) {
+		printf("usage: fzsys seed batches [first [calls]]\n");
 		exit(2);
 	}
 	seed = atol(argv[1]);
 	nbatch = atoi(argv[2]);
+	first = argc >= 4 ? atoi(argv[3]) : 0;
+	if(argc == 5)
+		ncall = atoi(argv[4]);
 	for(i = 0; i < (int)NWATCH; i++)
 		if(stat(watch[i], &before[i]) < 0)
 			fail("stat before");
@@ -201,7 +208,7 @@ main(int argc, char **argv)
 		;
 	if(w < 0 || status != 0)
 		fail("cannot become uid 8");
-	for(batch = 0; batch < nbatch; batch++) {
+	for(batch = first; batch < nbatch; batch++) {
 		rs = seed*2654435761UL + batch*40503UL + 11;
 		if((pid = fork()) < 0)
 			fail("fork");

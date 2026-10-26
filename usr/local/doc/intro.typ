@@ -158,8 +158,7 @@ kernel stack, below what `srsdb` has stored there (in the layout of
 ) <tab-vectors>
 
 _Coprocessors._ The ARM architecture lets a processor be extended by up to sixteen
-"coprocessors", numbered 0 to 15, which the core drives with its own
-instructions. The floating-point unit is coprocessors 10 and 11. Number
+"coprocessors", numbered 0 to 15, which are specialized interfaces to configure the processor extensions and system control. The floating-point unit is coprocessors 10 and 11. Number
 15, the system control coprocessor, is the processor's own control
 interface, built into the core, and holds the system control registers.
 A system control register is reached only by the instructions `mrc`,
