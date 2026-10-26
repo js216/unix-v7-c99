@@ -312,7 +312,6 @@ waitloc:
 nofault:
 	.space 4
 
-.section .ddrbss,"aw",%nobits
 .balign 4096
 kl3u:
 	.space 4096

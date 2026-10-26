@@ -141,16 +141,6 @@ iinit(void)
 }
 
 /*
- * This is the set of buffers proper, whose heads
- * were declared in buf.h.  There can exist buffer
- * headers not pointing here that are used purely
- * as arguments to the I/O routines to describe
- * I/O to be done-- e.g. swbuf for
- * swapping.
- */
-extern int	buffers[][(BSIZE+BSLOP+63)/64*16];
-
-/*
  * Initialize the buffer I/O system by freeing
  * all buffers and setting all device buffer lists to empty.
  */
@@ -167,8 +157,7 @@ binit(void)
 	for (i=0; i<NBUF; i++) {
 		bp = &buf[i];
 		bp->b_dev = NODEV;
-		bp->b_un.b_addr = (caddr_t)buffers[i] +
-		    (-(unsigned)buffers&63);
+		bp->b_un.b_addr = (caddr_t)buffers[i];
 		bp->b_back = &bfreelist;
 		bp->b_forw = bfreelist.b_forw;
 		bfreelist.b_forw->b_back = bp;

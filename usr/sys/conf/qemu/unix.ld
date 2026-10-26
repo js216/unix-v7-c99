@@ -17,10 +17,5 @@ SECTIONS
 		*(COMMON)
 	} > RAM
 	__bss_end = .;
-	.ddrbss (NOLOAD) : ALIGN(4096) {
-		__ddrbss_start = .;
-		*(.ddrbss*)
-		__ddrbss_end = .;
-	} > RAM
 }
 ASSERT(__bss_end <= _start + 0x200000, "the kernel must lie in one block")

@@ -78,7 +78,7 @@ struct	text	text[NTEXT];
 struct	buf	bfreelist;
 struct	acct	acctbuf;
 struct	inode	*acctp;
-int	buffers[NBUF+1][(BSIZE+BSLOP+63)/64*16];
+int	(*buffers)[(BSIZE+BSLOP+63)/64*16];
 struct	map	coremap[CMAPSIZ];
 struct	map	swapmap[SMAPSIZ];
 struct	map	ptmap[PMAPSIZ];
@@ -86,7 +86,7 @@ struct	mount	mount[NMOUNT];
 struct	callo	callout[NCALL];
 struct	cblock	cfree[NCLIST];
 
-unsigned int	corebase, coreoff, coretop = CORETOP;
+unsigned int	corebase = COREBASE, coreoff, coretop = CORETOP;
 unsigned int	gicdbase = GICDBASE, giccbase = GICCBASE;
 
 struct	memregion	board_map[] =

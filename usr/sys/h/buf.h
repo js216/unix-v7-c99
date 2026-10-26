@@ -41,6 +41,7 @@ struct buf
 
 extern struct buf buf[];		/* The buffer pool itself */
 extern struct buf bfreelist;		/* head of available list */
+extern int (*buffers)[(BSIZE+BSLOP+63)/64*16];	/* their data, in core */
 
 /*
  * These flags are kept in b_flags.

@@ -23,7 +23,7 @@
 #define	IAR	0x0c
 #define	EOIR	0x10
 
-extern char _start[], __ddrbss_start[], __ddrbss_end[];
+extern char _start[], __bss_end[];
 unsigned long long clkcval;
 unsigned	clkreload, clkrem, clkfrac;
 int	clkirq = 27;
@@ -82,6 +82,14 @@ startup(void)
 	t[0] = 0xe3a0703f;	/* mov r7, #63 */
 	t[1] = 0xef000000;	/* svc #0 */
 	arm_sync_icache((caddr_t)t, 8);
+
+	/*
+	 * the buffers of the buffer cache, in core,
+	 * where the disk's DMA can reach them
+	 */
+
+	buffers = (int (*)[(BSIZE+BSLOP+63)/64*16])PGADDR(i);
+	i += btop(NBUF*sizeof(*buffers));
 	maxmem = btop(coretop) - i;
 	mfree(coremap, maxmem, i);
 	printf("mem = %d\n", ptob(maxmem));
@@ -178,6 +186,7 @@ vtop(caddr_t va)
 caddr_t
 machine_init(void)
 {
+	register struct memregion *m;
 	register unsigned a;
 	register char *p;
 
@@ -186,10 +195,12 @@ machine_init(void)
 	cninit();
 	clock_ddr_init();
 	kmap(BLK_KERN);
-	for(p = __ddrbss_start; p < __ddrbss_end; p++)
-		*p = 0;
-	coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);
-	corebase = ptob(btop(vtop(__ddrbss_end)));
+	a = ptob(btop(vtop(__bss_end)));
+	if(a > corebase && a < coretop)
+		corebase = a;
+	for(m = board_map; m->end != 0; m++)
+		if(m->attr == BLK_KERN && corebase - m->start < m->end - m->start)
+			coreoff = m->va - m->start;
 	for(a = 0; a < USIZE; a++)
 		kl3u[a] = (corebase + ptob(a)) | BLK_KERN | PTE_TAB;
 	kl2[(UBASE>>BLKSHIFT) & (NPTE-1)] = vtop((caddr_t)kl3u) | PTE_TAB;
