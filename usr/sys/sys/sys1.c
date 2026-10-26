@@ -28,20 +28,21 @@ exec(void)
 	exece();
 }
 
+#define	NARGPG	((NCARGS+PGSIZE-1)/PGSIZE)
+#define	ARGC(n)	(PGADDR(pg[(n)>>PGSHIFT])[(n)&(PGSIZE-1)])
+
 void
 exece(void)
 {
-	register int nc;
-	register char *cp = NULL;
-	register struct buf *bp;
+	register int nc, i;
 	register struct execa *uap;
-	int na, ne, bno, ucp, ap, c;
+	int na, ne, ucp, ap, c, pg[(NCARGS+PGSIZE-1)/PGSIZE];
 	struct inode *ip;
 
 	if ((ip = namei(uchar, 0)) == NULL)
 		return;
-	bno = 0;
-	bp = 0;
+	for (i = 0; i < NARGPG; i++)
+		pg[i] = 0;
 	if(access(ip, IEXEC))
 		goto bad;
 	if((ip->i_mode & IFMT) != IFREG ||
@@ -50,16 +51,18 @@ exece(void)
 		goto bad;
 	}
 	/*
-	 * Collect arguments on "file" in swap space.
+	 * Collect arguments in pages of core.
 	 */
 	na = 0;
 	ne = 0;
 	nc = 0;
 	uap = (struct execa *)u.u_ap;
-	if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {
+	if (npgfree < NARGPG) {
 		u.u_error = ENOMEM;
 		goto bad;
 	}
+	for (i = 0; i < NARGPG; i++)
+		pg[i] = pgalloc();
 	if (uap->argp) for (;;) {
 		ap = NULL;
 		if (uap->argp) {
@@ -85,19 +88,10 @@ exece(void)
 				u.u_error = EFAULT;
 			if (u.u_error)
 				goto bad;
-			if ((nc&BMASK) == 0) {
-				if (bp)
-					bawrite(bp);
-				bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));
-				cp = bp->b_un.b_addr;
-			}
+			ARGC(nc) = c;
 			nc++;
-			*cp++ = c;
 		} while (c>0);
 	}
-	if (bp)
-		bawrite(bp);
-	bp = 0;
 	nc = (nc + NBPW-1) & ~(NBPW-1);
 	getxfile(ip, nc+(na+3)*NBPW);
 	if (u.u_error)
@@ -122,13 +116,7 @@ exece(void)
 			break;
 		suword((caddr_t)ap, ucp);
 		do {
-			if ((nc&BMASK) == 0) {
-				if (bp)
-					brelse(bp);
-				bp = bread(swapdev, swplo+bno+(nc>>BSHIFT));
-				cp = bp->b_un.b_addr;
-			}
-			subyte((caddr_t)ucp++, (c = *cp++));
+			subyte((caddr_t)ucp++, (c = ARGC(nc)));
 			nc++;
 		} while(c&0377);
 	}
@@ -136,10 +124,9 @@ exece(void)
 	suword((caddr_t)ucp, 0);
 	setregs();
 bad:
-	if (bp)
-		brelse(bp);
-	if(bno)
-		mfree(swapmap, (NCARGS+BSIZE-1)/BSIZE, bno);
+	for (i = 0; i < NARGPG; i++)
+		if (pg[i])
+			pgfree(pg[i]);
 	iput(ip);
 }
 
