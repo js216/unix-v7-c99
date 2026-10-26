@@ -37,9 +37,9 @@ main(int argc, char **argv)
 		sprintf(s1, "%ld", s);
 		sprintf(s2, "%ld", s + 1);
 		sprintf(s3, "%ld", s + 2);
-		run(U "fzsys", "-s", s1, "20", (char *)0);
+		run(U "fzsys", "-s", s1, "40", (char *)0);
 		run(U "fzmem", s2, "4", "30", (char *)0);
-		run(U "fzlib", s3, "1", (char *)0, (char *)0);
+		run(U "fzlib", s3, "2", (char *)0, (char *)0);
 		while(wait(&status) >= 0)
 			;
 		printf("fuzz round %ld seeds %ld-%ld done\n", r, s, s + 2);
