@@ -37,9 +37,7 @@ kernel into RAM itself and starts it at its entry point.
 board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
 contains one ARM Cortex-A7 processor and 168~KB of on-chip RAM. Of
 this, 128~KB is the system RAM (SYSRAM) at 0x2FFE0000, which holds the
-kernel, and 32~KB in three banks, SRAM1--3, follows it. The kernel is mapped
-and linked so that it can grow into SRAM1--3, but at present it ends
-within SYSRAM. (The port does not use the 8~KB of backup SRAM.) The board adds 512~MB of DDR3L
+kernel, and 32~KB in three banks, SRAM1--3, follows it. (The port uses neither SRAM1--3 nor the 8~KB of backup SRAM.) The board adds 512~MB of DDR3L
 memory, at 0xC0000000, and an SD card slot. The console is one of the
 chip's serial ports, USART2 at 0x4C001000, whose pins the board brings
 out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
@@ -246,8 +244,8 @@ MMU off. From there the system comes up in these steps:
   sets aside physical pages for the processes' translation tables, 32 bytes of
   first-level table for each process in `l1tab`, then `NPTAB` pages in
   `ptmap` (#at("/usr/sys/sys/machdep.c", "mfree(ptmap, NPTAB, i);")), from which each process's tables of the second and third
-  levels are allocated. It puts every other free page of RAM in the
-  core map, and enters the swap area in the swap map. The running code
+  levels are allocated. It puts every other free page of RAM on the
+  stack of free pages, and enters the swap area in the swap map. The running code
   becomes process 0 (#at("/usr/sys/sys/main.c", "proc[0].p_addr = btop(corebase);")).
 + Next `clkstart` (#at("/usr/sys/sys/machdep.c", "clkstart(")) programs the timer, and `intrstart`
   (#at("/usr/sys/sys/machdep.c", "intrstart(")) enables the interrupts and unmasks them. Then `main` initialises the character
@@ -312,28 +310,32 @@ faults any access from user mode which an entry does not allow
   [0x00008000], table.cell(colspan: 2)[text],
   [next page], table.cell(colspan: 2)[data and `bss`, growing upward],
   [0xbfffffff], table.cell(colspan: 2)[stack, growing downward],
-  [0xc0000000], [RAM 0x40000000--0x5FFFFFFF: kernel, then free RAM], [SYSRAM, SRAM1--3 0x2FFE0000: kernel],
-  [0xc0200000], [(RAM, continued)], [DDR 0xC0000000--0xDFFFFFFF: free RAM],
-  [0xf0000000], [GIC 0x08000000], [RCC, PWR, GPIO 0x50000000],
-  [0xf0200000], [UART 0x09000000], [SDMMC1 0x58005000],
-  [0xf0400000], [virtio 0x0A000000], [IWDG2 0x5A002000, DDR controller 0x5A003000],
-  [0xf0600000], [], [GIC 0xA0021000],
-  [0xf0800000], [], [TZC 0x5C006000],
-  [0xf0a00000], [], [USART2 0x4C001000, I2C4 0x4C005000],
+  [0xc0000000], [RAM 0x40000000--0x401FFFFF: kernel], [SYSRAM 0x2FFE0000: kernel],
+  [0xc0200000], [RAM 0x40000000--0x5FFFFFFF: free after the kernel], [DDR 0xC0000000--0xDFFFFFFF: free RAM],
+  [0xf0000000], [GIC distributor 0x08000000], [GIC distributor 0xA0021000],
+  [0xf0001000], [GIC CPU interface 0x08010000], [GIC CPU interface 0xA0022000],
+  [0xf0003000], [UART 0x09000000], [USART2 0x4C001000],
+  [0xf0004000], [virtio 0x0A000000], [SDMMC1 0x58005000],
+  [0xf0008000], [], [RCC, PWR, GPIO 0x50000000],
+  [0xf0013000], [], [IWDG2, DDR controller, PHY 0x5A002000],
+  [0xf0016000], [], [TZC, ETZPC 0x5C006000],
+  [0xf0018000], [], [I2C4 0x4C005000],
   [0xffe00000], table.cell(colspan: 2)[`u`, the current process's u-area],
   bot,
 ) <tab-addr>
 
-The kernel's gigabyte maps the 512~MB of RAM near its start, at 0xc0000000 on the QEMU
-machine and at 0xc0200000 on the MP135 machine, after the block of
-SYSRAM, so the kernel can
+The kernel's gigabyte maps the 512~MB of RAM at 0xc0200000 on both
+machines, so the kernel can
 reach any page of memory at a fixed distance from its physical address
 (`PGADDR`, #f("seg.h")). The kernel's own text, data, and `bss` lie
 where it was linked, starting at 0xc0000000 on both machines. On
-the QEMU machine they occupy the start of RAM. On the MP135 machine
+the QEMU machine they occupy the start of RAM, which therefore appears
+at 0xc0200000 as well. On the MP135 machine
 they lie in SYSRAM (#f("mp135/unix.ld")). The kernel's stack is the kernel
-stack in the u-area, described below. The device registers follow, one 2~MB block
-for each device. The devices are mapped only in the kernel's gigabyte, so
+stack in the u-area, described below. The device registers follow from
+0xf0000000, a page or a few for each device. The devices which both
+machines have, the interrupt controller, the console, and the disk,
+lie at the same kernel addresses on both. The devices are mapped only in the kernel's gigabyte, so
 a user program reaches a device only via #box(`/dev/mem`) or through the
 device driver. The file #box(`/dev/mem`) is the memory by physical address, and #box(`/dev/kmem`) the
 same by kernel address (#f("mem.c")). Neither is mapped anywhere
@@ -410,8 +412,8 @@ lower half (@fig-tree), so that a process switch changes only `TTBR0`.
   align: horizon,
   bx[`TTBR0`], ar, bx(w: 2.1cm)[first level, one per process], ar,
     bx(w: 2.4cm)[second level], ar, bx(w: 2.1cm)[third level: text, data, and stack pages],
-  bx[`TTBR1`], grid.cell(colspan: 3, ar), bx(w: 2.4cm)[`kl2`: 2~MB blocks of RAM and devices], ar,
-    bx(w: 2.1cm)[`kl3u`: the u-area page at `UBASE`],
+  bx[`TTBR1`], grid.cell(colspan: 3, ar), bx(w: 2.4cm)[`kl2`: 2~MB blocks of RAM], ar,
+    bx(w: 2.1cm)[`kl3u`, `kl3d`: the u-area page, the device pages],
 ), [The user's tables, above, and the kernel's, below]) <fig-tree>
 
 Each process's own tables are built from a _prototype_, a description
@@ -640,23 +642,26 @@ in. In the parent `newproc` returns 0, and in the child 1. The system call `fork
 the two returns into the child's process number in the parent and 0 in
 the child.
 
-A process's image in physical memory is one contiguous piece (@tab-image): the u-area, then
-the data, then the stack. The text is a separate piece, shared by every
-process running the same program (`xalloc`, #f("text.c")).
+A process's image is a list of pages (@tab-image): the u-area, then
+the data, then the stack. The pages may lie anywhere in physical
+memory. The u-area's page is `p_addr`, and the process's page map lists
+the others in order (#f("malloc.c")). The text is a separate list, shared by every
+process running the same program (`xalloc`, #f("text.c")). Memory is
+handed out a page at a time, from a stack of the free pages (`pgalloc`).
 
 #btable(columns: (auto, 1fr, 1fr), caption: [A process's image in RAM, and where each part is seen],
   table.header(top, [*Part*], [*In RAM*], [*Seen at*], mid),
-  [u-area], [the start of the image], [`UBASE`, by the kernel only],
-  [data], [after the u-area], [the page after the text],
-  [stack], [after the data], [just below 0xc0000000],
-    [text], [a separate piece, shared], [0x8000],
+  [u-area], [one page, `p_addr`], [`UBASE`, by the kernel only],
+  [data], [the first pages of the page map], [the page after the text],
+  [stack], [the rest of the page map], [just below 0xc0000000],
+    [text], [the pages of its own map, shared], [0x8000],
   [trampoline], [one page, shared by all], [0x1000],
   bot,
 ) <tab-image>
 
 The program a process runs can be replaced by `exec` (#at("/usr/sys/sys/sys1.c", "exec(")). It reads
 the program's ELF headers and copies the arguments and
-the environment to a temporary area in the swap space, since the old
+the environment to two pages of core, since the old
 image, which holds them, is about to go. It then releases the old text,
 and finds the new one in the text table if another process is running
 the same program, or reads it in from the file. It grows or shrinks
@@ -669,10 +674,11 @@ A process changes its size in two ways. A call of `brk` asks for more or less
 data in the heap, and the stack grows when a program touches an address just below
 it. The data abort handler (#f("trap.c")) sees such a fault and calls
 `grow` (#at("/usr/sys/sys/sig.c", "grow(")), and the faulting instruction is executed again. Both
-use `expand` (#at("/usr/sys/sys/slp.c", "expand(")), which takes a larger piece of memory and
-copies the image into it, or swaps the process out if there is none,
+use `expand` (#at("/usr/sys/sys/slp.c", "expand(")), which adds pages at the end of the image or takes them away, without
+copying the image, or swaps the process out if no page is free,
 and `estabur` (#at("/usr/sys/sys/ureg.c", "estabur(")), which records the new sizes for the
-tables.
+tables. Turning entries of the page map around then moves the stack
+past the pages added or taken away (`maprot`, #f("malloc.c")).
 
 A process ends with `exit` (#at("/usr/sys/sys/sys1.c", "exit(int")). It closes its files,
 releases its text and its memory, and becomes a zombie, which keeps
@@ -767,7 +773,7 @@ about putting registers into one of them and taking them out again.
   [user registers at entry], [every trap and interrupt (#f("low.s"))], [frame on the kernel stack], [the common return (#f("low.s"))],
   [kernel registers at a switch], [`save` in `swtch`], [`u_rsav`], [`resume` in `swtch`],
   [the start of a system call], [`save` in `trap`], [`u_qsav`], [`resume` in `sleep`, on a signal],
-  [the point of a copy], [`save` in `newproc`, `expand`, `xswap`], [`u_ssav`], [`resume` in `swtch`, under `SSWAP`],
+  [the point of a copy], [`save` in `newproc`, `expand`, `xexpand`], [`u_ssav`], [`resume` in `swtch`, under `SSWAP`],
   [floating point registers], [`swtch`, `newproc`, `expand`, `psig`], [`u_fps`], [the return to user mode],
   [user registers for a handler], [`sendsig`], [frame on the user stack], [`sigreturn`],
   bot,
@@ -793,7 +799,7 @@ again. The label `u_qsav` records where `trap` began a system call.
 When a signal ends a wait, `sleep` resumes there, and the call returns
 `EINTR`. Process 0 uses its own `u_qsav` as the entry to the search
 loop of `swtch`. The label `u_ssav` records the point at which a
-process's image was copied, to a new place in RAM or to the swap area,
+process's image was copied, for a new process or to the swap area,
 and the flag `SSWAP` makes `swtch` resume the process there instead of
 at `u_rsav`.
 
@@ -1009,7 +1015,7 @@ Code which needs no protection from interrupts needs none at all,
 because no other process runs until this one sleeps. When `falloc`
 (#at("/usr/sys/sys/fio.c", "falloc(void)")) finds a free entry in the file table, the entry stays
 free until `falloc` takes it. The same holds when `iget` (#at("/usr/sys/sys/iget.c", "iget(dev_t dev, ino_t ino)")) takes
-a free inode and `malloc` (#f("malloc.c")) a piece of the core map. On
+a free inode and `pgalloc` (#f("malloc.c")) a free page. On
 two processors, two processes could find the same free entry and both
 take it.
 

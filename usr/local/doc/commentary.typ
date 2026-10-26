@@ -274,22 +274,26 @@ file is executable: `access` checks the permission of the caller, and
 execute bits set, so that the super-user, to whom `access` grants
 everything, cannot execute a data file.
 
-The initialisation of `cp` (#l("register char *cp = NULL;")) is new. It quiets the compiler, which
-cannot see that `cp` is always set (at #l("cp = bp->b_un.b_addr;", after: "bp = getblk(swapdev, swplo+bno+(nc>>BSHIFT));")) before it is used.
+The arguments wait in `NARGPG` pages of core (#l("#define\tNARGPG")), enough for `NCARGS` bytes, and `ARGC`
+(#l("#define\tARGC(n)")) names byte `n` of them, in the page `n` falls in. The pages
+are noted as none at first (#l("pg[i] = 0;")), so that `bad` gives back only those
+taken.
 
 #lines-to("/*", after: "}")
 
 The arguments and environment strings must survive the destruction of
 the old image, and are too big for the kernel stack, so they are copied
-into a temporary area of `NCARGS` bytes on the swap device, one buffer
-at a time (`bawrite` does not wait for the write to finish). The count `na` takes in
+into the pages, taken from the stack of free pages (#f("malloc.c")).
+In v7 they went to a temporary area on the swap device, one buffer
+at a time, and every `exec` wrote at least one block to the disk, on
+the MP135 machine to the SD card. The count `na` takes in
 all the strings, `ne` those of the environment, and `nc` is the total of
 their lengths. The two lists are walked as one: when `argp` runs out,
 `envp` takes over.
 
 A fault in reading either list gives `EFAULT`, and too much gives
-`E2BIG`, and `bad` then releases the swap area. If the swap area has no
-room for the arguments, `exec` fails with `ENOMEM` (#l("if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")--#l("}", after: "if ((bno = malloc(swapmap,(NCARGS+BSIZE-1)/BSIZE)) == 0) {")), where v7
+`E2BIG`, and `bad` then gives the pages back. If fewer than `NARGPG`
+pages are free, `exec` fails with `ENOMEM` (#l("if (npgfree < NARGPG) {")--#l("pg[i] = pgalloc();")), where v7, out of swap,
 panicked. Nothing has been changed yet.
 
 The new stack's size, passed to `getxfile` (#l("getxfile(ip, nc+(na+3)*NBPW);")), takes in the
@@ -304,7 +308,7 @@ been enough.
 #lines-to("/*", lead: true, after: "goto bad;")
 
 Once `getxfile` has built the new image, the strings are copied back
-from the swap area to the top of the new user stack, and a vector of
+from the pages to the top of the new user stack, and a vector of
 pointers to them is built below, in the form which the C start-up
 routine expects.
 
@@ -328,7 +332,7 @@ is v7's. Here `c` is never negative.
 #lines-to("setregs();")
 
 Then `setregs` prepares the registers for the new program. At `bad` the
-buffer and the swap area are released in every case, success included.
+pages are given back in every case, success included.
 
 #lines-to("/*", lead: true)
 
@@ -416,7 +420,7 @@ mapped below that, and a null pointer faults.
 With the profiling turned off (#l("u.u_prof.pr_scale = 0;")) the old image is abandoned. As in v7, the image is
 expanded to `USIZE+ds+ss` pages, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
-(#l("i = USIZE+ds+ss;"), #l("while(--i >= USIZE)"), #l("clearseg(u.u_procp->p_addr+i);")). The uninitialised data and the stack therefore read as
+(#l("i = USIZE+ds+ss;"), #l("while(--i >= USIZE)"), #l("clearseg(imgpage(u.u_procp, i));")). The uninitialised data and the stack therefore read as
 zero. The image is no larger than the program: `sbreak` and the growth
 of the stack (`grow`, #f("sig.c")) enlarge it when the program asks for
 more, and `fork` copies only what there is (#f("slp.c")).
@@ -484,10 +488,11 @@ goes in the high byte of the status and the signal in the low, as
 The system call `exit` gives up everything the process holds: signals are all set to be
 ignored, so that nothing can interrupt the exit. Files, current and root
 directories, text, page tables (#f("ureg.c")), and finally core are
-released. After `mfree` (#l("mfree(coremap, p->p_size, p->p_addr);")) the process goes on running on the stack within the
+released, the pages of the page map and then the u-area's (#l("mapfree(&p->p_map, 0, p->p_size-USIZE);"), #l("pgfree(p->p_addr);")). After `pgfree` the process goes on running on the stack within the
 per-process area it has just freed. As in `expand` (#f("slp.c")), this is
 safe because nothing can allocate core before `swtch` has chosen
-another process.
+another process, and `pgfree` does not write the page it frees
+(#f("malloc.c")).
 
 The process becomes a zombie. Its `proc` entry keeps the exit status
 and the times in `p_xstat`, `p_utime`, and `p_stime` (#f("proc.h")),
@@ -546,12 +551,17 @@ text, and the text's segments were subtracted. The mapping routine
 `estabur` must accept the new size: it refuses a data area that would
 run into the stack or the signal trampoline (#f("ureg.c")).
 
-The image is then changed with `expand`. Since the stack lies above the
-data in core, it is copied down (shrinking) or up (growing), a page at
-a time, by the amount of the change: when shrinking before the image is
-cut, so that nothing is lost, and when growing after it is enlarged,
-from the top down. The pages added to the data are cleared, so that
-the program finds zeros there, as it would in new memory. The shell
+The image is then changed with `expand`. In the image the stack's pages
+follow the data's, so pages added to the data or taken from it must
+pass the stack. None is copied: the entries of the page map are turned
+around instead (`maprot`, #f("malloc.c")). When shrinking, the data's
+last pages move to the end before `expand` gives them back
+(#l("maprot(p->p_map, a, a-d, n-d-USIZE);")), and when growing, the pages which `expand` adds at the end
+move below the stack (#l("maprot(p->p_map, a-d, n-d-USIZE, n-USIZE);")). In v7 the stack was copied, a page at a
+time. The pages added to the data are cleared, so that
+the program finds zeros there, as it would in new memory. Last the
+page tables, which `estabur` built for the new sizes before the pages
+were in place, are built again (#l("ptfree(p);", after: "clearseg(*mapent(p->p_map, --a));")--#l("sureg();", after: "clearseg(*mapent(p->p_map, --a));")). The shell
 relies on none of this: it grows its data only when a store beyond the
 break faults (#f("sh/stak.c")), and the memory beyond the break is not
 mapped until then.
@@ -839,8 +849,7 @@ and the line is deleted.
 The routine `grow` extends the stack downward, so that it includes the address
 `sp`. A reference below the stack is a fault, and `user_trap_handler`
 (#f("trap.c")) and `sendsig` (#f("machdep.c")) call `grow` to enlarge
-the stack, moving it in core with `copyseg`. The faulting instruction is
-then executed again.
+the stack. The faulting instruction is then executed again.
 
 On the PDP-11 the stack lay at the top of the 64 KB address space, so
 `-ctob(u.u_ssize)` was the lowest address of the stack as an unsigned
@@ -850,10 +859,11 @@ expressions become `USRSIZE-ptob(u.u_ssize)` and `USRSIZE-sp`
 (#l("if(sp >= USRSIZE-ptob(u.u_ssize))")--#l("si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;")). The divisor 64, the PDP-11's click in bytes, becomes
 `ptob(1)`. The new stack size is the depth of `sp` in
 pages, rounded down, plus `SINCR` pages of room, and `estabur` refuses it
-if the stack would meet the data. The routine `expand` enlarges the image, and the
-stack, which lies at the end of the image, is copied up by the number
-of pages added, from the top down so that it does not overwrite
-itself, and the pages freed at its bottom are cleared.
+if the stack would meet the data. The routine `expand` adds the pages at the end of the image, after the
+stack, and turning the map's entries around puts them below it
+(#l("maprot(p->p_map, a-si-u.u_ssize, a-si, a);")), with no page copied. In v7 the whole stack was copied up by
+the number of pages added. The new pages, now at the stack's bottom,
+are cleared, and the page tables built again (#l("ptfree(p);")--#l("sureg();", after: "ptfree(p);")).
 
 #lines-to("/*", lead: true, after: "}")
 
@@ -1027,16 +1037,18 @@ as any of them exists. The `text` table records each such segment. A
 process finds its entry through `p_textp` (#f("proc.h")).
 
 The block number of the swap copy, counted from
-`swplo`, is `x_daddr` (#l("/* disk address of segment (relative to swplo) */")). The page number of the core copy is `x_caddr` (#l("int\tx_caddr;\t/* core address, if loaded */")). The count `x_count`
+`swplo`, is `x_daddr` (#l("/* disk address of segment (relative to swplo) */")). The core copy is a list of pages,
+whose page map is `x_map` (#l("int\tx_map;\t\t/* page map in core, if loaded */"), #f("malloc.c")). The count `x_count`
 (#l("char\tx_count;\t/* reference count */")) is the number of processes which use the text at all, and
 `x_ccount` (#l("char\tx_ccount;\t/* number of loaded references */")) the number of those which are in core: the core copy may
 be freed when the second reaches zero, the swap copy only when the first
 does.
 
-The fields `x_caddr`, `x_daddr`, and `x_size` have been widened from `short` to
+The fields `x_daddr` and `x_size` have been widened from `short` to
 `int`, for the reasons already given for `p_addr` and `p_size` in
-#f("proc.h"): neither a page number, nor a block of the swap area
-(#f("c.c")), nor the size of the largest text fits in a `short`.
+#f("proc.h"): neither a block of the swap area
+(#f("c.c")) nor the size of the largest text fits in a `short`, nor does
+the page of a map, `x_map`.
 
 The counts `x_count` and `x_ccount` are `char`s. Every process which runs a
 program holds a reference to its text, so a count can reach `NPROC`,
@@ -1072,7 +1084,8 @@ The routine `xswap` writes process `p` to the swap device. The argument `os` is 
 image in core. It differs from `p_size` only when `expand` (#f("slp.c"))
 swaps out a process whose size has already been increased, in which case
 the space allocated on the swap device is for the new size (#l("a = malloc(swapmap, ptod(p->p_size));")) while
-only the old size is written (#l("swap(a, p->p_addr, os, B_WRITE);")).
+only the old size is written, the u-area and then the pages of the map
+in order (#l("swap(a, p->p_addr, USIZE, B_WRITE);")--#l("mapswap(a+ptod(USIZE), p->p_map, os-USIZE, B_WRITE);")), so that on the swap device the image lies in one piece.
 
 #lines-to("p->p_flag |= SLOCK;")
 
@@ -1080,11 +1093,12 @@ only the old size is written (#l("swap(a, p->p_addr, os, B_WRITE);")).
 the write is in progress. The process's claim on the core copy of
 its text is given up (#l("xccdec(p->p_textp);")). If it was the last process in core using that
 text, the core copy is freed, having first been written out if `XWRIT`
-says the swap copy is stale. The core is freed (#l("if(ff)")) unless `ff` is zero,
+says the swap copy is stale. The core is freed, the map's pages and
+the u-area's (#l("if(ff) {")--#l("pgfree(p->p_addr);", after: "if(ff) {")), unless `ff` is zero,
 which is the case when `newproc` makes the child's image on the swap
 device from the parent's core, which the parent goes on using.
 
-Now `p_addr` holds a swap block number and `SLOAD` is cleared, and `p_time`
+Now `p_map` is 0, `p_addr` holds a swap block number, and `SLOAD` is cleared, and `p_time`
 restarts, since `sched` measures how long a process has been out. If
 `sched` is waiting on `runout` for something to bring in, this process
 is now such a thing.
@@ -1095,7 +1109,7 @@ that `xswap` returns only when the image is safely on the disk.
 The page tables are released (#l("ptfree(p);")) after the write, not before it. They
 describe the core which the image is leaving, and `sureg`
 (#f("ureg.c")) builds new ones when the process is next resumed, from
-`p_addr`, wherever `swapin` has put it. A process may be swapping
+the page map, wherever `swapin` has put the pages. A process may be swapping
 itself out, from `expand` or `xexpand` or, as the child, from
 `newproc` (#f("slp.c")). It then sleeps in `swap`, and when it is
 resumed there, `sureg` finds no tables and builds them, still for the
@@ -1152,7 +1166,7 @@ address, as `getxfile` does, and allocates swap space and core for the text.
 
 #lines-to("for(i = 0; i < ts; i++)")
 
-The core is cleared (#l("for(i = 0; i < ts; i++)"), #l("clearseg(xp->x_caddr+i);")), which v7 did not need: its text filled
+The pages are cleared (#l("for(i = 0; i < ts; i++)"), #l("clearseg(*mapent(xp->x_map, i));")), which v7 did not need: its text filled
 the core from the first byte, but here the bottom of the first page
 lies below the text's first address, and the last page may extend
 beyond its end.
@@ -1160,17 +1174,17 @@ beyond its end.
 The user mapping is then set up with the text segment only (#l("estabur(u.u_exdata.ph[0].p_vaddr >> PGSHIFT, ts, 0, 0, 0, RW);")),
 writable for the moment, and the text is read from the file into it at
 its own address. `u_segflg` 2 directs `readi` to instruction space,
-which on the ARM is the same as data space. The text is then made visible to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));"),
+which on the ARM is the same as data space. The text is then made visible to instruction fetch (#l("xsync(xp);", after: "u.u_segflg = 0;"),
 `arm_sync_icache`, #f("mch.s")), a step the PDP-11, which had no
 caches, did not need. `XWRIT` (#l("xp->x_flag = XWRIT;")) then ensures that the swap copy is
 written when the core copy is first given up.
 
 #lines-to("/*", lead: true)
 
-The routine `xexpand` obtains core for a text which has none. If core is available,
-the text is read in from its swap copy, unless `XLOAD` says it is about
-to be read from the file instead. A copy read from swap is made visible
-to instruction fetch (#l("arm_sync_icache(PGADDR(xp->x_caddr),", after: "swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);")) as `xalloc` does.
+The routine `xexpand` obtains core for a text which has none, a page map of
+`x_size` pages (#l("if (mapalloc(&xp->x_map, 0, xp->x_size)) {")). If core is available,
+the text is read in from its swap copy by `xread`, unless `XLOAD` says it is about
+to be read from the file instead.
 
 If not, the process makes room for itself by swapping itself out
 (#l("xswap(u.u_procp, 1, 0);")), and leaves the matter to `sched`, which brings in data area and
@@ -1180,6 +1194,13 @@ of `SSWAP` and `swtch`, once it is back in core. It then reloads its
 user mapping with `sureg` and returns. The call of `qswtch` (#l("qswtch();")) does not return.
 
 #lines-to("/*", lead: true, after: "/* no return */")
+
+The routine `xread` reads a text in from the swap device, a run of consecutive pages
+at a time (`mapswap`, #f("bio.c")), and `xsync` makes it visible to
+instruction fetch, a page at a time, since its pages need not follow
+one another. The routine `swapin` (#f("slp.c")) calls `xread` too.
+
+#lines-to("/*", lead: true, after: "xsync(register struct text *xp)")
 
 The lock on a text entry. A call of `xlock` sleeps at `PSWP`, a priority at which
 no signal can interrupt it.
@@ -1401,12 +1422,13 @@ carries neither the multiplexor (`mx1.c`, `mx2.c`) nor its stub
 `fakemx.c`, and the definition is gone.
 
 In v7, `main.c` defined the buffers, the three maps, and the mount
-table, `callo.h` the callouts, and `prim.c` the character blocks. The port defines them here too (#l("struct\tmap\tcoremap[CMAPSIZ];")--#l("struct\tcblock\tcfree[NCLIST];")).
+table, `callo.h` the callouts, and `prim.c` the character blocks. The port defines them here too (#l("struct\tmap\tswapmap[SMAPSIZ];")--#l("struct\tcblock\tcfree[NCLIST];")),
+with two maps, since RAM is no longer kept in one (#f("malloc.c")).
 The buffers are the exception. Here `buffers` (#l("int\t(*buffers)[(BSIZE+BSLOP+63)/64*16];")) is only a pointer,
 which `startup` sets to rows it takes from core (#f("machdep.c")), since
 the SD card's DMA does not reach all the on-chip RAM in which the MP135
 machine's kernel lies. The sizes are the same on both machines, and
-`CMAPSIZ` and the other sizes of the maps are computed from them.
+the sizes of the maps are computed from them.
 
 #lines-to("unsigned int\tcorebase = COREBASE, coreoff, coretop = CORETOP;")
 
@@ -1414,14 +1436,12 @@ The rest of the file is new: the facts about the machine, which come
 from #f("qemu/mach.h") or #f("mp135/mach.h").
 
 The bounds `corebase` and `coretop` (#l("unsigned int\tcorebase = COREBASE, coreoff, coretop = CORETOP;")) give, by physical address, the memory
-which `startup` (#f("machdep.c")) gives to `coremap` for process images:
+which `startup` (#f("machdep.c")) puts on the stack of free pages for process images:
 from `COREBASE`, the start of the machine's RAM, or the first page
 after the kernel if the kernel lies in that RAM, which `machine_init`
 decides, to `CORETOP`, the end of the machine's memory. The offset `coreoff`, which
 `machine_init` also sets, is the distance from the physical address of
-core to its kernel address (#f("seg.h")). The addresses `gicdbase` and `giccbase` (#l("unsigned int\tgicdbase = GICDBASE, giccbase = GICCBASE;"))
-locate, by kernel address, the distributor and the processor interface
-of the ARM generic interrupt controller. The attributes of a user page,
+core to its kernel address (#f("seg.h")). The attributes of a user page,
 `PGUSER`, are the same on both machines and are a constant
 (#f("seg.h")).
 
@@ -1456,15 +1476,24 @@ driver defines it under v7's name (#f("pl011.c")).
 
 The facts which #f("c.c") needs about the QEMU machine. All the
 addresses are those of @ch-intro. `COREBASE` and `CORETOP` (#l("#define\tCOREBASE\t0x40000000")--#l("#define\tCORETOP\t0x60000000")) are the
-physical start and end of the 512~MB of memory with which QEMU is started, and
-`GICDBASE` and `GICCBASE` the kernel addresses of the interrupt
-controller's distributor and processor interface.
+physical start and end of the 512~MB of memory with which QEMU is started.
 
-The memory map, `BOARD_MAP` (#l("#define\tBOARD_MAP \\")), has four rows. The first covers all 512~MB of memory, at
-0xc0000000, as cacheable kernel memory, kernel and core alike. The
-others map a block of 2~MB each for the interrupt controller, the UART,
-and the virtio transports, from 0xf0000000, as device memory which may
-not be executed. `BLK_KERN` and `BLK_DEV` are defined in #f("seg.h").
+The memory map, `BOARD_MAP` (#l("#define\tBOARD_MAP \\")), has six rows. The first two are memory,
+mapped as cacheable kernel memory: the kernel's own block, the first
+2~MB of RAM, at 0xc0000000, where the kernel is linked (#l("{0xc0000000, 0x40000000, 0x40200000, BLK_KERN},")), and
+all 512~MB of RAM again at 0xc0200000 (#l("{0xc0200000, 0x40000000, 0x60000000, BLK_KERN},")), where the MP135 machine's
+DDR lies too. The kernel's block is seen twice, which does no harm:
+both mappings are of normal memory with the same attributes, and the
+data cache is indexed by physical address. So on both machines core
+lies from 0xc0200000 up (`coreoff`, #f("machdep.c")).
+
+The other four map the devices by pages, as device memory which may
+not be executed: the interrupt controller's distributor and processor
+interface at 0xf0000000 and 0xf0001000, the UART, the console, at
+0xf0003000, and the 32 virtio transports, of 0x200 bytes each, at
+0xf0004000. The MP135 machine has its interrupt controller, its
+console, and its disk at the same kernel addresses, so that the code
+which drives the interrupt controller (#f("machdep.c")) is common to both. `BLK_KERN` and `BLK_DEV` are defined in #f("seg.h").
 The devices which QEMU puts between them are not mapped. The QEMU
 machine needs neither `DDRINIT`, `WDINIT`, nor `NSINIT`, and all three are empty.
 
@@ -1481,8 +1510,8 @@ area. The console is one of the chip's serial ports, driven by
 
 The memory of the MP135 machine is in two pieces which are not
 contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
-`0x2FFE0000`, with the 32~KB of SRAM1--3 after it for room (@ch-intro), which the first row of the map
-(#l("{0xc0000000, 0x2ffe0000, 0x30008000, BLK_KERN},")) places at 0xc0000000, where the
+`0x2FFE0000` (@ch-intro), which the first row of the map
+(#l("{0xc0000000, 0x2ffe0000, 0x30000000, BLK_KERN},")) places at 0xc0000000, where the
 QEMU machine's kernel lies too. This is smaller than a block of 2~MB
 and does not begin on one, so `machine_init` does not map it in a
 block. It keeps the pages in which `_start` mapped the kernel
@@ -1497,21 +1526,25 @@ normal memory, cached write-back, like the kernel itself in SYSRAM,
 and so are user pages (`PGUSER`, #f("seg.h")). The one party
 which does not see the
 processor's data cache is the SD card's DMA controller, which moves
-process images during swapping and raw I/O, and the buffers of the
-buffer cache. The disk driver therefore cleans and invalidates the
+process images during swapping, the buffers of the
+buffer cache, and the page of raw I/O (`physpg`, #f("bio.c")). The disk driver therefore cleans and invalidates the
 cache over every transfer before it, and invalidates it after a read
 (`dcflush`, `dcinval`, #f("sd.c")), so that the device reads what
 the processor wrote and the processor does not afterwards find stale
 lines. The buffers of the buffer cache occupy whole cache lines of
 their own (#f("main.c")).
 
-The other rows are a 2~MB block each of the peripherals which the
-drivers use, at successive kernel addresses from `0xf0000000`. They are the reset and clock controller with the power controller and the GPIO ports
-(#l("{0xf0000000, 0x50000000, 0x50200000, BLK_DEV},")); the SD card controller (#l("{0xf0200000, 0x58000000, 0x58200000, BLK_DEV},")); the DDR controller with its PHY
-and the watchdog IWDG2 (#l("{0xf0400000, 0x5a000000, 0x5a200000, BLK_DEV},")); the interrupt controller (#l("{0xf0600000, 0xa0000000, 0xa0200000, BLK_DEV},")), which on this chip lies apart from
-them, and whose two parts `GICDBASE` and `GICCBASE` (#l("#define\tGICDBASE\t0xf0621000")--#l("#define\tGICCBASE\t0xf0622000")) name within that block;
-the TrustZone controller of the DDR (#l("{0xf0800000, 0x5c000000, 0x5c200000, BLK_DEV},")); and the block of I2C4 and of USART2, the console (#l("{0xf0a00000, 0x4c000000, 0x4c200000, BLK_DEV},"), #f("pmic.c"), #f("usart.c")). Each driver
-names its registers by these kernel addresses.
+The other rows map, a page at a time, the peripherals which the
+drivers use. The first four are those which the QEMU machine has too, at the
+same kernel addresses: the interrupt controller's distributor and
+processor interface (#l("{0xf0000000, 0xa0021000, 0xa0022000, BLK_DEV},")--#l("{0xf0001000, 0xa0022000, 0xa0024000, BLK_DEV},")), USART2, the console (#l("{0xf0003000, 0x4c001000, 0x4c002000, BLK_DEV},"), #f("usart.c")), and the
+SD card controller (#l("{0xf0004000, 0x58005000, 0x58006000, BLK_DEV},")). The rest follow from 0xf0008000: the reset
+and clock controller, the power controller, and the nine GPIO ports,
+eleven pages in all (#l("{0xf0008000, 0x50000000, 0x5000b000, BLK_DEV},")); the watchdog IWDG2, the DDR controller, and its
+PHY (#l("{0xf0013000, 0x5a002000, 0x5a005000, BLK_DEV},")); the TrustZone controllers of the DDR and of the
+peripherals, TZC and ETZPC (#l("{0xf0016000, 0x5c006000, 0x5c008000, BLK_DEV},")); and I2C4, which reaches the PMIC
+(#l("{0xf0018000, 0x4c005000, 0x4c006000, BLK_DEV},"), #f("pmic.c")). Each driver names its registers by these kernel
+addresses.
 
 Last, `DDRINIT` (#l("#define\tDDRINIT\tddrinit()")) makes `clock_ddr_init` call `ddrinit` (#f("ddr.c"))
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
@@ -1538,7 +1571,7 @@ heading comment (#l("* RK disk driver")) is kept, since the driver is configured
 The device is a "virtio" block device, an interface designed for
 virtual machines rather than for hardware. QEMU provides up to 32 virtio
 transports, each a block of registers 0x200 bytes long, from physical
-address `0x0A000000`, which the kernel maps at 0xf0400000 (#f("c.c")).
+address `0x0A000000`, which the kernel maps at 0xf0004000 (#f("qemu/mach.h")).
 The driver uses the original ("legacy") form of the
 interface. Requests are passed through a "virtqueue" in the machine's memory. It
 has a table of descriptors, each giving the address and length of a
@@ -1598,7 +1631,7 @@ the used ring, and the page number of the ring itself. The address rounded up to
 the physical address, which `vtop` (#f("machdep.c")) supplies. Status 7
 (#l("RKADDR(0x70) = 7;")) says the driver is ready.
 
-The interrupt of the n-th transport (#l("rkirq = 48 + (vbase-0xF0400000)/0x200;")) is shared peripheral
+The interrupt of the n-th transport (#l("rkirq = 48 + (vbase-0xF0004000)/0x200;")) is shared peripheral
 interrupt 16 + n of the interrupt controller, number 48 + n. The table `intrtab`
 reaches `rkirq` through a pointer for that reason, and `intrstart`
 (#f("machdep.c")), which enables the interrupts in the table, runs after
@@ -1837,7 +1870,8 @@ The routine `clrbuf` zeroes a buffer a word at a time, and `sizeof(int)` makes t
 The routine `swap` transfers `count` pages of a process image between core, at
 page `coreaddr`, and the swap device, at block `blkno` of the swap area.
 Its callers are `xswap` (#f("text.c")) and `swapin` (#f("slp.c")),
-and sleeps until the transfer is complete.
+for a u-area, and `mapswap`, below, for each run of consecutive pages
+of a page map, and it sleeps until the transfer is complete.
 
 #lines-to("bp = &swbuf1;")
 
@@ -1847,7 +1881,7 @@ the first.
 
 #lines-to("while (count) {")
 
-The image is transferred (#l("while (count) {")--#l("}", after: "blkno += ptod(tcount);")) in one piece. In v7 it was broken into
+The pages are transferred (#l("while (count) {")--#l("}", after: "blkno += ptod(tcount);")) in one piece. In v7 it was broken into
 pieces of at most `01700` clicks, because on the PDP-11 the byte count
 of a transfer was bounded by a sixteen-bit register, and `01700` 64-byte
 clicks was 61440 bytes. Here neither `b_bcount` nor either driver's
@@ -1869,6 +1903,14 @@ An error in swapping is fatal (#l("panic(\"IO err in swap\");")): a process imag
 
 #lines-to("/*", lead: true)
 
+The routine `mapswap` moves the `n` pages which a page map lists (#f("malloc.c")) between core and
+the swap area, where they lie in order from `blkno`. Pages which
+follow one another in core go in one transfer (#l("for(j = i+1; j < n && *mapent(map, j) == pg+j-i; j++)")), since
+`startup` hands out the free pages from the bottom up, and the pages
+of an image taken together often lie together.
+
+#lines-to("/*", lead: true, after: "mapswap(int blkno, int map, int n, int rdflg)")
+
 The routine `bflush` starts the writing of every delayed-write buffer of a device,
 or of all devices. Its caller is `update` (#f("alloc.c")), which
 in turn `sync`, `umount`, and `panic` call. Each write changes the available
@@ -1876,9 +1918,9 @@ list, so the search starts again from the head after each one.
 
 #lines-to("/*", lead: true, after: "}")
 
-The routine `physio` implements the raw devices, transferring directly between the
+The routine `physio` implements the raw devices, transferring between the
 device and the user's memory, using a header which belongs to the
-driver, and does as much in one transfer as the user asks for. The fields `u_base`, `u_count`, and `u_offset` describe the transfer, as
+driver. The fields `u_base`, `u_count`, and `u_offset` describe the transfer, as
 for `read` and `write`.
 
 #lines-to("if (base&01 || u.u_count&01 || base>=base+u.u_count ||")
@@ -1894,38 +1936,30 @@ catch.
 v7 then refused a transfer which overlapped the text, which is shared
 and must not be written by a device, and checked that the transfer lay
 wholly in the data segment or wholly in the stack, the two parts of the
-user's address space which are mapped and which lie in different places
-in core. With the text and the data each at its own address, the second
-check alone covers the first, and the port makes only that
-(#l("if (nb >= (int)u.u_pdstart &&")--#l("goto bad;", after: "else if (nb >= (int)(btop(USRSIZE)-u.u_ssize))")). The page of the start of the transfer is
-`nb` (#l("nb = base>>12;")), and the test is of the page of its last
-byte. In v7 it was of the click of the byte after the transfer, so that
-a transfer which ended exactly at the end of the data was refused. With
-pages of 4096 bytes in place of clicks of 64, such a buffer is 64 times
-as likely. v7 also masked the addresses with `01777` to keep them
-within the 64 KB address space, which the test at #l("if (base&01 || u.u_count&01 || base>=base+u.u_count ||") has
-already done here.
+user's address space which lay in one piece in core, so that the device
+could be given the address of the user's buffer. Here the user's pages
+lie anywhere in core, and the data no longer moves between the device
+and the user's memory. It passes through one page of the kernel's,
+`physpg`, which `startup` sets aside (#f("machdep.c")), a page at a
+time, copied from the user before it is written and to the user after
+it is read, by `copyin` and `copyout` (#f("mch.s")). They fault on any
+address which the user may not read, or write, the text included, so
+neither of v7's checks is needed.
 
-The same test finds `ts`, the transfer's first page within the image.
-The data begins `USIZE` pages into the image (#f("proc.h")), and the
-stack follows it. An address in the data lies `nb-u_pdstart` pages
-into the data, and one in the stack lies as many pages into the stack
-as it lies above the stack's lowest address.
+#lines-to("while (u.u_count) {")
 
-#lines-to("/*", after: "bp->b_dev = dev;")
+Every raw transfer uses the one page, so `physbusy` (#l("static char\tphysbusy;")) lets one at a time
+have it. A process which finds it taken marks it wanted and sleeps on it
+(#l("while (physbusy) {")--#l("physbusy = 1;")).
 
-In v7 the physical address of the user's buffer was found by reading the user
-segmentation registers (`UISA` or `UDSA`), simulating the translation
-which the hardware would have made. The port adds `ts` to `p_addr`
-instead (#l("bp->b_un.b_addr = PGADDR(u.u_procp->p_addr + ts) + (base&07777);")), and only after any sleep for the buffer, during
-which the image may have moved. `PGADDR` converts the page number to an
-address, as in `swap`, and the low twelve bits of the user's address
-give the offset within the page. Each part is contiguous in core, so
-the whole transfer is too.
-
-`SLOCK` (#l("u.u_procp->p_flag |= SLOCK;")) keeps the process in core while the device transfers
-into its memory: the address given to the device would be wrong if the
-image were swapped out and brought back elsewhere.
+Each pass moves at most a page (#l("n = min(u.u_count, PGSIZE);")). Every pass but the last moves a whole
+page, a multiple of the block size, so each transfer begins on a block
+of the device, as the first does (#l("bp->b_blkno = off >> BSHIFT;")). A transfer which fails or comes
+up short ends the loop, and `u_count` is left at what was not moved,
+as v7 left it at `b_resid`. A fault in `copyin` or `copyout` ends it
+too, and the call fails with `EFAULT` (#l("if (u.u_count && (bp->b_flags&B_ERROR) == 0 && bp->b_resid == 0)")). The process is not locked in
+core while the device works, as it was in v7 (`SLOCK`, #f("proc.h")),
+since the device sees only `physpg`.
 
 #lines-to("/*", lead: true, after: "}")
 
@@ -3227,7 +3261,7 @@ read and written whole, in one access of its own width, and a read may
 itself change the device, so the bytewise loop will not do. An offset in
 a device's block is therefore served a word at a time (#l("if(devaddr(dev, u.u_offset)) {", after: "mmread(int dev)")--#l("}", before: "do {")): `fkword` (#f("mch.s")) reads
 each 32-bit word once, and `iomove` (#f("rdwri.c")) passes it to the
-user. A 2 MB block of device space may have holes where no device
+user. A page of device space may have holes where no register
 answers, and a read there aborts. Through `nofault` (#f("mch.s"))
 `fkword` turns the abort into a failure, which the driver reports, where
 a plain load would have panicked the kernel. The request must be word-aligned and
@@ -3504,9 +3538,9 @@ ahead at speed, or a paste into the console, needs.
 
 #lines-to("/* base address */")
 
-`KLADDR` (#l("#define\tKLADDR\t0xF0200000")), the console's address, is no longer a pointer to a
+`KLADDR` (#l("#define\tKLADDR\t0xF0003000")), the console's address, is no longer a pointer to a
 `struct device` but the kernel address at which the kernel maps the
-UART, `0xf0200000`. Its physical address is `0x09000000`
+UART, `0xf0003000`, the console's on both machines. Its physical address is `0x09000000`
 (#f("qemu/mach.h")). The register macros (#l("#define\tUARTDR\t(*(volatile int *)(KLADDR+0x00))")--#l("#define\tUARTICR\t(*(volatile int *)(KLADDR+0x44))")) are built on it.
 Each is `volatile`, since a read of `UARTDR` removes a character from
 the receiver and a write sends one, and `UARTLCRH` is the line control
@@ -3981,8 +4015,8 @@ transmitted (`TDR`) data.
 
 #lines-to("/* base address */")
 
-`KLADDR` is the kernel address of USART2, physical `0x4C001000`, in the
-2 MB block which it shares with I2C4 (#f("mp135/mach.h")). `RCC` is the chip's reset and clock controller, by its kernel address,
+`KLADDR` is the kernel address of USART2, physical `0x4C001000`,
+0xf0003000, which is that of the QEMU machine's console too (#f("mp135/mach.h")). `RCC` is the chip's reset and clock controller, by its kernel address,
 and `GPIO` a register of a port of general purpose pins.
 `APB6ENSETR` and `UART12CKSELR` are the registers of `RCC` which
 enable USART2's clock and choose its source. The bits of
@@ -4146,7 +4180,7 @@ specification, known by number. The boot ROM leaves the card as it was
 unless it booted from it, so the driver brings it up itself, as the ROM
 would.
 
-#lines-to("#define\tSD(off)\t(*(volatile int *)(0xF0205000+(off)))")
+#lines-to("#define\tSD(off)\t(*(volatile int *)(0xF0004000+(off)))")
 
 `SD` names a register of the controller by its offset, `RCC` one of the
 reset and clock controller, and `GPIO` one of a port of general purpose
@@ -4421,21 +4455,21 @@ and the R output divides that by 1 (#l("RCC(0x4D4) = RCC(0x480)&3 ? 0x00020041 :
 are then enabled, the PLL waited for until it is locked, and the bus
 returned to PLL2's P output (selector value 2, #l("RCC(0x544) = 2;")--#l(";", after: "RCC(0x544) = 2;")).
 
-#lines-to("if (R(0xF000100C) & 0x1000) {")
+#lines-to("if (R(0xF000900C) & 0x1000) {")
 
 If a previous low power mode left the DDR pads in retention (bit 12 of
 the power controller's `PWR_CR3`, physical address `0x5000100C`, which
-lies in the block of the reset and clock controller and so at
-`0xf000100c`), the PHY could not drive the memory. Retention is turned
-off (#l("if (R(0xF000100C) & 0x1000) {")--#l("}", after: "R(0xF000100C) &= ~0x1000;")).
+lies in the pages of the reset and clock controller and so at
+`0xf000900c`), the PHY could not drive the memory. Retention is turned
+off (#l("if (R(0xF000900C) & 0x1000) {")--#l("}", after: "R(0xF000900C) &= ~0x1000;")).
 
 The TrustZone address space controller, `TZC`, at physical `0x5C006000`
-and mapped at `0xf0806000` (#f("mp135/mach.h")), guards DDR. It filters
+and mapped at `0xf0016000` (#f("mp135/mach.h")), guards DDR. It filters
 every access by its address and by the security state of the bus
 master. Its clock, and that of the memory
 encryption unit beside it, are enabled (#l("RCC(0x780) = 2;")--#l("(void)RCC(0x740);")). Then, with its
 filter disabled, region 0, which covers the whole of DDR, is opened to
-reading and writing by every master (#l("R(0xF0806008) = 0;")--#l("R(0xF0806008) = 1;")). The SD card's DMA
+reading and writing by every master (#l("R(0xF0016008) = 0;")--#l("R(0xF0016008) = 1;")). The SD card's DMA
 controller is one of the masters which must reach it.
 
 #lines-to("DDRITFCR &= ~0x100;")
@@ -4555,10 +4589,10 @@ gives the memory its 1.35 V, and `VREF_DDR`, its reference voltage.
 The one routine here, `ddrpower`, turns them on, and `ddrinit` calls it
 first.
 
-`RCC` and `GPIO` (#l("#define\tRCC(o)\tR(0xF0000000+(o))"), #l("#define\tGPIO(p, o)\tR(0xF0002000+(p)*0x1000+(o))")) are the reset and clock controller and the
+`RCC` and `GPIO` (#l("#define\tRCC(o)\tR(0xF0008000+(o))"), #l("#define\tGPIO(p, o)\tR(0xF000A000+(p)*0x1000+(o))")) are the reset and clock controller and the
 general purpose I/O ports, by their kernel addresses, as in #f("sd.c"), and
-`I2C` is the controller of the chip's fourth I2C bus, I2C4, at offset
-`0x5000` in the block which #f("mp135/mach.h") maps at `0xf0a00000`.
+`I2C` is the controller of the chip's fourth I2C bus, I2C4, at
+physical `0x4C005000`, which #f("mp135/mach.h") maps at `0xf0018000`.
 
 #lines-to("static int")
 
@@ -11074,28 +11108,23 @@ table holds (#l("while (ndev < 256 &&")), where v7 had no limit.
 
 The map `datmap` describes how
 user addresses map onto the image, as a debugger's map would: addresses
-from `b1` to `e1` lie at file offset `f1` plus the distance from `b1`,
-and those from `b2` to `e2` at `f2` plus the distance from `b2`. Its
-members are now `unsigned long`, since the stack lies above 0x80000000,
+from `b1` to `e1` lie at offset `f1` in the image plus the distance from `b1`,
+and those from `b2` to `e2` at `f2` plus the distance from `b2`. The
+routine `imgoff`, below, turns an offset in the image into one in the
+file. The members are now `unsigned long`, since the stack lies above 0x80000000,
 and a physical offset in `/dev/mem` may too, where a `long` would turn
 negative.
 
 #lines-to("int", after: "int\tfile;")
 
-The routine `prcom` handles one process. If it is loaded (`SLOAD`), its image is at
-`p_addr` pages in `/dev/mem`. In the port, as on the PDP-11, `p_addr`
-is a physical page number (#f("proc.h")), so `ptob` of it, v7's `ctob`
-of the click number, gives the physical address, the offset in
-`/dev/mem`. It is
-computed as an `unsigned long`, and `addr` is one, for the reason just
-given. If the process is swapped out, `p_addr` is a block number in the swap area,
-and `swplo` is added. The `user` structure is at the start of the image
-in both cases.
+The routine `prcom` handles one process. Its image is read from `/dev/mem` if it is
+loaded (`SLOAD`), and from the swap area otherwise (#l("file = mproc.p_flag&SLOAD? swmem: swap;")). The `user`
+structure is at the start of the image in both cases (#l("addr = imgoff(0);")).
 
-The maps follow from the shape of the image, which is v7's on the ARM
-too (#f("machdep.c")): the `USIZE` pages of the `user` area, then the
-data, then the stack, packed together. The stack segment, at the top of
-the address space, follows the data in the image. The bound `f2` (#l("datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1)+addr;")) is
+The maps follow from the shape of the image, which is v7's: the `USIZE` pages of the `user` area, then the
+data, then the stack, in order, as the image lies on the swap area
+(#f("text.c")). The stack segment, at the top of
+the address space, follows the data in the image. The bound `f2` (#l("datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1);")) is
 accordingly the end of the data, `datmap.e1-datmap.b1` past the `user`
 area. The data map begins at the data's first page
 (#l("datmap.b1 = ptob(u.u_pdstart);")), which `exec` records in
@@ -11167,8 +11196,17 @@ process table from the same descriptor.
 The routine `getptr` assembles a pointer from the image byte by byte, through
 `getbyte`. Its counter is now `unsigned`, so that the comparison with
 `sizeof` is between unsigned values. The routine `getbyte`
-finds the offset of a user address through the two maps and reads one
+finds the offset of a user address in the image through the two maps,
+and its offset in the file through `imgoff`, and reads one
 byte. An address in neither map reads as zero.
+
+The routine `imgoff` is new. On the swap area the image lies in order, from
+block `p_addr` (#l("return(((unsigned long)mproc.p_addr+swplo)*512 + off);")). In core only the u-area is at `p_addr`, and the data
+and stack pages lie anywhere, listed by the page map which `p_map`
+names (#f("malloc.c")). So `imgoff` reads two numbers from `/dev/mem`, the entry of the root page,
+which names a list page, and the entry of that list page, which names
+the page (#l("if (lseek(swmem, (long)ptob(mproc.p_map) + 4*(i/1024), 0) == -1 ||")--#l("read(swmem, (char *)&pg, 4) != 4)", after: "lseek(swmem, (long)ptob(pg) + 4*(i%1024), 0) == -1 ||")). It returns 0 if they cannot be read, and `getbyte` then reads
+zero too.
 
 The v7 `within` compared `(unsigned)adr` with the `long` bounds. On the
 PDP-11 the 16-bit `unsigned` was promoted to a 32-bit `long` and the
@@ -15007,12 +15045,11 @@ kernel unmapped.
 The MP135 machine's linker script, #f("mp135/unix.ld"), differs from #f("qemu/unix.ld") only in
 its region and in the difference between kernel and physical addresses.
 
-`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2FFE0000`, and
-the 32~KB of SRAM1--3 which follow it, in which the kernel runs, by its
-kernel address 0xc0000000, that of the QEMU machine's kernel. The
-text, data, and `.bss` of the kernel, its tables included, must all fit
-there. They take some 117~KB, so the kernel ends in SYSRAM, and
-SRAM1--3 are room to grow. The linker reports an overflow of the
+`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2FFE0000`, in
+which the kernel runs, by its kernel address 0xc0000000, that of the
+QEMU machine's kernel. The text, data, and `.bss` of the kernel, its
+tables included, must all fit there. They take some 120~KB. The
+linker reports an overflow of the
 region, so a kernel which has outgrown it fails to link rather than to
 boot. The first byte of the text, at the start of SYSRAM, is `_start`.
 From this ELF file the build makes the image which the boot ROM loads,

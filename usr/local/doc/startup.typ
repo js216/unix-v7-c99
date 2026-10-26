@@ -13,25 +13,26 @@ in the Introduction (@ch-intro).
 A resource map is a list of the free areas of some resource. Each
 element gives the size of one area and the address of its first unit,
 both measured in whatever unit suits the resource. The system keeps
-three such lists, for RAM, for the swap area, and for the pages
-set aside at boot for user page tables (`NPTAB`, #f("param.h")), and
-all three are managed by the two procedures of #f("malloc.c"). RAM
-and the page tables are measured in pages of 4096~bytes, the
-unit in which the MMU maps memory, and the swap area in 512-byte disk
-blocks.
+two such lists, for the swap area and for the pages set aside at boot
+for user page tables (`NPTAB`, #f("param.h")), and both are managed by
+the two procedures `malloc` and `mfree` of #f("malloc.c"). The page tables are measured in
+pages of 4096~bytes, the unit in which the MMU maps memory, and the
+swap area in 512-byte disk blocks. RAM itself is not kept in a map,
+but handed out a page at a time, by `pgalloc` in the same file.
 
-#lines-to("extern struct map coremap[];\t/* space for core allocation */", lead: true)
+#lines-to("extern struct map swapmap[];", lead: true)
 
-The maps themselves follow: `coremap` for RAM, `swapmap` for
-the swap area, and, new in the port, `ptmap` for the pages of user page
-tables (#f("ureg.c")).
+The maps themselves follow: `swapmap` for the swap area, and, new in
+the port, `ptmap` for the pages of user page tables (#f("ureg.c")).
+In v7 a third, `coremap`, listed the free RAM.
 
 #lines-to(none)
 #source("/usr/sys/sys/malloc.c")
 
 This file holds the two procedures which manage a resource map
-(#f("map.h")): `malloc` takes an area out of the free list and `mfree`
-puts one back.
+(#f("map.h")), `malloc`, which takes an area out of the free list, and `mfree`, which
+puts one back, and the port's allocator of RAM, a page at a time, with
+the page maps built from it.
 Despite its name, `malloc` has nothing to do with the C library routine
 of the same name.
 
@@ -51,8 +52,7 @@ which every operation must preserve:
 Neither procedure checks for the end of the array, so the arrays must
 be large enough never to overflow. A map can hold no more free areas
 than there are allocated areas between them, plus one, and it needs one
-entry more for the sentinel. `CMAPSIZ`,
-`SMAPSIZ`, and `PMAPSIZ` (#f("param.h")) are computed from this bound, and the
+entry more for the sentinel. `SMAPSIZ` and `PMAPSIZ` (#f("param.h")) are computed from this bound, and the
 configuration gives the maps those sizes
 (#f("c.c")).
 
@@ -76,25 +76,16 @@ the sentinel keeps its own zero, which is the fourth rule above.
 
 #lines-to("return(a);")
 
-The address is returned (#l("return(a);")). Zero (#l("return(0);")) means failure. This is safe only because no free area ever
-begins at address zero. For RAM, the addresses are physical page numbers, and neither machine
+The address is returned (#l("return(a);")). Zero (#l("return(0);", after: "malloc(struct map *mp, int size)")) means failure. This is safe only because no free area ever
+begins at address zero. For the page tables, the addresses are physical page numbers, and neither machine
 has RAM at address zero. For swap, `startup` (#f("machdep.c")) frees the
 map starting at block 1, and decrements `swplo`, the first block of the
 swap area on its device, to compensate. So block zero of the swap area
 is never named.
 
-#lines-to("if ((bp = mp)==coremap && runin) {")
+#lines-to("for (bp = mp; bp->m_addr<=a && bp->m_size!=0; bp++);")
 
-Freeing RAM may allow the scheduler to bring in a process
-which is waiting on disk. If `sched` (#f("slp.c")) has gone to sleep
-for want of RAM (`runin` set), it is woken at once. The map has not yet been updated when the wakeup
-is issued, which is harmless,
-since `wakeup` merely makes `sched` runnable, and the kernel is not
-preempted, so `sched` cannot look at the map before `mfree` returns.
-
-#lines-to("for (; bp->m_addr<=a && bp->m_size!=0; bp++);")
-
-The loop with the empty body (#l("for (; bp->m_addr<=a && bp->m_size!=0; bp++);")) steps `bp` forward past every area
+The loop with the empty body (#l("for (bp = mp; bp->m_addr<=a && bp->m_size!=0; bp++);")) steps `bp` forward past every area
 which begins at or below `a`. At its end, `bp` points to the first area
 above the one being returned, or to the sentinel. The new area belongs
 just before `bp`.
@@ -127,6 +118,64 @@ the end of the list, needs no zero written into it: by the fourth
 rule, it already holds one.
 
 A zero `size` (#l("} else if (size) {")) changes nothing. It is tested only in this last case, since in the others adding zero is harmless.
+
+#lines-to("/*", lead: true)
+
+RAM is not kept in a resource map. After boot every piece of RAM the
+kernel takes is a single page: a process's image and a text are lists
+of pages, and the u-area is one page (`USIZE`, #f("param.h")). A map of
+single pages could split into as many entries as there are free
+pages, so the free pages are kept instead on a stack, `pgstk`, an array
+of their numbers, which `startup` (#f("machdep.c")) makes large enough
+for all of RAM and fills. Taking a page and giving one back cost one
+step each, and a free page is never written while it is free. That
+matters to `exit`, which gives back the u-area page on which it is
+still running.
+
+Giving back a page may let the scheduler bring in a process which is
+waiting on disk. If `sched` (#f("slp.c")) has gone to sleep for want of
+RAM (`runin` set), it is woken (#l("if (runin) {")). The kernel is not preempted,
+so `sched` cannot look at the stack before `pgfree` returns.
+
+#lines-to("/*", lead: true, after: "int\t*pgstk;")
+
+A page map lists the pages of a process's image, or of a text, in
+order. Two levels suffice. The root page holds the numbers of up to
+`NPM`, 1024, list pages, and each list page the numbers of 1024 pages,
+so one map reaches 4~GB, more than all of RAM. A map of $n$ entries
+has its root and the list pages of entries 0 to $n-1$, and nothing
+more, so the map of no entries is no page at all, 0. The routine
+`mapent` finds an entry through the root, by the kernel addresses of
+the two pages (`PGADDR`, #f("seg.h")).
+
+#lines-to("/*", lead: true, after: "#define\tNPM")
+
+The routine `mapneed` counts the pages which growing a map takes: one for each new
+entry, one for each list page begun, and the root if the map was
+empty. Every caller compares it with `npgfree` before it changes
+anything, so that a growth never stops halfway.
+
+#lines-to("/*", lead: true, after: "mapneed(int n0, int n1)")
+
+The routine `mapalloc` checks the count itself as well (#l("if (mapneed(n0, n1) > npgfree)")). It takes the root if
+the map had none, and clears it, and a list page whenever an entry
+begins one (#l("if (i%NPM == 0) {", after: "mapalloc(int *mp, int n0, int n1)")). The new pages are not cleared. Whoever grows a map
+fills or clears the pages itself.
+
+#lines-to("/*", lead: true, after: "mapalloc(int *mp, int n0, int n1)")
+
+The routine `mapfree` gives the pages back from the end: each entry's page, then
+the list page when the entry was its first, and at last the root, when
+no entry is left.
+
+#lines-to("/*", lead: true, after: "mapfree(int *mp, int n0, int n1)")
+
+The routine `maprot` moves pages within an image without copying them. It turns the
+entries from `a` to `c` around, so that those from `b` come first, by
+three reversals: of `a` to `b`, of `b` to `c`, and of the whole. A call
+of `brk` and the growth of the stack use it to move the stack past
+pages added or taken away at the end of the image (#f("sys1.c"),
+#f("sig.c")).
 
 #lines-to(none)
 #source("/usr/sys/sys/prf.c")
@@ -227,7 +276,7 @@ The two disk drivers pass a single status value and a zero:
 #f("param.h") is the first file which nearly every kernel source file
 includes, and most of the other `.h` files assume that it has been
 included before them. It reserves no storage, though it declares some
-(#l("extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;")), but defines the constants and simple types upon
+(#l("extern unsigned corebase, coretop, coreoff;")), but defines the constants and simple types upon
 which the remainder of the system is built. As elsewhere in UNIX,
 defined constants are written in upper case only.
 
@@ -263,18 +312,15 @@ area.
 gives a new program and the amount by which `grow` (#f("sig.c")) enlarges
 it, one page each, the smallest amount the MMU maps.
 
-`CMAPSIZ`, `SMAPSIZ`, and `PMAPSIZ` (#l("#define\tCMAPSIZ\t(NPROC+NTEXT+3)\t/* size of core allocation area */")--#l("#define\tPMAPSIZ\t(NPROC+2)\t/* size of page table allocation area */")) are the sizes of the three
+`SMAPSIZ` and `PMAPSIZ` (#l("#define\tSMAPSIZ\t(2*NPROC+NTEXT+2)\t/* swap allocation area size */")--#l("#define\tPMAPSIZ\t(NPROC+2)\t/* size of page table allocation area */")) are the sizes of the two
 resource maps (#f("map.h")). They are derived from a bound on the number of free areas. Each free area of a map lies between
 two allocated ones, so the free areas number at most one more than the
 allocated areas, and the map needs one entry more for its sentinel
-(#f("malloc.c")). RAM holds at most a process image for each process
-and a text for each `text` entry, and `expand` (#f("slp.c")) briefly
-holds two images of the process it grows: `NPROC+NTEXT+1` allocated
-areas, hence `NPROC+NTEXT+3` entries. The swap area holds at most an
-image for each process, a copy of each text, and the argument list of
-each process in the middle of an `exec` (#f("sys1.c")): `2*NPROC+NTEXT`
-allocated areas, hence `2*NPROC+NTEXT+2`. The pool of user page tables
-(#l("#define\tNPTAB")) is allocated with the third map, `ptmap` (#f("ureg.c")). Each
+(#f("malloc.c")). The swap area holds at most an image for each
+process and a copy of each text, `NPROC+NTEXT` areas. The size allows
+for `NPROC` more, a margin kept from v7, whose `exec` also put each
+argument list there. The pool of user page tables
+(#l("#define\tNPTAB")) is allocated with the second map, `ptmap` (#f("ureg.c")). Each
 process holds one run of pages from it, hence `NPROC+2`.
 
 `NPTAB` (#l("#define\tNPTAB\t(4*NPROC+256)\t/* pages of user page tables */")) is new: the user page tables of the processes in RAM are
@@ -384,11 +430,11 @@ login history, and of the archive formats which the commands keep.
 mode, from the mode bits of its status register, which `irq`
 (#f("machdep.c")) passes to `clock` (#f("clock.c")).
 
-#lines-to("extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;")
+#lines-to("extern unsigned corebase, coretop, coreoff;")
 
-The declarations of variables. The values which differ between the
-two machines are defined by the configuration (#f("c.c"), #f("qemu/mach.h")): the
-end of RAM (`coretop`) and the addresses of the interrupt controller. Where RAM
+The declarations of variables. The value which differs between the
+two machines, the end of RAM (`coretop`), is defined by the
+configuration (#f("c.c"), #f("qemu/mach.h")). Where RAM
 begins (`corebase`) and how far its kernel addresses lie from its
 physical ones (`coreoff`) are computed by `machine_init` (#f("machdep.c")).
 
@@ -517,7 +563,8 @@ the low twelve and the top twelve.
 It is global (bit 11 clear), so that its
 translations survive a change of the user's tables.
 
-`BLK_DEV` (#l("#define\tBLK_DEV\t0x60000000000405ULL")) describes a block of device registers:
+`BLK_DEV` (#l("#define\tBLK_DEV\t0x60000000000405ULL")) describes device registers. The devices are mapped by pages
+(`kmap`, #f("machdep.c")), and `PTE_TAB` turns the same bits into a page entry:
 
 - attribute index 1, device memory, which is neither cached nor
   touched speculatively,
@@ -528,7 +575,7 @@ translations survive a change of the user's tables.
   architecture requires.
 
 Its shareability is
-ignored. Both kinds of block are reached only through the kernel's
+ignored. Both kinds of entry are reached only through the kernel's
 table, at addresses above `USRSIZE`, and user mode cannot reach them at
 all, whatever their permission bits.
 
@@ -545,14 +592,16 @@ next level, and also the type of a page entry at the third level.
   the user's translations alone.
 
 It is the same on
-both machines. `PGSHIFT` and `PGSIZE` (#l("#define\tPGSHIFT\t12"), #l("#define\tPGSIZE\t4096")) describe the 4~KB page, the unit of the user mapping. `BLKSHIFT` and
+both machines. `PGSHIFT` and `PGSIZE` (#l("#define\tPGSHIFT\t12"), #l("#define\tPGSIZE\t4096")) describe the 4~KB page, the unit of the user mapping. `DEVBASE` (#l("#define\tDEVBASE")) is the
+kernel address of the 2~MB in which the registers of every device
+are mapped, a page each, through the third-level table `kl3d` (#l("extern unsigned long long kl2[], kl3u[], kl3d[], bootl1[];")). `BLKSHIFT` and
 `L1SHIFT` (#l("#define\tBLKSHIFT"), #l("#define\tL1SHIFT")) give the reach of an entry of a
 second-level and of a first-level table, 2~MB and 1~GB, and `NPTE`
 (#l("#define\tNPTE")) the number of entries in a table. The type `struct memregion` (#l("struct memregion { unsigned va, start, end; unsigned long long attr; };")) is that of
 the table `board_map`, which #f("c.c") defines from the rows in the
 machine's #f("qemu/mach.h"). Each entry is a range of
 physical addresses, the kernel address at which it is to be mapped, and
-the block descriptor bits to use.
+the descriptor bits to use.
 
 #lines-to(none)
 #source("/usr/sys/conf/low.s")
@@ -1303,14 +1352,22 @@ zero except while a user reference is made.
 #lines-to(".balign 4096", after: "nofault:")
 
 The u-area is switched by `resume` through the page table `kl3u`.
-The kernel's own table maps only whole 2~MB blocks, but a u-area is one
-page within its process's image. So the 2~MB block at `UBASE` gets a
+The kernel's own table maps RAM in whole 2~MB blocks, but a u-area is
+one page, anywhere in RAM. So the 2~MB block at `UBASE` gets a
 third-level table, which maps page by page. Of its 512~entries only the
 first `USIZE` are used. The rest stay invalid, so that a stray
 reference beyond the u-area faults. The table is hooked by `machine_init`
 into the last entry of `kl2` (#f("low.s")). Like every table of the long
 format, it is aligned on 4~KB. Like the rest of the `bss`, it is
 cleared by `_start` (#f("low.s")).
+
+#lines-to("kl3d:")
+
+The device registers are mapped the same way, a page each, through
+`kl3d`, which `kmap` (#f("machdep.c")) fills and hooks into the entry
+of `kl2` for `DEVBASE` (#f("seg.h")). A device's registers seldom begin
+on a 2~MB boundary, and by pages each device can lie at the same kernel
+address on both machines, whatever its physical address.
 
 #lines-to(none)
 #source("/usr/sys/h/reg.h")
@@ -1525,8 +1582,8 @@ and the buffer cache, `iinit` and `binit`.
 _Memory._ The call of `startup` (#l("startup();")) divides the RAM which follows the u-area of
 process 0. First come the processes' first-level page tables, then a
 pool of pages for their other tables (`ptmap`). Everything above, up to
-the top of RAM given by the configuration (`coretop`), goes into the
-core map, the list of memory free for processes.
+the top of RAM given by the configuration (`coretop`), goes onto the
+stack of free pages (#f("malloc.c")), from which processes take their memory.
 
 #lines-to("/*")
 
@@ -1572,9 +1629,10 @@ maps the page into the user window at virtual address 0, and
 `copyout` writes `icode` (#f("machdep.c")) through that mapping, to
 user address 0.
 
-A call of `arm_sync_icache` (#l("arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),")) makes the
+A call of `arm_sync_icache` (#l("arm_sync_icache(PGADDR(imgpage(u.u_procp, USIZE)),")) makes the
 instructions just written visible to instruction fetch (#f("mch.s")). It
-is given the page's kernel address (`PGADDR`), not user address 0. The
+is given the kernel address (`PGADDR`) of the image's page after the
+u-area (`imgpage`, #f("slp.c")), not user address 0. The
 two name the same physical page, and the routine works through the
 kernel's mapping of RAM.
 
@@ -1660,7 +1718,8 @@ offsets serve as addresses, and both fit the 8-bit immediate field of
 _Memory._ The routine `machine_init` (#l("machine_init(void)")) has set `corebase`
 to the physical address of the first page after the kernel and its
 tables, and the configuration (#f("c.c")) gives `coretop`. Both
-are physical addresses, because the core map counts physical pages.
+are physical addresses, because the kernel counts RAM in physical
+pages.
 The macro `btop` divides each address by the page size to give the
 page number.
 
@@ -1690,13 +1749,18 @@ The buffers of the buffer cache are taken from core next
 the SD card's DMA cannot reach all the on-chip RAM in which the MP135
 machine's kernel lies, and reaches DDR. The rows begin on a page, and
 so each on a cache line, which the SD card driver needs (#f("sd.c")).
+One more page, `physpg`, is the one through which raw I/O moves data
+(`physio`, #f("bio.c")).
 
-#lines-to("maxmem = btop(coretop) - i;")
+#lines-to("/*", lead: true, after: "physpg = i++;")
 
-The rest of RAM is freed (#l("maxmem = btop(coretop) - i;"), #l("mfree(coremap, maxmem, i);")). Memory
+The rest of RAM is freed. The stack of free pages (#f("malloc.c")) comes first
+(#l("pgstk = (int *)PGADDR(i);")--#l("i += btop((btop(coretop) - i) * sizeof(int));")), one word for each page after it, and then every page
+above it is pushed onto it (#l("for(a = btop(coretop)-1; a >= i; a--)")--#l("pgstk[npgfree++] = a;")), from the top down, so that
+the low pages are handed out first. Memory
 is cleared where it is used. The routine `machine_init` clears the area
 of process 0, and `exec` (#f("sys1.c")) clears each image it builds.
-The variable `maxmem` is the amount of RAM left, which is printed
+The variable `maxmem` (#l("maxmem = npgfree;")) is the amount of RAM left, which is printed
 (#l("printf(\"mem = ")). The routine `estabur` (#f("ureg.c")) refuses any
 image larger.
 
@@ -1710,9 +1774,10 @@ fails. So `swplo` is lowered by one to compensate (#l("swplo--;")).
 
 _Interrupts._ Every device interrupt reaches
 the processor through a single line from the Generic Interrupt
-Controller (GIC), whose distributor (`gicdbase`) and processor interface
-(`giccbase`) registers are reached through `GICD` and `GICC` (#l("#define\tGICD(o)\t(*(volatile unsigned *)(gicdbase+(o)))"), #l("#define\tGICC(o)\t(*(volatile unsigned *)(giccbase+(o)))")),
-at the offsets named after them. The clock is the processor's own
+Controller (GIC), whose distributor and processor interface
+registers are reached through `GICD` and `GICC` (#l("#define\tGICD(o)\t(*(volatile unsigned *)(0xF0000000+(o)))"), #l("#define\tGICC(o)\t(*(volatile unsigned *)(0xF0001000+(o)))")),
+at the offsets named after them. Both machines map them at these
+kernel addresses (#f("qemu/mach.h"), #f("mp135/mach.h")). The clock is the processor's own
 generic timer. Its interrupt, 27 (`clkirq`, #l("int\tclkirq = 27;")), is the
 virtual timer's private interrupt. Each core has its own private
 interrupts, numbered 16 to 31, which no other core sees.
@@ -1783,16 +1848,20 @@ to be mapped, each with its
 kernel address, its physical bounds, and the attribute bits of its block
 descriptors. The linker script defines `__bss_end`
 (#l("extern char _start[], __bss_end[];")), the end of the kernel. On the MP135 machine the
-whole kernel, its tables included, runs from SYSRAM, with SRAM1--3 after
-it for room, and on the QEMU machine from the start of RAM. The tables `kl2`, `kl3u`, and `bootl1` (#f("seg.h")) are reserved in
+whole kernel, its tables included, runs from SYSRAM, and on the QEMU
+machine from the start of RAM. The tables `kl2`, `kl3u`, `kl3d`, and `bootl1` (#f("seg.h")) are reserved in
 #f("low.s") and #f("mch.s").
 
 The routine `kmap` (#l("kmap(unsigned long long attr)")) enters the regions of `board_map` whose
-attributes are `attr` into the kernel's table `kl2`, 2~MB at a time.
-The entry for a kernel address is its 2~MB block within the top
-gigabyte, bits 21 to 29 of the address (#l("kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =")). The attributes are
-defined in #f("seg.h"). A region which does not begin on a block, the
-MP135 machine's SYSRAM, is left alone (#l("if(m->attr == attr && (m->start & ((1U<<BLKSHIFT)-1)) == 0)")), since no block can map it,
+attributes are `attr` into the kernel's tables, each address at its
+distance `v` from the physical one. The devices go into
+`kl3d` a page at a time (#l("kl3d[PTX(v+a)] = a | attr | PTE_TAB;")), and `kl3d` into the entry of `kl2` for
+`DEVBASE` (#l("kl2[BLX(DEVBASE)] = vtop((caddr_t)kl3d) | PTE_TAB;")). Memory goes into `kl2` 2~MB at a time (#l("kl2[BLX(v+a)] = a | attr;")). The
+macros `PTX` and `BLX` (#l("#define\tPTX(va)"), #l("#define\tBLX(va)")) give the entry for a kernel address in a third-level
+table, bits 12 to 20, and in `kl2`, its 2~MB block within the top
+gigabyte, bits 21 to 29. The attributes are
+defined in #f("seg.h"). A region of memory which does not begin on a block, the
+MP135 machine's SYSRAM, is left alone (#l("else if((m->start & ((1U<<BLKSHIFT)-1)) == 0)")), since no block can map it,
 and the pages in which `_start` mapped the kernel go on doing so
 (#f("low.s")). Afterwards `kmap` calls `tlbflush` (#f("mch.s")),
 because an entry may change. On the QEMU machine the entry for the
@@ -1835,7 +1904,9 @@ lies in that RAM, as on the QEMU machine, core begins instead at the
 first page after it (#l("a = ptob(btop(vtop(__bss_end)));")--#l("corebase = a;")). On the MP135 machine, whose kernel runs
 from SYSRAM, core is the whole of DDR. The offset `coreoff` (#l("coreoff = m->va - m->start;")) is the
 difference between the kernel and physical addresses of the region of
-`board_map` which holds core (#l("for(m = board_map; m->end != 0; m++)", after: "corebase = a;")). The macro `PGADDR` (#f("seg.h")) adds it to
+`board_map` which holds core (#l("for(m = board_map; m->end != 0; m++)", after: "corebase = a;")). On the QEMU machine core lies in two
+regions, the kernel's block and RAM, and the last, RAM at 0xc0200000,
+gives the offset, as on the MP135 machine. The macro `PGADDR` (#f("seg.h")) adds it to
 turn a page into a kernel address.
 
 The `USIZE` pages of the per process data area of process 0, the first
@@ -1871,8 +1942,9 @@ access.
 
 The routines `fumem` and `sumem` fetch and store one byte through
 `fkbyte` and `skbyte` (#f("mch.s")), which turn an abort into -1 by way
-of `nofault`. A region is mapped in 2~MB blocks, and part of a block
-may have no memory or device behind it. Without the guard a read
+of `nofault`. A region of memory is mapped in 2~MB blocks, part of
+which may have no memory behind it, and a device's page may have holes
+where no register answers. Without the guard a read
 there would panic the kernel. Both return -1 for an offset in no
 region, and the driver sets `ENXIO`.
 
@@ -1964,7 +2036,7 @@ where it is, why it sleeps, and the information that scheduling and
 signals need. The rest of the process state, the `user` structure
 (#f("user.h"), which is discussed in the next section, page
 #pageref(label("user.h"))), lives at the bottom of the process's memory image, the u-area, data,
-and stack which `p_addr` locates (see _The Address Space_, page
+and stack which `p_addr` and `p_map` locate (see _The Address Space_, page
 #pageref(<sec-addr>)), and is swapped with it.
 
 #lines-to("char\tp_pri;")
@@ -1983,10 +2055,11 @@ signal _n_ being 1 shifted left _n_-1.
 
 #lines-to("int\tp_addr;")
 
-_Memory._ The fields `p_addr` (#l("int\tp_addr;\t\t/* address of swappable image */")) and `p_size` (#l("int\tp_size;\t\t/* size of swappable image (pages) */")) locate the image. When `SLOAD` is set,
-`p_addr` is a page number, the physical address divided by 4096
-(`PGADDR`, #f("seg.h")), otherwise it is a block number on the swap
-device. The size
+_Memory._ The fields `p_addr` (#l("int\tp_addr;\t\t/* u-area page, or image on swap */")), `p_size` (#l("int\tp_size;\t\t/* size of swappable image (pages) */")), and `p_map` (#l("int\tp_map;\t\t/* page map of the image in core */")) locate the image. When `SLOAD` is set,
+`p_addr` is the page of the u-area, a page number, the physical address divided by 4096
+(`PGADDR`, #f("seg.h")), and the data and stack pages may lie anywhere
+in RAM: the page map `p_map` lists them in order (#f("malloc.c")). Otherwise `p_addr` is a block number on the swap
+device, where the whole image lies in order, and `p_map` is 0. The size
 is in pages in both cases, and includes the `USIZE` pages of the
 u-area, which come first.
 
@@ -1999,7 +2072,7 @@ The fields `p_ptab` and `p_nptab` (#l("int\tp_ptab;\t\t/* user page tables (page
 of the pages of user page tables which the process holds while it is in
 RAM, taken from the pool by `sureg` and given back by `ptfree`
 (#f("ureg.c")). The count is zero while the process has none, as after
-it has been swapped out, created, or moved in RAM.
+it has been swapped out or created, or its image has changed.
 
 #lines-to("caddr_t p_wchan;")
 
@@ -2231,8 +2304,8 @@ address space apart from each other and that the image fits in
 prototype (see #f("user.h"), page #pageref(label("user.h"))), discards
 the old page tables, and calls `sureg`. The routine `sureg` points the
 MMU at the process's tables, first building them from the prototype if
-the process has none. It is called whenever the image may have moved, by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
-(#f("text.c")), and when `swtch` (#f("slp.c")) resumes a process.
+the process has none. It is called whenever the image may have changed, by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
+(#f("text.c")), by `sbreak` and `grow` (#f("sys1.c"), #f("sig.c")), and when `swtch` (#f("slp.c")) resumes a process.
 
 The tables form a tree in RAM (see _Translation Tables_, page
 #pageref(<sec-tables>)). Each process has its own tree for the lower
@@ -2245,25 +2318,36 @@ The first-level tables live in `l1tab` (#l("unsigned long long *l1tab;"),
 #l("unsigned l1pa;")), one for each slot of the process table, set aside
 by `startup` (#f("machdep.c")). The tables below them are pages from
 the pool `ptmap`, and the process's `proc` entry records which
-(`p_ptab` and `p_nptab`, #f("proc.h")). They are kept while the process
-stays where it is in RAM, so a switch only points `TTBR0` at the
+(`p_ptab` and `p_nptab`, #f("proc.h")). They are kept while the
+process's image stays as it is, so a switch only points `TTBR0` at the
 process's first-level table.
 
 #lines-to("/*")
 
 A `urange` (#l("struct urange {")) describes a segment to be mapped by its first page,
-its number of pages, the physical address of its first page, and its
-access bits.
+its number of pages, the page map which lists its pages and the entry
+of the first, or, with no map, its first page itself, and its access
+bits.
 
 #lines-to("/*", lead: true, after: "};")
 
+The routine `upage` gives the page of entry `i` of a range. The range without a map
+is the trampoline's one page. A range with a map may reach past the
+entries the map yet holds, `nent`: `sbreak` and `grow` record the new
+sizes with `estabur`, which builds the tables at once, before `expand`
+has added the pages (#f("sys1.c"), #f("sig.c")). Such an entry is left unmapped (#l("return(0);", after: "upage(register struct urange *rp, unsigned i, int nent)")), and
+the caller builds the tables again once the pages are there.
+
+#lines-to("/*", lead: true, after: "upage(register struct urange *rp, unsigned i, int nent)")
+
 The routine `ptbuild` makes the tables of the current process `p`. It
-lists up to four ranges (#l("nr = 0;")--#l("rp->ap = RO;")). The text lies at the RAM address of
-the shared text segment, if there is one, and carries the access rights
-of the prototype. The data and the stack lie in the process's own
-image, from `USIZE` pages into it, and are read and write. The fourth is
+lists up to four ranges (#l("nr = 0;")--#l("nent[nr-1] = 1;")), each with the number of entries its map holds, `nent`. The text's
+pages are those of the shared text segment's page map, if there is one, and carry the access rights
+of the prototype. The data and the stack are the process's own pages,
+listed in its page map, the data from entry 0 and the stack from entry
+`u_pdsize`, and are read and write. The fourth is
 the one read-only page of the signal trampoline (`sigpage`,
-#f("machdep.c")). The ranges are then sorted by address (#l("for(i = 1; i < (int)nr; i++)")--#l("r[j-1] = t;")).
+#f("machdep.c")). The ranges are then sorted by address, their counts with them (#l("for(i = 1; i < (int)nr; i++)")--#l("nent[j-1] = a;")).
 
 A first pass counts the tables needed (#l("n = 0;", after: "r[j-1] = t;")). Each gigabyte a range touches
 needs a second-level table, and each 2~MB block a third-level one.
@@ -2284,7 +2368,8 @@ The run is cleared, and a second pass, in the same order, takes the
 tables from it as they are first needed. It enters each second-level
 table in the first-level table and each third-level table in its
 second-level table (#l("l1[gb] = ptob(a) | PTE_TAB;"), #l("l2[blk & (NPTE-1)] = ptob(a) | PTE_TAB;")), and each page in its third-level
-table with the range's access bits (#l("l3[pg & (NPTE-1)] = (rp->pa + ptob(pg - rp->va)) |")). An entry which points to a
+table with the range's access bits (#l("l3[pg & (NPTE-1)] = ptob(pa) | PGUSER | rp->ap;")), passing over a page which the map does
+not yet hold (#l("if((pa = upage(rp, pg - rp->va, nent[rp-r])) == 0)")). An entry which points to a
 table holds its physical address and the type `PTE_TAB` (#f("seg.h")).
 The attributes other than the access rights are `PGUSER` (#f("seg.h")),
 among them "not global", which lets `ttbset` (#f("mch.s")) discard the
@@ -2294,8 +2379,8 @@ user's translations alone.
 
 The routine `ptfree` returns a process's tables to the pool and empties its
 first-level table. It is called whenever the tables no longer describe the image, by
-`estabur` when the prototype changes, by `expand`
-(#f("slp.c")) when the image moves, by `xswap` (#f("text.c")) when it
+`estabur` when the prototype changes, by `sbreak` and `grow`
+(#f("sys1.c"), #f("sig.c")) when the image's pages change, by `xswap` (#f("text.c")) when it
 leaves RAM, and by `exit` (#f("sys1.c")). The first-level table is
 emptied even when there were no tables, so that a slot of the process
 table always begins with an empty address space.
@@ -2348,7 +2433,7 @@ of the priority of a process running in user mode (`setpri`), which
 rises with its recent use of the processor and its `nice` value, as
 distinct from the fixed priority a process is given when it sleeps in
 the kernel, the scheduler proper (`sched`, `swapin`), and the two
-procedures which create or move a process image in RAM (`newproc`,
+procedures which create or grow a process image in RAM (`newproc`,
 `expand`).
 How they work together is described in the Introduction (see
 _Scheduling and Swapping_, page #pageref(<sec-sched>)). The commentary follows the file, `sleep` and `wakeup`, then `setrun` and `setpri`,
@@ -2597,37 +2682,43 @@ priorities". Sources at
 #link("https://www.tuhs.org/cgi-bin/utree.pl?file=V5/usr/sys/ken/slp.c")[`tuhs.org`].]
 Otherwise `sched` sleeps on `runin`. It is woken by `clock` each
 second, by `sleep` when a process goes to sleep and so may become a
-candidate (#l("if(runin != 0) {")), and by `mfree` (#f("malloc.c")) when RAM is
+candidate (#l("if(runin != 0) {")), and by `pgfree` (#f("malloc.c")) when RAM is
 freed.
-
-
 
 #lines-to("/*", lead: true, after: "sleep((caddr_t)&runin, PSWP);")
 
+The routine `imgpage` gives the page at index `i` of the image of a process in
+RAM: the u-area's at `p_addr`, then those which its map lists. The
+routines which go through an image page by page use it, so that the
+u-area needs no entry in the map.
+
+#lines-to("/*", lead: true, after: "imgpage(register struct proc *p, int i)")
+
 The routine `swapin` is called by `sched` (#l("if (swapin(p))")) to bring the chosen
-process into RAM. It allocates RAM for the data area first, and then,
-if the process has a shared text which is not in RAM, for the text. If
-either allocation fails, it gives back what it has taken and returns
-zero. The comment's wish, to allocate the larger of the two first, is
-about the first fit rule of `malloc` (#f("malloc.c")): the larger
-request is the harder to satisfy, and taking it first leaves the
-smaller one more places to fit.#footnote[The Sixth Edition's `swapin`
-(1975) allocated text and data as one piece. The Seventh split them
-and added the comment. In 32V (1979), the VAX port, memory is
-allocated page by page (`memall`), and the order no longer matters.
+process into RAM. It locks the text first, since whether the text
+needs RAM depends on its count of users in RAM, `x_ccount`, which the
+lock holds steady. It then counts every page the process will take,
+and its text too if no user of the text is in RAM, the pages of their
+maps included (#l("need = USIZE + mapneed(0, p->p_size-USIZE);")--#l("need += mapneed(0, xp->x_size);")), and gives up if fewer are free. All the
+pages are taken before anything is read, because each read sleeps, and
+another process could take pages meanwhile.#footnote[The Sixth Edition's `swapin`
+(1975) allocated text and data as one piece. The Seventh split them,
+with a comment asking that the larger be taken first, for the first
+fit rule of `malloc`. In 32V (1979), the VAX port, memory is allocated
+page by page (`memall`), as here, and the order no longer matters.
 Sources at #link("https://www.tuhs.org/cgi-bin/utree.pl?file=V6/usr/sys/ken/slp.c")[`tuhs.org`].]
 
-#lines-to("if ((xp = p->p_textp)) {")
+#lines-to("if (xp) {", after: "need += mapneed(0, xp->x_size);")
 
 The text is read in only if no process using it is in RAM
-(#l("if (xp->x_ccount==0) {")). Instructions just read from the swap area are new to
-the instruction cache, which may hold stale lines for the same memory,
-so `arm_sync_icache` (#f("mch.s")) is called to make instruction fetch
-see them (#l("arm_sync_icache(PGADDR(x),")).
+(#l("if (xp->x_ccount==0) {")), by `xread` (#f("text.c")), which also makes instruction
+fetch see the new instructions.
 
-#lines-to("swap(p->p_addr, a, p->p_size, B_READ);")
+#lines-to("a = p->p_addr;", after: "xunlock(xp);")
 
-Last the data is read in, its swap space is freed, and the process is
+Last the image is read in, the u-area into its new page and the rest
+into the pages of the new map, a run of consecutive pages at a time
+(`mapswap`, #f("bio.c")). Its swap space is freed, and the process is
 marked as in RAM, with `p_time` reset, so that `sched` does not choose
 it to go out again at once.
 
@@ -2757,20 +2848,21 @@ calls `sureg` and returns a constant. The registers which the callers
 higher up the stack expect to find preserved were pushed on that stack
 before `save` was reached, and are still there when it returns again.
 
-#lines-to("if(a2 == NULL) {")
+#lines-to("if(USIZE + mapneed(0, n-USIZE) > npgfree) {")
 
-If there is no RAM for the copy (#l("if(a2 == NULL) {", after: "* copy.")), `newproc` writes the parent's image
+If there is no RAM for the copy (#l("if(USIZE + mapneed(0, n-USIZE) > npgfree) {")), counted in pages before any is
+taken, `newproc` writes the parent's image
 to the swap area as the child's image, without freeing the RAM
-(`xswap` with second argument zero). For this it points `rpp->p_addr`
-at the parent's RAM, and `SIDL` keeps the parent from being
+(`xswap` with second argument zero). For this it points the child's
+`p_addr` and `p_map` at the parent's u-area and page map, and `SIDL` keeps the parent from being
 chosen for swapping in the meanwhile. While `xswap` waits for the
 write, the parent sleeps and is resumed in `swtch` as the child, for
 `u.u_procp` names the child's entry: the `sureg` there builds page
 tables in the child's slot, mapping the parent's RAM, and loads them.
 `xswap` frees the tables once the image is written (#f("text.c")), and the
 `sureg` at (#l("sureg();", after: "u.u_procp = rip;")) points the processor back at the parent's own tables.
-Otherwise (#l("rpp->p_addr = a2;")) `copyseg` (#f("machdep.c")) copies the image a page at
-a time. On the PDP-11 `copyseg` had to borrow a user segmentation
+Otherwise the child gets a u-area page and a map of its own (#l("rpp->p_addr = a2 = pgalloc();")--#l("mapalloc(&rpp->p_map, 0, n-USIZE);")), and `copyseg` (#f("machdep.c")) copies the image a page at
+a time, into pages which need not follow one another. On the PDP-11 `copyseg` had to borrow a user segmentation
 register to reach physical memory. Here the kernel maps all of RAM,
 and `PGADDR` turns a page number into an address.
 
@@ -2781,26 +2873,24 @@ stack, which is no more than the program has asked for (`getxfile`,
 #lines-to("/*", lead: true, after: "return(0);")
 
 _Growth._ The routine `expand` changes the size of the current process's image to `newsize`
-pages. A shrinking image simply gives back its tail (#l("mfree(coremap, n-newsize, a1+newsize);")). A growing
-one is copied into a new area (#l("for(i=0; i<n; i++)")), after which `resume` (#l("resume(a2, u.u_ssav);"))
-switches to the copy, whose `save` (#l("if (save(u.u_ssav)) {", after: "mfree(coremap, n-newsize, a1+newsize);")) then returns 1. The comment's
-"taking care to reset registers" is a PDP-11 relic in effect: since `u`
-and the kernel stack always appear at the same virtual address, the
-copy needs no adjustment, and `resume` only has to remap `u` to the new
-area. `expand` releases the page tables of the old image first (#l("ptfree(p);")), and
-`sureg` builds new ones for the copy (#f("ureg.c")). A shrinking image
-keeps its tables: the caller has already set the new sizes with
-`estabur`, whose tables no longer reach the tail given back.
+pages, and since the image is a list of pages, it never copies. A shrinking image gives back the pages at its end
+(#l("mapfree(&p->p_map, newsize-USIZE, n-USIZE);")). A growing one gets new pages at its end (#l("if(mapalloc(&p->p_map, n-USIZE, newsize-USIZE)) {")),
+and everything the image held stays in its pages. Where the new pages
+belong, after the data or below the stack, the caller arranges by
+turning map entries around, and it then builds the page tables again
+(`sbreak`, #f("sys1.c"), `grow`, #f("sig.c")). In v7 a growing image was
+copied whole into a larger area, and a process which grew a page at a
+time was copied each time.
 
-If there is no RAM (#l("if(a2 == NULL) {", after: "a2 = malloc(coremap, newsize);")), `xswap` writes the image to the swap area at its
+If there is no RAM, `xswap` writes the image to the swap area at its
 old size `n`, with `p_size` already set to the new one, and frees the
 old RAM, and the process gives up the processor with `SSWAP` set.
-`expand` first stores the floating point registers in the u-area (#l("if (u.u_fpsaved==0) {", after: "a2 = malloc(coremap, newsize);")--#l("}", after: "a2 = malloc(coremap, newsize);")),
+`expand` first stores the floating point registers in the u-area (#l("if (u.u_fpsaved==0) {", after: "if(mapalloc(&p->p_map, n-USIZE, newsize-USIZE)) {")--#l("u.u_fpsaved = 1;", after: "if(mapalloc(&p->p_map, n-USIZE, newsize-USIZE)) {")),
 since the copy on the swap area is the one which will come back, and
 `swtch` would store them only after it had been written. v7 omitted
 this. When
 `sched` brings it back, `swapin` allocates the larger size, and the
-process resumes at `u.u_ssav` (#l("if (save(u.u_ssav)) {", after: "mfree(coremap, n-newsize, a1+newsize);")) and returns from `expand` as if
+process resumes at `u.u_ssav` (#l("if (save(u.u_ssav)) {", after: "if(mapalloc(&p->p_map, n-USIZE, newsize-USIZE)) {")) and returns from `expand` as if
 nothing had happened. Until `swtch` resumes another process, the
 process goes on running in RAM which is already free. Nothing can
 reallocate it in that interval, since no interrupt routine allocates
