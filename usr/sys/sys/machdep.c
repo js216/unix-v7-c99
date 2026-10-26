@@ -178,8 +178,6 @@ machine_init(void)
 
 	kmap(BLK_DEV);
 	wdinit();
-	GICD(DCTLR) = 0;
-	GICC(CCTLR) = 0;
 	cninit();
 	clock_ddr_init();
 	kmap(BLK_KERN);
