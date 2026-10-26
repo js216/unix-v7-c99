@@ -13,3 +13,4 @@
 	{0xf0a00000, 0x4c000000, 0x4c200000, BLK_DEV},	/* USART2, I2C4 */
 #define	DDRINIT	ddrinit()
 #define	WDINIT	iwdgstart()
+#define	NSINIT	etzpcinit()

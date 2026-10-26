@@ -11,6 +11,7 @@
 .globl idle, waitloc
 .globl savfp, restfp
 .globl dfar, dfsr
+.globl nsenter
 .globl kl3u
 
 dmbsy:
@@ -302,6 +303,85 @@ dfar:
 dfsr:
 	mrc p15, 0, r0, c5, c0, 0	@ DFSR
 	bx lr
+
+/*
+ * Leave the secure world (etzpc.c). The data caches are cleaned,
+ * level 1 and level 2, since the non-secure world does not see the
+ * lines the secure world cached; the non-secure world is let use the
+ * floating-point unit; and smc enters the monitor, which copies the
+ * MMU's registers into their non-secure copies and returns there.
+ */
+nsenter:
+	push {r4-r11, lr}
+	mov r11, #0
+3:	mcr p15, 2, r11, c0, c0, 0	@ CSSELR: the cache of level r11/2+1
+	isb
+	mrc p15, 1, r0, c0, c0, 0	@ CCSIDR: its geometry
+	and r1, r0, #7
+	add r1, r1, #4
+	movw r3, #0x3ff
+	and r3, r3, r0, lsr #3
+	clz ip, r3
+	movw r7, #0x7fff
+	and r7, r7, r0, lsr #13
+1:	mov r8, r3
+2:	lsl r9, r8, ip
+	orr r9, r9, r7, lsl r1
+	orr r9, r9, r11
+	mcr p15, 0, r9, c7, c14, 2	@ DCCISW: clean and invalidate by set/way
+	subs r8, r8, #1
+	bge 2b
+	subs r7, r7, #1
+	bge 1b
+	add r11, r11, #2
+	cmp r11, #4
+	blo 3b
+	dsb
+	mrc p15, 0, r0, c1, c1, 2	@ NSACR
+	orr r0, r0, #(3 << 10)		@ cp10, cp11: VFP
+	mcr p15, 0, r0, c1, c1, 2
+	ldr r0, =monvec
+	mcr p15, 0, r0, c12, c0, 1	@ MVBAR
+	isb
+	smc #0
+	mov r2, #0
+	mcr p15, 0, r2, c8, c7, 0	@ TLBIALL
+	mcr p15, 0, r2, c7, c5, 0	@ ICIALLU
+	mcr p15, 0, r2, c7, c5, 6	@ BPIALL
+	dsb
+	isb
+	pop {r4-r11, pc}
+
+.balign 32
+monvec:
+	b .
+	b .
+	b monsmc
+	b .
+	b .
+	b .
+	b .
+	b .
+
+monsmc:
+	mrc p15, 0, r0, c1, c0, 0	@ SCTLR
+	mrc p15, 0, r1, c2, c0, 2	@ TTBCR
+	mrrc p15, 0, r2, r3, c2		@ TTBR0
+	mrrc p15, 1, r4, r5, c2		@ TTBR1
+	mrc p15, 0, r6, c10, c2, 0	@ MAIR0
+	mrc p15, 0, r7, c12, c0, 0	@ VBAR
+	mrc p15, 0, r8, c1, c1, 0	@ SCR
+	orr r8, r8, #1			@ NS: the non-secure copies from here
+	mcr p15, 0, r8, c1, c1, 0
+	isb
+	mcr p15, 0, r1, c2, c0, 2	@ TTBCR
+	mcrr p15, 0, r2, r3, c2		@ TTBR0
+	mcrr p15, 1, r4, r5, c2		@ TTBR1
+	mcr p15, 0, r6, c10, c2, 0	@ MAIR0
+	mcr p15, 0, r7, c12, c0, 0	@ VBAR
+	mcr p15, 0, r0, c1, c0, 0	@ SCTLR
+	isb
+	movs pc, lr
 
 .data
 waitloc:

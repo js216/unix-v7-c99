@@ -108,3 +108,4 @@ void	cninit(void) { klinit(); }
 void	bdinit(void) { rkinit(); }
 void	clock_ddr_init(void) { DDRINIT; }
 void	wdinit(void) { WDINIT; }
+void	nsinit(void) { NSINIT; }

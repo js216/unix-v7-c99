@@ -3,7 +3,8 @@ LIB1 = $S/sys/LIB1
 LIB2 = $S/dev/LIB2
 LIB1_OBJ := $(patsubst %.c,%.o,$(wildcard $S/sys/*.c))
 QEMU_DRV = $S/dev/pl011.o $S/dev/virtio_blk.o
-MP135_DRV = $S/dev/usart.o $S/dev/iwdg.o $S/dev/sd.o $S/dev/ddr.o $S/dev/pmic.o
+MP135_DRV = $S/dev/usart.o $S/dev/iwdg.o $S/dev/sd.o $S/dev/ddr.o $S/dev/pmic.o \
+	$S/dev/etzpc.o
 LIB2_OBJ := $(filter-out $(QEMU_DRV) $(MP135_DRV), \
 	$(patsubst %.c,%.o,$(wildcard $S/dev/*.c)))
 BOARDS = qemu mp135

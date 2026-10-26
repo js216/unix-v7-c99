@@ -194,6 +194,7 @@ machine_init(void)
 	wdinit();
 	cninit();
 	clock_ddr_init();
+	nsinit();
 	kmap(BLK_KERN);
 	a = ptob(btop(vtop(__bss_end)));
 	if(a > corebase && a < coretop)

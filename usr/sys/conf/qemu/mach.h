@@ -9,3 +9,4 @@
 	{0xf0400000, 0x0a000000, 0x0a200000, BLK_DEV},	/* virtio */
 #define	DDRINIT
 #define	WDINIT
+#define	NSINIT
