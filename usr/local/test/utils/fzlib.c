@@ -7,8 +7,7 @@
  * with 17 digits must give back every bit; ldexp, frexp, modf, floor,
  * and ceil against exact references, and sqrt, exp, log, sin, and cos
  * against identities they must hold to a few units in the last place;
- * arrays
- * sorted by qsort, which must come out ordered and a permutation;
+ * scanf reading back what sprintf wrote; arrays sorted by qsort, which must come out ordered and a permutation;
  * strings compared, copied, and searched against naive versions; and
  * times broken down by gmtime against a conversion of its own.  It
  * writes no file.  Prints the seed, round, and check on the first
@@ -510,6 +509,169 @@ fzfloat(int ncase)
 }
 
 /*
+ * scanf: what sprintf wrote, with random white space between, must
+ * read back to the same values and count, for integers of every
+ * size and base, numbers in fields of fixed width, doubles bit for
+ * bit, words, characters, and character classes.
+ */
+static char	*sep[] = { " ", "  ", "\t", "\n", " \t\n " };
+
+static unsigned long long
+pickll(void)
+{
+	unsigned long long v;
+
+	v = (unsigned long long)rnd(0) << 32 | rnd(0);
+	return(rnd(2) ? v >> rnd(64) : v);
+}
+
+static void
+scanint(void)
+{
+	int i, n, k, d, d2;
+	unsigned u, u2, pw;
+	long l, l2;
+	long long ll, ll2;
+	short h, h2;
+
+	what = "scanf integers";
+	d = pickint();
+	u = pickint();
+	l = pickint();
+	ll = pickll();
+	h = pickint();
+	k = rnd(5);
+	sprintf(b3, "%s%d%s%o%s%x%s%ld%s%lld%s%d", sep[rnd(5)], d, sep[k],
+	    u, sep[rnd(5)], u, sep[rnd(5)], l, sep[rnd(5)], ll,
+	    sep[rnd(5)], h);
+	d2 = l2 = h2 = 0;
+	u2 = 0;
+	ll2 = 0;
+	n = sscanf(b3, "%d%o", &d2, &u2);
+	if(n != 2 || d2 != d || u2 != u)
+		fail(b3);
+	u2 = 0;
+	n = sscanf(b3, "%*d %*o %x %ld %lld %hd", &u2, &l2, &ll2, &h2);
+	if(n != 4 || u2 != u || l2 != l || ll2 != ll || h2 != h)
+		fail(b3);
+	n = sscanf(b3, "%D", &l2);
+	if(n != 1 || l2 != d)
+		fail(b3);
+
+	what = "scanf widths";
+	k = 1 + rnd(9);
+	for(i = 0, pw = 1; i < k; i++)
+		pw *= 10;
+	b3[0] = '\0';
+	for(i = 0; i < 4; i++) {
+		sprintf(b4, "%%0%du", k);
+		sprintf(b3 + strlen(b3), b4, rnd(pw));
+	}
+	sprintf(b4, "%%%du%%%du%%%du%%%du", k, k, k, k);
+	{
+		unsigned v[4];
+		char *p;
+
+		if(sscanf(b3, b4, &v[0], &v[1], &v[2], &v[3]) != 4)
+			fail(b3);
+		for(i = 0, p = b3; i < 4; i++, p += k) {
+			strncpy(b1, p, k);
+			b1[k] = '\0';
+			if(parse(b1, 10) != v[i])
+				fail(b3);
+		}
+	}
+}
+
+static void
+scanfloat(void)
+{
+	double x, y;
+	float f;
+	int n;
+
+	what = "scanf doubles";
+	x = pickbits();
+	sprintf(b3, "%s%.16e%s", sep[rnd(5)], x, sep[rnd(5)]);
+	y = 0;
+	n = sscanf(b3, rnd(2) ? "%lf" : "%E", &y);
+	if(n != 1)
+		fail(b3);
+	same(x, y, b3);
+	x = pickdouble();
+	sprintf(b3, "%.9e", x);
+	n = sscanf(b3, "%f", &f);
+	if(n != 1 || f != (float)atof(b3))
+		fail(b3);
+}
+
+static void
+scanstr(void)
+{
+	char w[6][40], r[6][40], c[50];
+	int i, j, n, k;
+
+	what = "scanf words";
+	b3[0] = '\0';
+	for(i = 0; i < 6; i++) {
+		n = 1 + rnd(30);
+		for(j = 0; j < n; j++)
+			w[i][j] = '!' + rnd(94);
+		w[i][n] = '\0';
+		strcat(b3, sep[rnd(5)]);
+		strcat(b3, w[i]);
+	}
+	n = sscanf(b3, "%s %s %*s %s%s %s", r[0], r[1], r[3], r[4], r[5]);
+	if(n != 5 || strcmp(r[0], w[0]) || strcmp(r[1], w[1]) ||
+	    strcmp(r[3], w[3]) || strcmp(r[4], w[4]) || strcmp(r[5], w[5]))
+		fail(b3);
+	k = 1 + rnd(8);
+	sprintf(b4, "%%%ds", k);
+	if(sscanf(b3, b4, r[0]) != 1 || strncmp(r[0], w[0], k) ||
+	    (int)strlen(r[0]) != ((int)strlen(w[0]) < k ?
+	    (int)strlen(w[0]) : k))
+		fail(b3);
+
+	what = "scanf characters";
+	k = 1 + rnd(40);
+	if((int)strlen(b3) < k)
+		k = strlen(b3);
+	sprintf(b4, "%%%dc", k);
+	for(i = 0; i < 50; i++)
+		c[i] = 1;
+	if(sscanf(b3, b4, c) != 1 || strncmp(c, b3, k) || c[k] != 1)
+		fail(b3);
+
+	what = "scanf classes";
+	for(i = 0; i < 30; i++)
+		b1[i] = 'a' + rnd(6);
+	b1[i] = '\0';
+	k = 1 + rnd(29);
+	b1[k] = 'x';
+	if(sscanf(b1, "%[abcdef]x%[^q]", r[0], r[1]) != (k < 29 ? 2 : 1) ||
+	    strncmp(r[0], b1, k) || r[0][k] != '\0' ||
+	    (k < 29 && strcmp(r[1], b1 + k + 1)))
+		fail(b1);
+}
+
+static void
+fzscan(int ncase)
+{
+	int i, d;
+
+	for(i = 0; i < ncase; i++) {
+		scanint();
+		scanfloat();
+		scanstr();
+	}
+	what = "scanf end";
+	d = 7;
+	if(sscanf("", "%d", &d) != -1 || sscanf(" \t\n", "%d", &d) != -1 ||
+	    sscanf("x", "%d", &d) != 0 || d != 7)
+		fail("empty input");
+}
+
+/*
  * qsort: arrays of one, four, and twelve bytes, with many equal
  * keys; the result must be ordered and hold the same elements.
  */
@@ -725,6 +887,7 @@ main(int argc, char **argv)
 		fzint(300);
 		fzdouble(300);
 		fzfloat(300);
+		fzscan(300);
 		fzsort(30);
 		fzstr(300);
 		fztime(300);
