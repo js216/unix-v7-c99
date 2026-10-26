@@ -9207,45 +9207,91 @@ conversions (#f("stdio/doscan.c")), `awk`, `graph`, and `spline`.
 Leading blanks are skipped, though not tabs. The conversion stops at the
 first character which cannot continue the number.
 
-#lines-to("exp = 0;")
+The v7 routine gathered the digits in a `double`, up to 2 to the power
+56, and multiplied or divided by a power of ten built from powers of
+five by repeated squaring. Every product rounded, so a number of
+seventeen digits could come back several units in its last place away
+from the nearest `double`, the more the larger its exponent: the digits
+printed for -7.32495410389490839e-249 were read as a `double` five units
+away. The fuzzer of the library, `fzlib`, found it. This
+`atof` keeps every digit exactly, in a big integer, and rounds once, to
+the nearest `double`, an exact tie going to the one whose last bit is
+even. It then agrees bit for bit with a correctly rounding `strtod`.
 
-The digits are accumulated as an integer in the `double` `fl`, the point
-being remembered as a decimal exponent `exp`, which is decremented for
-each digit after the point. Once `fl` reaches 2 to the power 56 (#l("double big = 72057594037927936.;  /*2^56*/")), further
-digits before the point only increment `exp`, and further digits after
-it are ignored. The limit is the 56-bit fraction of the PDP-11's
-`double`, the most digits it could hold exactly. The ARM's IEEE `double`
-has a fraction of 53 bits, so digits accumulated between 2 to the
-power 53 and 2 to the power 56 are rounded. The effect is confined to the last
-bit or two of the result, and v7's constant has been kept.
+A big integer is an array of 32-bit limbs, the least significant
+first, with a count of those in use. `NLIMB` limbs hold 4160 bits,
+enough for 800 digits times the largest power of ten which the
+conversion multiplies or divides by. More than `MAXDIG` digits never
+change the result. Between two neighbouring `double`s lies a number of
+at most 767 significant digits which decides which is nearer, and
+digits beyond it can only say that the value lies above that number, not
+on it.
+
+#lines-to("static void")
+
+The arithmetic is only what the conversion needs. The routine `bmuladd` multiplies by a small number
+and adds another, with a 64-bit product for each limb; `bbits` counts
+the bits in use; `bshl` shifts left by any number of bits; `bcmp`
+compares; `bsub` subtracts a smaller number from a larger; and `bpow10`
+multiplies by a power of ten, nine digits at a time.
+
+#lines-to("static big\tnum, den, t;")
+
+The numbers are
+static, since each is over half a kilobyte, and `bassign` copies one,
+which a structure assignment would do through `memcpy`, a routine the
+library does not have.
+
+The routine `digit` takes one digit of the mantissa into `num`. A
+leading zero only moves the point, and a digit after the point lowers
+the exponent `dexp` by one. Beyond `MAXDIG` digits a digit before the
+point only raises the exponent, and `sticky` records that a digit
+which was not kept was not zero.
+
+#lines-to("double")
+
+The parse is v7's: blanks, a sign, the digits before the point and
+after it. When digits were dropped and one of them was not zero, a 1
+is appended (#l("if (sticky) {")--#l("dexp--;", after: "bmuladd(&num, 10, 1);")). This puts the value strictly between the
+kept digits and the next value of them, where all the dropped digits
+put it, so that it cannot be taken for a tie.
 
 #lines-to("negexp = 1;")
 
-The explicit exponent is added to `exp`. Its digits are accumulated
+The explicit exponent is added to `dexp`. Its digits are accumulated
 only while it is below 10000 (#l("if (eexp < 10000)")), a test the port has added: v7 let
 `eexp` grow without limit, and a long enough string of digits overflowed
 the `int`, which C leaves undefined. Ten thousand is far beyond any
-exponent which can make a difference, since the result is already zero
-or infinite long before.
+exponent which can make a difference.
 
-#lines-to("if(fl == 0 || (nd+exp*negexp) < -LOGHUGE){", lead: true)
+#lines-to("/*", after: "dexp = dexp + eexp;")
 
-The scaling. Multiplying by a power of ten is done as multiplying by
-the same power of five and then of two. The power of five is computed by
-repeated squaring. The power of two is applied with `ldexp`, which only
-changes the exponent of the `double` and is therefore exact. (`ldexp` is
-`ldexp.c`, the port's C replacement for v7's PDP-11 assembly
-`ldexp11.s`.)
+The value is `num` times ten to the power `dexp`. A value below ten to
+the power -330 is zero, being less than half the smallest `double`,
+and one above ten to the power 310 is `HUGE`, the largest, as v7's
+overflowing `ldexp` gave (#l("if (num.n == 0 || nd + dexp < -330)")--#l("return(neg ? -HUGE : HUGE);")). Otherwise it is made a
+fraction, `num` over `den`, with the power of ten on one side or the
+other.
 
-A number whose magnitude is below 10 to the power -`LOGHUGE` becomes
-zero at once (#l("if(fl == 0 || (nd+exp*negexp) < -LOGHUGE){")). `LOGHUGE`, in `math.h`, was 39 on the PDP-11, whose
-largest `double` was about 1.7e38. It is 308 for the IEEE `double`.
+#lines-to("/*", after: "bpow10(&den, -dexp);")
 
-The test `fl == 0` (#l("if(fl == 0 || (nd+exp*negexp) < -LOGHUGE){")) is new. A zero mantissa with a large exponent,
-such as `0e500`, made `flexp` infinite, and zero times infinity is not
-a number. Such input now takes the path to zero directly. The PDP-11 of v7
-had no infinities, and this case could not arise. The local declaration
-of `ldexp` has gone, `math.h` now declaring it with a prototype.
+The quotient `q` of `num` times 2 to the power `k` by `den` is formed
+bit by bit, by long division (#l("for (i = 63; i >= 0; i--) {")--#l("sticky = num.n != 0;")). `k` is chosen from the lengths of
+`num` and `den` so that `q` has 62 or 63 bits, nine or ten more than a
+`double` keeps. The remainder survives only as `sticky`, whether it was
+zero: whether the value lies on the bits of `q` or beyond them.
+
+#lines-to("/*", after: "sticky = num.n != 0;")
+
+The rounding. The value lies between 2 to the power `e2` and twice
+that. A `double` keeps 53 bits, or fewer for a subnormal number below 2 to
+the power -1022, `prec` bits in all. The bits below them are dropped,
+and `m` is rounded up when they exceed half a unit of its last place,
+or equal it and either something beyond them is not zero or `m` is odd
+(#l("if (rem > half || (rem == half && (sticky || (m & 1))))")). `m` then has at most 54 bits, and its two halves convert to
+`double` exactly, without a 64-bit conversion, which on the ARM is a
+routine of the compiler's library, which the system is not linked with.
+`ldexp` (#f("gen/ldexp.c")) applies the power of two exactly.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/atoi.c")
@@ -9272,63 +9318,81 @@ follow the point. They serve `_doprnt` for `%e` and `%f`
 (#f("stdio/doprnt.c")) and `gcvt` for `%g`. The result is in a static
 buffer which the next call overwrites.
 
+The v7 routine produced the digits by arithmetic in `double`s,
+dividing the integer part by ten and multiplying the fraction by ten,
+and every step rounded. A number printed to seventeen digits could
+differ from the nearest decimal in its last two or three, the more the
+larger its exponent, and for numbers of 1e40 or more it divided by 1e10
+first and lost those digits outright. The fuzzer of the library, `fzlib`,
+found it. This `cvt` produces the digits of the exact
+value of the `double` and rounds them once, to nearest, an exact tie
+going to the even digit, as a correctly rounding `printf` does.
+
+#lines-to("#define\tNLIMB")
+
 The includes and the static declaration of `cvt` (#l("#include <stdio.h>")--#l("int eflag);")) are new:
 #f("stdio.h") holds the prototypes of `ecvt` and `fcvt`, and `math.h`
-that of `modf`, which v7 declared locally, and `cvt` is used before it is
+those of `frexp` and `ldexp`, and `cvt` is used before it is
 defined.
+
+#lines-to("static big\tip, fp;")
+
+A `double` is an integer `m` of 53 bits times a power of two, `2^e`. Its
+integer part and its fraction are held as big integers, `ip` and `fp`,
+of 32-bit limbs, the least significant first, the fraction as an integer
+over 2 to the power `fs`. Forty limbs hold the 1077 bits of the largest
+fraction, that of the smallest subnormal number, and the 1024 of the
+largest integer part. The array `id` holds the integer part's digits,
+up to 309, the last first.
+
+#lines-to("static unsigned")
+
+The routine `bdiv10` divides by ten in place, returning the remainder, a
+digit of the integer part, and `bmul10` multiplies by ten. The division
+works sixteen bits at a time, since the remainder is below ten, so that
+no 64-bit division, which the ARM does in a routine of the compiler's
+library, is needed.
+
+#lines-to("/*", after: "if(c)")
+
+The routine `fdigit` produces the next digit of the fraction: it multiplies the
+fraction by ten and takes off the bits at and above `fs`, which are the
+digit. The routine `next` gives the digits of the whole value in order,
+those of the integer part first.
 
 #lines-to("static char*")
 
 The routine `cvt` does the work for both, `eflag` telling them apart. The number of
 digits is kept within the buffer of `NDIG` bytes, and the sign is
-recorded and removed. The variable `r2` will count the position of the decimal point.
+recorded and removed. An infinity, or a NaN, which IEEE arithmetic can
+produce and the PDP-11's could not, is replaced by the largest finite
+`double` (#l("if (!(arg <= 1.7976931348623157e308))")), as the port did before. Zero gives zeros, its point at 0.
 
-#lines-to("if (!(arg <= 1.7976931348623157e308))")
+#lines-to("x = ldexp(frexp(arg, &e), 53);")
 
-The test at (#l("if (!(arg <= 1.7976931348623157e308))")) is new. It replaces an infinity, or a NaN, which the
-IEEE arithmetic of the ARM can produce and the PDP-11's could not, by
-the largest finite `double`. Without it, the loop at (#l("while (fi != 0) {")) would never
-end for an infinity, since dividing an infinity by ten leaves it
-infinite.
+The value is taken apart exactly (#l("x = ldexp(frexp(arg, &e), 53);")--#l("m = (unsigned long long)h << 32 | (unsigned)(x - h * 4294967296.0);")): `frexp` and `ldexp` give `m` as a
+`double` holding an integer, which is split into its two halves for
+the same reason as the division by ten. A non-negative `e` makes the
+whole value an integer, `m` shifted left. Otherwise the fraction has
+`fs` bits, and the integer part, if any, is `m` shifted right.
 
-A call of `modf` splits the number into its integer part `fi` and its fraction.
-The digits of the integer part are produced from the right by dividing
-by ten and taking the remainder, `fj` being the fraction of `fi/10`. The
-`.03` makes up for the inexactness of that fraction, which may fall
-just short of a tenth of the digit. The digits are built backwards from
-the end of `buf` and then moved to its start. A number below 1 instead
-yields its leading zeros as a negative `r2`: it is multiplied by ten,
-and `r2` decremented, as long as the product stays below 1.
+#lines-to("/*", after: "fp.n--;")
 
-The loop at (#l("for (; fi >= 1e40; r2 += 10)")--#l("modf(fi, &fi);")) is new. The largest PDP-11 number, about 1.7e38,
-had 39 digits before the point, and these always fitted in the 80 bytes
-of `buf`. An IEEE `double` may have 309, and the digits, built
-backwards from the end, would run off the front of the buffer for any
-number of 1e80 or more. Numbers of 1e40 or more are therefore divided by
-1e10 until they are smaller, `r2` counting ten places for each
-division, and the fraction which the division leaves is discarded
-(#l("modf(fi, &fi);")). At most 40 digits are thus produced. The rest are lost, but a
-`double` has only about seventeen significant decimal digits, and the
-digits which follow are supplied as zeros by the fraction loop below
-(the fraction of so large a number being zero) or by `_doprnt`.
+The digits of the integer part are found, and then the first digit of
+the value. The point lies after the integer part's digits, and for a
+number below 1 each leading zero of the fraction moves it one place
+left (`r2`). The count of digits wanted, `k`, is `ndigits`, or for
+`fcvt` that many past the point. As in v7, too few places make the
+result empty, and more than the buffer holds are given unrounded.
 
-#lines-to("p1 = &buf[ndigits];")
+#lines-to("/*", after: "buf[k] = '\\0';")
 
-The pointer `p1` marks the position one past the last digit wanted: `ndigits` from
-the start for `ecvt`, `ndigits` past the point for `fcvt`. If that lies
-before the start, as for a small number with too few places asked of
-`fcvt`, the result is empty. Otherwise digits of the fraction are
-produced, by repeated multiplication by ten, until there is one beyond
-the last wanted, the buffer being full at worst. In the latter case the
-result is returned unrounded, `NDIG`-1 digits long.
-
-#lines-to("p = p1;")
-
-The extra digit rounds the result: 5 is added to it and the carry is
-propagated leftwards. A carry out of the first digit, as when 9.99 is
-rounded to two digits, makes that digit `1`, moves the point one place
-right, and in `fcvt`'s case adds a digit at the end. The rounding digit
-itself is then cut off by the null character.
+The first digit not kept, `d`, and whether anything at all lies beyond
+it, `sticky`, decide the rounding. More than half a unit of the last
+digit rounds up, and so does exactly half when that digit is odd
+(#l("up = d > 5 || (d == 5 && (sticky || (k > 0 && (buf[k-1] & 1))));")). A carry out of the first digit, as when 9.99 is rounded to
+two digits, makes the digits a 1 and zeros, moves the point one place
+right, and in `fcvt`'s case adds a digit at the end.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/frexp.c")
