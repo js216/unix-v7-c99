@@ -1,6 +1,6 @@
 T=/tmp/ddend U=/usr/local/test/utils
 mkdir $T; cd $T
 set `$U/swb`; e=`expr $2 - 1`
-$U/endblk /dev/rrk0 $e
-dd if=/dev/rrk0 bs=512 skip=99999999999 count=1; echo st$?
+$U/endblk /dev/rrk2 $e
+dd if=/dev/rrk2 bs=512 skip=99999999999 count=1; echo st$?
 cd /; rm -rf $T

@@ -1,6 +1,6 @@
 T=/tmp/login U=/usr/local/test/utils
 mkdir $T; cd $T
 ls -ld /usr/dmr /usr/sys /usr/lib/uucp
-ls -l /dev/root /dev/swap /dev/rrk0
+ls -l /dev/root /dev/swap /dev/rrk0 /dev/rrk1 /dev/rrk2
 echo 'pwd; ps; echo ps$?' | su dmr | sort +3
 cd /; rm -rf $T

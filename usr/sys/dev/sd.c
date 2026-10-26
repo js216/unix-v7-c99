@@ -51,7 +51,7 @@
 #define	BUSYD0END	(1<<21)
 #define	WIDE	(1<<14)
 #define	MAXIO	0x1000000
-#define	RKBASE	1024	/* first block of the disk on the card */
+#define	RKBASE	1024	/* first block of the file system on the card */
 
 /*
  * Monitoring device bit
@@ -65,6 +65,14 @@ struct	buf	rrkbuf;
 unsigned	rkoff;
 static unsigned	rkn, rkstop, rksta;
 daddr_t	nrkblk;
+
+/*
+ * The minor devices: the whole card, the boot area which holds the
+ * copies of the kernel the ROM boots, and the file system and swap
+ */
+struct {
+	daddr_t	base, len;
+} rksizes[3];
 static unsigned	rca, rkbyte;
 
 static void
@@ -104,8 +112,8 @@ rkcmd(int com, unsigned arg, int resp)
  * Bring the card up as the boot ROM would have:
  * pins, a 400 kHz clock, identification, the size
  * from the CSD, selection, then 4 bits at 32 MHz.
- * The disk begins at block RKBASE of the card,
- * after the copies of the kernel the ROM boots.
+ * The file system begins at block RKBASE of the
+ * card, after the copies of the kernel the ROM boots.
  */
 void
 rkinit(void)
@@ -174,15 +182,21 @@ rkinit(void)
 		rkdelay(10);
 		SD(CLKCR) = 1 | WIDE;
 	}
-	nrkblk -= RKBASE;
+	rksizes[0].len = nrkblk;
+	rksizes[1].len = RKBASE;
+	rksizes[2].base = RKBASE;
+	rksizes[2].len = nrkblk - RKBASE;
 }
 
 void
 rkstrategy(register struct buf *bp)
 {
+	register unsigned m;
 
-	if (bp->b_blkno >= nrkblk || bp->b_bcount&BMASK ||
-	    (int)bp->b_un.b_addr&3) {
+	m = minor(bp->b_dev);
+	if (m >= 3 ||
+	    bp->b_blkno + (daddr_t)(bp->b_bcount>>BSHIFT) > rksizes[m].len ||
+	    bp->b_bcount&BMASK || (int)bp->b_un.b_addr&3) {
 		bp->b_flags |= B_ERROR;
 		iodone(bp);
 		return;
@@ -228,8 +242,8 @@ rkstart(void)
 	SD(IDMABASER) = vtop(bp->b_un.b_addr+rkoff);
 	SD(IDMACTRL) = 1;
 	SD(MASK) = IENABLE;
-	SD(ARG) = (RKBASE+bp->b_blkno+(rkoff>>BSHIFT)) << (rkbyte ?
-	    BSHIFT : 0);
+	SD(ARG) = (rksizes[minor(bp->b_dev)].base + bp->b_blkno +
+	    (rkoff>>BSHIFT)) << (rkbyte ? BSHIFT : 0);
 	com = GO;
 	if(bp->b_flags & B_READ)
 		com |= RCOM; else

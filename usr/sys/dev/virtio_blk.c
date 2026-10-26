@@ -81,11 +81,19 @@ rkinit(void)
 	rkirq = 48 + (vbase-0xF0400000)/0x200;
 }
 
+/*
+ * Minor devices 0 and 2 are the whole disk, as the whole card and
+ * its file system are on the MP135 machine; 1, the boot area, is
+ * empty.
+ */
 void
 rkstrategy(register struct buf *bp)
 {
+	register unsigned m;
 
-	if (bp->b_blkno >= NRKBLK || bp->b_bcount&BMASK) {
+	m = minor(bp->b_dev);
+	if (m >= 3 || m == 1 ||
+	    bp->b_blkno + (daddr_t)(bp->b_bcount>>BSHIFT) > NRKBLK || bp->b_bcount&BMASK) {
 		bp->b_flags |= B_ERROR;
 		iodone(bp);
 		return;

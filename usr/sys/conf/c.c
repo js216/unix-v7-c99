@@ -63,9 +63,9 @@ struct	linesw	linesw[] =
 	{0}
 };
 
-int	rootdev	= makedev(0, 0);
-int	swapdev	= makedev(0, 0);
-int	pipedev = makedev(0, 0);
+int	rootdev	= makedev(0, 2);
+int	swapdev	= makedev(0, 2);
+int	pipedev = makedev(0, 2);
 int	nldisp = 1;
 daddr_t	swplo	= 32768;
 int	nswap	= 1048576;
