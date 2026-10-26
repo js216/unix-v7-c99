@@ -204,7 +204,7 @@ estabur(unsigned ts, unsigned nt, unsigned ds, unsigned nd, unsigned ns,
 	    !apart(ds, nd, ss, ns) || !apart(ts, nt, tr, 1) ||
 	    !apart(ds, nd, tr, 1) || !apart(ss, ns, tr, 1))
 		goto err;
-	if(nt+nd+ns+USIZE > maxmem)
+	if(USIZE + mapneed(0, nd+ns) + mapneed(0, nt) > (int)maxmem)
 		goto err;
 	u.u_ptstart = ts;
 	u.u_ptsize = nt;

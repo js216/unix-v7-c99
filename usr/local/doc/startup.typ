@@ -2407,8 +2407,9 @@ The routine `estabur` checks a new shape before it records it. Each
 segment must lie below `USRSIZE` (#l("if(nt > top || ts > top-nt || nd > top || ds > top-nd || ns > top)")), tested so that no sum can wrap.
 The text, the data, the stack, which ends at `USRSIZE`, and the
 trampoline's page at `SIGTRAMP` (#f("seg.h")) must all be apart
-(#l("if(!apart(ts, nt, ds, nd) || !apart(ts, nt, ss, ns) ||")--#l("!apart(ds, nd, tr, 1) || !apart(ss, ns, tr, 1))")). And the image, with its per process data area, must not exceed
-`maxmem` (#l("if(nt+nd+ns+USIZE > maxmem)")). In v7 the checks were others. It refused separate
+(#l("if(!apart(ts, nt, ds, nd) || !apart(ts, nt, ss, ns) ||")--#l("!apart(ds, nd, tr, 1) || !apart(ss, ns, tr, 1))")). And the image, with its per process data area and the pages of its
+page maps, and of its text's, must not exceed `maxmem` (#l("if(USIZE + mapneed(0, nd+ns) + mapneed(0, nt) > (int)maxmem)")), so that the
+swapper can always bring it back in once it has made room. In v7 the checks were others. It refused separate
 instruction and data spaces on a PDP-11 without them, and required the
 segments to fit its eight segmentation registers, the text and data from
 address 0 and the stack at the top. Here each segment lies where its
