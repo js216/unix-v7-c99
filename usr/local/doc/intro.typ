@@ -336,8 +336,11 @@ in DDR, from 0xc0200000 (#f("mp135/unix.ld")). The kernel's stack is the kernel
 stack in the u-area, described below. The device registers follow, one 2~MB block
 for each device. The devices are mapped only in the kernel's gigabyte, so
 a user program reaches a device only via #box(`/dev/mem`) or through its
-driver. The file #box(`/dev/mem`) is the physical memory, and #box(`/dev/kmem`)
-the kernel's gigabyte by kernel address (#f("mem.c")). A program such
+driver. The file #box(`/dev/mem`) is the memory and device registers
+which the kernel maps, by physical address, and #box(`/dev/kmem`) the
+same by kernel address (#f("mem.c")). Neither is mapped anywhere
+itself: the driver finds the kernel address of each offset in the map
+of regions (#f("c.c")). A program such
 as `ps` or `pstat` reads the kernel's tables through #box(`/dev/kmem`), at the
 addresses which it finds in the symbol table of #box(`/unix`). These are
 kernel addresses, so without #box(`/dev/kmem`) the program would have to
