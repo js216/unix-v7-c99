@@ -1401,23 +1401,23 @@ carries neither the multiplexor (`mx1.c`, `mx2.c`) nor its stub
 `fakemx.c`, and the definition is gone.
 
 In v7, `main.c` defined the buffers, the three maps, and the mount
-table, `callo.h` the callouts, and `prim.c` the character blocks. The port defines them here too (#l("int\tbuffers[NBUF+1][(BSIZE+BSLOP+63)/64*16];")--#l("struct\tcblock\tcfree[NCLIST];")),
-so that every large table is in `c.o`, which the MP135 machine's linker
-script places in DDR, beyond the small SYSRAM in which its kernel runs
-(#f("mp135/unix.ld")). The sizes are the same on both machines, and
-`CMAPSIZ` and the other sizes of the maps are computed from them. The
-buffers have one row more than `NBUF`, of a whole number of 64-byte
-cache lines, for `binit` to align them (#f("main.c")).
+table, `callo.h` the callouts, and `prim.c` the character blocks. The port defines them here too (#l("struct\tmap\tcoremap[CMAPSIZ];")--#l("struct\tcblock\tcfree[NCLIST];")).
+The buffers are the exception. Here `buffers` (#l("int\t(*buffers)[(BSIZE+BSLOP+63)/64*16];")) is only a pointer,
+which `startup` sets to rows it takes from core (#f("machdep.c")), since
+the SD card's DMA does not reach all the on-chip RAM in which the MP135
+machine's kernel lies. The sizes are the same on both machines, and
+`CMAPSIZ` and the other sizes of the maps are computed from them.
 
-#lines-to("unsigned int\tcorebase, coreoff, coretop = CORETOP;")
+#lines-to("unsigned int\tcorebase = COREBASE, coreoff, coretop = CORETOP;")
 
 The rest of the file is new: the facts about the machine, which come
 from #f("qemu/mach.h") or #f("mp135/mach.h").
 
-The bounds `corebase` and `coretop` (#l("unsigned int\tcorebase, coreoff, coretop = CORETOP;")) give, by physical address, the memory
+The bounds `corebase` and `coretop` (#l("unsigned int\tcorebase = COREBASE, coreoff, coretop = CORETOP;")) give, by physical address, the memory
 which `startup` (#f("machdep.c")) gives to `coremap` for process images:
-from the first page after the kernel, which `machine_init` stores into
-`corebase`, to `CORETOP`, the end of the machine's memory. The offset `coreoff`, which
+from `COREBASE`, the start of the machine's RAM, or the first page
+after the kernel if the kernel lies in that RAM, which `machine_init`
+decides, to `CORETOP`, the end of the machine's memory. The offset `coreoff`, which
 `machine_init` also sets, is the distance from the physical address of
 core to its kernel address (#f("seg.h")). The addresses `gicdbase` and `giccbase` (#l("unsigned int\tgicdbase = GICDBASE, giccbase = GICCBASE;"))
 locate, by kernel address, the distributor and the processor interface
@@ -1444,8 +1444,10 @@ machine-dependent code calls the configured drivers without naming them. The rou
 finds the disk before `main` enables the interrupts. The other two
 come from the header. On the MP135 machine `clock_ddr_init` starts the
 memory controller (#f("ddr.c")), and `wdinit` starts the watchdog
-(#f("iwdg.c")). On the QEMU machine both are empty, since its memory
-needs no initialisation and it has no watchdog. The routine `putchar`, the
+(#f("iwdg.c")). The last, `nsinit`, leaves the secure world in which the
+MP135 machine's boot ROM starts the kernel (#f("etzpc.c")). On the QEMU machine all three are empty, since its memory
+needs no initialisation, it has no watchdog, and it has no secure
+world. The routine `putchar`, the
 console output of `printf` (#f("prf.c")), needs no glue: the console
 driver defines it under v7's name (#f("pl011.c")).
 
@@ -1453,8 +1455,8 @@ driver defines it under v7's name (#f("pl011.c")).
 #source("/usr/sys/conf/qemu/mach.h")
 
 The facts which #f("c.c") needs about the QEMU machine. All the
-addresses are those of @ch-intro. `CORETOP` (#l("#define\tCORETOP\t0x60000000")) is the
-physical end of the 512~MB of memory with which QEMU is started, and
+addresses are those of @ch-intro. `COREBASE` and `CORETOP` (#l("#define\tCOREBASE\t0x40000000")--#l("#define\tCORETOP\t0x60000000")) are the
+physical start and end of the 512~MB of memory with which QEMU is started, and
 `GICDBASE` and `GICCBASE` the kernel addresses of the interrupt
 controller's distributor and processor interface.
 
@@ -1464,7 +1466,7 @@ others map a block of 2~MB each for the interrupt controller, the UART,
 and the virtio transports, from 0xf0000000, as device memory which may
 not be executed. `BLK_KERN` and `BLK_DEV` are defined in #f("seg.h").
 The devices which QEMU puts between them are not mapped. The QEMU
-machine needs neither `DDRINIT` nor `WDINIT`, and both are empty.
+machine needs neither `DDRINIT`, `WDINIT`, nor `NSINIT`, and all three are empty.
 
 #lines-to(none)
 #source("/usr/sys/conf/mp135/mach.h")
@@ -1479,17 +1481,16 @@ area. The console is one of the chip's serial ports, driven by
 
 The memory of the MP135 machine is in two pieces which are not
 contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
-`0x2ffe0000` (@ch-intro), which the first row of the map
-(#l("{0xc0000000, 0x2ffe0000, 0x30000000, BLK_KERN},")) places at 0xc0000000, where the
-QEMU machine's kernel lies too. SYSRAM is smaller than a block of 2~MB
+`0x2ffe0000`, with the 32~KB of SRAM1--3 after it for room (@ch-intro), which the first row of the map
+(#l("{0xc0000000, 0x2ffe0000, 0x30008000, BLK_KERN},")) places at 0xc0000000, where the
+QEMU machine's kernel lies too. This is smaller than a block of 2~MB
 and does not begin on one, so `machine_init` does not map it in a
 block. It keeps the pages in which `_start` mapped the kernel
 (#f("low.s"), #f("machdep.c")). Process images, and anything else too
 large for SYSRAM, live in the 512~MB of external DDR memory at
 `0xc0000000`, which the kernel maps at 0xc0200000, the next block
-(#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). The large tables of the kernel take the start of DDR
-(#f("mp135/unix.ld")), and core the rest of it, up to `CORETOP`
-(#l("#define\tCORETOP\t0xe0000000")).
+(#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). Core is the whole of DDR, from `COREBASE` to `CORETOP`
+(#l("#define\tCOREBASE\t0xc0000000")--#l("#define\tCORETOP\t0xe0000000")).
 
 The attributes of DDR are the QEMU machine's: all of DDR is
 normal memory, cached write-back, like the kernel itself in SYSRAM,
@@ -1514,8 +1515,9 @@ names its registers by these kernel addresses.
 
 Last, `DDRINIT` (#l("#define\tDDRINIT\tddrinit()")) makes `clock_ddr_init` call `ddrinit` (#f("ddr.c"))
 early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
-tables in it are touched, and `WDINIT` makes `wdinit` start the watchdog
-(`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
+tables in it are touched, `WDINIT` makes `wdinit` start the watchdog
+(`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped, and
+`NSINIT` makes `nsinit` leave the secure world (`etzpcinit`, #f("etzpc.c")).
 
 #lines-to(none)
 #source("/usr/sys/dev/virtio_blk.c")
@@ -4347,7 +4349,7 @@ kernel is the first stage. The page tables, the core, and all the
 processes are in DDR (#f("mp135/mach.h")), so the work must be done before
 anything else touches it, and `machine_init` calls `ddrinit` immediately
 after the device registers are mapped and the console is set up, before
-it maps the DDR, clears `.ddrbss`, and builds the table of the u-area.
+it maps the DDR and builds the table of the u-area.
 The registers are named by their kernel addresses, those of the blocks
 which #f("mp135/mach.h") maps. The work cannot be left to a user program:
 the kernel, its page tables, and the first processes would then all
@@ -4491,6 +4493,54 @@ restored (#l("DDRITFCR |= 0x100;")). DDR may now be used.
 
 #lines-to(none)
 
+#source("/usr/sys/dev/etzpc.c")
+
+The MP135 machine's boot ROM starts the kernel in the secure world of
+the ARM's TrustZone, in which SYSRAM and the chip's securable
+peripherals are reserved to secure software. The file #f("etzpc.c")
+leaves that world, once `machine_init` has started the DDR memory
+(#f("machdep.c")), and from then on the kernel runs, like any other
+program on the chip, in the non-secure world. The order of the work
+matters. The DDR's TrustZone controller accepts its settings only from
+the secure world (#f("ddr.c")), so it comes first. What the kernel
+needs afterwards must then be open to the non-secure world, or the
+kernel would fault on its own memory and devices.
+
+The macros name the registers by their kernel addresses (#f("mp135/mach.h")):
+the clock enables of the reset and clock controller, the GPIO ports,
+the TrustZone protection controller ETZPC, and the distributor and
+processor interface of the interrupt controller.
+
+#lines-to("void", lead: true)
+
+The routine `etzpcinit` first makes the whole of the reset and clock
+controller non-secure (#l("SECCFGR_RCC = 0;")). The boot ROM leaves parts of it secure,
+among them the system reset, which `/etc/reset` would then ask for in
+vain (#f("cmd/reset.c")). Then it turns on the clock of the ETZPC
+(#l("APB5ENSETR = 1<<13;")) and makes all of SYSRAM non-secure, by setting
+the size of its secure part to zero (#l("ETZPC(TZMA1_SIZE) &= ~01777;")). Each two bits of
+the `DECPROT` registers set the protection of one securable
+peripheral, and all ones (#l("ETZPC(DECPROT0+4*n) = ~0U;")) make every one of them readable
+and writable by the non-secure world. Each GPIO port has a register
+`SECCFGR` in which a pin may be made secure. With the ports' clocks
+on (#l("AHB4ENSETR = 0777;")), all of A to I are cleared (#l("GPIO(n, SECCFGR) = 0;")).
+
+The interrupt controller divides its interrupts into two groups, 0
+for the secure world and 1 for the non-secure, and the non-secure world
+sees only group 1. Both groups are enabled in the distributor and the
+processor interface, and every priority is let through
+(#l("GICD(0x000) |= 3;")--#l("GICC(0x004) = 0xFF;")). Then every interrupt is disabled, made not
+pending, and put in group 1 (#l("GICD(0x180+4*n) = ~0U;")--#l("GICD(0x080+4*n) = ~0U;")), so that `intrstart`
+(#f("machdep.c")) finds them, from the non-secure world, as it finds
+them on the QEMU machine. Last, `nsenter` (#f("mch.s")) switches the
+processor to the non-secure world, with the MMU, the caches, and the
+vectors as they were.
+
+The generic timer's frequency `CNTFRQ`, which only the secure world may
+set, is left as the boot ROM set it. The kernel takes its clock rate
+from it (`clkstart`, #f("machdep.c")).
+
+#lines-to(none)
 = Part Two: The Shell
 
 == User Space <ch-user>
@@ -14873,17 +14923,6 @@ tentative definitions left as common symbols, and GCC makes them only when
 asked with `-fcommon`, which the port does not use, so it collects
 nothing.
 
-#lines-to(".ddrbss (NOLOAD) : ALIGN(4096) {")
-
-`.ddrbss` holds the table `kl3u` reserved in #f("mch.s"), which must
-lie on a 4 KB boundary. `NOLOAD` makes it like `.bss`: it occupies
-memory but nothing in the file. It is cleared, not by `_start`, but by
-`machine_init` (#f("machdep.c")), between the symbols `__ddrbss_start`
-and `__ddrbss_end`. On the QEMU machine the distinction serves nothing,
-and the section simply follows `.bss` in `RAM`. It exists for the MP135
-machine (#f("mp135/unix.ld")), where the table lies in a memory which cannot be
-written until `machine_init` has started it.
-
 #lines-to("ASSERT(__bss_end <= _start + 0x200000, \"the kernel must lie in one block\")", lead: true)
 
 `_start` maps the kernel by pages through one third-level table, which
@@ -14894,39 +14933,20 @@ kernel unmapped.
 #lines-to(none)
 #source("/usr/sys/conf/mp135/unix.ld")
 
-The MP135 machine's linker script, #f("mp135/unix.ld"), differs from #f("qemu/unix.ld") in its two
-regions, in the difference between kernel and physical addresses, and
-in where it puts `.ddrbss` and what it puts there, and `u` and `start` are
-defined in the same way.
+The MP135 machine's linker script, #f("mp135/unix.ld"), differs from #f("qemu/unix.ld") only in
+its region and in the difference between kernel and physical addresses.
 
-`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, in
-which the kernel runs, by its kernel address 0xc0000000, that of the
-QEMU machine's kernel.
-The text, data, and `.bss` of the kernel must all fit there. The linker
-reports an overflow of the region, so a kernel which has outgrown SYSRAM
-fails to link rather than to boot. `TAB` is the DDR memory, at
-physical `0xc0000000` and kernel address 0xc0200000, which holds the
-table `kl3u` in `.ddrbss`, at its very start, and after it the tables
-of the configuration, and core follows them (#f("mp135/mach.h")). The first
-byte of the text, at the start of SYSRAM, is `_start`. From this ELF
-file the build makes the image which the boot ROM loads, with the
-ROM's header in front (#f("sys.mk")).
-
-Here the separation of `.ddrbss` from `.bss` matters. The DDR is dead
-until `ddrinit` (#f("ddr.c")) has started it, so `_start`
-(#f("low.s")) may clear only `.bss`, in SYSRAM, and `machine_init`
-(#f("machdep.c")) clears `.ddrbss` after the DDR is running. `NOLOAD`
-gives the section no contents in the file, so that nothing has to be
-loaded into DDR before it is running.
-
-The tables of the configuration, from `buf` to `cfree`
-(#f("c.c")), are the uninitialised data of `c.o`. At the sizes
-of #f("param.h") they take some three quarters of a
-megabyte, six times SYSRAM, so `EXCLUDE_FILE` (#l(".bss : AT(ADDR(.bss) - 0x90020000) {")) keeps them out of
-`.bss`, and the pattern `*/c.o` (#l("*/c.o(.bss* COMMON)")) puts them into `.ddrbss` after
-`kl3u`. Nothing in `c.o`'s uninitialised data is used before
-`machine_init` has started the DDR and cleared the section: `corebase`
-and `coreoff` are set only after that.
+`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, and
+the 32~KB of SRAM1--3 which follow it, in which the kernel runs, by its
+kernel address 0xc0000000, that of the QEMU machine's kernel. The
+text, data, and `.bss` of the kernel, its tables included, must all fit
+there. They take some 117~KB, so the kernel ends in SYSRAM, and
+SRAM1--3 are room to grow. The linker reports an overflow of the
+region, so a kernel which has outgrown it fails to link rather than to
+boot. The first byte of the text, at the start of SYSRAM, is `_start`.
+From this ELF file the build makes the image which the boot ROM loads,
+with the ROM's header in front (#f("sys.mk")). Core, the DDR memory,
+lies outside the kernel (#f("mp135/mach.h")).
 
 #lines-to(none)
 #source("/usr/sys/conf/mkstm32.c")

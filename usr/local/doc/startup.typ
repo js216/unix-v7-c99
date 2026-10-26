@@ -194,7 +194,6 @@ possible of the file systems is lost. If the panic arose in the disk
 code itself, this may not succeed, and if `update` was already running
 when the panic came, its lock `updlock` makes it return at once.
 The lock is held from the start (#f("main.c")), and `main` releases it only once `binit` has built the buffers. Until then `update` would walk
-tables in DDR which the MP135 machine may not yet be able to reach, and
 a free list not yet linked.
 
 #lines-to("for(;;)")
@@ -1254,12 +1253,51 @@ _Fault Registers._ The routines `dfar` and `dfsr` return the data fault address 
 which describe the last data abort. They are printed by `user_trap_handler`
 (#f("trap.c")) before it panics on a fault in kernel mode.
 
+#lines-to("/*", after: "dfsr:")
+
+_Leaving the Secure World._ The boot ROM of the MP135 machine starts the
+kernel in the secure world, and `etzpcinit` (#f("etzpc.c")) calls
+`nsenter` (#l("nsenter:")) to leave it once the memory and the devices have been
+made non-secure. The processor keeps two copies of most of its system
+registers, one for each world, and the non-secure world starts with
+its MMU off, its caches off, and no vectors. Rather than set the
+machine up a second time, `nsenter` enters the monitor, the mode
+between the two worlds, which copies the secure world's settings into
+the non-secure copies.
+
+First the data caches are cleaned and invalidated by set and way, at
+level 1 and at level 2 (#l("3:\tmcr p15, 2, r11, c0, c0, 0")--#l("blo 3b")), as #f("low.s") invalidated level 1 at boot,
+with `DCCISW` (#l("mcr p15, 0, r9, c7, c14, 2")) in place of `DCISW`. A cache line remembers the world
+which filled it, and the non-secure world does not hit a secure line,
+so anything modified must be in memory before the switch. `NSACR`
+(#l("mrc p15, 0, r0, c1, c1, 2")--#l("mcr p15, 0, r0, c1, c1, 2")) lets the non-secure world use coprocessors 10 and 11, the
+floating-point unit. `MVBAR` (#l("mcr p15, 0, r0, c12, c0, 1")) gives the monitor its vectors, and `smc`
+(#l("smc #0")) enters it. Back in the non-secure world, `nsenter` discards the
+TLB, the instruction cache, and the branch predictor, which hold nothing
+of that world yet, and returns.
+
+#lines-to(".balign 32", after: "pop {r4-r11, pc}")
+
+The monitor's vectors (#l("monvec:")) are all loops but that of `smc`. The
+monitor needs no stack.
+
+#lines-to("monsmc:")
+
+The handler `monsmc` reads the secure copies of `SCTLR`, `TTBCR`, `TTBR0`,
+`TTBR1`, `MAIR0`, and `VBAR`, sets the bit `NS` of the secure configuration
+register `SCR` (#l("orr r8, r8, #1")), after which the monitor's accesses reach the
+non-secure copies, and writes them there, `SCTLR` last, which turns the
+non-secure MMU and caches on with the same tables (#l("mcr p15, 0, r1, c2, c0, 2", after: "orr r8, r8, #1")--#l("mcr p15, 0, r0, c1, c0, 0", after: "orr r8, r8, #1")). The monitor itself still
+runs on the secure tables. The return (#l("movs pc, lr")) restores the caller's `cpsr`
+from the monitor's `spsr`, SVC mode with interrupts masked, and with
+`NS` set the processor is then non-secure.
+
 #lines-to(".data")
 
 The variable `waitloc` holds the address of `waitpc`, and `nofault` is
 zero except while a user reference is made.
 
-#lines-to(".section .ddrbss,\"aw\",%nobits")
+#lines-to(".balign 4096", after: "nofault:")
 
 The u-area is switched by `resume` through the page table `kl3u`.
 The kernel's own table maps only whole 2~MB blocks, but a u-area is one
@@ -1268,11 +1306,8 @@ third-level table, which maps page by page. Of its 512~entries only the
 first `USIZE` are used. The rest stay invalid, so that a stray
 reference beyond the u-area faults. The table is hooked by `machine_init`
 into the last entry of `kl2` (#f("low.s")). Like every table of the long
-format, it is aligned on 4~KB. It lies in the section `.ddrbss`, which
-on the MP135 machine is in the DDR memory and so cannot be cleared until
-`machine_init` has started the DDR controller. The clearing loop in
-#f("low.s") therefore leaves it alone, and `machine_init` clears it
-afterwards.
+format, it is aligned on 4~KB. Like the rest of the `bss`, it is
+cleared by `_start` (#f("low.s")).
 
 #lines-to(none)
 #source("/usr/sys/h/reg.h")
@@ -1566,23 +1601,15 @@ _Buffer Cache._ The buffers of the buffer cache (see _Disk I/O_,
 page #pageref(<sec-disk>)) each hold one disk
 block. Each buffer has a header, a `struct buf` (#f("buf.h")), which
 records the device and the block it holds, and `binit` (#l("binit(void)")) pairs
-each header with its buffer. The buffers themselves
-(#l("extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")) are defined, with
-the kernel's other tables, in the configuration
-(#at("/usr/sys/conf/c.c", "int\tbuffers[")), and `NBUF`
+each header with its buffer. The buffers themselves are rows which
+`startup` took from core (#f("machdep.c")), to which `buffers`
+(#f("buf.h")) points, and `NBUF`
 (#at("/usr/sys/h/param.h", "#define\tNBUF")) gives their number. Each
 buffer occupies whole cache lines of its own, as the SD card driver
-requires (#f("sd.c")). So a row of the array is rounded up to whole
-64-byte lines, sixteen `int`s each.
-
-#lines-to("/*", after: "extern int\tbuffers[][(BSIZE+BSLOP+63)/64*16];")
-
-The routine `binit` links every buffer into the free list through
-`brelse`. On the way it moves every buffer up by the same amount, less
-than 64~bytes, to bring them all onto a line boundary
-(#l("bp->b_un.b_addr = (caddr_t)buffers[i] +")). The configuration
-provides one row more than `NBUF` (#f("c.c")) to make room for
-the shift.
+requires (#f("sd.c")). So a row is rounded up to whole
+64-byte lines, sixteen `int`s each. The routine `binit` links every
+buffer into the free list through `brelse`, and gives each header its
+row (#l("bp->b_un.b_addr = (caddr_t)buffers[i];")).
 
 #lines-to("for (bdp = bdevsw; bdp->d_open; bdp++) {")
 
@@ -1654,6 +1681,14 @@ cleared, so that nothing of the kernel shows through it, and given two
 instructions, `mov r7, #63` and `svc #0`, which make the system call
 `sigreturn`. The copy is then made visible to instruction fetch.
 Every process maps this one page read-only at `SIGTRAMP` (#f("seg.h")).
+
+The buffers of the buffer cache are taken from core next
+(#l("buffers = (int (*)[(BSIZE+BSLOP+63)/64*16])PGADDR(i);")--#l("i += btop(NBUF*sizeof(*buffers));")), rather than being a table of the kernel, since
+the SD card's DMA cannot reach all the on-chip RAM in which the MP135
+machine's kernel lies, and reaches DDR. The rows begin on a page, and
+so each on a cache line, which the SD card driver needs (#f("sd.c")).
+
+#lines-to("maxmem = btop(coretop) - i;")
 
 The rest of RAM is freed (#l("maxmem = btop(coretop) - i;"), #l("mfree(coremap, maxmem, i);")). Memory
 is cleared where it is used. The routine `machine_init` clears the area
@@ -1743,12 +1778,10 @@ _Kernel Map._ The table `board_map` (#f("seg.h")) comes from the
 configuration (#f("c.c"), #f("qemu/mach.h"), #f("mp135/mach.h")). It holds the regions
 to be mapped, each with its
 kernel address, its physical bounds, and the attribute bits of its block
-descriptors. The linker script defines the `__` symbols
-(#l("extern char _start[], __ddrbss_start[], __ddrbss_end[];")). The section `.ddrbss` holds further
-uninitialised data. On the MP135 machine the kernel image runs from
-SYSRAM, and the large tables are placed in the DDR memory, which is
-useless until it has been set up. On the QEMU machine it is ordinary
-RAM. The tables `kl2`, `kl3u`, and `bootl1` (#f("seg.h")) are reserved in
+descriptors. The linker script defines `__bss_end`
+(#l("extern char _start[], __bss_end[];")), the end of the kernel. On the MP135 machine the
+whole kernel, its tables included, runs from SYSRAM, with SRAM1--3 after
+it for room, and on the QEMU machine from the start of RAM. The tables `kl2`, `kl3u`, and `bootl1` (#f("seg.h")) are reserved in
 #f("low.s") and #f("mch.s").
 
 The routine `kmap` (#l("kmap(unsigned long long attr)")) enters the regions of `board_map` whose
@@ -1784,20 +1817,22 @@ stay masked in `cpsr` until `intrstart` has set the controller up.
 
 On the MP135 machine it then has the PMIC power the DDR memory
 (#f("pmic.c")) and starts the DDR controller (#f("ddr.c")), and
-`clock_ddr_init` is empty on the QEMU machine. Only then does it map
+`clock_ddr_init` is empty on the QEMU machine. Next `nsinit` (#l("nsinit();")) leaves the
+secure world on the MP135 machine (#f("etzpc.c")). It must come after the
+DDR is started, since the DDR's TrustZone controller accepts its
+settings only from the secure world, and it is empty on the QEMU
+machine, which has no secure world. Only then does it map
 memory (#l("kmap(BLK_KERN);")), the DDR memory among it, since a mapping of RAM which
 does not yet work would invite the processor to touch it
-speculatively. Then it clears `.ddrbss`, which `_start` could not
-(#l("for(p = __ddrbss_start; p < __ddrbss_end; p++)"), #l("*p = 0;", after: "for(p = __ddrbss_start; p < __ddrbss_end; p++)")).
+speculatively.
 
-RAM begins at the first page boundary after `.ddrbss`, the last part
-of the kernel to be placed (#f("qemu/unix.ld")). On the QEMU machine
-that is just past the kernel image. On the MP135 machine, whose kernel
-runs from SYSRAM, it is just past the tables in DDR. Neither needs to be
-stated in the configuration, which gives only the top of RAM.
-The physical address of that boundary is `corebase` (#l("corebase = ptob(btop(vtop(__ddrbss_end)));")), and `coreoff` (#l("coreoff = (unsigned)__ddrbss_end - vtop(__ddrbss_end);")) the
-difference between the kernel and physical addresses of all of RAM,
-which lies in one region. The macro `PGADDR` (#f("seg.h")) adds it to
+Core begins at `corebase`, which the configuration starts at
+`COREBASE`, the first byte of the machine's RAM (#f("qemu/mach.h")). If the kernel
+lies in that RAM, as on the QEMU machine, core begins instead at the
+first page after it (#l("a = ptob(btop(vtop(__bss_end)));")--#l("corebase = a;")). On the MP135 machine, whose kernel runs
+from SYSRAM, core is the whole of DDR. The offset `coreoff` (#l("coreoff = m->va - m->start;")) is the
+difference between the kernel and physical addresses of the region of
+`board_map` which holds core (#l("for(m = board_map; m->end != 0; m++)", after: "corebase = a;")). The macro `PGADDR` (#f("seg.h")) adds it to
 turn a page into a kernel address.
 
 The `USIZE` pages of the per process data area of process 0, the first

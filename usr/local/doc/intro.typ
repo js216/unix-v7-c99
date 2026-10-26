@@ -36,8 +36,8 @@ kernel into RAM itself and starts it at its entry point.
 board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
 contains one ARM Cortex-A7 processor and 168~KB of on-chip RAM. Of
 this, 128~KB is the system RAM (SYSRAM) at 0x2ffe0000, which holds the
-kernel. The rest, 32~KB of SRAM in three banks and 8~KB of backup
-SRAM, the port does not use. The board adds 512~MB of DDR3L
+kernel, and 32~KB in three banks, SRAM1--3, follows it, which the kernel
+may grow into. The 8~KB of backup SRAM the port does not use. The board adds 512~MB of DDR3L
 memory, at 0xc0000000, and an SD card slot. The console is one of the
 chip's serial ports, USART2 at 0x4c001000, whose pins the board brings
 out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
@@ -45,9 +45,11 @@ out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
 0xa0021000. The kernel also uses the chip's reset and clock controller
 (RCC), its power controller (PWR), its general purpose pins (GPIO), its
 DDR controller, its TrustZone address space controller (TZC), which
-guards the DDR memory, its independent watchdog (IWDG2), and, over the chip's I2C4 bus, the board's
+guards the DDR memory, its TrustZone protection controller (ETZPC), which
+decides which world may use each peripheral and SYSRAM, its independent watchdog (IWDG2), and, over the chip's I2C4 bus, the board's
 STPMIC1 power management chip. The chip's boot ROM loads the kernel
-from the SD card into SYSRAM and starts it.
+from the SD card into SYSRAM and starts it in the secure world, which
+the kernel leaves early on.
 
 One kernel source serves both machines. The dozen lines which differ
 are collected in each machine's header (#f("qemu/mach.h"),
@@ -231,10 +233,9 @@ MMU off. From there the system comes up in these steps:
   `machine_init`.
 + Then `machine_init` (#at("/usr/sys/sys/machdep.c", "machine_init(")) maps the device registers and starts the console,
   so that `printf` and `panic` work from then on. On the MP135 machine
-  it then powers the DDR memory and starts its controller. Only then
-  does it map the rest of RAM and clear the kernel's large tables.
-  The routine `_start` could not clear them with the rest of the `bss`, since on
-  the MP135 machine they lie in DDR, which works only from now on. Then
+  it then powers the DDR memory and starts its controller, and leaves
+  the secure world, making SYSRAM and the devices non-secure first
+  (#f("etzpc.c")). Only then does it map the rest of RAM. Then
   it maps the u-area of process 0,
   removes the identity mapping, and returns the top of that u-area to
   `_start`, as the stack for `main`.
@@ -314,8 +315,8 @@ faults any access from user mode which an entry does not allow
   [0x00008000], table.cell(colspan: 2)[text],
   [next page], table.cell(colspan: 2)[data and `bss`, growing upward],
   [0xbfffffff], table.cell(colspan: 2)[stack, growing downward],
-  [0xc0000000], [RAM 0x40000000--0x5fffffff: kernel, then free RAM], [SYSRAM 0x2ffe0000: kernel],
-  [0xc0200000], [(RAM, continued)], [DDR 0xc0000000--0xdfffffff: tables, then free RAM],
+  [0xc0000000], [RAM 0x40000000--0x5fffffff: kernel, then free RAM], [SYSRAM, SRAM1--3 0x2ffe0000: kernel],
+  [0xc0200000], [(RAM, continued)], [DDR 0xc0000000--0xdfffffff: free RAM],
   [0xf0000000], [GIC 0x08000000], [RCC, PWR, GPIO 0x50000000],
   [0xf0200000], [UART 0x09000000], [SDMMC1 0x58005000],
   [0xf0400000], [virtio 0x0a000000], [IWDG2 0x5a002000, DDR controller 0x5a003000],
@@ -333,8 +334,7 @@ reach any page of memory at a fixed distance from its physical address
 (`PGADDR`, #f("seg.h")). The kernel's own text, data, and `bss` lie
 where it was linked, from 0xc0000000 on both machines. On
 the QEMU machine they occupy the start of RAM. On the MP135 machine
-they lie in SYSRAM, except the larger tables of the `bss`, which lie
-in DDR, from 0xc0200000 (#f("mp135/unix.ld")). The kernel's stack is the kernel
+they lie in SYSRAM, tables and all (#f("mp135/unix.ld")). The kernel's stack is the kernel
 stack in the u-area, described below. The device registers follow, one 2~MB block
 for each device. The devices are mapped only in the kernel's gigabyte, so
 a user program reaches a device only via #box(`/dev/mem`) or through its
