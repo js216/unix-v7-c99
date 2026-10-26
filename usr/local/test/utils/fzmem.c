@@ -127,11 +127,14 @@ worker(int k, long mb)
 		}
 		while(wait(&st) != pid)
 			;
-		if(st != 0)
+		if(st != 0) {
+			printf("FAIL fzmem seed %ld: child %d status %o\n",
+			    seed, pid, st);
 			exit(1);
+		}
 		check("parent after fork", 0, nw, gen);
 		more = (long)rnd(&s, 16) * MB - 8*MB;
-		if(brk(p + size + more) == 0 && size + more > MB) {
+		if(size + more > MB && brk(p + size + more) == 0) {
 			size += more;
 			if(more < 0)
 				nw = size/4;
@@ -149,7 +152,7 @@ worker(int k, long mb)
 int
 main(int argc, char **argv)
 {
-	int k, n, st, bad;
+	int k, n, st, bad, pid;
 	long mb;
 
 	if(argc != 4) {
@@ -163,9 +166,12 @@ main(int argc, char **argv)
 		if(fork() == 0)
 			worker(k, mb);
 	bad = 0;
-	while(wait(&st) >= 0)
-		if(st != 0)
+	while((pid = wait(&st)) >= 0)
+		if(st != 0) {
+			printf("FAIL fzmem seed %ld: pid %d status %o\n",
+			    seed, pid, st);
 			bad = 1;
+		}
 	if(!bad)
 		printf("fzmem ok\n");
 	exit(bad);

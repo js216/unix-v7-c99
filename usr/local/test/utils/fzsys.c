@@ -119,13 +119,15 @@ arg(void)
 /*
  * May call n be made?  fork, exec, and exit never; with -s, nothing
  * which could create, write, remove, or change a file on the disk,
- * and neither signal nor sigreturn, since a random handler or frame
- * could send the child to the svc in rawsys with any number in r7.
+ * nor brk, which could grow a child past the RAM and so swap it to
+ * the disk, and neither signal nor sigreturn, since a random handler
+ * or frame could send the child to the svc in rawsys with any number
+ * in r7.
  */
 static int
 allowed(int n)
 {
-	static char unsafe[] = { 8, 9, 10, 12, 14, 15, 16, 21, 22, 30, 36,
+	static char unsafe[] = { 8, 9, 10, 12, 14, 15, 16, 17, 21, 22, 30, 36,
 		42, 48, 51, 61, 63, 0 };
 	char *p;
 
