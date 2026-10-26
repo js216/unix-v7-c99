@@ -1,8 +1,11 @@
-: sh fuzz.sh [seed]: the fuzzers, for ever.  Each round runs three
-: file system fuzzers at once, in directories of their own, beside the
-: process fuzzer and the command checks, then checks the root file
-: system with icheck and dcheck.  Each line printed is a result, a FAIL
-: line with the seed which repeats it, or the summary of a round.
+: sh fuzz.sh [seed]: the fuzzers, for ever.  Each round has two
+: phases.  In the first, three file system fuzzers, the filler which
+: runs the disk out of space and inodes, random system calls, and
+: mutated programs run at once.  In the second, the process fuzzer,
+: the command checks, and, every other round, more memory than RAM.
+: The root file system is then checked with icheck and dcheck.  Each
+: line printed is a result, a FAIL line with the seed which repeats
+: it, or the summary of a round.
 U=/usr/local/test/utils
 T=/tmp/fz
 s=${1-1}
@@ -10,16 +13,24 @@ r=0
 while :
 do
 	rm -rf $T
-	mkdir $T $T/1 $T/2 $T/3 $T/sh
+	mkdir $T $T/1 $T/2 $T/3 $T/sh $T/sys $T/elf $T/fill
+	chmod 777 $T/sys $T/elf
 	for i in 1 2 3
 	do
 		mkdir $T/$i/d0 $T/$i/d1
 	done
-	(cd $T/1; $U/fzfs $s 300) &
-	(cd $T/2; $U/fzfs `expr $s + 1` 300) &
-	(cd $T/3; $U/fzfs `expr $s + 2` 300) &
-	$U/fzproc `expr $s + 3` 10 &
-	(cd $T/sh; sh $U/fzsh `expr $s + 4`)
+	(cd $T/1; $U/fzfs $s 400) &
+	(cd $T/2; $U/fzfs `expr $s + 1` 400) &
+	(cd $T/3; $U/fzfs `expr $s + 2` 400) &
+	(cd $T/fill; $U/fzfill `expr $s + 3` 1) &
+	$U/fzsys `expr $s + 4` 20 &
+	$U/fzelf `expr $s + 5` 40
+	wait
+	$U/fzproc `expr $s + 6` 10 &
+	case `expr $r % 2` in
+	0)	$U/fzmem `expr $s + 7` 5 80 &
+	esac
+	(cd $T/sh; sh $U/fzsh `expr $s + 8`)
 	wait
 	cd /
 	rm -rf $T
@@ -33,6 +44,6 @@ do
 	test -s /tmp/fz.x && { echo FAIL dcheck after seed $s; cat /tmp/fz.x; }
 	rm -f /tmp/fz.ic /tmp/fz.x
 	r=`expr $r + 1`
-	echo fuzz round $r seeds $s-`expr $s + 4` done
-	s=`expr $s + 5`
+	echo fuzz round $r seeds $s-`expr $s + 8` done
+	s=`expr $s + 9`
 done

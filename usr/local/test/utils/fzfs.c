@@ -10,15 +10,17 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 
-#define	NNAME	6
+#define	NNAME	10
 #define	NFILE	NNAME
-#define	MAXSZ	200000L
+#define	MAXSZ	600000L
 #define	BLK	512L
 #define	DIRECT	(10*BLK)
 #define	INDIR	(DIRECT+128*BLK)
 
-char	*name[NNAME] = { "d0/a", "d0/b", "d0/c", "d1/a", "d1/b", "d1/c" };
+char	*name[NNAME] = { "d0/a", "d0/b", "d0/c", "d0/d", "d0/e", "d1/a",
+	"d1/b", "d1/c", "d1/d", "d1/e" };
 int	fileof[NNAME];		/* file named, or -1 */
 struct	file {
 	char	*data;
@@ -30,6 +32,7 @@ unsigned long	rs;
 long	seed;
 int	op;
 char	buf[8200];
+char	now[MAXSZ+8200];
 
 static unsigned
 rnd(unsigned n)
@@ -148,6 +151,41 @@ doread(int n)
 	close(fd);
 }
 
+/*
+ * A write of len bytes at o failed for want of space.  It may have
+ * written a part, a whole number of blocks from o, but nothing else
+ * may have changed: the file must hold the old bytes, then zeros for
+ * any hole, then a prefix of buf, then the old bytes again.
+ */
+static void
+partial(int n, long o, int len)
+{
+	struct file *fp;
+	long size, i, k;
+	int fd, got;
+
+	fp = &file[fileof[n]];
+	if((fd = open(name[n], 0)) < 0)
+		fail("open after ENOSPC", name[n]);
+	for(size = 0; (got = read(fd, now+size, 4096)) > 0; size += got)
+		if(size > MAXSZ+4096)
+			fail("file grew past the write", name[n]);
+	close(fd);
+	if(size < fp->size || size > (o+len > fp->size ? o+len : fp->size))
+		fail("size after ENOSPC", name[n]);
+	for(i = 0; i < size && i < o; i++)
+		if(now[i] != (i < fp->size ? fp->data[i] : 0))
+			fail("bytes before a failed write", name[n]);
+	for(k = 0; k < len && o+k < size && now[o+k] == buf[k]; k++)
+		;
+	for(i = o+k; i < size; i++)
+		if(now[i] != (i < fp->size ? fp->data[i] : 0))
+			fail("bytes after a failed write", name[n]);
+	for(i = 0; i < size; i++)
+		fp->data[i] = now[i];
+	fp->size = size;
+}
+
 static void
 dowrite(int n)
 {
@@ -165,8 +203,14 @@ dowrite(int n)
 	if((fd = open(name[n], 1)) < 0)
 		fail("open for write", name[n]);
 	lseek(fd, o, 0);
-	if(write(fd, buf, len) != len)
-		fail("write count", name[n]);
+	errno = 0;
+	if(write(fd, buf, len) != len) {
+		if(errno != ENOSPC)
+			fail("write which is not ENOSPC", name[n]);
+		close(fd);
+		partial(n, o, len);
+		return;
+	}
 	close(fd);
 	while(fp->size < o)
 		fp->data[fp->size++] = 0;
@@ -182,8 +226,12 @@ docreat(int n)
 	struct stat st;
 	int fd, f;
 
-	if((fd = creat(name[n], 0644)) < 0)
+	errno = 0;
+	if((fd = creat(name[n], 0644)) < 0) {
+		if(fileof[n] < 0 && (errno == ENOSPC || errno == ENFILE))
+			return;
 		fail("creat", name[n]);
+	}
 	close(fd);
 	if((f = fileof[n]) < 0) {
 		if((f = newfile()) < 0)
@@ -217,8 +265,11 @@ dolink(int n, int m)
 			fail("link onto existing name", name[m]);
 		return;
 	}
-	if(r < 0)
+	if(r < 0) {
+		if(errno == ENOSPC)
+			return;
 		fail("link", name[m]);
+	}
 	fileof[m] = fileof[n];
 	file[fileof[n]].nlink++;
 }

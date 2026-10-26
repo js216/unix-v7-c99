@@ -220,10 +220,14 @@ d--755 0 0
           devt	---755 0 0 usr/local/test/obj/devt
           endblk	---755 0 0 usr/local/test/obj/endblk
           fpt	---755 0 0 usr/local/test/obj/fpt
+          fzelf	---755 0 0 usr/local/test/obj/fzelf
+          fzfill	---755 0 0 usr/local/test/obj/fzfill
           fzfs	---755 0 0 usr/local/test/obj/fzfs
           fzgen	---755 0 0 usr/local/test/obj/fzgen
+          fzmem	---755 0 0 usr/local/test/obj/fzmem
           fzproc	---755 0 0 usr/local/test/obj/fzproc
           fzsh	---644 0 0 usr/local/test/utils/fzsh
+          fzsys	---755 0 0 usr/local/test/obj/fzsys
           k12	---755 0 0 usr/local/test/obj/k12
           kcmp	---755 0 0 usr/local/test/obj/kcmp
           pidf	---755 0 0 usr/local/test/obj/pidf
