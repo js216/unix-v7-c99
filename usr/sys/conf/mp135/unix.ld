@@ -1,19 +1,19 @@
 MEMORY
 {
-	RAM (rwx) : ORIGIN = 0xc01e0000, LENGTH = 0x20000
+	RAM (rwx) : ORIGIN = 0xc0000000, LENGTH = 0x20000
 	TAB (rwx) : ORIGIN = 0xc0200000, LENGTH = 0x20000000
 }
 u = 0xFFE00000;
 ENTRY(start)
-start = _start - 0x90200000;
+start = _start - 0x90020000;
 SECTIONS
 {
-	.text : AT(ADDR(.text) - 0x90200000) { *(.text*) } > RAM
-	.rodata : AT(ADDR(.rodata) - 0x90200000) { *(.rodata*) } > RAM
-	.data : AT(ADDR(.data) - 0x90200000) { *(.data*) } > RAM
+	.text : AT(ADDR(.text) - 0x90020000) { *(.text*) } > RAM
+	.rodata : AT(ADDR(.rodata) - 0x90020000) { *(.rodata*) } > RAM
+	.data : AT(ADDR(.data) - 0x90020000) { *(.data*) } > RAM
 	. = ALIGN(4);
 	__bss_start = .;
-	.bss : AT(ADDR(.bss) - 0x90200000) {
+	.bss : AT(ADDR(.bss) - 0x90020000) {
 		*(EXCLUDE_FILE(*/c.o) .bss*)
 		*(EXCLUDE_FILE(*/c.o) COMMON)
 	} > RAM
@@ -25,3 +25,4 @@ SECTIONS
 		__ddrbss_end = .;
 	} > TAB
 }
+ASSERT(__bss_end <= _start + 0x200000, "the kernel must lie in one block")

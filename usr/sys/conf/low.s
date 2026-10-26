@@ -1,5 +1,7 @@
 .set BLK_KERN, 0x701
 .set PGSIZE, 4096
+.set PGSHIFT, 12
+.set PTE_TAB, 3
 .set BLKSHIFT, 21
 .set UMODE, 037
 .set SIGINS, 4
@@ -37,21 +39,24 @@ _start:
 	blo 1b
 	ldr r5, =kl2
 	add r5, r5, r4
+	ldr r6, =kl3k
+	add r6, r6, r4
 	ldr r0, =_start
-	lsr r0, r0, #BLKSHIFT
+	ubfx r1, r0, #BLKSHIFT, #9
+	orr ip, r6, #PTE_TAB
+	str ip, [r5, r1, lsl #3]
 	ldr r1, =__bss_end
-	sub r1, r1, #1
-	lsr r1, r1, #BLKSHIFT
 	movw r3, #BLK_KERN
-1:
-	add ip, r4, r0, lsl #BLKSHIFT
+	add ip, r0, r4
 	orr ip, ip, r3
-	ubfx r6, r0, #0, #9
-	add r6, r5, r6, lsl #3
-	str ip, [r6]
-	add r0, r0, #1
+	orr ip, ip, #PTE_TAB
+1:
+	ubfx r7, r0, #PGSHIFT, #9
+	str ip, [r6, r7, lsl #3]
+	add ip, ip, #PGSIZE
+	add r0, r0, #PGSIZE
 	cmp r0, r1
-	bls 1b
+	blo 1b
 	ldr r6, =bootl1
 	add r6, r6, r4
 	adr r0, _start
@@ -209,6 +214,8 @@ dabort_entry:
 stack_top:
 .balign 4096
 kl2:
+	.space 4096
+kl3k:
 	.space 4096
 bootl1:
 	.space 32

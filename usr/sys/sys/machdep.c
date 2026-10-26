@@ -142,6 +142,11 @@ irq(int *r)
 	GICC(EOIR) = n;
 }
 
+/*
+ * Map the regions of board_map whose attributes are attr in blocks.
+ * A region which does not begin on a block, the MP135's SYSRAM, keeps
+ * the pages in which _start mapped the kernel.
+ */
 static void
 kmap(unsigned long long attr)
 {
@@ -149,7 +154,7 @@ kmap(unsigned long long attr)
 	register unsigned a;
 
 	for(m = board_map; m->end != 0; m++)
-		if(m->attr == attr)
+		if(m->attr == attr && (m->start & ((1U<<BLKSHIFT)-1)) == 0)
 			for(a = m->start; a < m->end; a += 1U<<BLKSHIFT)
 				kl2[((m->va+a-m->start)>>BLKSHIFT) & (NPTE-1)] =
 				    a | m->attr;

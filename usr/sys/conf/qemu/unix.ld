@@ -23,3 +23,4 @@ SECTIONS
 		__ddrbss_end = .;
 	} > RAM
 }
+ASSERT(__bss_end <= _start + 0x200000, "the kernel must lie in one block")
