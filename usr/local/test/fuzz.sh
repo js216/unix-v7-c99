@@ -6,8 +6,14 @@
 : The root file system is then checked with icheck and dcheck.  Each
 : line printed is a result, a FAIL line with the seed which repeats
 : it, or the summary of a round.
+:
+: sh fuzz.sh -b [seed]: the board's mode, which writes nothing to the
+: SD card but the inode times an idle system writes too (fzboard).
 U=/usr/local/test/utils
 T=/tmp/fz
+case $1 in
+-b)	shift; exec $U/fzboard ${1-1}
+esac
 s=${1-1}
 r=0
 while :

@@ -1,6 +1,9 @@
 /*
- * fzsys seed batches [first [calls]]: random system calls with hostile
- * arguments, in batches first (0) to batches-1, of calls (300) each.
+ * fzsys [-s] seed batches [first [calls]]: random system calls with
+ * hostile arguments, in batches first (0) to batches-1, of calls (300)
+ * each.  With -s, safe for the board's SD card, only calls which can
+ * change no file, in /, which the child cannot write, so that it
+ * makes no core file either.
  * Each batch runs in a child as uid 8, which no one else uses, with
  * its standard files on /dev/null, in /tmp/fz/sys.  The child makes
  * random calls by number, through svc, with arguments drawn from
@@ -61,7 +64,7 @@ char	*watch[] = { "/etc/passwd", "/etc/group", "/unix", "/bin/sh",
 struct	stat	before[NWATCH];
 unsigned long	rs;
 long	seed;
-int	batch, ncall = NCALL;
+int	batch, ncall = NCALL, safe;
 char	buf[BUFSZ];
 char	longname[600];
 
@@ -113,6 +116,29 @@ arg(void)
 	}
 }
 
+/*
+ * May call n be made?  fork, exec, and exit never; with -s, nothing
+ * which could create, write, remove, or change a file on the disk,
+ * and neither signal nor sigreturn, since a random handler or frame
+ * could send the child to the svc in rawsys with any number in r7.
+ */
+static int
+allowed(int n)
+{
+	static char unsafe[] = { 8, 9, 10, 12, 14, 15, 16, 21, 22, 30, 36,
+		42, 48, 51, 61, 63, 0 };
+	char *p;
+
+	n &= 077;
+	if(n == 1 || n == 2 || n == 11 || n == 59)
+		return(0);
+	if(safe)
+		for(p = unsafe; *p; p++)
+			if(*p == n)
+				return(0);
+	return(1);
+}
+
 static void
 child(void)
 {
@@ -126,7 +152,7 @@ child(void)
 	signal(SIGALRM, SIG_DFL);
 	if(setgid(FUZZGID) < 0 || setuid(FUZZUID) < 0 || getuid() != FUZZUID)
 		exit(9);
-	chdir("/tmp/fz/sys");
+	chdir(safe ? "/" : "/tmp/fz/sys");
 	for(i = 0; i < BUFSZ; i++)
 		buf[i] = rnd(256);
 	for(i = 0; i < (int)sizeof(longname)-1; i++)
@@ -134,8 +160,7 @@ child(void)
 	for(i = 0; i < ncall; i++) {
 		do
 			n = rnd(70);
-		while((n&077) == 1 || (n&077) == 2 || (n&077) == 11 ||
-		    (n&077) == 59);
+		while(!allowed(n));
 		rawsys(n, arg(), arg(), arg(), arg());
 		if(creat(PROOF, 0644) >= 0)
 			exit(8);
@@ -186,8 +211,13 @@ main(int argc, char **argv)
 	struct stat st;
 	int i, nbatch, first, pid, w, status;
 
+	if(argc > 1 && strcmp(argv[1], "-s") == 0) {
+		safe = 1;
+		argc--;
+		argv++;
+	}
 	if(argc < 3 || argc > 5) {
-		printf("usage: fzsys seed batches [first [calls]]\n");
+		printf("usage: fzsys [-s] seed batches [first [calls]]\n");
 		exit(2);
 	}
 	seed = atol(argv[1]);

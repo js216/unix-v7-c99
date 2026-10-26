@@ -223,6 +223,7 @@ d--755 0 0
           devt	---755 0 0 usr/local/test/obj/devt
           endblk	---755 0 0 usr/local/test/obj/endblk
           fpt	---755 0 0 usr/local/test/obj/fpt
+          fzboard	---755 0 0 usr/local/test/obj/fzboard
           fzelf	---755 0 0 usr/local/test/obj/fzelf
           fzfill	---755 0 0 usr/local/test/obj/fzfill
           fzfs	---755 0 0 usr/local/test/obj/fzfs
