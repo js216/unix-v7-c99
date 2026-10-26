@@ -9410,11 +9410,18 @@ exponent field of zero, is first scaled by $2^54$ to make it normal
 #lines-to(none)
 #source("/usr/src/libc/gen/ldexp.c")
 
-The routine `ldexp` multiplies a number by a power of two. The port builds the
-power as a double directly, with the exponent field set and the
-fraction zero (#l("x.u[0] = 0;")--#l("x.u[1] = (k+1023) << 20;")), and multiplies. A power beyond the range of a
-double is applied in steps of at most $2^1000$ (#l("for (; n; n -= k) {")--#l("k = n > 1000? 1000: n < -1000? -1000: n;")). An overflowing result becomes the largest double of the right sign, and
-`errno` set to `ERANGE` (#l("if (value > 1.7976931348623157e308 ||")--#l("}", after: "0? -1.7976931348623157e308: 1.7976931348623157e308;")), as v7's did.
+The routine `ldexp` multiplies a number by a power of two and rounds once.
+It takes the number apart with `frexp` (#l("x.d = frexp(value, &e);")) and adds `n` to the
+exponent (#l("e += n;")), after clamping `n` so that the sum cannot overflow an
+`int` (#l("if (n > 2200)")--#l("n = -2200;")). A shift of 2200 already carries the smallest
+subnormal past the largest double. A result in the normal range needs
+only the new exponent field (#l("if (e >= -1021) {")--#l("return(x.d);")). A smaller one is the
+fraction times a subnormal power of two, built in the bits directly
+(#l("p.u[0] = p.u[1] = 0;")--#l("return(x.d * p.d);")), so that the multiplication is the only
+rounding. Below half the smallest subnormal the result is a zero of the
+number's sign (#l("if (e < -1074)")--#l("return(x.d * 0.0);")). An overflowing result becomes the
+largest double of the right sign, with `errno` set to `ERANGE`
+(#l("if (e > 1024) {")--#l("0? -1.7976931348623157e308: 1.7976931348623157e308);")), as v7's did.
 
 #lines-to(none)
 #source("/usr/src/libc/gen/modf.c")
