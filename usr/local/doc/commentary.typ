@@ -1467,6 +1467,57 @@ The devices which QEMU puts between them are not mapped. The QEMU
 machine needs neither `DDRINIT` nor `WDINIT`, and both are empty.
 
 #lines-to(none)
+#source("/usr/sys/conf/mp135/mach.h")
+
+The facts which #f("c.c") needs about the MP135 machine, in the form of
+#f("qemu/mach.h"). The devices, root, and swap are those of the QEMU
+machine: one disk, configured as `rk` although it is an SD card driven
+by #f("sd.c"), holding the root file system and, after it, the swap
+area. The console is one of the chip's serial ports, driven by
+#f("usart.c"). The interrupt numbers behind `klirq` and `rkirq` differ
+(71 and 82, #f("usart.c"), #f("sd.c")).
+
+The memory of the MP135 machine is in two pieces which are not
+contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
+`0x2ffe0000` (@ch-intro), which the first row of the map
+(#l("{0xc0000000, 0x2ffe0000, 0x30000000, BLK_KERN},")) places at 0xc0000000, where the
+QEMU machine's kernel lies too. SYSRAM is smaller than a block of 2~MB
+and does not begin on one, so `machine_init` does not map it in a
+block. It keeps the pages in which `_start` mapped the kernel
+(#f("low.s"), #f("machdep.c")). Process images, and anything else too
+large for SYSRAM, live in the 512~MB of external DDR memory at
+`0xc0000000`, which the kernel maps at 0xc0200000, the next block
+(#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). The large tables of the kernel take the start of DDR
+(#f("mp135/unix.ld")), and core the rest of it, up to `CORETOP`
+(#l("#define\tCORETOP\t0xe0000000")).
+
+The attributes of DDR are the QEMU machine's: all of DDR is
+normal memory, cached write-back, like the kernel itself in SYSRAM,
+and so are user pages (`PGUSER`, #f("seg.h")). The one party
+which does not see the
+processor's data cache is the SD card's DMA controller, which moves
+process images during swapping and raw I/O, and the buffers of the
+buffer cache. The disk driver therefore cleans and invalidates the
+cache over every transfer before it, and invalidates it after a read
+(`dcflush`, `dcinval`, #f("sd.c")), so that the device reads what
+the processor wrote and the processor does not afterwards find stale
+lines. The buffers of the buffer cache occupy whole cache lines of
+their own (#f("main.c")).
+
+The other rows are a 2~MB block each of the peripherals which the
+drivers use, at successive kernel addresses from `0xf0000000`. They are the reset and clock controller with the power controller and the GPIO ports
+(#l("{0xf0000000, 0x50000000, 0x50200000, BLK_DEV},")); the SD card controller (#l("{0xf0200000, 0x58000000, 0x58200000, BLK_DEV},")); the DDR controller with its PHY
+and the watchdog IWDG2 (#l("{0xf0400000, 0x5a000000, 0x5a200000, BLK_DEV},")); the interrupt controller (#l("{0xf0600000, 0xa0000000, 0xa0200000, BLK_DEV},")), which on this chip lies apart from
+them, and whose two parts `GICDBASE` and `GICCBASE` (#l("#define\tGICDBASE\t0xf0621000")--#l("#define\tGICCBASE\t0xf0622000")) name within that block;
+the TrustZone controller of the DDR (#l("{0xf0800000, 0x5c000000, 0x5c200000, BLK_DEV},")); and the block of I2C4 and of USART2, the console (#l("{0xf0a00000, 0x4c000000, 0x4c200000, BLK_DEV},"), #f("pmic.c"), #f("usart.c")). Each driver
+names its registers by these kernel addresses.
+
+Last, `DDRINIT` (#l("#define\tDDRINIT\tddrinit()")) makes `clock_ddr_init` call `ddrinit` (#f("ddr.c"))
+early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
+tables in it are touched, and `WDINIT` makes `wdinit` start the watchdog
+(`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
+
+#lines-to(none)
 #source("/usr/sys/dev/virtio_blk.c")
 
 This is the disk driver of the QEMU machine. It replaces v7's
@@ -3898,57 +3949,6 @@ is always `NULL`, it returns `NULL`.
 
 == More Drivers <ch-drivers>
 
-#source("/usr/sys/conf/mp135/mach.h")
-
-The facts which #f("c.c") needs about the MP135 machine, in the form of
-#f("qemu/mach.h"). The devices, root, and swap are those of the QEMU
-machine: one disk, configured as `rk` although it is an SD card driven
-by #f("sd.c"), holding the root file system and, after it, the swap
-area. The console is one of the chip's serial ports, driven by
-#f("usart.c"). The interrupt numbers behind `klirq` and `rkirq` differ
-(71 and 82, #f("usart.c"), #f("sd.c")).
-
-The memory of the MP135 machine is in two pieces which are not
-contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
-`0x2ffe0000` (@ch-intro), which the first row of the map
-(#l("{0xc0000000, 0x2ffe0000, 0x30000000, BLK_KERN},")) places at 0xc0000000, where the
-QEMU machine's kernel lies too. SYSRAM is smaller than a block of 2~MB
-and does not begin on one, so `machine_init` does not map it in a
-block. It keeps the pages in which `_start` mapped the kernel
-(#f("low.s"), #f("machdep.c")). Process images, and anything else too
-large for SYSRAM, live in the 512~MB of external DDR memory at
-`0xc0000000`, which the kernel maps at 0xc0200000, the next block
-(#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). The large tables of the kernel take the start of DDR
-(#f("mp135/unix.ld")), and core the rest of it, up to `CORETOP`
-(#l("#define\tCORETOP\t0xe0000000")).
-
-The attributes of DDR are the QEMU machine's: all of DDR is
-normal memory, cached write-back, like the kernel itself in SYSRAM,
-and so are user pages (`PGUSER`, #f("seg.h")). The one party
-which does not see the
-processor's data cache is the SD card's DMA controller, which moves
-process images during swapping and raw I/O, and the buffers of the
-buffer cache. The disk driver therefore cleans and invalidates the
-cache over every transfer before it, and invalidates it after a read
-(`dcflush`, `dcinval`, #f("sd.c")), so that the device reads what
-the processor wrote and the processor does not afterwards find stale
-lines. The buffers of the buffer cache occupy whole cache lines of
-their own (#f("main.c")).
-
-The other rows are a 2~MB block each of the peripherals which the
-drivers use, at successive kernel addresses from `0xf0000000`. They are the reset and clock controller with the power controller and the GPIO ports
-(#l("{0xf0000000, 0x50000000, 0x50200000, BLK_DEV},")); the SD card controller (#l("{0xf0200000, 0x58000000, 0x58200000, BLK_DEV},")); the DDR controller with its PHY
-and the watchdog IWDG2 (#l("{0xf0400000, 0x5a000000, 0x5a200000, BLK_DEV},")); the interrupt controller (#l("{0xf0600000, 0xa0000000, 0xa0200000, BLK_DEV},")), which on this chip lies apart from
-them, and whose two parts `GICDBASE` and `GICCBASE` (#l("#define\tGICDBASE\t0xf0621000")--#l("#define\tGICCBASE\t0xf0622000")) name within that block;
-the TrustZone controller of the DDR (#l("{0xf0800000, 0x5c000000, 0x5c200000, BLK_DEV},")); and the block of I2C4 and of USART2, the console (#l("{0xf0a00000, 0x4c000000, 0x4c200000, BLK_DEV},"), #f("pmic.c"), #f("usart.c")). Each driver
-names its registers by these kernel addresses.
-
-Last, `DDRINIT` (#l("#define\tDDRINIT\tddrinit()")) makes `clock_ddr_init` call `ddrinit` (#f("ddr.c"))
-early in `machine_init` (#f("machdep.c")), before DDR is mapped or the
-tables in it are touched, and `WDINIT` makes `wdinit` start the watchdog
-(`iwdgstart`, #f("iwdg.c")) as soon as the devices are mapped.
-
-#lines-to(none)
 #source("/usr/sys/dev/usart.c")
 
 The console driver of the MP135 machine. Like #f("pl011.c") on the QEMU

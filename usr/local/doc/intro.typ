@@ -66,25 +66,30 @@ The Cortex-A7 implements the ARMv7-A architecture. It has sixteen
 
 The current program status register `cpsr` (@fig-cpsr) holds the
 condition flags `N`, `Z`, `C`, and `V`, for negative, zero, carry, and
-overflow. Arithmetic instructions and comparisons set them, and
-conditional instructions test them. It also holds two interrupt masks,
+overflow (set by arithmetic instructions). It also holds two interrupt masks,
 `I` for ordinary interrupts (IRQ) and `F` for fast ones (FIQ), and the
 processor mode in its low five bits.
 
 #diagram({
-  let small(t) = text(size: 7.5pt, t)
+  let small(t) = text(size: 7pt, t)
+  let num(t) = text(size: 5.5pt, str(t))
   let fld(lo, hi, body) = stack(dir: ttb, spacing: 2pt,
-    pad(x: 2pt, if lo == hi { align(center, text(size: 6.5pt)[#hi]) } else {
-      grid(columns: (1fr, 1fr),
-        align(left, text(size: 6.5pt)[#hi]), align(right, text(size: 6.5pt)[#lo])) }),
-    rect(width: 100%, inset: 4pt, stroke: 0.6pt, align(center, small(body))))
-  grid(columns: (2fr, 2fr, 2fr, 2fr, 11fr, 2fr, 2fr, 2fr, 5fr),
+    if lo == hi { align(center, num(hi)) } else {
+      pad(x: 1.5pt, grid(columns: (1fr, 1fr), align(left, num(hi)), align(right, num(lo)))) },
+    rect(width: 100%, inset: (x: 0pt, y: 4pt), stroke: 0.6pt, align(center, small(body))))
+  grid(columns: (1fr,) * 5 + (2fr, 1fr, 4fr, 4fr, 6fr) + (1fr,) * 5 + (5fr,),
     fld(31, 31)[`N`], fld(30, 30)[`Z`], fld(29, 29)[`C`], fld(28, 28)[`V`],
-    fld(8, 27)[other state], fld(7, 7)[`I`], fld(6, 6)[`F`],
-    fld(5, 5)[`T`], fld(0, 4)[mode],
+    fld(27, 27)[`Q`], fld(25, 26)[`IT`], fld(24, 24)[`J`], fld(20, 23)[--],
+    fld(16, 19)[`GE`], fld(10, 15)[`IT`], fld(9, 9)[`E`], fld(8, 8)[`A`],
+    fld(7, 7)[`I`], fld(6, 6)[`F`], fld(5, 5)[`T`], fld(0, 4)[`M`],
   )
-}, [The current program status register `cpsr`. The bit `T` selects the
-Thumb instruction set, which the port does not use.]) <fig-cpsr>
+}, [The current program status register `cpsr`: the condition flags, the
+interrupt masks `I` and `F`, and the mode `M`. The port does not use the
+other fields: `Q`, the sticky saturation flag, `IT`, the state of a
+Thumb if-then block, `J` and `T`, which select the Jazelle and Thumb
+instruction sets, `GE`, the flags of the SIMD instructions, `E`, the
+order of bytes in data, and `A`, the mask of asynchronous aborts. Bits
+20 to 23 are reserved.]) <fig-cpsr>
 
 _Processor Modes._ The mode decides what a program may do. User programs run in user mode
 (USR, mode bits `10000`), which can reach neither the kernel's memory
