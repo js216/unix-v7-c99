@@ -7,8 +7,9 @@
 : line printed is a result, a FAIL line with the seed which repeats
 : it, or the summary of a round.
 :
-: sh fuzz.sh -b [seed]: the board's mode, which writes nothing to the
-: SD card but the inode times an idle system writes too (fzboard).
+: sh fuzz.sh -b [seed]: the mode for the board, which writes nothing to the
+: SD card but the inode times an idle system writes too.  It runs
+: fzboard, which see.
 U=/usr/local/test/utils
 T=/tmp/fz
 case $1 in
