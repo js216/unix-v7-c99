@@ -3,7 +3,11 @@
  * Each round draws, from the seed, a run of malloc, free, and realloc
  * whose live blocks must keep their contents; integers printed with
  * sprintf and read back with atoi, atol, and a parser of its own;
- * doubles printed with %e, %f, and %g and read back with atof; arrays
+ * doubles printed with %e, %f, and %g and read back with atof, which
+ * with 17 digits must give back every bit; ldexp, frexp, modf, floor,
+ * and ceil against exact references, and sqrt, exp, log, sin, and cos
+ * against identities they must hold to a few units in the last place;
+ * arrays
  * sorted by qsort, which must come out ordered and a permutation;
  * strings compared, copied, and searched against naive versions; and
  * times broken down by gmtime against a conversion of its own.  It
@@ -14,6 +18,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
+#include <math.h>
 
 #define	NLIVE	150
 #define	NSORT	1500
@@ -323,6 +328,188 @@ fzdouble(int ncase)
 }
 
 /*
+ * Exact floating point: any bit pattern but infinity and NaN, a
+ * quarter of them subnormal, and for ldexp also numbers scaled to
+ * land near the subnormal range.  ref is m * 2^n rounded once, to
+ * nearest, ties to even, or the largest double where ldexp clamps.
+ */
+typedef union {
+	double	d;
+	unsigned	w[2];
+} bits;
+
+static double
+pickbits(void)
+{
+	bits u;
+
+	u.w[0] = rnd(0);
+	u.w[1] = rnd(0);
+	switch(rnd(4)) {
+	case 0:
+		u.w[1] &= 0x800fffff;
+		break;
+	case 1:
+		u.w[1] = (u.w[1] & 0x800fffff) | (1003 + rnd(41)) << 20;
+		break;
+	}
+	if((u.w[1] & 0x7ff00000) == 0x7ff00000)
+		u.w[1] &= 0xffefffff;
+	return(u.d);
+}
+
+static void
+same(double x, double y, char *s)
+{
+	bits ux, uy;
+	char m[700];
+
+	ux.d = x;
+	uy.d = y;
+	if(ux.w[0] != uy.w[0] || ux.w[1] != uy.w[1]) {
+		sprintf(m, "%s: bits %08x%08x, not %08x%08x", s, uy.w[1],
+		    uy.w[0], ux.w[1], ux.w[0]);
+		fail(m);
+	}
+}
+
+static double
+ref(double x, int n)
+{
+	bits u;
+	unsigned long long m, r, half;
+	int e, p, sh;
+
+	u.d = x;
+	e = u.w[1] >> 20 & 03777;
+	m = (unsigned long long)(u.w[1] & 0xfffff) << 32 | u.w[0];
+	if(m == 0 && e == 0)
+		return(x);
+	if(e)
+		m |= 1ULL << 52;
+	else
+		e = 1;
+	e += n - 1075;
+	for(p = 52; !(m >> p & 1); p--)
+		;
+	u.w[1] &= 0x80000000;
+	u.w[0] = 0;
+	if(e + p > 1023)
+		return(x < 0 ? -1.7976931348623157e308 :
+		    1.7976931348623157e308);
+	if(e + p >= -1022) {
+		m = (m << (52 - p) & ((1ULL << 52) - 1)) |
+		    (unsigned long long)(e + p + 1023) << 52;
+	} else if(e >= -1074) {
+		m <<= e + 1074;
+	} else {
+		sh = -1074 - e;
+		if(sh > 54)
+			m = 0;
+		else {
+			r = m & ((1ULL << sh) - 1);
+			half = 1ULL << (sh - 1);
+			m >>= sh;
+			if(r > half || (r == half && (m & 1)))
+				m++;
+		}
+	}
+	u.w[1] |= m >> 32;
+	u.w[0] = m;
+	return(u.d);
+}
+
+static int
+integral(double x)
+{
+	bits u;
+	int e;
+
+	u.d = x;
+	e = (int)(u.w[1] >> 20 & 03777) - 1023;
+	if(e < 0)
+		return(x == 0);
+	if(e >= 52)
+		return(1);
+	if(e >= 20)
+		return((u.w[0] & (0xffffffffU >> (e - 20))) == 0);
+	return(u.w[0] == 0 && (u.w[1] & (0xfffff >> e)) == 0);
+}
+
+static void
+fzfloat(int ncase)
+{
+	int i, n, e;
+	double x, y, f;
+	char m[100];
+
+	for(i = 0; i < ncase; i++) {
+		x = pickbits();
+		what = "round trip";
+		sprintf(b3, "%.16e", x);
+		same(x, atof(b3), b3);
+		what = "ldexp";
+		switch(rnd(3)) {
+		case 0:
+			n = (int)rnd(301) - 150;
+			y = x;
+			break;
+		case 1:
+			n = (int)rnd(4401) - 2200;
+			y = x;
+			break;
+		default:
+			y = ref(frexp(x, &e), -(int)rnd(80));
+			n = -980 - (int)rnd(100);
+		}
+		sprintf(m, "%.17e, %d", y, n);
+		same(ref(y, n), ldexp(y, n), m);
+		what = "frexp";
+		f = frexp(x, &e);
+		sprintf(m, "%.17e to %.17e, %d", x, f, e);
+		if(x != 0 && (dabs(f) < 0.5 || dabs(f) >= 1))
+			fail(m);
+		same(x, ref(f, e), m);
+		what = "modf";
+		f = modf(x, &y);
+		sprintf(m, "%.17e to %.17e, %.17e", x, y, f);
+		if(!integral(y) || dabs(f) >= 1 || y + f != x ||
+		    (f != 0 && (f < 0) != (x < 0)))
+			fail(m);
+		what = "floor";
+		y = floor(x);
+		sprintf(m, "%.17e to %.17e", x, y);
+		if(!integral(y) || y > x || (y != x && y + 1 <= x))
+			fail(m);
+		what = "ceil";
+		y = ceil(x);
+		sprintf(m, "%.17e to %.17e", x, y);
+		if(!integral(y) || y < x || (y != x && y - 1 >= x))
+			fail(m);
+		x = dabs(x);
+		if(x < 1e-300 || x > 1e300)
+			continue;
+		what = "sqrt";
+		y = sqrt(x);
+		sprintf(m, "%.17e to %.17e", x, y);
+		if(dabs(y*y - x) > x * 6.7e-16)
+			fail(m);
+		x = (double)rnd(0) / 4294967296.0 * 1400 - 700;
+		what = "exp, log";
+		y = log(exp(x));
+		sprintf(m, "%.17e to %.17e", x, y);
+		if(dabs(y - x) > 1e-14 * (dabs(x) + 1))
+			fail(m);
+		x = (double)rnd(0) / 4294967296.0 * 2000 - 1000;
+		what = "sin, cos";
+		y = sin(x)*sin(x) + cos(x)*cos(x);
+		sprintf(m, "%.17e to %.17e", x, y);
+		if(dabs(y - 1) > 1e-14)
+			fail(m);
+	}
+}
+
+/*
  * qsort: arrays of one, four, and twelve bytes, with many equal
  * keys; the result must be ordered and hold the same elements.
  */
@@ -537,6 +724,7 @@ main(int argc, char **argv)
 		fzmalloc(3000);
 		fzint(300);
 		fzdouble(300);
+		fzfloat(300);
 		fzsort(30);
 		fzstr(300);
 		fztime(300);
