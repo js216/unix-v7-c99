@@ -9,7 +9,9 @@
  * gigabyte, and names which are long, empty, or not ended.  fork and
  * exec are left to fzproc and fzelf.  The kernel must never panic,
  * the child must never gain root, and no file of the system may
- * change.  Prints the seed and batch on the first difference and
+ * change.  After each call the child tries to create /fzroot, which
+ * only root can; its exit status proves nothing, since a random
+ * signal handler may send it anywhere in its own code.  Prints the seed and batch on the first difference and
  * exits 1; prints "fzsys ok" otherwise.
  */
 
@@ -22,6 +24,7 @@
 #define	BUFSZ	8192
 #define	FUZZUID	7
 #define	FUZZGID	3
+#define	PROOF	"/fzroot"
 
 unsigned	rawsys(unsigned n, unsigned a, unsigned b, unsigned c, unsigned d);
 unsigned	rawerr;
@@ -130,10 +133,8 @@ child(void)
 			n = rnd(70);
 		while(n == 1 || n == 2 || n == 11 || n == 59);
 		rawsys(n, arg(), arg(), arg(), arg());
-		if(rawsys(24, 0, 0, 0, 0) == 0 || rawsys(47, 0, 0, 0, 0) == 0) {
-			creat("/tmp/fz/sys/ROOT", 0666);
+		if(creat(PROOF, 0644) >= 0)
 			exit(8);
-		}
 	}
 	exit(0);
 }
@@ -167,6 +168,16 @@ main(int argc, char **argv)
 	for(i = 0; i < (int)NWATCH; i++)
 		if(stat(watch[i], &before[i]) < 0)
 			fail("stat before");
+	if((pid = fork()) == 0) {
+		if(setgid(FUZZGID) < 0 || setuid(FUZZUID) < 0 ||
+		    getuid() != FUZZUID || creat(PROOF, 0644) >= 0)
+			exit(9);
+		exit(0);
+	}
+	while((w = wait(&status)) != pid && w >= 0)
+		;
+	if(w < 0 || status != 0)
+		fail("cannot become dmr");
 	for(batch = 0; batch < nbatch; batch++) {
 		rs = seed*2654435761UL + batch*40503UL + 11;
 		if((pid = fork()) < 0)
@@ -181,10 +192,10 @@ main(int argc, char **argv)
 				alarm(0);
 			}
 		alarm(0);
-		if((status>>8 & 0377) == 8 || stat("/tmp/fz/sys/ROOT", &st) == 0)
+		if(stat(PROOF, &st) == 0) {
+			unlink(PROOF);
 			fail("the child became root");
-		if((status>>8 & 0377) == 9 && (status & 0177) == 0)
-			fail("cannot become dmr");
+		}
 		for(i = 0; i < (int)NWATCH; i++)
 			if(stat(watch[i], &st) < 0 || !same(&st, &before[i]))
 				fail(watch[i]);
