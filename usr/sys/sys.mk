@@ -25,6 +25,7 @@ $S/conf/mkstm32: $S/conf/mkstm32.c
 
 $S/conf/%/c.o: $S/conf/c.c
 	$(COMPILE.c) -I$(@D) -o $@ $<
+-include $(BOARDS:%=$S/conf/%/c.d)
 
 $S/conf/qemu/unix: $(QEMU_DRV)
 $S/conf/mp135/unix: $(MP135_DRV)
