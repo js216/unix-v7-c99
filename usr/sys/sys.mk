@@ -10,8 +10,7 @@ BOARDS = qemu mp135
 KERNELS = $(BOARDS:%=$S/conf/%/unix)
 SYS_OBJ = $(LIB1_OBJ) $(LIB2_OBJ) $(QEMU_DRV) $(MP135_DRV) \
 	$S/conf/low.o $S/conf/mch.o $(BOARDS:%=$S/conf/%/c.o)
-GEN += $(BOARDS:%=$S/conf/%/c.c) $(BOARDS:%=$S/conf/%/unix.ld) \
-	$S/conf/mkconf $S/conf/mkstm32
+GEN += $S/conf/mkstm32
 
 $(SYS_OBJ): $S/sys.mk
 $(SYS_OBJ): CFLAGS += -mfloat-abi=soft
@@ -21,17 +20,11 @@ $(LIB1) $(LIB2):
 	$Qrm -f $@
 	$(call T,AR)$(AR) rc $@ $^
 
-$S/conf/mkconf: $S/conf/mkconf.c
-	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
-
 $S/conf/mkstm32: $S/conf/mkstm32.c
 	$(call T,HOSTCC)$(HOSTCC) $(HOSTCFLAGS) -o $@ $<
 
-$S/conf/%/c.c $S/conf/%/unix.ld: $S/conf/%conf $S/conf/mkconf
-	$Qmkdir -p $(@D)
-	$(call T,MKCONF)cd $(@D) && ../mkconf <../$*conf
-
-$S/conf/%/c.o: CPPFLAGS = -I$S/conf
+$S/conf/%/c.o: $S/conf/c.c
+	$(COMPILE.c) -I$(@D) -o $@ $<
 
 $S/conf/qemu/unix: $(QEMU_DRV)
 $S/conf/mp135/unix: $(MP135_DRV)

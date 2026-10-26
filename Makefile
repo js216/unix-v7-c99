@@ -52,11 +52,11 @@ qemu: boot/unix boot/qemu.img
 	    -drive if=none,file=boot/qemu.img,format=raw,id=hd0 \
 	    -device virtio-blk-device,drive=hd0
 
-boot/qemu.img: boot/rootfs.img $S/conf/qemuconf
+boot/qemu.img: boot/rootfs.img $S/conf/c.c
 	$(call T,CP)cp --sparse=always $< $@
 	$Qtruncate -s \
-	    $$(awk '/^(swplo|nswap) /{n+=$$2} END{print n*512}' \
-	    $S/conf/qemuconf) $@
+	    $$(awk '$$2 ~ /^(swplo|nswap)$$/ {n += $$4} END {print n*512}' \
+	    $S/conf/c.c) $@
 
 ROOTFS_STATIC = bin/1 bin/true bin/false bin/nohup bin/diff3 \
 	etc/passwd etc/group etc/ttys etc/rc \
