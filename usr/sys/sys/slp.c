@@ -287,40 +287,51 @@ loop:
 }
 
 /*
+ * The page of an image at index i: the u-area, then the pages which
+ * the process's page map lists
+ */
+int
+imgpage(register struct proc *p, int i)
+{
+	return(i < USIZE? p->p_addr + i: *mapent(p->p_map, i-USIZE));
+}
+
+/*
  * Swap a process in.
- * Allocate data and possible text separately.
- * It would be better to do largest first.
+ * Allocate all the core it and its text need first,
+ * then read them.
  */
 int
 swapin(register struct proc *p)
 {
 	register struct text *xp;
-	register int a;
-	int x;
+	register int need, a;
 
-	if ((a = malloc(coremap, p->p_size)) == NULL)
-		return(0);
-	if ((xp = p->p_textp)) {
+	if ((xp = p->p_textp))
 		xlock(xp);
+	need = USIZE + mapneed(0, p->p_size-USIZE);
+	if (xp && xp->x_ccount==0)
+		need += mapneed(0, xp->x_size);
+	if (need > npgfree) {
+		if (xp)
+			xunlock(xp);
+		return(0);
+	}
+	if (xp) {
 		if (xp->x_ccount==0) {
-			if ((x = malloc(coremap, xp->x_size)) == NULL) {
-				xunlock(xp);
-				mfree(coremap, p->p_size, a);
-				return(0);
-			}
-			xp->x_caddr = x;
-			if ((xp->x_flag&XLOAD)==0) {
-				swap(xp->x_daddr,x,xp->x_size,B_READ);
-				arm_sync_icache(PGADDR(x),
-				    ptob(xp->x_size));
-			}
+			mapalloc(&xp->x_map, 0, xp->x_size);
+			if ((xp->x_flag&XLOAD)==0)
+				xread(xp);
 		}
 		xp->x_ccount++;
 		xunlock(xp);
 	}
-	swap(p->p_addr, a, p->p_size, B_READ);
-	mfree(swapmap, ptod(p->p_size), p->p_addr);
-	p->p_addr = a;
+	a = p->p_addr;
+	p->p_addr = pgalloc();
+	mapalloc(&p->p_map, 0, p->p_size-USIZE);
+	swap(a, p->p_addr, USIZE, B_READ);
+	mapswap(a+ptod(USIZE), p->p_map, p->p_size-USIZE, B_READ);
+	mfree(swapmap, ptod(p->p_size), a);
 	p->p_flag |= SLOAD;
 	p->p_time = 0;
 	return(1);
@@ -515,24 +526,29 @@ retry:
 		sureg();
 		return(1);
 	}
-	a2 = malloc(coremap, n);
 	/*
 	 * If there is not enough core for the
 	 * new process, swap out the current process to generate the
 	 * copy.
 	 */
-	if(a2 == NULL) {
+	if(USIZE + mapneed(0, n-USIZE) > npgfree) {
 		rip->p_stat = SIDL;
 		rpp->p_addr = a1;
+		rpp->p_map = rip->p_map;
 		xswap(rpp, 0, 0);
 		rip->p_stat = SRUN;
 	} else {
 		/*
-		 * There is core, so just copy.
+		 * There is core, so just copy,
+		 * a page at a time.
 		 */
-		rpp->p_addr = a2;
-		while(n--)
-			copyseg(a1++, a2++);
+		rpp->p_addr = a2 = pgalloc();
+		rpp->p_map = 0;
+		mapalloc(&rpp->p_map, 0, n-USIZE);
+		copyseg(a1, a2);
+		for(n -= USIZE; n--; )
+			copyseg(*mapent(rip->p_map, n),
+			    *mapent(rpp->p_map, n));
 	}
 	u.u_procp = rip;
 	sureg();
@@ -543,51 +559,46 @@ retry:
 
 /*
  * Change the size of the data+stack regions of the process.
- * If the size is shrinking, it's easy-- just release the extra core.
- * If it's growing, and there is core, just allocate it
- * and copy the image, taking care to reset registers to account
- * for the fact that the system's stack has moved.
+ * If the size is shrinking, it's easy-- just release the pages
+ * at the end of the image.
+ * If it's growing, and there is core, just add pages at the end:
+ * the image is a list of pages, so nothing need be copied.
  * If there is no core, arrange for the process to be swapped
  * out after adjusting the size requirement-- when it comes
  * in, enough core will be allocated.
  *
- * After the expansion, the caller will take care of copying
- * the user's stack towards or away from the data area.
+ * After the expansion, the caller will take care of moving
+ * the user's stack towards or away from the data area,
+ * and of rebuilding the page tables.
  */
 void
 expand(int newsize)
 {
-	register int i, n;
+	register int n;
 	register struct proc *p;
-	register int a1, a2;
 
 	p = u.u_procp;
 	n = p->p_size;
-	p->p_size = newsize;
-	a1 = p->p_addr;
 	if(n >= newsize) {
-		mfree(coremap, n-newsize, a1+newsize);
+		mapfree(&p->p_map, newsize-USIZE, n-USIZE);
+		p->p_size = newsize;
 		return;
 	}
+	if(mapalloc(&p->p_map, n-USIZE, newsize-USIZE)) {
+		p->p_size = newsize;
+		return;
+	}
+	p->p_size = newsize;
 	if (save(u.u_ssav)) {
 		sureg();
 		return;
 	}
-	a2 = malloc(coremap, newsize);
-	if(a2 == NULL) {
-		if (u.u_fpsaved==0) {
-			savfp(&u.u_fps);
-			u.u_fpsaved = 1;
-		}
-		xswap(p, 1, n);
-		p->p_flag |= SSWAP;
-		qswtch();
-		/* no return */
+	if (u.u_fpsaved==0) {
+		savfp(&u.u_fps);
+		u.u_fpsaved = 1;
 	}
-	ptfree(p);
-	p->p_addr = a2;
-	for(i=0; i<n; i++)
-		copyseg(a1+i, a2+i);
-	mfree(coremap, n, a1);
-	resume(a2, u.u_ssav);
+	xswap(p, 1, n);
+	p->p_flag |= SSWAP;
+	qswtch();
+	/* no return */
 }

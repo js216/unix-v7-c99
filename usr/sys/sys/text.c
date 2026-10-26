@@ -33,10 +33,14 @@ xswap(register struct proc *p, int ff, int os)
 		panic("out of swap space");
 	p->p_flag |= SLOCK;
 	xccdec(p->p_textp);
-	swap(a, p->p_addr, os, B_WRITE);
+	swap(a, p->p_addr, USIZE, B_WRITE);
+	mapswap(a+ptod(USIZE), p->p_map, os-USIZE, B_WRITE);
 	ptfree(p);
-	if(ff)
-		mfree(coremap, os, p->p_addr);
+	if(ff) {
+		mapfree(&p->p_map, 0, os-USIZE);
+		pgfree(p->p_addr);
+	}
+	p->p_map = 0;
 	p->p_addr = a;
 	p->p_flag &= ~(SLOAD|SLOCK);
 	p->p_time = 0;
@@ -65,7 +69,7 @@ xfree(void)
 	if(--xp->x_count==0 && (ip->i_mode&ISVTX)==0) {
 		xp->x_iptr = NULL;
 		mfree(swapmap, ptod(xp->x_size), xp->x_daddr);
-		mfree(coremap, xp->x_size, xp->x_caddr);
+		mapfree(&xp->x_map, 0, xp->x_size);
 		ip->i_flag &= ~ITEXT;
 		if (ip->i_flag&ILOCK)
 			ip->i_count--;
@@ -132,7 +136,7 @@ xalloc(register struct inode *ip)
 	u.u_procp->p_textp = xp;
 	xexpand(xp);
 	for(i = 0; i < ts; i++)
-		clearseg(xp->x_caddr+i);
+		clearseg(*mapent(xp->x_map, i));
 	estabur(u.u_exdata.ph[0].p_vaddr >> PGSHIFT, ts, 0, 0, 0, RW);
 	u.u_count = u.u_exdata.ph[0].p_filesz;
 	u.u_offset = u.u_exdata.ph[0].p_offset;
@@ -142,7 +146,7 @@ xalloc(register struct inode *ip)
 	readi(ip);
 	u.u_procp->p_flag &= ~SLOCK;
 	u.u_segflg = 0;
-	arm_sync_icache(PGADDR(xp->x_caddr), ptob(ts));
+	xsync(xp);
 	xp->x_flag = XWRIT;
 }
 
@@ -155,12 +159,9 @@ xalloc(register struct inode *ip)
 void
 xexpand(register struct text *xp)
 {
-	if ((xp->x_caddr = malloc(coremap, xp->x_size)) != NULL) {
-		if ((xp->x_flag&XLOAD)==0) {
-			swap(xp->x_daddr, xp->x_caddr, xp->x_size, B_READ);
-			arm_sync_icache(PGADDR(xp->x_caddr),
-			    ptob(xp->x_size));
-		}
+	if (mapalloc(&xp->x_map, 0, xp->x_size)) {
+		if ((xp->x_flag&XLOAD)==0)
+			xread(xp);
 		xp->x_ccount++;
 		xunlock(xp);
 		return;
@@ -174,6 +175,29 @@ xexpand(register struct text *xp)
 	u.u_procp->p_flag |= SSWAP;
 	qswtch();
 	/* no return */
+}
+
+/*
+ * Read a text in from the swap area, and make the processor
+ * fetch its instructions afresh
+ */
+void
+xread(register struct text *xp)
+{
+	mapswap(xp->x_daddr, xp->x_map, xp->x_size, B_READ);
+	xsync(xp);
+}
+
+/*
+ * Write the instructions of a text out of the data cache
+ */
+void
+xsync(register struct text *xp)
+{
+	register int i;
+
+	for(i = 0; i < xp->x_size; i++)
+		arm_sync_icache(PGADDR(*mapent(xp->x_map, i)), PGSIZE);
 }
 
 /*
@@ -213,9 +237,10 @@ xccdec(register struct text *xp)
 	if (--xp->x_ccount==0) {
 		if (xp->x_flag&XWRIT) {
 			xp->x_flag &= ~XWRIT;
-			swap(xp->x_daddr,xp->x_caddr,xp->x_size,B_WRITE);
+			mapswap(xp->x_daddr, xp->x_map, xp->x_size,
+			    B_WRITE);
 		}
-		mfree(coremap, xp->x_size, xp->x_caddr);
+		mapfree(&xp->x_map, 0, xp->x_size);
 	}
 	xunlock(xp);
 }

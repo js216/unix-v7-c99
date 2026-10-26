@@ -187,7 +187,7 @@ dotext(void)
 		if (xp->x_iptr!=NULL)
 			ntx++;
 	printf("%d text segments\n", ntx);
-	printf("   LOC FLAGS DADDR  CADDR SIZE   IPTR  CNT CCNT\n");
+	printf("   LOC FLAGS DADDR    MAP SIZE   IPTR  CNT CCNT\n");
 	loc = setup[STEXT].value;
 	for (xp = xtext; xp < &xtext[NTEXT]; xp++, loc+=sizeof(xtext[0])) {
 		if (xp->x_iptr == NULL)
@@ -200,7 +200,7 @@ dotext(void)
 		putf(xp->x_flag&XLOCK, 'K');
 		putf(xp->x_flag&XWANT, 'w');
 		printf("%5u", xp->x_daddr);
-		printf("%7.1o", xp->x_caddr);
+		printf("%7.1o", xp->x_map);
 		printf("%5d", xp->x_size);
 		printf("%8.1o", (unsigned)xp->x_iptr);
 		printf("%4d", xp->x_count&0377);

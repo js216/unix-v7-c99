@@ -30,6 +30,8 @@ struct {
  */
 struct	buf	swbuf1;
 struct	buf	swbuf2;
+int	physpg;			/* the page of physio */
+static char	physbusy;	/* 1 while physio uses it, 2 if wanted */
 
 /*
  * The following several routines allocate and free
@@ -439,6 +441,24 @@ swap(int blkno, int coreaddr, register int count, int rdflg)
 }
 
 /*
+ * Move the n pages which map lists between core and swap,
+ * from block blkno of the swap area, a run of consecutive
+ * pages at a time
+ */
+void
+mapswap(int blkno, int map, int n, int rdflg)
+{
+	register int i, j, pg;
+
+	for(i = 0; i < n; i = j) {
+		pg = *mapent(map, i);
+		for(j = i+1; j < n && *mapent(map, j) == pg+j-i; j++)
+			;
+		swap(blkno+ptod(i), pg, j-i, rdflg);
+	}
+}
+
+/*
  * make sure all write-behind blocks
  * on dev (or NODEV for all)
  * are flushed out.
@@ -469,16 +489,16 @@ loop:
  *	  header owned exclusively by the device for this purpose
  *	The device number
  *	Read/write flag
- * Essentially all the work is computing physical addresses and
- * validating them.
+ * The user's memory is a list of pages, not one piece, so the data
+ * moves through one page of the kernel's, physpg, a page at a time.
  */
 void
 physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,
     int rw)
 {
-	register unsigned base;
-	register int nb;
-	int ts;
+	register unsigned base, n;
+	register char *pa;
+	off_t off;
 
 	base = (unsigned)u.u_base;
 	/*
@@ -487,46 +507,56 @@ physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,
 	if (base&01 || u.u_count&01 || base>=base+u.u_count ||
 	    base+u.u_count > USRSIZE || u.u_offset < 0)
 		goto bad;
-	nb = base>>12;
-	/*
-	 * Check that transfer is either entirely in the
-	 * data or in the stack (remember wraparound was
-	 * already checked), and find its first page
-	 * in the image: ts and nb are in 4096-byte pages
-	 */
-	if (nb >= (int)u.u_pdstart &&
-	    (base+u.u_count-1)>>12 < u.u_pdstart+u.u_dsize)
-		ts = USIZE + nb - u.u_pdstart;
-	else if (nb >= (int)(btop(USRSIZE)-u.u_ssize))
-		ts = USIZE + u.u_dsize + nb - (btop(USRSIZE)-u.u_ssize);
-	else
-		goto bad;
+	off = u.u_offset;
+	pa = PGADDR(physpg);
 	intr_disable();
 	while (bp->b_flags&B_BUSY) {
 		bp->b_flags |= B_WANTED;
 		sleep((caddr_t)bp, PRIBIO+1);
 	}
-	bp->b_flags = B_BUSY | B_PHYS | rw;
-	bp->b_dev = dev;
-	/*
-	 * Compute physical address by simulating
-	 * the segmentation hardware.
-	 */
-	bp->b_un.b_addr = PGADDR(u.u_procp->p_addr + ts) + (base&07777);
-	bp->b_blkno = u.u_offset >> BSHIFT;
-	bp->b_bcount = u.u_count;
-	bp->b_error = 0;
-	u.u_procp->p_flag |= SLOCK;
-	(*strat)(bp);
+	while (physbusy) {
+		physbusy |= 2;
+		sleep((caddr_t)&physbusy, PRIBIO+1);
+	}
+	physbusy = 1;
+	intr_enable();
+	bp->b_flags = 0;
+	bp->b_resid = 0;
+	while (u.u_count) {
+		n = min(u.u_count, PGSIZE);
+		if (rw == B_WRITE && copyin((caddr_t)base, pa, n) < 0)
+			break;
+		bp->b_flags = B_BUSY | B_PHYS | rw;
+		bp->b_dev = dev;
+		bp->b_un.b_addr = pa;
+		bp->b_blkno = off >> BSHIFT;
+		bp->b_bcount = n;
+		bp->b_resid = 0;
+		bp->b_error = 0;
+		(*strat)(bp);
+		intr_disable();
+		while ((bp->b_flags&B_DONE) == 0)
+			sleep((caddr_t)bp, PRIBIO);
+		intr_enable();
+		n -= bp->b_resid;
+		if (rw == B_READ && copyout(pa, (caddr_t)base, n) < 0)
+			break;
+		base += n;
+		off += n;
+		u.u_count -= n;
+		if (bp->b_flags&B_ERROR || bp->b_resid)
+			break;
+	}
+	if (u.u_count && (bp->b_flags&B_ERROR) == 0 && bp->b_resid == 0)
+		u.u_error = EFAULT;
 	intr_disable();
-	while ((bp->b_flags&B_DONE) == 0)
-		sleep((caddr_t)bp, PRIBIO);
-	u.u_procp->p_flag &= ~SLOCK;
+	if (physbusy&2)
+		wakeup((caddr_t)&physbusy);
+	physbusy = 0;
 	if (bp->b_flags&B_WANTED)
 		wakeup((caddr_t)bp);
 	intr_enable();
 	bp->b_flags &= ~(B_BUSY|B_WANTED);
-	u.u_count = bp->b_resid;
 	geterror(bp);
 	return;
     bad:

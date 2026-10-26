@@ -244,7 +244,7 @@ getxfile(register struct inode *ip, int nargc)
 	i = USIZE+ds+ss;
 	expand(i);
 	while(--i >= USIZE)
-		clearseg(u.u_procp->p_addr+i);
+		clearseg(imgpage(u.u_procp, i));
 	xalloc(ip);
 
 	/*
@@ -361,7 +361,8 @@ exit(int rv)
 	xfree();
 	acct();
 	ptfree(p);
-	mfree(coremap, p->p_size, p->p_addr);
+	mapfree(&p->p_map, 0, p->p_size-USIZE);
+	pgfree(p->p_addr);
 	p->p_stat = SZOMB;
 	p->p_xstat = rv;
 	p->p_utime = u.u_cutime + u.u_utime;
@@ -498,7 +499,7 @@ sbreak(void)
 		char	*nsiz;
 	};
 	register int a, n, d;
-	int i;
+	register struct proc *p;
 
 	/*
 	 * set n to new data size
@@ -516,26 +517,20 @@ sbreak(void)
 	    u.u_ssize, RO))
 		return;
 	u.u_dsize += d;
+	p = u.u_procp;
+	a = n - u.u_ssize - USIZE;
 	if(d > 0)
 		goto bigger;
-	a = u.u_procp->p_addr + n - u.u_ssize;
-	i = n;
-	n = u.u_ssize;
-	while(n--) {
-		copyseg(a-d, a);
-		a++;
-	}
-	expand(i);
-	return;
+	maprot(p->p_map, a, a-d, n-d-USIZE);
+	expand(n);
+	goto out;
 
 bigger:
 	expand(n);
-	a = u.u_procp->p_addr + n;
-	n = u.u_ssize;
-	while(n--) {
-		a--;
-		copyseg(a-d, a);
-	}
+	maprot(p->p_map, a-d, n-d-USIZE, n-USIZE);
 	while(d--)
-		clearseg(--a);
+		clearseg(*mapent(p->p_map, --a));
+out:
+	ptfree(p);
+	sureg();
 }

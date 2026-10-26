@@ -79,7 +79,6 @@ struct	buf	bfreelist;
 struct	acct	acctbuf;
 struct	inode	*acctp;
 int	(*buffers)[(BSIZE+BSLOP+63)/64*16];
-struct	map	coremap[CMAPSIZ];
 struct	map	swapmap[SMAPSIZ];
 struct	map	ptmap[PMAPSIZ];
 struct	mount	mount[NMOUNT];

@@ -33,6 +33,9 @@ extern	char	curpri;			/* more scheduling */
 extern	unsigned	maxmem;			/* max memory per process */
 extern	daddr_t	swplo;			/* block number of swap space */
 extern	int	nswap;			/* size of swap space */
+extern	int	npgfree;		/* free pages of core */
+extern	int	*pgstk;			/* their numbers */
+extern	int	physpg;			/* the page of physio */
 extern	int	updlock;		/* lock for sync */
 extern	daddr_t	rablock;		/* block to be read ahead */
 extern	char	regloc[];	/* locs. of saved user registers (trap.c) */
@@ -137,6 +140,9 @@ void	klopen(dev_t dev, int flag);
 void	klread(dev_t dev);
 void	klwrite(dev_t dev);
 void	link(void);
+void	mapfree(int *mp, int n0, int n1);
+void	maprot(int map, int a, int b, int c);
+void	mapswap(int blkno, int map, int n, int rdflg);
 void	mfree(struct map *mp, int size, int a);
 void	mknod(void);
 void	mmread(int dev);
@@ -157,6 +163,7 @@ void	openi(struct inode *ip, int rw);
 void	panic(char *s);
 void	panictrap(void);
 void	pause(void);
+void	pgfree(int pg);
 void	physio(void (*strat)(struct buf *bp), struct buf *bp,
 	    int dev, int rw);
 void	pipe(void);
@@ -240,8 +247,10 @@ void	writep(struct file *fp);
 void	xalloc(struct inode *ip);
 void	xfree(void);
 void	xlock(struct text *xp);
+void	xread(struct text *xp);
 void	xrele(struct inode *ip);
 void	xumount(int dev);
+void	xsync(struct text *xp);
 void	xunlock(struct text *xp);
 int	access(struct inode *ip, int mode);
 int	b_to_q(char *cp, int cc, struct clist *q);
@@ -265,13 +274,18 @@ int	fuword(caddr_t a);
 int	getc(struct clist *p);
 int	getw(struct clist *p);
 int	grow(unsigned sp);
+int	imgpage(struct proc *p, int i);
 int	intr_disable(void);
 int	issig(void);
 int	malloc(struct map *mp, int size);
+int	mapalloc(int *mp, int n0, int n1);
+int	*mapent(int map, int i);
+int	mapneed(int n0, int n1);
 int	max(unsigned a, unsigned b);
 int	min(unsigned a, unsigned b);
 int	ndqb(struct clist *q, int flag);
 int	newproc(void);
+int	pgalloc(void);
 int	passc(int c);
 int	putc(int c, struct clist *p);
 int	putw(int c, struct clist *p);

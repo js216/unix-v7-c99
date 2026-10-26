@@ -97,7 +97,7 @@ main(void)
 		expand(USIZE + (int)btop(szicode));
 		estabur(0, 0, 0, btop(szicode), 0, RO);
 		copyout((caddr_t)icode, (caddr_t)0, szicode);
-		arm_sync_icache(PGADDR(u.u_procp->p_addr+USIZE),
+		arm_sync_icache(PGADDR(imgpage(u.u_procp, USIZE)),
 		    szicode);
 		/*
 		 * Return goes to loc. 0 of user init

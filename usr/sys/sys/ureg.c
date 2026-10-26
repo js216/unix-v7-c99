@@ -12,11 +12,28 @@ unsigned l1pa;
 
 /*
  * A range of user pages: the first page, the number of pages, the
- * physical address of the first, and the access bits
+ * page map which lists them from its entry first, or none and the
+ * first page itself, and the access bits
  */
 struct urange {
-	unsigned va, n, pa, ap;
+	unsigned va, n;
+	int map, first;
+	unsigned ap;
 };
+
+/*
+ * The page of entry i of a range, or 0 if the map does not hold it
+ * yet, while expand has still to add it
+ */
+static unsigned
+upage(register struct urange *rp, unsigned i, int nent)
+{
+	if(rp->map == 0)
+		return(rp->first + i);
+	if(rp->first + (int)i >= nent)
+		return(0);
+	return(*mapent(rp->map, rp->first + i));
+}
 
 /*
  * Build the page tables of the current process from the prototype:
@@ -31,41 +48,52 @@ ptbuild(register struct proc *p)
 	register struct urange *rp;
 	register unsigned pg;
 	unsigned long long *l1, *l2, *l3;
-	unsigned nr, n, a, gb, blk;
-	int i, j;
+	unsigned nr, n, a, gb, blk, pa;
+	int i, j, nent[4];
 
 	nr = 0;
 	if(u.u_ptsize && p->p_textp != NULL) {
 		rp = &r[nr++];
 		rp->va = u.u_ptstart;
 		rp->n = u.u_ptsize;
-		rp->pa = ptob(p->p_textp->x_caddr);
+		rp->map = p->p_textp->x_map;
+		rp->first = 0;
 		rp->ap = u.u_pxrw;
+		nent[nr-1] = p->p_textp->x_size;
 	}
 	if(u.u_pdsize) {
 		rp = &r[nr++];
 		rp->va = u.u_pdstart;
 		rp->n = u.u_pdsize;
-		rp->pa = ptob(p->p_addr + USIZE);
+		rp->map = p->p_map;
+		rp->first = 0;
 		rp->ap = RW;
+		nent[nr-1] = p->p_size - USIZE;
 	}
 	if(u.u_pssize) {
 		rp = &r[nr++];
 		rp->va = btop(USRSIZE) - u.u_pssize;
 		rp->n = u.u_pssize;
-		rp->pa = ptob(p->p_addr + USIZE + u.u_pdsize);
+		rp->map = p->p_map;
+		rp->first = u.u_pdsize;
 		rp->ap = RW;
+		nent[nr-1] = p->p_size - USIZE;
 	}
 	rp = &r[nr++];
 	rp->va = btop(SIGTRAMP);
 	rp->n = 1;
-	rp->pa = ptob(sigpage);
+	rp->map = 0;
+	rp->first = sigpage;
 	rp->ap = RO;
+	nent[nr-1] = 1;
 	for(i = 1; i < (int)nr; i++)
 		for(j = i; j > 0 && r[j-1].va > r[j].va; j--) {
 			t = r[j];
 			r[j] = r[j-1];
 			r[j-1] = t;
+			a = nent[j];
+			nent[j] = nent[j-1];
+			nent[j-1] = a;
 		}
 
 	n = 0;
@@ -97,6 +125,8 @@ ptbuild(register struct proc *p)
 	gb = blk = ~0U;
 	for(rp = r; rp < &r[nr]; rp++)
 		for(pg = rp->va; pg < rp->va+rp->n; pg++) {
+			if((pa = upage(rp, pg - rp->va, nent[rp-r])) == 0)
+				continue;
 			if(pg>>(L1SHIFT-PGSHIFT) != gb) {
 				gb = pg>>(L1SHIFT-PGSHIFT);
 				l1[gb] = ptob(a) | PTE_TAB;
@@ -107,8 +137,7 @@ ptbuild(register struct proc *p)
 				l2[blk & (NPTE-1)] = ptob(a) | PTE_TAB;
 				l3 = (unsigned long long *)PGADDR(a++);
 			}
-			l3[pg & (NPTE-1)] = (rp->pa + ptob(pg - rp->va)) |
-			    PGUSER | rp->ap;
+			l3[pg & (NPTE-1)] = ptob(pa) | PGUSER | rp->ap;
 		}
 }
 

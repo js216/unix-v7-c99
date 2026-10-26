@@ -8,7 +8,7 @@ struct text
 {
 	/* disk address of segment (relative to swplo) */
 	int	x_daddr;
-	int	x_caddr;	/* core address, if loaded */
+	int	x_map;		/* page map in core, if loaded */
 	int	x_size;		/* size (pages) */
 	struct inode *x_iptr;	/* inode of prototype */
 	char	x_count;	/* reference count */

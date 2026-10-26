@@ -87,13 +87,24 @@ startup(void)
 
 	/*
 	 * the buffers of the buffer cache, in core,
-	 * where the disk's DMA can reach them
+	 * where the disk's DMA can reach them,
+	 * and the page through which physio moves data
 	 */
 
 	buffers = (int (*)[(BSIZE+BSLOP+63)/64*16])PGADDR(i);
 	i += btop(NBUF*sizeof(*buffers));
-	maxmem = btop(coretop) - i;
-	mfree(coremap, maxmem, i);
+	physpg = i++;
+
+	/*
+	 * the stack of free pages,
+	 * holding every page after it
+	 */
+
+	pgstk = (int *)PGADDR(i);
+	i += btop((btop(coretop) - i) * sizeof(int));
+	for(a = btop(coretop)-1; a >= i; a--)
+		pgstk[npgfree++] = a;
+	maxmem = npgfree;
 	printf("mem = %d\n", ptob(maxmem));
 	mfree(swapmap, nswap, 1);
 	swplo--;

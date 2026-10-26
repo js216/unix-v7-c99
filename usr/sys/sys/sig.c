@@ -255,14 +255,14 @@ grow(unsigned sp)
 		return(0);
 	p = u.u_procp;
 	expand(p->p_size+si);
-	a = p->p_addr + p->p_size;
-	for(i=u.u_ssize; i; i--) {
-		a--;
-		copyseg(a-si, a);
-	}
+	a = p->p_size - USIZE;
+	maprot(p->p_map, a-si-u.u_ssize, a-si, a);
+	a -= u.u_ssize;
 	for(i=si; i; i--)
-		clearseg(--a);
+		clearseg(*mapent(p->p_map, --a));
 	u.u_ssize += si;
+	ptfree(p);
+	sureg();
 	return(1);
 }
 

@@ -34,6 +34,7 @@ char	*gettty(void);
 char	*getptr(char **adr);
 int	prcom(int puid), getbyte(char *adr);
 int	within(char *adr, unsigned long lbd, unsigned long ubd);
+unsigned long	imgoff(unsigned long off);
 void	getdev(void);
 int	aflg;
 int	mem;
@@ -208,13 +209,8 @@ prcom(int puid)
 	int lw=(lflg?35:80);
 	char **ap;
 
-	if (mproc.p_flag&SLOAD) {
-		addr = ptob((unsigned long)mproc.p_addr);
-		file = swmem;
-	} else {
-		addr = (mproc.p_addr+swplo)<<9;
-		file = swap;
-	}
+	file = mproc.p_flag&SLOAD? swmem: swap;
+	addr = imgoff(0);
 	lseek(file, addr, 0);
 	if (read(file, (char *)&u, sizeof(u)) != sizeof(u))
 		return(0);
@@ -224,10 +220,10 @@ prcom(int puid)
 	stksiz = ptob(u.u_ssize);
 	datmap.b1 = ptob(u.u_pdstart);
 	datmap.e1 = datmap.b1+datsiz;
-	datmap.f1 = ptob(USIZE)+addr;
+	datmap.f1 = ptob(USIZE);
 	datmap.b2 = stackbas(stksiz);
 	datmap.e2 = stacktop(stksiz);
-	datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1)+addr;
+	datmap.f2 = ptob(USIZE)+(datmap.e1-datmap.b1);
 
 	tp = gettty();
 	if (tptr && strncmp(tptr, tp, 2))
@@ -271,7 +267,7 @@ prcom(int puid)
 		printf(" swapper");
 		return(1);
 	}
-	addr += ptob((unsigned long)mproc.p_size) - 512;
+	addr = imgoff(ptob((unsigned long)mproc.p_size) - 512);
 
 	/* look for sh special */
 	lseek(file, addr+512-sizeof(char **), 0);
@@ -387,13 +383,40 @@ getbyte(char *adr)
 			return(0);
 	} else
 		saddr = (unsigned)adr + amap->f1 - amap->b1;
-	if(lseek(file, saddr, 0)==-1
+	if((saddr = imgoff(saddr)) == 0 || lseek(file, saddr, 0)==-1
 		   || read(file, &b, 1)<1) {
 		return(0);
 	}
 	return((unsigned)b);
 }
 
+
+/*
+ * The offset in file of byte off of the process's image.  On the
+ * swap area the pages lie in order, but in core anywhere: the
+ * process's page map lists those after the u-area, a root page of
+ * list pages, each of the numbers of 1024 pages.  0 if it cannot be
+ * read.
+ */
+unsigned long
+imgoff(unsigned long off)
+{
+	unsigned i;
+	int pg;
+
+	if ((mproc.p_flag&SLOAD) == 0)
+		return(((unsigned long)mproc.p_addr+swplo)*512 + off);
+	i = off/4096;
+	if (i < USIZE)
+		return(ptob((unsigned long)mproc.p_addr+i) + off%4096);
+	i -= USIZE;
+	if (lseek(swmem, (long)ptob(mproc.p_map) + 4*(i/1024), 0) == -1 ||
+	    read(swmem, (char *)&pg, 4) != 4 ||
+	    lseek(swmem, (long)ptob(pg) + 4*(i%1024), 0) == -1 ||
+	    read(swmem, (char *)&pg, 4) != 4)
+		return(0);
+	return(ptob((unsigned long)pg) + off%4096);
+}
 
 int
 within(char *adr, unsigned long lbd, unsigned long ubd)
