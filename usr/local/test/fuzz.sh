@@ -1,7 +1,7 @@
 : sh fuzz.sh [seed]: the fuzzers, for ever.  Each round has two
 : phases.  In the first, three file system fuzzers, the filler which
-: runs the disk out of space and inodes, random system calls, and
-: mutated programs run at once.  In the second, the process fuzzer,
+: runs the disk out of space and inodes, random system calls, mutated
+: programs, and the C library against references run at once.  In the second, the process fuzzer,
 : the command checks, and more memory than RAM.
 : The root file system is then checked with icheck and dcheck.  Each
 : line printed is a result, a FAIL line with the seed which repeats
@@ -31,6 +31,7 @@ do
 	(cd $T/3; $U/fzfs `expr $s + 2` 400) &
 	(cd $T/fill; $U/fzfill `expr $s + 3` 1) &
 	$U/fzsys `expr $s + 4` 40 &
+	$U/fzlib `expr $s + 9` 1 &
 	$U/fzelf `expr $s + 5` 80
 	wait
 	$U/fzproc `expr $s + 6` 10 &
@@ -49,6 +50,6 @@ do
 	test -s /tmp/fz.x && { echo FAIL dcheck after seed $s; cat /tmp/fz.x; ps alx; }
 	rm -f /tmp/fz.ic /tmp/fz.x
 	r=`expr $r + 1`
-	echo fuzz round $r seeds $s-`expr $s + 8` done
-	s=`expr $s + 9`
+	echo fuzz round $r seeds $s-`expr $s + 9` done
+	s=`expr $s + 10`
 done

@@ -2,7 +2,8 @@
  * fzboard [seed]: the fuzzers which are safe for the board's SD card,
  * for ever.  Each round runs fzsys -s, held to calls which change no
  * file, beside fzmem, kept below the RAM so that nothing is swapped,
- * and prints "fuzz round N seeds S-T done".  The loop is a program,
+ * and fzlib, which writes no file, and prints "fuzz round N seeds S-T
+ * done".  The loop is a program,
  * not a shell script, because the shell's `...` reads through a pipe,
  * whose data the disk would receive at the next sync.
  */
@@ -27,7 +28,7 @@ run(char *prog, char *a1, char *a2, char *a3, char *a4)
 int
 main(int argc, char **argv)
 {
-	char s1[20], s2[20];
+	char s1[20], s2[20], s3[20];
 	long s, r;
 	int status;
 
@@ -35,11 +36,13 @@ main(int argc, char **argv)
 	for(r = 1; ; r++) {
 		sprintf(s1, "%ld", s);
 		sprintf(s2, "%ld", s + 1);
+		sprintf(s3, "%ld", s + 2);
 		run(U "fzsys", "-s", s1, "20", (char *)0);
 		run(U "fzmem", s2, "4", "40", (char *)0);
+		run(U "fzlib", s3, "1", (char *)0, (char *)0);
 		while(wait(&status) >= 0)
 			;
-		printf("fuzz round %ld seeds %ld-%ld done\n", r, s, s + 1);
-		s += 2;
+		printf("fuzz round %ld seeds %ld-%ld done\n", r, s, s + 2);
+		s += 3;
 	}
 }
