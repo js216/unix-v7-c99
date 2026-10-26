@@ -2,8 +2,9 @@ Tests, run on the system itself, in two modes.
 
 The core is a set of regression tests which together finish in well
 under 10 seconds, on either machine, and is always run under a strict
-10 second limit; running out of time is a failure. Boot the system
-and type
+10 second limit: on the board 10 seconds of time, and on QEMU 10
+seconds of the CPU time of the emulator, which a busy host does not
+change. Running out of time is a failure. Boot the system and type
 
 	/usr/local/test/run.sh		all core tests
 	/usr/local/test/run.sh k12 kern	only the named tests

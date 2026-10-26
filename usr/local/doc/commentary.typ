@@ -15561,7 +15561,9 @@ The system is tested on itself, in two modes. The _core_ is a suite
 of regression tests in `/usr/local/test` which together finish in a
 few seconds on either machine, and the build machine always runs it
 under a strict limit of 10 seconds, so that running out of time counts
-as a failure. The _fuzzers_ run for ever, making random combinations of
+as a failure. On the board the limit is on the time itself. On QEMU it
+is on the CPU time the emulator uses, since the emulator shares the
+build machine with other work, and its time measures that work too. The _fuzzers_ run for ever, making random combinations of
 operations and checking every result, until they are stopped
 (@ch-fuzz). Each core test, or _case_, is a shell script in `cases`, with the output it must produce in a file of the same
 name ending in `.exp`, and, where some of the output legitimately varies
