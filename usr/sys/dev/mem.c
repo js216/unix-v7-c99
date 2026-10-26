@@ -7,6 +7,7 @@
  *	minor device 0 is physical memory
  *	minor device 1 is kernel memory
  *	minor device 2 is EOF/RATHOLE
+ *	minor device 3 is an endless source of zeros
  */
 
 #include "../h/param.h"
@@ -15,6 +16,8 @@
 #include "../h/user.h"
 #include "../h/conf.h"
 #include "../h/buf.h"
+
+static char	zeros[512];
 
 void
 mmread(int dev)
@@ -25,6 +28,12 @@ mmread(int dev)
 
 	if(minor(dev) == 2)
 		return;
+	if(minor(dev) == 3) {
+		while(u.u_error==0 && u.u_count > 0)
+			iomove(zeros, u.u_count < sizeof(zeros) ? u.u_count :
+			    sizeof(zeros), B_READ);
+		return;
+	}
 	if(devaddr(dev, u.u_offset)) {
 		while(u.u_error==0 && u.u_count >= 4 &&
 		    (u.u_offset&3) == 0 &&
@@ -50,7 +59,7 @@ mmwrite(int dev)
 	register char *a;
 	int w;
 
-	if(minor(dev) == 2) {
+	if(minor(dev) == 2 || minor(dev) == 3) {
 		u.u_count = 0;
 		return;
 	}
