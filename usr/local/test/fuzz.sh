@@ -2,7 +2,7 @@
 : phases.  In the first, three file system fuzzers, the filler which
 : runs the disk out of space and inodes, random system calls, and
 : mutated programs run at once.  In the second, the process fuzzer,
-: the command checks, and, every other round, more memory than RAM.
+: the command checks, and more memory than RAM.
 : The root file system is then checked with icheck and dcheck.  Each
 : line printed is a result, a FAIL line with the seed which repeats
 : it, or the summary of a round.
@@ -30,13 +30,11 @@ do
 	(cd $T/2; $U/fzfs `expr $s + 1` 400) &
 	(cd $T/3; $U/fzfs `expr $s + 2` 400) &
 	(cd $T/fill; $U/fzfill `expr $s + 3` 1) &
-	$U/fzsys `expr $s + 4` 20 &
-	$U/fzelf `expr $s + 5` 40
+	$U/fzsys `expr $s + 4` 40 &
+	$U/fzelf `expr $s + 5` 80
 	wait
 	$U/fzproc `expr $s + 6` 10 &
-	case `expr $r % 2` in
-	0)	$U/fzmem `expr $s + 7` 5 80 &
-	esac
+	$U/fzmem `expr $s + 7` 5 80 &
 	(cd $T/sh; sh $U/fzsh `expr $s + 8`)
 	wait
 	cd /
