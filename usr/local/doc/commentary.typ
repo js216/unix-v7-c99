@@ -1481,14 +1481,14 @@ area. The console is one of the chip's serial ports, driven by
 
 The memory of the MP135 machine is in two pieces which are not
 contiguous. The kernel runs in the 128~KB of on-chip SYSRAM at
-`0x2ffe0000`, with the 32~KB of SRAM1--3 after it for room (@ch-intro), which the first row of the map
+`0x2FFE0000`, with the 32~KB of SRAM1--3 after it for room (@ch-intro), which the first row of the map
 (#l("{0xc0000000, 0x2ffe0000, 0x30008000, BLK_KERN},")) places at 0xc0000000, where the
 QEMU machine's kernel lies too. This is smaller than a block of 2~MB
 and does not begin on one, so `machine_init` does not map it in a
 block. It keeps the pages in which `_start` mapped the kernel
 (#f("low.s"), #f("machdep.c")). Process images, and anything else too
 large for SYSRAM, live in the 512~MB of external DDR memory at
-`0xc0000000`, which the kernel maps at 0xc0200000, the next block
+`0xC0000000`, which the kernel maps at 0xc0200000, the next block
 (#l("{0xc0200000, 0xc0000000, 0xe0000000, BLK_KERN},")). Core is the whole of DDR, from `COREBASE` to `CORETOP`
 (#l("#define\tCOREBASE\t0xc0000000")--#l("#define\tCORETOP\t0xe0000000")).
 
@@ -1538,7 +1538,7 @@ heading comment (#l("* RK disk driver")) is kept, since the driver is configured
 The device is a "virtio" block device, an interface designed for
 virtual machines rather than for hardware. QEMU provides up to 32 virtio
 transports, each a block of registers 0x200 bytes long, from physical
-address `0x0a000000`, which the kernel maps at 0xf0400000 (#f("c.c")).
+address `0x0A000000`, which the kernel maps at 0xf0400000 (#f("c.c")).
 The driver uses the original ("legacy") form of the
 interface. Requests are passed through a "virtqueue" in the machine's memory. It
 has a table of descriptors, each giving the address and length of a
@@ -3981,7 +3981,7 @@ transmitted (`TDR`) data.
 
 #lines-to("/* base address */")
 
-`KLADDR` is the kernel address of USART2, physical `0x4c001000`, in the
+`KLADDR` is the kernel address of USART2, physical `0x4C001000`, in the
 2 MB block which it shares with I2C4 (#f("mp135/mach.h")). `RCC` is the chip's reset and clock controller, by its kernel address,
 and `GPIO` a register of a port of general purpose pins.
 `APB6ENSETR` and `UART12CKSELR` are the registers of `RCC` which
@@ -4424,12 +4424,12 @@ returned to PLL2's P output (selector value 2, #l("RCC(0x544) = 2;")--#l(";", af
 #lines-to("if (R(0xF000100C) & 0x1000) {")
 
 If a previous low power mode left the DDR pads in retention (bit 12 of
-the power controller's `PWR_CR3`, physical address `0x5000100c`, which
+the power controller's `PWR_CR3`, physical address `0x5000100C`, which
 lies in the block of the reset and clock controller and so at
 `0xf000100c`), the PHY could not drive the memory. Retention is turned
 off (#l("if (R(0xF000100C) & 0x1000) {")--#l("}", after: "R(0xF000100C) &= ~0x1000;")).
 
-The TrustZone address space controller, `TZC`, at physical `0x5c006000`
+The TrustZone address space controller, `TZC`, at physical `0x5C006000`
 and mapped at `0xf0806000` (#f("mp135/mach.h")), guards DDR. It filters
 every access by its address and by the security state of the bus
 master. Its clock, and that of the memory
@@ -15007,7 +15007,7 @@ kernel unmapped.
 The MP135 machine's linker script, #f("mp135/unix.ld"), differs from #f("qemu/unix.ld") only in
 its region and in the difference between kernel and physical addresses.
 
-`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2ffe0000`, and
+`RAM` is the 128 KB of on-chip SYSRAM, at physical `0x2FFE0000`, and
 the 32~KB of SRAM1--3 which follow it, in which the kernel runs, by its
 kernel address 0xc0000000, that of the QEMU machine's kernel. The
 text, data, and `.bss` of the kernel, its tables included, must all fit
@@ -15030,7 +15030,7 @@ The header is that of the chip's documentation, version 2 (#l("memcpy(hdr, \"STM
 not set to demand one; the checksum (#l("put4(hdr+68, sum);")), the sum of the image's bytes
 (#l("sum = 0;")--#l("sum += img[i];")), which the ROM recomputes; the version (#l("hdr[74] = 2;")); the image's
 length (#l("put4(hdr+76, n);")); the entry point and the load address (#l("put4(hdr+80, SYSRAM);"), #l("put4(hdr+88, SYSRAM);")), both the
-start of SYSRAM, `0x2ffe0000` (#l("#define\tSYSRAM\t0x2ffe0000UL")), where `_start` lies
+start of SYSRAM, `0x2FFE0000` (#l("#define\tSYSRAM\t0x2ffe0000UL")), where `_start` lies
 (#f("mp135/unix.ld")); and flag bit 31 with a length of 384 (#l("put4(hdr+100, 1UL << 31);"), #l("put4(hdr+104, 512 - 128);")),
 which say that an extension header follows and fills the rest of the
 512 bytes: a padding header (#l("memcpy(hdr+128, \"ST\\377\\377\", 4);"), #l("put4(hdr+132, 512 - 128);")), `ST` followed by two bytes of
