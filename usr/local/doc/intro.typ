@@ -719,7 +719,6 @@ again: a debugger stops at every breakpoint.
 
 === Saved State <sec-saved>
 
-The registers of a process are saved in six places (@tab-saved).
 Every entry to the kernel from user mode, by a system call, an
 interrupt, or a fault, saves all of the user's registers on the kernel
 stack in the u-area (#at("/usr/sys/h/reg.h", "#define\tR0\t(0)")). The kernel finds them through
@@ -728,16 +727,21 @@ changing them. When the kernel itself is interrupted, a frame of the
 same form is saved below whatever the kernel had on its stack, and
 holds the kernel's registers instead.
 
-#btable(columns: (1.25fr, 1fr, 1fr, 1fr), align: left, caption: [Where registers are saved], pl: bottom,
-  table.header(top, [*What*], [*Saved by*], [*Kept in*], [*Restored by*], mid),
-  [user registers at entry], [every trap and interrupt (#f("low.s"))], [frame on the kernel stack], [the common return (#f("low.s"))],
-  [kernel registers at a switch], [`save` in `swtch`], [`u_rsav`], [`resume` in `swtch`],
-  [the start of a system call], [`save` in `trap`], [`u_qsav`], [`resume` in `sleep`, on a signal],
-  [where the image was copied or swapped out], [`save` in `newproc`, `expand`, `xexpand`], [`u_ssav`], [`resume` in `swtch`, under `SSWAP`],
-  [floating point registers], [`swtch`, `newproc`, `expand`, `psig`], [`u_fps`], [the return to user mode],
-  [user registers for a handler], [`sendsig`], [frame on the user stack], [`sigreturn`],
-  bot,
-) <tab-saved>
+A process's registers are kept in six places, each with its own code
+to save and restore them:
+
+- the frame on the kernel stack: the user's registers at every trap
+  and interrupt, saved and restored in #f("low.s");
+- `u_rsav`: the kernel's registers at a switch, saved and resumed in
+  `swtch`;
+- `u_qsav`: the start of a system call, saved in `trap`, resumed by
+  `sleep` on a signal;
+- `u_ssav`: where the image was copied or swapped out, saved in
+  `newproc`, `expand`, and `xexpand`, resumed by `swtch` under `SSWAP`;
+- `u_fps`: the floating point registers, saved by `swtch`, `newproc`,
+  `expand`, and `psig`, loaded on the return to user mode;
+- the frame on the user stack: the user's registers for a signal
+  handler, saved by `sendsig`, restored by `sigreturn`.
 
 A _label_ (`label_t`, #at("/usr/sys/h/param.h", "typedef\tint\t\tlabel_t[10];")) is a point in the kernel to which
 control can later return. It holds only the registers which a called
