@@ -11,7 +11,6 @@
 #define	SINCR	1		/* increment of stack (*4096 bytes) */
 #define	NOFILE	20		/* max open files per process */
 #define	CANBSIZ	256		/* max size of typewriter line */
-#define	CMAPSIZ	(NPROC+NTEXT+3)	/* size of core allocation area */
 #define	SMAPSIZ	(2*NPROC+NTEXT+2)	/* swap allocation area size */
 #define	PMAPSIZ	(NPROC+2)	/* size of page table allocation area */
 #define	NPTAB	(4*NPROC+256)	/* pages of user page tables */
@@ -143,4 +142,4 @@ typedef	long		off_t;
 #define	UBITS	0xfe0ffe20	/* flags, GE, IT, E, and T: a user may set these */
 #define	TBITS	0x0600fe20	/* the Thumb state: T, IT, and E */
 
-extern unsigned corebase, coretop, coreoff, gicdbase, giccbase;
+extern unsigned corebase, coretop, coreoff;
