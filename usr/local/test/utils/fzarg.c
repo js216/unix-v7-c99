@@ -145,7 +145,7 @@ fail(char *what, long c, int status)
 static int
 try(long c)
 {
-	char *av[MAXSTR + 3], *ev[MAXSTR + 3];
+	static char *av[MAXSTR + 3], *ev[MAXSTR + 3];
 	int pid, status, i, j;
 
 	make(c);

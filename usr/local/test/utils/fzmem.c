@@ -3,16 +3,18 @@
  * take between 3mb/4 and mb megabytes of data with sbrk and fill it
  * with a pattern of their own, so that together they need more than
  * the machine has and the swapper must move them out and back in.
- * Each then checks its memory, grows its stack by recursion up to
- * 2 MB deep, checking every frame, changes part of it, forks a child
- * which checks the copy, unless core is short and the fork fails,
- * shrinks or grows itself, and checks again,
- * for several passes, yielding between them so that the others run.
- * Every word must hold what was last written.  With -s, the processes
- * fork one at a time, taking turns at a pipe, so that at most one copy
- * is made at once, and the most that they can need together is little
- * more than (nproc+1)*mb.  Prints the seed and the first bad word and
- * exits 1; prints "fzmem ok" otherwise.
+ * Each then checks its memory, recurses up to 2 MB deep, checking
+ * every frame, changes part of it, forks a child which checks the
+ * copy, unless core is short and the fork fails, shrinks or grows
+ * itself, and checks again, for several passes, yielding between them
+ * so that the others run.  Every word must hold what was last written.
+ * The stack is grown to its full 2 MB before the processes are forked,
+ * since a stack which must grow while core and swap are short is
+ * refused, with SIGSEG.  With -s, the processes fork one at a time,
+ * taking turns at a pipe, so that at most one copy is made at once,
+ * and the most that they can need together is little more than
+ * (nproc+1)*mb.  Prints the seed and the first bad word and exits 1;
+ * prints "fzmem ok" otherwise.
  */
 
 #include <stdio.h>
@@ -203,6 +205,7 @@ main(int argc, char **argv)
 	seed = atol(argv[1]);
 	n = atoi(argv[2]);
 	mb = atol(argv[3]);
+	deep(2047, (unsigned)seed);
 	for(k = 0; k < n; k++)
 		if(fork() == 0)
 			worker(k, mb);
