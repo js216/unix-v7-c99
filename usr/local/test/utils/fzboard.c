@@ -3,7 +3,8 @@
  * for ever.  Each round runs fzsys -s, held to calls which change no
  * file, beside fzmem, kept below the RAM so that nothing is swapped,
  * fzlib, which writes no file, fzraw, which only reads the disk, and
- * fzarg, which only execs, and prints "fuzz round N seeds S-T done".  The loop is a program,
+ * fzarg, which only execs, then audits the kernel's books with fzkern
+ * and prints "fuzz round N seeds S-T done".  The loop is a program,
  * not a shell script, because the shell's `...` reads through a pipe,
  * whose data the disk would receive at the next sync.
  */
@@ -44,6 +45,8 @@ main(int argc, char **argv)
 		run(U "fzarg", s2, "1", (char *)0, (char *)0);
 		while(wait(&status) >= 0)
 			;
+		run(U "fzkern", (char *)0, (char *)0, (char *)0, (char *)0);
+		wait(&status);
 		printf("fuzz round %ld seeds %ld-%ld done\n", r, s, s + 2);
 		s += 3;
 	}

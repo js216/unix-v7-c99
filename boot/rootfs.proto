@@ -229,6 +229,7 @@ d--755 0 0
           fzfill	---755 0 0 usr/local/test/obj/fzfill
           fzfs	---755 0 0 usr/local/test/obj/fzfs
           fzgen	---755 0 0 usr/local/test/obj/fzgen
+          fzkern	---755 0 0 usr/local/test/obj/fzkern
           fzlib	---755 0 0 usr/local/test/obj/fzlib
           fzmem	---755 0 0 usr/local/test/obj/fzmem
           fzraw	---755 0 0 usr/local/test/obj/fzraw

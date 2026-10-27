@@ -6,10 +6,10 @@
 : the command checks, and exec with random arguments run beside more
 : memory than RAM but less than RAM and swap together, since running
 : out of swap is a known panic, on a disk cleared of what the first
-: left, since random writes can fill it.
-: The root file system is then checked with icheck and dcheck.  Each
-: line printed is a result, a FAIL line with the seed which repeats
-: it, or the summary of a round.
+: left, since random writes can fill it.  The root file system is
+: then checked with icheck and dcheck, and the books of the kernel with
+: fzkern.  Each line printed is a result, a FAIL line with the seed
+: which repeats it, or the summary of a round.
 :
 : sh fuzz.sh -b [seed]: the mode for the board, which writes nothing to the
 : SD card but the inode times an idle system writes too.  It runs
@@ -56,6 +56,7 @@ do
 	sed -e 1d -e '/^ *entries *link cnt$/d' /tmp/fz.ic >/tmp/fz.x
 	test -s /tmp/fz.x && { echo FAIL dcheck after seed $s; cat /tmp/fz.x; ps alx; }
 	rm -f /tmp/fz.ic /tmp/fz.x
+	$U/fzkern | grep -v '^fzkern ok$'
 	r=`expr $r + 1`
 	echo fuzz round $r seeds $s-`expr $s + 9` done
 	s=`expr $s + 10`
