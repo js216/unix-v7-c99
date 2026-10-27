@@ -715,8 +715,7 @@ default action, so that a second signal which arrives before the
 handler has asked again to catch it takes the default action, often to
 end the process. The illegal instruction and trace signals keep their
 handlers, since a program which catches them expects them again and
-again: a debugger stops at every breakpoint, and on the PDP-11 a
-floating point simulator caught every floating point instruction.
+again: a debugger stops at every breakpoint.
 
 === Saved State <sec-saved>
 
