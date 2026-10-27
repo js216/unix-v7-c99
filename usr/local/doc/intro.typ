@@ -230,8 +230,7 @@ MMU off. From there the system comes up in these steps:
   0x2ffe0000 maps to the physical address 0X2FFE0000. The identity
   mapping lets the code go on running when the MMU is turned on. (The
   book writes a physical address in capitals, prefix and all, as
-  0X40000000, and a virtual one in lower case, as 0x40000000, so that
-  the two can be told apart.) It turns the MMU on,
+  0X40000000, and a virtual one in lower case, as 0x40000000.) It turns the MMU on,
   jumps to the kernel address, sets up a small boot stack, installs the
   exception vectors, enables the floating point unit, and calls
   `machine_init`.
@@ -661,7 +660,7 @@ from another process. The kernel posts it with `psignal`
 (#at("/usr/sys/sys/sig.c", "psignal(register struct proc *p, register int sig)")), which sets a bit in the process's table entry and, if
 the process sleeps at an interruptible priority, wakes it.
 
-#btable(columns: (auto, auto, 1fr, auto), align: left, caption: [The signals],
+#btable(columns: (auto, auto, 1fr, auto), align: left, caption: [The signals], pl: bottom,
   table.header(top, [*No.*], [*Name*], [*Sent when*], [*Default*], mid),
   [1], [`SIGHUP`], [the terminal hangs up], [exit],
   [2], [`SIGINT`], [the interrupt key, DEL], [exit],
