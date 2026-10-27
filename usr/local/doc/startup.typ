@@ -703,7 +703,7 @@ the offset in the page, is taken by `ubfx`. The upper word of each
 entry stays zero, since `bss` has just been cleared.
 
 Pages are used rather than blocks of 2~MB because on the MP135 machine
-the kernel lies in SYSRAM, at 0x2FFE0000, which is not at the same
+the kernel lies in SYSRAM, at 0X2FFE0000, which is not at the same
 place in its block as the kernel address 0xc0000000 is in its own, so
 no block could map it. The QEMU machine's kernel could be mapped by a
 block, but the same code serves both. The kernel must lie within the

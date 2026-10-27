@@ -27,22 +27,22 @@
 This book describes Unix v7 ported to run on these two machines:
 
 *The QEMU machine* is the `virt` machine of the QEMU emulator, configured with a single ARM Cortex-A7 processor and 512~MB of
-RAM at address 0x40000000, an ARM Generic Interrupt Controller (GIC)
-version 2 at 0x08000000, the ARM generic timer, an ARM PL011 UART at
-0x09000000 as the console, and, as the disk, a virtio block device,
-found among the virtio "MMIO" slots at 0x0A000000. QEMU loads the
+RAM at address 0X40000000, an ARM Generic Interrupt Controller (GIC)
+version 2 at 0X08000000, the ARM generic timer, an ARM PL011 UART at
+0X09000000 as the console, and, as the disk, a virtio block device,
+found among the virtio "MMIO" slots at 0X0A000000. QEMU loads the
 kernel into RAM itself and starts it at its entry point.
 
 *The MP135 machine* is Seeed Studio's Odyssey-STM32MP135D, a small
 board built around STMicroelectronics' STM32MP135D system-on-chip. The chip
 contains one ARM Cortex-A7 processor and 168~KB of on-chip RAM. Of
-this, 128~KB is the system RAM (SYSRAM) at 0x2FFE0000, which holds the
+this, 128~KB is the system RAM (SYSRAM) at 0X2FFE0000, which holds the
 kernel, and 32~KB in three banks, SRAM1--3, follows it. (The port uses neither SRAM1--3 nor the 8~KB of backup SRAM.) The board adds 512~MB of DDR3L
-memory, at 0xC0000000, and an SD card slot. The console is one of the
-chip's serial ports, USART2 at 0x4C001000, whose pins the board brings
+memory, at 0XC0000000, and an SD card slot. The console is one of the
+chip's serial ports, USART2 at 0X4C001000, whose pins the board brings
 out on its 40-pin header. The "disk" is the SD card, on the SDMMC1 controller at
-0x58005000, and the interrupt controller is again a GIC version 2, at
-0xA0021000. The kernel also uses the chip's reset and clock controller
+0X58005000, and the interrupt controller is again a GIC version 2, at
+0XA0021000. The kernel also uses the chip's reset and clock controller
 (RCC), its power controller (PWR), its general purpose pins (GPIO), its
 DDR controller, its TrustZone address space controller (TZC), which
 guards the DDR memory, its TrustZone protection controller (ETZPC), which
@@ -310,16 +310,16 @@ faults any access from user mode which an entry does not allow
   [0x00008000], table.cell(colspan: 2)[text],
   [next page], table.cell(colspan: 2)[data and `bss`, growing upward],
   [0xbfffffff], table.cell(colspan: 2)[stack, growing downward],
-  [0xc0000000], [RAM 0x40000000--0x401FFFFF: kernel], [SYSRAM 0x2FFE0000: kernel],
-  [0xc0200000], [RAM 0x40000000--0x5FFFFFFF: free after the kernel], [DDR 0xC0000000--0xDFFFFFFF: free RAM],
-  [0xf0000000], [GIC distributor 0x08000000], [GIC distributor 0xA0021000],
-  [0xf0001000], [GIC CPU interface 0x08010000], [GIC CPU interface 0xA0022000],
-  [0xf0003000], [UART 0x09000000], [USART2 0x4C001000],
-  [0xf0004000], [virtio 0x0A000000], [SDMMC1 0x58005000],
-  [0xf0008000], [], [RCC, PWR, GPIO 0x50000000],
-  [0xf0013000], [], [IWDG2, DDR controller, PHY 0x5A002000],
-  [0xf0016000], [], [TZC, ETZPC 0x5C006000],
-  [0xf0018000], [], [I2C4 0x4C005000],
+  [0xc0000000], [RAM 0X40000000--0X401FFFFF: kernel], [SYSRAM 0X2FFE0000: kernel],
+  [0xc0200000], [RAM 0X40000000--0X5FFFFFFF: free after the kernel], [DDR 0XC0000000--0XDFFFFFFF: free RAM],
+  [0xf0000000], [GIC distributor 0X08000000], [GIC distributor 0XA0021000],
+  [0xf0001000], [GIC CPU interface 0X08010000], [GIC CPU interface 0XA0022000],
+  [0xf0003000], [UART 0X09000000], [USART2 0X4C001000],
+  [0xf0004000], [virtio 0X0A000000], [SDMMC1 0X58005000],
+  [0xf0008000], [], [RCC, PWR, GPIO 0X50000000],
+  [0xf0013000], [], [IWDG2, DDR controller, PHY 0X5A002000],
+  [0xf0016000], [], [TZC, ETZPC 0X5C006000],
+  [0xf0018000], [], [I2C4 0X4C005000],
   [0xffe00000], table.cell(colspan: 2)[`u`, the current process's u-area],
   bot,
 ) <tab-addr>

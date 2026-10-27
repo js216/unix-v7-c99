@@ -15021,7 +15021,7 @@ The kernel's text, read-only data, and initialised data follow one
 another from the origin of `RAM`. `AT` gives each section its load
 address, the kernel address less 0x80000000, which the ELF file
 records as the physical address of its segment and QEMU loads it at,
-0x40000000 onwards.
+0X40000000 onwards.
 
 `__bss_start` and `__bss_end` bound the uninitialised data, and play the
 part of v7's `_edata` and `_end`: `_start` clears the memory between
