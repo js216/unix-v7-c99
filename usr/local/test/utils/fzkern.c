@@ -407,17 +407,20 @@ audit(void)
 
 /*
  * Watch, while process pid lives, the most blocks of swap which held
- * images of processes at once, and the most processes swapped out; a
- * failure if there were none, since then the swapper went untried
+ * images of processes at once, the most processes swapped out, and
+ * the least free swap and largest hole in it; a failure if no process
+ * was swapped out, since then the swapper went untried
  */
 static void
 watch(int pid)
 {
-	int i, n, used, most, out, mostout;
+	int i, used, most, out, mostout, fr, hole, leastfr, leasthole;
 
 	most = mostout = 0;
+	leastfr = leasthole = nswap;
 	while(kill(pid, 0) == 0) {
-		if(!kread(nl[X_PROC].n_value, xproc, sizeof(xproc)))
+		if(!kread(nl[X_PROC].n_value, xproc, sizeof(xproc)) ||
+		    !kread(nl[X_SWAPMAP].n_value, xswapmap, sizeof(xswapmap)))
 			break;
 		used = out = 0;
 		for(i = 0; i < NPROC; i++)
@@ -426,18 +429,28 @@ watch(int pid)
 				out++;
 				used += ptod(xproc[i].p_size);
 			}
+		fr = hole = 0;
+		for(i = 0; i < SMAPSIZ && xswapmap[i].m_size; i++) {
+			fr += xswapmap[i].m_size;
+			if(xswapmap[i].m_size > hole)
+				hole = xswapmap[i].m_size;
+		}
 		if(used > most)
 			most = used;
 		if(out > mostout)
 			mostout = out;
+		if(fr < leastfr)
+			leastfr = fr;
+		if(hole < leasthole)
+			leasthole = hole;
 		sleep(1);
 	}
-	n = most/2048;
 	if(mostout == 0)
 		printf("FAIL fzkern: nothing was swapped out\n");
 	else
-		printf("fzkern: at most %d MB of %d processes swapped out\n",
-		    n, mostout);
+		printf("fzkern: at most %d MB of %d processes swapped out, "
+		    "free swap down to %d MB, its largest hole to %d MB\n",
+		    most/2048, mostout, leastfr/2048, leasthole/2048);
 }
 
 int
