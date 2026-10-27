@@ -263,6 +263,7 @@ int	dfsr(void);
 int	estabur(unsigned ts, unsigned nt, unsigned ds, unsigned nd,
 	    unsigned ns, int xrw);
 void	expand(int newsize);
+int	roomfor(int newsize, int tn), swapfits(int n);
 int	fsig(struct proc *p);
 int	fkbyte(char *a);
 int	fkword(int *a, int *w);

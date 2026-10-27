@@ -2666,7 +2666,12 @@ If RAM has no room (#l("if (swapin(p))")), `sched` looks for a process to swap o
 in its place. It prefers the largest process which is sleeping at a
 priority that a signal could break, or which is stopped by tracing
 (#l("if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||")). Failing that, it takes the process which has been in RAM
-longest, counting `p_nice` once more.
+longest, counting `p_nice` once more. It passes over a process whose
+image no hole of the swap map would hold (#l("if (!swapfits(rp->p_size))")), since an image
+goes to the swap area in one piece. With images of hundreds of
+megabytes, small ones left between them can cut the free swap into
+holes too short for any, and v7, whose images were at most 64~KB,
+panicked in `xswap` instead.
 
 #lines-to("/*", after: "inage = rp->p_time+rp->p_nice-NZERO;")
 
@@ -2688,6 +2693,21 @@ candidate (#l("if(runin != 0) {")), and by `pgfree` (#f("malloc.c")) when RAM is
 freed.
 
 #lines-to("/*", lead: true, after: "sleep((caddr_t)&runin, PSWP);")
+
+The routine `swapfits` says whether one hole of the swap map holds an
+image of `n` pages.
+
+#lines-to("/*", lead: true, after: "swapfits(int n)")
+
+The routine `roomfor` says whether the current process may grow to
+`newsize` pages, with `tn` pages of text to bring in as well. Either
+the free core holds the growth (#l("if (mapneed(n-USIZE, newsize-USIZE) + tn <= npgfree)")), or the image can be
+swapped out to make room (#l("return(swapfits(newsize));")). The callers of `expand`, `sbreak`
+and `getxfile` (#f("sys1.c")) and `grow` (#f("sig.c")), ask it first and fail
+when it says no, so that the swap which `expand` falls back on always
+finds its hole.
+
+#lines-to("/*", lead: true, after: "roomfor(int newsize, int tn)")
 
 The routine `imgpage` gives the page at index `i` of the image of a process in
 RAM: the u-area's at `p_addr`, then those which its map lists. The

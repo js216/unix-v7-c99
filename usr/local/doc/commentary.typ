@@ -408,7 +408,9 @@ wraps around, which makes the unsigned sum smaller than the size, or
 lies beyond the user's space is refused with `ENOMEM`
 (#l("if(end < u.u_exdata.ph[0].p_filesz || end > USRSIZE)")). The
 stack is given `SSIZE` pages plus room for the strings and the pointer
-vector, `nargc` bytes. Then `estabur` (#f("ureg.c")) refuses segments
+vector, `nargc` bytes. An image for which there is neither free core
+nor a hole in the swap area to move it out to is refused with `ENOMEM`
+(`roomfor`, #f("slp.c"), #l("if(!roomfor(USIZE+ds+ss, mapneed(0, ts)))")). Then `estabur` (#f("ureg.c")) refuses segments
 which overlap each other, the stack, or the signal trampoline.
 
 In v7 the text began at address zero and the data followed it. The
@@ -417,7 +419,10 @@ mapped below that, and a null pointer faults.
 
 #lines-to("/*", after: "return;")
 
-With the profiling turned off (#l("u.u_prof.pr_scale = 0;")) the old image is abandoned. As in v7, the image is
+With the profiling turned off (#l("u.u_prof.pr_scale = 0;")) the old image is abandoned. Since `xfree`
+may sleep, the room is asked for again
+(#l("if(!roomfor(i, mapneed(0, ts))) {")), and if it has gone meanwhile,
+the process, which has already given up its text, is killed. As in v7, the image is
 expanded to `USIZE+ds+ss` pages, its per process area and the sizes
 just computed, and everything beyond the per process area is cleared
 (#l("i = USIZE+ds+ss;"), #l("while(--i >= USIZE)"), #l("clearseg(imgpage(u.u_procp, i));")). The uninitialised data and the stack therefore read as
@@ -551,7 +556,9 @@ The routine `sbreak` sets the size of the data area. The new break is
 converted to pages, and the data's first page, `u_pdstart`, is
 subtracted (#l("n = (int)btop((unsigned)((struct a *)u.u_ap)->nsiz) -")). In v7 the data began at the first segment after the
 text, and the text's segments were subtracted. The mapping routine
-`estabur` must accept the new size, which it records in `u_dsize`: it
+There must be free core for the new size, or a hole in the swap area
+to move the image out to (#l("if(!roomfor(n, 0)) {")), or the call fails with
+`ENOMEM`. Then `estabur` must accept the new size, which it records in `u_dsize`: it
 refuses a data area that would run into the stack or the signal
 trampoline (#f("ureg.c")).
 
@@ -864,7 +871,9 @@ expressions become `USRSIZE-ptob(u.u_ssize)` and `USRSIZE-sp`
 `ptob(1)`. The new stack size is the depth of `sp` in
 pages, rounded down, plus `SINCR` pages of room, and `estabur` refuses it
 if the stack would meet the data. Since `estabur` records the new
-size at once, `grow` keeps the old one in `ss` (#l("ss = u.u_ssize;")). The routine `expand` adds the pages at the end of the image, after the
+size at once, `grow` keeps the old one in `ss` (#l("ss = u.u_ssize;")). Without free core
+or swap for the larger image (#l("if(!roomfor(u.u_procp->p_size+si, 0))")), the stack does
+not grow, and the fault becomes `SIGSEG`. The routine `expand` adds the pages at the end of the image, after the
 stack, and turning the map's entries around puts them below it
 (#l("maprot(p->p_map, a-si-ss, a-si, a);")), with no page copied. In v7 the whole stack was copied up by
 the number of pages added. The new pages, now at the stack's bottom,

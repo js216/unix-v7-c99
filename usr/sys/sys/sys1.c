@@ -217,6 +217,8 @@ getxfile(register struct inode *ip, int nargc)
 		goto nomem;
 	ds = btop(end) - d0;
 	ss = SSIZE + btop(nargc);
+	if(!roomfor(USIZE+ds+ss, mapneed(0, ts)))
+		goto nomem;
 	if(estabur(t0, ts, d0, ds, ss, RO))
 		return;
 
@@ -229,6 +231,10 @@ getxfile(register struct inode *ip, int nargc)
 	u.u_prof.pr_scale = 0;
 	xfree();
 	i = USIZE+ds+ss;
+	if(!roomfor(i, mapneed(0, ts))) {
+		psignal(u.u_procp, SIGKIL);
+		goto nomem;
+	}
 	expand(i);
 	while(--i >= USIZE)
 		clearseg(imgpage(u.u_procp, i));
@@ -456,7 +462,8 @@ fork(void)
 		goto out;
 	}
 	/*
-	 * The child is made in core, or not at all.
+	 * Disallow too if there is
+	 * no free core for the child.
 	 */
 	a = u.u_procp->p_size;
 	if (USIZE + mapneed(0, a-USIZE) > npgfree) {
@@ -505,6 +512,10 @@ sbreak(void)
 		n = 0;
 	d = n - u.u_dsize;
 	n += USIZE+u.u_ssize;
+	if(!roomfor(n, 0)) {
+		u.u_error = ENOMEM;
+		return;
+	}
 	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize+d,
 	    u.u_ssize, RO))
 		return;

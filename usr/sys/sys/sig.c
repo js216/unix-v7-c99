@@ -251,6 +251,8 @@ grow(unsigned sp)
 	if(si <= 0)
 		return(0);
 	ss = u.u_ssize;
+	if(!roomfor(u.u_procp->p_size+si, 0))
+		return(0);
 	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize,
 	    ss+si, RO))
 		return(0);

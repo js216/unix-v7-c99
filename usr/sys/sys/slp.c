@@ -255,6 +255,8 @@ loop:
 			continue;
 		if (rp->p_textp && rp->p_textp->x_flag&XLOCK)
 			continue;
+		if (!swapfits(rp->p_size))
+			continue;
 		if ((rp->p_stat==SSLEEP&&rp->p_pri>=PZERO) ||
 		    rp->p_stat==SSTOP) {
 			if (maxsize < rp->p_size) {
@@ -284,6 +286,41 @@ loop:
 	runin++;
 	sleep((caddr_t)&runin, PSWP);
 	goto loop;
+}
+
+/*
+ * Is there a hole in the swap map
+ * big enough for an image of n pages?
+ */
+int
+swapfits(int n)
+{
+	register struct map *mp;
+
+	for (mp = swapmap; mp->m_size; mp++)
+		if (mp->m_size >= ptod(n))
+			return(1);
+	return(0);
+}
+
+/*
+ * May the current process grow to
+ * newsize pages, with tn more pages of
+ * text to come into core?
+ * There must be free core, or swap
+ * space to move the image out of the way.
+ */
+int
+roomfor(int newsize, int tn)
+{
+	register int n;
+
+	n = u.u_procp->p_size;
+	if (newsize <= n)
+		return(1);
+	if (mapneed(n-USIZE, newsize-USIZE) + tn <= npgfree)
+		return(1);
+	return(swapfits(newsize));
 }
 
 /*
