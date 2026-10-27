@@ -758,7 +758,9 @@ resumes from it when it is brought back in.
 Programs read and write files in bytes, but the disk moves blocks of
 512~bytes, the sector of both the virtio disk and the SD card. Between
 the two lies the buffer cache (#f("bio.c")), which is a pool
-of buffers in memory, each holding one disk block. The routines `readi` and `writei`
+of buffers in memory, each holding one disk block. There are only
+`NBUF`, 29, of them (#at("/usr/sys/h/param.h", "#define\tNBUF\t")), 14.5~KB in all, so most reads
+of a large file still go to the disk. The routines `readi` and `writei`
 (#f("rdwri.c")) translate a position in a file into a block of the
 disk, and move bytes between the user and a buffer.
 
@@ -836,7 +838,8 @@ and none of this is needed.
 
 _Character Lists._ A terminal sends and receives characters one at a time, and the
 kernel keeps them in character lists (#f("prim.c")): queues built of
-small blocks taken from a common pool. Each terminal has three (@fig-tty). The raw
+small blocks taken from a common pool, `NCLIST`, 100, blocks of
+`CBSIZE`, 12, characters each (#at("/usr/sys/h/param.h", "#define\tNCLIST\t"), #at("/usr/sys/h/param.h", "#define\tCBSIZE\t")). Each terminal has three (@fig-tty). The raw
 queue holds characters as they arrive. The canonical queue holds
 complete lines, after erase and kill have been applied. The output queue
 holds characters on their way to the terminal (#f("tty.h")).
