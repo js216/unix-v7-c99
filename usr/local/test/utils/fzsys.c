@@ -31,6 +31,7 @@
 #define	FUZZUID	8
 #define	FUZZGID	3
 #define	PROOF	"/fzroot"
+#define	BRKMAX	(64*1024*1024)
 
 unsigned	rawsys(unsigned n, unsigned a, unsigned b, unsigned c, unsigned d);
 unsigned	rawerr;
@@ -141,10 +142,16 @@ allowed(int n)
 	return(1);
 }
 
+/*
+ * A child which may run each allowed call but a brk past BRKMAX,
+ * which could take most of RAM and, when swapped out, use up the
+ * swap area: the panic which follows, out of swap space, is known.
+ */
 static void
 child(void)
 {
-	int i, n, fd;
+	int i, j, n, fd;
+	unsigned a[4];
 
 	for(fd = 0; fd < 20; fd++)
 		close(fd);
@@ -163,7 +170,11 @@ child(void)
 		do
 			n = rnd(70);
 		while(!allowed(n));
-		rawsys(n, arg(), arg(), arg(), arg());
+		for(j = 0; j < 4; j++)
+			a[j] = arg();
+		if((n&077) == 17 && a[0] >= BRKMAX && a[0] < 0x40000000)
+			a[0] %= BRKMAX;
+		rawsys(n, a[0], a[1], a[2], a[3]);
 		if(creat(PROOF, 0644) >= 0)
 			exit(8);
 	}

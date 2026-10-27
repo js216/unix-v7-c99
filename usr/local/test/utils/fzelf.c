@@ -20,6 +20,7 @@
 #define	MAXF	65536
 #define	FUZZUID	9
 #define	FUZZGID	3
+#define	BIG	(64*1024*1024)
 
 char	orig[MAXF], img[MAXF];
 int	norig;
@@ -55,9 +56,22 @@ put4(int o, unsigned v)
 	}
 }
 
+static unsigned
+get4(int o)
+{
+	if(o < 0 || o+4 > norig)
+		return(0);
+	return((img[o]&0377) | (img[o+1]&0377) << 8 | (img[o+2]&0377) << 16 |
+	    (unsigned)(img[o+3]&0377) << 24);
+}
+
 /*
  * Change a few bytes: most in the first 52 bytes, the ELF header,
  * or in the program headers which follow it at 52, 32 bytes each.
+ * A segment's sizes in the file and in memory stay below BIG or
+ * above all of RAM: a program which takes most of RAM could, when
+ * it is swapped out, use up the swap area, and the panic which then
+ * follows, out of swap space, is known.
  */
 static int
 mutate(void)
@@ -93,6 +107,10 @@ mutate(void)
 			if(rnd(3) == 0)
 				len = rnd(norig);
 		}
+	for(i = 0; i < 3; i++)
+		for(o = 52+32*i+16; o <= 52+32*i+20; o += 4)
+			if(get4(o) >= BIG && get4(o) < 0x40000000)
+				put4(o, get4(o) % BIG);
 	return(len);
 }
 
