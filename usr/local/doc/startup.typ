@@ -2095,8 +2095,8 @@ times used, in `p_xstat`, `p_utime`, and `p_stime` (#l("short\tp_xstat;"), #l("t
 _States._ The field `p_stat` (#l("char\tp_stat;")) takes one of these values, and a
 zero entry is free. `SWAIT` is a leftover from the Sixth Edition and
 is never set. A sleeping process is `SSLEEP` whatever its priority, and
-`p_pri` tells the kinds apart. `SIDL` covers the brief
-time in `newproc` while a child is being copied, and `SZOMB` the time
+`p_pri` tells the kinds apart. `SIDL`, which v7's `newproc` set while
+it wrote a child's image to the swap area, is no longer used (#f("slp.c")), and `SZOMB` covers the time
 between `exit` and the parent's `wait`.
 
 #lines-to("/* flag codes */")
@@ -2849,20 +2849,15 @@ calls `sureg` and returns a constant. The registers which the callers
 higher up the stack expect to find preserved were pushed on that stack
 before `save` was reached, and are still there when it returns again.
 
-#lines-to("if(USIZE + mapneed(0, n-USIZE) > npgfree) {")
+#lines-to("rpp->p_addr = a2 = pgalloc();")
 
-If there is no RAM for the copy (#l("if(USIZE + mapneed(0, n-USIZE) > npgfree) {")), counted in pages before any is
-taken, `newproc` writes the parent's image
-to the swap area as the child's image, without freeing the RAM
-(`xswap` with second argument zero). For this it points the child's
-`p_addr` and `p_map` at the parent's u-area and page map, and `SIDL` keeps the parent from being
-chosen for swapping in the meanwhile. While `xswap` waits for the
-write, the parent sleeps and is resumed in `swtch` as the child, for
-`u.u_procp` names the child's entry: the `sureg` there builds page
-tables in the child's slot, mapping the parent's RAM, and loads them.
-`xswap` frees the tables once the image is written (#f("text.c")), and the
-`sureg` at (#l("sureg();", after: "u.u_procp = rip;")) points the processor back at the parent's own tables.
-Otherwise the child gets a u-area page and a map of its own (#l("rpp->p_addr = a2 = pgalloc();")--#l("mapalloc(&rpp->p_map, 0, n-USIZE);")), and `copyseg` (#f("machdep.c")) copies the image a page at
+The child gets a u-area page and a map of its own (#l("rpp->p_addr = a2 = pgalloc();")--#l("mapalloc(&rpp->p_map, 0, n-USIZE);")),
+from the RAM which `fork` has found free (#f("sys1.c")). Nothing between
+that test and the copy sleeps, so no other process can take the pages
+meanwhile. When the RAM was short, v7's `newproc` wrote the parent's
+image to the swap area as the child's. Here `fork` fails instead, and
+`xswap` has lost the flag which kept the parent's RAM for that
+(#f("text.c")). Then `copyseg` (#f("machdep.c")) copies the image a page at
 a time, into pages which need not follow one another. On the PDP-11 `copyseg` had to borrow a user segmentation
 register to reach physical memory. Here the kernel maps all of RAM,
 and `PGADDR` turns a page number into an address.

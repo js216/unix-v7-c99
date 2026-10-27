@@ -522,9 +522,12 @@ insurance against running out of swap space later, which is fatal
 (#f("text.c")). The insurance did harm: the space must be contiguous, and a small process left on the
 swap device between two large ones could leave no hole of `MAXMEM`
 pages, after which no process at all could fork. The check made
-here is the one `newproc` relies on: the child's image, if it must go
-to the swap device, is the size of the caller's. The comment (#l("* Make sure there's enough swap space for the")) is
-changed to match. The last slot of `proc` is reserved for the super-user, so that root can
+here is for the size of the caller's image, which is the child's, should
+it later be swapped out. The comment (#l("* Make sure there's enough swap space for the")) is
+changed to match. Then `fork` checks that the free RAM holds the child's
+image now (#l("if (USIZE + mapneed(0, a-USIZE) > npgfree) {")), and fails with `ENOMEM` if
+not: the child is made in RAM or not at all, where v7's `newproc` made
+it on the swap device. The last slot of `proc` is reserved for the super-user, so that root can
 still log in and kill something when the table is full.
 
 In the child `newproc` (#f("slp.c")) returns 1 and in the parent 0, but
@@ -1094,9 +1097,10 @@ the write is in progress. The process's claim on the core copy of
 its text is given up (#l("xccdec(p->p_textp);")). If it was the last process in core using that
 text, the core copy is freed, having first been written out if `XWRIT`
 says the swap copy is stale. The core is freed, the map's pages and
-the u-area's (#l("if(ff) {")--#l("pgfree(p->p_addr);", after: "if(ff) {")), unless `ff` is zero,
-which is the case when `newproc` makes the child's image on the swap
-device from the parent's core, which the parent goes on using.
+the u-area's (#l("mapfree(&p->p_map, 0, os-USIZE);")--#l("pgfree(p->p_addr);", after: "mapfree(&p->p_map, 0, os-USIZE);")). In v7 a
+flag, `ff`, kept the core when `newproc` made a child's image on the
+swap device from the parent's core. A child is now made only in RAM
+(#f("sys1.c")), and the flag is gone.
 
 Now `p_map` is 0, `p_addr` holds a swap block number, and `SLOAD` is cleared, and `p_time`
 restarts, since `sched` measures how long a process has been out. If
@@ -1187,7 +1191,7 @@ the text is read in from its swap copy by `xread`, unless `XLOAD` says it is abo
 to be read from the file instead.
 
 If not, the process makes room for itself by swapping itself out
-(#l("xswap(u.u_procp, 1, 0);")), and leaves the matter to `sched`, which brings in data area and
+(#l("xswap(u.u_procp, 0);")), and leaves the matter to `sched`, which brings in data area and
 text together (`swapin`, #f("slp.c")). The pattern is that of `expand`:
 `save(u.u_ssav)` (#l("if (save(u.u_ssav)) {")) is the point to which the process returns, by way
 of `SSWAP` and `swtch`, once it is back in core. It then reloads its

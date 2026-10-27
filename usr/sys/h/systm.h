@@ -301,7 +301,7 @@ int	ttioccomm(int com, struct tty *tp, caddr_t addr, int dev);
 int	ttread(struct tty *tp);
 int	uchar(void);
 int	ufalloc(void);
-void	xswap(struct proc *p, int ff, int os);
+void	xswap(struct proc *p, int os);
 caddr_t	machine_init(void);
 caddr_t	ttwrite(struct tty *tp);
 char	*devaddr(int dev, off_t off);

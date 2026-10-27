@@ -12,17 +12,14 @@ void	xexpand(struct text *xp), xccdec(struct text *xp),
 	xuntext(struct text *xp);
 
 /*
- * Swap out process p.
- * The ff flag causes its core to be freed--
- * it may be off when called to create an image for a
- * child process in newproc.
+ * Swap out process p, and free its core.
  * Os is the old size of the data area of the process,
  * and is supplied during core expansion swaps.
  *
  * panic: out of swap space
  */
 void
-xswap(register struct proc *p, int ff, int os)
+xswap(register struct proc *p, int os)
 {
 	register int a;
 
@@ -36,10 +33,8 @@ xswap(register struct proc *p, int ff, int os)
 	swap(a, p->p_addr, USIZE, B_WRITE);
 	mapswap(a+ptod(USIZE), p->p_map, os-USIZE, B_WRITE);
 	ptfree(p);
-	if(ff) {
-		mapfree(&p->p_map, 0, os-USIZE);
-		pgfree(p->p_addr);
-	}
+	mapfree(&p->p_map, 0, os-USIZE);
+	pgfree(p->p_addr);
 	p->p_map = 0;
 	p->p_addr = a;
 	p->p_flag &= ~(SLOAD|SLOCK);
@@ -170,7 +165,7 @@ xexpand(register struct text *xp)
 		sureg();
 		return;
 	}
-	xswap(u.u_procp, 1, 0);
+	xswap(u.u_procp, 0);
 	xunlock(xp);
 	u.u_procp->p_flag |= SSWAP;
 	qswtch();

@@ -277,7 +277,7 @@ loop:
 	 */
 	if (maxsize>=0 || (outage>=3 && inage>=2)) {
 		p->p_flag &= ~SLOAD;
-		xswap(p, 1, 0);
+		xswap(p, 0);
 		goto loop;
 	}
 	intr_disable();
@@ -527,29 +527,15 @@ retry:
 		return(1);
 	}
 	/*
-	 * If there is not enough core for the
-	 * new process, swap out the current process to generate the
-	 * copy.
+	 * Copy the image, a page at a time,
+	 * into the core which fork found free.
 	 */
-	if(USIZE + mapneed(0, n-USIZE) > npgfree) {
-		rip->p_stat = SIDL;
-		rpp->p_addr = a1;
-		rpp->p_map = rip->p_map;
-		xswap(rpp, 0, 0);
-		rip->p_stat = SRUN;
-	} else {
-		/*
-		 * There is core, so just copy,
-		 * a page at a time.
-		 */
-		rpp->p_addr = a2 = pgalloc();
-		rpp->p_map = 0;
-		mapalloc(&rpp->p_map, 0, n-USIZE);
-		copyseg(a1, a2);
-		for(n -= USIZE; n--; )
-			copyseg(*mapent(rip->p_map, n),
-			    *mapent(rpp->p_map, n));
-	}
+	rpp->p_addr = a2 = pgalloc();
+	rpp->p_map = 0;
+	mapalloc(&rpp->p_map, 0, n-USIZE);
+	copyseg(a1, a2);
+	for(n -= USIZE; n--; )
+		copyseg(*mapent(rip->p_map, n), *mapent(rpp->p_map, n));
 	u.u_procp = rip;
 	sureg();
 	setrq(rpp);
@@ -597,7 +583,7 @@ expand(int newsize)
 		savfp(&u.u_fps);
 		u.u_fpsaved = 1;
 	}
-	xswap(p, 1, n);
+	xswap(p, n);
 	p->p_flag |= SSWAP;
 	qswtch();
 	/* no return */

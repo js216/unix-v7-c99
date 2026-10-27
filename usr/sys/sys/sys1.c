@@ -458,6 +458,14 @@ fork(void)
 		u.u_error = EAGAIN;
 		goto out;
 	}
+	/*
+	 * The child is made in core, or not at all.
+	 */
+	a = u.u_procp->p_size;
+	if (USIZE + mapneed(0, a-USIZE) > npgfree) {
+		u.u_error = ENOMEM;
+		goto out;
+	}
 	p1 = u.u_procp;
 	if(newproc()) {
 		u.u_r.r_val1 = p1->p_pid;
