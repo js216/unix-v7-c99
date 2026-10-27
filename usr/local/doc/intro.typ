@@ -742,11 +742,18 @@ to save and restore them:
 - the frame on the user stack: the user's registers for a signal
   handler, saved by `sendsig`, restored by `sigreturn`.
 
+All six lie in the process's own image, in its u-area or on its user
+stack, so a process swapped out takes its saved state with it, and
+resumes from it when it is brought back in.
+
 A _label_ (`label_t`, #at("/usr/sys/h/param.h", "typedef\tint\t\tlabel_t[10];")) is a point in the kernel to which
 control can later return. It holds only the registers which a called
 function must preserve, `r4` to `r11`, `sp`, and `lr`. The
 routine `save` stores them and returns 0. Later `resume` reloads them,
-and the original call of `save` returns a second time, with 1.
+and the original call of `save` returns a second time, with 1. In C's
+terms, `save` is the kernel's `setjmp` and `resume` its `longjmp`, and
+as with `setjmp`, the code after the second return must not count on a
+local variable changed since the `save`.
 Three labels serve three purposes:
 
 - The label `u_rsav` records where a process stopped in `swtch`, and is
@@ -773,7 +780,13 @@ _Reading a Block._ The routines `readi` and `writei` call `bread`
 transfer is needed. Otherwise `getblk` (#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")) takes the buffer least recently
 used, and `bread` asks the disk driver to fill it. The driver's
 strategy routine (`rkstrategy`) puts the request on the driver's queue
-and starts the disk if it is idle. The process then sleeps on the
+and starts the disk if it is idle. (The term _strategy_ is used to
+suggest that different storage devices may prefer a different access
+order for the blocks. For example, access times on a rotating hard disk
+drive may be reduced by sorting the blocks in the order of their
+physical tracks rather than in the order they came, while on a flash
+device we could coalesce blocks by physical page to reduce the wear on
+the medium.) The process then sleeps on the
 buffer.
 
 When the transfer ends, the disk interrupts. The driver's interrupt
