@@ -104,6 +104,7 @@ nor the system control registers. The kernel runs in supervisor mode (SVC, `1001
 of exception has a mode of its own:
 
 - IRQ (`10010`) for interrupts,
+- FIQ (`10001`) for fast interrupts, not used in this Unix port,
 - abort (ABT, `10111`) for memory faults, and
 - undefined (UND, `11011`) for an instruction the processor does not
   know.
@@ -117,8 +118,8 @@ vector table (@tab-vectors). The vector base register `VBAR` (#at("/usr/sys/conf
 
 _Banked Registers._ Each of these modes has its own copy of `sp` and `lr`, called banked
 registers (@tab-regs), and its own `spsr`. The other registers, `r0`
-to `r12`, are shared by all modes, except the fast interrupt mode (FIQ,
-`10001`, not used in this Unix port). Exception entry does not change
+to `r12`, are shared by all modes, except the fast interrupt mode
+(FIQ). Exception entry does not change
 the interrupted program's `sp` and `lr`. It changes only which banked
 copy is visible.
 
