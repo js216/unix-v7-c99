@@ -228,8 +228,10 @@ MMU off. From there the system comes up in these steps:
   QEMU machine, the virtual address 0x40000000 maps to the physical
   address 0X40000000, and on the MP135 machine the virtual address
   0x2ffe0000 maps to the physical address 0X2FFE0000. The identity
-  mapping lets the code go on running when the MMU is turned on. It
-  turns the MMU on,
+  mapping lets the code go on running when the MMU is turned on. (The
+  book writes a physical address in capitals, prefix and all, as
+  0X40000000, and a virtual one in lower case, as 0x40000000, so that
+  the two can be told apart.) It turns the MMU on,
   jumps to the kernel address, sets up a small boot stack, installs the
   exception vectors, enables the floating point unit, and calls
   `machine_init`.
