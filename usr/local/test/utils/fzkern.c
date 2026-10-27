@@ -13,6 +13,7 @@
  * not show yet, so a difference counts only if it stays for five tries
  * a second apart.  Prints each difference of the last try and exits 1;
  * prints "fzkern ok" otherwise.
+ *	fzkern -w pid	watch the swap while process pid lives
  */
 
 #include <stdio.h>
@@ -404,8 +405,43 @@ audit(void)
 			    xinode[i].i_count, niref[i]);
 }
 
+/*
+ * Watch, while process pid lives, the most blocks of swap which held
+ * images of processes at once, and the most processes swapped out; a
+ * failure if there were none, since then the swapper went untried
+ */
+static void
+watch(int pid)
+{
+	int i, n, used, most, out, mostout;
+
+	most = mostout = 0;
+	while(kill(pid, 0) == 0) {
+		if(!kread(nl[X_PROC].n_value, xproc, sizeof(xproc)))
+			break;
+		used = out = 0;
+		for(i = 0; i < NPROC; i++)
+			if(xproc[i].p_stat && xproc[i].p_stat != SZOMB &&
+			    (xproc[i].p_flag & SLOAD) == 0) {
+				out++;
+				used += ptod(xproc[i].p_size);
+			}
+		if(used > most)
+			most = used;
+		if(out > mostout)
+			mostout = out;
+		sleep(1);
+	}
+	n = most/2048;
+	if(mostout == 0)
+		printf("FAIL fzkern: nothing was swapped out\n");
+	else
+		printf("fzkern: at most %d MB of %d processes swapped out\n",
+		    n, mostout);
+}
+
 int
-main(void)
+main(int argc, char **argv)
 {
 	int t;
 
@@ -433,6 +469,10 @@ main(void)
 		printf("FAIL fzkern: %d pages of core, %d of swap\n", maxmem,
 		    nswap);
 		exit(1);
+	}
+	if(argc == 3 && strcmp(argv[1], "-w") == 0) {
+		watch(atoi(argv[2]));
+		exit(0);
 	}
 	for(t = 0; t < 5; t++) {
 		report = t == 4;

@@ -1,14 +1,17 @@
 /*
- * fzmem seed nproc mb: more memory than RAM.  nproc processes each
- * take between mb/2 and mb megabytes of data with sbrk and fill it
+ * fzmem seed nproc mb [-s]: more memory than RAM.  nproc processes each
+ * take between 3mb/4 and mb megabytes of data with sbrk and fill it
  * with a pattern of their own, so that together they need more than
  * the machine has and the swapper must move them out and back in.
  * Each then checks its memory, grows its stack by recursion up to
  * 2 MB deep, checking every frame, changes part of it, forks a child
  * which checks the copy, shrinks or grows itself, and checks again,
  * for several passes, yielding between them so that the others run.
- * Every word must hold what was last written.  Prints the seed and
- * the first bad word and exits 1; prints "fzmem ok" otherwise.
+ * Every word must hold what was last written.  With -s, the processes
+ * fork one at a time, taking turns at a pipe, so that at most one copy
+ * is made at once, and the most that they can need together is little
+ * more than (nproc+1)*mb.  Prints the seed and the first bad word and
+ * exits 1; prints "fzmem ok" otherwise.
  */
 
 #include <stdio.h>
@@ -23,6 +26,7 @@ long	seed;
 unsigned	*base;
 long	nw;			/* words in use */
 unsigned	gen;		/* generation of the pattern */
+int	lk[2] = { -1, -1 };	/* the turn to fork, with -s */
 
 static unsigned
 rnd(unsigned long *s, unsigned n)
@@ -121,7 +125,7 @@ worker(int k, long mb)
 
 	s = seed*2654435761UL + k*7919UL + 1;
 	seed = seed*100 + k;
-	size = (mb/2 + rnd(&s, (unsigned)(mb/2 + 1))) * MB;
+	size = (mb*3/4 + rnd(&s, (unsigned)(mb/4 + 1))) * MB;
 	if((p = sbrk(0)) == (char *)-1)
 		exit(3);
 	p = (char *)(((unsigned)p + 4095) & ~4095U);
@@ -141,8 +145,12 @@ worker(int k, long mb)
 		gen++;
 		fill(0, nw/2, gen);
 		fill(nw/2, nw, gen);
+		if(lk[0] >= 0 && read(lk[0], (char *)&st, 1) != 1)
+			exit(3);
 		if((pid = fork()) < 0) {
 			printf("fzmem: pid %d cannot fork\n", getpid());
+			if(lk[1] >= 0)
+				write(lk[1], (char *)&st, 1);
 			continue;
 		}
 		if(pid == 0) {
@@ -154,6 +162,8 @@ worker(int k, long mb)
 		}
 		while(wait(&st) != pid)
 			;
+		if(lk[1] >= 0)
+			write(lk[1], "", 1);
 		if(st != 0) {
 			printf("FAIL fzmem seed %ld: child %d status %o\n",
 			    seed, pid, st);
@@ -182,8 +192,12 @@ main(int argc, char **argv)
 	int k, n, st, bad, pid;
 	long mb;
 
-	if(argc != 4) {
-		printf("usage: fzmem seed nproc mb\n");
+	if(argc != 4 && (argc != 5 || strcmp(argv[4], "-s") != 0)) {
+		printf("usage: fzmem seed nproc mb [-s]\n");
+		exit(2);
+	}
+	if(argc == 5 && (pipe(lk) < 0 || write(lk[1], "", 1) != 1)) {
+		printf("fzmem: no pipe\n");
 		exit(2);
 	}
 	seed = atol(argv[1]);

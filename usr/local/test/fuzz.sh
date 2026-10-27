@@ -6,7 +6,8 @@
 : the command checks, and exec with random arguments run beside more
 : memory than RAM but less than RAM and swap together, since running
 : out of swap is a known panic, on a disk cleared of what the first
-: left, since random writes can fill it.  The root file system is
+: left, since random writes can fill it.  Meanwhile fzkern sees that
+: the swapper did swap, and how much.  The root file system is
 : then checked with icheck and dcheck, and the books of the kernel with
 : fzkern.  Each line printed is a result, a FAIL line with the seed
 : which repeats it, or the summary of a round.
@@ -41,7 +42,8 @@ do
 	wait
 	rm -rf $T/1 $T/2 $T/3 $T/sys $T/elf $T/fill
 	$U/fzproc `expr $s + 6` 10 &
-	$U/fzmem `expr $s + 7` 5 60 &
+	$U/fzmem `expr $s + 7` 6 100 -s &
+	$U/fzkern -w $! &
 	$U/fzarg `expr $s + 5` 1 &
 	(cd $T/sh; sh $U/fzsh `expr $s + 8`)
 	wait
