@@ -36,7 +36,7 @@ upage(register struct urange *rp, unsigned i, int nent)
 }
 
 /*
- * Build the page tables of the current process from the prototype:
+ * Build the page tables of the current process from its sizes:
  * one second-level table for each gigabyte, and one third-level table
  * for each 2 MB block, that the text, data, stack, and signal
  * trampoline touch.
@@ -52,30 +52,30 @@ ptbuild(register struct proc *p)
 	int i, j, nent[4];
 
 	nr = 0;
-	if(u.u_ptsize && p->p_textp != NULL) {
+	if(u.u_tsize && p->p_textp != NULL) {
 		rp = &r[nr++];
 		rp->va = u.u_ptstart;
-		rp->n = u.u_ptsize;
+		rp->n = u.u_tsize;
 		rp->map = p->p_textp->x_map;
 		rp->first = 0;
 		rp->ap = u.u_pxrw;
 		nent[nr-1] = p->p_textp->x_size;
 	}
-	if(u.u_pdsize) {
+	if(u.u_dsize) {
 		rp = &r[nr++];
 		rp->va = u.u_pdstart;
-		rp->n = u.u_pdsize;
+		rp->n = u.u_dsize;
 		rp->map = p->p_map;
 		rp->first = 0;
 		rp->ap = RW;
 		nent[nr-1] = p->p_size - USIZE;
 	}
-	if(u.u_pssize) {
+	if(u.u_ssize) {
 		rp = &r[nr++];
-		rp->va = btop(USRSIZE) - u.u_pssize;
-		rp->n = u.u_pssize;
+		rp->va = btop(USRSIZE) - u.u_ssize;
+		rp->n = u.u_ssize;
 		rp->map = p->p_map;
-		rp->first = u.u_pdsize;
+		rp->first = u.u_dsize;
 		rp->ap = RW;
 		nent[nr-1] = p->p_size - USIZE;
 	}
@@ -183,9 +183,8 @@ apart(unsigned a, unsigned n, unsigned b, unsigned m)
 }
 
 /*
- * Set up the prototype of the user's address space: nt pages of text
- * from page ts, nd pages of data from page ds, and ns pages of stack
- * ending at USRSIZE.  The segments must lie within the user's space,
+ * Set up the user's address space: nt pages of text from page ts, nd
+ * pages of data from page ds, and ns pages of stack ending at USRSIZE.  The segments must lie within the user's space,
  * apart from each other and from the signal trampoline, and the image
  * must fit in memory.  xrw is the access to the text, RO or RW.
  */
@@ -207,10 +206,10 @@ estabur(unsigned ts, unsigned nt, unsigned ds, unsigned nd, unsigned ns,
 	if(USIZE + mapneed(0, nd+ns) + mapneed(0, nt) > (int)maxmem)
 		goto err;
 	u.u_ptstart = ts;
-	u.u_ptsize = nt;
+	u.u_tsize = nt;
 	u.u_pdstart = ds;
-	u.u_pdsize = nd;
-	u.u_pssize = ns;
+	u.u_dsize = nd;
+	u.u_ssize = ns;
 	u.u_pxrw = xrw;
 	ptfree(u.u_procp);
 	sureg();

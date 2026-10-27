@@ -441,7 +441,7 @@ The set-user-id and set-group-id bits take effect unless
 the process is being traced, in which case it is stopped with `SIGTRC`
 instead, so that the tracing parent can examine the new image.
 
-#lines-to("u.u_tsize = ts;")
+#lines-to("estabur(t0, ts, d0, ds, ss, RO);")
 
 The sizes are recorded and the user mapping set by
 `estabur`. The instructions of the new program were made visible to
@@ -551,8 +551,9 @@ The routine `sbreak` sets the size of the data area. The new break is
 converted to pages, and the data's first page, `u_pdstart`, is
 subtracted (#l("n = (int)btop((unsigned)((struct a *)u.u_ap)->nsiz) -")). In v7 the data began at the first segment after the
 text, and the text's segments were subtracted. The mapping routine
-`estabur` must accept the new size: it refuses a data area that would
-run into the stack or the signal trampoline (#f("ureg.c")).
+`estabur` must accept the new size, which it records in `u_dsize`: it
+refuses a data area that would run into the stack or the signal
+trampoline (#f("ureg.c")).
 
 The image is then changed with `expand`. In the image the stack's pages
 follow the data's, so pages added to the data or taken from it must
@@ -862,9 +863,10 @@ expressions become `USRSIZE-ptob(u.u_ssize)` and `USRSIZE-sp`
 (#l("if(sp >= USRSIZE-ptob(u.u_ssize))")--#l("si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;")). The divisor 64, the PDP-11's click in bytes, becomes
 `ptob(1)`. The new stack size is the depth of `sp` in
 pages, rounded down, plus `SINCR` pages of room, and `estabur` refuses it
-if the stack would meet the data. The routine `expand` adds the pages at the end of the image, after the
+if the stack would meet the data. Since `estabur` records the new
+size at once, `grow` keeps the old one in `ss` (#l("ss = u.u_ssize;")). The routine `expand` adds the pages at the end of the image, after the
 stack, and turning the map's entries around puts them below it
-(#l("maprot(p->p_map, a-si-u.u_ssize, a-si, a);")), with no page copied. In v7 the whole stack was copied up by
+(#l("maprot(p->p_map, a-si-ss, a-si, a);")), with no page copied. In v7 the whole stack was copied up by
 the number of pages added. The new pages, now at the stack's bottom,
 are cleared, and the page tables built again (#l("ptfree(p);")--#l("sureg();", after: "ptfree(p);")).
 
@@ -14139,8 +14141,8 @@ copies give to ordinary programs. The routine `nlist` marks a symbol it did not
 find with a type of 0 (#l("if (setup[SINODE].type == 0) {"), #l("if (setup[SNDH].type == 0)")), as the port's `nlist` for ELF files
 does, where v7's used $-1$. The number of terminal lines read from the
 kernel is kept within the array (#l("if ((unsigned)ndh > 48)")--#l("ndh = 48;")). In `dousr`, the PDP-11's
-segmentation registers give way to the sizes of the process's
-segments (#l("printf(\"pdir %.1o\\n\", (unsigned)up->u_pdir);")--#l("up->u_pssize, up->u_pxrw);")), and the times, now `long long`, are printed as
+segmentation registers give way to the first pages of the text and
+the data and the text's access (#l("printf(\"pdir %.1o\\n\", (unsigned)up->u_pdir);")--#l("printf(\"segs %.1o %.1o %.1o\", up->u_ptstart, up->u_pdstart, up->u_pxrw);")), and the times, now `long long`, are printed as
 such (#l("printf(\"\\ntimes %lld %lld\\n\", up->u_utime/60, up->u_stime/60);")--#l("printf(\"ctimes %lld %lld\\n\", up->u_cutime/60, up->u_cstime/60);")).
 
 #lines-to(none)

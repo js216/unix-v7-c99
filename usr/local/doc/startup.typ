@@ -2186,19 +2186,22 @@ them.
 #lines-to("unsigned u_ptstart, u_pdstart;")
 
 When a process's image is laid out, `estabur` (#f("ureg.c")) records
-its shape here without building any tables. It records the first pages
-of the text and the data (#l("unsigned u_ptstart, u_pdstart;")), the sizes, in pages, of the
-text, the data, and the stack to be mapped (#l("unsigned u_ptsize, u_pdsize, u_pssize;")), and the access rights of
-the text (#l("int\tu_pxrw;")), `RO` except while `xalloc` (#f("text.c"))
+its shape here without building any tables: the first pages of the
+text and the data (#l("unsigned u_ptstart, u_pdstart;")), the access rights of the text
+(#l("int\tu_pxrw;")), `RO` except while `xalloc` (#f("text.c"))
 reads the text in or `ptrace` (#f("sig.c")) writes into it for a
-debugger. This record is the _prototype_. The routine `sureg` builds the
-page tables from it later, wherever the image then lies in RAM. The
+debugger, and the sizes, in pages, of the text, the data, and the
+stack, `u_tsize`, `u_dsize`, and `u_ssize`
+(#l("unsigned u_tsize;")--#l("unsigned u_ssize;")). The routine `sureg` builds the
+page tables from them later, wherever the image then lies in RAM. v7
+kept a separate _prototype_ of the segmentation registers, `u_uisa`
+and `u_uisd`, since the PDP-11's registers had to be loaded from it at
+every switch. Here the tables stay in RAM while the process does, and
+are rebuilt from the shape alone. The
 table of open files, indexed by file descriptor, is `u_ofile`
 (#l("struct file *u_ofile[NOFILE];")). The array `u_arg`
 (#l("int\tu_arg[")) receives the arguments of a system call from the
-saved registers r0 to r3. The sizes, in pages, of the three parts of
-the user image are `u_tsize`, `u_dsize`, and `u_ssize`
-(#l("unsigned u_tsize;")--#l("unsigned u_ssize;")).
+saved registers r0 to r3.
 
 #lines-to("label_t\tu_qsav;\t\t\t/* label variable for quits and interrupts */")
 
@@ -2298,10 +2301,10 @@ tables. Whenever an image is created or changes size, by `exec`
 stack (`grow`, #f("sig.c")), or by `expand` (#f("slp.c")), its new shape
 is passed to `estabur`. The routine checks that the segments lie in the
 address space apart from each other and that the image fits in
-`maxmem`, records it as the process's
-prototype (see #f("user.h"), page #pageref(label("user.h"))), discards
+`maxmem`, records it in the process's `user` structure (see
+#f("user.h"), page #pageref(label("user.h"))), discards
 the old page tables, and calls `sureg`. The routine `sureg` points the
-MMU at the process's tables, first building them from the prototype if
+MMU at the process's tables, first building them from the recorded shape if
 the process has none. It is called whenever the image may have changed, by `estabur`, by `newproc` and `expand` (#f("slp.c")), by `xexpand`
 (#f("text.c")), by `sbreak` and `grow` (#f("sys1.c"), #f("sig.c")), and when `swtch` (#f("slp.c")) resumes a process.
 
@@ -2340,10 +2343,10 @@ the caller builds the tables again once the pages are there.
 
 The routine `ptbuild` makes the tables of the current process `p`. It
 lists up to four ranges (#l("nr = 0;")--#l("nent[nr-1] = 1;")), each with the number of entries its map holds, `nent`. The text's
-pages are those of the shared text segment's page map, if there is one, and carry the access rights
-of the prototype. The data and the stack are the process's own pages,
+pages are those of the shared text segment's page map, if there is one, and carry the text's access rights,
+`u_pxrw`. The data and the stack are the process's own pages,
 listed in its page map, the data from entry 0 and the stack from entry
-`u_pdsize`, and are read and write. The fourth is
+`u_dsize`, and are read and write. The fourth is
 the one read-only page of the signal trampoline (`sigpage`,
 #f("machdep.c")). The ranges are then sorted by address, their counts with them (#l("for(i = 1; i < (int)nr; i++)")--#l("nent[j-1] = a;")).
 
@@ -2377,7 +2380,7 @@ user's translations alone.
 
 The routine `ptfree` returns a process's tables to the pool and empties its
 first-level table. It is called whenever the tables no longer describe the image, by
-`estabur` when the prototype changes, by `sbreak` and `grow`
+`estabur` when the shape changes, by `sbreak` and `grow`
 (#f("sys1.c"), #f("sig.c")) when the image's pages change, by `xswap` (#f("text.c")) when it
 leaves RAM, and by `exit` (#f("sys1.c")). The first-level table is
 emptied even when there were no tables, so that a slot of the process
@@ -2413,7 +2416,7 @@ segments to fit its eight segmentation registers, the text and data from
 address 0 and the stack at the top. Here each segment lies where its
 program asks (`getxfile`, #f("sys1.c")).
 
-The prototype is then recorded (#l("u.u_ptstart = ts;")--#l("u.u_pxrw = xrw;")), the old tables are released,
+The shape is then recorded (#l("u.u_ptstart = ts;")--#l("u.u_pxrw = xrw;")), the old tables are released,
 and new ones built and loaded. Callers ask for a mapping before the
 image itself has changed: `grow` and `sbreak` check the new sizes
 before they call `expand`, and `xalloc` (#f("text.c")) asks for the text

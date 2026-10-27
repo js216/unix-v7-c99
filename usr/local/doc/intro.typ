@@ -414,15 +414,15 @@ lower half (@fig-tree), so that a process switch changes only `TTBR0`.
     bx(w: 2.1cm)[`kl3u`, `kl3d`: the u-area page, the device pages],
 ), [The user's tables, above, and the kernel's, below]) <fig-tree>
 
-Each process's own tables are built from a _prototype_, a description
-of its address space kept in its `user` structure (#at("/usr/sys/h/user.h", "unsigned u_ptstart, u_pdstart;")): where its text and
+Each process's own tables are built from a description of its
+address space kept in its `user` structure (#at("/usr/sys/h/user.h", "unsigned u_ptstart, u_pdstart;")): where its text and
 data begin and how many pages each has, how many pages of stack end at
 the top of the user's space, and whether the text may be written. The
 text and data come from the program's file. The data segment holds the
 program's initialised data, then its `bss`, which `exec` clears to
 zeros, and then whatever `sbrk` adds for the heap as the
 program grows (#f("sys/sbrk.s"), `sbreak` in #at("/usr/sys/sys/sys1.c", "sbreak(void)")). The
-sizes are recorded into the prototype by `estabur`
+sizes are recorded there by `estabur`
 (#at("/usr/sys/sys/ureg.c", "estabur(")), and the tables are built from
 the recorded values by `sureg` (#at("/usr/sys/sys/ureg.c", "sureg(void)")), which `estabur` calls at once,
 and which runs again whenever the process is switched in. The text pages are mapped read-only and the data and stack pages

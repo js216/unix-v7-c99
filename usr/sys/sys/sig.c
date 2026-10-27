@@ -243,24 +243,24 @@ grow(unsigned sp)
 {
 	register int si, i;
 	register struct proc *p;
-	register int a;
+	register int a, ss;
 
 	if(sp >= USRSIZE-ptob(u.u_ssize))
 		return(0);
 	si = (USRSIZE-sp)/ptob(1) - u.u_ssize + SINCR;
 	if(si <= 0)
 		return(0);
+	ss = u.u_ssize;
 	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize,
-	    u.u_ssize+si, RO))
+	    ss+si, RO))
 		return(0);
 	p = u.u_procp;
 	expand(p->p_size+si);
 	a = p->p_size - USIZE;
-	maprot(p->p_map, a-si-u.u_ssize, a-si, a);
-	a -= u.u_ssize;
+	maprot(p->p_map, a-si-ss, a-si, a);
+	a -= ss;
 	for(i=si; i; i--)
 		clearseg(*mapent(p->p_map, --a));
-	u.u_ssize += si;
 	ptfree(p);
 	sureg();
 	return(1);

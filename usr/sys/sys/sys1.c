@@ -256,9 +256,6 @@ getxfile(register struct inode *ip, int nargc)
 			u.u_gid = ip->i_gid;
 	} else
 		psignal(u.u_procp, SIGTRC);
-	u.u_tsize = ts;
-	u.u_dsize = ds;
-	u.u_ssize = ss;
 	estabur(t0, ts, d0, ds, ss, RO);
 	return;
 
@@ -511,7 +508,6 @@ sbreak(void)
 	if(estabur(u.u_ptstart, u.u_tsize, u.u_pdstart, u.u_dsize+d,
 	    u.u_ssize, RO))
 		return;
-	u.u_dsize += d;
 	p = u.u_procp;
 	a = n - u.u_ssize - USIZE;
 	if(d > 0)

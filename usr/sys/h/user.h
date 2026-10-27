@@ -44,9 +44,8 @@ struct	user
 	caddr_t	u_dirp;			/* pathname pointer */
 	struct direct u_dent;		/* current directory entry */
 	struct inode *u_pdir;		/* inode of parent directory of dirp */
-	unsigned u_ptstart, u_pdstart;	/* prototype first pages */
-	unsigned u_ptsize, u_pdsize, u_pssize;	/* prototype sizes */
-	int	u_pxrw;			/* prototype of text access */
+	unsigned u_ptstart, u_pdstart;	/* first pages of text and data */
+	int	u_pxrw;			/* access to the text, RO or RW */
 	struct file *u_ofile[NOFILE];	/* pointers to file structures of open files */
 	char	u_pofile[NOFILE];	/* per-process flags of open files */
 	int	u_arg[4];		/* arguments to current system call */
