@@ -222,9 +222,7 @@ MMU off. From there the system comes up in these steps:
 + First `_start` masks interrupts, turns off the MMU and the caches,
   discards the contents of the TLB, the caches, and the branch
   predictor, and clears the kernel's `bss`. It builds the boot page tables, which map the
-  kernel at its _kernel address_, the virtual address at which it is
-  linked to run (The Address Space, page #pageref(<sec-addr>)), and
-  also at the virtual address equal to its physical address, by an
+  kernel at its _kernel address_, equal to the physical address, by an
   _identity mapping_, so that the
   code goes on running when the MMU is turned on. It turns the MMU on,
   jumps to the kernel address, sets up a small boot stack, installs the
