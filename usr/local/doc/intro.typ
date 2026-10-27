@@ -690,7 +690,7 @@ trap, system call, and interrupt from user mode ends with a call of
 `issig` (#at("/usr/sys/sys/sig.c", "issig(")), and if a signal is pending, with `psig`. So a signal takes effect at the next return to user mode.
 
 For each signal, a process has asked either to take the default action,
-to ignore it, or to catch it with a handler (`ssig`, #at("/usr/sys/sys/sys4.c", "ssig(void)")). To catch a signal, the kernel makes the process call its handler:
+to ignore it, or to catch it with a handler (`ssig`, #at("/usr/sys/sys/sys4.c", "ssig(void)")): the signal's _disposition_. To catch a signal, the kernel makes the process call its handler:
 
 + First `sendsig` (#at("/usr/sys/sys/machdep.c", "sendsig(")) copies the user's saved registers and
   floating point state onto the user's stack, below the current stack
@@ -710,8 +710,8 @@ to ignore it, or to catch it with a handler (`ssig`, #at("/usr/sys/sys/sys4.c", 
   When the frame is unloaded, the program continues where the signal
   interrupted it, with all its registers as they were.
 
-When a caught signal is delivered, the process's choice for it reverts
-to the default action, so that a second signal which arrives before the
+When a caught signal is delivered, its disposition reverts to the
+default action, so that a second signal which arrives before the
 handler has asked again to catch it takes the default action, often to
 end the process. The illegal instruction and trace signals keep their
 handlers, since a program which catches them expects them again and
