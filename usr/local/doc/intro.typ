@@ -711,11 +711,10 @@ to ignore it, or to catch it with a handler (`ssig`, #at("/usr/sys/sys/sys4.c", 
   interrupted it, with all its registers as they were.
 
 When a caught signal is delivered, its disposition reverts to the
-default action, so that a second signal which arrives before the
-handler has asked again to catch it takes the default action, often to
-end the process. The illegal instruction and trace signals keep their
-handlers, since a program which catches them expects them again and
-again: a debugger stops at every breakpoint.
+default, so a second one which arrives before the handler catches it
+again usually ends the process. The illegal instruction and trace
+signals keep their handlers, since a debugger expects them at every
+breakpoint.
 
 === Saved State <sec-saved>
 
@@ -731,7 +730,7 @@ A process's registers are kept in six places, each with its own code
 to save and restore them:
 
 - the frame on the kernel stack: the user's registers at every trap
-  and interrupt, saved and restored in #f("low.s");
+  and interrupt, saved and restored in #f("low.s")\;
 - `u_rsav`: the kernel's registers at a switch, saved and resumed in
   `swtch`;
 - `u_qsav`: the start of a system call, saved in `trap`, resumed by
@@ -835,7 +834,7 @@ and none of this is needed.
 
 === Terminal I/O <sec-tty>
 
-A terminal sends and receives characters one at a time, and the
+_Character Lists._ A terminal sends and receives characters one at a time, and the
 kernel keeps them in character lists (#f("prim.c")): queues built of
 small blocks taken from a common pool. Each terminal has three (@fig-tty). The raw
 queue holds characters as they arrive. The canonical queue holds
@@ -848,7 +847,7 @@ holds characters on their way to the terminal (#f("tty.h")).
   bx[transmit interrupt], al, bx[output queue], al, bx[`ttyoutput`], al, bx[`ttwrite`],
 ), [The three queues of a terminal], pl: bottom) <fig-tty>
 
-When a character arrives, the driver's receive interrupt passes it to
+_Input._ When a character arrives, the driver's receive interrupt passes it to
 `ttyhold` (#at("/usr/sys/dev/tty.c", "ttyhold(")), which hands it to the line discipline,
 `ttyinput`, or keeps it in a hold queue while the raw queue is full.
 The line discipline handles the special
@@ -858,14 +857,14 @@ resume output. It echoes the character, if echo is on, and puts it in
 the raw queue. When a newline arrives, it wakes the processes reading
 from the terminal.
 
-A reading process gets its input from `ttread` (#at("/usr/sys/dev/tty.c", "ttread(")). In the
+_Reading._ A reading process gets its input from `ttread` (#at("/usr/sys/dev/tty.c", "ttread(")). In the
 normal mode it waits for a complete line, applies erase and kill as it
 moves the line to the canonical queue (`canon`), and returns at most
 one line. In raw mode it returns characters as they come, without
 interpretation. The system calls `stty` and `gtty` set the mode and the special
 characters (#f("sgtty.h")).
 
-The special characters are set by `stty`, and start as @tab-tty
+_Special Characters._ The special characters are set by `stty`, and start as @tab-tty
 shows (#f("tty.h")).
 
 #btable(columns: (auto, auto, 1fr), align: left, caption: [The terminal's special characters],
@@ -879,7 +878,7 @@ shows (#f("tty.h")).
   bot,
 ) <tab-tty>
 
-A writing process's output goes to the output queue through `ttwrite`
+_Output._ A writing process's output goes to the output queue through `ttwrite`
 and `ttyoutput`, which expands tabs and turns a newline into a carriage
 return and a line feed where the terminal needs it. The driver's start
 routine sends characters from the queue. Each transmitter interrupt
@@ -887,7 +886,7 @@ sends the next. When the queue holds more than a high water mark, the
 writer sleeps until it drains below a low one, so a fast program
 cannot fill all of memory with output.
 
-Each terminal is described by a `tty` structure (#f("tty.h")), which
+_The `tty` Structure._ Each terminal is described by a `tty` structure (#f("tty.h")), which
 the driver owns and the line discipline uses. It holds the queues, the
 mode set by `stty` (`t_flags`), the erase and kill characters, the
 terminal's process group (`t_pgrp`), and the column which the output
@@ -895,7 +894,7 @@ has reached, which tab expansion needs (`t_col`). It also holds the
 driver's start routine (`t_oproc`), through which `tty.c` asks the
 driver for more output without knowing which device it is.
 
-Each machine has one console driver, for the PL011 UART on the QEMU
+_The Drivers._ Each machine has one console driver, for the PL011 UART on the QEMU
 machine (#f("pl011.c")), and for a USART on the MP135 machine
 (#f("usart.c")). Each device sends and receives characters through a
 small FIFO, and interrupts when there is room to send or something to
@@ -904,7 +903,7 @@ read. Both drivers present the same interface to `tty.c`. The kernel's own messa
 directly, by `putchar`, so that they work even when interrupts are
 off.
 
-A terminal belongs to a process group. The first terminal a process
+_Process Groups._ A terminal belongs to a process group. The first terminal a process
 opens, when it has none, becomes its controlling terminal. Its
 signals go to every process which shares it, which is how an interrupt
 typed at the keyboard stops the whole of a pipeline.
