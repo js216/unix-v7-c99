@@ -677,7 +677,7 @@ the process sleeps at an interruptible priority, wakes it.
   bot,
 ) <tab-signals>
 
-Whether a sleep is interruptible is decided by its priority, given in
+Whether a sleep is interruptible is decided by its priority (@tab-pri), given in
 the call of `sleep` (#at("/usr/sys/sys/slp.c", "sleep(caddr_t")). A process that waits for something
 which is sure to happen soon, such as a disk transfer, can sleep at a
 priority of `PZERO` or better (#f("param.h")), so that a signal does not
