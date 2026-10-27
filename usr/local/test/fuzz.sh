@@ -46,7 +46,7 @@ do
 	$U/fzproc `expr $s + 6` 10 &
 	(cd $T/sh; sh $U/fzsh `expr $s + 8`)
 	wait
-	$U/fzmem `expr $s + 7` 6 100 -s &
+	$U/fzmem `expr $s + 7` 6 120 -s &
 	$U/fzkern -w $! &
 	$U/fzarg `expr $s + 5` 1
 	wait
