@@ -5,7 +5,8 @@
  * the machine has and the swapper must move them out and back in.
  * Each then checks its memory, grows its stack by recursion up to
  * 2 MB deep, checking every frame, changes part of it, forks a child
- * which checks the copy, shrinks or grows itself, and checks again,
+ * which checks the copy, unless core is short and the fork fails,
+ * shrinks or grows itself, and checks again,
  * for several passes, yielding between them so that the others run.
  * Every word must hold what was last written.  With -s, the processes
  * fork one at a time, taking turns at a pipe, so that at most one copy
@@ -148,7 +149,6 @@ worker(int k, long mb)
 		if(lk[0] >= 0 && read(lk[0], (char *)&st, 1) != 1)
 			exit(3);
 		if((pid = fork()) < 0) {
-			printf("fzmem: pid %d cannot fork\n", getpid());
 			if(lk[1] >= 0)
 				write(lk[1], (char *)&st, 1);
 			continue;

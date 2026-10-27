@@ -9,7 +9,7 @@
  * argument list, which also drops the environment, or a bad pointer.
  * The status tells whether exec failed with the error it must, or ran
  * and found every string it was given.  Memory may run short beside
- * fzmem, so a case which fails for want of it is tried again.  Prints
+ * fzmem, so a fork or exec which fails for want of it is tried again.  Prints
  * the seed, round, and case of the first difference and exits 1;
  * prints "fzarg ok" otherwise.  In the new image, file 9 is open.
  */
@@ -156,7 +156,9 @@ try(long c)
 		ev[j++] = i == bad ? (char *)-1 : str[i];
 	ev[j] = 0;
 	fflush(stdout);
-	if((pid = fork()) == 0) {
+	for(i = 0; (pid = fork()) < 0 && i < 20; i++)
+		sleep(1);
+	if(pid == 0) {
 		if((i = open("/dev/null", 0)) < 0 || dup2(i, 9) < 0)
 			_exit(99);
 		if(bad == nstr)
