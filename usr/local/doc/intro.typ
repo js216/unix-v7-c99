@@ -30,7 +30,7 @@ This book describes Unix v7 ported to run on these two machines:
 RAM at address 0X40000000, an ARM Generic Interrupt Controller (GIC)
 version 2 at 0X08000000, the ARM generic timer, an ARM PL011 UART at
 0X09000000 as the console, and, as the disk, a virtio block device,
-found among the virtio "MMIO" slots at 0X0A000000. QEMU loads the
+found among the virtio MMIO slots at 0X0A000000. QEMU loads the
 kernel into RAM itself and starts it at its entry point.
 
 *The MP135 machine* is Seeed Studio's Odyssey-STM32MP135D, a small
