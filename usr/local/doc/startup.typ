@@ -4,9 +4,7 @@
 
 This chapter follows the kernel from its first instruction to its
 first process, through the tables and routines which set up memory,
-start the machine, and create and switch processes. The machines, the
-address space, and the translation tables they rely on are described
-in the Introduction (@ch-intro).
+start the machine, and create and switch processes.
 
 #source("/usr/sys/h/map.h")
 
