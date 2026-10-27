@@ -221,10 +221,15 @@ MMU off. From there the system comes up in these steps:
 #[#set enum(numbering: "1.a.")
 + First `_start` masks interrupts, turns off the MMU and the caches,
   discards the contents of the TLB, the caches, and the branch
-  predictor, and clears the kernel's `bss`. It builds the boot page tables, which map the
-  kernel at its _kernel address_, equal to the physical address, by an
-  _identity mapping_, so that the
-  code goes on running when the MMU is turned on. It turns the MMU on,
+  predictor, and clears the kernel's `bss`. It builds the boot page
+  tables that allow accessing the kernel by two virtual addresses:
+  (1) by its so-called _kernel address_ in the top gigabyte (starting
+  from 0xc0000000), and (2) by the _identity mapping_ where, on the
+  QEMU machine, the virtual address 0x40000000 maps to the physical
+  address 0X40000000, and on the MP135 machine the virtual address
+  0x2ffe0000 maps to the physical address 0X2FFE0000. The identity
+  mapping lets the code go on running when the MMU is turned on. It
+  turns the MMU on,
   jumps to the kernel address, sets up a small boot stack, installs the
   exception vectors, enables the floating point unit, and calls
   `machine_init`.
