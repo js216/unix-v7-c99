@@ -1,7 +1,8 @@
 : sh fuzz.sh [seed]: the fuzzers, for ever.  Each round has two
 : phases.  In the first, three file system fuzzers, the filler which
 : runs the disk out of space and inodes, random system calls, mutated
-: programs, and the C library against references run at once.  In the second, the process fuzzer,
+: programs, the C library against references, and raw reads against
+: the block device run at once.  In the second, the process fuzzer,
 : the command checks, and more memory than RAM but less than RAM and
 : swap together, since running out of swap is a known panic, on a disk
 : cleared of what the first left, since random writes can fill it.
@@ -34,6 +35,7 @@ do
 	(cd $T/fill; $U/fzfill `expr $s + 3` 1) &
 	$U/fzsys `expr $s + 4` 40 &
 	$U/fzlib `expr $s + 9` 1 &
+	$U/fzraw `expr $s + 6` 1 &
 	$U/fzelf `expr $s + 5` 80
 	wait
 	rm -rf $T/1 $T/2 $T/3 $T/sys $T/elf $T/fill

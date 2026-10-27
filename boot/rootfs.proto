@@ -230,6 +230,7 @@ d--755 0 0
           fzgen	---755 0 0 usr/local/test/obj/fzgen
           fzlib	---755 0 0 usr/local/test/obj/fzlib
           fzmem	---755 0 0 usr/local/test/obj/fzmem
+          fzraw	---755 0 0 usr/local/test/obj/fzraw
           fzproc	---755 0 0 usr/local/test/obj/fzproc
           fzsh	---644 0 0 usr/local/test/utils/fzsh
           fzsys	---755 0 0 usr/local/test/obj/fzsys

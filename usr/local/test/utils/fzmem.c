@@ -3,7 +3,8 @@
  * take between mb/2 and mb megabytes of data with sbrk and fill it
  * with a pattern of their own, so that together they need more than
  * the machine has and the swapper must move them out and back in.
- * Each then checks its memory, changes part of it, forks a child
+ * Each then checks its memory, grows its stack by recursion up to
+ * 2 MB deep, checking every frame, changes part of it, forks a child
  * which checks the copy, shrinks or grows itself, and checks again,
  * for several passes, yielding between them so that the others run.
  * Every word must hold what was last written.  Prints the seed and
@@ -86,6 +87,30 @@ check(char *who, long a, long b, unsigned g)
 	}
 }
 
+/*
+ * Recurse n deep, each frame a kilobyte of a pattern of its own, so
+ * that the stack grows a page at a time below a live stack; every
+ * frame must hold its pattern when the calls below it return.
+ */
+static unsigned
+deep(int n, unsigned h)
+{
+	volatile unsigned v[256];
+	register int i;
+	unsigned r;
+
+	for(i = 0; i < 256; i++)
+		v[i] = h*31 + i;
+	r = n > 0? deep(n-1, h*2654435761U + n): h;
+	for(i = 0; i < 256; i++)
+		if(v[i] != h*31 + i) {
+			printf("FAIL fzmem seed %ld: stack frame %d word %d\n",
+			    seed, n, i);
+			exit(1);
+		}
+	return(r ^ v[n&255]);
+}
+
 static void
 worker(int k, long mb)
 {
@@ -111,6 +136,8 @@ worker(int k, long mb)
 	for(pass = 0; pass < NPASS; pass++) {
 		sleep(1);
 		check("after sleep", 0, nw, gen);
+		deep(rnd(&s, 2048), (unsigned)seed + pass);
+		check("after recursion", 0, nw, gen);
 		gen++;
 		fill(0, nw/2, gen);
 		fill(nw/2, nw, gen);
