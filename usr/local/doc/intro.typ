@@ -726,17 +726,24 @@ changing them. When the kernel itself is interrupted, a frame of the
 same form is saved below whatever the kernel had on its stack, and
 holds the kernel's registers instead.
 
-A process's registers are kept in six places, each with its own code
-to save and restore them:
+A _label_ (`label_t`, #at("/usr/sys/h/param.h", "typedef\tint\t\tlabel_t[10];")) is a point in the kernel to which
+control can later return. It holds only the registers which a called
+function must preserve, `r4` to `r11`, `sp`, and `lr`. The
+routine `save` stores them and returns 0. Later `resume` reloads them,
+and the original call of `save` returns a second time, with 1.
+
+A process's registers are kept in six places, three of them labels:
 
 - the frame on the kernel stack: the user's registers at every trap
   and interrupt, saved and restored in #f("low.s")\;
-- `u_rsav`: the kernel's registers at a switch, saved and resumed in
-  `swtch`;
-- `u_qsav`: the start of a system call, saved in `trap`, resumed by
-  `sleep` on a signal;
-- `u_ssav`: where the image was copied or swapped out, saved in
-  `newproc`, `expand`, and `xexpand`, resumed by `swtch` under `SSWAP`;
+- `u_rsav`: where a process stopped in `swtch`, and where it continues
+  when chosen again;
+- `u_qsav`: where `trap` began a system call. When a signal ends a
+  wait, `sleep` resumes there, and the call returns `EINTR`. Process 0
+  uses its own `u_qsav` as the entry to the search loop of `swtch`;
+- `u_ssav`: where the image was copied for a new process, by `newproc`,
+  or swapped out, by `expand` and `xexpand`. The flag `SSWAP` makes
+  `swtch` resume the process there instead of at `u_rsav`;
 - `u_fps`: the floating point registers, saved by `swtch`, `newproc`,
   `expand`, and `psig`, loaded on the return to user mode;
 - the frame on the user stack: the user's registers for a signal
@@ -745,26 +752,6 @@ to save and restore them:
 All six lie in the process's own image, in its u-area or on its user
 stack, so a process swapped out takes its saved state with it, and
 resumes from it when it is brought back in.
-
-A _label_ (`label_t`, #at("/usr/sys/h/param.h", "typedef\tint\t\tlabel_t[10];")) is a point in the kernel to which
-control can later return. It holds only the registers which a called
-function must preserve, `r4` to `r11`, `sp`, and `lr`. The
-routine `save` stores them and returns 0. Later `resume` reloads them,
-and the original call of `save` returns a second time, with 1. In C's
-terms, `save` is the kernel's `setjmp` and `resume` its `longjmp`, and
-as with `setjmp`, the code after the second return must not count on a
-local variable changed since the `save`.
-Three labels serve three purposes:
-
-- The label `u_rsav` records where a process stopped in `swtch`, and is
-  where it continues when chosen again.
-- The label `u_qsav` records where `trap` began a system call. When a
-  signal ends a wait, `sleep` resumes there, and the call returns
-  `EINTR`. Process 0 uses its own `u_qsav` as the entry to the search
-  loop of `swtch`.
-- The label `u_ssav` records the point at which a process's image was
-  copied, for a new process or to the swap area, and the flag `SSWAP`
-  makes `swtch` resume the process there instead of at `u_rsav`.
 
 === Disk I/O <sec-disk>
 
