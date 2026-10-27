@@ -769,7 +769,7 @@ of buffers in memory, each holding one disk block. The routines `readi` and `wri
 (#f("rdwri.c")) translate a position in a file into a block of the
 disk, and move bytes between the user and a buffer.
 
-_Reading a Block._ They call `bread`
+_Reading a Block._ The routines `readi` and `writei` call `bread`
 (#at("/usr/sys/dev/bio.c", "bread(dev_t dev, daddr_t blkno)")) to obtain a block. If a buffer already holds it, no disk
 transfer is needed. Otherwise `getblk` (#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")) takes the buffer least recently
 used, and `bread` asks the disk driver to fill it. The driver's
