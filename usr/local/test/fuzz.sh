@@ -4,15 +4,15 @@
 : programs, the C library against references, and raw reads against
 : the block device run at once.  In the second, on a disk cleared of
 : what the first left, since random writes can fill it, the process
-: fuzzer and the command checks run.  In the third, exec with random
-: arguments runs beside more memory than RAM but less than RAM and
-: swap together, since running out of swap is a known panic.  With
-: core short a fork or an exec fails, as it should, so only fuzzers
-: which try again run then, and fzkern sees that the swapper did
-: swap, and how much.  The root file system is
-: then checked with icheck and dcheck, and the books of the kernel with
-: fzkern.  Each line printed is a result, a FAIL line with the seed
-: which repeats it, or the summary of a round.
+: fuzzer, the command checks, and processes racing on shared names
+: run.  In the third, exec with random arguments runs beside more
+: memory than RAM but less than RAM and swap together, since running
+: out of swap is a known panic.  With core short a fork or an exec
+: fails, as it should, so only fuzzers which try again run then, and
+: fzkern sees that the swapper did swap, and how much.  The root file
+: system is then checked with icheck and dcheck, and the books of the
+: kernel with fzkern.  Each line printed is a result, a FAIL line with
+: the seed which repeats it, or the summary of a round.
 :
 : sh fuzz.sh -b [seed]: the mode for the board, which writes nothing to the
 : SD card but the inode times an idle system writes too.  It runs
@@ -43,6 +43,8 @@ do
 	$U/fzelf `expr $s + 5` 80
 	wait
 	rm -rf $T/1 $T/2 $T/3 $T/sys $T/elf $T/fill
+	mkdir $T/race
+	(cd $T/race; $U/fzrace `expr $s + 1` 6 3) &
 	$U/fzproc `expr $s + 6` 10 &
 	(cd $T/sh; sh $U/fzsh `expr $s + 8`)
 	wait
