@@ -730,7 +730,7 @@ A _label_ (`label_t`, #at("/usr/sys/h/param.h", "typedef\tint\t\tlabel_t[10];"))
 control can later return. It holds only the registers which a called
 function must preserve, `r4` to `r11`, `sp`, and `lr`. The
 routine `save` stores them and returns 0. Later `resume` reloads them,
-and the original call of `save` returns a second time, with 1.
+and the original call of `save` returns 1.
 
 A process's registers are kept in six places, three of them labels:
 
@@ -799,7 +799,7 @@ reused for another block, and whenever `sync` writes out all of them.
 Every 30~seconds, `update` (#f("cmd/update.c")) asks for a `sync`.
 
 _Raw I/O._ Raw I/O bypasses the cache. A program which reads the disk's raw
-device moves data between the disk and its own memory a page at a
+device file moves data between the disk and its own memory a page at a
 time, through one page of kernel memory, `physpg` (`physio`, #at("/usr/sys/dev/bio.c", "physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,")).
 
 === Terminal I/O <sec-tty>
@@ -809,13 +809,14 @@ characters the driver receives and sends through the _line discipline_,
 i.e., the routines listed in `linesw` (#at("/usr/sys/conf/c.c", "struct\tlinesw\tlinesw[] =")). Each enabled line of
 `/etc/ttys` names a special file in `/dev` corresponding to a terminal
 device, whose major device number selects the corresponding driver in
-`cdevsw` (#f("c.c")).
+`cdevsw` (#at("/usr/sys/conf/c.c", "struct\tcdevsw\tcdevsw[] =")).
 
-For each line of `/etc/ttys`, `init` forks a process to open the file
-as file descriptor 0, and clones it as 1 and 2 with `dup`, and execs
-`getty` (#f("cmd/init.c")). Then `getty` prints `login:` on descriptor
-1, reads the username from descriptor 0, and execs `login` with the
-username as its argument (#f("cmd/getty.c")). Then `login` turns off
+For each line of `/etc/ttys`, `init` (#f("cmd/init.c")) forks a
+process to open the corresponding device file as file descriptor 0,
+clones it as 1 and 2 with `dup`, and execs `getty`. Then `getty`
+(#f("cmd/getty.c")) prints `login:` on descriptor 1, reads the username
+from descriptor 0, and execs `login` with the username as its
+argument. Then `login` turns off
 echo using `stty`, reads the password from `/dev/tty`, and checks it
 against `/etc/passwd` (#f("cmd/login.c"), #f("stdio/getpass.c")). If
 they match, `login` execs the user's shell. The shell, and every
@@ -832,21 +833,16 @@ queue to the driver's transmit interrupts. The terminal also records a
 process group, to which the line discipline sends the interrupt and
 quit signals typed at the terminal.
 
-_Character Lists._ A terminal sends and receives characters one at a time, and the
-kernel keeps them in character lists (`getc` and `putc`, #at("/usr/sys/sys/prim.c", "getc(register struct clist *p)"), #at("/usr/sys/sys/prim.c", "putc(int c, register struct clist *p)")): queues built of
-small blocks taken from a common pool, `NCLIST`, 100, blocks of
-`CBSIZE`, 12, characters each (#at("/usr/sys/h/param.h", "#define\tNCLIST\t"), #at("/usr/sys/h/param.h", "#define\tCBSIZE\t")). Each terminal has three (@fig-tty). The raw
-queue holds characters as they arrive. The canonical queue holds
-complete lines, after erase and kill have been applied. The output queue
-holds characters on their way to the terminal (#f("tty.h")).
+A terminal sends and receives characters one at a time, and the
+kernel keeps them in character lists (`getc` and `putc`, #at("/usr/sys/sys/prim.c", "getc(register struct clist *p)") and #at("/usr/sys/sys/prim.c", "putc(int c, register struct clist *p)")). Each
+terminal has three such character queues (#f("tty.h")):
 
-#diagram(grid(columns: 7, column-gutter: 3pt, row-gutter: 6pt,
-  align: horizon,
-  bx[receive interrupt], ar, bx[raw queue], ar, bx[canonical queue], ar, bx[`ttread`],
-  bx[transmit interrupt], al, bx[output queue], al, bx[`ttyoutput`], al, bx[`ttwrite`],
-), [The three queues of a terminal], pl: bottom) <fig-tty>
+- the raw queue holds characters as they arrive;
+- the canonical queue holds complete lines, after erase and kill have
+  been applied;
+- the output queue holds characters on their way to the terminal.
 
-_Input._ When a character arrives, the driver's receive interrupt passes it to
+When a character arrives, the driver's receive interrupt passes it to
 `ttyhold` (#at("/usr/sys/dev/tty.c", "ttyhold(")), which hands it to the line discipline,
 `ttyinput`, or keeps it in a hold queue while the raw queue is full.
 The line discipline handles the special
@@ -855,13 +851,6 @@ of the terminal, and the stop and start characters halt and
 resume output. It echoes the character, if echo is on, and puts it in
 the raw queue. When a newline arrives, it wakes the processes reading
 from the terminal.
-
-_Reading._ A reading process gets its input from `ttread` (#at("/usr/sys/dev/tty.c", "ttread(")). In the
-normal mode it waits for a complete line, applies erase and kill as it
-moves the line to the canonical queue (`canon`, #at("/usr/sys/dev/tty.c", "canon(register struct tty *tp)")), and returns at most
-one line. In raw mode it returns characters as they come, without
-interpretation. The system calls `stty` and `gtty` (#at("/usr/sys/dev/tty.c", "stty(void)"), #at("/usr/sys/dev/tty.c", "gtty(void)")) set and get the mode and the special
-characters (#f("sgtty.h")).
 
 #btable(columns: (auto, auto, 1fr), align: left, caption: [The terminal's default special characters],
   table.header(top, [*Character*], [*Default*], [*Effect*], mid),
@@ -874,14 +863,6 @@ characters (#f("sgtty.h")).
   bot,
 ) <tab-tty>
 
-_Output._ The output of a writing process goes to the output queue through `ttwrite`
-and `ttyoutput` (#at("/usr/sys/dev/tty.c", "ttwrite(register struct tty *tp)"), #at("/usr/sys/dev/tty.c", "ttyoutput(register int c, register struct tty *tp)")), which expands tabs and turns a newline into a carriage
-return and a line feed where the terminal needs it. The driver's start
-routine sends characters from the queue. Each transmitter interrupt
-sends the next. When the queue holds more than a high water mark, the
-writer sleeps until it drains below a low one, so a fast program
-cannot fill all of memory with output.
-
 _Process Groups._ A terminal belongs to a process group. The first terminal a process
 opens, when it has none, becomes its controlling terminal. Its
 signals go to every process which shares it, which is how an interrupt
@@ -889,59 +870,38 @@ typed at the keyboard stops the whole of a pipeline.
 
 === Multiprocessing <sec-mp>
 
-Both machines have one processor, and the kernel relies on it. At any
-moment at most one process runs in the kernel, and it keeps the
-processor until it sleeps or returns to user mode. A process in the
-kernel is never preempted. Only an interrupt can run in between, and
-the kernel guards against interrupts by masking them. These two facts
-are the kernel's whole means of mutual exclusion. A second processor
-would break both, in the places which @tab-mp lists.
+The kernel runs on one processor, and six of its habits depend on it.
 
-#btable(columns: (auto, 1fr, 1fr), align: left, caption: [What the kernel assumes of one processor], pl: bottom,
-  table.header(top, [*Assumption*], [*Where*], [*With two processors*], mid),
-  [masking excludes], [character lists, buffers, callouts, run queue], [a spin lock for each],
-  [no preemption], [free entries of the tables], [a lock around each search],
-  [flag locks], [`ILOCK`, `B_BUSY`], [an indivisible test and set],
-  [one current process], [`u` at `UBASE`, `kl3u`], [a u-area mapping for each processor],
-  [one scheduler], [`runrun`, `curpri`, the run queue], [scheduling under a lock],
-  [local maintenance], [TLB and caches], [operations broadcast to all],
-  bot,
-) <tab-mp>
+_Masking._ Code which changes a list that an interrupt routine also
+changes masks interrupts around the change, with `intr_disable` and
+`intr_restore` (#at("/usr/sys/conf/mch.s", "intr_restore:")). The character lists (#at("/usr/sys/sys/prim.c", "getc(register struct clist *p)")), the buffer
+lists (#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")), the callout table (#at("/usr/sys/sys/clock.c", "timeout(void (*fun)")), and the run queue
+(#at("/usr/sys/sys/slp.c", "setrq(struct proc *p)")) are guarded this way. With two processors, each of
+these lists needs a spin lock.
 
-Code which changes a list that an interrupt routine also changes masks
-interrupts around the change, with `intr_disable` and `intr_restore`
-(#at("/usr/sys/conf/mch.s", "intr_restore:")). The character lists (#at("/usr/sys/sys/prim.c", "getc(register struct clist *p)")), the buffer lists
-(#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")), the callout table (#at("/usr/sys/sys/clock.c", "timeout(void (*fun)")), and the run queue
-(#at("/usr/sys/sys/slp.c", "setrq(struct proc *p)")) are all guarded this way. Masking holds off the
-interrupts of the processor that masks them, and nothing else. A
-second processor could change the same list at the same moment.
+_No Preemption._ A process in the kernel keeps the processor until it
+sleeps or returns to user mode. When `falloc` (#at("/usr/sys/sys/fio.c", "falloc(void)")) finds a
+free entry in the file table, the entry stays free until `falloc`
+takes it. The same holds when `iget` (#at("/usr/sys/sys/iget.c", "iget(dev_t dev, ino_t ino)")) takes a free
+inode and `pgalloc` (#f("malloc.c")) a free page. With two processors,
+each search for a free entry needs a lock.
 
-Code which needs no protection from interrupts needs none at all,
-because no other process runs until this one sleeps. When `falloc`
-(#at("/usr/sys/sys/fio.c", "falloc(void)")) finds a free entry in the file table, the entry stays
-free until `falloc` takes it. The same holds when `iget` (#at("/usr/sys/sys/iget.c", "iget(dev_t dev, ino_t ino)")) takes
-a free inode and `pgalloc` (#f("malloc.c")) a free page. On
-two processors, two processes could find the same free entry and both
-take it.
+_Flag Locks._ A lock which lasts across a sleep is a flag. An inode is
+locked by its `ILOCK` bit, and a buffer by `B_BUSY`. The routine
+`plock` (#at("/usr/sys/sys/pipe.c", "plock(register struct inode *ip)")) sleeps while the flag is set, and then
+sets it. With two processors, the test and the set must be one
+indivisible operation, such as the ARM's `ldrex` and `strex` provide.
 
-Where a lock must last across a sleep, the kernel uses a flag. An inode
-is locked by its `ILOCK` bit, and a buffer by `B_BUSY`. The routine
-`plock` (#at("/usr/sys/sys/pipe.c", "plock(register struct inode *ip)")) shows the pattern. It sleeps while the flag is set,
-and then sets it. The test and the set are two steps, and the lock
-holds only because no other process runs between them. On a
-multiprocessor they must be one indivisible operation, such as the
-ARM's `ldrex` and `strex` provide.
+_One Current Process._ The u-area of the running process lies at
+`UBASE`, mapped by the page table `kl3u`, and the kernel reaches it as
+`u` (see _The Address Space_, page #pageref(<sec-addr>)). With two
+processors, each needs its own mapping of `UBASE`.
 
-The current process is a single thing. Its u-area always lies at
-`UBASE`, and the kernel reaches it as `u` (see _The Address Space_,
-page #pageref(<sec-addr>)). Two processors would run two processes at once,
-each with its own u-area at `UBASE`, and so each with its own `kl3u`.
-The scheduler's state is single too. The flags `runrun` and `curpri`
-and the run queue (#f("slp.c")) describe one processor, and `swtch`
-chooses a process on the assumption that no other processor is
-choosing.
+_One Scheduler._ The flags `runrun` and `curpri` and the run queue
+(#f("slp.c")) describe one processor. With two processors, `swtch`
+must choose a process under a lock.
 
-The routines which discard translations and maintain the caches
-(#f("mch.s")) act on the processor which runs them. A second processor
-would keep its own stale translations and cache lines unless the
-operations were broadcast to it.
+_Local Maintenance._ The routines in #f("mch.s") which discard
+translations from the TLB and maintain the caches act on the processor
+which runs them. With two processors, these operations must be
+broadcast to both.

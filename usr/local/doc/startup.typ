@@ -3,7 +3,7 @@
 == Startup and Processes <ch-startup>
 
 This chapter follows the kernel from its first instruction to its
-first process, through the tables and routines which set up memory,
+first process, through the tables and routines that set up memory,
 start the machine, and create and switch processes.
 
 #source("/usr/sys/h/map.h")
@@ -20,39 +20,30 @@ but handed out a page at a time, by `pgalloc` in the same file.
 
 #lines-to("extern struct map swapmap[];", lead: true)
 
-The maps themselves follow: `swapmap` for the swap area, and, new in
-the port, `ptmap` for the pages of user page tables (#f("ureg.c")).
-In v7 a third, `coremap`, listed the free RAM.
-
 #lines-to(none)
 #source("/usr/sys/sys/malloc.c")
 
 This file holds the two procedures which manage a resource map
-(#f("map.h")), `malloc`, which takes an area out of the free list, and `mfree`, which
-puts one back, and the port's allocator of RAM, a page at a time, with
-the page maps built from it.
+(#f("map.h")): `malloc`, which takes an area out of the free list, and `mfree`, which
+puts one back. The file also holds `pgalloc` (#at("/usr/sys/sys/malloc.c", "pgalloc(void)")), the port's allocator of RAM, a
+page at a time, from a stack.
 Despite its name, `malloc` has nothing to do with the C library routine
 of the same name.
 
-The correctness of both procedures rests on four rules about the list,
-which every operation must preserve:
+The correctness of `malloc` and `mfree` rests on four rules about the list:
 
 + The free areas appear in order of increasing address.
 + No two entries describe adjacent areas; two such areas are always
   merged into one entry.
-+ The list ends at the first entry with a zero size. This sentinel is
-  not itself a free area, and its address field means nothing.
++ The list ends at the first entry with a zero size,
+  which is called the sentinel.
 + Every element of the array beyond the sentinel also has a zero size.
-  The arrays start out zero, and the code which shortens the list
-  leaves zeros behind it, and `mfree` depends on this when it lengthens the
-  list.
+  The routine `mfree` depends on this when it lengthens the list.
 
 Neither procedure checks for the end of the array, so the arrays must
 be large enough never to overflow. A map can hold no more free areas
 than there are allocated areas between them, plus one, and it needs one
-entry more for the sentinel. `SMAPSIZ` and `PMAPSIZ` (#f("param.h")) are computed from this bound, and the
-configuration gives the maps those sizes
-(#f("c.c")).
+entry more for the sentinel. `SMAPSIZ` and `PMAPSIZ` (#f("param.h")) are computed from this bound.
 
 #lines-to("int")
 
