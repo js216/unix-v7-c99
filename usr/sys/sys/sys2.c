@@ -147,7 +147,7 @@ open1(register struct inode *ip, register int mode, int trf)
 		itrunc(ip);
 	prele(ip);
 	if ((fp = falloc()) == NULL)
-		goto out;
+		goto out1;
 	fp->f_flag = mode&(FREAD|FWRITE);
 	fp->f_inode = ip;
 	i = u.u_r.r_val1;
@@ -157,6 +157,12 @@ open1(register struct inode *ip, register int mode, int trf)
 	u.u_ofile[i] = NULL;
 	fp->f_count--;
 
+	/*
+	 * As in link, lock it again
+	 * before iput.
+	 */
+out1:
+	plock(ip);
 out:
 	iput(ip);
 }
@@ -242,16 +248,24 @@ link(void)
 	if(xp != NULL) {
 		u.u_error = EEXIST;
 		iput(xp);
-		goto out;
+		goto out1;
 	}
 	if (u.u_error)
-		goto out;
+		goto out1;
 	if(u.u_pdir->i_dev != ip->i_dev) {
 		iput(u.u_pdir);
 		u.u_error = EXDEV;
-		goto out;
+		goto out1;
 	}
 	wdir(ip);
+
+	/*
+	 * Lock it again, holding nothing
+	 * else now. iput unlocks it, and
+	 * would take another's lock away.
+	 */
+out1:
+	plock(ip);
 	if (u.u_error==0) {
 		ip->i_nlink++;
 		ip->i_flag |= ICHG;

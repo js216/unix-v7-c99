@@ -191,6 +191,15 @@ eloop:
 	dp = iget(d, u.u_dent.d_ino);
 	if(dp == NULL)
 		return(NULL);
+	/*
+	 * If iget slept, the entry may
+	 * have been removed and the
+	 * inode freed in the meantime.
+	 */
+	if(dp->i_mode == 0) {
+		u.u_error = ENOENT;
+		goto out;
+	}
 	goto cloop;
 
 out:
