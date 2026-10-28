@@ -804,6 +804,34 @@ time, through one page of kernel memory, `physpg` (`physio`, #at("/usr/sys/dev/b
 
 === Terminal I/O <sec-tty>
 
+A terminal is a device, usually a serial line, whose driver passes the
+characters the driver receives and sends through the _line discipline_,
+i.e., the routines listed in `linesw` (#at("/usr/sys/conf/c.c", "struct\tlinesw\tlinesw[] =")). Each enabled line of
+`/etc/ttys` names a special file in `/dev` corresponding to a terminal
+device, whose major device number selects the corresponding driver in
+`cdevsw` (#f("c.c")).
+
+For each line of `/etc/ttys`, `init` forks a process to open the file
+as file descriptor 0, and clones it as 1 and 2 with `dup`, and execs
+`getty` (#f("cmd/init.c")). Then `getty` prints `login:` on descriptor
+1, reads the username from descriptor 0, and execs `login` with the
+username as its argument (#f("cmd/getty.c")). Then `login` turns off
+echo using `stty`, reads the password from `/dev/tty`, and checks it
+against `/etc/passwd` (#f("cmd/login.c"), #f("stdio/getpass.c")). If
+they match, `login` execs the user's shell. The shell, and every
+command the shell starts, inherits the three file descriptors through
+`fork` and `exec`. So when `cat` reads its descriptor 0, the read goes
+to the terminal's driver.
+
+Typed characters arrive by interrupt and wait in the terminal's raw
+queue. Each process reading the terminal sleeps on that queue, and a
+complete line of input wakes them all. The first process run by the
+scheduler takes the line, and the others sleep again. Output goes the
+other way, from a write on a descriptor through the terminal's output
+queue to the driver's transmit interrupts. The terminal also records a
+process group, to which the line discipline sends the interrupt and
+quit signals typed at the terminal.
+
 _Character Lists._ A terminal sends and receives characters one at a time, and the
 kernel keeps them in character lists (`getc` and `putc`, #at("/usr/sys/sys/prim.c", "getc(register struct clist *p)"), #at("/usr/sys/sys/prim.c", "putc(int c, register struct clist *p)")): queues built of
 small blocks taken from a common pool, `NCLIST`, 100, blocks of
