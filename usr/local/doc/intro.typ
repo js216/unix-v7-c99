@@ -755,16 +755,14 @@ resumes from it when it is brought back in.
 
 === Disk I/O <sec-disk>
 
-Programs read and write files in bytes, but the disk moves blocks of
-512~bytes, the sector of both the virtio disk and the SD card. Between
+Programs read and write files in bytes, but a disk typically moves
+blocks of 512~or more bytes. Between
 the two lies the buffer cache (#f("bio.c")), which is a pool
 of buffers in memory, each holding one disk block. There are only
 `NBUF`, 29, of them (#at("/usr/sys/h/param.h", "#define\tNBUF\t")), 14.5~KB in all, so most reads
-of a large file still go to the disk. The routines `readi` and `writei`
-(#f("rdwri.c")) translate a position in a file into a block of the
-disk, and move bytes between the user and a buffer.
+of a large file still go to the disk.
 
-_Reading a Block._ The routines `readi` and `writei` call `bread`
+_Reading a Block._ The routines `readi` and `writei` (#f("rdwri.c")) call `bread`
 (#at("/usr/sys/dev/bio.c", "bread(dev_t dev, daddr_t blkno)")) to obtain a block. If a buffer already holds it, no disk
 transfer is needed. Otherwise `getblk` (#at("/usr/sys/dev/bio.c", "getblk(dev_t dev, daddr_t blkno)")) takes the buffer least recently
 used, and `bread` asks the disk driver to fill it. The driver's
@@ -794,50 +792,20 @@ use, and wakes any process that wanted it. For a file read in order,
 the next block of a file ahead, with `breada`, so that a program
 reading a file in order usually finds its next block already there.
 
-_Reading Ahead._ For example, when `cat` reads a file of three blocks from the start,
-the first `bread` misses the cache, and the process sleeps until the
-disk has delivered the block. Meanwhile `breada` has asked for the
-second block, so the second read finds it in the cache, or already on
-its way. A second `cat` of the same file soon after finds all three
-blocks in the cache, and never waits for the disk.
-
-_Errors and Writes._ A failed transfer marks the buffer in error, and the system call which
-asked for the block fails with `EIO` (`geterror`, #f("bio.c")). A write
-may also be started without waiting for it, by `bawrite`.
-
-Writes usually go only to the buffer. The routine `bdwrite` marks the buffer dirty
+Writes usually go only to the buffer. The routine `bdwrite` (#at("/usr/sys/dev/bio.c", "bdwrite(register struct buf *bp)")) marks the buffer dirty
 and leaves it in the cache, since the next write often goes to the same
 block. A dirty buffer is written to the disk when it is about to be
-reused for another block, and whenever `sync` writes out all of them,
-which `/etc/update` (#f("cmd/update.c")) asks for every 30~seconds.
-
-_The Drivers._ Each machine has one disk driver, with the same entry points on both:
-the virtio block driver on the QEMU machine (#f("virtio_blk.c")), and
-the SD card driver on the MP135 machine (#f("sd.c")). Both are called
-`rk` in the configuration, the name of the disk they replace. The swap
-area lies on the same disk, after the root file system, and swapping
-goes through the same driver, with a buffer of its own. The kernel
-finds a disk's driver by its major device number in the block device
-switch, `bdevsw` (#f("c.c")), a table which holds each driver's
-open, close, and strategy routines and its queue.
+reused for another block, and whenever `sync` writes out all of them.
+Every 30~seconds, `update` (#f("cmd/update.c")) asks for a `sync`.
 
 _Raw I/O._ Raw I/O bypasses the cache. A program which reads the disk's raw
 device moves data between the disk and its own memory a page at a
-time, through one page of the kernel's (`physio`, #f("bio.c")).
-
-_DMA and the Cache._ The SD card controller reaches memory by DMA, which does not see the
-data cache. So before a transfer the driver writes the buffer's lines
-out of the cache (`dcflush`, #f("mch.s")), and after a read it discards
-them (`dcinval`), so that the processor sees what the controller wrote.
-Discarding is safe only for whole lines of the cache, and the buffers
-are aligned on cache lines for that reason (#f("main.c")). QEMU does not
-model the cache, so on the QEMU machine the device sees every store,
-and none of this is needed.
+time, through one page of kernel memory, `physpg` (`physio`, #at("/usr/sys/dev/bio.c", "physio(void (*strat)(struct buf *bp), register struct buf *bp, int dev,")).
 
 === Terminal I/O <sec-tty>
 
 _Character Lists._ A terminal sends and receives characters one at a time, and the
-kernel keeps them in character lists (#f("prim.c")): queues built of
+kernel keeps them in character lists (`getc` and `putc`, #at("/usr/sys/sys/prim.c", "getc(register struct clist *p)"), #at("/usr/sys/sys/prim.c", "putc(int c, register struct clist *p)")): queues built of
 small blocks taken from a common pool, `NCLIST`, 100, blocks of
 `CBSIZE`, 12, characters each (#at("/usr/sys/h/param.h", "#define\tNCLIST\t"), #at("/usr/sys/h/param.h", "#define\tCBSIZE\t")). Each terminal has three (@fig-tty). The raw
 queue holds characters as they arrive. The canonical queue holds
@@ -854,23 +822,20 @@ _Input._ When a character arrives, the driver's receive interrupt passes it to
 `ttyhold` (#at("/usr/sys/dev/tty.c", "ttyhold(")), which hands it to the line discipline,
 `ttyinput`, or keeps it in a hold queue while the raw queue is full.
 The line discipline handles the special
-characters at once: interrupt and quit send a signal to every process
-of the terminal (Signals), and the stop and start characters halt and
+characters (@tab-tty) at once: interrupt and quit send a signal to every process
+of the terminal, and the stop and start characters halt and
 resume output. It echoes the character, if echo is on, and puts it in
 the raw queue. When a newline arrives, it wakes the processes reading
 from the terminal.
 
 _Reading._ A reading process gets its input from `ttread` (#at("/usr/sys/dev/tty.c", "ttread(")). In the
 normal mode it waits for a complete line, applies erase and kill as it
-moves the line to the canonical queue (`canon`), and returns at most
+moves the line to the canonical queue (`canon`, #at("/usr/sys/dev/tty.c", "canon(register struct tty *tp)")), and returns at most
 one line. In raw mode it returns characters as they come, without
-interpretation. The system calls `stty` and `gtty` set the mode and the special
+interpretation. The system calls `stty` and `gtty` (#at("/usr/sys/dev/tty.c", "stty(void)"), #at("/usr/sys/dev/tty.c", "gtty(void)")) set and get the mode and the special
 characters (#f("sgtty.h")).
 
-_Special Characters._ The special characters are set by `stty`, and start as @tab-tty
-shows (#f("tty.h")).
-
-#btable(columns: (auto, auto, 1fr), align: left, caption: [The terminal's special characters],
+#btable(columns: (auto, auto, 1fr), align: left, caption: [The terminal's default special characters],
   table.header(top, [*Character*], [*Default*], [*Effect*], mid),
   [erase], [`#`], [deletes the last character of the line],
   [kill], [`@`], [deletes the whole line],
@@ -881,30 +846,13 @@ shows (#f("tty.h")).
   bot,
 ) <tab-tty>
 
-_Output._ A writing process's output goes to the output queue through `ttwrite`
-and `ttyoutput`, which expands tabs and turns a newline into a carriage
+_Output._ The output of a writing process goes to the output queue through `ttwrite`
+and `ttyoutput` (#at("/usr/sys/dev/tty.c", "ttwrite(register struct tty *tp)"), #at("/usr/sys/dev/tty.c", "ttyoutput(register int c, register struct tty *tp)")), which expands tabs and turns a newline into a carriage
 return and a line feed where the terminal needs it. The driver's start
 routine sends characters from the queue. Each transmitter interrupt
 sends the next. When the queue holds more than a high water mark, the
 writer sleeps until it drains below a low one, so a fast program
 cannot fill all of memory with output.
-
-_The `tty` Structure._ Each terminal is described by a `tty` structure (#f("tty.h")), which
-the driver owns and the line discipline uses. It holds the queues, the
-mode set by `stty` (`t_flags`), the erase and kill characters, the
-terminal's process group (`t_pgrp`), and the column which the output
-has reached, which tab expansion needs (`t_col`). It also holds the
-driver's start routine (`t_oproc`), through which `tty.c` asks the
-driver for more output without knowing which device it is.
-
-_The Drivers._ Each machine has one console driver, for the PL011 UART on the QEMU
-machine (#f("pl011.c")), and for a USART on the MP135 machine
-(#f("usart.c")). Each device sends and receives characters through a
-small FIFO, and interrupts when there is room to send or something to
-read. Both drivers present the same interface to `tty.c`. The kernel's own messages,
-`printf` and `panic`, bypass the queues and write to the console
-directly, by `putchar`, so that they work even when interrupts are
-off.
 
 _Process Groups._ A terminal belongs to a process group. The first terminal a process
 opens, when it has none, becomes its controlling terminal. Its
